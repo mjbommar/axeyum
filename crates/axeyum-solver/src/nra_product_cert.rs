@@ -48,21 +48,73 @@
 
 use std::collections::BTreeMap;
 
-use axeyum_ir::{Op, Rational, TermArena, TermId, TermNode};
+use axeyum_ir::{Op, Rational, Sort, TermArena, TermId, TermNode};
 
 use crate::term_walk::collect_top_binary_conjuncts as collect_top_conjuncts;
 
 /// A monomial as sorted `(variable name, exponent)` pairs. `[]` is the constant.
-type Mono = Vec<(String, u32)>;
+pub(crate) type Mono = Vec<(String, u32)>;
 
 /// A multivariate polynomial over the rationals, keyed on source names.
+///
+/// Shared with [`crate::nra_handelman_cert`], which needs the same exact,
+/// arena-free arithmetic for its multi-term combinations. It is deliberately one
+/// implementation: two polynomial types keyed on names would be two chances to
+/// disagree about what `a*b` means, and the certificates are only as good as
+/// this multiplication.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-struct NamedPoly {
+pub(crate) struct NamedPoly {
     terms: BTreeMap<Mono, Rational>,
 }
 
 impl NamedPoly {
-    fn constant(value: Rational) -> Self {
+    /// The monomial-to-coefficient map, ascending by monomial. No zero
+    /// coefficients are ever stored, so `terms().next().is_none()` is
+    /// `is_zero()`.
+    pub(crate) fn terms(&self) -> impl Iterator<Item = (&Mono, &Rational)> {
+        self.terms.iter()
+    }
+
+    /// The total degree: the largest monomial exponent sum. Zero for the zero
+    /// polynomial and for a constant.
+    pub(crate) fn degree(&self) -> u32 {
+        self.terms
+            .keys()
+            .map(|mono| mono.iter().map(|(_, exp)| *exp).sum::<u32>())
+            .max()
+            .unwrap_or(0)
+    }
+
+    /// The coefficient of the empty monomial.
+    pub(crate) fn constant_term(&self) -> Rational {
+        self.terms
+            .get(&Vec::new())
+            .copied()
+            .unwrap_or_else(Rational::zero)
+    }
+
+    /// Every variable name occurring in any monomial, ascending.
+    pub(crate) fn variables(&self) -> Vec<String> {
+        let mut names: Vec<String> = self
+            .terms
+            .keys()
+            .flat_map(|mono| mono.iter().map(|(name, _)| name.clone()))
+            .collect();
+        names.sort();
+        names.dedup();
+        names
+    }
+
+    /// `self` scaled by `factor`. `None` on `i128` overflow.
+    pub(crate) fn scale(&self, factor: Rational) -> Option<Self> {
+        let mut out = NamedPoly::default();
+        for (mono, &coeff) in &self.terms {
+            out.add_term(mono.clone(), coeff.checked_mul(factor)?)?;
+        }
+        Some(out)
+    }
+
+    pub(crate) fn constant(value: Rational) -> Self {
         let mut poly = NamedPoly::default();
         if !value.is_zero() {
             poly.terms.insert(Vec::new(), value);
@@ -70,18 +122,18 @@ impl NamedPoly {
         poly
     }
 
-    fn var(name: &str) -> Self {
+    pub(crate) fn var(name: &str) -> Self {
         let mut poly = NamedPoly::default();
         poly.terms
             .insert(vec![(name.to_owned(), 1)], Rational::integer(1));
         poly
     }
 
-    fn is_zero(&self) -> bool {
+    pub(crate) fn is_zero(&self) -> bool {
         self.terms.is_empty()
     }
 
-    fn add_term(&mut self, mono: Mono, coeff: Rational) -> Option<()> {
+    pub(crate) fn add_term(&mut self, mono: Mono, coeff: Rational) -> Option<()> {
         if coeff.is_zero() {
             return Some(());
         }
@@ -101,7 +153,7 @@ impl NamedPoly {
         Some(())
     }
 
-    fn add(&self, other: &Self) -> Option<Self> {
+    pub(crate) fn add(&self, other: &Self) -> Option<Self> {
         let mut out = self.clone();
         for (mono, &coeff) in &other.terms {
             out.add_term(mono.clone(), coeff)?;
@@ -109,7 +161,7 @@ impl NamedPoly {
         Some(out)
     }
 
-    fn neg(&self) -> Option<Self> {
+    pub(crate) fn neg(&self) -> Option<Self> {
         let mut out = NamedPoly::default();
         for (mono, &coeff) in &self.terms {
             out.add_term(mono.clone(), coeff.checked_neg()?)?;
@@ -117,11 +169,11 @@ impl NamedPoly {
         Some(out)
     }
 
-    fn sub(&self, other: &Self) -> Option<Self> {
+    pub(crate) fn sub(&self, other: &Self) -> Option<Self> {
         self.add(&other.neg()?)
     }
 
-    fn mul(&self, other: &Self) -> Option<Self> {
+    pub(crate) fn mul(&self, other: &Self) -> Option<Self> {
         let mut out = NamedPoly::default();
         for (lhs_mono, &lhs_coeff) in &self.terms {
             for (rhs_mono, &rhs_coeff) in &other.terms {
@@ -138,7 +190,7 @@ impl NamedPoly {
     }
 
     /// Deterministic wire form: `[(monomial, numerator, denominator)]`.
-    fn to_wire(&self) -> Vec<(Mono, i128, i128)> {
+    pub(crate) fn to_wire(&self) -> Vec<(Mono, i128, i128)> {
         self.terms
             .iter()
             .map(|(mono, coeff)| (mono.clone(), coeff.numerator(), coeff.denominator()))
@@ -149,6 +201,9 @@ impl NamedPoly {
 /// How an atom compares its polynomial to zero, after normalization.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AtomSign {
+    /// `p = 0`. Produced only by [`atom_or_equality`]; [`atom`] never returns it,
+    /// so the two-factor product route below is unaffected by its existence.
+    Zero,
     /// `p > 0`
     Positive,
     /// `p >= 0`
@@ -181,7 +236,16 @@ impl RealProductRefutationCertificate {
 
 /// `t` as a polynomial over source names, or `None` for anything outside
 /// `{+, -, *, neg, rational constant, variable}`.
-fn to_poly(arena: &TermArena, term: TermId) -> Option<NamedPoly> {
+///
+/// # A symbol is turned into a variable WITHOUT consulting its sort
+///
+/// Every caller reaches this through a numeric relation (`RealGt`, `IntLe`, …)
+/// whose operands are numeric by construction — except `Op::Eq`, which is
+/// sort-polymorphic. [`atom_or_equality`] therefore checks the operand sort
+/// itself before calling in; without that a Boolean `(= p q)` would become the
+/// real equation `p - q = 0` and a Handelman combination could "refute" a query
+/// about Booleans.
+pub(crate) fn to_poly(arena: &TermArena, term: TermId) -> Option<NamedPoly> {
     match arena.node(term) {
         TermNode::RealConst(value) => Some(NamedPoly::constant(*value)),
         TermNode::IntConst(value) => Some(NamedPoly::constant(Rational::integer(*value))),
@@ -225,7 +289,7 @@ fn to_poly(arena: &TermArena, term: TermId) -> Option<NamedPoly> {
 
 /// Normalize a comparison conjunct to `(polynomial, sign)` with the polynomial
 /// on the left of zero.
-fn atom(arena: &TermArena, conjunct: TermId) -> Option<(NamedPoly, AtomSign)> {
+pub(crate) fn atom(arena: &TermArena, conjunct: TermId) -> Option<(NamedPoly, AtomSign)> {
     let TermNode::App { op, args } = arena.node(conjunct) else {
         return None;
     };
@@ -241,6 +305,30 @@ fn atom(arena: &TermArena, conjunct: TermId) -> Option<(NamedPoly, AtomSign)> {
         _ => return None,
     };
     Some((difference, sign))
+}
+
+/// [`atom`], extended with numeric **equalities** as [`AtomSign::Zero`].
+///
+/// `Op::Eq` is sort-polymorphic, so the operand sort is checked here rather than
+/// in [`to_poly`]: a Boolean or bit-vector equality is refused outright.
+pub(crate) fn atom_or_equality(
+    arena: &TermArena,
+    conjunct: TermId,
+) -> Option<(NamedPoly, AtomSign)> {
+    if let Some(found) = atom(arena, conjunct) {
+        return Some(found);
+    }
+    let TermNode::App { op: Op::Eq, args } = arena.node(conjunct) else {
+        return None;
+    };
+    let [lhs, rhs] = &**args else { return None };
+    if !matches!(arena.sort_of(*lhs), Sort::Real | Sort::Int)
+        || !matches!(arena.sort_of(*rhs), Sort::Real | Sort::Int)
+    {
+        return None;
+    }
+    let difference = to_poly(arena, *lhs)?.sub(&to_poly(arena, *rhs)?)?;
+    Some((difference, AtomSign::Zero))
 }
 
 /// Does `p ⋈ 0` mean `p` is at least zero?
@@ -263,7 +351,9 @@ const fn product_refutes(left: AtomSign, right: AtomSign, refuted: AtomSign) -> 
     match refuted {
         AtomSign::Negative => true,
         AtomSign::Nonpositive => product_is_strict,
-        AtomSign::Positive | AtomSign::Nonnegative => false,
+        // A product of lower bounds says nothing about an EQUALITY: `pq >= 0` is
+        // perfectly consistent with `pq = 0`.
+        AtomSign::Positive | AtomSign::Nonnegative | AtomSign::Zero => false,
     }
 }
 
@@ -313,7 +403,7 @@ pub fn real_product_refutation(
 
 /// Rebuild a polynomial from its wire form. `None` on a malformed entry, which
 /// a forged certificate can contain.
-fn from_wire(wire: &[(Mono, i128, i128)]) -> Option<NamedPoly> {
+pub(crate) fn from_wire(wire: &[(Mono, i128, i128)]) -> Option<NamedPoly> {
     let mut poly = NamedPoly::default();
     for (mono, num, den) in wire {
         if *den == 0 {

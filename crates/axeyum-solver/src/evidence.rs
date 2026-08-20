@@ -93,6 +93,7 @@ use crate::model::Model;
 use crate::nia_square::IntQuadraticNegativeDiscriminantCertificate;
 use crate::nia_univariate_cert::IntUnivariateRefutationCertificate;
 use crate::nra_even_power::NraEvenPowerRefutationCertificate;
+use crate::nra_handelman_cert::HandelmanRefutationCertificate;
 use crate::nra_monomial_bound_cert::MonomialBoundRefutationCertificate;
 use crate::nra_product_cert::RealProductRefutationCertificate;
 use crate::nra_real_root::{self, SosCertificate};
@@ -584,6 +585,16 @@ pub enum Evidence {
     /// which refutes `pq < 0` but NOT `pq ≤ 0`. Only two strict factors refute
     /// both.
     UnsatRealProduct(RealProductRefutationCertificate),
+    /// Unsatisfiable (`QF_NRA`): a multi-term Handelman / Positivstellensatz
+    /// combination. Products of asserted hypotheses, with positive rational
+    /// coefficients, plus polynomial multiples of asserted equalities, summing to
+    /// a constant that a sum of nonnegative terms cannot equal. One combination
+    /// per case when the refutation splits a top-level disjunction.
+    ///
+    /// Strictness decides whether a residual of exactly zero closes: a sum of
+    /// nonnegative products is `>= 0`, which contradicts `= 0` only when one term
+    /// is strictly positive. Every atom's strictness is carried and re-derived.
+    UnsatRealHandelman(HandelmanRefutationCertificate),
     /// Unsatisfiable (`QF_NRA`): per-variable bounds multiply into a bound on a
     /// monomial that contradicts an asserted atom — either `M >= lo` against
     /// `M < lo`, or every factor pinned so `M == k` against `M != k`.
@@ -825,6 +836,7 @@ impl Evidence {
             Evidence::UnsatNraEvenPower(_) => "unsat-nra-even-power",
             Evidence::UnsatRealZeroProduct(_) => "unsat-real-zero-product",
             Evidence::UnsatRealProduct(_) => "unsat-real-product",
+            Evidence::UnsatRealHandelman(_) => "unsat-real-handelman",
             Evidence::UnsatMonomialBound(_) => "unsat-monomial-bound",
             Evidence::UnsatDiophantine { .. } => "unsat-diophantine",
             Evidence::UnsatBoundedIntBlast(_) => "unsat-bounded-int-blast",
@@ -1060,6 +1072,13 @@ impl Evidence {
                     certificate,
                 ))
             }
+            Evidence::UnsatRealHandelman(certificate) => {
+                Ok(crate::nra_handelman_cert::check_handelman_refutation(
+                    arena,
+                    assertions,
+                    certificate,
+                ))
+            }
             Evidence::UnsatMonomialBound(certificate) => Ok(
                 crate::nra_monomial_bound_cert::check_monomial_bound_refutation(
                     arena,
@@ -1232,6 +1251,7 @@ impl Evidence {
                 | Evidence::UnsatNraEvenPower(_)
                 | Evidence::UnsatRealZeroProduct(_)
                 | Evidence::UnsatRealProduct(_)
+                | Evidence::UnsatRealHandelman(_)
                 | Evidence::UnsatMonomialBound(_)
                 | Evidence::UnsatDiophantine { .. }
                 | Evidence::UnsatBoundedIntBlast(_)
@@ -2788,6 +2808,35 @@ pub fn produce_real_product_evidence(
     })
 }
 
+/// Produce source-bound evidence for a multi-term Handelman / Positivstellensatz
+/// refutation.
+///
+/// Declines (`None`) for anything purely linear -- a linear refutation is a Farkas
+/// refutation and the linear route already carries one -- and for any nonlinear
+/// query whose combination the bounded search does not find.
+pub fn produce_handelman_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<EvidenceReport> {
+    let certificate = crate::nra_handelman_cert::handelman_refutation(arena, assertions)?;
+    Some(EvidenceReport {
+        evidence: Evidence::UnsatRealHandelman(certificate),
+        provenance: Provenance {
+            semantics_version: SEMANTICS_VERSION,
+            layers: LayerVersions::CURRENT,
+            backend: "nra-handelman-positivstellensatz-certificate".to_owned(),
+            assertion_count: assertions.len(),
+            timeout: None,
+            resource_limit: None,
+            node_budget: None,
+            cnf_variable_budget: None,
+            cnf_clause_budget: None,
+            prove_unsat: true,
+        },
+        trusted_steps: Vec::new(),
+    })
+}
+
 /// Produce source-bound evidence for a real monomial-divisibility refutation.
 pub fn produce_real_zero_product_evidence(
     arena: &TermArena,
@@ -3031,6 +3080,15 @@ pub fn produce_evidence(
                 return Ok(report);
             }
             if let Some(report) = produce_monomial_bound_evidence(arena, assertions) {
+                return Ok(report);
+            }
+            // The multi-term Handelman combination: the most general of the
+            // certifying `QF_NRA` routes, so it runs last of them and only after
+            // the single-product shapes above have declined. Like them it must
+            // sit INSIDE this arm -- `produce_nra_evidence` below answers these
+            // queries with a bare `unsat`, so a hook after the `match` never
+            // fires for the files it was written for.
+            if let Some(report) = produce_handelman_evidence(arena, assertions) {
                 return Ok(report);
             }
             match produce_lra_dpll_evidence(arena, assertions, config) {
@@ -4140,6 +4198,7 @@ pub fn prove(
         | Evidence::UnsatNraEvenPower(_)
         | Evidence::UnsatRealZeroProduct(_)
         | Evidence::UnsatRealProduct(_)
+        | Evidence::UnsatRealHandelman(_)
         | Evidence::UnsatMonomialBound(_)
         | Evidence::UnsatDiophantine { .. }
         | Evidence::UnsatBoundedIntBlast(_)
