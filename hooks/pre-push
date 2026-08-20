@@ -110,7 +110,6 @@ gate_root() {
 }
 GATE_ROOT="$(gate_root)"
 mkdir -p "$GATE_ROOT"
-tmp_wt="$GATE_ROOT/worktree"
 
 # ONE root for every lane, serialized by flock — deliberately not per-lane.
 #
@@ -137,13 +136,7 @@ echo "pre-push: Rust/TOML changed — compile + fmt gate on pushed SHA ${target_
 # stale-mtime trap in CLAUDE.md comes from tar restoring COMMIT times, which can
 # put content behind a warm cache and let a gate pass over code it never
 # compiled. Checkout cannot do that.
-if ! { git -C "$tmp_wt" rev-parse --git-dir >/dev/null 2>&1 \
-       && git -C "$tmp_wt" checkout --detach --force --quiet "$target_sha" 2>/dev/null; }; then
-  rm -rf "$tmp_wt"
-  git -C "$REPO_ROOT" worktree prune
-  git -C "$REPO_ROOT" worktree add --detach --quiet "$tmp_wt" "$target_sha"
-fi
-git -C "$tmp_wt" clean -xdfq
+tmp_wt="$(scripts/prepare-prepush-worktree.sh "$REPO_ROOT" "$GATE_ROOT" "$target_sha")"
 
 # A DEDICATED target dir for the gate — persistent, so it stays warm across
 # pushes, but NOT shared with the main checkout's.
