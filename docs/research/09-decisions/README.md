@@ -628,3 +628,5 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0553](adr-0553-distinguish-projective-eigenlines-from-affine-fixed-vectors.md) | Classify the long-cycle projective eigenlines and reject a free cyclic-quotient shortcut | accepted |
 | [0554](adr-0554-isolate-binary-square-strata-in-the-hast-matei-long-cycle-sector.md) | Translate the Hast--Matei top variance exactly and confine its long-cycle low-characteristic defect to square proper powers | accepted |
 | [0555](adr-0555-reduce-lemire-to-a-characteristic-delta-least-period-lemma.md) | Encode the complete Lemire coefficient class as one binary characteristic-delta convolution and isolate its unproved no-proper-period lemma | accepted |
+| [0556](adr-0556-recover-odd-lemire-endpoints-with-one-admitted-ntt-prime.md) | Use the exact odd prime-power identity and candidate count to replace two-prime CRT by one uniqueness-bounded NTT | accepted |
+| [0557](adr-0557-bound-hayes-power-sum-history-by-conductor-width.md) | Replace all-degree Hayes power-sum history and tree unit lookup by an exact conductor-width circular recurrence and dense index | accepted |

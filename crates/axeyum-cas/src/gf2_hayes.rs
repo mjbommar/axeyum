@@ -2,8 +2,10 @@
 //!
 //! This module supplies the reusable algebra behind the Lemire endpoint
 //! experiment. Search and asymptotic conjectures remain untrusted: the public
-//! operations compute exact integral class counts using two modular transforms
-//! and CRT, with explicit admission limits and residue checks.
+//! general operations compute exact integral class counts using two modular
+//! transforms and CRT, with explicit admission limits and residue checks.  A
+//! specialized odd-endpoint route uses its sharper proved population bound to
+//! recover the same integer from one admitted transform prime.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
@@ -14,7 +16,11 @@ use serde::{Deserialize, Serialize};
 
 const PRIME_ONE: u64 = 998_244_353;
 const PRIME_TWO: u64 = 1_004_535_809;
+// `3` is a primitive root and `p-1 = 70 * 2^30`, so this prime supports
+// every principal-unit NTT admitted by the odd-endpoint runner below.
+const ODD_ENDPOINT_SINGLE_PRIME: u64 = 75_161_927_681;
 const PRIMITIVE_ROOT: u64 = 3;
+const POWER_SUM_CHARACTER_BLOCK: usize = 1 << 15;
 
 struct CharacterMobiusTable {
     rows: Vec<Vec<u64>>,
@@ -9116,6 +9122,91 @@ pub fn identity_class_count(
     Ok(exact)
 }
 
+/// Compute the exact odd Lemire endpoint using one NTT prime.
+///
+/// For `degree = 2*ell+1`, the only proper-degree element in the identity
+/// class is zero, with Mangoldt weight one.  Hence
+///
+/// ```text
+/// N_degree(1) = 1 + degree * I_degree(1),
+/// ```
+///
+/// and there are at most `2^ell` candidate irreducible polynomials (the
+/// constant coefficient is forced to one).  Consequently
+/// `N_degree(1) <= 1 + degree*2^ell`.  When that upper bound is smaller than
+/// `ODD_ENDPOINT_SINGLE_PRIME`, one transform residue is already the unique
+/// nonnegative integer count; a second CRT transform is unnecessary.
+///
+/// # Errors
+///
+/// Returns a typed resource decline, rejects levels whose rigorous upper
+/// bound reaches the single-prime modulus, and fails closed unless the exact
+/// odd-endpoint prime-power identity is integral.
+pub fn odd_endpoint_irreducible_count_single_ntt(
+    ell: usize,
+    limits: HayesLimits,
+) -> Result<IdentityClassIrreducibleReport, HayesError> {
+    let reduction = odd_endpoint_prime_power_reduction(ell, limits)?;
+    let degree = reduction.degree;
+    admit(ell, degree, limits)?;
+    let candidate_count = 1_u128
+        .checked_shl(u32::try_from(ell).map_err(|_| {
+            HayesError::InvalidParameter("odd endpoint level does not fit a shift".to_owned())
+        })?)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("odd endpoint candidate count overflow".to_owned())
+        })?;
+    let population_upper_bound = candidate_count
+        .checked_mul(degree as u128)
+        .and_then(|value| value.checked_add(1))
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("odd endpoint population bound overflow".to_owned())
+        })?;
+    if population_upper_bound >= u128::from(ODD_ENDPOINT_SINGLE_PRIME) {
+        return Err(HayesError::ResourceLimit {
+            resource: "odd-endpoint single-prime uniqueness bound",
+            requested: usize::try_from(population_upper_bound).unwrap_or(usize::MAX),
+            limit: usize::try_from(ODD_ENDPOINT_SINGLE_PRIME - 1).unwrap_or(usize::MAX),
+        });
+    }
+
+    let mangoldt_population = u128::from(identity_class_residue(
+        ell,
+        degree,
+        ODD_ENDPOINT_SINGLE_PRIME,
+    )?);
+    if mangoldt_population > population_upper_bound {
+        return Err(HayesError::Invariant(format!(
+            "odd endpoint population {mangoldt_population} exceeds its bound {population_upper_bound}"
+        )));
+    }
+    let weighted_irreducibles = mangoldt_population
+        .checked_sub(reduction.proper_prime_power_population)
+        .ok_or_else(|| {
+            HayesError::Invariant(
+                "odd endpoint population omits the proved proper-power contribution".to_owned(),
+            )
+        })?;
+    if !weighted_irreducibles.is_multiple_of(degree as u128) {
+        return Err(HayesError::Invariant(
+            "odd endpoint population does not have the form 1+nI".to_owned(),
+        ));
+    }
+    let irreducible_count = weighted_irreducibles / degree as u128;
+    if irreducible_count > candidate_count {
+        return Err(HayesError::Invariant(
+            "odd endpoint irreducible count exceeds the candidate population".to_owned(),
+        ));
+    }
+    Ok(IdentityClassIrreducibleReport {
+        ell,
+        degree,
+        mangoldt_population,
+        proper_prime_power_population: reduction.proper_prime_power_population,
+        irreducible_count,
+    })
+}
+
 /// Compute every exact principal-unit class population.
 ///
 /// This is the inverse-Fourier companion of [`identity_class_count`].  It is
@@ -14473,7 +14564,7 @@ fn character_power_sums_residue(
         .map(|factor| factor.order)
         .collect::<Vec<_>>();
     let size = 1_usize << ell;
-    let mut unit_to_index = BTreeMap::new();
+    let mut unit_to_index = vec![usize::MAX; size];
     for index in 0..size {
         let mut quotient = index;
         let mut value = 1_u64;
@@ -14485,13 +14576,15 @@ fn character_power_sums_residue(
                 value = unit_multiply(value, generator, ell);
             }
         }
-        if unit_to_index.insert(value, index).is_some() {
+        let packed = (value >> 1) as usize;
+        if packed >= size || unit_to_index[packed] != usize::MAX {
             return Err(HayesError::Invariant(format!(
                 "ell={ell}: principal-unit decomposition is not injective"
             )));
         }
+        unit_to_index[packed] = index;
     }
-    if unit_to_index.len() != size {
+    if unit_to_index.contains(&usize::MAX) {
         return Err(HayesError::Invariant(format!(
             "ell={ell}: principal-unit decomposition is incomplete"
         )));
@@ -14503,7 +14596,7 @@ fn character_power_sums_residue(
     for (degree, class_sum) in class_sums.iter_mut().enumerate().skip(1) {
         for tail in 0..(1_u64 << degree) {
             let unit = 1 | (tail << 1);
-            class_sum[unit_to_index[&unit]] = 1;
+            class_sum[unit_to_index[(unit >> 1) as usize]] = 1;
         }
         group_transform(class_sum, &dimensions, modulus);
     }
@@ -14511,31 +14604,60 @@ fn character_power_sums_residue(
         .map(|degree| mod_pow(2, degree as u64, modulus))
         .collect::<Vec<_>>();
 
-    let mut mangoldt = vec![vec![0_u64; size]; target + 1];
-    for degree in 1..=target {
-        for character in 0..size {
-            let class_sum = |class_degree: usize| {
-                if class_degree < ell {
-                    class_sums[class_degree][character]
-                } else if character == 0 {
-                    powers_of_two[class_degree]
+    // For a nontrivial character, A_d(chi)=0 once d>=ell.  Thus the
+    // logarithmic-derivative recurrence needs only the preceding ell-1 rows.
+    // Process deterministic character blocks so that this circular history
+    // is `ell * block_width`, rather than `ell * 2^ell`, cells.  Every
+    // character recurrence is independent after the group transforms, so
+    // blocking changes neither arithmetic nor output order.
+    //
+    // The trivial character is the closed series 1/(1-2z), whose power sum
+    // is exactly 2^degree and therefore needs no recurrence history.
+    let mut target_values = vec![0_u64; size];
+    target_values[0] = powers_of_two[target];
+    for block_start in (1..size).step_by(POWER_SUM_CHARACTER_BLOCK) {
+        let block_end = block_start
+            .saturating_add(POWER_SUM_CHARACTER_BLOCK)
+            .min(size);
+        let block_width = block_end - block_start;
+        let history_cells = ell.checked_mul(block_width).ok_or_else(|| {
+            HayesError::InvalidParameter("Hayes power-sum block size overflow".to_owned())
+        })?;
+        let mut mangoldt = vec![0_u64; history_cells];
+        for degree in 1..=target {
+            let row = degree % ell;
+            for (offset, character) in (block_start..block_end).enumerate() {
+                let mut value = if degree < ell {
+                    multiply_mod(
+                        degree as u64 % modulus,
+                        class_sums[degree][character],
+                        modulus,
+                    )
                 } else {
                     0
+                };
+                for (class_degree, class_sum) in
+                    class_sums.iter().enumerate().take(degree.min(ell)).skip(1)
+                {
+                    let earlier = degree - class_degree;
+                    if earlier == 0 {
+                        continue;
+                    }
+                    let correction = multiply_mod(
+                        mangoldt[(earlier % ell) * block_width + offset],
+                        class_sum[character],
+                        modulus,
+                    );
+                    value = subtract_mod(value, correction, modulus);
                 }
-            };
-            let mut value = multiply_mod(degree as u64 % modulus, class_sum(degree), modulus);
-            for (earlier, earlier_values) in mangoldt.iter().enumerate().take(degree).skip(1) {
-                let correction = multiply_mod(
-                    earlier_values[character],
-                    class_sum(degree - earlier),
-                    modulus,
-                );
-                value = subtract_mod(value, correction, modulus);
+                mangoldt[row * block_width + offset] = value;
             }
-            mangoldt[degree][character] = value;
         }
+        let target_row = (target % ell) * block_width;
+        target_values[block_start..block_end]
+            .copy_from_slice(&mangoldt[target_row..target_row + block_width]);
     }
-    Ok((mangoldt.swap_remove(target), dimensions))
+    Ok((target_values, dimensions))
 }
 
 fn exact_conductor_energy_residue(
@@ -18074,6 +18196,84 @@ mod tests {
         let even = identity_class_irreducible_count(5, 12, HayesLimits::default()).unwrap();
         assert!(even.proper_prime_power_population != 0);
         assert_eq!(even.irreducible_count, 12);
+    }
+
+    #[test]
+    fn odd_endpoint_single_ntt_matches_two_prime_reconstruction() {
+        for ell in 1..=12 {
+            let single =
+                odd_endpoint_irreducible_count_single_ntt(ell, HayesLimits::default()).unwrap();
+            let full =
+                identity_class_irreducible_count(ell, 2 * ell + 1, HayesLimits::default()).unwrap();
+            assert_eq!(single, full);
+        }
+    }
+
+    #[test]
+    fn odd_endpoint_single_ntt_modulus_has_the_admitted_root_order() {
+        assert!(crate::ntheory::is_prime(i128::from(
+            ODD_ENDPOINT_SINGLE_PRIME
+        )));
+        assert_eq!(ODD_ENDPOINT_SINGLE_PRIME - 1, 70_u64 * (1_u64 << 30));
+        for prime_factor in [2_u64, 5, 7] {
+            assert_ne!(
+                mod_pow(
+                    PRIMITIVE_ROOT,
+                    (ODD_ENDPOINT_SINGLE_PRIME - 1) / prime_factor,
+                    ODD_ENDPOINT_SINGLE_PRIME,
+                ),
+                1
+            );
+        }
+        assert_eq!(
+            mod_pow(
+                PRIMITIVE_ROOT,
+                ODD_ENDPOINT_SINGLE_PRIME - 1,
+                ODD_ENDPOINT_SINGLE_PRIME,
+            ),
+            1
+        );
+    }
+
+    #[test]
+    fn odd_endpoint_single_ntt_crosses_the_character_block_boundary() {
+        let ell = 16;
+        let degree = 2 * ell + 1;
+        let group_order = 1 << ell;
+        let report = odd_endpoint_irreducible_count_single_ntt(
+            ell,
+            HayesLimits {
+                max_ell: ell,
+                max_degree: degree,
+                max_group_order: group_order,
+                max_table_cells: (ell + degree + 1) * group_order,
+            },
+        )
+        .unwrap();
+        assert_eq!(report.mangoldt_population, 133_816);
+        assert_eq!(report.proper_prime_power_population, 1);
+        assert_eq!(report.irreducible_count, 4_055);
+    }
+
+    #[test]
+    fn odd_endpoint_single_ntt_fails_closed_outside_its_uniqueness_range() {
+        assert!(matches!(
+            odd_endpoint_irreducible_count_single_ntt(0, HayesLimits::default()),
+            Err(HayesError::InvalidParameter(_))
+        ));
+        let limits = HayesLimits {
+            max_ell: 31,
+            max_degree: 63,
+            max_group_order: 1_usize << 31,
+            max_table_cells: usize::MAX,
+        };
+        assert!(matches!(
+            odd_endpoint_irreducible_count_single_ntt(31, limits),
+            Err(HayesError::ResourceLimit {
+                resource: "odd-endpoint single-prime uniqueness bound",
+                ..
+            })
+        ));
     }
 
     #[test]
