@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-dyadic-projection-preserving-extension",
+  "title": "A projection-preserving extension linearizes the pinned dyadic fibre phase",
+  "statement": "There exist a group G, a surjective homomorphism pi:G->F_2^7, and a homomorphism q:G->Z/4 such that q=d composed with pi for the normalized product-discriminant phase d of the pinned degree-eleven dyadic fibre. THIS PROPOSITION IS FALSE: d(1)=1 but d(1 xor 1)=0 is not 1+1 modulo four.",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"claim\":\"exists G, surjective homomorphism pi:G->F_2^7, and homomorphism q=d*pi:G->Z/4\",\"counterexample\":{\"expected_xor_phase_mod_four\":2,\"left\":1,\"left_phase_mod_four\":1,\"right\":1,\"right_phase_mod_four\":1,\"xor_phase_mod_four\":0},\"fibre\":{\"dimension\":7,\"full_support_coefficient_mod_eight\":6,\"paired_coordinate_shift\":48,\"polynomial_degree\":11},\"format\":\"axeyum-gf2-dyadic-fibre-projection-obstruction\",\"version\":1}",
+    "fragment": "none",
+    "free_symbols": ["G", "pi", "q"]
+  },
+  "epistemic_status": "refuted",
+  "external_status": "unknown",
+  "depends_on": ["F:gf2-dyadic-auxiliary-quadratic-projector"],
+  "proof_route": "cas-certificate",
+  "evidence": [
+    {
+      "id": "gf2-pinned-dyadic-fibre-mod-four-additivity-counterexample",
+      "kind": "witness-replay",
+      "supports": "The exact 128-point product-discriminant table has full-support coefficient 6 modulo eight and normalized phase d(1)=1, so d(1 xor 1)=0 differs from d(1)+d(1)=2 modulo four.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-cas --all-features pinned_dyadic_fibre_rejects_projection_preserving_extensions",
+      "artifact": "crates/axeyum-cas/src/gf2_hayes.rs",
+      "notes": "Surjectivity then lifts any pair of quotient coordinates; homomorphism of d composed with pi would force d itself to be additive. The calculation uses exact integer discriminants modulo eight."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-19",
+    "established_by": "Axeyum gf2-lemire lane",
+    "source": "native exact product-discriminant table and elementary quotient-homomorphism argument"
+  },
+  "notes": "This rules out only extensions that retain the affine fibre as a homomorphic quotient. It does not rule out a joined nonabelian law that mixes affine, auxiliary, valuation, and Witt coordinates, and it grants no endpoint cancellation credit."
+}

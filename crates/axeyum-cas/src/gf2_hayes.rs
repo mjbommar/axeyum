@@ -1495,6 +1495,39 @@ pub struct DyadicAuxiliaryQuadraticProjectorReport {
     pub residues: Vec<DyadicAuxiliaryProjectorResidue>,
 }
 
+/// A concrete failure of additivity for a normalized mod-four phase.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DyadicFibreModFourAdditivityWitness {
+    /// First binary fibre coordinate.
+    pub left: usize,
+    /// Second binary fibre coordinate.
+    pub right: usize,
+    /// Normalized phase at `left`.
+    pub left_phase_mod_four: u8,
+    /// Normalized phase at `right`.
+    pub right_phase_mod_four: u8,
+    /// Normalized phase at `left xor right`.
+    pub xor_phase_mod_four: u8,
+    /// Sum of the two input phases modulo four.
+    pub expected_xor_phase_mod_four: u8,
+}
+
+/// Exact obstruction to a projection-preserving central-extension model of
+/// the pinned nonquadratic dyadic fibre.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DyadicFibreProjectionObstructionReport {
+    /// Degree of each monic constant-one polynomial.
+    pub polynomial_degree: usize,
+    /// Number of affine binary fibre coordinates.
+    pub fibre_dimension: usize,
+    /// Coordinate mask relating the two discriminants.
+    pub paired_coordinate_shift: usize,
+    /// Full-support coefficient of the product-discriminant phase modulo eight.
+    pub full_support_coefficient_mod_eight: u8,
+    /// Lexicographically first exact additivity failure.
+    pub witness: DyadicFibreModFourAdditivityWitness,
+}
+
 /// Coefficient counts at one support degree in the multilinear discriminant
 /// polynomial modulo eight.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -6592,6 +6625,93 @@ pub fn dyadic_auxiliary_quadratic_projector_report()
         });
     }
     Ok(DyadicAuxiliaryQuadraticProjectorReport { residues })
+}
+
+/// Extract the exact mod-four additivity obstruction in the pinned worst
+/// dyadic autocorrelation fibre.
+///
+/// For `t in F_2^7`, set
+///
+/// ```text
+/// F_t = x^11 + 1 + sum_(j=0)^6 t_j x^(j+2),
+/// D_t = disc(F_t) disc(F_(t xor 48)) mod 8,
+/// d_t = D_t - D_0 mod 4.
+/// ```
+///
+/// This is the `(ell,k,d)=(9,11,8)` fibre with packed shift `96`, input
+/// coset zero, and inverse difference `192`.  If a group `G` admitted a
+/// surjective homomorphism onto this additive fibre and `d` pulled back to a
+/// homomorphism on `G`, then `d` itself would be additive after choosing
+/// preimages.  The returned counterexample therefore rejects every such
+/// projection-preserving central extension; it does not reject a joined law
+/// whose multiplication genuinely mixes the fibre and auxiliary coordinates.
+///
+/// # Errors
+///
+/// Returns an invariant failure if the exact discriminant ANF does not have
+/// the pinned full-support coefficient six, or if no additivity failure is
+/// found.
+pub fn pinned_dyadic_fibre_projection_obstruction_report()
+-> Result<DyadicFibreProjectionObstructionReport, HayesError> {
+    const DEGREE: usize = 11;
+    const DIMENSION: usize = 7;
+    const PAIRED_SHIFT: usize = 48;
+    const SIZE: usize = 1 << DIMENSION;
+
+    let polynomial = |coordinate: usize| {
+        let mut packed = (1_u64 << DEGREE) | 1;
+        for bit in 0..DIMENSION {
+            packed |= u64::from((coordinate >> bit) & 1 != 0) << (bit + 2);
+        }
+        packed
+    };
+    let mut product_residues = vec![0_u8; SIZE];
+    for (coordinate, product_residue) in product_residues.iter_mut().enumerate() {
+        let left = binary_integral_discriminant_residue_mod_eight(polynomial(coordinate), DEGREE)?;
+        let right = binary_integral_discriminant_residue_mod_eight(
+            polynomial(coordinate ^ PAIRED_SHIFT),
+            DEGREE,
+        )?;
+        *product_residue = (left * right) % 8;
+    }
+    let coefficients = mod_eight_anf_coefficients(&product_residues, DIMENSION)?;
+    let full_support_coefficient_mod_eight = coefficients[SIZE - 1];
+    if full_support_coefficient_mod_eight != 6 {
+        return Err(HayesError::Invariant(
+            "pinned product-discriminant full-support coefficient changed".to_owned(),
+        ));
+    }
+
+    let origin = product_residues[0] % 4;
+    let normalized = product_residues
+        .iter()
+        .map(|&value| (value % 4 + 4 - origin) % 4)
+        .collect::<Vec<_>>();
+    for left in 0..SIZE {
+        for right in 0..SIZE {
+            let expected = (normalized[left] + normalized[right]) % 4;
+            let actual = normalized[left ^ right];
+            if actual != expected {
+                return Ok(DyadicFibreProjectionObstructionReport {
+                    polynomial_degree: DEGREE,
+                    fibre_dimension: DIMENSION,
+                    paired_coordinate_shift: PAIRED_SHIFT,
+                    full_support_coefficient_mod_eight,
+                    witness: DyadicFibreModFourAdditivityWitness {
+                        left,
+                        right,
+                        left_phase_mod_four: normalized[left],
+                        right_phase_mod_four: normalized[right],
+                        xor_phase_mod_four: actual,
+                        expected_xor_phase_mod_four: expected,
+                    },
+                });
+            }
+        }
+    }
+    Err(HayesError::Invariant(
+        "pinned product-discriminant phase unexpectedly became additive".to_owned(),
+    ))
 }
 
 /// Recover the exact multilinear coefficient polynomial for the integral
@@ -12903,6 +13023,26 @@ mod tests {
         assert_eq!(
             auxiliary.residues[1].normalized_gauss_cyclotomic_basis,
             [2, 0, -2, 0]
+        );
+    }
+
+    #[test]
+    fn pinned_dyadic_fibre_rejects_projection_preserving_extensions() {
+        let report = pinned_dyadic_fibre_projection_obstruction_report().unwrap();
+        assert_eq!(report.polynomial_degree, 11);
+        assert_eq!(report.fibre_dimension, 7);
+        assert_eq!(report.paired_coordinate_shift, 48);
+        assert_eq!(report.full_support_coefficient_mod_eight, 6);
+        assert_eq!(
+            report.witness,
+            DyadicFibreModFourAdditivityWitness {
+                left: 1,
+                right: 1,
+                left_phase_mod_four: 1,
+                right_phase_mod_four: 1,
+                xor_phase_mod_four: 0,
+                expected_xor_phase_mod_four: 2,
+            }
         );
     }
 

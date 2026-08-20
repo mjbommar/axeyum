@@ -1357,6 +1357,24 @@ Fourier)` in the exact cyclotomic basis.  This proves the small projector,
 not the endpoint bound.  A larger joined fibre/valuation/Witt law must first
 make the discriminant difference additive modulo four; the already pinned
 nonquadratic affine fibre shows that the direct-product law cannot do so.
+The stronger projection-preserving variant now fails exactly as well.
+`pinned_dyadic_fibre_projection_obstruction_report` independently reconstructs
+
+```text
+F_t=x^11+1+sum_(j=0)^6 t_j x^(j+2),
+D_t=Disc(F_t)Disc(F_(t xor 48)) mod 8,
+d_t=D_t-D_0 mod 4.
+```
+
+Its full-support coefficient is `6 mod 8`, and its first additivity witness is
+already `d_1=1`: hence `d_(1 xor 1)=0`, whereas `d_1+d_1=2 mod 4`.  If
+`pi:G -> F_2^7` were a surjective homomorphism and `d o pi:G -> Z/4` were a
+homomorphism, choosing preimages would force `d` itself to be additive.  Thus
+no projection-preserving central extension can repair this fibre.  A viable
+joined law must make the displayed affine fibre cease to be a homomorphic
+quotient by mixing its multiplication with the auxiliary, valuation, or Witt
+coordinates.  This is a stopping theorem for a broad construction class, not
+cancellation credit for the remaining mixed law.
 
 The raw discriminant phase is not globally low degree in the binary
 coefficient bits.  `binary_discriminant_anf_report` evaluates every integral
