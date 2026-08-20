@@ -511,6 +511,14 @@ connected Adams trace allowance that survived through `GF(8)`.  The weaker
 one-extra-field-factor allowance survives this row but remains unproved; the
 result neither tests the separate binary Witt off-diagonal inequality nor
 controls the signed cross-order endpoint sum.
+The level-three field sequence is no longer empirical: Gorodetsky's exact
+period-24 symmetry reduces degree seven to a two-valued degree-one class
+distribution, and the native closed form proves
+`T_r=q^16(q^2-1)(q^4-6q^2+6)`.  Its normalized `q`-degree is eight, refuting
+both the degree-six cutoff and the one-extra-`q` repair (explicitly by
+`q=128`).  The theorem's own nonperiodicity boundary at four prescribed
+coefficients prevents treating this fixed-level compression as the growing
+endpoint result.
 Quotient-compatible unit inversion now embeds the coarse additive Walsh
 spectrum into the fine one and cancels all `2^(a-1)` inflated coarse
 frequencies before any absolute value.  The resulting exact high-frequency
@@ -531,6 +539,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-20 | `9a3e77556` | Derived the exact ell-three degree-seven extension trace from characteristic-two period-24 symmetry, reproduced the sharded GF(16) row, and refuted the one-extra-q cutoff repair. |
 | 2026-08-20 | `ef5a90f0b` | Added an atomic bounded fleet shard runner and used the exact GF(16) level-three merge to refute the apparent ell^4 connected Adams trace allowance without granting endpoint credit. |
 | 2026-08-20 | `6b064750d` | Added deterministic connected extension-field class-vector shards, fail-closed exact merge, CLI JSON workflows, and mutation-tested equality with direct connected Adams traces. |
 | 2026-08-20 | `4d162d984` | Classified every binary projective repair of odd-degree Artin--Schreier doubling, reducing it to an impossible translation case, an explicitly reducible transvection case, or the existing cyclotomic/Q candidate. |
