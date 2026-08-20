@@ -134,6 +134,7 @@ macro_rules! full_modules {
         mod nia_univariate_cert;
         mod nra;
         mod nra_even_power;
+        mod nra_handelman_cert;
         mod nra_monomial_bound_cert;
         mod nra_product_cert;
         mod nra_real_root;
@@ -452,6 +453,10 @@ pub mod certificates {
         };
         pub use crate::nra_even_power::{
             NraEvenPowerRefutationCertificate, nra_even_power_refutation,
+        };
+        pub use crate::nra_handelman_cert::{
+            HandelmanAtom, HandelmanCase, HandelmanProduct, HandelmanRefutationCertificate,
+            check_handelman_refutation, handelman_refutation,
         };
         pub use crate::nra_monomial_bound_cert::{
             MonomialBound, MonomialBoundRefutationCertificate, check_monomial_bound_refutation,

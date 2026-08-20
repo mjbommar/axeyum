@@ -198,6 +198,40 @@ const QUERIES: &[(&str, &str)] = &[
          (assert (< (* a b c d d) 0))\n\
          (check-sat)",
     ),
+    // QF_NRA multi-term Handelman / Positivstellensatz. All three shapes are
+    // verbatim from committed corpus files (`cli__regress1__nl__coeff-unsat`,
+    // `cli__regress1__nl__combine`, `cli__regress1__nl__approx-sqrt-unsat`),
+    // which shipped as bare `Evidence::Unsat(None)` until 2026-08-20. The third
+    // is a THREE-WAY case split whose certificate carries one combination per
+    // disjunct, and the row exists because a split certificate has more ways to
+    // describe the producing run rather than the query than a conjunctive one.
+    (
+        "nra_handelman_multi_product",
+        "(set-logic QF_NRA)\n\
+         (declare-fun a () Real)(declare-fun b () Real)\n\
+         (assert (> a 0))(assert (> b 0))(assert (>= a (* 3 b)))\n\
+         (assert (< (* a a) (* 8 b b)))\n\
+         (check-sat)",
+    ),
+    (
+        "nra_handelman_product_plus_linear",
+        "(set-logic QF_NRA)\n\
+         (declare-fun a () Real)(declare-fun b () Real)(declare-fun c () Real)\n\
+         (assert (> c 1))(assert (> (* a b) 1))(assert (< (* a b c) 1))\n\
+         (check-sat)",
+    ),
+    (
+        "nra_handelman_case_split_with_equality",
+        "(set-logic QF_NRA)\n\
+         (declare-fun x () Real)\n\
+         (assert (= (* x x) 2))(assert (> x 0))\n\
+         (assert (or \n\
+           (> (+ (* x x) (* (- 2.8) x)) (- 1.95))\n\
+           (> (+ (* x x) (* (- 2.8284271247) x)) (- 1.999999))\n\
+           (> (+ (* x x) (* (- 2.82842712475) x)) \
+              (- 2.0000000000000000000000000001))))\n\
+         (check-sat)",
+    ),
     (
         "skolemised_existential",
         "(set-logic UF)\n\
