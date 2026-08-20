@@ -23,17 +23,19 @@ allows the squared polynomial loss `4ell^4`; ordinary Weil then discharges
 every level with `2^(j-1)<=4ell^4`.  Only the growing range above roughly
 `4log2(ell)+3` remains for that sufficient route.  Exact repricing against the
 already proved Haar triangle removes one factor of `ell` and most conductor
-levels: the selected `(TOP-POLY)` target asks only for a `12ell/5` improvement
-over individual Weil on the top `4ceil(log2 ell)+1` levels.  A native
-parity-safe integer implication and a uniform geometric proof show that this
-alone closes both endpoints after degree 400.  `(TOP-POLY)`, not the stronger
-fourth-moment premise, is the current load-bearing proof obligation.  The
-paper-facing proof has now been written backward from that obligation as a
-two-page LaTeX manuscript: it carries a fail-visible warning, states
-`(TOP-POLY)` as its sole open lemma, and contains the checked Haar, parity,
-proper-power, and finite-handoff implications needed once that lemma lands.
+levels: `(TOP-POLY)` asks only for a `12ell/5` improvement over individual
+Weil on the top `4ceil(log2 ell)+1` levels.  It remains sufficient, but the
+paper has now been repriced against the exact identity path.  The selected
+`(REL)` target keeps the top `ceil(log2 ell)+2` conductor levels in one signed
+Carlitz trace and bounds only its harmful negative direction.  A native exact
+implication spends the complete proved low-Weil envelope; at `ell=200` it
+reduces the required separate-Weil saving from 1,583 to 626, asymptotically
+`4ell+O(log ell)`.  The two-page LaTeX manuscript carries a fail-visible
+warning, states `(REL)` as its sole open lemma, and contains the checked Haar,
+parity, proper-power, and finite-handoff implications needed once that lemma
+lands.
 
-**Next:** prove `(TOP-POLY)`, encode it as replayable evidence, remove the
+**Next:** prove `(REL)`, encode it as replayable evidence, remove the
 manuscript's fail-visible warning, and perform the final source audit.  The
 stronger sufficient fourth-moment bound is
 experimentally true for `6<=ell<=23` but remains an open fact; curve positivity
@@ -715,6 +717,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-20 | `33a259776` | Replaced the uniform TOP-POLY maxima by the exact one-sided relative identity trace, lowered the first endpoint saving price from 1,583 to 626, and rewrote the two-page manuscript around the weaker REL obligation. |
 | 2026-08-20 | `604504e20` | Wrote the two-page paper-facing Lemire reduction, marked TOP-POLY as its sole open lemma, and froze the fail-closed manuscript contract in ADR-0571. |
 | 2026-08-20 | `2530ff1cb` | Repriced the surviving endpoint argument against the proved Haar triangle, selected the weaker TOP-POLY saving on only the top logarithmic conductor window, and added an exact parity-safe implication through the degree-400 handoff. |
 | 2026-08-20 | `c6c0dc238` | Refuted the absolute conductor-layer constant by exact fixed-level recurrence, retained the corrected polynomial-loss theorem, and reduced its open range to growing conductors above the individual-Weil prefix. |
