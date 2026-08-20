@@ -61,9 +61,37 @@ there be an axiomatized package at all", and the answer is no.
    `crates/axeyum-solver/examples/front_door_carrier.rs:169` reads *"`CReal.`
    also matches a `contains(\"Real.\")` test, so the carrier is decided by the
    carrier DECLARATION"*. `CReal` contains `Real`; it does not contain `AxReal`.
+1b. **And the prelude LABEL, not only the declarations.** Landed
+   2026-08-19 as a correction, because step 1 as first executed renamed the
+   declarations and left the ledger filing them under prelude `real` — so the
+   table a referee reads said `real 30` about thirty rows every one of which is
+   named `AxReal.…`. That is not a smaller version of the problem this ADR
+   describes; it is the problem, with the two halves now openly disagreeing and
+   only the misleading one on screen. The lesson generalises past this rename:
+   **a rename is not landed until the thing that PUBLISHES the name has moved.**
+   Renaming declarations is the half a compiler checks and therefore the half
+   that gets done.
+
+   Landed atomically per Consequences below — four Rust labels, `SOURCE_PATHS`,
+   `EXPECTED_PRELUDES`, the 30 committed entries and the count-claim groups in
+   one commit — and the total read 30 before and 30 after, never 31.
+
+   The generated ledger now also carries a paragraph stating what `axreal` is,
+   that ADR-0509's *declared* is not *reached*, and that the `creal`/`complex`
+   rows beside it at zero are what the shipped route uses. The table previously
+   assumed its reader already knew all three.
+
 2. Then retire: the three model developments re-expressed as telescope
    instantiations, two standing facts restated, a new home for
    `arith_prelude_builds()`, and the ledger population swap.
+
+   **Known blocker, recorded 2026-08-19:** `axeyum-lean-kernel` depends on no
+   other axeyum crate, but `generalize_over_ordered_ring` — the telescope the
+   re-expression needs — lives in `axeyum-solver` while the models live in the
+   kernel. Step 2 therefore needs a layering decision (move the telescope down,
+   invert the dependency, or re-express without it) before it can start, and
+   that decision is ADR-sized in its own right. Step 1/1b do not depend on it,
+   which is why they are landed and this is not.
 
 ## Why this order
 
@@ -79,7 +107,9 @@ rename exists to prevent.
 
 The ledger population swap must be **one change**. Done in two steps it
 publishes `real 30 + control 1 = 31` — a trusted surface larger than today's,
-which is worse than not starting.
+which is worse than not starting. (Step 1b above was the first exercise of this
+rule and honoured it: `total=30|axreal=30|…`, with no intermediate state in
+which both labels existed.)
 
 Retiring the package must not remove the ability of any axiom-freedom
 measurement to fail. `front_door_carrier`, `ordered_ring_refutation` and
