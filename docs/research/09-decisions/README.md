@@ -626,3 +626,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0551](adr-0551-stop-the-naive-even-odd-parity-induction.md) | Certify the Frobenius-square parity decomposition and prove that it supplies squarefreeness, not an irreducibility induction | accepted |
 | [0552](adr-0552-localize-the-long-cycle-euler-trace-before-weighted-bounds.md) | Prove exact non-top long-cycle Euler cancellation from the homogeneous cone, while retaining its projective Frobenius trace as the endpoint obligation | accepted |
 | [0553](adr-0553-distinguish-projective-eigenlines-from-affine-fixed-vectors.md) | Classify the long-cycle projective eigenlines and reject a free cyclic-quotient shortcut | accepted |
+| [0554](adr-0554-isolate-binary-square-strata-in-the-hast-matei-long-cycle-sector.md) | Translate the Hast--Matei top variance exactly and confine its long-cycle low-characteristic defect to square proper powers | accepted |

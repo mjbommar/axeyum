@@ -3656,6 +3656,28 @@ The native `sawin_projective_eigenline_report` enumerates every divisor of
 plausible finite-etale torsor shortcut but supplies no bound on `Frob*c`; the
 report keeps that obligation false (ADR-0553).
 
+Hast--Matei's explicit two-polynomial top-weight representation gives a
+useful but insufficient positive comparison.  With short-interval tail
+degree `h=floor(n/2)`, their partition cutoff is
+`n-h-2=ell-1`.  Only hook representations see a long cycle, and exactly
+`ell-1` hooks survive.  The resulting idealized top-weight global second
+moment is `(ell-1)2^n`.  Cauchy compares this with the squared class mean and
+leaves ratio `(ell-1)/2^(n-2ell)`: denominator two at the odd endpoint and
+four at the even endpoint.  It therefore misses every unresolved degree.
+
+Their `m>2` singular-locus proof excludes characteristic two through one
+repeated-root fibre lemma.  On the long-cycle sector that defect can now be
+localized exactly.  A repeated-root Frobenius tuple has polynomial
+`Q(x)^(n/e)` for one orbit degree `e|n`.  Odd multiplicity makes the first
+`e` output coefficients triangular in those of `Q`; even multiplicity makes
+the polynomial a Frobenius square, with visible coefficient stride
+`2^v2(n/e)`.  Thus all low-characteristic failures selected by the long-cycle
+trace are square proper-power strata.  The native
+`hast_matei_long_cycle_endpoint_report` checks the endpoint hook ledger and
+every divisor stratum, but it does not yet prove that the connected virtual
+projector cancels those square strata or bound the remaining Frobenius trace
+(ADR-0554).
+
 The closest general symmetric-cohomology theorems do not fill that gap.
 Chenevert's smooth projective hypersurface calculation assumes `n!` is
 invertible in the ground field, excluding this characteristic-two `S_n`

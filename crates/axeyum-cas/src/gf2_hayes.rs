@@ -2771,6 +2771,73 @@ pub struct SawinProjectiveEigenlineReport {
     pub frobenius_weighted_trace_bound_certified: bool,
 }
 
+/// One repeated-root stratum selected by a long-cycle Frobenius condition.
+///
+/// If the distinct-root orbit has degree `e|n`, its characteristic polynomial
+/// is `Q(x)^(n/e)`.  In characteristic two, writing the multiplicity as
+/// `2^v a` with `a` odd shows that only coefficient indices divisible by
+/// `2^v` can be nonzero.  When `v=0`, the first `e` coefficients of `Q^a`
+/// determine the coefficients of `Q` triangularly.  Thus the low-
+/// characteristic failure on these long-cycle strata is confined to genuine
+/// Frobenius-square proper powers.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HastMateiLongCycleStratum {
+    /// Degree `e` of the distinct-root orbit/base polynomial.
+    pub base_degree: usize,
+    /// Uniform root multiplicity `n/e`.
+    pub multiplicity: usize,
+    /// Lowest set bit `2^v` of the multiplicity.
+    pub frobenius_coefficient_stride: usize,
+    /// Whether the multiplicity is odd.
+    pub odd_multiplicity: bool,
+    /// Whether the first `e` output coefficients recover `Q` triangularly.
+    pub triangular_base_recovery_certified: bool,
+    /// Whether the stratum consists of characteristic-two squares.
+    pub frobenius_square_stratum: bool,
+}
+
+/// Exact endpoint translation of the Hast--Matei variance geometry.
+///
+/// The report separates two facts that must not be conflated.  First, the
+/// top-weight `X_(2,n,h)` representation contributes only `ell-1` hook
+/// characters to a pair of long cycles.  Second, even this idealized leading
+/// second moment does not give a pointwise endpoint bound after Cauchy.  It
+/// also classifies every repeated-root stratum compatible with a long-cycle
+/// Frobenius condition, isolating the characteristic-two obstruction to
+/// Frobenius-square proper powers.  No bound on the full connected trace is
+/// asserted.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HastMateiLongCycleEndpointReport {
+    /// Polynomial degree `n`.
+    pub degree: usize,
+    /// Lemire/Hayes level `ell=ceil(n/2)-1`.
+    pub ell: usize,
+    /// Short-interval tail degree `h=n-ell-1=floor(n/2)`.
+    pub short_interval_tail_degree: usize,
+    /// Number `n-h-1=ell` of equal-leading-coefficient equations.
+    pub coefficient_equation_count: usize,
+    /// Repeated-root threshold `n-h-2=ell-1` in Hast--Matei.
+    pub repeated_root_threshold: usize,
+    /// Number `ell-1` of hook representations surviving on two long cycles.
+    pub top_weight_long_cycle_hook_count: usize,
+    /// Frobenius exponent `n-1` on the top weight piece.
+    pub top_weight_frobenius_exponent: usize,
+    /// Idealized top-weight contribution `(ell-1)2^n` to the global variance.
+    pub top_weight_global_second_moment: BigUint,
+    /// Square of the identity-class mean `2^(n-ell)`.
+    pub squared_identity_class_mean: BigUint,
+    /// Numerator `ell-1` in the squared Cauchy/main ratio.
+    pub pointwise_deficit_numerator: usize,
+    /// Denominator `2^(n-2ell)` in the squared Cauchy/main ratio.
+    pub pointwise_deficit_denominator: BigUint,
+    /// Whether the idealized top-weight second moment alone closes endpoint.
+    pub top_weight_second_moment_alone_closes_endpoint: bool,
+    /// Long-cycle-compatible repeated-root strata below the singular cutoff.
+    pub repeated_root_strata: Vec<HastMateiLongCycleStratum>,
+    /// Explicit theorem boundary: no connected Frobenius trace bound follows.
+    pub connected_frobenius_trace_bound_certified: bool,
+}
+
 /// Hypothetical polynomial bound on every effective cyclic Foulkes Betti
 /// multiplicity beyond one degree threshold.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -8184,6 +8251,169 @@ pub fn sawin_projective_eigenline_report(
         tame_projective_euler_trace,
         projective_long_cycle_action_free: false,
         frobenius_weighted_trace_bound_certified: false,
+    })
+}
+
+fn hast_matei_long_cycle_strata(
+    degree: usize,
+    repeated_root_threshold: usize,
+    limits: SawinFoulkesLimits,
+) -> Result<Vec<HastMateiLongCycleStratum>, HayesError> {
+    let divisors = divisors_from_factorization(&factor_usize(degree))?;
+    if divisors.len() > limits.max_orthogonality_cells {
+        return Err(HayesError::ResourceLimit {
+            resource: "hast_matei_repeated_root_divisors",
+            requested: divisors.len(),
+            limit: limits.max_orthogonality_cells,
+        });
+    }
+    let mut rows = Vec::new();
+    for base_degree in divisors {
+        if base_degree == degree || base_degree > repeated_root_threshold {
+            continue;
+        }
+        let multiplicity = degree / base_degree;
+        if base_degree * multiplicity != degree {
+            return Err(HayesError::Invariant(
+                "Hast--Matei divisor does not divide the degree".to_owned(),
+            ));
+        }
+        let frobenius_coefficient_stride = 1_usize
+            .checked_shl(multiplicity.trailing_zeros())
+            .ok_or_else(|| {
+                HayesError::InvalidParameter(
+                    "Hast--Matei Frobenius stride calculation overflow".to_owned(),
+                )
+            })?;
+        let odd_multiplicity = multiplicity % 2 == 1;
+        rows.push(HastMateiLongCycleStratum {
+            base_degree,
+            multiplicity,
+            frobenius_coefficient_stride,
+            odd_multiplicity,
+            triangular_base_recovery_certified: odd_multiplicity,
+            frobenius_square_stratum: !odd_multiplicity,
+        });
+    }
+    if rows
+        .iter()
+        .any(|row| !row.triangular_base_recovery_certified && !row.frobenius_square_stratum)
+    {
+        return Err(HayesError::Invariant(
+            "Hast--Matei long-cycle stratum classification failed".to_owned(),
+        ));
+    }
+    Ok(rows)
+}
+
+/// Translate Hast--Matei's two-polynomial top weight to the Lemire endpoint
+/// and classify the low-characteristic long-cycle repeated-root strata.
+///
+/// For `h=floor(n/2)` their cutoff is
+/// `n-h-2=ell-1`.  An `n`-cycle has nonzero irreducible character only on
+/// hooks `(n-j,1^j)`; exactly `ell-1` of those satisfy the cutoff.  Therefore
+/// the idealized top-weight global second moment is `(ell-1)2^n`.  Cauchy
+/// compares this with the squared class mean `2^(2(n-ell))`, leaving squared
+/// ratio `(ell-1)/2^(n-2ell)`, which fails throughout the unresolved range.
+///
+/// A repeated-root tuple compatible with the long-cycle Frobenius condition
+/// has one orbit of degree `e|n` and polynomial `Q^(n/e)`.  For odd
+/// multiplicity, the coefficient of `Q` at index `j` occurs with coefficient
+/// `n/e=1` modulo two in the index-`j` coefficient of the power, while all
+/// other terms use earlier coefficients.  Hence the first `e` coefficients
+/// recover `Q` triangularly.  Even multiplicity gives an actual Frobenius
+/// square.  This confines the failure of Hast--Matei's characteristic-free
+/// fibre argument on the selected long-cycle strata, but does not control the
+/// connected fourfold virtual trace.
+///
+/// # Errors
+///
+/// Declines degrees below nine (the first endpoint in Hast--Matei's stated
+/// `h<=n-5` range), degrees above the caller's explicit limit,
+/// arithmetic overflow, or a failed endpoint/divisor invariant.
+pub fn hast_matei_long_cycle_endpoint_report(
+    degree: usize,
+    limits: SawinFoulkesLimits,
+) -> Result<HastMateiLongCycleEndpointReport, HayesError> {
+    if degree < 9 {
+        return Err(HayesError::InvalidParameter(
+            "Hast--Matei endpoint report requires degree at least nine".to_owned(),
+        ));
+    }
+    if degree > limits.max_degree {
+        return Err(HayesError::ResourceLimit {
+            resource: "hast_matei_endpoint_degree",
+            requested: degree,
+            limit: limits.max_degree,
+        });
+    }
+
+    let ell = degree.div_ceil(2).checked_sub(1).ok_or_else(|| {
+        HayesError::InvalidParameter("Hast--Matei endpoint level underflow".to_owned())
+    })?;
+    let short_interval_tail_degree = degree
+        .checked_sub(ell)
+        .and_then(|value| value.checked_sub(1))
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("Hast--Matei tail degree underflow".to_owned())
+        })?;
+    if short_interval_tail_degree != degree / 2 {
+        return Err(HayesError::Invariant(
+            "Hast--Matei endpoint tail is not floor(n/2)".to_owned(),
+        ));
+    }
+    let coefficient_equation_count = degree
+        .checked_sub(short_interval_tail_degree)
+        .and_then(|value| value.checked_sub(1))
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("Hast--Matei equation count underflow".to_owned())
+        })?;
+    if coefficient_equation_count != ell {
+        return Err(HayesError::Invariant(
+            "Hast--Matei equation count does not equal ell".to_owned(),
+        ));
+    }
+    let repeated_root_threshold = coefficient_equation_count - 1;
+    let top_weight_long_cycle_hook_count = repeated_root_threshold;
+    let top_weight_frobenius_exponent = degree - 1;
+    let top_weight_global_second_moment = BigUint::from(top_weight_long_cycle_hook_count) << degree;
+    let class_mean_exponent = degree.checked_sub(ell).ok_or_else(|| {
+        HayesError::InvalidParameter("Hast--Matei class mean underflow".to_owned())
+    })?;
+    let squared_class_mean_exponent = class_mean_exponent.checked_mul(2).ok_or_else(|| {
+        HayesError::InvalidParameter("Hast--Matei squared mean overflow".to_owned())
+    })?;
+    let squared_identity_class_mean = BigUint::from(1_u8) << squared_class_mean_exponent;
+    let pointwise_denominator_exponent = degree
+        .checked_sub(ell.checked_mul(2).ok_or_else(|| {
+            HayesError::InvalidParameter("Hast--Matei endpoint denominator overflow".to_owned())
+        })?)
+        .ok_or_else(|| {
+            HayesError::Invariant("Hast--Matei endpoint denominator is negative".to_owned())
+        })?;
+    let pointwise_deficit_denominator = BigUint::from(1_u8) << pointwise_denominator_exponent;
+    let pointwise_deficit_numerator = top_weight_long_cycle_hook_count;
+    let top_weight_second_moment_alone_closes_endpoint =
+        BigUint::from(pointwise_deficit_numerator) < pointwise_deficit_denominator;
+
+    let repeated_root_strata =
+        hast_matei_long_cycle_strata(degree, repeated_root_threshold, limits)?;
+
+    Ok(HastMateiLongCycleEndpointReport {
+        degree,
+        ell,
+        short_interval_tail_degree,
+        coefficient_equation_count,
+        repeated_root_threshold,
+        top_weight_long_cycle_hook_count,
+        top_weight_frobenius_exponent,
+        top_weight_global_second_moment,
+        squared_identity_class_mean,
+        pointwise_deficit_numerator,
+        pointwise_deficit_denominator,
+        top_weight_second_moment_alone_closes_endpoint,
+        repeated_root_strata,
+        connected_frobenius_trace_bound_certified: false,
     })
 }
 
@@ -18152,6 +18382,147 @@ mod tests {
             assert!(!report.projective_long_cycle_action_free);
             assert!(!report.frobenius_weighted_trace_bound_certified);
         }
+    }
+
+    #[test]
+    fn hast_matei_endpoint_hooks_expose_the_second_moment_deficit() {
+        for (degree, tail, denominator) in
+            [(401_usize, 200_usize, 2_u8), (402_usize, 201_usize, 4_u8)]
+        {
+            let report =
+                hast_matei_long_cycle_endpoint_report(degree, SawinFoulkesLimits::default())
+                    .unwrap();
+            assert_eq!(report.ell, 200);
+            assert_eq!(report.short_interval_tail_degree, tail);
+            assert_eq!(report.coefficient_equation_count, 200);
+            assert_eq!(report.repeated_root_threshold, 199);
+            assert_eq!(report.top_weight_long_cycle_hook_count, 199);
+            assert_eq!(report.top_weight_frobenius_exponent, degree - 1);
+            assert_eq!(
+                report.top_weight_global_second_moment,
+                BigUint::from(199_u8) << degree
+            );
+            assert_eq!(
+                report.squared_identity_class_mean,
+                BigUint::from(1_u8) << (2 * (degree - 200))
+            );
+            assert_eq!(report.pointwise_deficit_numerator, 199);
+            assert_eq!(
+                report.pointwise_deficit_denominator,
+                BigUint::from(denominator)
+            );
+            assert!(!report.top_weight_second_moment_alone_closes_endpoint);
+            assert!(report.repeated_root_strata.iter().all(|row| {
+                row.triangular_base_recovery_certified || row.frobenius_square_stratum
+            }));
+            assert!(!report.connected_frobenius_trace_bound_certified);
+        }
+
+        let first_admitted =
+            hast_matei_long_cycle_endpoint_report(9, SawinFoulkesLimits::default()).unwrap();
+        assert!(!first_admitted.top_weight_second_moment_alone_closes_endpoint);
+    }
+
+    #[test]
+    fn hast_matei_long_cycle_strata_separate_odd_powers_from_squares() {
+        let report =
+            hast_matei_long_cycle_endpoint_report(12, SawinFoulkesLimits::default()).unwrap();
+        assert_eq!(report.ell, 5);
+        assert_eq!(report.short_interval_tail_degree, 6);
+        assert_eq!(report.repeated_root_threshold, 4);
+        assert_eq!(
+            report
+                .repeated_root_strata
+                .iter()
+                .map(|row| (
+                    row.base_degree,
+                    row.multiplicity,
+                    row.frobenius_coefficient_stride,
+                    row.triangular_base_recovery_certified,
+                    row.frobenius_square_stratum,
+                ))
+                .collect::<Vec<_>>(),
+            [
+                (1, 12, 4, false, true),
+                (2, 6, 2, false, true),
+                (3, 4, 4, false, true),
+                (4, 3, 1, true, false),
+            ]
+        );
+
+        for degree in 9_usize..=128 {
+            let report =
+                hast_matei_long_cycle_endpoint_report(degree, SawinFoulkesLimits::default())
+                    .unwrap();
+            assert!(report.repeated_root_strata.iter().all(|row| {
+                degree == row.base_degree * row.multiplicity
+                    && row.base_degree <= report.repeated_root_threshold
+                    && row.odd_multiplicity == (row.multiplicity % 2 == 1)
+                    && row.triangular_base_recovery_certified == row.odd_multiplicity
+                    && row.frobenius_square_stratum != row.odd_multiplicity
+                    && row.frobenius_coefficient_stride
+                        == (1_usize << row.multiplicity.trailing_zeros())
+            }));
+        }
+
+        // Independent packed-polynomial control of the symbolic argument:
+        // odd powers are injective on the first e leading coefficients, while
+        // even powers have the asserted Frobenius coefficient stride.
+        for base_degree in 1_usize..=6 {
+            for multiplicity in 1_usize..=7 {
+                let output_degree = base_degree * multiplicity;
+                let stride = 1_usize << multiplicity.trailing_zeros();
+                let mut prefixes = BTreeSet::new();
+                for tail in 0_u64..(1_u64 << base_degree) {
+                    let base = (1_u64 << base_degree) | tail;
+                    let mut power = 1_u64;
+                    for _ in 0..multiplicity {
+                        power = polynomial_multiply_packed(power, base);
+                    }
+                    let mut prefix = 0_u64;
+                    for index in 1..=base_degree {
+                        let coefficient = (power >> (output_degree - index)) & 1;
+                        prefix |= coefficient << (index - 1);
+                    }
+                    if multiplicity % 2 == 1 {
+                        assert!(prefixes.insert(prefix));
+                    } else {
+                        for index in 1..=output_degree {
+                            if index % stride != 0 {
+                                assert_eq!((power >> (output_degree - index)) & 1, 0);
+                            }
+                        }
+                    }
+                }
+                if multiplicity % 2 == 1 {
+                    assert_eq!(prefixes.len(), 1_usize << base_degree);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn hast_matei_endpoint_report_declines_invalid_or_excessive_degree() {
+        for degree in 0..=8 {
+            assert!(
+                hast_matei_long_cycle_endpoint_report(degree, SawinFoulkesLimits::default())
+                    .is_err()
+            );
+        }
+        assert_eq!(
+            hast_matei_long_cycle_endpoint_report(
+                13,
+                SawinFoulkesLimits {
+                    max_degree: 12,
+                    max_orthogonality_cells: 100,
+                }
+            ),
+            Err(HayesError::ResourceLimit {
+                resource: "hast_matei_endpoint_degree",
+                requested: 13,
+                limit: 12,
+            })
+        );
     }
 
     #[test]
