@@ -3678,6 +3678,70 @@ every divisor stratum, but it does not yet prove that the connected virtual
 projector cancels those square strata or bound the remaining Frobenius trace
 (ADR-0554).
 
+### A characteristic-delta least-period reduction
+
+There is now a separate algebraic route that bypasses the connected trace if
+one explicit cyclic-period lemma can be proved.  Put
+
+```text
+ell=ceil(n/2)-1,  N=2^n-1,
+delta_j(a)=1 iff the canonical n-bit representative of a has weight j.
+```
+
+For a primitive `zeta in GF(2^n)`, Tuxanidy--Wang's characteristic-delta
+identity is
+
+```text
+sigma_j(zeta^a)=DFT(delta_j)(a).
+```
+
+Since `sigma_j` is binary valued, `1+sigma_j` is the indicator that the
+`j`-th leading coefficient vanishes.  Therefore
+
+```text
+F(alpha)=product_(j=1)^ell (1+sigma_j(alpha))
+```
+
+is exactly the complete Lemire-class indicator, and its inverse Fourier
+coefficient function is the single group-algebra element
+
+```text
+Gamma_(n,ell)=*_(j=1)^ell (delta_0+delta_j)
+               in GF(2)[Z/N].                       (CD)
+```
+
+Let
+
+```text
+M_n=lcm_(d|n,d<n)(2^d-1)=N/Phi_n(2).
+```
+
+The cited DFT support theorem proves that if the least translation period of
+`Gamma_(n,ell)` does not divide `M_n`, then the support of `F` contains an
+element of exact degree `n`.  Its minimal polynomial is irreducible and has
+all the required coefficients zero.  Thus the following stronger statement
+would prove Lemire directly:
+
+```text
+least_period(Gamma_(n,ell))=N.                     (MP)
+```
+
+The bounded native `tuxanidy_lemire_period_report` multiplies (CD) exactly in
+the binary cyclic group algebra and computes the actual translation period.
+It finds (MP) for every `3<=n<=12`.  An independent oracle through degree eight
+instead enumerates `GF(2^n)^*`, constructs each Frobenius-root characteristic
+polynomial, and recovers the DFT period from the gcd of the supported
+exponents; the two routes agree.  These are finite controls only.
+
+Tuxanidy--Wang prove maximum period for each individual binary factor
+`delta_0+delta_j` when `j<=n/2`, but that result cannot simply be multiplied.
+At degree eight the product through weights `1,2,3,4`, including the middle
+coefficient, has period `15`, even though every factor has maximum period;
+the Lemire product through weight three has period `255`.  Consequently the
+new universal obligation is genuinely the combined half-open convolution,
+and the weakest useful theorem is only that its period does not divide `M_n`.
+No theorem credit is attached to (MP) (ADR-0555).
+
 The closest general symmetric-cohomology theorems do not fill that gap.
 Chenevert's smooth projective hypersurface calculation assumes `n!` is
 invertible in the ground field, excluding this characteristic-two `S_n`

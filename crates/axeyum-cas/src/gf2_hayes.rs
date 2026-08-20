@@ -61,6 +61,32 @@ pub struct SawinFoulkesLimits {
     pub max_orthogonality_cells: usize,
 }
 
+/// Resource admission for the exact Tuxanidy--Wang least-period diagnostic.
+///
+/// The operation multiplies characteristic-delta functions in the group
+/// algebra `GF(2)[Z/(2^n-1)]`.  Its work depends on the intermediate support,
+/// so both the cyclic domain and the exact number of toggled cells are
+/// admitted explicitly.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TuxanidyPeriodLimits {
+    /// Largest admitted extension/polynomial degree.
+    pub max_degree: usize,
+    /// Largest admitted cyclic group order `2^degree-1`.
+    pub max_cyclic_order: usize,
+    /// Largest admitted number of exact parity-toggle cells.
+    pub max_convolution_cells: usize,
+}
+
+impl Default for TuxanidyPeriodLimits {
+    fn default() -> Self {
+        Self {
+            max_degree: 14,
+            max_cyclic_order: (1 << 14) - 1,
+            max_convolution_cells: 250_000_000,
+        }
+    }
+}
+
 impl Default for SawinFoulkesLimits {
     fn default() -> Self {
         Self {
@@ -2836,6 +2862,57 @@ pub struct HastMateiLongCycleEndpointReport {
     pub repeated_root_strata: Vec<HastMateiLongCycleStratum>,
     /// Explicit theorem boundary: no connected Frobenius trace bound follows.
     pub connected_frobenius_trace_bound_certified: bool,
+}
+
+/// Exact least-period reduction of the Lemire class indicator.
+///
+/// For `N=2^n-1`, let `delta_j` be the indicator of the `n`-bit residues of
+/// Hamming weight `j`.  Fourier inversion of the characteristic elementary
+/// symmetric functions gives the coefficient function
+///
+/// ```text
+/// Gamma_(n,ell) = product_(j=1)^ell (delta_0 + delta_j)
+/// ```
+///
+/// in `GF(2)[Z/N]`.  On `GF(2^n)^*`, its Fourier transform is exactly
+/// `product_j (1+sigma_j)`, the indicator that the first `ell` coefficients
+/// of the degree-`n` characteristic polynomial vanish.  The
+/// Tuxanidy--Wang support theorem therefore proves Lemire at degree `n` if
+/// the least period of `Gamma` does not divide
+/// `lcm_(d|n,d<n)(2^d-1) = N/Phi_n(2)`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TuxanidyLemirePeriodReport {
+    /// Target polynomial degree `n`.
+    pub degree: usize,
+    /// Lemire prefix length `ell=ceil(n/2)-1`.
+    pub ell: usize,
+    /// Cyclic group order `N=2^n-1`.
+    pub cyclic_order: usize,
+    /// Support sizes of the factors `delta_0+delta_j`, `1<=j<=ell`.
+    pub factor_support_sizes: Vec<usize>,
+    /// Support size of the exact group-algebra product `Gamma`.
+    pub convolution_support_size: usize,
+    /// Least positive translation period of `Gamma`.
+    pub least_period: usize,
+    /// `lcm_(d|n,d<n)(2^d-1)`, equal to `N/Phi_n(2)`.
+    pub proper_subfield_exponent_lcm: usize,
+    /// Whether the computed period is the maximum `N`.
+    pub maximum_least_period: bool,
+    /// Whether the exact Tuxanidy--Wang sufficient condition holds.
+    pub period_criterion_holds: bool,
+    /// Explicit epistemic boundary between the cited general implication and
+    /// the still-open universal period statement.
+    pub theorem_boundary: TuxanidyPeriodTheoremBoundary,
+    /// Exact number of parity-toggle cells used by the convolution.
+    pub convolution_cells: usize,
+}
+
+/// The theorem boundary retained by a Tuxanidy--Lemire period report.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TuxanidyPeriodTheoremBoundary {
+    /// Tuxanidy--Wang certify that the period criterion implies Lemire at this
+    /// degree; the report does not certify the universal maximum-period lemma.
+    CriterionImplicationCertifiedUniversalPeriodOpen,
 }
 
 /// Hypothetical polynomial bound on every effective cyclic Foulkes Betti
@@ -8414,6 +8491,227 @@ pub fn hast_matei_long_cycle_endpoint_report(
         top_weight_second_moment_alone_closes_endpoint,
         repeated_root_strata,
         connected_frobenius_trace_bound_certified: false,
+    })
+}
+
+fn hamming_weight_masks(degree: usize, weight: usize) -> Result<Vec<usize>, HayesError> {
+    if weight == 0 || weight >= degree {
+        return Err(HayesError::InvalidParameter(
+            "characteristic-delta weight must lie strictly between zero and degree".to_owned(),
+        ));
+    }
+    let domain_end = 1_usize
+        .checked_shl(u32::try_from(degree).map_err(|_| {
+            HayesError::InvalidParameter("Tuxanidy degree does not fit a machine shift".to_owned())
+        })?)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("Tuxanidy binary domain overflow".to_owned())
+        })?;
+    let mut mask = (1_usize << weight) - 1;
+    let mut masks = Vec::new();
+    while mask < domain_end {
+        masks.push(mask);
+        let low_bit = mask & mask.wrapping_neg();
+        let ripple = mask.checked_add(low_bit).ok_or_else(|| {
+            HayesError::InvalidParameter("Tuxanidy mask enumeration overflow".to_owned())
+        })?;
+        mask = (((ripple ^ mask) >> 2) / low_bit) | ripple;
+    }
+    Ok(masks)
+}
+
+fn lcm_usize_checked(left: usize, right: usize) -> Result<usize, HayesError> {
+    left.checked_div(gcd_usize(left, right))
+        .and_then(|quotient| quotient.checked_mul(right))
+        .ok_or_else(|| HayesError::InvalidParameter("Tuxanidy LCM overflow".to_owned()))
+}
+
+struct CharacteristicDeltaConvolution {
+    coefficients: Vec<bool>,
+    factor_support_sizes: Vec<usize>,
+    cells: usize,
+}
+
+fn characteristic_delta_convolution(
+    degree: usize,
+    maximum_weight: usize,
+    cyclic_order: usize,
+    maximum_cells: usize,
+) -> Result<CharacteristicDeltaConvolution, HayesError> {
+    let mut convolution = vec![false; cyclic_order];
+    convolution[0] = true;
+    let mut support_size = 1_usize;
+    let mut cells = 0_usize;
+    let mut factor_support_sizes = Vec::with_capacity(maximum_weight);
+
+    for weight in 1..=maximum_weight {
+        let mut factor = hamming_weight_masks(degree, weight)?;
+        factor.push(0);
+        factor.sort_unstable();
+        if factor.windows(2).any(|pair| pair[0] == pair[1]) {
+            return Err(HayesError::Invariant(
+                "Tuxanidy characteristic-delta factor has duplicate support".to_owned(),
+            ));
+        }
+        factor_support_sizes.push(factor.len());
+        let step_cells = support_size.checked_mul(factor.len()).ok_or_else(|| {
+            HayesError::InvalidParameter("Tuxanidy convolution work overflow".to_owned())
+        })?;
+        cells = cells.checked_add(step_cells).ok_or_else(|| {
+            HayesError::InvalidParameter("Tuxanidy convolution work overflow".to_owned())
+        })?;
+        if cells > maximum_cells {
+            return Err(HayesError::ResourceLimit {
+                resource: "tuxanidy_period_convolution_cells",
+                requested: cells,
+                limit: maximum_cells,
+            });
+        }
+
+        let mut next = vec![false; cyclic_order];
+        for (left, present) in convolution.iter().copied().enumerate() {
+            if present {
+                for right in factor.iter().copied() {
+                    let raw = left.checked_add(right).ok_or_else(|| {
+                        HayesError::InvalidParameter("Tuxanidy cyclic sum overflow".to_owned())
+                    })?;
+                    let slot = if raw >= cyclic_order {
+                        raw - cyclic_order
+                    } else {
+                        raw
+                    };
+                    next[slot] = !next[slot];
+                }
+            }
+        }
+        support_size = next.iter().filter(|present| **present).count();
+        convolution = next;
+    }
+
+    Ok(CharacteristicDeltaConvolution {
+        coefficients: convolution,
+        factor_support_sizes,
+        cells,
+    })
+}
+
+/// Compute the exact Tuxanidy--Wang least-period diagnostic for the Lemire
+/// coefficient class.
+///
+/// Over `GF(2)`, the function `1+sigma_j(alpha)` is the indicator that the
+/// `j`-th leading coefficient of the degree-`n` characteristic polynomial of
+/// `alpha` vanishes.  Its inverse DFT is `delta_0+delta_j`; multiplying these
+/// indicators therefore gives the cyclic convolution retained here.  By the
+/// Tuxanidy--Wang support criterion, a period not dividing
+/// `lcm_(d|n,d<n)(2^d-1)` forces the common zero set to contain an element of
+/// exact degree `n`, whose minimal polynomial is the required irreducible.
+///
+/// The implication is a general algebraic theorem.  This operation computes
+/// only one bounded row and deliberately does not certify that the maximum-
+/// period pattern holds for every degree.
+///
+/// # Errors
+///
+/// Declines degrees below three, degrees or cyclic domains above the caller's
+/// limits, a convolution exceeding the admitted exact cell count, arithmetic
+/// overflow, or an internal period/factor invariant failure.
+pub fn tuxanidy_lemire_period_report(
+    degree: usize,
+    limits: TuxanidyPeriodLimits,
+) -> Result<TuxanidyLemirePeriodReport, HayesError> {
+    if degree < 3 {
+        return Err(HayesError::InvalidParameter(
+            "Tuxanidy--Lemire period report requires degree at least three".to_owned(),
+        ));
+    }
+    if degree > limits.max_degree {
+        return Err(HayesError::ResourceLimit {
+            resource: "tuxanidy_period_degree",
+            requested: degree,
+            limit: limits.max_degree,
+        });
+    }
+    let shift = u32::try_from(degree).map_err(|_| {
+        HayesError::InvalidParameter("Tuxanidy degree does not fit a machine shift".to_owned())
+    })?;
+    let cyclic_order = 1_usize
+        .checked_shl(shift)
+        .and_then(|value| value.checked_sub(1))
+        .ok_or_else(|| HayesError::InvalidParameter("Tuxanidy cyclic order overflow".to_owned()))?;
+    if cyclic_order > limits.max_cyclic_order {
+        return Err(HayesError::ResourceLimit {
+            resource: "tuxanidy_period_cyclic_order",
+            requested: cyclic_order,
+            limit: limits.max_cyclic_order,
+        });
+    }
+    let ell = degree.div_ceil(2) - 1;
+    let convolution =
+        characteristic_delta_convolution(degree, ell, cyclic_order, limits.max_convolution_cells)?;
+
+    let least_period = positive_divisors(cyclic_order)
+        .into_iter()
+        .find(|period| {
+            convolution
+                .coefficients
+                .iter()
+                .copied()
+                .enumerate()
+                .all(|(index, value)| {
+                    value == convolution.coefficients[(index + period) % cyclic_order]
+                })
+        })
+        .ok_or_else(|| {
+            HayesError::Invariant("Tuxanidy convolution has no cyclic period".to_owned())
+        })?;
+    if cyclic_order % least_period != 0 {
+        return Err(HayesError::Invariant(
+            "Tuxanidy least period does not divide the cyclic order".to_owned(),
+        ));
+    }
+
+    let mut proper_subfield_exponent_lcm = 1_usize;
+    for divisor in positive_divisors(degree) {
+        if divisor == degree {
+            continue;
+        }
+        let subfield_order = 1_usize
+            .checked_shl(u32::try_from(divisor).map_err(|_| {
+                HayesError::InvalidParameter("Tuxanidy subfield shift overflow".to_owned())
+            })?)
+            .and_then(|value| value.checked_sub(1))
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("Tuxanidy subfield order overflow".to_owned())
+            })?;
+        proper_subfield_exponent_lcm =
+            lcm_usize_checked(proper_subfield_exponent_lcm, subfield_order)?;
+    }
+    if cyclic_order % proper_subfield_exponent_lcm != 0
+        || proper_subfield_exponent_lcm >= cyclic_order
+    {
+        return Err(HayesError::Invariant(
+            "Tuxanidy proper-subfield exponent is not a proper divisor".to_owned(),
+        ));
+    }
+    let period_criterion_holds = !proper_subfield_exponent_lcm.is_multiple_of(least_period);
+
+    Ok(TuxanidyLemirePeriodReport {
+        degree,
+        ell,
+        cyclic_order,
+        factor_support_sizes: convolution.factor_support_sizes,
+        convolution_support_size: convolution
+            .coefficients
+            .iter()
+            .filter(|present| **present)
+            .count(),
+        least_period,
+        proper_subfield_exponent_lcm,
+        maximum_least_period: least_period == cyclic_order,
+        period_criterion_holds,
+        theorem_boundary:
+            TuxanidyPeriodTheoremBoundary::CriterionImplicationCertifiedUniversalPeriodOpen,
+        convolution_cells: convolution.cells,
     })
 }
 
@@ -18523,6 +18821,194 @@ mod tests {
                 limit: 12,
             })
         );
+    }
+
+    #[test]
+    fn tuxanidy_lemire_convolution_has_maximum_period_through_degree_twelve() {
+        let expected_support_sizes = [
+            (3_usize, 4_usize),
+            (4, 5),
+            (5, 16),
+            (6, 30),
+            (7, 64),
+            (8, 133),
+            (9, 240),
+            (10, 536),
+            (11, 968),
+            (12, 2_094),
+        ];
+        for (degree, expected_support_size) in expected_support_sizes {
+            let report = tuxanidy_lemire_period_report(
+                degree,
+                TuxanidyPeriodLimits {
+                    max_degree: 12,
+                    max_cyclic_order: (1 << 12) - 1,
+                    max_convolution_cells: 20_000_000,
+                },
+            )
+            .unwrap();
+            assert_eq!(report.degree, degree);
+            assert_eq!(report.ell, degree.div_ceil(2) - 1);
+            assert_eq!(report.cyclic_order, (1 << degree) - 1);
+            assert_eq!(report.convolution_support_size, expected_support_size);
+            assert_eq!(report.least_period, report.cyclic_order);
+            assert!(report.maximum_least_period);
+            assert!(report.period_criterion_holds);
+            assert_eq!(
+                report.theorem_boundary,
+                TuxanidyPeriodTheoremBoundary::CriterionImplicationCertifiedUniversalPeriodOpen
+            );
+            assert!(report.proper_subfield_exponent_lcm < report.cyclic_order);
+        }
+    }
+
+    #[test]
+    fn tuxanidy_characteristic_delta_factors_have_binomial_support() {
+        for degree in 3_usize..=10 {
+            let report = tuxanidy_lemire_period_report(
+                degree,
+                TuxanidyPeriodLimits {
+                    max_degree: 10,
+                    max_cyclic_order: (1 << 10) - 1,
+                    max_convolution_cells: 2_000_000,
+                },
+            )
+            .unwrap();
+            for (weight, actual) in report.factor_support_sizes.iter().copied().enumerate() {
+                let weight = weight + 1;
+                let mut binomial = 1_usize;
+                for index in 0..weight {
+                    binomial = binomial * (degree - index) / (index + 1);
+                }
+                assert_eq!(actual, binomial + 1);
+            }
+        }
+    }
+
+    #[test]
+    fn tuxanidy_distinct_maximum_period_factors_need_not_preserve_period() {
+        // Tuxanidy--Wang prove maximum period for each individual binary
+        // delta_0+delta_j with j<=n/2.  That theorem cannot be multiplied:
+        // at n=8 the convolution through the middle weight has period 15,
+        // while the Lemire convolution stops one factor earlier and has the
+        // maximum period 255.
+        let degree = 8_usize;
+        let cyclic_order = (1_usize << degree) - 1;
+        let convolution =
+            characteristic_delta_convolution(degree, degree / 2, cyclic_order, 1_000_000).unwrap();
+        let least_period = positive_divisors(cyclic_order)
+            .into_iter()
+            .find(|period| {
+                convolution
+                    .coefficients
+                    .iter()
+                    .copied()
+                    .enumerate()
+                    .all(|(index, value)| {
+                        value == convolution.coefficients[(index + period) % cyclic_order]
+                    })
+            })
+            .unwrap();
+        assert_eq!(least_period, 15);
+        assert_eq!(
+            tuxanidy_lemire_period_report(degree, TuxanidyPeriodLimits::default())
+                .unwrap()
+                .least_period,
+            cyclic_order
+        );
+    }
+
+    #[test]
+    fn tuxanidy_period_matches_direct_extension_field_support_gcd() {
+        // Primitive packed moduli for degrees three through eight.  This
+        // oracle never constructs the characteristic-delta convolution: it
+        // enumerates powers of x in GF(2^n), multiplies the Frobenius-root
+        // characteristic polynomial directly, and applies the independent
+        // support-gcd formula for the DFT period.
+        for (degree, modulus) in [
+            (3_usize, 0b1_011_u64),
+            (4, 0b1_0011),
+            (5, 0b10_0101),
+            (6, 0b100_0011),
+            (7, 0b1000_0011),
+            (8, 0b1_0001_1101),
+        ] {
+            let report = tuxanidy_lemire_period_report(
+                degree,
+                TuxanidyPeriodLimits {
+                    max_degree: 8,
+                    max_cyclic_order: 255,
+                    max_convolution_cells: 200_000,
+                },
+            )
+            .unwrap();
+            let mut element = 1_u64;
+            let mut support_gcd = report.cyclic_order;
+            let mut seen = BTreeSet::new();
+            for exponent in 0..report.cyclic_order {
+                assert!(seen.insert(element), "listed modulus is not primitive");
+                let mut characteristic = vec![1_u64];
+                let mut root = element;
+                for _ in 0..degree {
+                    let mut next = vec![0_u64; characteristic.len() + 1];
+                    for (index, coefficient) in characteristic.iter().copied().enumerate() {
+                        next[index] ^= binary_quotient_multiply(coefficient, root, modulus, degree);
+                        next[index + 1] ^= coefficient;
+                    }
+                    characteristic = next;
+                    root = binary_quotient_multiply(root, root, modulus, degree);
+                }
+                assert_eq!(root, element);
+                assert_eq!(characteristic[degree], 1);
+                assert!(characteristic.iter().all(|coefficient| *coefficient <= 1));
+                let in_lemire_class =
+                    (1..=report.ell).all(|index| characteristic[degree - index] == 0);
+                if in_lemire_class {
+                    support_gcd = gcd_usize(support_gcd, exponent);
+                }
+                element = binary_quotient_multiply(element, 2, modulus, degree);
+            }
+            assert_eq!(seen.len(), report.cyclic_order);
+            assert_eq!(report.least_period, report.cyclic_order / support_gcd);
+        }
+    }
+
+    #[test]
+    fn tuxanidy_period_report_declines_invalid_or_excessive_work() {
+        for degree in 0..=2 {
+            assert!(
+                tuxanidy_lemire_period_report(degree, TuxanidyPeriodLimits::default()).is_err()
+            );
+        }
+        assert_eq!(
+            tuxanidy_lemire_period_report(
+                7,
+                TuxanidyPeriodLimits {
+                    max_degree: 6,
+                    max_cyclic_order: 127,
+                    max_convolution_cells: 1_000_000,
+                }
+            ),
+            Err(HayesError::ResourceLimit {
+                resource: "tuxanidy_period_degree",
+                requested: 7,
+                limit: 6,
+            })
+        );
+        assert!(matches!(
+            tuxanidy_lemire_period_report(
+                8,
+                TuxanidyPeriodLimits {
+                    max_degree: 8,
+                    max_cyclic_order: 255,
+                    max_convolution_cells: 10,
+                }
+            ),
+            Err(HayesError::ResourceLimit {
+                resource: "tuxanidy_period_convolution_cells",
+                ..
+            })
+        ));
     }
 
     #[test]

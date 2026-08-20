@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-lemire-characteristic-delta-maximum-period",
+  "title": "Maximum period of the binary Lemire characteristic-delta convolution",
+  "statement": "For every integer n >= 3, put ell=ceil(n/2)-1 and N=2^n-1. On Z/N, let delta_j be the GF(2)-valued indicator of residues whose canonical n-bit representative has Hamming weight j. Then the convolution product Gamma=product_(j=1)^ell (delta_0+delta_j) has least translation period N.",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"bound\":\"least_period(Gamma)=2^n-1\",\"convolution\":\"Gamma=*_(j=1)^ell(delta_0+delta_j)\",\"delta\":\"delta_j(a)=1 iff popcount_n(a)=j\",\"ell\":\"ceil(n/2)-1\",\"field_order\":2,\"format\":\"axeyum-gf2-lemire-characteristic-delta-maximum-period\",\"n_min\":3,\"version\":1}",
+    "fragment": "none",
+    "free_symbols": ["n", "ell", "Gamma"]
+  },
+  "epistemic_status": "conjectured",
+  "external_status": "unknown",
+  "depends_on": [],
+  "proof_route": "none",
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-20",
+    "established_by": "not established in this ledger",
+    "source": "Axeyum gf2-lemire lane; Tuxanidy--Wang characteristic-delta reduction"
+  },
+  "notes": "This is a deliberately stronger conjectural sufficient condition, not a promoted finite computation. Tuxanidy--Wang's proved DFT criterion only requires that the least period fail to divide lcm_(d|n,d<n)(2^d-1); either statement would imply Lemire. Exact native convolution has maximum period for n=3 through 12, and an independent direct GF(2^n) characteristic-polynomial oracle agrees through n=8. Those bounded rows are controls, not evidence for the universal claim. Each individual factor has maximum period by the binary zero-coefficient case of Hansen--Mullen, but that property does not generally survive convolution of distinct factors: at n=8 the product through the middle weight j=4 has period 15 rather than 255. No proof operation is registered."
+}
