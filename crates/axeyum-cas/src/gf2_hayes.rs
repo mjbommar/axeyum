@@ -242,6 +242,59 @@ pub struct HayesRootNumberFibreReport {
     pub witness: Option<HayesRootNumberFibreWitness>,
 }
 
+/// One exact normalized `2`-adic Newton slope.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct HayesTwoAdicNewtonSlope {
+    /// Reduced numerator of the slope with `v_2(2)=1`.
+    pub numerator: usize,
+    /// Positive reduced denominator of the slope.
+    pub denominator: usize,
+    /// Number of reciprocal roots on this segment.
+    pub multiplicity: usize,
+}
+
+/// Exact Newton polygon of one primitive Hayes character.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HayesCharacterTwoAdicNewtonRow {
+    /// Mixed-radix character index.
+    pub character: usize,
+    /// Exact multiplicative order of the character.
+    pub character_order: usize,
+    /// `v_(1-zeta)` of every `L`-coefficient; `None` denotes zero.
+    pub coefficient_uniformizer_valuations: Vec<Option<usize>>,
+    /// Normalized lower Newton-polygon slopes in increasing order.
+    pub slopes: Vec<HayesTwoAdicNewtonSlope>,
+}
+
+/// Exact primitive-character Newton polygons at one Hayes conductor level.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HayesConductorTwoAdicNewtonReport {
+    /// Exact conductor level.
+    pub level: usize,
+    /// Frobenius power used for the trace comparison.
+    pub degree: usize,
+    /// Ambient power-of-two cyclotomic order.
+    pub cyclotomic_order: usize,
+    /// Ramification index `phi(cyclotomic_order)` above two.
+    pub two_adic_ramification_index: usize,
+    /// Number `2^(level-1)` of primitive characters.
+    pub primitive_character_count: usize,
+    /// One exact Newton polygon per primitive character.
+    pub characters: Vec<HayesCharacterTwoAdicNewtonRow>,
+    /// Smallest normalized slope occurring in the conductor layer.
+    pub minimum_slope_numerator: usize,
+    /// Denominator of the smallest normalized slope.
+    pub minimum_slope_denominator: usize,
+    /// Total reciprocal-root multiplicity at the smallest slope.
+    pub minimum_slope_multiplicity: usize,
+    /// Integral ceiling of `degree * minimum_slope`.
+    pub minimum_power_valuation_ceiling: usize,
+    /// Independently reconstructed exact conductor-layer trace.
+    pub direct_conductor_trace: i128,
+    /// Exact `2`-adic valuation of that trace; `None` denotes zero.
+    pub direct_conductor_trace_two_adic_valuation: Option<u32>,
+}
+
 /// Exact trace statistics for character Galois orbits of one order.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HayesGaloisOrbitOrderRow {
@@ -515,6 +568,148 @@ impl PowerTwoCyclotomicInteger {
         }
         Ok(Self(product))
     }
+
+    /// Valuation at the unique prime `(1-zeta)` above two.
+    ///
+    /// If `a=(1-zeta)b` in the basis `1,zeta,...,zeta^(e-1)`, where
+    /// `zeta^e=-1`, then
+    ///
+    /// ```text
+    /// a_0=b_0+b_(e-1),  a_i=b_i-b_(i-1).
+    /// ```
+    ///
+    /// Thus divisibility is equivalent to
+    /// `a_0-sum_(i>0)a_i` being even, and the quotient is recovered
+    /// triangularly.  Repetition gives the exact valuation without choosing
+    /// a floating-point embedding or factoring an integer norm.
+    fn uniformizer_valuation(&self) -> Result<Option<usize>, HayesError> {
+        if self.0.iter().all(|coefficient| *coefficient == 0) {
+            return Ok(None);
+        }
+        let mut current = self.0.clone();
+        let mut valuation = 0_usize;
+        loop {
+            let tail_sum = current
+                .iter()
+                .skip(1)
+                .try_fold(0_i128, |sum, coefficient| {
+                    sum.checked_add(*coefficient).ok_or_else(|| {
+                        HayesError::InvalidParameter(
+                            "cyclotomic uniformizer division overflow".to_owned(),
+                        )
+                    })
+                })?;
+            let numerator = current[0].checked_sub(tail_sum).ok_or_else(|| {
+                HayesError::InvalidParameter("cyclotomic uniformizer division overflow".to_owned())
+            })?;
+            if numerator % 2 != 0 {
+                return Ok(Some(valuation));
+            }
+            let mut quotient = vec![0_i128; current.len()];
+            quotient[0] = numerator / 2;
+            for index in 1..current.len() {
+                quotient[index] =
+                    quotient[index - 1]
+                        .checked_add(current[index])
+                        .ok_or_else(|| {
+                            HayesError::InvalidParameter(
+                                "cyclotomic uniformizer division overflow".to_owned(),
+                            )
+                        })?;
+            }
+            current = quotient;
+            valuation = valuation.checked_add(1).ok_or_else(|| {
+                HayesError::InvalidParameter("cyclotomic uniformizer valuation overflow".to_owned())
+            })?;
+        }
+    }
+
+    #[cfg(test)]
+    fn field_norm(&self) -> Result<BigInt, HayesError> {
+        let order = self.0.len() * 2;
+        let columns = (0..self.0.len())
+            .map(|column| {
+                self.multiply(&Self::root_power(order, column))
+                    .map(|product| product.0.into_iter().map(BigInt::from).collect::<Vec<_>>())
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        let matrix = columns[0]
+            .iter()
+            .enumerate()
+            .map(|(row, _)| columns.iter().map(|column| column[row].clone()).collect())
+            .collect();
+        integer_determinant_bareiss(matrix)
+    }
+}
+
+fn two_adic_newton_slopes(
+    coefficients: &[PowerTwoCyclotomicInteger],
+) -> Result<Vec<HayesTwoAdicNewtonSlope>, HayesError> {
+    let Some(first) = coefficients.first() else {
+        return Err(HayesError::InvalidParameter(
+            "Newton polygon requires a nonempty coefficient vector".to_owned(),
+        ));
+    };
+    let ramification_index = first.0.len();
+    let mut hull = Vec::<(usize, usize)>::new();
+    for (degree, coefficient) in coefficients.iter().enumerate() {
+        let Some(valuation) = coefficient.uniformizer_valuation()? else {
+            continue;
+        };
+        while hull.len() >= 2 {
+            let (left_degree, left_value) = hull[hull.len() - 2];
+            let (middle_degree, middle_value) = hull[hull.len() - 1];
+            let left_rise = i128::try_from(middle_value)
+                .and_then(|middle| i128::try_from(left_value).map(|left| middle - left))
+                .map_err(|_| {
+                    HayesError::InvalidParameter("Newton valuation does not fit i128".to_owned())
+                })?;
+            let right_rise = i128::try_from(valuation)
+                .and_then(|right| i128::try_from(middle_value).map(|middle| right - middle))
+                .map_err(|_| {
+                    HayesError::InvalidParameter("Newton valuation does not fit i128".to_owned())
+                })?;
+            let left_run = i128::try_from(middle_degree - left_degree).map_err(|_| {
+                HayesError::InvalidParameter("Newton segment does not fit i128".to_owned())
+            })?;
+            let right_run = i128::try_from(degree - middle_degree).map_err(|_| {
+                HayesError::InvalidParameter("Newton segment does not fit i128".to_owned())
+            })?;
+            if left_rise.checked_mul(right_run).ok_or_else(|| {
+                HayesError::InvalidParameter("Newton cross product overflow".to_owned())
+            })? < right_rise.checked_mul(left_run).ok_or_else(|| {
+                HayesError::InvalidParameter("Newton cross product overflow".to_owned())
+            })? {
+                break;
+            }
+            hull.pop();
+        }
+        hull.push((degree, valuation));
+    }
+    if hull.first().map(|point| point.0) != Some(0)
+        || hull.last().map(|point| point.0) != Some(coefficients.len() - 1)
+    {
+        return Err(HayesError::Invariant(
+            "Newton polygon omits a nonzero endpoint coefficient".to_owned(),
+        ));
+    }
+    hull.windows(2)
+        .map(|segment| {
+            let horizontal = segment[1].0 - segment[0].0;
+            let vertical = segment[1].1.checked_sub(segment[0].1).ok_or_else(|| {
+                HayesError::Invariant("Newton polygon has a negative slope".to_owned())
+            })?;
+            let denominator = ramification_index.checked_mul(horizontal).ok_or_else(|| {
+                HayesError::InvalidParameter("Newton slope denominator overflow".to_owned())
+            })?;
+            let common = gcd_usize(vertical, denominator);
+            Ok(HayesTwoAdicNewtonSlope {
+                numerator: vertical / common,
+                denominator: denominator / common,
+                multiplicity: horizontal,
+            })
+        })
+        .collect()
 }
 
 fn character_root_exponent(
@@ -784,6 +979,157 @@ fn mixed_radix_character_order(
         ));
     }
     Ok(order)
+}
+
+fn primitive_two_adic_newton_rows(
+    level: usize,
+    factors: &[PrincipalUnitFactor],
+    cyclotomic_order: usize,
+) -> Result<Vec<HayesCharacterTwoAdicNewtonRow>, HayesError> {
+    let group_order = 1_usize << level;
+    let mut characters = Vec::with_capacity(1_usize << (level - 1));
+    for character in 1..group_order {
+        if mixed_radix_character_conductor(character, factors)? != Some(level) {
+            continue;
+        }
+        let (coefficient_order, coefficients) = exact_character_l_coefficients(level, character)?;
+        if coefficient_order != cyclotomic_order {
+            return Err(HayesError::Invariant(
+                "primitive character changed the ambient cyclotomic order".to_owned(),
+            ));
+        }
+        validate_primitive_functional_equation(&coefficients)?;
+        let coefficient_uniformizer_valuations = coefficients
+            .iter()
+            .map(PowerTwoCyclotomicInteger::uniformizer_valuation)
+            .collect::<Result<Vec<_>, _>>()?;
+        let slopes = two_adic_newton_slopes(&coefficients)?;
+        if slopes.iter().map(|slope| slope.multiplicity).sum::<usize>() != level - 1 {
+            return Err(HayesError::Invariant(
+                "Newton slopes do not cover the primitive L-degree".to_owned(),
+            ));
+        }
+        characters.push(HayesCharacterTwoAdicNewtonRow {
+            character,
+            character_order: mixed_radix_character_order(character, factors)?,
+            coefficient_uniformizer_valuations,
+            slopes,
+        });
+    }
+    Ok(characters)
+}
+
+/// Compute every primitive-character `2`-adic Newton polygon at one exact
+/// Hayes conductor and compare its minimum slope with the integral conductor
+/// trace.
+///
+/// The coefficient field is `Q(zeta_(2^r))`, where two is totally ramified
+/// and `(1-zeta)` is its unique uniformizer.  Coefficient valuations are
+/// obtained by exact repeated division in the integral cyclotomic basis.  A
+/// lower convex hull then gives slopes normalized by
+/// `v_2(2)=1`.  No complex or floating-point root approximation is used.
+///
+/// This is a bounded diagnostic for the normalized odd-endpoint congruence.
+/// It identifies which positive Newton slopes can survive a requested
+/// Frobenius power, but it does not prove a uniform slope distribution or the
+/// cancellation among minimal-slope character orbits.
+///
+/// # Errors
+///
+/// Rejects levels below two, zero Frobenius degree, transform-limit or exact
+/// enumeration work excess, arithmetic overflow, a malformed Newton polygon,
+/// or disagreement with the independent exact conductor trace.
+pub fn hayes_conductor_two_adic_newton_report(
+    level: usize,
+    degree: usize,
+    limits: HayesLimits,
+) -> Result<HayesConductorTwoAdicNewtonReport, HayesError> {
+    if level < 2 || degree == 0 {
+        return Err(HayesError::InvalidParameter(
+            "two-adic Newton audit requires level at least two and positive degree".to_owned(),
+        ));
+    }
+    admit(level, degree, limits)?;
+    let group_order = 1_usize << level;
+    let primitive_character_count = 1_usize << (level - 1);
+    let exact_work_cells = primitive_character_count
+        .checked_mul(group_order)
+        .and_then(|value| value.checked_mul(level))
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("two-adic Newton work estimate overflow".to_owned())
+        })?;
+    check_limit(
+        "hayes_two_adic_newton_cells",
+        exact_work_cells,
+        limits.max_table_cells,
+    )?;
+    let factors = principal_unit_factors(level);
+    let cyclotomic_order = factors.iter().map(|factor| factor.order).max().unwrap_or(2);
+    let two_adic_ramification_index = cyclotomic_order / 2;
+    let characters = primitive_two_adic_newton_rows(level, &factors, cyclotomic_order)?;
+    if characters.len() != primitive_character_count {
+        return Err(HayesError::Invariant(format!(
+            "two-adic Newton audit found {} primitive characters, expected {primitive_character_count}",
+            characters.len()
+        )));
+    }
+
+    let minimum = characters
+        .iter()
+        .filter_map(|row| row.slopes.first().copied())
+        .min_by(|left, right| {
+            let left_cross = (left.numerator as u128) * (right.denominator as u128);
+            let right_cross = (right.numerator as u128) * (left.denominator as u128);
+            left_cross.cmp(&right_cross)
+        })
+        .ok_or_else(|| HayesError::Invariant("Newton audit has no slopes".to_owned()))?;
+    let minimum_slope_multiplicity = characters
+        .iter()
+        .filter_map(|row| row.slopes.first())
+        .filter(|slope| {
+            (slope.numerator as u128) * (minimum.denominator as u128)
+                == (minimum.numerator as u128) * (slope.denominator as u128)
+        })
+        .map(|slope| slope.multiplicity)
+        .sum();
+    let scaled_minimum = degree.checked_mul(minimum.numerator).ok_or_else(|| {
+        HayesError::InvalidParameter("Newton power valuation overflow".to_owned())
+    })?;
+    let minimum_power_valuation_ceiling = scaled_minimum
+        .checked_add(minimum.denominator - 1)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("Newton power valuation overflow".to_owned())
+        })?
+        / minimum.denominator;
+    let direct_conductor_trace = conductor_layers(level, degree, limits)?[level - 1].value;
+    let direct_conductor_trace_two_adic_valuation = (direct_conductor_trace != 0)
+        .then_some(direct_conductor_trace.unsigned_abs().trailing_zeros());
+    let minimum_power_valuation_ceiling_u32 = u32::try_from(minimum_power_valuation_ceiling)
+        .map_err(|_| {
+            HayesError::InvalidParameter("Newton power valuation does not fit u32".to_owned())
+        })?;
+    if direct_conductor_trace_two_adic_valuation
+        .is_some_and(|valuation| valuation < minimum_power_valuation_ceiling_u32)
+    {
+        return Err(HayesError::Invariant(
+            "exact conductor trace lies below its Newton-slope valuation floor".to_owned(),
+        ));
+    }
+
+    Ok(HayesConductorTwoAdicNewtonReport {
+        level,
+        degree,
+        cyclotomic_order,
+        two_adic_ramification_index,
+        primitive_character_count,
+        characters,
+        minimum_slope_numerator: minimum.numerator,
+        minimum_slope_denominator: minimum.denominator,
+        minimum_slope_multiplicity,
+        minimum_power_valuation_ceiling,
+        direct_conductor_trace,
+        direct_conductor_trace_two_adic_valuation,
+    })
 }
 
 fn signed_crt_residue(first: u64, second: u64) -> Result<i128, HayesError> {
@@ -4129,6 +4475,63 @@ impl IdentityClassIrreducibleReport {
     #[must_use]
     pub const fn proves_irreducible_exists(self) -> bool {
         self.irreducible_count != 0
+    }
+}
+
+/// Exact odd-endpoint residue together with the Carlitz `2`-rank ledger.
+///
+/// For `n=2 ell+1`, the proved prime-power reduction gives
+///
+/// ```text
+/// N_n(1)=1+n I_n(1).
+/// ```
+///
+/// Hence a nonzero residue `I_n(1) mod 8` proves the requested irreducible
+/// exists in that one row.  The associated binary Carlitz curve satisfies
+///
+/// ```text
+/// #C_ell(GF(2^n))=1+2^ell N_n(1).
+/// ```
+///
+/// Recovering `I_n(1) mod 8` geometrically therefore requires the point count
+/// modulo `2^(ell+3)`.  Deuring--Shafarevich gives `2`-rank zero for this
+/// one-branch-point `2`-group cover, but that only controls the zeta numerator
+/// modulo two and does not supply the required normalized three bits.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct OddEndpointTwoAdicReport {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// Odd endpoint degree `2 ell+1`.
+    pub degree: usize,
+    /// Exact identity-class Mangoldt population `N_degree(1)`.
+    pub mangoldt_population: u128,
+    /// Exact number `I_degree(1)` of shaped irreducibles.
+    pub irreducible_count: u128,
+    /// `I_degree(1) mod 8`.
+    pub irreducible_residue_mod_8: u8,
+    /// `I_degree(1) mod 16`.
+    pub irreducible_residue_mod_16: u8,
+    /// Exact `2`-adic valuation of `I_degree(1)`, or `None` when it is zero.
+    pub irreducible_two_adic_valuation: Option<u32>,
+    /// Order `2^ell` of the Carlitz Galois group.
+    pub carlitz_galois_group_order: u128,
+    /// The unique finite branch stabilizer, also of order `2^ell`.
+    pub ramified_place_stabilizer_order: u128,
+    /// The Deuring--Shafarevich `2`-rank of the Carlitz curve, exactly zero.
+    pub carlitz_two_rank: usize,
+    /// Bits of raw point-count precision needed to recover the residue mod 8.
+    pub required_curve_point_modulus_bits: usize,
+    /// Exact curve point count from the point-population identity.
+    pub curve_point_count: u128,
+    /// Exact point-count residue modulo `2^(ell+3)`.
+    pub curve_point_residue_at_required_precision: u128,
+}
+
+impl OddEndpointTwoAdicReport {
+    /// Whether this exact row proves the odd Lemire endpoint by its residue.
+    #[must_use]
+    pub const fn proves_odd_endpoint_by_modulo_eight(self) -> bool {
+        self.irreducible_residue_mod_8 != 0
     }
 }
 
@@ -9355,6 +9758,106 @@ pub fn odd_endpoint_irreducible_count_single_ntt(
         mangoldt_population,
         proper_prime_power_population: reduction.proper_prime_power_population,
         irreducible_count,
+    })
+}
+
+/// Compute one exact odd-endpoint modulo-eight certificate and replay the
+/// Carlitz Deuring--Shafarevich precision ledger.
+///
+/// The binary Carlitz cover of conductor `t^(ell+1)` has Galois group of
+/// order `2^ell`, one totally ramified finite place, and split infinity.  The
+/// Deuring--Shafarevich formula therefore gives
+///
+/// ```text
+/// gamma(C_ell)-1 = 2^ell(0-1)+(2^ell-1) = -1,
+/// gamma(C_ell)=0.
+/// ```
+///
+/// This is an exact structural fact, but not the desired congruence: after
+/// the factor `2^ell` in the point-population identity, recovering the three
+/// normalized residue bits requires the raw point count modulo `2^(ell+3)`.
+/// The operation consequently certifies a bounded row without promoting the
+/// observed universal modulo-eight nonvanishing pattern to a theorem.
+///
+/// # Errors
+///
+/// Propagates the exact odd-endpoint transform's typed failures, rejects
+/// arithmetic overflow, or fails closed if the Deuring--Shafarevich and
+/// point-population identities do not replay exactly.
+pub fn odd_endpoint_two_adic_report(
+    ell: usize,
+    limits: HayesLimits,
+) -> Result<OddEndpointTwoAdicReport, HayesError> {
+    let exact = odd_endpoint_irreducible_count_single_ntt(ell, limits)?;
+    let group_order = 1_u128
+        .checked_shl(u32::try_from(ell).map_err(|_| {
+            HayesError::InvalidParameter("Carlitz level does not fit a shift".to_owned())
+        })?)
+        .ok_or_else(|| HayesError::InvalidParameter("Carlitz group order overflow".to_owned()))?;
+    let group_order_signed = i128::try_from(group_order).map_err(|_| {
+        HayesError::InvalidParameter("Carlitz group order does not fit i128".to_owned())
+    })?;
+    let two_rank_minus_one = (-group_order_signed)
+        .checked_add(group_order_signed - 1)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("Deuring--Shafarevich sum overflow".to_owned())
+        })?;
+    let carlitz_two_rank = usize::try_from(two_rank_minus_one + 1).map_err(|_| {
+        HayesError::Invariant("Carlitz Deuring--Shafarevich rank is negative".to_owned())
+    })?;
+    if carlitz_two_rank != 0 {
+        return Err(HayesError::Invariant(
+            "one-branch-point Carlitz cover does not have 2-rank zero".to_owned(),
+        ));
+    }
+
+    let required_curve_point_modulus_bits = ell.checked_add(3).ok_or_else(|| {
+        HayesError::InvalidParameter("Carlitz point precision overflow".to_owned())
+    })?;
+    let required_curve_point_modulus = 1_u128
+        .checked_shl(
+            u32::try_from(required_curve_point_modulus_bits).map_err(|_| {
+                HayesError::InvalidParameter(
+                    "Carlitz point modulus does not fit a shift".to_owned(),
+                )
+            })?,
+        )
+        .ok_or_else(|| HayesError::InvalidParameter("Carlitz point modulus overflow".to_owned()))?;
+    let curve_point_count = group_order
+        .checked_mul(exact.mangoldt_population)
+        .and_then(|value| value.checked_add(1))
+        .ok_or_else(|| HayesError::InvalidParameter("Carlitz point count overflow".to_owned()))?;
+    let reconstructed_irreducibles = ((curve_point_count - 1) / group_order)
+        .checked_sub(1)
+        .ok_or_else(|| {
+            HayesError::Invariant("Carlitz point count omits the ramified contribution".to_owned())
+        })?
+        / exact.degree as u128;
+    if reconstructed_irreducibles != exact.irreducible_count {
+        return Err(HayesError::Invariant(
+            "Carlitz point residue does not reconstruct the odd irreducible count".to_owned(),
+        ));
+    }
+    let irreducible_residue_mod_8 = u8::try_from(exact.irreducible_count % 8)
+        .map_err(|_| HayesError::Invariant("modulo-eight residue does not fit u8".to_owned()))?;
+    let irreducible_residue_mod_16 = u8::try_from(exact.irreducible_count % 16)
+        .map_err(|_| HayesError::Invariant("modulo-sixteen residue does not fit u8".to_owned()))?;
+
+    Ok(OddEndpointTwoAdicReport {
+        ell,
+        degree: exact.degree,
+        mangoldt_population: exact.mangoldt_population,
+        irreducible_count: exact.irreducible_count,
+        irreducible_residue_mod_8,
+        irreducible_residue_mod_16,
+        irreducible_two_adic_valuation: (exact.irreducible_count != 0)
+            .then_some(exact.irreducible_count.trailing_zeros()),
+        carlitz_galois_group_order: group_order,
+        ramified_place_stabilizer_order: group_order,
+        carlitz_two_rank,
+        required_curve_point_modulus_bits,
+        curve_point_count,
+        curve_point_residue_at_required_precision: curve_point_count % required_curve_point_modulus,
     })
 }
 
@@ -16920,6 +17423,107 @@ mod tests {
     }
 
     #[test]
+    fn cyclotomic_uniformizer_and_hayes_newton_polygons_are_exact() {
+        for order in [2_usize, 4, 8, 16] {
+            let mut uniformizer = PowerTwoCyclotomicInteger::root_power(order, 0);
+            uniformizer
+                .subtract_assign(&PowerTwoCyclotomicInteger::root_power(order, 1))
+                .unwrap();
+            assert_eq!(uniformizer.uniformizer_valuation().unwrap(), Some(1));
+            let two = PowerTwoCyclotomicInteger::root_power(order, 0)
+                .scale(2)
+                .unwrap();
+            assert_eq!(two.uniformizer_valuation().unwrap(), Some(order / 2));
+            let mut power = PowerTwoCyclotomicInteger::root_power(order, 0);
+            for valuation in 1..=order {
+                power = power.multiply(&uniformizer).unwrap();
+                assert_eq!(power.uniformizer_valuation().unwrap(), Some(valuation));
+            }
+            assert_eq!(
+                PowerTwoCyclotomicInteger::zero(order)
+                    .uniformizer_valuation()
+                    .unwrap(),
+                None
+            );
+        }
+
+        for order in [2_usize, 4, 8] {
+            let dimension = order / 2;
+            let exhaustive_size = 5_usize.pow(u32::try_from(dimension).unwrap());
+            for seed in 1..exhaustive_size.min(512) {
+                let mut quotient = seed;
+                let mut coefficients = Vec::with_capacity(dimension);
+                for _ in 0..dimension {
+                    coefficients.push(i128::try_from(quotient % 5).unwrap() - 2);
+                    quotient /= 5;
+                }
+                let value = PowerTwoCyclotomicInteger(coefficients);
+                if value.0.iter().all(|coefficient| *coefficient == 0) {
+                    continue;
+                }
+                let mut norm = value.field_norm().unwrap();
+                assert_ne!(norm, BigInt::from(0_u8));
+                let mut norm_valuation = 0_usize;
+                while &norm % BigInt::from(2_u8) == BigInt::from(0_u8) {
+                    norm /= 2;
+                    norm_valuation += 1;
+                }
+                assert_eq!(value.uniformizer_valuation().unwrap(), Some(norm_valuation));
+            }
+        }
+
+        let expected = [
+            (2_usize, 2_usize, -8_i128, 3_u32),
+            (2, 8, 32, 5),
+            (4, 8, 80, 4),
+            (4, 8, -160, 5),
+            (4, 64, -2_048, 11),
+            (4, 80, 2_944, 7),
+            (8, 128, 2_304, 8),
+            (8, 128, -9_472, 8),
+            (8, 256, 108_032, 9),
+        ];
+        for (level, (expected_denominator, expected_multiplicity, expected_trace, expected_v2)) in
+            (2..=10).zip(expected)
+        {
+            let degree = 2 * level + 1;
+            let group_order = 1 << level;
+            let max_table_cells =
+                (level * (1 << (2 * level - 1))).max((level + degree + 1) * group_order);
+            let report = hayes_conductor_two_adic_newton_report(
+                level,
+                degree,
+                HayesLimits {
+                    max_ell: level,
+                    max_degree: degree,
+                    max_group_order: group_order,
+                    max_table_cells,
+                },
+            )
+            .unwrap();
+            assert_eq!(report.primitive_character_count, 1 << (level - 1));
+            assert_eq!(report.characters.len(), report.primitive_character_count);
+            assert_eq!(report.minimum_slope_numerator, 1);
+            assert_eq!(report.minimum_slope_denominator, expected_denominator);
+            assert_eq!(report.minimum_slope_multiplicity, expected_multiplicity);
+            assert_eq!(report.direct_conductor_trace, expected_trace);
+            assert_eq!(
+                report.direct_conductor_trace_two_adic_valuation,
+                Some(expected_v2)
+            );
+            assert!(report.characters.iter().all(|row| {
+                row.coefficient_uniformizer_valuations.len() == level
+                    && row
+                        .slopes
+                        .iter()
+                        .map(|slope| slope.multiplicity)
+                        .sum::<usize>()
+                        == level - 1
+            }));
+        }
+    }
+
+    #[test]
     fn galois_orbit_traces_reconstruct_exact_conductor_layers() {
         let mut worst = (0_u128, None);
         for level in 2..=12 {
@@ -18357,6 +18961,41 @@ mod tests {
             let full =
                 identity_class_irreducible_count(ell, 2 * ell + 1, HayesLimits::default()).unwrap();
             assert_eq!(single, full);
+        }
+    }
+
+    #[test]
+    fn odd_endpoint_two_adic_report_replays_residue_and_precision() {
+        let expected_mod_8 = [1_u8, 1, 3, 4, 4, 6, 4, 1, 1, 4, 3, 6];
+        let expected_valuations = [0_u32, 0, 0, 2, 2, 1, 2, 0, 0, 2, 0, 1];
+        for (ell, (expected_residue, expected_valuation)) in
+            (1..=12).zip(expected_mod_8.into_iter().zip(expected_valuations))
+        {
+            let report = odd_endpoint_two_adic_report(ell, HayesLimits::default()).unwrap();
+            assert_eq!(report.irreducible_residue_mod_8, expected_residue);
+            assert_eq!(
+                report.irreducible_two_adic_valuation,
+                Some(expected_valuation)
+            );
+            assert!(report.proves_odd_endpoint_by_modulo_eight());
+            assert_eq!(report.carlitz_galois_group_order, 1_u128 << ell);
+            assert_eq!(
+                report.ramified_place_stabilizer_order,
+                report.carlitz_galois_group_order
+            );
+            assert_eq!(report.carlitz_two_rank, 0);
+            assert_eq!(report.required_curve_point_modulus_bits, ell + 3);
+            assert_eq!(
+                report.curve_point_count,
+                1 + report.carlitz_galois_group_order * report.mangoldt_population
+            );
+            let population_mod_8 =
+                ((report.curve_point_residue_at_required_precision - 1) >> ell) % 8;
+            let inverse_degree_mod_8 = (report.degree % 8) as u128;
+            assert_eq!(
+                ((population_mod_8 + 7) * inverse_degree_mod_8) % 8,
+                u128::from(report.irreducible_residue_mod_8)
+            );
         }
     }
 

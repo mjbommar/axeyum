@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-lemire-odd-endpoint-modulo-eight-nonvanishing",
+  "title": "Modulo-eight nonvanishing at every odd Lemire endpoint",
+  "statement": "For every integer ell at least one, the number I_(2ell+1)(1) of monic irreducible binary polynomials of degree 2ell+1 congruent to 1 modulo x^(ell+1) is not divisible by eight.",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"bound\":\"I_(2*ell+1)(1) mod 8 != 0\",\"field_order\":2,\"format\":\"axeyum-gf2-lemire-odd-endpoint-modulo-eight-nonvanishing\",\"interval\":\"ell>=1\",\"modulus\":\"x^(ell+1)\",\"version\":1}",
+    "fragment": "none",
+    "free_symbols": [
+      "ell"
+    ]
+  },
+  "epistemic_status": "conjectured",
+  "external_status": "unknown",
+  "depends_on": [],
+  "proof_route": "none",
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-20",
+    "established_by": "not established in this ledger",
+    "source": "Axeyum gf2-lemire lane; exact odd-endpoint residues and Carlitz two-adic precision re-aim"
+  },
+  "notes": "The exact native report finds nonzero residues modulo eight in every odd endpoint from degree 3 through degree 51, with maximum observed two-adic valuation two. Those 25 rows are stopping diagnostics only and do not establish the quantified statement. The proved identity N_(2ell+1)(1)=1+(2ell+1)I_(2ell+1)(1) means this fact would settle every odd Lemire endpoint. Deuring-Shafarevich gives two-rank zero for the associated one-branch-point Carlitz cover but does not provide the point-count precision modulo 2^(ell+3) required to prove the residue. Exact primitive-character Newton polygons have minimum slopes 1/4 from conductor level four and 1/8 from level eight, so low positive slopes require cancellation across the complete Galois and conductor aggregate rather than a near-half characterwise cutoff. No Autogenesis operation is registered because the bounded exact checkers cannot establish universal nonvanishing."
+}

@@ -1036,6 +1036,19 @@ RSS.  Thus the observed odd-count 2-adic nonvanishing survives this new row but
 remains an unproved congruence and supplies no universal endpoint credit.  The
 characteristic-delta period lemma and the connected trace remain the two
 honest universal frontiers.
+The congruence route is now stated at its actual geometric precision.  The
+binary Carlitz cover has 2-rank zero by Deuring--Shafarevich, but recovering
+`I_(2ell+1)(1) mod 8` requires its raw point count modulo `2^(ell+3)`, so
+2-rank alone loses the normalized higher-slope information.  A charged native
+report records the exact odd residue, valuation, curve normalization, and
+precision ledger.  Exact cyclotomic arithmetic also computes every primitive
+character Newton polygon through repeated `(1-zeta)` division, independently
+checked against field norms and exact conductor traces.  Levels four and
+eight already contain slopes `1/4` and `1/8` with large multiplicity; hence a
+near-half characterwise cutoff is false.  Any modulo-eight proof must instead
+explain cancellation in the complete Galois/conductor aggregate of these low
+positive slopes.  The observed residues remain nonzero through `ell=25`, but
+this is a stopping diagnostic and receives no theorem credit.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.

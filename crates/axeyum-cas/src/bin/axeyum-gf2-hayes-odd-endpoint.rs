@@ -1,6 +1,6 @@
 //! Compute one exact odd Hayes endpoint with a single admitted NTT prime.
 
-use axeyum_cas::gf2_hayes::{HayesLimits, odd_endpoint_irreducible_count_single_ntt};
+use axeyum_cas::gf2_hayes::{HayesLimits, odd_endpoint_two_adic_report};
 
 const MAX_ELL: usize = 27;
 
@@ -29,14 +29,20 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         max_table_cells: (ell + degree + 1) * group_order,
     };
     let started = std::time::Instant::now();
-    let report = odd_endpoint_irreducible_count_single_ntt(ell, limits)?;
+    let report = odd_endpoint_two_adic_report(ell, limits)?;
     let main_term = 1_i128 << (degree - ell);
     let discrepancy = i128::try_from(report.mangoldt_population)? - main_term;
     println!(
-        "GF2_HAYES_ODD_ENDPOINT|status=PASS|ell={ell}|degree={degree}|count={}|discrepancy={discrepancy}|irreducibles={}|irreducibles_mod_8={}|exact=single_ntt_prime_plus_odd_endpoint_bound|elapsed_seconds={:.3}",
+        "GF2_HAYES_ODD_ENDPOINT|status=PASS|ell={ell}|degree={degree}|count={}|discrepancy={discrepancy}|irreducibles={}|irreducibles_mod_8={}|irreducibles_mod_16={}|irreducibles_v2={}|carlitz_2_rank={}|curve_point_precision_bits={}|exact=single_ntt_prime_plus_odd_endpoint_bound|elapsed_seconds={:.3}",
         report.mangoldt_population,
         report.irreducible_count,
-        report.irreducible_count % 8,
+        report.irreducible_residue_mod_8,
+        report.irreducible_residue_mod_16,
+        report
+            .irreducible_two_adic_valuation
+            .map_or_else(|| "infinity".to_owned(), |value| value.to_string()),
+        report.carlitz_two_rank,
+        report.required_curve_point_modulus_bits,
         started.elapsed().as_secs_f64(),
     );
     Ok(())

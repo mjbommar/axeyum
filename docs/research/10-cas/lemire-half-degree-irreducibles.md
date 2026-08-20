@@ -531,6 +531,58 @@ The exact native counts already give `N_9(1)=2^(9-4)+5=37`, so the endpoint
 population can be odd.  Any new-point argument must provide a genuine lower
 bound or cancellation estimate, not infer one from `N_n(1)>=1` and divisibility.
 
+### A normalized two-adic target for odd endpoints
+
+The exact reduction nevertheless leaves a different algebraic possibility.
+Every checked odd endpoint through degree 51 satisfies
+
+```text
+I_(2ell+1)(1) != 0 mod 8,                           (C8)
+```
+
+with observed `2`-adic valuation at most two.  Since a nonzero residue is
+already positivity, `(C8)` would settle every odd endpoint without an
+analytic square-root saving.  The typed `odd_endpoint_two_adic_report`
+retains the exact residues modulo 8 and 16, the valuation, and the geometric
+precision needed to reproduce the residue.
+
+The first proposed bridge, Deuring--Shafarevich, is exact but insufficient.
+The binary Carlitz cover has group order `2^ell`, one totally ramified finite
+place, and split infinity, so
+
+```text
+gamma(C_ell)-1=-2^ell+(2^ell-1)=-1,
+gamma(C_ell)=0.
+```
+
+On the other hand, the point-population and odd prime-power identities give
+
+```text
+I_n(1)=((#C_ell(GF(2^n))-1)/2^ell-1)/n.
+```
+
+Thus `I_n(1) mod 8` requires the raw point count modulo `2^(ell+3)`.
+`2`-rank zero controls only the slope-zero part, or the zeta numerator modulo
+two; it does not determine the three normalized bits after division by
+`2^ell`.  The honest target is therefore a congruence for the **higher-slope
+normalized trace**, not a p-rank formula by itself.  The 25 surviving rows are
+stopping evidence, not theorem credit.  Nor do they yield an even induction:
+the known half-sized square proper-power stratum supplies bookkeeping but no
+strict inequality or congruence recurrence (ADR-0559).
+
+An exact cyclotomic Newton audit further shows that "higher slope" cannot be
+replaced by a thin near-half window.  Because two is totally ramified in
+`Z[zeta_(2^r)]`, repeated division by the unique uniformizer `1-zeta`
+computes every coefficient valuation exactly.  The native lower convex hull
+finds minimum primitive-character slopes `1/2` at levels two and three,
+`1/4` at levels four through seven, and `1/8` at levels eight through ten.
+At level ten the minimum-slope multiplicity is already 256.  These terms lie
+far below the endpoint cutoff and the independently computed integral
+conductor trace gains its valuation only after they are summed.  The proposed
+theorem must therefore preserve cancellation across the complete
+Galois/conductor family of low positive slopes; a characterwise Newton cutoff
+does not supply `(C8)`.
+
 ### The exact half-level sieve hits the parity barrier
 
 There is an elementary identity which initially looks strong enough to prove
