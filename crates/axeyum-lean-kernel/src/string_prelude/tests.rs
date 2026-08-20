@@ -520,8 +520,8 @@ fn bool_true_ne_false(
     // discr := λ b, Bool.rec (λ _ => Prop) False True b.  discr true ↝ False, discr false ↝ True.
     let discr = {
         let e = k.app(rec, motive);
-        let e = k.app(e, false_const); // minor for Bool.true
         let e = k.app(e, true_const); // minor for Bool.false
+        let e = k.app(e, false_const); // minor for Bool.true
         let b = k.bvar(0);
         let body = k.app(e, b);
         k.lam(anon, bool_ty, body, BinderInfo::Default)

@@ -27,11 +27,10 @@ use axeyum_lean_kernel::{
 
 /// A Lean-shaped `Nat`/`Bool` environment, built by hand.
 ///
-/// Deliberately **not** `build_logic_prelude`: that prelude declares `Bool` with
-/// its constructors in the order `[true, false]`, which is not Lean's, and the
-/// rule refuses to fire there for exactly that reason
-/// (`the_reconstruction_prelude_is_not_accelerated`). A test of Lean's rule
-/// needs Lean's shapes.
+/// Deliberately **not** `build_logic_prelude`: this fixture can construct both
+/// official Lean order `[false, true]` and the negative `[true, false]` order,
+/// while supplying deliberately adversarial operation bodies that the trusted
+/// acceleration rule must either override or leave alone.
 struct Env {
     nat: NameId,
     nat_zero: NameId,
@@ -624,11 +623,10 @@ fn an_axiom_or_opaque_named_like_an_operation_is_not_accelerated() {
     }
 }
 
-/// The `Bool` guard, and it is load-bearing rather than decorative. Our own
-/// reconstruction prelude declares `Bool` with constructors in the order
-/// `[true, false]`; accelerating `Nat.beq` there would return the *opposite*
-/// truth value. With the order reversed, no operation is accelerated at all —
-/// including the arithmetic ones, because the table is refused as a whole.
+/// The `Bool` guard is load-bearing rather than decorative. A non-Lean fixture
+/// with constructors `[true, false]` would make accelerated `Nat.beq` return
+/// the opposite truth value. In that fixture no operation is accelerated at
+/// all, including arithmetic, because the table is refused as a whole.
 #[test]
 fn a_bool_whose_constructors_are_in_the_wrong_order_disables_the_table() {
     let mut kernel = Kernel::new();

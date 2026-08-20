@@ -970,17 +970,15 @@ fn popping_the_local_that_justified_k_reduction_invalidates_the_entry() {
     );
 }
 
-/// The reconstruction preludes are **not** accelerated, and this is the
-/// mechanism rather than a hope.
+/// The reconstruction preludes use official Lean's Bool constructor order, so
+/// literal arithmetic acceleration and generated proof terms share one
+/// computational convention.
 ///
-/// `build_logic_prelude` declares `Bool` with its constructors in the order
-/// `[true, false]`. Lean's order is `[false, true]`, and `Bool.false` being
-/// constructor 0 is what `Nat.beq`'s accelerated result means. So the whole
-/// table is refused for any environment built by our preludes, every operation
-/// keeps computing by its own declared body, and nothing about the 119-theorem
-/// `nat` inventory or its empty axiom footprint can move because of this rule.
+/// `Bool.false` being constructor 0 is load-bearing: it is what the kernel's
+/// name-keyed `Nat.beq` accelerator means. The separate wrong-order fixture in
+/// `tests/nat_literal_arithmetic.rs` retains the fail-closed negative control.
 #[test]
-fn the_reconstruction_prelude_is_not_accelerated() {
+fn the_reconstruction_prelude_uses_leans_bool_order_and_acceleration() {
     let mut kernel = Kernel::new();
     let prelude = crate::build_nat_prelude(&mut kernel).expect("nat prelude must build");
 
@@ -999,17 +997,15 @@ fn the_reconstruction_prelude_is_not_accelerated() {
     };
     assert_eq!(
         ctor_names.as_slice(),
-        [true_, false_],
-        "this test is about our prelude's constructor order; if it changed, the \
-         acceleration guard changed meaning with it"
+        [false_, true_],
+        "the reconstruction prelude must match official Lean's Bool order"
     );
 
     assert!(
-        kernel.nat_binop_table().is_none(),
-        "no literal arithmetic rule may fire in an environment whose `Bool` is \
-         not Lean's"
+        kernel.nat_binop_table().is_some(),
+        "the verified prelude shape must activate Lean-compatible Nat acceleration"
     );
-    // And the prelude's own `Nat.add` still computes, by its own definition.
+    // The prelude's own `Nat.add` agrees with the accelerated result.
     let add = kernel.const_(prelude.add, vec![]);
     let two = kernel.lit(crate::Lit::Nat(crate::NatLit::from(2_u8)));
     let three = kernel.lit(crate::Lit::Nat(crate::NatLit::from(3_u8)));

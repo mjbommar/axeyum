@@ -1182,7 +1182,7 @@ fn executable_division_spec_step(
     };
     let level_zero = d.kernel().level_zero();
     let bool_rec = d.kernel().const_(p.logic.bool_rec, vec![level_zero]);
-    let selected = d.apply(bool_rec, &[motive, true_minor, false_minor, condition]);
+    let selected = d.apply(bool_rec, &[motive, false_minor, true_minor, condition]);
     let condition_refl = d.bool_refl(condition);
     d.apply(selected, &[condition_refl])
 }

@@ -169,7 +169,7 @@ pub trait NatOps {
         let one = self.level_one();
         let bool_rec = self.prelude().logic.bool_rec;
         let rec = self.kernel().const_(bool_rec, vec![one]);
-        self.apply(rec, &[motive, on_true, on_false, condition])
+        self.apply(rec, &[motive, on_false, on_true, condition])
     }
 
     /// `Nat.zero`.
@@ -617,7 +617,7 @@ pub trait NatOps {
             let rec = self.kernel().const_(logic.bool_rec, vec![one]);
             let false_prop = self.kernel().const_(logic.false_, vec![]);
             let true_prop = self.kernel().const_(logic.true_, vec![]);
-            self.apply(rec, &[motive, false_prop, true_prop])
+            self.apply(rec, &[motive, true_prop, false_prop])
         };
         let motive = {
             let value_fv = self.fresh_fvar();

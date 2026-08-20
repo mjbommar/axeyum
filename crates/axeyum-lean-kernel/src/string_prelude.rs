@@ -442,8 +442,8 @@ impl StringPrelude {
         let motive = kernel.lam(anon, bool_const, bool_const, BinderInfo::Default);
         let rec = kernel.const_(self.logic.bool_rec, vec![self.one]);
         let e0 = kernel.app(rec, motive);
-        let e0 = kernel.app(e0, t); // minor for Bool.true
         let e0 = kernel.app(e0, e); // minor for Bool.false
+        let e0 = kernel.app(e0, t); // minor for Bool.true
         kernel.app(e0, c)
     }
 
