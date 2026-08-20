@@ -20,6 +20,10 @@ cargo run -p axeyum-lean-import --example nat_mod_invariant_specialization -- \
   nat-mod-invariant.ndjson target.ndjson
 cargo run -p axeyum-lean-import --example nat_mod_invariant_specialization -- \
   nat-mod-invariant.ndjson target.ndjson --probe-dvd-gcd
+cargo run -p axeyum-lean-import --example nat_fib_iterate_recurrence -- \
+  --native-composition --stream r080.ndjson
+cargo run -p axeyum-lean-import --example nat_fib_native_definition_probe -- \
+  r082.ndjson
 ```
 
 Autogenesis statement inputs use the stronger proof-isolated adapter boundary:
@@ -53,3 +57,12 @@ footprint, and checks that the resulting `Nat.dvd_mod_iff` has the native
 theorem's kernel type shape. Optional `--probe-dvd-gcd` additionally measures
 the exact checked target-leaf frontier without publishing a failed private
 clone or writing the ledger.
+
+The two native-Fibonacci probes exercise the reverse composition direction.
+Checked admission follows the source closure's dependency order across ordinary
+definitions and atomic singleton packages, so typeclass and product support is
+available before `Nat.fib`. The r080 mode reconstructs the already fixed
+`Nat.fib_add_two` candidate without new search and composes it into the native
+Nat kernel; the r082 probe composes the exact target-side `Nat.fib` definition.
+Both operations replay their receipts, require empty theorem footprints, leave
+their callers unchanged, and write no ledger state.

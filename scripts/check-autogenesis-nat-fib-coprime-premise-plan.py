@@ -509,6 +509,140 @@ def validate_nat_gcd_target_leaf_frontier(manifest: dict[str, Any]) -> None:
             raise PlanError(f"Nat.gcd official support changed for {row['root']}")
 
 
+def validate_native_fib_composition(manifest: dict[str, Any]) -> None:
+    pack = manifest["native_fib_composition"]
+    manifest_path = pathlib.Path(pack["manifest"])
+    pack_dir = manifest_path.parent
+    expected_files = {
+        "manifest.json",
+        "r080-native-recurrence.json",
+        "r082-native-definition.json",
+    }
+    if (
+        sha256(manifest_path) != pack["manifest_sha256"]
+        or stat.S_IMODE(pack_dir.stat().st_mode) != 0o555
+        or {path.name for path in pack_dir.iterdir()} != expected_files
+        or any(stat.S_IMODE(path.stat().st_mode) != 0o444 for path in pack_dir.iterdir())
+    ):
+        raise PlanError("native Fibonacci composition pack changed or is mutable")
+    external = load(manifest_path)
+    if (
+        external.get("schema_version") != 1
+        or external.get("kind")
+        != "axeyum-lean430-native-fib-composition-reference-pack"
+        or external.get("tooling_commit") != pack["implementation_commit"]
+        or external.get("lean")
+        != {
+            "version": "4.30.0",
+            "githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+        }
+    ):
+        raise PlanError("native Fibonacci composition identity changed")
+    for row in external["implementation"]:
+        if row["sha256"] != git_blob_sha256(pack["implementation_commit"], row["path"]):
+            raise PlanError("native Fibonacci composition implementation changed")
+    for row in external["sources"]:
+        if sha256(pathlib.Path(row["path"])) != row["sha256"]:
+            raise PlanError("native Fibonacci composition source changed")
+
+    observation_rows = {row["file"]: row for row in external["observations"]}
+    if set(observation_rows) != expected_files - {"manifest.json"}:
+        raise PlanError("native Fibonacci composition observation set changed")
+    r080 = load(pack_dir / "r080-native-recurrence.json")
+    r082 = load(pack_dir / "r082-native-definition.json")
+    expected_definitions = {
+        "OfNat.ofNat",
+        "instOfNatNat",
+        "Nat.casesOn",
+        "outParam",
+        "HAdd.hAdd",
+        "Add.add",
+        "instHAdd",
+        "Nat.below",
+        "Nat.brecOn.go",
+        "Nat.brecOn",
+        "Nat.add.match_1",
+        "Nat.add._f",
+        "instAddNat",
+        "Prod.fst",
+        "Nat.iterate.match_1",
+        "Nat.iterate._f",
+        "Nat.iterate",
+        "Prod.snd",
+        "Nat.fib",
+    }
+    expected_packages = {"OfNat", "HAdd", "Add", "PUnit", "PProd", "Prod"}
+    observations = [
+        (
+            "r080-native-recurrence.json",
+            r080,
+            pack["r080"],
+            "axeyum-nat-fib-recurrence-native-composition",
+        ),
+        (
+            "r082-native-definition.json",
+            r082,
+            pack["r082"],
+            "axeyum-nat-fib-native-definition-probe",
+        ),
+    ]
+    for filename, observation, tracked, expected_kind in observations:
+        observation_path = pack_dir / filename
+        external_row = observation_rows[filename]
+        if (
+            sha256(observation_path) != external_row["sha256"]
+            or observation_path.stat().st_size != external_row["bytes"]
+            or observation.get("schema_version") != 1
+            or observation.get("kind") != expected_kind
+            or observation.get("source_stream_sha256")
+            != tracked["source_stream_sha256"]
+            or observation.get("nat_fib_declaration_sha256")
+            != pack["nat_fib_declaration_sha256"]
+            or observation.get("source_closure") != tracked["source_closure"]
+            or observation.get("reused_declarations")
+            != tracked["reused_declarations"]
+            or set(observation.get("added_definitions", [])) != expected_definitions
+            or len(observation.get("added_definitions", []))
+            != tracked["added_definitions"]
+            or set(observation.get("added_singleton_inductives", []))
+            != expected_packages
+            or len(observation.get("added_singleton_inductives", []))
+            != tracked["added_singleton_inductives"]
+            or observation.get("added_theorems") != tracked["added_theorems"]
+            or observation.get("receipt_sha256") != tracked["receipt_sha256"]
+            or observation.get("receipt_sha256") != external_row["receipt_sha256"]
+            or observation.get("caller_declarations_before") != 198
+            or observation.get("caller_declarations_after") != 198
+            or observation.get("completed_declarations") != 236
+            or observation.get("proof_search_invocations") != 0
+            or observation.get("ledger_writes") != 0
+        ):
+            raise PlanError(f"native Fibonacci composition changed for {filename}")
+    if (
+        r080["target_theorem_axiom_footprint"] != []
+        or r080["target_theorem_dependencies"] != []
+        or r082["added_axiom_footprints"]
+        != [["Axeyum.Autogenesis.fib_definition_probe", []]]
+        or external["result"]
+        != {
+            "nat_fib_declaration_sha256": pack["nat_fib_declaration_sha256"],
+            "definition_identity_equal_across_r080_r082": True,
+            "native_recurrence_axiom_footprint": [],
+            "native_recurrence_theorem_dependencies": [],
+            "caller_mutations": 0,
+            "proof_search_invocations": 0,
+            "ledger_writes": 0,
+        }
+        or pack["definition_identity_equal_across_r080_r082"] is not True
+        or pack["native_recurrence_axiom_footprint"] != []
+        or pack["native_recurrence_theorem_dependencies"] != []
+        or pack["caller_mutations"] != 0
+        or pack["proof_search_invocations"] != 0
+        or pack["ledger_writes"] != 0
+    ):
+        raise PlanError("native Fibonacci composition assurance changed")
+
+
 def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
     manifest = load(MANIFEST) if manifest is None else manifest
     if (
@@ -516,7 +650,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or manifest.get("kind")
         != "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan"
         or manifest.get("state")
-        != "target-leaf-cut-advances-to-axiom-bearing-nat-gcd-succ"
+        != "native-fib-and-recurrence-composed-with-axiom-free-native-gcd-library"
     ):
         raise PlanError("manifest identity changed")
     source = manifest["source"]
@@ -613,7 +747,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or manifest["proof_plan"]["required_present_in_import"] != []
         or manifest["proof_plan"]["already_present_in_import"] != ["Nat.rec"]
         or manifest["proof_plan"]["next_action"]
-        != "construct an axiom-free target-side Nat.gcd successor contract or replace the Nat.dvd_gcd proof route without importing Quot.sound"
+        != "construct the bounded Fibonacci coprimality induction directly in the completed native kernel, using the composed Nat.fib_add_two theorem and existing axiom-free native gcd library"
         or probe["imported_division_declaration_names"] != expected_division_names
         or observation["source"]["imported_division_declaration_names"]
         != expected_division_names
@@ -927,6 +1061,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
     validate_official_equation_pack(manifest)
     validate_nat_mod_invariant_pack(manifest)
     validate_nat_gcd_target_leaf_frontier(manifest)
+    validate_native_fib_composition(manifest)
     return manifest
 
 
@@ -937,7 +1072,7 @@ def main() -> int:
             "AUTOGENESIS_NAT_FIB_COPRIME_PREMISE_PLAN_OK|"
             f"required={len(manifest['proof_plan']['required_native_declarations'])}|"
             "present=0|exact=11|compatible=Nat.mod_lt,Acc,Nat.dvd_mod_iff|"
-            "next=target-gcd-successor-contract|"
+            "next=native-fib-coprimality-induction|"
             "submissions=24|evaluation=0|writes=0"
         )
         return 0

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "kind": "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan",
-  "state": "target-leaf-cut-advances-to-axiom-bearing-nat-gcd-succ",
+  "state": "native-fib-and-recurrence-composed-with-axiom-free-native-gcd-library",
   "target": {
     "fact_id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
     "source_name": "Nat.fib_coprime_fib_succ",
@@ -237,6 +237,36 @@
       }
     }
   },
+  "native_fib_composition": {
+    "manifest": "/nas3/data/axeyum/autogenesis/reference-packs/91d7df736-lean430-native-fib-composition-v1/manifest.json",
+    "manifest_sha256": "b797f5876ca3d033a5e58424573a774e3cad1af6dc9723059555a779d3028877",
+    "implementation_commit": "91d7df736fee9bb3becc3977ca4cb7165b06d3ee",
+    "nat_fib_declaration_sha256": "15f76f9318e04cf653cd094524473919b14a333c308cee32d6d428136bdc522c",
+    "r080": {
+      "source_stream_sha256": "00578e949d71154cf5d9e79005b2a1c8f7fe73d9885ae96b0dd5cb6744c30501",
+      "source_closure": 46,
+      "reused_declarations": 8,
+      "added_definitions": 19,
+      "added_singleton_inductives": 6,
+      "added_theorems": ["Axeyum.Autogenesis.NatFibAddTwo"],
+      "receipt_sha256": "f7244fbc69e6ceec6ed2511e46786bccd2d5a4e4485f3e6de70743104f888168"
+    },
+    "r082": {
+      "source_stream_sha256": "6afa79d79481403d3e3273ea3eea26b4d1194762f9bd623ec019f8e821323cfd",
+      "source_closure": 46,
+      "reused_declarations": 8,
+      "added_definitions": 19,
+      "added_singleton_inductives": 6,
+      "added_theorems": ["Axeyum.Autogenesis.fib_definition_probe"],
+      "receipt_sha256": "208b7e8703b3de9e89319d2ba9716a917940ccaeb3f4a7af4527d1e2d6f790ee"
+    },
+    "definition_identity_equal_across_r080_r082": true,
+    "native_recurrence_axiom_footprint": [],
+    "native_recurrence_theorem_dependencies": [],
+    "caller_mutations": 0,
+    "proof_search_invocations": 0,
+    "ledger_writes": 0
+  },
   "nat_mod_lt_compatibility_result": {
     "name": "Nat.mod_lt",
     "compatibility": "translated-definitional-equality",
@@ -414,7 +444,7 @@
     ],
     "required_present_in_import": [],
     "already_present_in_import": ["Nat.rec"],
-    "next_action": "construct an axiom-free target-side Nat.gcd successor contract or replace the Nat.dvd_gcd proof route without importing Quot.sound"
+    "next_action": "construct the bounded Fibonacci coprimality induction directly in the completed native kernel, using the composed Nat.fib_add_two theorem and existing axiom-free native gcd library"
   },
   "next_capability_sequence": [
     "bind existing imported logic and Nat declarations to reusable prelude handles",
@@ -424,8 +454,8 @@
     "compose the authored fuel invariant over official Nat.mod and independently specialize its explicit arithmetic parameters",
     "retain the resulting successor-divisor Nat.dvd_mod_iff as an axiom-free target theorem with the native type shape",
     "retain explicit target-owned theorem leaves only after type compatibility, empty target footprint, exact reachability, and receipt replay",
-    "replace the assumption-bearing official Nat.gcd_succ recursion equation with an axiom-free target contract or a Nat.dvd_gcd route that avoids it",
-    "replay the seven-lemma surface before any coprimality target submission"
+    "compose the exact imported Nat.fib definition and the admitted Nat.fib_add_two theorem into the axiom-free native Nat kernel in source dependency order",
+    "construct and independently check the bounded coprimality induction against the completed native kernel before any ledger transition"
   ],
   "authority": {
     "partitions_inspected": ["train"],
@@ -437,5 +467,5 @@
     "ledger_writes": 0
   },
   "verification": "python3 scripts/check-autogenesis-nat-fib-coprime-premise-plan.py",
-  "limitations": "This freezes a proof plan and independently composes exact Nat.mul and Nat.dvd definitions, the exact official-order Bool and singleton Exists packages, the declaration-exact canonical native Acc package, and axiom-free control theorems. Native Nat.mod_lt has Lean's general positive-denominator contract and its distinct wrapper-level type is target-kernel definitionally equal to the imported theorem. An authored constructive fuel induction composes over official Nat.mod and specializes into an axiom-free target Nat.dvd_mod_iff with the native theorem's type shape. Explicit target-owned theorem leaves are now checked, axiom-free, reachability-bound, and replayable. Cutting Nat.dvd_mod_iff alone leaves a 66-declaration closure and still reaches Nat.div_mod_exec; also cutting target Nat.mod_lt yields 57 declarations, removes Nat.div_mod_exec, and exposes Nat.gcd_succ. Official Lean 4.30 Nat.gcd_succ and its generated recursion equation both reach Quot.sound and remain audited references, not admissible support. A direct rfl proof does not elaborate. This does not authorize importing quotient assumptions, arbitrary recursive or mutual inductives, conflicting definitions, axioms, opaque declarations, unchecked theorem transport, recursor permutation, or weakening definitional equality; construct the remaining gcd foundation; compose the remaining required lemmas; submit the Fibonacci target; inspect held-out data; write the ledger; or establish the fact."
+  "limitations": "The imported-to-official direction remains blocked at assumption-bearing Nat.gcd_succ, but it is no longer the selected route. Checked composition now follows the source dependency order across definitions and atomic singleton packages. The exact Lean 4.30 Nat.fib definition is identical in r080 and r082 and composes into the native Nat kernel; the already admitted axiom-free Nat.fib_add_two theorem composes with it and has no axiom footprint or direct theorem dependencies. This does not authorize importing quotient assumptions, arbitrary recursive or mutual inductives, conflicting definitions, axioms, opaque declarations, unchecked theorem transport, recursor permutation, or weakening definitional equality; construct and check the bounded native coprimality proof; submit the Fibonacci target; inspect held-out data; write the ledger; or establish the fact."
 }

@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** The official-`Nat.mod` seam has an axiom-free target `Nat.dvd_mod_iff`, and theorem composition can now stop at an explicit compatible, footprint-empty target-owned theorem with an exact replayable receipt. The real `Nat.dvd_gcd` retry needs two cuts: `Nat.dvd_mod_iff` alone leaves a 66-declaration closure and still reaches `Nat.div_mod_exec`; adding target `Nat.mod_lt` yields 57 declarations, removes `Nat.div_mod_exec`, and advances the first rejection to `Nat.gcd_succ`. Fresh official Lean 4.30 exports show both `Nat.gcd_succ` and its generated recursion equation reach `Quot.sound`; a direct `rfl` control fails. No ledger credit is due.
+**Status:** The official-`Nat.mod` seam has an axiom-free target `Nat.dvd_mod_iff`, and target-owned theorem leaves move the imported-to-official route to `Nat.gcd_succ`, whose official proof reaches `Quot.sound`. The selected route now goes the other direction: checked composition admits definitions and atomic singleton packages in one source-derived order, so the exact Lean 4.30 `Nat.fib` definition and the already admitted axiom-free `Nat.fib_add_two` theorem both live in Axeyum's 236-declaration native Nat kernel. The r080 and r082 `Nat.fib` declaration identity is equal; the recurrence footprint and direct theorem dependencies are empty; both receipts replay without caller mutation. No new ledger credit is due.
 
-**Next:** construct an axiom-free target-side gcd successor contract, or replace the native `Nat.dvd_gcd` proof route so it does not need the assumption-bearing official recursion equation. Preserve imported `Nat.gcd` semantics explicitly; do not import `Quot.sound`, declare an equation, or infer compatibility from source text. Retry the unchanged root after the smallest checked foundation lands.
+**Next:** construct the bounded Fibonacci-coprimality induction directly in the completed native kernel, using composed `Nat.fib_add_two` as the sole admitted theorem premise and the existing axiom-free native gcd/divisibility library for the other seven lemmas. Independently audit the theorem footprint and dependencies before any receipt or ledger transition; do not import `Quot.sound` or infer a different Fibonacci semantics.
 
 <!-- plan-section: landed-changes -->
 
@@ -33,3 +33,4 @@
 | 2026-08-20 | `667201932` | Receipt-backed checked specialization admits constructive target `Nat.dvd_mod_iff` with an empty footprint and native type shape |
 | 2026-08-20 | `7e6e28c1f` | Explicit target-owned theorem leaves cut only compatible axiom-free source proofs and replay from a distinct receipt |
 | 2026-08-20 | `5fb817301` | Real r082 leaf probe removes `Nat.div_mod_exec` with two cuts and exposes assumption-bearing `Nat.gcd_succ` next |
+| 2026-08-20 | `91d7df736` | Dependency-ordered mixed composition moves exact `Nat.fib` and the established recurrence into the axiom-free native gcd kernel |

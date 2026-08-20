@@ -165,6 +165,7 @@ compounding, not automation theatre.
 | [Axiom-free Nat.mod equation pack](66-axiom-free-nat-mod-equation-pack.md) | Which official computation equations can compose with empty footprints and support a constructive target-side remainder proof? |
 | [Constructive Nat.mod invariant specialization](67-constructive-nat-mod-invariant-specialization.md) | Can an authored fuel induction become an independently checked target `Nat.dvd_mod_iff`, and which closure boundary remains before `Nat.dvd_gcd`? |
 | [Target-owned theorem leaves and the Nat.gcd frontier](68-target-owned-theorem-leaves-and-nat-gcd-frontier.md) | Can a compatible axiom-free target theorem cut only its source proof, and which foundation appears after both division branches are cut? |
+| [Native Fibonacci composition](69-native-fibonacci-composition.md) | Can the exact imported Fibonacci definition and its established recurrence move into the axiom-free native gcd environment, avoiding the assumption-bearing official gcd route? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

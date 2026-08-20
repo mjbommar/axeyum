@@ -231,6 +231,29 @@ class FibCoprimePremisePlanTests(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.PlanError, "official support"):
             MODULE.validate(changed)
 
+    def test_native_fib_composition_mutations_are_rejected(self) -> None:
+        changed = copy.deepcopy(self.manifest)
+        changed["native_fib_composition"]["manifest_sha256"] = "0" * 64
+        with self.assertRaisesRegex(MODULE.PlanError, "changed or is mutable"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["native_fib_composition"]["nat_fib_declaration_sha256"] = "0" * 64
+        with self.assertRaisesRegex(MODULE.PlanError, "native Fibonacci composition"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["native_fib_composition"]["r080"]["added_definitions"] = 18
+        with self.assertRaisesRegex(MODULE.PlanError, "r080-native-recurrence"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["native_fib_composition"]["native_recurrence_axiom_footprint"] = [
+            "Quot.sound"
+        ]
+        with self.assertRaisesRegex(MODULE.PlanError, "assurance"):
+            MODULE.validate(changed)
+
     def test_nat_mod_lt_compatibility_mutations_are_rejected(self) -> None:
         changed = copy.deepcopy(self.manifest)
         changed["nat_mod_lt_compatibility_result"]["source_declaration_sha256"] = (
