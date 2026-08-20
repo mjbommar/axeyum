@@ -134,6 +134,7 @@ macro_rules! full_modules {
         mod nia_univariate_cert;
         mod nra;
         mod nra_even_power;
+        mod nra_monomial_bound_cert;
         mod nra_product_cert;
         mod nra_real_root;
         mod nra_zero_product_cert;
@@ -451,6 +452,10 @@ pub mod certificates {
         };
         pub use crate::nra_even_power::{
             NraEvenPowerRefutationCertificate, nra_even_power_refutation,
+        };
+        pub use crate::nra_monomial_bound_cert::{
+            MonomialBound, MonomialBoundRefutationCertificate, check_monomial_bound_refutation,
+            monomial_bound_refutation,
         };
         pub use crate::nra_product_cert::{
             AtomSign, RealProductRefutationCertificate, check_real_product_refutation,

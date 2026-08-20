@@ -168,6 +168,36 @@ const QUERIES: &[(&str, &str)] = &[
          (assert (> z 0))(assert (> x y))(assert (< (* x z) (* y z)))\n\
          (check-sat)",
     ),
+    // QF_NRA monomial bounds: per-variable bounds multiplying into a bound on a
+    // monomial. All three shapes are verbatim from committed corpus files
+    // (`ones`, `mult.01`, `simple-mono-unsat`), and the third has a factor with
+    // NO bound at all -- `d^2 >= 0` holds regardless.
+    (
+        "nra_monomial_lower_bound",
+        "(set-logic QF_NRA)\n\
+         (declare-fun a () Real)(declare-fun b () Real)\n\
+         (declare-fun c () Real)(declare-fun d () Real)\n\
+         (assert (>= a 1))(assert (>= b 1))(assert (>= c 1))(assert (>= d 1))\n\
+         (assert (< (* a b c d) 1))\n\
+         (check-sat)",
+    ),
+    (
+        "nra_monomial_pinned_exact",
+        "(set-logic QF_NRA)\n\
+         (declare-fun n () Real)(declare-fun x () Real)\n\
+         (assert (>= n 1))(assert (<= n 1))(assert (<= x 1))(assert (>= x 1))\n\
+         (assert (not (= (* x n) 1)))\n\
+         (check-sat)",
+    ),
+    (
+        "nra_monomial_even_exponent_wildcard",
+        "(set-logic QF_NRA)\n\
+         (declare-fun a () Real)(declare-fun b () Real)\n\
+         (declare-fun c () Real)(declare-fun d () Real)\n\
+         (assert (or (= a 4) (= a 3)))(assert (> b 0))(assert (> c 0))\n\
+         (assert (< (* a b c d d) 0))\n\
+         (check-sat)",
+    ),
     (
         "skolemised_existential",
         "(set-logic UF)\n\

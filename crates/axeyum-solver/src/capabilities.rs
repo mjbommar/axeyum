@@ -982,7 +982,17 @@ pub const CAPABILITIES: &[Capability] = &[
                    pq >= 0, refuting pq < 0 but NOT pq <= 0, which is satisfiable at p = 0. \
                    Covers cli__regress1__nl__coeff-unsat-base and \
                    cli__regress1__nl__simple-mono; refutations needing a product PLUS a \
-                   linear step (coeff-unsat, combine) are DECLINED, not guessed",
+                   linear step (coeff-unsat, combine) are DECLINED, not guessed. \
+                   MONOMIAL-BOUND UNSAT: per-variable bounds multiply into a bound on a \
+                   monomial that contradicts an asserted atom, either M >= lo against \
+                   M < lo or every factor pinned so M == k against M != k. An EVEN \
+                   exponent needs no bound (x^2 >= 0 for every real x); an ODD one on an \
+                   unbounded variable leaves the monomial unbounded below, so the parity \
+                   is carried and re-derived rather than assumed. Lower bounds must be \
+                   NONNEGATIVE -- multiplying bounds is monotone only on that orthant, and \
+                   (-2)*(-3) = 6 is not a lower bound for a*b. Covers \
+                   cli__regress1__nl__ones, cli__regress0__arith__mult.01 and \
+                   cli__regress1__nl__simple-mono-unsat, all previously bare unsat",
         checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0024/0038/0039/0040/0044/0045/0046",
     },

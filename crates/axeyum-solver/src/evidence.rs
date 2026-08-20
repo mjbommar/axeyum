@@ -93,6 +93,7 @@ use crate::model::Model;
 use crate::nia_square::IntQuadraticNegativeDiscriminantCertificate;
 use crate::nia_univariate_cert::IntUnivariateRefutationCertificate;
 use crate::nra_even_power::NraEvenPowerRefutationCertificate;
+use crate::nra_monomial_bound_cert::MonomialBoundRefutationCertificate;
 use crate::nra_product_cert::RealProductRefutationCertificate;
 use crate::nra_real_root::{self, SosCertificate};
 use crate::nra_zero_product_cert::RealZeroProductRefutationCertificate;
@@ -583,6 +584,14 @@ pub enum Evidence {
     /// which refutes `pq < 0` but NOT `pq ≤ 0`. Only two strict factors refute
     /// both.
     UnsatRealProduct(RealProductRefutationCertificate),
+    /// Unsatisfiable (`QF_NRA`): per-variable bounds multiply into a bound on a
+    /// monomial that contradicts an asserted atom — either `M >= lo` against
+    /// `M < lo`, or every factor pinned so `M == k` against `M != k`.
+    ///
+    /// An EVEN exponent needs no bound (`x^2 >= 0` for every real `x`); an odd
+    /// one on an unbounded variable leaves the monomial unbounded below, so the
+    /// parity is carried and re-checked rather than assumed.
+    UnsatMonomialBound(MonomialBoundRefutationCertificate),
     /// Unsatisfiable (integer-equality systems): a self-checking "integer Farkas" /
     /// Diophantine refutation of an integer-infeasible system of equalities. The
     /// `certificate`'s independent re-checker [`check_diophantine_certificate`]
@@ -816,6 +825,7 @@ impl Evidence {
             Evidence::UnsatNraEvenPower(_) => "unsat-nra-even-power",
             Evidence::UnsatRealZeroProduct(_) => "unsat-real-zero-product",
             Evidence::UnsatRealProduct(_) => "unsat-real-product",
+            Evidence::UnsatMonomialBound(_) => "unsat-monomial-bound",
             Evidence::UnsatDiophantine { .. } => "unsat-diophantine",
             Evidence::UnsatBoundedIntBlast(_) => "unsat-bounded-int-blast",
             Evidence::UnsatFiniteDomainPigeonhole(_) => "unsat-finite-domain-pigeonhole",
@@ -1050,6 +1060,13 @@ impl Evidence {
                     certificate,
                 ))
             }
+            Evidence::UnsatMonomialBound(certificate) => Ok(
+                crate::nra_monomial_bound_cert::check_monomial_bound_refutation(
+                    arena,
+                    assertions,
+                    certificate,
+                ),
+            ),
             Evidence::UnsatDiophantine {
                 equalities,
                 certificate,
@@ -1215,6 +1232,7 @@ impl Evidence {
                 | Evidence::UnsatNraEvenPower(_)
                 | Evidence::UnsatRealZeroProduct(_)
                 | Evidence::UnsatRealProduct(_)
+                | Evidence::UnsatMonomialBound(_)
                 | Evidence::UnsatDiophantine { .. }
                 | Evidence::UnsatBoundedIntBlast(_)
                 | Evidence::UnsatFiniteDomainPigeonhole(_)
@@ -2722,6 +2740,30 @@ pub fn produce_nra_even_power_evidence(
     }))
 }
 
+/// Produce source-bound evidence for a monomial-bound refutation.
+pub fn produce_monomial_bound_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<EvidenceReport> {
+    let certificate = crate::nra_monomial_bound_cert::monomial_bound_refutation(arena, assertions)?;
+    Some(EvidenceReport {
+        evidence: Evidence::UnsatMonomialBound(certificate),
+        provenance: Provenance {
+            semantics_version: SEMANTICS_VERSION,
+            layers: LayerVersions::CURRENT,
+            backend: "nra-monomial-bound-certificate".to_owned(),
+            assertion_count: assertions.len(),
+            timeout: None,
+            resource_limit: None,
+            node_budget: None,
+            cnf_variable_budget: None,
+            cnf_clause_budget: None,
+            prove_unsat: true,
+        },
+        trusted_steps: Vec::new(),
+    })
+}
+
 /// Produce source-bound evidence for a degree-2 Positivstellensatz refutation.
 pub fn produce_real_product_evidence(
     arena: &TermArena,
@@ -2986,6 +3028,9 @@ pub fn produce_evidence(
                 return Ok(report);
             }
             if let Some(report) = produce_real_product_evidence(arena, assertions) {
+                return Ok(report);
+            }
+            if let Some(report) = produce_monomial_bound_evidence(arena, assertions) {
                 return Ok(report);
             }
             match produce_lra_dpll_evidence(arena, assertions, config) {
@@ -4095,6 +4140,7 @@ pub fn prove(
         | Evidence::UnsatNraEvenPower(_)
         | Evidence::UnsatRealZeroProduct(_)
         | Evidence::UnsatRealProduct(_)
+        | Evidence::UnsatMonomialBound(_)
         | Evidence::UnsatDiophantine { .. }
         | Evidence::UnsatBoundedIntBlast(_)
         | Evidence::UnsatFiniteDomainPigeonhole(_)

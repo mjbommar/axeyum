@@ -168,6 +168,7 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
         Evidence::UnsatNraEvenPower(_) => "nra-even-power-unsat",
         Evidence::UnsatRealZeroProduct(_) => "real-zero-product-unsat",
         Evidence::UnsatRealProduct(_) => "real-product-unsat",
+        Evidence::UnsatMonomialBound(_) => "monomial-bound-unsat",
         Evidence::UnsatDiophantine { .. } => "diophantine-unsat",
         Evidence::UnsatBoundedIntBlast(_) => "bounded-int-blast-unsat",
         Evidence::UnsatFiniteDomainPigeonhole(_) => "finite-domain-pigeonhole-unsat",
