@@ -1699,6 +1699,26 @@ mod tests {
     }
 
     #[test]
+    fn unweighted_cone_cancellation_does_not_imply_frobenius_cancellation() {
+        let euler = crate::gf2_hayes::sawin_long_cycle_euler_report(
+            5,
+            crate::gf2_hayes::SawinFoulkesLimits::default(),
+        )
+        .unwrap();
+        let weighted =
+            binary_extension_long_cycle_trace(0b11, 5, 2, BinaryExtensionTraceLimits::default())
+                .unwrap();
+        assert_eq!(euler.non_top_alternating_cycle_trace, 0);
+        assert_eq!(weighted.field_order, 2);
+        assert_eq!(weighted.error, -2);
+        assert_ne!(
+            i128::from(euler.non_top_alternating_cycle_trace),
+            weighted.error
+        );
+        assert!(!euler.frobenius_weighted_cancellation_certified);
+    }
+
+    #[test]
     fn connected_adams_trace_matches_base_field_hayes_moments() {
         let limits = BinaryExtensionTraceLimits::default();
         for degree in [5_usize, 6] {

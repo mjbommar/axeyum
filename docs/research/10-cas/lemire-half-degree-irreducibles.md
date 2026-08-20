@@ -3625,7 +3625,10 @@ Tr(Frob^r*c | H_c^*(X))
 ```
 
 At `r=1` the projective factor is one, so this identity supplies no numerical
-saving.  The next theorem must bound that projective Frobenius--long-cycle
+saving.  The exact `(n,ell)=(5,2)` control makes the distinction concrete:
+the non-top Euler trace is zero, while independent base-field enumeration
+gives Frobenius-weighted error `-2`.  A cross-operation test pins both values.
+The next theorem must bound that projective Frobenius--long-cycle
 trace, not merely its zero unweighted Euler specialization or a generic total
 Betti number.  No Lemire endpoint credit is attached (ADR-0552).
 

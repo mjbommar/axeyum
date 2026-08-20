@@ -134,6 +134,10 @@ does not save anything.  The report exposes this boundary with
 - Pinned rows cover odd degree 401, even composite degrees 12 and 402, and the
   exceptional power-of-two degree 512.  Degrees below five and
   resource-excessive inputs fail closed.
+- A cross-operation control at `(n,ell)=(5,2)` pairs non-top Euler trace zero
+  with the independently enumerated binary Frobenius error `-2`.  This is an
+  exact witness against promoting the unweighted identity to the endpoint
+  estimate.
 
 ## Alternatives
 
