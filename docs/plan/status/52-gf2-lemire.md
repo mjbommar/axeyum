@@ -27,10 +27,15 @@ levels: the selected `(TOP-POLY)` target asks only for a `12ell/5` improvement
 over individual Weil on the top `4ceil(log2 ell)+1` levels.  A native
 parity-safe integer implication and a uniform geometric proof show that this
 alone closes both endpoints after degree 400.  `(TOP-POLY)`, not the stronger
-fourth-moment premise, is the current load-bearing proof obligation.
+fourth-moment premise, is the current load-bearing proof obligation.  The
+paper-facing proof has now been written backward from that obligation as a
+two-page LaTeX manuscript: it carries a fail-visible warning, states
+`(TOP-POLY)` as its sole open lemma, and contains the checked Haar, parity,
+proper-power, and finite-handoff implications needed once that lemma lands.
 
-**Next:** prove `(TOP-POLY)`, encode it as replayable evidence, then write the
-paper.  The stronger sufficient fourth-moment bound is
+**Next:** prove `(TOP-POLY)`, encode it as replayable evidence, remove the
+manuscript's fail-visible warning, and perform the final source audit.  The
+stronger sufficient fourth-moment bound is
 experimentally true for `6<=ell<=23` but remains an open fact; curve positivity
 alone is non-strict.  The exact half-level Möbius sieve now has a native
 positive-composite counterexample, so the elementary divisor-density route
@@ -710,6 +715,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-20 | `604504e20` | Wrote the two-page paper-facing Lemire reduction, marked TOP-POLY as its sole open lemma, and froze the fail-closed manuscript contract in ADR-0571. |
 | 2026-08-20 | `2530ff1cb` | Repriced the surviving endpoint argument against the proved Haar triangle, selected the weaker TOP-POLY saving on only the top logarithmic conductor window, and added an exact parity-safe implication through the degree-400 handoff. |
 | 2026-08-20 | `c6c0dc238` | Refuted the absolute conductor-layer constant by exact fixed-level recurrence, retained the corrected polynomial-loss theorem, and reduced its open range to growing conductors above the individual-Weil prefix. |
 | 2026-08-20 | `d9380f0d7` | Reduced the wild fourth-moment target to exact-conductor delocalization, proved the `C=4` prefix through level three, and added a fail-closed finite diagnostic plus the polynomial-loss endpoint implication. |
