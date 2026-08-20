@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "kind": "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan",
-  "state": "proof-plan-frozen-canonical-acc-library-slice-compatible",
+  "state": "proof-plan-frozen-nat-division-representation-mismatch-isolated",
   "target": {
     "fact_id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
     "source_name": "Nat.fib_coprime_fib_succ",
@@ -16,7 +16,7 @@
     "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622"
   },
   "implementation": {
-    "evidence_commit": "3d466b45cc34435702db09604f47d0362eb9d17b",
+    "evidence_commit": "f099a4a37d58b0d976d73a564cb13245462c8b11",
     "bool_order_commit": "772646c0d1a0c6ebca302c37a42cf2bb2f5030ee",
     "logic_prelude": "crates/axeyum-lean-kernel/src/prelude.rs",
     "logic_prelude_sha256": "8bc2090e18e8433234e9262a1d4e605ff84c448b79aebeef88153e1d0b3b7a0b",
@@ -55,11 +55,11 @@
   },
   "composition_probe": {
     "tool": "crates/axeyum-lean-import/examples/nat_prelude_composition_probe.rs",
-    "tool_sha256": "9767fd1df4edf4f21551b5b4043809fd3cfe513b342f16635914bcffda9180fe",
+    "tool_sha256": "3d1eb42b583f60317fd6d9b5cea335c23e91a64d1d51f27aceebeb5f1c2f871a",
     "api": "crates/axeyum-lean-import/src/theorem_composition.rs",
-    "api_sha256": "1ecde3d39ca9f87708d2ef00cac8b2afcb6cf8f9f82dddacbb069c3a0034a121",
-    "observation": "/nas3/data/axeyum/autogenesis/probes/3d466b45c-canonical-acc-composition-v14/observation.json",
-    "observation_sha256": "9ed5aceb87ffd73797b48069ba38c1f62db8c001f43aa2bb584b3060136076dd",
+    "api_sha256": "bfdc63a1ed7e1a9ee9f8d0de933ad654a3e951f5a6ea0e95ddcc4b84f17f2ad6",
+    "observation": "/nas3/data/axeyum/autogenesis/probes/f099a4a37-nat-div-mod-exec-mismatch-v15/observation.json",
+    "observation_sha256": "b7e467c0ef0cf6487f2476abfe4718172662c75ab8bd70215d5e59bf6468d025",
     "outcome": "rejected",
     "first_conflict": "True",
     "imported_declarations": 261,
@@ -68,7 +68,25 @@
     "exact_overlaps": 11,
     "alpha_type_compatible_content_mismatches": 15,
     "kernel_type_shape_compatible_content_mismatches": 10,
-    "unresolved_type_overlaps": 7
+    "unresolved_type_overlaps": 7,
+    "imported_division_declaration_names": [
+      "HMod",
+      "HMod.hMod",
+      "HMod.mk",
+      "HMod.rec",
+      "Nat.div.go.match_1",
+      "Nat.div_rec_fuel_lemma",
+      "Nat.div_rec_lemma",
+      "Nat.instMod",
+      "Nat.mod",
+      "Nat.mod.match_1",
+      "Nat.modCore",
+      "Nat.modCore.go",
+      "Nat.modCore.go._f",
+      "Nat.modCoreGo_lt",
+      "Nat.modCore_lt",
+      "Nat.mod_lt"
+    ]
   },
   "closure_census": {
     "required_theorems": 7,
@@ -125,11 +143,32 @@
     "environment_sha256_before": "82ac7b0143bdd9891b666a37220fb91b86afc4af4b920d68773d80b5c9348855",
     "environment_sha256_after": "bda5fa7e1660db1635ea2e019775ead03663cf3676e6a7695ea5352f8572c9bf",
     "negative_control_root": "Nat.dvd_gcd",
-    "negative_control_error": "AdmissionRejected { name: \"Nat.div_mod_exec\", error: \"TypeMismatch { expected: ExprId(46664), got: ExprId(46674) }\" }",
+    "negative_control_error_sha256": "78f77e0ef5ee8fd7a6326a2bdee23c8a08efd9c69a9b53c8e01fecea0ffdb3e5",
     "negative_control_first_rejected": "Nat.div_mod_exec",
     "negative_control_error_kind": "TypeMismatch",
+    "negative_control_source_closure_count": 92,
+    "negative_control_reused_nat_div_mod_exec_direct_consumers": ["Nat.mod_lt"],
+    "negative_control_missing_nat_div_mod_exec_direct_consumers": ["Nat.dvd_mod_iff"],
     "negative_control_environment_sha256": "798b19a16b1e6937d4fc9eb6f0c2f5f58c5544d5ea58641c7aa04119dc6b0982",
     "negative_control_environment_unchanged": true
+  },
+  "official_support_audit": {
+    "manifest": "/nas3/data/axeyum/autogenesis/reference-audits/a12d44858-lean430-nat-division-support-v1/manifest.json",
+    "manifest_sha256": "c462b234b64342bd4a43cf844c6aaaa05c9c13cc3ce3f2cc4a7a049d435f4c7f",
+    "audit_commit": "a12d44858124d26848f807d985e972637d4bd0d7",
+    "lean_version": "4.30.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "lean4export_commit": "a3e35a584f59b390667db7269cd37fca8575e4bf",
+    "theorems": {
+      "Nat.dvd_mod_iff": {
+        "declaration_sha256": "99bc389ae70b1b688ad37a9728c978c38b72b4ce8e95df7333ab7099edb5e1ee",
+        "axiom_footprint": ["propext"]
+      },
+      "Nat.mod_add_div": {
+        "declaration_sha256": "bd40e537243af5794fc9d576e60056ba5a11e35101f7af6c49a416ffae99a4c1",
+        "axiom_footprint": ["propext"]
+      }
+    }
   },
   "nat_mod_lt_compatibility_result": {
     "name": "Nat.mod_lt",
@@ -314,7 +353,8 @@
     "compare overlapping declaration identities and fail closed on semantic mismatch",
     "reconstruct missing definitions and singleton inductives only through ordinary target kernel gates",
     "reconstruct the exact canonical native Acc package only through an atomic target-kernel inductive gate",
-    "diagnose and align the Nat.div_mod_exec proof term at the first independently rejected target admission",
+    "reconstruct an axiom-free target-side Nat.dvd_mod_iff bridge over the imported Nat.mod representation",
+    "retry the unchanged Nat.div_mod_exec-dependent Nat.dvd_gcd closure without importing propext",
     "replay the seven-lemma surface before any coprimality target submission"
   ],
   "authority": {
@@ -327,5 +367,5 @@
     "ledger_writes": 0
   },
   "verification": "python3 scripts/check-autogenesis-nat-fib-coprime-premise-plan.py",
-  "limitations": "This freezes a proof plan and independently composes exact Nat.mul and Nat.dvd definitions, the exact official-order Bool and singleton Exists packages, the declaration-exact canonical native Acc package, and axiom-free control theorems. Native Nat.mod_lt has Lean's general positive-denominator contract and its distinct wrapper-level type is target-kernel definitionally equal to the imported theorem. This does not authorize arbitrary recursive or mutual inductives, conflicting definitions, axioms, opaque declarations, quotient packages, generic theorem transport, or recursor permutation; compose the remaining six required lemmas; submit the Fibonacci target; inspect held-out data; write the ledger; or establish the fact. The next measured blocker is target-kernel rejection of the translated Nat.div_mod_exec proof with a TypeMismatch."
+  "limitations": "This freezes a proof plan and independently composes exact Nat.mul and Nat.dvd definitions, the exact official-order Bool and singleton Exists packages, the declaration-exact canonical native Acc package, and axiom-free control theorems. Native Nat.mod_lt has Lean's general positive-denominator contract and its distinct wrapper-level type is target-kernel definitionally equal to the imported theorem. The rendered Nat.div_mod_exec mismatch is localized to official Nat.mod versus the native Bool-rollover remainder representation across a 92-declaration closure: Nat.mod_lt is already reusable, while Nat.dvd_mod_iff remains missing. Official Lean 4.30 Nat.dvd_mod_iff and Nat.mod_add_div both carry propext and therefore are audited references, not admissible support. This does not authorize arbitrary recursive or mutual inductives, conflicting definitions, axioms, opaque declarations, quotient packages, generic theorem transport, recursor permutation, or weakening definitional equality; compose the remaining six required lemmas; submit the Fibonacci target; inspect held-out data; write the ledger; or establish the fact."
 }

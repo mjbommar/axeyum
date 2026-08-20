@@ -77,23 +77,20 @@ The manifest checker and its mutation suite additionally pin the immutable
 package receipt, exact identity map, next rejection, authority counts, and
 unchanged caller environment.
 
-## Next measured gap
+## Subsequent measured gap
 
-The unchanged `Nat.dvd_gcd` composition attempt no longer stops at `Acc`. It
-reaches the target admission of a native theorem and declines with:
+The next increment completed that diagnostic. The durable rejection now
+renders expected, inferred, weak-head-normal-form, and first-mismatch
+expressions without retaining process-local arena IDs. It isolates official
+`Nat.mod` versus the native Bool-rollover remainder and measures the complete
+92-declaration closure. `Nat.mod_lt` is already reusable; the independent
+missing direct consumer is `Nat.dvd_mod_iff`.
 
-```text
-AdmissionRejected {
-  name: "Nat.div_mod_exec",
-  error: "TypeMismatch { expected: ExprId(46664), got: ExprId(46674) }"
-}
-```
-
-The raw expression IDs are local diagnostics, not a durable semantic
-classification. The next increment should render and compare the expected and
-inferred target expressions at this admission boundary, identify the first
-source/target representation mismatch, and correct the smallest reusable
-theorem or translation contract. It must not weaken target type checking.
+See the
+[Nat division composition mismatch](65-nat-division-composition-mismatch.md)
+for the exact evidence, the rejected zero-delta dependency-cut experiment, and
+the Lean 4.30 support audit showing that the official helper proofs carry
+`propext`.
 
 ## Reproduction
 
