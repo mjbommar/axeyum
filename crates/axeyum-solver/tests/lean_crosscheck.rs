@@ -3306,9 +3306,30 @@ fn conjunctive_lra_still_reconstructs_unchanged() {
          reconstructor that emits arithmetic"
     );
     assert!(!source.contains("sorryAx"));
+    // `CReal`, not `AxReal`. The shipped front door reconstructs over the
+    // CONSTRUCTED reals (`a6ee37c6a`), so the emitted module names `CReal.*`.
+    //
+    // This assertion read `AxReal.lt_irrefl` and FAILED. It was written as
+    // `Real.lt_irrefl` and mechanically rewritten by the `Real` -> `AxReal`
+    // rename (`c26e492b1`, ADR-0522), which renamed the string without asking
+    // whether this route still used that carrier — it had already stopped. The
+    // rename was correct everywhere it applied and wrong here, and nothing
+    // caught it because `lean_crosscheck` takes ~370s and the push hook skips
+    // it. Same shape as the ledger row that said `real 30` about rows named
+    // `AxReal.*`: a rename is not landed until every place that PUBLISHES the
+    // name has been re-read, not just re-spelled.
+    //
+    // Asserting the carrier by name is the point of the test — an `AxReal`
+    // module here would mean the shipped route had silently regressed onto the
+    // 30-axiom package, which is exactly what must never happen quietly.
     assert!(
-        source.contains("AxReal.lt_irrefl"),
-        "the module must carry the ordered-field reasoning, not an opaque prop"
+        source.contains("CReal.lt_irrefl"),
+        "the module must carry the ordered-field reasoning over the CONSTRUCTED \
+         reals, not an opaque prop and not the axiomatized package; got:\n{source}"
+    );
+    assert!(
+        !source.contains("AxReal."),
+        "the shipped LRA route must not reach the 30-axiom AxReal package"
     );
 }
 
