@@ -37,7 +37,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or manifest.get("kind")
         != "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan"
         or manifest.get("state")
-        != "proof-plan-frozen-first-native-library-slice-publicly-composed"
+        != "proof-plan-frozen-singleton-inductive-library-slice-composed"
     ):
         raise PlanError("manifest identity changed")
     source = manifest["source"]
@@ -107,7 +107,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         != {
             "proof_bodies_displayed": False,
             "proof_search_invocations": 0,
-            "kernel_submissions": 3,
+            "kernel_submissions": 5,
             "ledger_writes": 0,
         }
     ):
@@ -157,6 +157,13 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         for row in reused_receipts
     )
     type_shape_only_reused = len(reused_receipts) - exact_reused
+    compatibility_counts = {
+        kind: sum(row["compatibility"] == kind for row in reused_receipts)
+        for kind in [
+            "kernel-type-shape",
+            "translated-definitional-equality",
+        ]
+    }
     if (
         composed["roots"] != [composition_result["root"]]
         or composed["source_closure"] != composition_result["source_closure"]
@@ -171,12 +178,15 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or exact_reused != composition_result["reused_exact_declarations"]
         or type_shape_only_reused
         != composition_result["reused_type_shape_compatible_content_mismatches"]
+        or compatibility_counts != composition_result["reused_compatibility"]
         or any(
             row["source_type_shape_sha256"] != row["target_type_shape_sha256"]
             for row in reused_receipts
         )
         or composed["added_theorem_names"]
         != composition_result["added_theorem_names"]
+        or composed["added_singleton_inductives"]
+        != composition_result["added_singleton_inductives"]
         or composed["declarations_absent_before"]
         != composition_result["added_theorem_names"]
         or composed["added_declaration_sha256"]
@@ -196,6 +206,35 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         != composition_result["negative_control_environment_unchanged"]
     ):
         raise PlanError("native theorem composition result changed")
+    singleton = observation["source"]["singleton_inductive_control"]
+    singleton_result = manifest["singleton_inductive_result"]
+    if (
+        singleton["roots"] != [singleton_result["root"]]
+        or singleton["outcome"] != singleton_result["outcome"]
+        or singleton["receipt_schema"] != singleton_result["receipt_schema"]
+        or singleton["receipt_sha256"] != singleton_result["receipt_sha256"]
+        or singleton["added_theorem_names"]
+        != singleton_result["added_theorem_names"]
+        or singleton["added_axiom_footprints"]
+        != singleton_result["added_axiom_footprints"]
+        or singleton["added_singleton_inductives"]
+        != singleton_result["added_singleton_inductives"]
+        or singleton["environment_sha256_before"]
+        != singleton_result["environment_sha256_before"]
+        or singleton["environment_sha256_after"]
+        != singleton_result["environment_sha256_after"]
+        or singleton["environment_sha256_before"]
+        == singleton["environment_sha256_after"]
+    ):
+        raise PlanError("singleton inductive composition result changed")
+    for package in singleton["added_singleton_inductives"]:
+        expected_names = [package["family"], *package["constructors"], package["recursor"]]
+        if (
+            sorted(package["source_declaration_sha256"]) != sorted(expected_names)
+            or package["source_declaration_sha256"]
+            != package["target_declaration_sha256"]
+        ):
+            raise PlanError("singleton inductive identity changed")
     if (
         manifest["target"]["fact_id"]
         != "F:ml430-nat-fib-coprime-fib-succ-162fc738"
@@ -208,7 +247,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         "held_out_inspected": False,
         "proof_bodies_displayed": False,
         "proof_search_invocations": 0,
-        "kernel_submissions": 3,
+        "kernel_submissions": 5,
         "evaluation_credit": 0,
         "ledger_writes": 0,
     }:
@@ -222,7 +261,7 @@ def main() -> int:
         print(
             "AUTOGENESIS_NAT_FIB_COPRIME_PREMISE_PLAN_OK|"
             f"required={len(manifest['proof_plan']['required_native_declarations'])}|"
-            "present=0|first_conflict=True|submissions=3|evaluation=0|writes=0"
+            "present=0|first_conflict=True|submissions=5|evaluation=0|writes=0"
         )
         return 0
     except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError, PlanError) as error:

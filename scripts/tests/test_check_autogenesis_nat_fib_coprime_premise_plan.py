@@ -67,12 +67,26 @@ class FibCoprimePremisePlanTests(unittest.TestCase):
             MODULE.validate(changed)
 
         changed = copy.deepcopy(self.manifest)
+        changed["singleton_inductive_result"]["added_singleton_inductives"][0][
+            "constructors"
+        ] = []
+        with self.assertRaisesRegex(MODULE.PlanError, "singleton inductive"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
         changed["composition_result"]["receipt_sha256"] = "0" * 64
         with self.assertRaisesRegex(MODULE.PlanError, "composition result"):
             MODULE.validate(changed)
 
         changed = copy.deepcopy(self.manifest)
         changed["composition_result"]["reused_exact_declarations"] = 3
+        with self.assertRaisesRegex(MODULE.PlanError, "composition result"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["composition_result"]["reused_compatibility"][
+            "translated-definitional-equality"
+        ] = 1
         with self.assertRaisesRegex(MODULE.PlanError, "composition result"):
             MODULE.validate(changed)
 

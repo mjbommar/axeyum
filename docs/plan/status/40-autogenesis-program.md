@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** The ADR-0523 public theorem-only completed-clone API reproduces the first three axiom-free native Nat admissions over r082 with an exact source closure, environment transition, and canonical receipt; ten controls cover the major fail-closed boundary.
+**Status:** ADR-0525 and receipt V3 atomically reconstruct demanded non-recursive singleton inductives through the target kernel. A real r082 control composes exact `Exists` / `Exists.intro` / `Exists.rec` plus an axiom-free theorem; the unchanged Fibonacci-support root now advances to missing definition `Nat.mul`.
 
-**Next:** finish the missing constructor/recursor/quotient-kind controls, then measure and specify the smallest representation bridge for `Nat.dvd_add_iff_right` (`Nat.le_trans` / `Nat.zero_le`) before retrying that original root. Do not broaden V1 into definition or inductive transport without a demand-backed ADR.
+**Next:** specify definition composition as exact rebuilt type/value/reducibility plus ordinary target admission and receipt identity, initially for the measured `Nat.mul` demand; retain opaque/axiom and conflicting-definition declines, then retry the original root unchanged.
 
 <!-- plan-section: landed-changes -->
 
@@ -18,3 +18,5 @@
 | 2026-08-20 | `bdc9bf1c9` | Public checked theorem-slice composition API publishes only a fully admitted owned clone and replayable receipt |
 | 2026-08-20 | `75aa21d1a` | Composition boundary controls cover unsupported kinds, type mismatch, binder metadata, free variables, partial staging, and receipt mutation |
 | 2026-08-20 | `0bcbe935d` | The r082 public-API probe exposes the exact source closure and canonical composition receipt identity |
+| 2026-08-20 | `c17b7e65b` | Receipt V2 records translated definitional equality as attempt-only reuse authority and moves the r082 blocker to missing `Exists` |
+| 2026-08-20 | `fced2b166` | Receipt V3 atomically reconstructs a demanded singleton inductive and advances the r082 root to missing definition `Nat.mul` |

@@ -1,4 +1,4 @@
-//! Checked theorem-only composition between independently owned kernels.
+//! Checked theorem-rooted composition between independently owned kernels.
 //!
 //! This module implements ADR-0523's publication boundary. Compatibility only
 //! authorizes an attempt; the target kernel independently checks every rebuilt
@@ -17,7 +17,27 @@ use sha2::{Digest, Sha256};
 use crate::{canonical_declaration_sha256, canonical_kernel_type_shape_sha256};
 
 /// Version of the checked theorem-composition receipt and compatibility policy.
-pub const CHECKED_THEOREM_COMPOSITION_VERSION: &str = "axeyum.checked-theorem-composition.v1";
+pub const CHECKED_THEOREM_COMPOSITION_VERSION: &str = "axeyum.checked-theorem-composition.v3";
+
+/// The checked relation that authorized reuse of one target declaration.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReusedTypeCompatibility {
+    /// Canonical kernel-relevant type shapes are identical.
+    KernelTypeShape,
+    /// The rebuilt source type is definitionally equal to the target type.
+    TranslatedDefinitionalEquality,
+}
+
+impl ReusedTypeCompatibility {
+    /// Stable receipt spelling for this relation.
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::KernelTypeShape => "kernel-type-shape",
+            Self::TranslatedDefinitionalEquality => "translated-definitional-equality",
+        }
+    }
+}
 
 /// One source declaration reused from the target environment.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -32,6 +52,8 @@ pub struct ReusedDeclarationReceipt {
     pub source_type_shape_sha256: String,
     /// Kernel-relevant target type-shape identity.
     pub target_type_shape_sha256: String,
+    /// Checked compatibility relation that authorized this reuse attempt.
+    pub compatibility: ReusedTypeCompatibility,
 }
 
 /// One checked theorem newly admitted to the completed target.
@@ -45,6 +67,21 @@ pub struct AddedTheoremReceipt {
     pub target_declaration_sha256: String,
     /// Kernel-derived assumptions reached by the admitted theorem.
     pub axiom_footprint: Vec<String>,
+}
+
+/// One atomically reconstructed non-recursive singleton inductive package.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AddedSingletonInductiveReceipt {
+    /// Complete family name.
+    pub family: String,
+    /// Complete constructor names in checked source order.
+    pub constructors: Vec<String>,
+    /// Complete generated recursor name.
+    pub recursor: String,
+    /// Exact source identities for family, constructors, and recursor.
+    pub source_declaration_sha256: BTreeMap<String, String>,
+    /// Exact independently reconstructed target identities.
+    pub target_declaration_sha256: BTreeMap<String, String>,
 }
 
 /// Deterministic receipt for one completed theorem-only composition.
@@ -62,6 +99,8 @@ pub struct CheckedTheoremCompositionReceipt {
     pub reused_declarations: Vec<ReusedDeclarationReceipt>,
     /// Missing source theorems independently admitted to the target clone.
     pub added_theorems: Vec<AddedTheoremReceipt>,
+    /// Missing singleton inductives atomically reconstructed before theorem admission.
+    pub added_singleton_inductives: Vec<AddedSingletonInductiveReceipt>,
     /// Exact target environment identity after composition.
     pub target_environment_sha256_after: String,
     /// Canonical digest of every preceding receipt field.
@@ -100,12 +139,20 @@ impl CheckedTheoremCompositionReceipt {
                 "target_declaration_sha256": row.target_declaration_sha256,
                 "source_type_shape_sha256": row.source_type_shape_sha256,
                 "target_type_shape_sha256": row.target_type_shape_sha256,
+                "compatibility": row.compatibility.as_str(),
             })).collect::<Vec<_>>(),
             "added_theorems": self.added_theorems.iter().map(|row| json!({
                 "name": row.name,
                 "source_declaration_sha256": row.source_declaration_sha256,
                 "target_declaration_sha256": row.target_declaration_sha256,
                 "axiom_footprint": row.axiom_footprint,
+            })).collect::<Vec<_>>(),
+            "added_singleton_inductives": self.added_singleton_inductives.iter().map(|row| json!({
+                "family": row.family,
+                "constructors": row.constructors,
+                "recursor": row.recursor,
+                "source_declaration_sha256": row.source_declaration_sha256,
+                "target_declaration_sha256": row.target_declaration_sha256,
             })).collect::<Vec<_>>(),
             "target_environment_sha256_after": self.target_environment_sha256_after,
         });
@@ -168,7 +215,8 @@ pub enum CheckedTheoremCompositionError {
         /// Target type-shape digest.
         target_sha256: String,
     },
-    /// V1 admits missing checked theorems only.
+    /// The current schema admits only missing checked theorems and complete
+    /// non-recursive singleton inductive packages.
     UnsupportedMissingDeclaration {
         /// Complete declaration name.
         name: String,
@@ -200,7 +248,7 @@ impl fmt::Display for CheckedTheoremCompositionError {
 
 impl std::error::Error for CheckedTheoremCompositionError {}
 
-/// Compose a theorem-only source slice into an owned clone of `target`.
+/// Compose a theorem-rooted source slice into an owned clone of `target`.
 ///
 /// `target` is never mutated. The function validates all reused declarations
 /// before cloning, admits every missing theorem into the private clone, and
@@ -208,9 +256,11 @@ impl std::error::Error for CheckedTheoremCompositionError {}
 ///
 /// # Errors
 ///
-/// Declines on invalid roots, incompatible reused types, unsupported missing
-/// declaration kinds, non-closed terms, identity failures, or trusted-gate
-/// rejection. No error publishes a target kernel.
+/// Declines on invalid roots, incompatible reused types, unsupported or partial
+/// missing declaration packages, non-closed terms, identity failures, or a
+/// trusted-gate rejection. Complete non-recursive singleton inductives are
+/// reconstructed atomically before missing theorem admission. No error
+/// publishes a target kernel.
 pub fn compose_checked_theorem_slice(
     source: &Kernel,
     target: &Kernel,
@@ -227,25 +277,23 @@ pub fn compose_checked_theorem_slice(
     if missing.is_empty() {
         return Err(CheckedTheoremCompositionError::NoAdditions);
     }
-    for &name in &missing {
-        let declaration = source.environment().get(name).ok_or_else(|| {
-            CheckedTheoremCompositionError::Identity(
-                "selected source declaration disappeared".to_owned(),
-            )
-        })?;
-        if !matches!(declaration, Declaration::Theorem { .. }) {
-            return Err(
-                CheckedTheoremCompositionError::UnsupportedMissingDeclaration {
-                    name: source.display_name(name).to_string(),
-                    kind: declaration_kind(declaration).to_owned(),
-                },
-            );
-        }
-    }
+    let singleton_packages = validate_missing_declarations(source, &missing)?;
 
     let before = environment_sha256(target)?;
     let mut staged = target.clone();
-    let added = admit_missing_theorems(source, &mut staged, &missing)?;
+    let added_singleton_inductives =
+        admit_missing_singleton_inductives(source, &mut staged, &singleton_packages)?;
+    let missing_theorems = missing
+        .iter()
+        .copied()
+        .filter(|name| {
+            matches!(
+                source.environment().get(*name),
+                Some(Declaration::Theorem { .. })
+            )
+        })
+        .collect::<Vec<_>>();
+    let added = admit_missing_theorems(source, &mut staged, &missing_theorems)?;
     let after = environment_sha256(&staged)?;
     let mut receipt = CheckedTheoremCompositionReceipt {
         schema_version: CHECKED_THEOREM_COMPOSITION_VERSION.to_owned(),
@@ -257,6 +305,7 @@ pub fn compose_checked_theorem_slice(
         target_environment_sha256_before: before,
         reused_declarations: reused,
         added_theorems: added,
+        added_singleton_inductives,
         target_environment_sha256_after: after,
         receipt_sha256: String::new(),
     };
@@ -337,6 +386,8 @@ fn validate_reused(
     target_names: &BTreeMap<String, NameId>,
 ) -> Result<Vec<ReusedDeclarationReceipt>, CheckedTheoremCompositionError> {
     let mut reused = Vec::new();
+    let mut compatibility_target = target.clone();
+    let mut compatibility_translator = ExpressionTranslator::new(source, &mut compatibility_target);
     for &source_name in selected {
         let rendered = source.display_name(source_name).to_string();
         let Some(&target_name) = target_names.get(&rendered) else {
@@ -362,22 +413,287 @@ fn validate_reused(
             .ty();
         let source_shape = type_shape(source, source_type)?;
         let target_shape = type_shape(target, target_type)?;
-        if source_shape != target_shape {
+        let compatibility = if source_shape == target_shape {
+            ReusedTypeCompatibility::KernelTypeShape
+        } else if translated_type_is_definitionally_equal(
+            &mut compatibility_translator,
+            source_type,
+            target_type,
+        )? {
+            ReusedTypeCompatibility::TranslatedDefinitionalEquality
+        } else {
             return Err(CheckedTheoremCompositionError::TypeShapeMismatch {
                 name: rendered,
                 source_sha256: source_shape,
                 target_sha256: target_shape,
             });
-        }
+        };
         reused.push(ReusedDeclarationReceipt {
             name: rendered,
             source_declaration_sha256: declaration_sha256(source, source_name)?,
             target_declaration_sha256: declaration_sha256(target, target_name)?,
             source_type_shape_sha256: source_shape,
             target_type_shape_sha256: target_shape,
+            compatibility,
         });
     }
     Ok(reused)
+}
+
+fn translated_type_is_definitionally_equal(
+    translator: &mut ExpressionTranslator<'_>,
+    source_type: ExprId,
+    target_type: ExprId,
+) -> Result<bool, CheckedTheoremCompositionError> {
+    let translated = translator.expr(source_type)?;
+    let Ok(inferred) = translator.target.infer(translated) else {
+        return Ok(false);
+    };
+    let inferred = translator.target.whnf(inferred);
+    if !matches!(translator.target.expr_node(inferred), ExprNode::Sort(_)) {
+        return Ok(false);
+    }
+    Ok(translator.target.def_eq(translated, target_type))
+}
+
+#[derive(Debug)]
+struct SingletonInductivePackage {
+    family: NameId,
+    constructors: Vec<NameId>,
+    recursor: NameId,
+}
+
+fn validate_missing_declarations(
+    source: &Kernel,
+    missing: &[NameId],
+) -> Result<Vec<SingletonInductivePackage>, CheckedTheoremCompositionError> {
+    let missing_set = missing.iter().copied().collect::<BTreeSet<_>>();
+    let names = declaration_names(source);
+    let mut package_members = BTreeSet::new();
+    let mut packages = Vec::new();
+    for &family in missing {
+        if !matches!(
+            source.environment().get(family),
+            Some(Declaration::Inductive { .. })
+        ) {
+            continue;
+        }
+        let package = validate_singleton_inductive(source, family, &missing_set, &names)?;
+        package_members.insert(package.family);
+        package_members.extend(package.constructors.iter().copied());
+        package_members.insert(package.recursor);
+        packages.push(package);
+    }
+    for &name in missing {
+        let declaration = source.environment().get(name).ok_or_else(|| {
+            CheckedTheoremCompositionError::Identity(
+                "selected source declaration disappeared".to_owned(),
+            )
+        })?;
+        if !matches!(declaration, Declaration::Theorem { .. }) && !package_members.contains(&name) {
+            return Err(
+                CheckedTheoremCompositionError::UnsupportedMissingDeclaration {
+                    name: source.display_name(name).to_string(),
+                    kind: declaration_kind(declaration).to_owned(),
+                },
+            );
+        }
+    }
+    Ok(packages)
+}
+
+fn validate_singleton_inductive(
+    source: &Kernel,
+    family: NameId,
+    missing: &BTreeSet<NameId>,
+    names: &BTreeMap<String, NameId>,
+) -> Result<SingletonInductivePackage, CheckedTheoremCompositionError> {
+    let Some(Declaration::Inductive {
+        uparams,
+        num_params,
+        num_indices,
+        is_recursive,
+        ctor_names,
+        ..
+    }) = source.environment().get(family)
+    else {
+        unreachable!("caller selects only inductive declarations")
+    };
+    let rendered = source.display_name(family).to_string();
+    if *is_recursive {
+        return Err(
+            CheckedTheoremCompositionError::UnsupportedMissingDeclaration {
+                name: rendered,
+                kind: "recursive-inductive".to_owned(),
+            },
+        );
+    }
+    let recursor_rendered = format!("{rendered}.rec");
+    let Some(&recursor) = names.get(&recursor_rendered) else {
+        return Err(
+            CheckedTheoremCompositionError::UnsupportedMissingDeclaration {
+                name: rendered,
+                kind: "singleton-inductive-without-recursor".to_owned(),
+            },
+        );
+    };
+    let Some(Declaration::Recursor {
+        num_motives,
+        num_params: recursor_num_params,
+        num_indices: recursor_num_indices,
+        rec_rules,
+        ..
+    }) = source.environment().get(recursor)
+    else {
+        return Err(
+            CheckedTheoremCompositionError::UnsupportedMissingDeclaration {
+                name: recursor_rendered,
+                kind: "invalid-recursor".to_owned(),
+            },
+        );
+    };
+    let recursor_constructors = rec_rules
+        .iter()
+        .map(|rule| rule.ctor_name)
+        .collect::<Vec<_>>();
+    let complete = *num_motives == 1
+        && recursor_num_params == num_params
+        && recursor_num_indices == num_indices
+        && recursor_constructors == *ctor_names
+        && missing.contains(&recursor)
+        && ctor_names.iter().all(|name| missing.contains(name));
+    if !complete {
+        return Err(
+            CheckedTheoremCompositionError::UnsupportedMissingDeclaration {
+                name: rendered,
+                kind: "non-singleton-or-partial-inductive-package".to_owned(),
+            },
+        );
+    }
+    for (index, &constructor) in ctor_names.iter().enumerate() {
+        let Some(Declaration::Constructor {
+            uparams: ctor_uparams,
+            inductive,
+            idx,
+            ..
+        }) = source.environment().get(constructor)
+        else {
+            return Err(
+                CheckedTheoremCompositionError::UnsupportedMissingDeclaration {
+                    name: source.display_name(constructor).to_string(),
+                    kind: "invalid-constructor".to_owned(),
+                },
+            );
+        };
+        if ctor_uparams != uparams || *inductive != family || usize::from(*idx) != index {
+            return Err(
+                CheckedTheoremCompositionError::UnsupportedMissingDeclaration {
+                    name: source.display_name(constructor).to_string(),
+                    kind: "inconsistent-singleton-constructor".to_owned(),
+                },
+            );
+        }
+    }
+    Ok(SingletonInductivePackage {
+        family,
+        constructors: ctor_names.clone(),
+        recursor,
+    })
+}
+
+fn admit_missing_singleton_inductives(
+    source: &Kernel,
+    target: &mut Kernel,
+    packages: &[SingletonInductivePackage],
+) -> Result<Vec<AddedSingletonInductiveReceipt>, CheckedTheoremCompositionError> {
+    let mut translator = ExpressionTranslator::new(source, target);
+    let mut added = Vec::new();
+    for package in packages {
+        let Some(Declaration::Inductive {
+            name,
+            uparams,
+            ty,
+            num_params,
+            ..
+        }) = source.environment().get(package.family).cloned()
+        else {
+            return Err(CheckedTheoremCompositionError::Identity(
+                "validated singleton family disappeared".to_owned(),
+            ));
+        };
+        let target_family = translator.name(name);
+        let target_uparams = uparams
+            .into_iter()
+            .map(|name| translator.name(name))
+            .collect::<Vec<_>>();
+        let target_type = translator.expr(ty)?;
+        let mut target_constructors = Vec::with_capacity(package.constructors.len());
+        for &constructor in &package.constructors {
+            let Some(Declaration::Constructor { name, ty, .. }) =
+                source.environment().get(constructor).cloned()
+            else {
+                return Err(CheckedTheoremCompositionError::Identity(
+                    "validated singleton constructor disappeared".to_owned(),
+                ));
+            };
+            let name = translator.name(name);
+            let ty = translator.expr(ty)?;
+            target_constructors.push((name, ty));
+        }
+        translator
+            .target
+            .add_inductive(
+                target_family,
+                &target_uparams,
+                usize::from(num_params),
+                target_type,
+                &target_constructors,
+            )
+            .map_err(|error| CheckedTheoremCompositionError::AdmissionRejected {
+                name: source.display_name(package.family).to_string(),
+                error: format!("{error:?}"),
+            })?;
+
+        let family = source.display_name(package.family).to_string();
+        let constructors = package
+            .constructors
+            .iter()
+            .map(|name| source.display_name(*name).to_string())
+            .collect::<Vec<_>>();
+        let recursor = source.display_name(package.recursor).to_string();
+        let package_declarations = std::iter::once((family.clone(), package.family))
+            .chain(
+                constructors
+                    .iter()
+                    .cloned()
+                    .zip(package.constructors.iter().copied()),
+            )
+            .chain(std::iter::once((recursor.clone(), package.recursor)))
+            .collect::<Vec<_>>();
+        let target_names = declaration_names(translator.target);
+        let mut source_digests = BTreeMap::new();
+        let mut target_digests = BTreeMap::new();
+        for (rendered, source_name) in package_declarations {
+            let target_name = target_names.get(&rendered).copied().ok_or_else(|| {
+                CheckedTheoremCompositionError::Identity(format!(
+                    "reconstructed singleton declaration is absent: {rendered}"
+                ))
+            })?;
+            source_digests.insert(rendered.clone(), declaration_sha256(source, source_name)?);
+            target_digests.insert(
+                rendered,
+                declaration_sha256(translator.target, target_name)?,
+            );
+        }
+        added.push(AddedSingletonInductiveReceipt {
+            family,
+            constructors,
+            recursor,
+            source_declaration_sha256: source_digests,
+            target_declaration_sha256: target_digests,
+        });
+    }
+    Ok(added)
 }
 
 fn admit_missing_theorems(

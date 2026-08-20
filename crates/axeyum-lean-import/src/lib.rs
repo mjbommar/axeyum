@@ -74,9 +74,10 @@ pub use source_delta_trace::{
     CheckedSourceDeltaStep, SourceDeltaStepError, build_source_delta_step, verify_source_delta_step,
 };
 pub use theorem_composition::{
-    AddedTheoremReceipt, CHECKED_THEOREM_COMPOSITION_VERSION, CheckedTheoremCompositionError,
-    CheckedTheoremCompositionReceipt, CompletedTheoremComposition, ReusedDeclarationReceipt,
-    compose_checked_theorem_slice, verify_checked_theorem_composition,
+    AddedSingletonInductiveReceipt, AddedTheoremReceipt, CHECKED_THEOREM_COMPOSITION_VERSION,
+    CheckedTheoremCompositionError, CheckedTheoremCompositionReceipt, CompletedTheoremComposition,
+    ReusedDeclarationReceipt, ReusedTypeCompatibility, compose_checked_theorem_slice,
+    verify_checked_theorem_composition,
 };
 pub use trace_contract_receipt::{
     TRACE_BACKED_SOURCE_CONTRACT_RECEIPT_VERSION, TraceBackedSourceContractReceipt,

@@ -1,4 +1,7 @@
-use axeyum_lean_kernel::{BinderInfo, Declaration, Kernel, ReducibilityHint, build_logic_prelude};
+use axeyum_lean_kernel::{
+    BinderInfo, Declaration, InductiveFamilySpec, Kernel, ReducibilityHint, build_logic_prelude,
+    build_nat_prelude,
+};
 
 use super::*;
 
@@ -151,7 +154,7 @@ fn source_with_missing_proof_dependency(kind: &str) -> (Kernel, Kernel, &'static
 }
 
 #[test]
-fn missing_axiom_opaque_and_inductive_dependencies_decline() {
+fn missing_axiom_opaque_and_recursive_inductive_dependencies_decline() {
     for kind in ["axiom", "opaque"] {
         let (source, target, root) = source_with_missing_proof_dependency(kind);
         assert!(matches!(
@@ -164,12 +167,96 @@ fn missing_axiom_opaque_and_inductive_dependencies_decline() {
     }
 
     let mut source = Kernel::new();
-    add_true_theorem(&mut source, "Composition.inductiveRoot");
+    build_nat_prelude(&mut source).unwrap();
     let target = Kernel::new();
     assert!(matches!(
-        compose_checked_theorem_slice(&source, &target, &["Composition.inductiveRoot"]),
+        compose_checked_theorem_slice(&source, &target, &["Nat.add_comm"]),
         Err(CheckedTheoremCompositionError::UnsupportedMissingDeclaration { kind, .. })
-            if kind == "inductive"
+            if kind == "recursive-inductive"
+    ));
+}
+
+#[test]
+fn complete_nonrecursive_singleton_inductive_is_reconstructed_atomically() {
+    let mut source = Kernel::new();
+    add_true_theorem(&mut source, "Composition.inductiveRoot");
+    let target = Kernel::new();
+    let completed =
+        compose_checked_theorem_slice(&source, &target, &["Composition.inductiveRoot"]).unwrap();
+    assert_eq!(completed.receipt().added_singleton_inductives.len(), 1);
+    let package = &completed.receipt().added_singleton_inductives[0];
+    assert_eq!(package.family, "True");
+    assert_eq!(package.constructors, ["True.intro"]);
+    assert_eq!(package.recursor, "True.rec");
+    assert_eq!(
+        package
+            .source_declaration_sha256
+            .keys()
+            .cloned()
+            .collect::<Vec<_>>(),
+        ["True", "True.intro", "True.rec"]
+    );
+    assert_eq!(
+        package
+            .target_declaration_sha256
+            .keys()
+            .cloned()
+            .collect::<Vec<_>>(),
+        ["True", "True.intro", "True.rec"]
+    );
+    assert!(declaration_names(completed.kernel()).contains_key("True"));
+    assert!(declaration_names(completed.kernel()).contains_key("True.intro"));
+    assert!(declaration_names(completed.kernel()).contains_key("True.rec"));
+    assert!(declaration_names(completed.kernel()).contains_key("Composition.inductiveRoot"));
+    assert!(
+        completed.receipt().added_theorems[0]
+            .axiom_footprint
+            .is_empty()
+    );
+    verify_checked_theorem_composition(&source, &target, completed.kernel(), completed.receipt())
+        .unwrap();
+}
+
+#[test]
+fn mutual_inductive_package_remains_outside_the_boundary() {
+    let mut source = Kernel::new();
+    let prop = source.sort_zero();
+    let left = name(&mut source, "Composition.MutualLeft");
+    let right = name(&mut source, "Composition.MutualRight");
+    source
+        .add_mutual_inductive(
+            &[],
+            0,
+            &[
+                InductiveFamilySpec::new(left, prop, vec![]),
+                InductiveFamilySpec::new(right, prop, vec![]),
+            ],
+        )
+        .unwrap();
+    let witness = name(&mut source, "Composition.mutualWitness");
+    let left_type = source.const_(left, vec![]);
+    source
+        .add_declaration(Declaration::Axiom {
+            name: witness,
+            uparams: vec![],
+            ty: left_type,
+        })
+        .unwrap();
+    let root = name(&mut source, "Composition.mutualRoot");
+    let proof = source.const_(witness, vec![]);
+    source
+        .add_declaration(Declaration::Theorem {
+            name: root,
+            uparams: vec![],
+            ty: left_type,
+            value: proof,
+        })
+        .unwrap();
+    let target = Kernel::new();
+    assert!(matches!(
+        compose_checked_theorem_slice(&source, &target, &["Composition.mutualRoot"]),
+        Err(CheckedTheoremCompositionError::UnsupportedMissingDeclaration { kind, .. })
+            if kind == "non-singleton-or-partial-inductive-package"
     ));
 }
 
@@ -226,6 +313,81 @@ fn binder_info_only_type_difference_authorizes_a_fresh_gate_check() {
         completed.receipt().added_theorems[0].axiom_footprint,
         ["Composition.surfaceWitness"]
     );
+    assert_eq!(
+        surface.compatibility,
+        ReusedTypeCompatibility::KernelTypeShape
+    );
+}
+
+#[test]
+fn translated_definitional_equality_authorizes_only_a_fresh_gate_check() {
+    fn add_surface(kernel: &mut Kernel, wrapped_witness: bool, add_root: bool) {
+        let logic = build_logic_prelude(kernel).unwrap();
+        let prop = kernel.sort_zero();
+        let true_type = kernel.const_(logic.true_, vec![]);
+        let surface = name(kernel, "Composition.DefeqSurface");
+        kernel
+            .add_declaration(Declaration::Definition {
+                name: surface,
+                uparams: vec![],
+                ty: prop,
+                value: true_type,
+                hint: ReducibilityHint::Regular(1),
+            })
+            .unwrap();
+        let wrapped_type = kernel.const_(surface, vec![]);
+        let witness = name(kernel, "Composition.defeqWitness");
+        kernel
+            .add_declaration(Declaration::Axiom {
+                name: witness,
+                uparams: vec![],
+                ty: if wrapped_witness {
+                    wrapped_type
+                } else {
+                    true_type
+                },
+            })
+            .unwrap();
+        if add_root {
+            let root = name(kernel, "Composition.defeqRoot");
+            let proof = kernel.const_(witness, vec![]);
+            kernel
+                .add_declaration(Declaration::Theorem {
+                    name: root,
+                    uparams: vec![],
+                    ty: wrapped_type,
+                    value: proof,
+                })
+                .unwrap();
+        }
+    }
+
+    let mut source = Kernel::new();
+    add_surface(&mut source, true, true);
+    let mut target = Kernel::new();
+    add_surface(&mut target, false, false);
+    let completed =
+        compose_checked_theorem_slice(&source, &target, &["Composition.defeqRoot"]).unwrap();
+    let witness = completed
+        .receipt()
+        .reused_declarations
+        .iter()
+        .find(|row| row.name == "Composition.defeqWitness")
+        .unwrap();
+    assert_ne!(
+        witness.source_type_shape_sha256,
+        witness.target_type_shape_sha256
+    );
+    assert_eq!(
+        witness.compatibility,
+        ReusedTypeCompatibility::TranslatedDefinitionalEquality
+    );
+    assert_eq!(
+        completed.receipt().added_theorems[0].axiom_footprint,
+        ["Composition.defeqWitness"]
+    );
+    verify_checked_theorem_composition(&source, &target, completed.kernel(), completed.receipt())
+        .unwrap();
 }
 
 #[test]
@@ -354,6 +516,14 @@ fn free_variables_and_receipt_mutations_are_rejected() {
         compose_checked_theorem_slice(&source, &target, &["Composition.receiptRoot"]).unwrap();
     let mut changed = completed.receipt().clone();
     changed.target_environment_sha256_after = "00".repeat(32);
+    assert_eq!(
+        verify_checked_theorem_composition(&source, &target, completed.kernel(), &changed),
+        Err(CheckedTheoremCompositionError::ReceiptMismatch)
+    );
+
+    let mut changed = completed.receipt().clone();
+    changed.reused_declarations[0].compatibility =
+        ReusedTypeCompatibility::TranslatedDefinitionalEquality;
     assert_eq!(
         verify_checked_theorem_composition(&source, &target, completed.kernel(), &changed),
         Err(CheckedTheoremCompositionError::ReceiptMismatch)
