@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-20 | `18062735c` | Certified the Frobenius-square parity decomposition, its exact squarefreeness criterion, and the failure of the naive irreducibility induction without granting finite complement searches theorem credit. |
 | 2026-08-20 | `6c6e36597` | Certified the exact long-cycle cyclic/Foulkes compression, retained odd/even proper-power margins, and isolated a quartic characteristic-two cyclic-Betti theorem that would close every degree after 400 without claiming it. |
 | 2026-08-20 | `9a3e77556` | Derived the exact ell-three degree-seven extension trace from characteristic-two period-24 symmetry, reproduced the sharded GF(16) row, and refuted the one-extra-q cutoff repair. |
 | 2026-08-20 | `ef5a90f0b` | Added an atomic bounded fleet shard runner and used the exact GF(16) level-three merge to refute the apparent ell^4 connected Adams trace allowance without granting endpoint credit. |
@@ -953,6 +954,17 @@ published generic bound still fails, and the new quartic cyclic-eigenspace
 statement is recorded as conjectured with no evidence.  The representation
 compression has been proved; the characteristic-two cohomology estimate has
 not.
+The newly proposed even--odd recursion has also been reduced to its exact
+content and stopped before finite search was mistaken for induction.  Every
+half-shaped binary polynomial is reconstructed as
+`E(x)^2+xH(x)^2`, and the native report proves
+`gcd(f,f')=gcd(E,H)^2`.  The leading parity component remains half-shaped, but
+irreducibility of `f` forces only component coprimality: the certified shaped
+irreducibles `x^5+x^2+1` and `x^6+x^3+1` already have reducible leading parity
+components.  Conversely, the simplest odd lift with complement one always
+has the root one when the smaller component is irreducible.  Any useful
+recursive construction therefore needs a genuinely new uniform complement
+theorem; the active universal frontier remains the connected signed trace.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
