@@ -90,6 +90,27 @@ class FibCoprimePremisePlanTests(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.PlanError, "composition result"):
             MODULE.validate(changed)
 
+        changed = copy.deepcopy(self.manifest)
+        changed["definition_result"]["added_definitions"][0][
+            "target_declaration_sha256"
+        ] = "0" * 64
+        with self.assertRaisesRegex(MODULE.PlanError, "definition composition"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["definition_result"]["added_definitions"][1]["reducibility"] = (
+            "regular:3"
+        )
+        with self.assertRaisesRegex(MODULE.PlanError, "definition composition"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["definition_result"]["reused_compatibility"][
+            "translated-definitional-equality"
+        ] = 3
+        with self.assertRaisesRegex(MODULE.PlanError, "definition composition"):
+            MODULE.validate(changed)
+
 
 if __name__ == "__main__":
     unittest.main()

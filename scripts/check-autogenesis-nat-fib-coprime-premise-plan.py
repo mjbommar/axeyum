@@ -37,7 +37,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or manifest.get("kind")
         != "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan"
         or manifest.get("state")
-        != "proof-plan-frozen-singleton-inductive-library-slice-composed"
+        != "proof-plan-frozen-definition-library-slice-composed"
     ):
         raise PlanError("manifest identity changed")
     source = manifest["source"]
@@ -107,7 +107,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         != {
             "proof_bodies_displayed": False,
             "proof_search_invocations": 0,
-            "kernel_submissions": 5,
+            "kernel_submissions": 15,
             "ledger_writes": 0,
         }
     ):
@@ -185,6 +185,8 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         )
         or composed["added_theorem_names"]
         != composition_result["added_theorem_names"]
+        or composed["added_definitions"]
+        != composition_result["added_definitions"]
         or composed["added_singleton_inductives"]
         != composition_result["added_singleton_inductives"]
         or composed["declarations_absent_before"]
@@ -235,6 +237,51 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
             != package["target_declaration_sha256"]
         ):
             raise PlanError("singleton inductive identity changed")
+    definition = observation["source"]["definition_control"]
+    definition_result = manifest["definition_result"]
+    definition_reuse_counts = {
+        kind: sum(
+            row["compatibility"] == kind
+            for row in definition["reused_declaration_receipts"]
+        )
+        for kind in ["kernel-type-shape", "translated-definitional-equality"]
+    }
+    if (
+        definition["roots"] != [definition_result["root"]]
+        or definition["source_closure"] != definition_result["source_closure"]
+        or definition["source_closure"][-1] != definition_result["root"]
+        or definition["outcome"] != definition_result["outcome"]
+        or definition["receipt_schema"] != definition_result["receipt_schema"]
+        or definition["receipt_sha256"] != definition_result["receipt_sha256"]
+        or definition["added_definitions"]
+        != definition_result["added_definitions"]
+        or [row["name"] for row in definition["added_definitions"]]
+        != ["Nat.mul", "Nat.dvd"]
+        or any(
+            row["source_declaration_sha256"]
+            != row["target_declaration_sha256"]
+            for row in definition["added_definitions"]
+        )
+        or definition["added_theorem_names"]
+        != definition_result["added_theorem_names"]
+        or definition["added_axiom_footprints"]
+        != definition_result["added_axiom_footprints"]
+        or any(definition["added_axiom_footprints"].values())
+        or [
+            row["family"] for row in definition["added_singleton_inductives"]
+        ]
+        != definition_result["added_singleton_inductive_families"]
+        or definition["added_singleton_inductives"]
+        != singleton_result["added_singleton_inductives"]
+        or definition_reuse_counts != definition_result["reused_compatibility"]
+        or definition["environment_sha256_before"]
+        != definition_result["environment_sha256_before"]
+        or definition["environment_sha256_after"]
+        != definition_result["environment_sha256_after"]
+        or definition["environment_sha256_before"]
+        == definition["environment_sha256_after"]
+    ):
+        raise PlanError("definition composition result changed")
     if (
         manifest["target"]["fact_id"]
         != "F:ml430-nat-fib-coprime-fib-succ-162fc738"
@@ -247,7 +294,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         "held_out_inspected": False,
         "proof_bodies_displayed": False,
         "proof_search_invocations": 0,
-        "kernel_submissions": 5,
+        "kernel_submissions": 15,
         "evaluation_credit": 0,
         "ledger_writes": 0,
     }:
@@ -261,7 +308,7 @@ def main() -> int:
         print(
             "AUTOGENESIS_NAT_FIB_COPRIME_PREMISE_PLAN_OK|"
             f"required={len(manifest['proof_plan']['required_native_declarations'])}|"
-            "present=0|first_conflict=True|submissions=5|evaluation=0|writes=0"
+            "present=0|first_conflict=True|submissions=15|evaluation=0|writes=0"
         )
         return 0
     except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError, PlanError) as error:

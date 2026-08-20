@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "kind": "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan",
-  "state": "proof-plan-frozen-singleton-inductive-library-slice-composed",
+  "state": "proof-plan-frozen-definition-library-slice-composed",
   "target": {
     "fact_id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
     "source_name": "Nat.fib_coprime_fib_succ",
@@ -17,11 +17,11 @@
   },
   "composition_probe": {
     "tool": "crates/axeyum-lean-import/examples/nat_prelude_composition_probe.rs",
-    "tool_sha256": "cf53b022f1fab4660b6f6c53f48a9d623f4f4fbaab3d523597ba5c42add33ab7",
+    "tool_sha256": "d67f884e8bf38ce1df694f43a1c3fa86fd9d0d329a01dc0e4324fa4cf21fda40",
     "api": "crates/axeyum-lean-import/src/theorem_composition.rs",
-    "api_sha256": "9809ba2530a6eb78d82388623b6c26a4c5852fa7897359c65698e7dda02e1ea5",
-    "observation": "/nas3/data/axeyum/autogenesis/probes/fced2b166-singleton-inductive-composition-v9/observation.json",
-    "observation_sha256": "71923cf70ace04a37f0bae868c3d33950ccf031c156e9357268fbaaad104aaea",
+    "api_sha256": "3d5990a4a26162d9002d36125d4510cdf0965696679681cc265cce22dfa27fe7",
+    "observation": "/nas3/data/axeyum/autogenesis/probes/acade2a45-definition-composition-v10/observation.json",
+    "observation_sha256": "099019607493973cc6f4a4cc18b6894fdd4fe836b86318da25d9ee1f4728fd5f",
     "outcome": "rejected",
     "first_conflict": "True",
     "imported_declarations": 261,
@@ -49,8 +49,8 @@
   "composition_result": {
     "root": "Nat.add_comm",
     "outcome": "composed",
-    "receipt_schema": "axeyum.checked-theorem-composition.v3",
-    "receipt_sha256": "d1457727339d0928aaf2834160331cfc3b98ea868bb37ad2eba2d205e88288af",
+    "receipt_schema": "axeyum.checked-theorem-composition.v4",
+    "receipt_sha256": "65cebf06c4f6ed4156631af24f94800b4de41d3ed9dbfe73e667b1a01b780a9b",
     "source_closure": [
       "Nat",
       "Nat.zero",
@@ -72,6 +72,7 @@
       "translated-definitional-equality": 0
     },
     "added_theorem_names": ["Nat.zero_add", "Nat.succ_add", "Nat.add_comm"],
+    "added_definitions": [],
     "added_singleton_inductives": [],
     "added_declaration_sha256": {
       "Nat.add_comm": "c05e6d0986251392c9b1bc9fcc2bd5d66de22c856b9669cdd993e9993d94f4f9",
@@ -85,15 +86,15 @@
     },
     "environment_sha256_before": "82ac7b0143bdd9891b666a37220fb91b86afc4af4b920d68773d80b5c9348855",
     "environment_sha256_after": "bda5fa7e1660db1635ea2e019775ead03663cf3676e6a7695ea5352f8572c9bf",
-    "negative_control_root": "Nat.eq_one_of_dvd_one",
-    "negative_control_first_mismatch": "Nat.mul",
+    "negative_control_root": "Nat.dvd_gcd",
+    "negative_control_first_mismatch": "Bool.rec",
     "negative_control_environment_unchanged": true
   },
   "singleton_inductive_result": {
     "root": "Composition.existsTrue",
     "outcome": "composed",
-    "receipt_schema": "axeyum.checked-theorem-composition.v3",
-    "receipt_sha256": "71a9824ff9c091dbaa4825dac197ecd906881f2f0bbb7c3879a793eb8b04afdc",
+    "receipt_schema": "axeyum.checked-theorem-composition.v4",
+    "receipt_sha256": "7e40575f65ce4938795b10f6950b688a38980cb6e7cadabcc219b4b9e3a054df",
     "added_theorem_names": ["Composition.existsTrue"],
     "added_axiom_footprints": {
       "Composition.existsTrue": []
@@ -117,6 +118,90 @@
     ],
     "environment_sha256_before": "82ac7b0143bdd9891b666a37220fb91b86afc4af4b920d68773d80b5c9348855",
     "environment_sha256_after": "52e5b2e9dcc275fe83e77b9b0ca7c5b4f00b8a3b2cca3b471d0c7d29ad947847"
+  },
+  "definition_result": {
+    "root": "Nat.eq_one_of_dvd_one",
+    "outcome": "composed",
+    "receipt_schema": "axeyum.checked-theorem-composition.v4",
+    "receipt_sha256": "9ac9ace96e64d1bd9cd8131ebe1f2f7404cc93b4ed9d962ae55ffe51ef200cd0",
+    "source_closure": [
+      "True",
+      "True.intro",
+      "True.rec",
+      "Nat",
+      "Nat.zero",
+      "Nat.succ",
+      "Nat.rec",
+      "False",
+      "False.rec",
+      "Eq",
+      "Eq.refl",
+      "Eq.rec",
+      "Exists",
+      "Exists.intro",
+      "Exists.rec",
+      "Not",
+      "Nat.le",
+      "Nat.le.refl",
+      "Nat.le.step",
+      "Nat.le.rec",
+      "Nat.add",
+      "Nat.mul",
+      "Nat.zero_add",
+      "Nat.zero_mul",
+      "Nat.mul_one",
+      "Nat.zero_le",
+      "Nat.le_succ_succ",
+      "Nat.le_trans",
+      "Nat.le_of_succ_le_succ",
+      "Nat.not_succ_le_zero",
+      "Nat.le_add_right",
+      "Nat.mul_le_mul_left",
+      "Nat.dvd",
+      "Nat.not_dvd_one_of_two_le",
+      "Nat.eq_one_of_dvd_one"
+    ],
+    "added_definitions": [
+      {
+        "name": "Nat.mul",
+        "source_declaration_sha256": "2e6908897347927cde763d278479a92a2d831ebcce5e1f32b7398fa3da8fef26",
+        "target_declaration_sha256": "2e6908897347927cde763d278479a92a2d831ebcce5e1f32b7398fa3da8fef26",
+        "reducibility": "regular:2"
+      },
+      {
+        "name": "Nat.dvd",
+        "source_declaration_sha256": "1e8c4b9ac3e7d5db8a728cc5c3c1e9863a4bacd2797bcdef45281a53a99ff746",
+        "target_declaration_sha256": "1e8c4b9ac3e7d5db8a728cc5c3c1e9863a4bacd2797bcdef45281a53a99ff746",
+        "reducibility": "regular:4"
+      }
+    ],
+    "added_theorem_names": [
+      "Nat.zero_add",
+      "Nat.zero_mul",
+      "Nat.mul_one",
+      "Nat.le_succ_succ",
+      "Nat.le_add_right",
+      "Nat.mul_le_mul_left",
+      "Nat.not_dvd_one_of_two_le",
+      "Nat.eq_one_of_dvd_one"
+    ],
+    "added_axiom_footprints": {
+      "Nat.eq_one_of_dvd_one": [],
+      "Nat.le_add_right": [],
+      "Nat.le_succ_succ": [],
+      "Nat.mul_le_mul_left": [],
+      "Nat.mul_one": [],
+      "Nat.not_dvd_one_of_two_le": [],
+      "Nat.zero_add": [],
+      "Nat.zero_mul": []
+    },
+    "added_singleton_inductive_families": ["Exists"],
+    "reused_compatibility": {
+      "kernel-type-shape": 18,
+      "translated-definitional-equality": 4
+    },
+    "environment_sha256_before": "82ac7b0143bdd9891b666a37220fb91b86afc4af4b920d68773d80b5c9348855",
+    "environment_sha256_after": "292873e9fc64286387e7932bddd74ea3f781289d0c9e141d2312845ba4668132"
   },
   "proof_plan": {
     "induction_binder": "n",
@@ -145,7 +230,8 @@
   "next_capability_sequence": [
     "bind existing imported logic and Nat declarations to reusable prelude handles",
     "compare overlapping declaration identities and fail closed on semantic mismatch",
-    "construct only missing native theorems transactionally over the reused base",
+    "reconstruct missing definitions and singleton inductives only through ordinary target kernel gates",
+    "resolve the measured Bool recursor-order incompatibility without declaration grafting",
     "replay the seven-lemma surface before any coprimality target submission"
   ],
   "authority": {
@@ -153,10 +239,10 @@
     "held_out_inspected": false,
     "proof_bodies_displayed": false,
     "proof_search_invocations": 0,
-    "kernel_submissions": 5,
+    "kernel_submissions": 15,
     "evaluation_credit": 0,
     "ledger_writes": 0
   },
   "verification": "python3 scripts/check-autogenesis-nat-fib-coprime-premise-plan.py",
-  "limitations": "This freezes a proof plan, reproduces one three-theorem native slice, and atomically composes the demanded non-recursive singleton Exists package plus one axiom-free control theorem. It does not transport definitions, recursive or mutual inductives, or quotient packages; compose the remaining six required lemmas; submit the Fibonacci target; inspect held-out data; write the ledger; or establish the fact. The next measured blocker is Nat.mul definition composition."
+  "limitations": "This freezes a proof plan and independently composes exact Nat.mul and Nat.dvd definitions, the singleton Exists package, and eight axiom-free theorems for one demanded root. It does not authorize conflicting definitions, axioms, opaque declarations, recursive or mutual inductives, quotient packages, or recursor permutation; compose the remaining six required lemmas; submit the Fibonacci target; inspect held-out data; write the ledger; or establish the fact. The next measured blocker is the imported/native Bool.rec constructor-order mismatch reached by Nat.dvd_gcd."
 }

@@ -66,6 +66,11 @@ opaques, free variables, and late-stage rollback. After `Nat.mul` enters,
 retry the same theorem root to let the next real closure member choose the
 following task.
 
+That measured follow-up is now complete: [checked definition
+composition](61-checked-definition-composition.md) admits exact `Nat.mul` and
+`Nat.dvd` plus eight axiom-free theorems. The unchanged larger control advances
+to the imported/native `Bool.rec` branch-order mismatch.
+
 ## Evidence
 
 The immutable exact-commit observation is:
