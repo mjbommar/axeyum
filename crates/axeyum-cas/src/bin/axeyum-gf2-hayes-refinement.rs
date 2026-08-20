@@ -1,8 +1,8 @@
 //! Exact raw-population Haar refinement triangle at the Lemire endpoints.
 
 use axeyum_cas::gf2_hayes::{
-    HayesLimits, class_population_distribution, population_refinement_connected_top_implication,
-    population_refinement_envelope_implication,
+    HayesLimits, carlitz_connected_top_geometry, class_population_distribution,
+    population_refinement_connected_top_implication, population_refinement_envelope_implication,
 };
 
 const DEFAULT_ELL: usize = 12;
@@ -40,6 +40,8 @@ fn run() -> Result<(), String> {
             .map_err(|error| error.to_string())?;
         let connected_implication = population_refinement_connected_top_implication(ell, degree)
             .map_err(|error| error.to_string())?;
+        let geometry =
+            carlitz_connected_top_geometry(ell, degree).map_err(|error| error.to_string())?;
         let maxima = report
             .levels
             .iter()
@@ -52,7 +54,7 @@ fn run() -> Result<(), String> {
             .collect::<Vec<_>>()
             .join(",");
         println!(
-            "GF2_HAYES_REFINEMENT|status=PASS|ell={ell}|degree={degree}|candidate_holds={}|square_root_fibre_envelope_holds={}|envelope_implication_holds={}|connected_top_candidate_holds={}|connected_top_implication_holds={}|triangle_numerator={}|identity_path_triangle_numerator={}|envelope_triangle_numerator={}|connected_top_first_level={}|connected_top_signed_numerator={}|connected_top_candidate_numerator={}|connected_low_weil_numerator={}|target_numerator={}|actual_maximum_absolute_deviation={}|level_parent_maxima={maxima}",
+            "GF2_HAYES_REFINEMENT|status=PASS|ell={ell}|degree={degree}|candidate_holds={}|square_root_fibre_envelope_holds={}|envelope_implication_holds={}|connected_top_candidate_holds={}|connected_top_implication_holds={}|triangle_numerator={}|identity_path_triangle_numerator={}|envelope_triangle_numerator={}|connected_top_first_level={}|connected_top_signed_numerator={}|connected_top_candidate_numerator={}|connected_low_weil_numerator={}|connected_top_individual_weil_numerator={}|connected_top_required_saving_ceiling={}|carlitz_coarse_conductor_exponent={}|carlitz_artin_schreier_step_count={}|carlitz_relative_h1_dimension={}|target_numerator={}|actual_maximum_absolute_deviation={}|level_parent_maxima={maxima}",
             report.proves_candidate_discrepancy_bound(),
             report.satisfies_square_root_fibre_envelope(),
             implication.proves_candidate_discrepancy_bound(),
@@ -65,6 +67,11 @@ fn run() -> Result<(), String> {
             report.connected_top_signed_numerator,
             report.connected_top_candidate_numerator,
             connected_implication.low_weil_triangle_numerator,
+            connected_implication.connected_top_individual_weil_numerator,
+            connected_implication.connected_top_required_saving_ceiling,
+            geometry.coarse_conductor_exponent,
+            geometry.artin_schreier_step_count,
+            geometry.relative_first_cohomology_dimension,
             report.candidate_target_numerator,
             report.actual_maximum_absolute_deviation,
         );

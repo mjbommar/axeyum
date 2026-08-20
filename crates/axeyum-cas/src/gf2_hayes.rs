@@ -2382,10 +2382,56 @@ pub struct PopulationRefinementConnectedTopImplication {
     pub top_level_count: usize,
     /// Proved low-conductor contribution from individual Weil estimates.
     pub low_weil_triangle_numerator: BigUint,
+    /// Sum of the proved individual Weil envelopes over the connected top
+    /// window, before retaining cancellation between conductor levels.
+    pub connected_top_individual_weil_numerator: BigUint,
     /// Assumed connected top-trace bound `2^(2ell-2)`.
     pub connected_top_assumption_numerator: BigUint,
+    /// Smallest integer factor by which the separate top-level Weil envelope
+    /// must improve to reach the connected assumption.
+    pub connected_top_required_saving_ceiling: BigUint,
     /// Required Haar numerator `2^(2ell)`.
     pub candidate_target_numerator: BigUint,
+}
+
+/// Exact Carlitz-cyclotomic geometry underlying the connected top trace.
+///
+/// Hayes level `j` is the Galois group of the Carlitz field of conductor
+/// `t^(j+1)`.  The connected window from level `a` through `ell` is therefore
+/// the relative first cohomology of the tower
+/// `K_(t^(ell+1))/K_(t^a)`.  This report checks that its dimension reproduces
+/// the sum of the individual Weil envelopes exactly.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CarlitzConnectedTopGeometry {
+    /// Coefficient-prefix length and fine Hayes level.
+    pub ell: usize,
+    /// Endpoint degree `2ell+1` or `2ell+2`.
+    pub degree: usize,
+    /// Fine Carlitz conductor exponent `ell+1`.
+    pub fine_conductor_exponent: usize,
+    /// Coarse Carlitz conductor exponent `a`.
+    pub coarse_conductor_exponent: usize,
+    /// Number of quadratic Artin--Schreier steps in the relative tower.
+    pub artin_schreier_step_count: usize,
+    /// Degree `2^ell` of the fine cyclotomic extension.
+    pub fine_galois_degree: BigUint,
+    /// Degree `2^(a-1)` of the coarse cyclotomic extension.
+    pub coarse_galois_degree: BigUint,
+    /// Degree `2^step_count` of the relative extension.
+    pub relative_extension_degree: BigUint,
+    /// Twice the genus of the fine cyclotomic curve.
+    pub fine_twice_genus: BigUint,
+    /// Twice the genus of the coarse cyclotomic curve.
+    pub coarse_twice_genus: BigUint,
+    /// Dimension of the relative first cohomology.
+    pub relative_first_cohomology_dimension: BigUint,
+    /// Integer relative Hasse--Weil envelope using `2^ceil(degree/2)`.
+    pub integer_relative_weil_numerator: BigUint,
+    /// Connected trace allowance `2^(2ell-2)`.
+    pub connected_top_allowance_numerator: BigUint,
+    /// Smallest integral saving over relative Hasse--Weil required by the
+    /// endpoint ledger.
+    pub required_saving_ceiling: BigUint,
 }
 
 impl PopulationRefinementConnectedTopImplication {
@@ -2606,17 +2652,99 @@ pub fn population_refinement_connected_top_implication(
     }
     let weil_scale = BigUint::from(1_u8) << degree.div_ceil(2);
     let mut low_weil_triangle_numerator = BigUint::from(0_u8);
+    let mut connected_top_individual_weil_numerator = BigUint::from(0_u8);
     for level in 1..first_top_level {
         low_weil_triangle_numerator += (BigUint::from(level - 1) * &weil_scale) << (level - 1);
     }
+    for level in first_top_level..=ell {
+        connected_top_individual_weil_numerator +=
+            (BigUint::from(level - 1) * &weil_scale) << (level - 1);
+    }
+    let connected_top_assumption_numerator = BigUint::from(1_u8) << (doubled - 2);
+    let connected_top_required_saving_ceiling = (&connected_top_individual_weil_numerator
+        + &connected_top_assumption_numerator
+        - BigUint::from(1_u8))
+        / &connected_top_assumption_numerator;
     Ok(PopulationRefinementConnectedTopImplication {
         ell,
         degree,
         first_top_level,
         top_level_count,
         low_weil_triangle_numerator,
-        connected_top_assumption_numerator: BigUint::from(1_u8) << (doubled - 2),
+        connected_top_individual_weil_numerator,
+        connected_top_assumption_numerator,
+        connected_top_required_saving_ceiling,
         candidate_target_numerator: BigUint::from(1_u8) << doubled,
+    })
+}
+
+fn carlitz_twice_genus(level: usize) -> BigUint {
+    if level <= 1 {
+        BigUint::from(0_u8)
+    } else {
+        (BigUint::from(level - 2) << level) + BigUint::from(2_u8)
+    }
+}
+
+/// Re-express the connected top-conductor target as a relative trace in the
+/// binary Carlitz cyclotomic tower.
+///
+/// If coherent torsion generators satisfy
+/// `C_t(lambda_(r+1))=lambda_r`, then `y_(r+1)=lambda_(r+1)/t` obeys
+///
+/// ```text
+/// y_(r+1)^2 + y_(r+1) = lambda_r/t^2.
+/// ```
+///
+/// Thus every adjacent field in the returned window is a quadratic
+/// Artin--Schreier step.  The genus formula
+/// `2g_j=(j-2)2^j+2` then makes the relative cohomology dimension equal to
+/// the exact sum of separate conductor-level Weil degrees.
+///
+/// # Errors
+///
+/// Rejects the same invalid endpoints as
+/// [`population_refinement_connected_top_implication`].
+pub fn carlitz_connected_top_geometry(
+    ell: usize,
+    degree: usize,
+) -> Result<CarlitzConnectedTopGeometry, HayesError> {
+    let implication = population_refinement_connected_top_implication(ell, degree)?;
+    let fine_level = ell;
+    let coarse_level = implication.first_top_level - 1;
+    let fine_twice_genus = carlitz_twice_genus(fine_level);
+    let coarse_twice_genus = carlitz_twice_genus(coarse_level);
+    let fine_galois_degree = BigUint::from(1_u8) << fine_level;
+    let coarse_galois_degree = BigUint::from(1_u8) << coarse_level;
+    let relative_extension_degree = BigUint::from(1_u8) << implication.top_level_count;
+    if &coarse_galois_degree * &relative_extension_degree != fine_galois_degree {
+        return Err(HayesError::Invariant(
+            "Carlitz relative tower degrees do not multiply".to_owned(),
+        ));
+    }
+    let relative_first_cohomology_dimension = &fine_twice_genus - &coarse_twice_genus;
+    let integer_relative_weil_numerator =
+        &relative_first_cohomology_dimension << degree.div_ceil(2);
+    if integer_relative_weil_numerator != implication.connected_top_individual_weil_numerator {
+        return Err(HayesError::Invariant(
+            "Carlitz relative genus does not reproduce the top Weil envelope".to_owned(),
+        ));
+    }
+    Ok(CarlitzConnectedTopGeometry {
+        ell,
+        degree,
+        fine_conductor_exponent: fine_level + 1,
+        coarse_conductor_exponent: coarse_level + 1,
+        artin_schreier_step_count: implication.top_level_count,
+        fine_galois_degree,
+        coarse_galois_degree,
+        relative_extension_degree,
+        fine_twice_genus,
+        coarse_twice_genus,
+        relative_first_cohomology_dimension,
+        integer_relative_weil_numerator,
+        connected_top_allowance_numerator: implication.connected_top_assumption_numerator,
+        required_saving_ceiling: implication.connected_top_required_saving_ceiling,
     })
 }
 
@@ -12181,6 +12309,50 @@ mod tests {
                 ..
             })
         ));
+    }
+
+    #[test]
+    fn connected_top_refinement_quantifies_required_weil_saving() {
+        for degree in [401_usize, 402] {
+            let connected = population_refinement_connected_top_implication(200, degree).unwrap();
+            assert_eq!(connected.first_top_level, 191);
+            assert_eq!(connected.top_level_count, 10);
+            assert_eq!(
+                connected.connected_top_required_saving_ceiling,
+                BigUint::from(1_583_u16)
+            );
+            assert_eq!(
+                &connected.connected_top_individual_weil_numerator * BigUint::from(32_u8),
+                &connected.connected_top_assumption_numerator * BigUint::from(50_641_u16)
+            );
+        }
+    }
+
+    #[test]
+    fn carlitz_geometry_reconstructs_the_connected_top_weil_envelope() {
+        let geometry = carlitz_connected_top_geometry(12, 25).unwrap();
+        assert_eq!(geometry.fine_conductor_exponent, 13);
+        assert_eq!(geometry.coarse_conductor_exponent, 7);
+        assert_eq!(geometry.artin_schreier_step_count, 6);
+        assert_eq!(geometry.fine_galois_degree, BigUint::from(4_096_u16));
+        assert_eq!(geometry.coarse_galois_degree, BigUint::from(64_u8));
+        assert_eq!(geometry.relative_extension_degree, BigUint::from(64_u8));
+        assert_eq!(geometry.fine_twice_genus, BigUint::from(40_962_u16));
+        assert_eq!(geometry.coarse_twice_genus, BigUint::from(258_u16));
+        assert_eq!(
+            geometry.relative_first_cohomology_dimension,
+            BigUint::from(40_704_u16)
+        );
+        assert_eq!(
+            geometry.integer_relative_weil_numerator,
+            BigUint::from(333_447_168_u32)
+        );
+        assert_eq!(
+            geometry.connected_top_allowance_numerator,
+            BigUint::from(4_194_304_u32)
+        );
+        assert_eq!(geometry.required_saving_ceiling, BigUint::from(80_u8));
+        assert!(carlitz_connected_top_geometry(12, 24).is_err());
     }
 
     #[test]

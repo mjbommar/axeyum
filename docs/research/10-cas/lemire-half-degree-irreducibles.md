@@ -124,6 +124,18 @@ lemma.
   `l<=i<m`.  Lemire's block has `m=n` and `l=floor(n/2)`, making the exponent
   `l-n<0`; the sufficient condition therefore fails before constants are
   considered.
+- Voloch gives a geometric version of the same boundary.  His
+  cyclotomic-function-field twist theorem proves, for the relevant prescribed
+  coefficients, an error at most `7 m q^(n/2)`.  In the unrestricted case
+  `p^j>m`, this permits all first `m` coefficients to be prescribed, but at
+  `q=2` and `m=floor(n/2)` the factor `7m` is fatal.  The paper itself derives
+  existence only in a range `m<n/2-c log n` (with `q` sufficiently large).
+  This independently confirms the exact obstruction below: ordinary Weil on
+  a cyclotomic curve retains a linear genus/conductor loss, so the endpoint
+  needs cancellation internal to that family rather than another generic
+  point-count estimate.  See [Generators of finite fields with powers of
+  trace zero and cyclotomic function
+  fields](https://doi.org/10.4171/PM/1976), Theorems 1.1 and 3.2.
 - The 2003 AIM workshop notes contain an even more tempting unsupported
   remark: for `m=n`, Gao's relaxed `x^m+g` problem is said to be proved with
   `deg g <= n/2`.  The note gives no theorem, author, or reference for that
@@ -2553,6 +2565,25 @@ sum_(j=a)^ell 2^(j-1) H_j(1)
   = 2^ell N_ell(1) - 2^(a-1) N_(a-1)(1).              (CT)
 ```
 
+The cyclotomic compression above turns this into an exact relative point
+trace.  If `C_j` is the Carlitz curve of conductor `t^(j+1)`, then
+
+```text
+(CT) = #C_ell(GF(2^n)) - #C_(a-1)(GF(2^n)).           (RC)
+```
+
+Moreover, coherent torsion generators satisfying
+`C_t(lambda_(r+1))=lambda_r` give normalized variables
+`y_(r+1)=lambda_(r+1)/t` with
+
+```text
+y_(r+1)^2+y_(r+1)=lambda_r/t^2.
+```
+
+Thus (RC) comes from a chain of `ell+1-a` quadratic Artin--Schreier steps.
+The exact genus difference reproduces the separate top-conductor Weil
+envelope: it does not yet improve it.
+
 Fourier identity (HF) also shows that (CT) is one signed Mangoldt trace over
 all characters of conductor level at least `a`.  No absolute value has been
 taken between those levels.  The selected analytic target is now simply
@@ -2576,6 +2607,27 @@ Compared with summing individual Weil bounds on those levels, (CRT) needs only
 a polynomial conductor saving; the per-level (RF) estimate demands an
 exponential family gain and is therefore a stronger fallback.
 
+The separate-Weil loss can be stated exactly.  On the same top window its
+numerator is
+
+```text
+2^ceil(n/2) sum_(j=a)^ell (j-1)2^(j-1).
+```
+
+At both degree-401 and degree-402 endpoints with `ell=200`, this is exactly
+`50641/32` times the connected allowance, so an integral saving statement
+must provide a factor at least `1583`.  In general the ratio is
+
+```text
+8 ((ell-2) - (a-3) 2^(a-ell-1)),
+```
+
+which is asymptotic to `8ell`.  Thus (CRT) asks for a linear conductor saving
+over separate Hasse--Weil, not an exponential square-root gain in the number
+of characters.  The CAS exposes both the raw separate-Weil numerator and its
+exact ceiling saving factor so a proposed Witt/Heisenberg lemma can be tested
+against the endpoint before it receives proof credit.
+
 `population_refinement_connected_top_implication` checks the arithmetic
 implication exactly.  The finite population report also computes the identity
 path, reconstructs (CT) independently from the fine and coarse populations,
@@ -2591,6 +2643,16 @@ the five logs and their hashes are recorded on `s1,s4,s5,s6,s7` under
 still finite evidence only.  A relative characteristic-two Witt/Heisenberg
 theorem should now target the single trace (CT), preserving cross-conductor
 cancellation.
+
+This exact tower does **not** by itself put (RC) under the available
+Ito--Takeuchi--Tsushima theorem.  Their Heisenberg construction treats the
+special one-equation curves `y^2-y=xR(x)` for linearized `R` and a length-two
+Witt Lang torsor.  Here the number of Artin--Schreier steps grows like
+`log ell` in the selected relative window.  A valid bridge must exhibit an
+actual reduction of the relative Carlitz cohomology to that quadratic class,
+or prove an analogous commutator-rank statement for the whole chain; matching
+terminology is not enough.  See [The L-polynomials of van der Geer--van der
+Vlugt curves in characteristic 2](https://arxiv.org/abs/2505.22036).
 
 Exact fleet runs at both endpoints for every `16<=ell<=20` satisfy the Haar
 triangle and (RF).  At `ell=20`, the odd and even triangle numerators are

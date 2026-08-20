@@ -58,6 +58,12 @@ strictly below `2^(2ell)`, proving the earlier `2^ell` population-discrepancy
 bound with reserve.  At `ell=200`, (CT) contains only the ten levels
 `191<=j<=200`.
 
+The CAS also reports the sum of the individual Weil envelopes on the same
+window and the smallest integral factor required to reduce it to (CRT).  At
+both `ell=200` endpoints the exact ratio is `50641/32`, hence the required
+integer saving is `1583`; uniformly it is asymptotic to `8ell`.  This is the
+stopping test for a proposed connected geometric argument.
+
 ## Evidence boundary
 
 The exact level-12 odd and even connected traces are respectively `1,400,832`
