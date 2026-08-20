@@ -37,7 +37,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or manifest.get("kind")
         != "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan"
         or manifest.get("state")
-        != "proof-plan-frozen-execution-blocked-on-native-prelude-composition"
+        != "proof-plan-frozen-first-native-library-slice-composed"
     ):
         raise PlanError("manifest identity changed")
     source = manifest["source"]
@@ -105,7 +105,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         != {
             "proof_bodies_displayed": False,
             "proof_search_invocations": 0,
-            "kernel_submissions": 0,
+            "kernel_submissions": 3,
             "ledger_writes": 0,
         }
     ):
@@ -145,6 +145,33 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or blocked != closure_census["structurally_blocked_theorems"]
     ):
         raise PlanError("required theorem closure census changed")
+    composed = observation["source"]["composition_control"]
+    negative = observation["source"]["structural_mismatch_control"]
+    composition_result = manifest["composition_result"]
+    if (
+        composed["roots"] != [composition_result["root"]]
+        or composed["outcome"] != composition_result["outcome"]
+        or len(composed["reused_dependency_names"])
+        != composition_result["reused_dependencies"]
+        or composed["added_theorem_names"]
+        != composition_result["added_theorem_names"]
+        or composed["declarations_absent_before"]
+        != composition_result["added_theorem_names"]
+        or composed["added_axiom_footprints"]
+        != composition_result["added_axiom_footprints"]
+        or composed["environment_sha256_before"]
+        != composition_result["environment_sha256_before"]
+        or composed["environment_sha256_after"]
+        != composition_result["environment_sha256_after"]
+        or composed["environment_sha256_before"]
+        == composed["environment_sha256_after"]
+        or negative["root"] != composition_result["negative_control_root"]
+        or composition_result["negative_control_first_mismatch"]
+        not in negative["error"]
+        or (negative["environment_sha256_before"] == negative["environment_sha256_after"])
+        != composition_result["negative_control_environment_unchanged"]
+    ):
+        raise PlanError("native theorem composition result changed")
     if (
         manifest["target"]["fact_id"]
         != "F:ml430-nat-fib-coprime-fib-succ-162fc738"
@@ -157,7 +184,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         "held_out_inspected": False,
         "proof_bodies_displayed": False,
         "proof_search_invocations": 0,
-        "kernel_submissions": 0,
+        "kernel_submissions": 3,
         "evaluation_credit": 0,
         "ledger_writes": 0,
     }:
@@ -171,7 +198,7 @@ def main() -> int:
         print(
             "AUTOGENESIS_NAT_FIB_COPRIME_PREMISE_PLAN_OK|"
             f"required={len(manifest['proof_plan']['required_native_declarations'])}|"
-            "present=0|first_conflict=True|submissions=0|evaluation=0|writes=0"
+            "present=0|first_conflict=True|submissions=3|evaluation=0|writes=0"
         )
         return 0
     except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError, PlanError) as error:

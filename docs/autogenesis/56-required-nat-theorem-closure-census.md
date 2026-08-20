@@ -64,3 +64,8 @@ Verify it with:
 ```sh
 python3 scripts/check-autogenesis-nat-fib-coprime-premise-plan.py
 ```
+
+The subsequent
+[checked composition result](57-first-native-nat-composition.md) admits the
+three-theorem `Nat.add_comm` slice over the imported environment and confirms
+the structural-mismatch rollback control.

@@ -47,10 +47,10 @@ also benefits every later Mathlib target that needs native arithmetic facts.
 ## Evidence
 
 The current read-only observation is
-`/nas3/data/axeyum/autogenesis/probes/8dbd18c82-fib-coprime-required-closure-v4/observation.json`.
+`/nas3/data/axeyum/autogenesis/probes/9caac0bf5-nat-add-comm-composition-v5/observation.json`.
 It extends the original rejection receipt with a fail-closed overlap census;
 the interpretation and next boundary are recorded in
-[the required Nat closure census](56-required-nat-theorem-closure-census.md).
+[the first checked native-library composition](57-first-native-nat-composition.md).
 Verify the tracked plan and its authority boundary with:
 
 ```sh
