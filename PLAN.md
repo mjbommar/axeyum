@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-20 | `0e9a3ca9d` | Reduced the complete Lemire class to one characteristic-delta convolution period, added dual exact controls, and isolated the universal no-proper-period lemma without granting finite evidence theorem credit. |
 | 2026-08-20 | `531ed174a` | Translated Hast--Matei's top long-cycle variance at the exact endpoint, proved its second moment is insufficient, and confined the selected characteristic-two repeated-root defect to square proper powers. |
 | 2026-08-20 | `636f9da38` | Classified the projective long-cycle eigenlines, proving that exactly `phi(oddpart(n))` survive and rejecting a free cyclic-torsor shortcut without granting a Frobenius bound. |
 | 2026-08-20 | `35b4c6ad2` | Pinned the exact degree-five separation between zero unweighted non-top Euler trace and nonzero binary Frobenius error `-2`, preventing the cone identity from receiving endpoint credit. |
@@ -1003,6 +1004,18 @@ confined to square proper-power strata.  Proving that the connected virtual
 projector cancels or separately controls those square strata, with an
 effective bound on the remaining triangular sector, is now the precise
 Hast--Matei route; no weighted-trace credit has yet been granted.
+An independent algebraic reduction now writes the full Lemire coefficient
+indicator as the DFT of
+`Gamma=*_(j=1)^ell(delta_0+delta_j)` on `Z/(2^n-1)`.  The
+Tuxanidy--Wang support theorem would prove Lemire whenever the least period of
+`Gamma` does not divide the proper-subfield exponent.  Exact native
+convolution has maximum period through degree twelve, and a direct
+extension-field oracle agrees through degree eight.  The universal period
+lemma remains conjectural: maximum period of each separate factor cannot be
+multiplied blindly, as the degree-eight product including the middle
+coefficient has period `15` rather than `255`.  Proving the weaker
+no-proper-subfield-period statement is now the shortest candidate route to the
+paper; bounded rows receive no theorem credit.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
