@@ -2278,8 +2278,8 @@ impl IntReconstructCtx {
                     let one = self.kernel.level_succ(zero);
                     let rec = self.kernel.const_(self.int.logic.bool_rec, vec![one]);
                     let rec = self.kernel.app(rec, motive);
-                    let rec = self.kernel.app(rec, then_term);
                     let rec = self.kernel.app(rec, else_term);
+                    let rec = self.kernel.app(rec, then_term);
                     Ok(self.kernel.app(rec, condition))
                 }
                 _ => Err(closed_cex_decline(
@@ -2564,8 +2564,8 @@ impl IntReconstructCtx {
         let motive = self.kernel.lam(anon, bool_ty, prop, BinderInfo::Default);
         let discriminator = {
             let rec = self.kernel.app(rec, motive);
-            let rec = self.kernel.app(rec, false_prop);
             let rec = self.kernel.app(rec, true_prop);
+            let rec = self.kernel.app(rec, false_prop);
             let value = self.kernel.bvar(0);
             let body = self.kernel.app(rec, value);
             self.kernel.lam(anon, bool_ty, body, BinderInfo::Default)

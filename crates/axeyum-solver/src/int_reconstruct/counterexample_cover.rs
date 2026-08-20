@@ -148,8 +148,8 @@ fn cover_int_term(
                 let one = ctx.kernel.level_succ(zero);
                 let rec = ctx.kernel.const_(ctx.int.logic.bool_rec, vec![one]);
                 let rec = ctx.kernel.app(rec, motive);
-                let rec = ctx.kernel.app(rec, then_term);
                 let rec = ctx.kernel.app(rec, else_term);
+                let rec = ctx.kernel.app(rec, then_term);
                 Ok(ctx.kernel.app(rec, condition))
             }
             _ => Err(cover_decline("unsupported integer operator")),

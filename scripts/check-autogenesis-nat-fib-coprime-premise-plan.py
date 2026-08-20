@@ -37,12 +37,22 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or manifest.get("kind")
         != "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan"
         or manifest.get("state")
-        != "proof-plan-frozen-definition-library-slice-composed"
+        != "proof-plan-frozen-official-bool-order-library-slice-composed"
     ):
         raise PlanError("manifest identity changed")
     source = manifest["source"]
     if sha256(pathlib.Path(source["stream"])) != source["stream_sha256"]:
         raise PlanError("source stream changed")
+    implementation = manifest["implementation"]
+    if (
+        implementation["commit"]
+        != "772646c0d1a0c6ebca302c37a42cf2bb2f5030ee"
+        or implementation["bool_constructor_order"]
+        != ["Bool.false", "Bool.true"]
+        or sha256(ROOT / implementation["native_prelude"])
+        != implementation["native_prelude_sha256"]
+    ):
+        raise PlanError("official Bool implementation identity changed")
     probe = manifest["composition_probe"]
     if sha256(ROOT / probe["tool"]) != probe["tool_sha256"]:
         raise PlanError("composition probe changed")
@@ -99,10 +109,15 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         [row["name"] for row in observation["source"]["type_mismatched_overlaps"]],
     ]
     flattened = [name for category in categories for name in category]
+    exact_bool_package = {"Bool", "Bool.false", "Bool.rec", "Bool.true"}
     if (
         len(flattened) != 43
         or len(set(flattened)) != len(flattened)
         or any(category != sorted(category) for category in categories)
+        or not exact_bool_package.issubset(categories[0])
+        or any(
+            exact_bool_package.intersection(category) for category in categories[1:]
+        )
         or observation["authority"]
         != {
             "proof_bodies_displayed": False,
@@ -202,8 +217,19 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or composed["environment_sha256_before"]
         == composed["environment_sha256_after"]
         or negative["root"] != composition_result["negative_control_root"]
-        or composition_result["negative_control_first_mismatch"]
-        not in negative["error"]
+        or negative["error"]
+        != (
+            'TypeShapeMismatch { name: "'
+            f'{composition_result["negative_control_first_mismatch"]}", '
+            'source_sha256: "'
+            f'{composition_result["negative_control_source_sha256"]}", '
+            'target_sha256: "'
+            f'{composition_result["negative_control_target_sha256"]}" }}'
+        )
+        or negative["environment_sha256_before"]
+        != composition_result["negative_control_environment_sha256"]
+        or negative["environment_sha256_after"]
+        != composition_result["negative_control_environment_sha256"]
         or (negative["environment_sha256_before"] == negative["environment_sha256_after"])
         != composition_result["negative_control_environment_unchanged"]
     ):
@@ -308,7 +334,7 @@ def main() -> int:
         print(
             "AUTOGENESIS_NAT_FIB_COPRIME_PREMISE_PLAN_OK|"
             f"required={len(manifest['proof_plan']['required_native_declarations'])}|"
-            "present=0|first_conflict=True|submissions=15|evaluation=0|writes=0"
+            "present=0|exact=11|next=Nat.mod_lt|submissions=15|evaluation=0|writes=0"
         )
         return 0
     except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError, PlanError) as error:

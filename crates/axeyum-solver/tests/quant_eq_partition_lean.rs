@@ -66,10 +66,13 @@ fn sdlx_reconstructs_genuine_nested_quantifiers_and_routes() {
     // covers the module BODY, and the banner is pinned once in
     // `axeyum-lean-kernel --test module_banner_pin`. If this moves, PROOF text
     // moved. See `crates/axeyum-lean-kernel/tests/support/lean_golden.rs`.
+    // Re-pinned 2026-08-20 at the same 111_821-byte length: the native Bool
+    // package now follows official Lean order `[false, true]`, and the checked
+    // partition eliminator therefore writes the false cell before the true cell.
     lean_golden::assert_golden_module(
         "equality-partition",
         &source,
-        (111_821, 0xadca_ca06_49f6_11e5),
+        (111_821, 0xdd44_2b73_bd9c_3779),
     );
     assert!(source.contains("theorem axeyum_refutation : False"));
     assert!(source.contains("eq_em"));

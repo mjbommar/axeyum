@@ -158,6 +158,7 @@ compounding, not automation theatre.
 | [Translated definitional reuse](59-translated-definitional-reuse.md) | Are the first structural mismatches real blockers, and which checked package becomes the next demand after target-kernel reduction? |
 | [Atomic singleton-inductive composition](60-atomic-singleton-inductive-composition.md) | Can a demanded family, constructor, and generated recursor enter the imported target as one checked package, and what blocks the original root next? |
 | [Checked definition composition](61-checked-definition-composition.md) | Can demanded computational helpers enter only through target-kernel admission, and which representation seam appears next? |
+| [Official Bool order](62-official-bool-order.md) | Does aligning native Bool with Lean preserve every branch-sensitive consumer and advance the unchanged Mathlib composition control? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

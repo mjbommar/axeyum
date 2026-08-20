@@ -547,7 +547,7 @@ pub(super) fn declare_primes(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
                     let bool_rec = d.kernel().const_(p.logic.bool_rec, vec![level]);
                     let selected = d.apply(
                         bool_rec,
-                        &[motive, divides_branch, refutes_branch, condition],
+                        &[motive, refutes_branch, divides_branch, condition],
                     );
                     let reflexivity = d.bool_refl(condition);
                     let body = d.apply(selected, &[reflexivity]);

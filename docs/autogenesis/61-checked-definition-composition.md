@@ -62,17 +62,17 @@ field and require the checker to fail.
 
 ## Next measured gap
 
-The larger unchanged `Nat.dvd_gcd` root no longer stops at a missing
-definition. It reaches `Bool.rec`, where the imported recursor orders its
-`false` branch before `true` and the native recursor type orders those premises
-the other way around. The control declines with `TypeShapeMismatch`, and its
-target environment digest is unchanged.
+The next increment resolved this measured seam by adopting official Lean's
+`false`, `true` native constructor order and migrating every branch-sensitive
+consumer. The four-member Bool package is now exact, and the unchanged
+`Nat.dvd_gcd` control advances to `Nat.mod_lt`. See
+[official Bool order](62-official-bool-order.md) and
+[ADR-0527](../research/09-decisions/adr-0527-native-bool-follows-official-lean-constructor-order.md).
 
-That is a representation problem, not a reason to weaken reuse. The next
-increment should compare the native Bool package against official Lean's
-constructor order, measure the blast radius of correcting it, and retain an
-independent target-kernel replay. A generic branch-permutation transport would
-be broader than the evidence supports.
+The new blocker is a theorem-statement relationship: Mathlib's imported
+theorem accepts an arbitrary positive denominator, while the native theorem is
+specialized to a successor denominator. It calls for a checked specialization
+or explicit adapter, not generic recursor permutation or weaker reuse.
 
 ## Reproduction
 

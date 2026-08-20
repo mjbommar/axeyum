@@ -143,7 +143,8 @@ pub struct LogicPrelude {
     pub not: NameId,
 
     /// `Bool : Type` (`Sort 1`) — the **computational** two-element type, a
-    /// nullary enum `Bool.true | Bool.false`. This is *not* the `Prop`-valued
+    /// nullary enum `Bool.false | Bool.true`, in official Lean order. This is
+    /// *not* the `Prop`-valued
     /// `True`/`False`; it is the carrier the datatype **is-tester** recursor
     /// eliminates into (`is_C : D → Bool`), so `is_C (C x)` ι-reduces to a
     /// genuine `Bool` value computable by `def_eq`.
@@ -1638,7 +1639,7 @@ pub(crate) fn build_logic_prelude_uncached(
         }
 
         // --- Not (a : Prop) : Prop := fun a => a → False ---------------------
-        // --- Bool : Type, Bool.true | Bool.false -----------------------------
+        // --- Bool : Type, Bool.false | Bool.true (official Lean order) -------
         // The computational two-element enum at `Sort 1` (= Type). Its two nullary
         // constructors carry the truth values the is-tester recursor returns; the
         // generated `Bool.rec` is the eliminator that ι-computes `is_C (C x)`.
@@ -1657,7 +1658,7 @@ pub(crate) fn build_logic_prelude_uncached(
                 &[],
                 0,
                 bool_ty,
-                &[(bool_true, bool_const), (bool_false, bool_const)],
+                &[(bool_false, bool_const), (bool_true, bool_const)],
             )?;
         }
         let bool_rec = kernel.name_str(bool_, "rec");

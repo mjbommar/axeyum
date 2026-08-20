@@ -142,7 +142,7 @@ fn beq_is_true_or_false(d: &mut IntDev<'_>, m: ExprId, n: ExprId) -> ExprId {
     let zero = d.kernel().level_zero();
     let bool_rec = d.int().logic.bool_rec;
     let rec = d.kernel().const_(bool_rec, vec![zero]);
-    d.apply(rec, &[motive, minor_true, minor_false, scrutinee])
+    d.apply(rec, &[motive, minor_false, minor_true, scrutinee])
 }
 
 /// `Or (Eq Nat m n) (Not (Eq Nat m n))` — decidable natural equality, from
