@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-20 | `f729f3ad1` | Translated Hast--Matei into the exact proper-power-aware endpoint normalization, exposed the missing degree-uniform wild constant, and sharpened the even proper-power envelope by eliminating all odd exponent layers. |
 | 2026-08-20 | `b01ac7cd6` | Classified every shape-preserving polynomial composition, added certified tower search, and refuted the proposed degree `8 -> 64 -> 512` chain by exhaustive degree-eight controls. |
 | 2026-08-20 | `dd6dcd94a` | Corrected the weak fourth-moment target to retain proper-power subtraction, rejected the proposed KLLM/Efron shortcut at theorem and finite-scaling levels, and generalized Capell to every odd monomial power with 371/174 independently reproduced finite seeds. |
 | 2026-08-20 | `833806e24` | Expanded exact dyadic fibre `L^2`, proved the inverse-difference parallelogram criterion `h*t*(t+h)=0`, and reduced the conjectural nonpositive defect to a restricted four-shift Mobius correlation without granting endpoint credit. |
@@ -1097,7 +1098,17 @@ nonmonomial shaped degree-eight substitution finds four certified degree-64
 images but no degree-512 continuation.  This refutes the proposed
 `8 -> 64 -> 512` chain: the separately observed finite hits do not form an
 inductive family.  The analytic obligation remains the proper-power-aware
-weak fourth moment.
+weak fourth moment.  Its closest published analogue is now translated exactly:
+Hast--Matei's `m=4` theorem has the required `2^ell H^3` scale, but fixes
+`n,h`, permits its constant to depend on them, takes `q` to infinity, and
+excludes `p=2`.  The actual target is therefore a degree-uniform wild
+characteristic-two estimate with exact allowed constant
+`(H-P_n)^4/(2^ell H^3)`, tending to two and four at the two endpoints.  The
+CAS exposes this rational constant and does not credit the published
+fixed-degree theorem.  The even proper-power envelope is also sharpened:
+odd exponent layers are empty, moving the exact strong-target crossover from
+`ell=17` to `ell=13`.  Replacing the tame singular-locus argument and proving
+degree-uniform equivariant cancellation are both still open.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.

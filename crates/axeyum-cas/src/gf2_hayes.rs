@@ -17452,9 +17452,7 @@ mod tests {
         assert!(even.satisfies_fourth_moment_candidate().unwrap());
         assert_eq!(
             even.fourth_moment_proves_identity_class_irreducible(),
-            Err(HayesError::Invariant(
-                "proper powers exhaust the weak fourth-moment main term".to_owned()
-            ))
+            Ok(false)
         );
         assert_eq!(
             even.central_absolute_power_sum(4).unwrap(),
@@ -20422,7 +20420,7 @@ mod tests {
         assert_eq!(report.main_mangoldt_term, BigUint::from(128_u8));
         assert_eq!(
             report.proper_prime_power_upper_bound,
-            BigUint::from(288_u16)
+            BigUint::from(144_u16)
         );
         assert_eq!(report.irreducible_margin, BigUint::from(0_u8));
         assert_eq!(
