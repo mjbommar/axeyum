@@ -93,6 +93,7 @@ use crate::model::Model;
 use crate::nia_square::IntQuadraticNegativeDiscriminantCertificate;
 use crate::nia_univariate_cert::IntUnivariateRefutationCertificate;
 use crate::nra_even_power::NraEvenPowerRefutationCertificate;
+use crate::nra_product_cert::RealProductRefutationCertificate;
 use crate::nra_real_root::{self, SosCertificate};
 use crate::nra_zero_product_cert::RealZeroProductRefutationCertificate;
 use crate::proof::{UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof_within};
@@ -573,6 +574,15 @@ pub enum Evidence {
     /// Factors are carried by SOURCE NAME, not `SymbolId`: ids are arena-local
     /// and mean nothing against a fresh parse, which is what re-validation uses.
     UnsatRealZeroProduct(RealZeroProductRefutationCertificate),
+    /// Unsatisfiable (`QF_NRA`): the product of two asserted lower-bound
+    /// hypotheses is exactly the polynomial a third assertion claims negative.
+    /// A degree-2 Positivstellensatz refutation, checkable with exact rational
+    /// arithmetic and no CAD.
+    ///
+    /// Strictness is carried, not assumed: `p ≥ 0` and `q ≥ 0` give `pq ≥ 0`,
+    /// which refutes `pq < 0` but NOT `pq ≤ 0`. Only two strict factors refute
+    /// both.
+    UnsatRealProduct(RealProductRefutationCertificate),
     /// Unsatisfiable (integer-equality systems): a self-checking "integer Farkas" /
     /// Diophantine refutation of an integer-infeasible system of equalities. The
     /// `certificate`'s independent re-checker [`check_diophantine_certificate`]
@@ -805,6 +815,7 @@ impl Evidence {
             Evidence::UnsatIntUnivariatePoly(_) => "unsat-int-univariate-poly",
             Evidence::UnsatNraEvenPower(_) => "unsat-nra-even-power",
             Evidence::UnsatRealZeroProduct(_) => "unsat-real-zero-product",
+            Evidence::UnsatRealProduct(_) => "unsat-real-product",
             Evidence::UnsatDiophantine { .. } => "unsat-diophantine",
             Evidence::UnsatBoundedIntBlast(_) => "unsat-bounded-int-blast",
             Evidence::UnsatFiniteDomainPigeonhole(_) => "unsat-finite-domain-pigeonhole",
@@ -1032,6 +1043,13 @@ impl Evidence {
                     certificate,
                 ),
             ),
+            Evidence::UnsatRealProduct(certificate) => {
+                Ok(crate::nra_product_cert::check_real_product_refutation(
+                    arena,
+                    assertions,
+                    certificate,
+                ))
+            }
             Evidence::UnsatDiophantine {
                 equalities,
                 certificate,
@@ -1196,6 +1214,7 @@ impl Evidence {
                 | Evidence::UnsatIntUnivariatePoly(_)
                 | Evidence::UnsatNraEvenPower(_)
                 | Evidence::UnsatRealZeroProduct(_)
+                | Evidence::UnsatRealProduct(_)
                 | Evidence::UnsatDiophantine { .. }
                 | Evidence::UnsatBoundedIntBlast(_)
                 | Evidence::UnsatFiniteDomainPigeonhole(_)
@@ -2703,6 +2722,30 @@ pub fn produce_nra_even_power_evidence(
     }))
 }
 
+/// Produce source-bound evidence for a degree-2 Positivstellensatz refutation.
+pub fn produce_real_product_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<EvidenceReport> {
+    let certificate = crate::nra_product_cert::real_product_refutation(arena, assertions)?;
+    Some(EvidenceReport {
+        evidence: Evidence::UnsatRealProduct(certificate),
+        provenance: Provenance {
+            semantics_version: SEMANTICS_VERSION,
+            layers: LayerVersions::CURRENT,
+            backend: "nra-product-positivstellensatz-certificate".to_owned(),
+            assertion_count: assertions.len(),
+            timeout: None,
+            resource_limit: None,
+            node_budget: None,
+            cnf_variable_budget: None,
+            cnf_clause_budget: None,
+            prove_unsat: true,
+        },
+        trusted_steps: Vec::new(),
+    })
+}
+
 /// Produce source-bound evidence for a real monomial-divisibility refutation.
 pub fn produce_real_zero_product_evidence(
     arena: &TermArena,
@@ -2940,6 +2983,9 @@ pub fn produce_evidence(
             // certifies. Placed after the `match` first, and it never fired on
             // the two corpus files it was written for.
             if let Some(report) = produce_real_zero_product_evidence(arena, assertions) {
+                return Ok(report);
+            }
+            if let Some(report) = produce_real_product_evidence(arena, assertions) {
                 return Ok(report);
             }
             match produce_lra_dpll_evidence(arena, assertions, config) {
@@ -4048,6 +4094,7 @@ pub fn prove(
         | Evidence::UnsatIntUnivariatePoly(_)
         | Evidence::UnsatNraEvenPower(_)
         | Evidence::UnsatRealZeroProduct(_)
+        | Evidence::UnsatRealProduct(_)
         | Evidence::UnsatDiophantine { .. }
         | Evidence::UnsatBoundedIntBlast(_)
         | Evidence::UnsatFiniteDomainPigeonhole(_)

@@ -973,7 +973,16 @@ pub const CAPABILITIES: &[Capability] = &[
                    the checker re-scans the original assertions and re-establishes multiset \
                    containment for EVERY arm, since a partially covered case split proves \
                    nothing. Covers the committed corpus rows cli__regress1__nl__zero-subset \
-                   and cli__regress0__nl__subs0-unsat-confirm, which shipped as bare unsat",
+                   and cli__regress0__nl__subs0-unsat-confirm, which shipped as bare unsat. \
+                   DEGREE-2 POSITIVSTELLENSATZ UNSAT likewise: two asserted lower-bound \
+                   hypotheses whose exact product is the polynomial a third assertion calls \
+                   negative. Checked with exact rational arithmetic over a NAME-KEYED \
+                   polynomial (no CAD, and no arena-local ids, so it survives a fresh parse). \
+                   Strictness is carried and re-derived, not assumed: p >= 0 and q >= 0 give \
+                   pq >= 0, refuting pq < 0 but NOT pq <= 0, which is satisfiable at p = 0. \
+                   Covers cli__regress1__nl__coeff-unsat-base and \
+                   cli__regress1__nl__simple-mono; refutations needing a product PLUS a \
+                   linear step (coeff-unsat, combine) are DECLINED, not guessed",
         checked_by: CheckedBy::ExternalChecker,
         reference: "ADR-0024/0038/0039/0040/0044/0045/0046",
     },
