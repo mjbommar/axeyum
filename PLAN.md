@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-20 | `ada2c4542` | Closed the purely wild power-of-two Euler row by the homogeneous-cone decomposition and exposed the surviving projective Frobenius--long-cycle trace with exact factor `2^r-1`. |
 | 2026-08-20 | `1c517c87f` | Localized the long-cycle Euler trace by its tame/wild decomposition, proving exact non-top cancellation away from power-of-two degrees while retaining the Frobenius-weighted trace as unproved. |
 | 2026-08-20 | `18062735c` | Certified the Frobenius-square parity decomposition, its exact squarefreeness criterion, and the failure of the naive irreducibility induction without granting finite complement searches theorem credit. |
 | 2026-08-20 | `6c6e36597` | Certified the exact long-cycle cyclic/Foulkes compression, retained odd/even proper-power margins, and isolated a quartic characteristic-two cyclic-Betti theorem that would close every degree after 400 without claiming it. |
@@ -970,10 +971,12 @@ The long-cycle geometry now has one further exact theorem.  Writing
 `n=2^a b` with `b` odd, Deligne--Lusztig finite-order reduction and a
 triangular coefficient calculation collapse the odd-part fixed locus to one
 point whenever `b>1`.  Hence the non-top long-cycle complex has alternating
-Euler trace zero at every non-power-of-two degree.  The native report keeps
-power-of-two degrees undecided and explicitly grants no Frobenius-weighted
-cancellation: that weighted refinement, together with a separate purely wild
-power-of-two analysis, is the remaining geometric bridge rather than another
+Euler trace zero at every non-power-of-two degree.  The homogeneous-cone
+decomposition removes the remaining unweighted power-of-two exception: the
+punctured `G_m`-torsor has Euler trace zero and the vertex contributes one.
+With Frobenius inserted, however, the fibre factor becomes `2^r-1`, which is
+already one over the binary base field.  The remaining geometric bridge is
+therefore a bound for the projective Frobenius--long-cycle trace, not another
 unweighted fixed-locus count.
 Full definitions,
 proofs, controls, and literature record:
