@@ -441,6 +441,12 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
     # that check evidence PRODUCTION -- which is what a solver/rewrite change can
     # break. The Lean-module wrapper is checked by `lean-gate` and by the
     # reconstruct sweep now in `scripts/check.sh`.
+    # 0.06s, and it is the only thing in the tree comparing the DECISION route
+    # against the EVIDENCE route on the same query. Two regressions of exactly
+    # that shape were found by hand on 2026-08-20, neither by a test.
+    gated_test "integration: route agreement" \
+      cargo test -p axeyum-solver --features full --quiet \
+        --test decision_and_evidence_routes_agree
     gated_test "integration: evidence (minus the Lean-module wrapper)" \
       cargo test -p axeyum-solver --features full --quiet --test evidence \
         -- --skip qf_nra_sos_certificate_wrapper_carries_lean_module
