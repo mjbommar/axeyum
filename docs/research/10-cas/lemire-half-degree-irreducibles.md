@@ -2001,6 +2001,29 @@ has degree at most `2 floor(n/2)=n-1`, so the composition violates the shaped
 bound.  Hence no choice of the binary shift `a` turns this familiar extension
 construction into a universal shaped doubling induction.
 
+Nor can a binary projective change of variable repair that odd-degree
+composition.  Every quadratic Artin--Schreier output is stabilized by
+`x -> x+1`; conjugating through `PGL_2(GF(2))` leaves only the three involution
+classes represented by
+
+```text
+x -> x+1,  x -> 1/x,  x -> x/(x+1).
+```
+
+For odd source degree `n>=3`, translation invariance forces the forbidden
+coefficient in degree `2n-2`.  Inversion symmetry reduces a constant-one
+half-shaped output to `x^(2n)+x^n+1`, the self-reciprocal cyclotomic candidate
+already classified below.  For the third involution, reciprocation turns the
+polynomial into an element of the invariant ring `GF(2)[x^2+x]`; the middle
+coefficient gap then forces the only constant-one candidate to be
+`x^(2n)+(x+1)^n`.  It is divisible by `x^2+x+1`, since a nontrivial cube root
+`w` satisfies `w+1=w^2`.  The bounded native
+`characteristic_two_projective_doubling_obstruction` constructs both remaining
+candidates, checks the explicit factor, and requires the inversion candidate
+to equal the existing Q-output exactly (ADR-0546).  Thus all six projective
+repairs are impossible, reducible, or the already known cyclotomic family;
+none supplies a new all-degree induction.
+
 The standard Q-transform admits a complete negative classification, stronger
 than checking its familiar recurrence hypotheses.  For
 

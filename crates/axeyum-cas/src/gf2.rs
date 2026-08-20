@@ -309,6 +309,148 @@ pub fn characteristic_two_q_shape_obstruction(
     })
 }
 
+/// Exact obstruction to repairing a quadratic Artin--Schreier composition by
+/// a binary projective change of variable.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CharacteristicTwoProjectiveDoublingObstruction {
+    /// Odd source degree `n` and half of the doubled output degree.
+    pub source_degree: usize,
+    /// Doubled output degree `2n`.
+    pub output_degree: usize,
+    /// Forbidden exponent `2n-2` forced by translation invariance.
+    pub translation_forbidden_exponent: usize,
+    /// Sole constant-one half-shaped candidate with inversion symmetry.
+    pub inversion_candidate: Gf2Poly,
+    /// Sole constant-one half-shaped candidate with transvection symmetry.
+    pub transvection_candidate: Gf2Poly,
+    /// Explicit factor `x^2+x+1` of the transvection candidate.
+    pub transvection_factor: Gf2Poly,
+    /// Whether the inversion candidate is the already classified shaped
+    /// self-reciprocal Q-transform output.
+    pub inversion_candidate_is_q_output: bool,
+    /// Whether the three projective involution classes leave no new universal
+    /// shaped doubling construction.
+    pub closes_new_projective_doubling_route: bool,
+}
+
+/// Classify half-shaped degree doublings stabilized by an involution in
+/// `PGL_2(GF(2))`.
+///
+/// A separable quadratic Artin--Schreier composition is invariant under
+/// `x -> x+1`.  Conjugating by any binary projective change of variable makes
+/// its output invariant under one of the three involutions
+///
+/// ```text
+/// x -> x+1,  x -> 1/x,  x -> x/(x+1).
+/// ```
+///
+/// For odd `n>=3`, translation invariance is incompatible with half-shape:
+/// `(x+1)^(2n)+x^(2n)` has an uncancellable term in degree `2n-2>n`.
+/// Inversion symmetry leaves only `x^(2n)+x^n+1` after the reducible square
+/// `x^(2n)+1` is removed.  This is exactly the Q-transform/cyclotomic
+/// candidate already classified by [`characteristic_two_q_shape_obstruction`].
+/// Finally, reciprocating a transvection-invariant half-shaped polynomial
+/// turns it into a translation invariant polynomial with no terms in degrees
+/// `1..n-1`.  Since the invariant ring is `GF(2)[x^2+x]`, its only
+/// constant-one possibility is
+///
+/// ```text
+/// x^(2n)+(x+1)^n,
+/// ```
+///
+/// which is divisible by `x^2+x+1`: at a nontrivial cube root `w`,
+/// `w+1=w^2`, so the two summands agree.  Thus projective repair yields only
+/// the already known self-reciprocal family or a reducible polynomial, not a
+/// universal doubling induction.
+///
+/// # Errors
+///
+/// Rejects even degrees and odd degrees below three, configured degree/work
+/// excess, or failure of either exact polynomial identity.
+pub fn characteristic_two_projective_doubling_obstruction(
+    source_degree: usize,
+    limits: Gf2Limits,
+) -> Result<CharacteristicTwoProjectiveDoublingObstruction, Gf2Error> {
+    if source_degree < 3 || source_degree.is_multiple_of(2) {
+        return Err(Gf2Error::NotPositiveDegree);
+    }
+    if source_degree > limits.max_input_degree {
+        return Err(Gf2Error::DegreeLimit {
+            observed: source_degree,
+            limit: limits.max_input_degree,
+        });
+    }
+    let output_degree = source_degree.checked_mul(2).ok_or(Gf2Error::DegreeLimit {
+        observed: usize::MAX,
+        limit: limits.max_intermediate_degree,
+    })?;
+    if output_degree > limits.max_intermediate_degree {
+        return Err(Gf2Error::DegreeLimit {
+            observed: output_degree,
+            limit: limits.max_intermediate_degree,
+        });
+    }
+    let expansion_work = 1_u64
+        .checked_shl(source_degree.count_ones())
+        .unwrap_or(u64::MAX);
+    if expansion_work > limits.max_word_ops {
+        return Err(Gf2Error::WorkLimit {
+            used: expansion_work,
+            limit: limits.max_word_ops,
+        });
+    }
+
+    let translation_forbidden_exponent = output_degree - 2;
+    if translation_forbidden_exponent <= source_degree {
+        return Err(Gf2Error::InvalidCertificate(
+            "translation obstruction does not lie above the half-degree cutoff",
+        ));
+    }
+    let inversion_candidate = Gf2Poly::from_exponents(&[0, source_degree, output_degree], limits)?;
+    let q_report = characteristic_two_q_shape_obstruction(source_degree, limits)?;
+    let inversion_candidate_is_q_output = inversion_candidate == q_report.forced_output;
+    if !inversion_candidate_is_q_output {
+        return Err(Gf2Error::InvalidCertificate(
+            "projective inversion candidate differs from the forced Q-output",
+        ));
+    }
+
+    let mut transvection_exponents = Vec::with_capacity(
+        usize::try_from(expansion_work)
+            .unwrap_or(usize::MAX)
+            .saturating_add(1),
+    );
+    let mut submask = source_degree;
+    loop {
+        transvection_exponents.push(submask);
+        if submask == 0 {
+            break;
+        }
+        submask = (submask - 1) & source_degree;
+    }
+    transvection_exponents.push(output_degree);
+    let transvection_candidate = Gf2Poly::from_exponents(&transvection_exponents, limits)?;
+    let transvection_factor = Gf2Poly::from_exponents(&[0, 1, 2], limits)?;
+    let mut context = Gf2Context::new(limits);
+    let (_, remainder) = context.div_rem(&transvection_candidate, &transvection_factor)?;
+    if !remainder.is_zero() {
+        return Err(Gf2Error::InvalidCertificate(
+            "projective transvection candidate lacks its cyclotomic factor",
+        ));
+    }
+
+    Ok(CharacteristicTwoProjectiveDoublingObstruction {
+        source_degree,
+        output_degree,
+        translation_forbidden_exponent,
+        inversion_candidate,
+        transvection_candidate,
+        transvection_factor,
+        inversion_candidate_is_q_output,
+        closes_new_projective_doubling_route: true,
+    })
+}
+
 /// Exact Capell criterion data for the cubic composition `f(x^3)`.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CubicCompositionCriterion {
@@ -1185,6 +1327,43 @@ mod tests {
             characteristic_two_q_transform(&Gf2Poly::zero(), Gf2Limits::default()),
             Err(Gf2Error::NotPositiveDegree)
         );
+    }
+
+    #[test]
+    fn projective_artin_schreier_repair_collapses_to_known_or_reducible_forms() {
+        let limits = Gf2Limits::default();
+        for source_degree in (3_usize..=63).step_by(2) {
+            let report =
+                characteristic_two_projective_doubling_obstruction(source_degree, limits).unwrap();
+            assert_eq!(report.output_degree, 2 * source_degree);
+            assert_eq!(report.translation_forbidden_exponent, 2 * source_degree - 2);
+            assert!(report.translation_forbidden_exponent > source_degree);
+            assert!(report.inversion_candidate.is_half_degree_shaped());
+            assert!(report.transvection_candidate.is_half_degree_shaped());
+            assert!(report.inversion_candidate_is_q_output);
+            assert!(report.closes_new_projective_doubling_route);
+
+            let mut context = Gf2Context::new(limits);
+            let (_, remainder) = context
+                .div_rem(&report.transvection_candidate, &report.transvection_factor)
+                .unwrap();
+            assert!(remainder.is_zero());
+        }
+
+        let cubic = characteristic_two_projective_doubling_obstruction(3, limits).unwrap();
+        assert_eq!(cubic.inversion_candidate, poly(&[0, 3, 6]));
+        assert_eq!(cubic.transvection_candidate, poly(&[0, 1, 2, 3, 6]));
+        assert!(characteristic_two_projective_doubling_obstruction(2, limits).is_err());
+        assert!(characteristic_two_projective_doubling_obstruction(4, limits).is_err());
+
+        let tight = Gf2Limits {
+            max_word_ops: 3,
+            ..limits
+        };
+        assert!(matches!(
+            characteristic_two_projective_doubling_obstruction(3, tight),
+            Err(Gf2Error::WorkLimit { .. })
+        ));
     }
 
     #[test]
