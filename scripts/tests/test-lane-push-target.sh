@@ -23,6 +23,37 @@ git -c init.defaultBranch=main init -q .
 git config user.email t@t && git config user.name t
 git remote add origin ../origin.git
 echo hi > README.md && git add -A && git commit -qm base && git push -q origin main
+
+# A branch without a remote counterpart must use the same merge-base rule as
+# the hook. `git rev-parse origin/fresh-rust` prints the unresolved token while
+# exiting 0; treating that as a usable base made `git diff` fail, then the
+# pipeline reported zero changed files and a false FREE estimate.
+git checkout -qb fresh-rust && echo 'fn fresh(){}' > fresh.rs \
+  && git add -A && git commit -qm fresh-rust
+fresh_rust=$(bash "$here/scripts/lane-push.sh" --force --dry-run 2>&1)
+git checkout -q main && git branch -D fresh-rust >/dev/null
+
+git checkout -qb fresh-doc && echo fresh > fresh.md \
+  && git add -A && git commit -qm fresh-doc
+fresh_doc=$(bash "$here/scripts/lane-push.sh" --force --dry-run 2>&1)
+git checkout -q main && git branch -D fresh-doc >/dev/null
+
+fail=0
+case "$fresh_rust" in
+  *fatal:*) echo "FAIL: new Rust branch cost probe invoked git with an invalid base:"
+     echo "$fresh_rust" | sed 's/^/    /'; fail=1 ;;
+  *"1 commit(s)"*"FULL BATTERY"*) ;;
+  *) echo "FAIL: new Rust branch must be one-commit FULL BATTERY without a fatal diff:"
+     echo "$fresh_rust" | sed 's/^/    /'; fail=1 ;;
+esac
+case "$fresh_doc" in
+  *fatal:*) echo "FAIL: new docs branch cost probe invoked git with an invalid base:"
+     echo "$fresh_doc" | sed 's/^/    /'; fail=1 ;;
+  *"1 commit(s)"*"FREE"*) ;;
+  *) echo "FAIL: new docs branch must be one-commit FREE without a fatal diff:"
+     echo "$fresh_doc" | sed 's/^/    /'; fail=1 ;;
+esac
+
 git checkout -qb feature && git push -q origin feature          # upstream pinned here
 git checkout -q main && echo 'fn a(){}' > a.rs && git add -A \
   && git commit -qm rust && git push -q origin main
@@ -30,9 +61,8 @@ git checkout -q feature && git merge -q main -m merge \
   && echo doc > d.md && git add -A && git commit -qm doconly
 git fetch -q origin
 
-fail=0
-stale=$(bash "$here/scripts/lane-push.sh" --dry-run 2>&1)
-targeted=$(bash "$here/scripts/lane-push.sh" --to main --dry-run 2>&1)
+stale=$(bash "$here/scripts/lane-push.sh" --force --dry-run 2>&1)
+targeted=$(bash "$here/scripts/lane-push.sh" --force --to main --dry-run 2>&1)
 
 case "$stale" in
   *"FULL BATTERY"*) ;;
@@ -49,7 +79,7 @@ esac
 git checkout -q main && echo more >> README.md && git add -A \
   && git commit -qm ahead && git push -q origin main
 git checkout -q feature
-behind=$(bash "$here/scripts/lane-push.sh" --to main --dry-run 2>&1); rc=$?
+behind=$(bash "$here/scripts/lane-push.sh" --force --to main --dry-run 2>&1); rc=$?
 if [ "$rc" -eq 0 ]; then
   echo "FAIL: origin/main is not an ancestor of HEAD; --to main must decline, got rc=0:"
   echo "$behind" | sed 's/^/    /'; fail=1
@@ -84,7 +114,7 @@ exit 0
 HOOK
 chmod +x "$work/wt/.git/hooks/pre-push"
 
-out=$(bash "$here/scripts/lane-push.sh" --to main --retry 3 2>&1); rc=$?
+out=$(bash "$here/scripts/lane-push.sh" --force --to main --retry 3 2>&1); rc=$?
 rm -f "$work/wt/.git/hooks/pre-push"
 if [ "$rc" -ne 0 ]; then
   echo "FAIL: --retry did not recover from a mid-push remote advance (rc=$rc):" >&2

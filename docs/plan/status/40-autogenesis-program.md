@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** ADR-0528 generalizes native `Nat.mod_lt` to Lean's `forall x y, 0 < y -> x % y < y` contract with an axiom-free kernel proof. A read-only named compatibility receipt records `translated-definitional-equality` through imported wrappers without publication authority. On exact Mathlib 4.30.0 r082 evidence, the unchanged `Nat.dvd_gcd` control advances to missing recursive inductive `Acc` with an unchanged target environment.
+**Status:** ADR-0529 permits only the declaration-exact canonical native `Acc` package through atomic target-kernel reconstruction. Receipt V5 regenerates `Acc`, `Acc.intro`, and `Acc.rec` with equal source/target identities and admits axiom-free `Acc.inv`; incomplete, lookalike, and mutual packages still decline. The unchanged Mathlib 4.30.0 r082 `Nat.dvd_gcd` control now reaches target admission of `Nat.div_mod_exec` and fails with `TypeMismatch`, leaving the caller environment unchanged.
 
-**Next:** measure the complete native/imported `Acc` family, constructor, and generated recursor package; add an atomic target-kernel reconstruction path for exactly this recursive singleton; mutation-test incompleteness, metadata mismatch, and rollback; then retry `Nat.dvd_gcd` unchanged. Do not authorize arbitrary recursive/mutual inductive transport from one package.
+**Next:** render and compare the expected and inferred target types at the `Nat.div_mod_exec` admission failure; isolate the first reusable representation/proof mismatch; correct it without weakening the target gate; then retry `Nat.dvd_gcd` unchanged. Keep raw arena IDs diagnostic-only.
 
 <!-- plan-section: landed-changes -->
 
@@ -26,3 +26,4 @@
 | 2026-08-20 | `866add778` | Official-order fixtures and golden reconstruction bodies pass the authoritative pre-push gate |
 | 2026-08-20 | `a5a111498` | Native `Nat.mod_lt` proves Lean's general positive-denominator contract and migrates GCD/Bezout consumers |
 | 2026-08-20 | `ac33a0a2d` | Named compatibility diagnostics bind `Nat.mod_lt` translated definitional equality and expose `Acc` next |
+| 2026-08-20 | `3d466b45c` | Receipt V5 reconstructs only canonical native `Acc` exactly and exposes `Nat.div_mod_exec` target type mismatch |

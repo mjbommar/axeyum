@@ -10,6 +10,7 @@ use std::fmt::Write as _;
 
 use axeyum_lean_kernel::{
     Declaration, ExprId, ExprNode, Kernel, LevelId, LevelNode, NameId, NameNode, ReducibilityHint,
+    build_logic_prelude,
 };
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -17,7 +18,7 @@ use sha2::{Digest, Sha256};
 use crate::{canonical_declaration_sha256, canonical_kernel_type_shape_sha256};
 
 /// Version of the checked theorem-composition receipt and compatibility policy.
-pub const CHECKED_THEOREM_COMPOSITION_VERSION: &str = "axeyum.checked-theorem-composition.v4";
+pub const CHECKED_THEOREM_COMPOSITION_VERSION: &str = "axeyum.checked-theorem-composition.v5";
 
 /// The checked relation that authorized reuse of one target declaration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -82,7 +83,7 @@ pub struct AddedDefinitionReceipt {
     pub reducibility: String,
 }
 
-/// One atomically reconstructed non-recursive singleton inductive package.
+/// One atomically reconstructed singleton inductive package.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AddedSingletonInductiveReceipt {
     /// Complete family name.
@@ -239,7 +240,8 @@ pub enum CheckedTheoremCompositionError {
         target_sha256: String,
     },
     /// The current schema admits only missing definitions, checked theorems,
-    /// and complete non-recursive singleton inductive packages.
+    /// complete non-recursive singleton inductive packages, and the exact
+    /// canonical native `Acc` package.
     UnsupportedMissingDeclaration {
         /// Complete declaration name.
         name: String,
@@ -254,6 +256,16 @@ pub enum CheckedTheoremCompositionError {
         name: String,
         /// Typed kernel error rendered without exposing target handles.
         error: String,
+    },
+    /// An exact recursive package regenerated successfully but did not match
+    /// the canonical source family, constructor, or recursor identity.
+    ReconstructedInductiveMismatch {
+        /// Complete declaration name whose checked content drifted.
+        name: String,
+        /// Exact canonical source identity.
+        source_sha256: String,
+        /// Exact canonical regenerated-target identity.
+        target_sha256: String,
     },
     /// The requested closure would add no declaration.
     NoAdditions,
@@ -281,9 +293,9 @@ impl std::error::Error for CheckedTheoremCompositionError {}
 ///
 /// Declines on invalid roots, incompatible reused types, unsupported or partial
 /// missing declaration packages, non-closed terms, identity failures, or a
-/// trusted-gate rejection. Complete non-recursive singleton inductives are
-/// reconstructed atomically before missing theorem admission. No error
-/// publishes a target kernel.
+/// trusted-gate rejection. Complete non-recursive singleton inductives and the
+/// exact canonical native `Acc` package are reconstructed atomically before
+/// missing theorem admission. No error publishes a target kernel.
 pub fn compose_checked_theorem_slice(
     source: &Kernel,
     target: &Kernel,
@@ -513,6 +525,7 @@ struct SingletonInductivePackage {
     family: NameId,
     constructors: Vec<NameId>,
     recursor: NameId,
+    require_exact_reconstruction: bool,
 }
 
 fn validate_missing_declarations(
@@ -576,14 +589,6 @@ fn validate_singleton_inductive(
         unreachable!("caller selects only inductive declarations")
     };
     let rendered = source.display_name(family).to_string();
-    if *is_recursive {
-        return Err(
-            CheckedTheoremCompositionError::UnsupportedMissingDeclaration {
-                name: rendered,
-                kind: "recursive-inductive".to_owned(),
-            },
-        );
-    }
     let recursor_rendered = format!("{rendered}.rec");
     let Some(&recursor) = names.get(&recursor_rendered) else {
         return Err(
@@ -650,11 +655,70 @@ fn validate_singleton_inductive(
             );
         }
     }
+    let require_exact_reconstruction = if *is_recursive {
+        if !is_canonical_native_acc_package(source, family, ctor_names, recursor)? {
+            return Err(
+                CheckedTheoremCompositionError::UnsupportedMissingDeclaration {
+                    name: rendered,
+                    kind: "recursive-inductive".to_owned(),
+                },
+            );
+        }
+        true
+    } else {
+        false
+    };
     Ok(SingletonInductivePackage {
         family,
         constructors: ctor_names.clone(),
         recursor,
+        require_exact_reconstruction,
     })
+}
+
+/// The recursive composition boundary is deliberately a declaration-exact
+/// allow-list, not a structural class. A source can call an arbitrary family
+/// `Acc`; only the package produced by Axeyum's checked logic prelude receives
+/// this authority. The target still reconstructs and independently checks the
+/// package below.
+fn is_canonical_native_acc_package(
+    source: &Kernel,
+    family: NameId,
+    constructors: &[NameId],
+    recursor: NameId,
+) -> Result<bool, CheckedTheoremCompositionError> {
+    if source.display_name(family).to_string() != "Acc"
+        || constructors.len() != 1
+        || source.display_name(constructors[0]).to_string() != "Acc.intro"
+        || source.display_name(recursor).to_string() != "Acc.rec"
+    {
+        return Ok(false);
+    }
+
+    let mut reference = Kernel::new();
+    build_logic_prelude(&mut reference).map_err(|error| {
+        CheckedTheoremCompositionError::Identity(format!(
+            "canonical native Acc reference failed to build: {error:?}"
+        ))
+    })?;
+    let reference_names = declaration_names(&reference);
+    for (rendered, source_name) in [
+        ("Acc", family),
+        ("Acc.intro", constructors[0]),
+        ("Acc.rec", recursor),
+    ] {
+        let Some(&reference_name) = reference_names.get(rendered) else {
+            return Err(CheckedTheoremCompositionError::Identity(format!(
+                "canonical native Acc reference is missing {rendered}"
+            )));
+        };
+        if declaration_sha256(source, source_name)?
+            != declaration_sha256(&reference, reference_name)?
+        {
+            return Ok(false);
+        }
+    }
+    Ok(true)
 }
 
 fn admit_missing_singleton_inductives(
@@ -735,11 +799,19 @@ fn admit_missing_singleton_inductives(
                     "reconstructed singleton declaration is absent: {rendered}"
                 ))
             })?;
-            source_digests.insert(rendered.clone(), declaration_sha256(source, source_name)?);
-            target_digests.insert(
-                rendered,
-                declaration_sha256(translator.target, target_name)?,
-            );
+            let source_digest = declaration_sha256(source, source_name)?;
+            let target_digest = declaration_sha256(translator.target, target_name)?;
+            if package.require_exact_reconstruction && source_digest != target_digest {
+                return Err(
+                    CheckedTheoremCompositionError::ReconstructedInductiveMismatch {
+                        name: rendered,
+                        source_sha256: source_digest,
+                        target_sha256: target_digest,
+                    },
+                );
+            }
+            source_digests.insert(rendered.clone(), source_digest);
+            target_digests.insert(rendered, target_digest);
         }
         added.push(AddedSingletonInductiveReceipt {
             family,
