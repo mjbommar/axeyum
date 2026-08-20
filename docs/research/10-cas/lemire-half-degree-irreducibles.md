@@ -3085,6 +3085,24 @@ still finite evidence only.  A relative characteristic-two Witt/Heisenberg
 theorem should now target the single trace (CT), preserving cross-conductor
 cancellation.
 
+The top-conductor projector also has an exact Möbius-order decomposition.
+Applying the fine-minus-coarse scales before absolute values gives, at
+`ell=8`,
+
+```text
+n=17: [-768, 8192, -2304, 2048, 10240, 15360, -21504],
+n=18: [-4096, 7168, 9984, 0, -5120, 13824, -3584].
+```
+
+These vectors sum to the independently selected traces `11264` and `18176`.
+Order one survives in both rows; all seven orders survive in the odd row and
+six survive in the even row.  Thus the projector does not turn (CT) into a
+high-convolution-order tail.  The native
+`connected_top_mobius_convolution` report checks the main-term cancellation,
+every scaled order, and the final reconstruction.  A proof must preserve the
+signed cancellation across these orders as well as across conductors; taking
+orderwise absolute values is not a justified endpoint bridge (ADR-0543).
+
 This exact tower does **not** by itself put (RC) under the available
 Ito--Takeuchi--Tsushima theorem.  Their Heisenberg construction treats the
 special one-equation curves `y^2-y=xR(x)` for linearized `R` and a length-two

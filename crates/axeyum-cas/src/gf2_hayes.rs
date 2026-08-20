@@ -3467,6 +3467,43 @@ pub struct IdentityClassMobiusConvolution {
     pub terms: Vec<MobiusConvolutionTerm>,
 }
 
+/// One convolution-order contribution after the connected top-conductor
+/// projector is applied.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConnectedTopMobiusConvolutionTerm {
+    /// Interval degree `d`.
+    pub interval_degree: usize,
+    /// Fine level-`ell` Möbius-convolution term.
+    pub fine_value: i128,
+    /// Coarse level-`a-1` term, or zero once `d>=a-1`.
+    pub coarse_value: i128,
+    /// `2^ell fine_value-2^(a-1) coarse_value`.
+    pub connected_value: BigInt,
+}
+
+/// Exact Möbius-order decomposition of the connected top-conductor trace.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConnectedTopMobiusConvolutionReport {
+    /// Fine coefficient-prefix length.
+    pub ell: usize,
+    /// Endpoint degree.
+    pub degree: usize,
+    /// First retained exact-conductor level `a`.
+    pub first_top_level: usize,
+    /// Coarse quotient level `a-1`.
+    pub coarse_level: usize,
+    /// Contributions in increasing interval degree.
+    pub terms: Vec<ConnectedTopMobiusConvolutionTerm>,
+    /// First interval degree with a nonzero connected contribution.
+    pub first_nonzero_interval_degree: Option<usize>,
+    /// Number of nonzero connected order contributions.
+    pub nonzero_order_count: usize,
+    /// Signed sum of every connected order.
+    pub signed_connected_trace: BigInt,
+    /// Sum of absolute connected order contributions.
+    pub orderwise_absolute_trace: BigUint,
+}
+
 /// One symmetric convolution-order cell in the connected fourth cumulant.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConnectedOrderCumulantCell {
@@ -11387,6 +11424,96 @@ pub fn identity_class_mobius_convolution(
     })
 }
 
+/// Decompose the connected top-conductor trace by Möbius convolution order.
+///
+/// With `a=ell-ceil(log2(ell))-1`, the selected endpoint trace is
+///
+/// ```text
+/// 2^ell Delta_ell-2^(a-1) Delta_(a-1).
+/// ```
+///
+/// Applying [`identity_class_mobius_convolution`] at both levels gives an
+/// exact signed contribution for every interval degree before any absolute
+/// value is taken.  This is a bounded diagnostic: it does not estimate the
+/// resulting order sum uniformly.
+///
+/// # Errors
+///
+/// Rejects endpoints whose connected window reaches level one, and propagates
+/// any bounded convolution or invariant failure.
+pub fn connected_top_mobius_convolution(
+    ell: usize,
+    degree: usize,
+    limits: HayesLimits,
+) -> Result<ConnectedTopMobiusConvolutionReport, HayesError> {
+    let implication = population_refinement_connected_top_implication(ell, degree)?;
+    let first_top_level = implication.first_top_level;
+    let coarse_level = first_top_level.checked_sub(1).ok_or_else(|| {
+        HayesError::InvalidParameter("connected top coarse level underflow".to_owned())
+    })?;
+    if coarse_level == 0 {
+        return Err(HayesError::InvalidParameter(
+            "connected Möbius decomposition requires a positive coarse level".to_owned(),
+        ));
+    }
+    let fine = identity_class_mobius_convolution(ell, degree, limits)?;
+    let coarse = identity_class_mobius_convolution(coarse_level, degree, limits)?;
+    let fine_scale = BigInt::from(BigUint::from(1_u8) << ell);
+    let coarse_scale = BigInt::from(BigUint::from(1_u8) << coarse_level);
+    if &fine_scale * BigInt::from(fine.uniform_mean)
+        != &coarse_scale * BigInt::from(coarse.uniform_mean)
+    {
+        return Err(HayesError::Invariant(
+            "connected top fine/coarse main terms do not cancel".to_owned(),
+        ));
+    }
+    let mut signed_connected_trace = BigInt::from(0_u8);
+    let mut orderwise_absolute_trace = BigUint::from(0_u8);
+    let mut terms = Vec::with_capacity(fine.terms.len());
+    for fine_term in fine.terms {
+        let coarse_value = coarse
+            .terms
+            .get(fine_term.interval_degree - 1)
+            .map_or(0_i128, |term| term.value);
+        let connected_value = &fine_scale * BigInt::from(fine_term.value)
+            - &coarse_scale * BigInt::from(coarse_value);
+        signed_connected_trace += &connected_value;
+        orderwise_absolute_trace += connected_value.magnitude();
+        terms.push(ConnectedTopMobiusConvolutionTerm {
+            interval_degree: fine_term.interval_degree,
+            fine_value: fine_term.value,
+            coarse_value,
+            connected_value,
+        });
+    }
+    let direct = &fine_scale * BigInt::from(fine.mangoldt_population)
+        - &coarse_scale * BigInt::from(coarse.mangoldt_population);
+    if signed_connected_trace != direct {
+        return Err(HayesError::Invariant(format!(
+            "connected Möbius orders reconstruct {signed_connected_trace}, expected {direct}"
+        )));
+    }
+    let first_nonzero_interval_degree = terms
+        .iter()
+        .find(|term| term.connected_value != BigInt::from(0_u8))
+        .map(|term| term.interval_degree);
+    let nonzero_order_count = terms
+        .iter()
+        .filter(|term| term.connected_value != BigInt::from(0_u8))
+        .count();
+    Ok(ConnectedTopMobiusConvolutionReport {
+        ell,
+        degree,
+        first_top_level,
+        coarse_level,
+        terms,
+        first_nonzero_interval_degree,
+        nonzero_order_count,
+        signed_connected_trace,
+        orderwise_absolute_trace,
+    })
+}
+
 /// Certify the exact proper-prime-power reduction at `n = 2 ell + 1`.
 ///
 /// This operation is structural: it enumerates divisors and checks the
@@ -14494,6 +14621,47 @@ mod tests {
                 &connected.connected_top_assumption_numerator * BigUint::from(50_641_u16)
             );
         }
+    }
+
+    #[test]
+    fn connected_top_mobius_orders_reconstruct_the_selected_trace() {
+        let limits = HayesLimits::default();
+        let expected = [
+            (
+                17_usize,
+                11_264_i128,
+                vec![-768_i128, 8_192, -2_304, 2_048, 10_240, 15_360, -21_504],
+            ),
+            (
+                18,
+                18_176,
+                vec![-4_096_i128, 7_168, 9_984, 0, -5_120, 13_824, -3_584],
+            ),
+        ];
+        for (degree, expected_trace, expected_terms) in expected {
+            let report = connected_top_mobius_convolution(8, degree, limits).unwrap();
+            assert_eq!(report.first_top_level, 4);
+            assert_eq!(report.coarse_level, 3);
+            assert_eq!(report.first_nonzero_interval_degree, Some(1));
+            assert_eq!(
+                report.nonzero_order_count,
+                expected_terms.iter().filter(|value| **value != 0).count()
+            );
+            assert_eq!(report.signed_connected_trace, BigInt::from(expected_trace));
+            assert!(&report.orderwise_absolute_trace > report.signed_connected_trace.magnitude());
+            assert_eq!(
+                report
+                    .terms
+                    .iter()
+                    .map(|term| term.connected_value.clone())
+                    .collect::<Vec<_>>(),
+                expected_terms
+                    .into_iter()
+                    .map(BigInt::from)
+                    .collect::<Vec<_>>()
+            );
+        }
+        assert!(connected_top_mobius_convolution(4, 9, limits).is_err());
     }
 
     #[test]
