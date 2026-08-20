@@ -2287,6 +2287,26 @@ the old cubic-only conclusion.  These are infinite certified families, but
 the cutoff census leaves 29 witnesses uncovered and supplies no theorem that
 the union contains every degree.  It is not an all-degree proof.
 
+Nonmonomial composition has one exact shape window, now classified natively.
+For shaped `f` of degree `n` and monic `sigma=x^k+t`, `s=deg t`, the unique
+largest proper degree in the binary Frobenius expansion of `sigma^n` is
+
+```text
+kn-(k-s)2^v2(n).
+```
+
+It lies below the half line exactly when `sigma=x^k`, or `n` is a power of
+two and `sigma` is itself shaped.  `composition_shape_criterion` proves and
+directly checks this equivalence; `search_shaped_compositions` retains a
+Rabin certificate for every irreducible output.  Exhaustion of the complete
+degree-eight domain finds two shaped irreducible sources and four certified
+degree-64 compositions, but none of those four accepts any of the 31 shaped
+nonmonomial degree-eight substitutions.  Thus the separately observed
+degree-64 and degree-512 successes do not form an `8 -> 64 -> 512` chain.
+ADR-0566 records the corrected boundary.  The power-of-two window contains
+isolated constructions, not a proved inductive family, and cannot address
+odd prime degrees in any event.
+
 ### A sufficient endpoint discrepancy lemma
 
 Let `N_n(1)` be `[1] Lambda_n`, equivalently the number of elements of

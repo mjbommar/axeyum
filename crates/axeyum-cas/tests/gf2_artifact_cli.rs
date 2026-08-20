@@ -201,3 +201,20 @@ fn capell_audit_replays_sources_and_both_composition_checkers() {
     );
     fs::remove_dir_all(directory).unwrap();
 }
+
+#[test]
+fn composition_tower_cli_retains_a_certified_chain() {
+    let output = Command::new(env!("CARGO_BIN_EXE_axeyum-gf2-composition-tower"))
+        .args(["hex:13", "3", "1", "10000000"])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    assert!(stdout.starts_with("GF2_COMPOSITION_TOWER|status=PASS|"));
+    assert!(stdout.contains("|base_degree=4|substitution_degree=3|depth=1|degrees=4,12|"));
+    assert!(stdout.contains("|substitutions=0,3|"));
+}

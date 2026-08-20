@@ -713,6 +713,49 @@ pub struct MonomialCompositionCriterion {
     pub proves_composition_irreducible: bool,
 }
 
+/// Exact half-degree shape classification for a polynomial composition.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CompositionShapeCriterion {
+    /// Degree `n` of the shaped source polynomial.
+    pub source_degree: usize,
+    /// Degree `k` of the monic substitution polynomial.
+    pub substitution_degree: usize,
+    /// Degree `s` of `sigma-x^k`, absent for the monomial `sigma=x^k`.
+    pub substitution_tail_degree: Option<usize>,
+    /// Least power of two occurring in the binary expansion of `n`.
+    pub least_binary_place: usize,
+    /// Degree of `sigma^n-x^(kn)` when `sigma` is nonmonomial.
+    pub leading_power_tail_degree: Option<usize>,
+    /// Formal bounded composition `f(sigma)`.
+    pub composition: Gf2Poly,
+    /// Arithmetic verdict `(k-s) lsb(n) >= ceil(kn/2)` (or monomial).
+    pub arithmetic_shape_criterion: bool,
+    /// Equivalent classification: monomial, or power-of-two `n` and shaped `sigma`.
+    pub classified_shape_criterion: bool,
+}
+
+/// One certified positive result from a shaped-substitution search.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ShapedCompositionSearchHit {
+    /// Nonmonomial shaped substitution `sigma`.
+    pub substitution: Gf2Poly,
+    /// Replayable Rabin certificate for `f(sigma)`.
+    pub composition_certificate: IrreducibilityCertificate,
+}
+
+/// Deterministic bounded search over all shaped substitutions of one degree.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ShapedCompositionSearchReport {
+    /// Degree of the replay-checked source.
+    pub source_degree: usize,
+    /// Degree of every substitution.
+    pub substitution_degree: usize,
+    /// Number `2^(floor(k/2)+1)-1` of nonmonomial candidates examined.
+    pub candidates_examined: usize,
+    /// Criterion-positive outputs, each carrying a replayable certificate.
+    pub hits: Vec<ShapedCompositionSearchHit>,
+}
+
 /// Substitute `x^power` for `x` without changing coefficients.
 ///
 /// # Errors
@@ -748,6 +791,222 @@ pub fn monomial_compose(
         .map(|exponent| exponent * power)
         .collect::<Vec<_>>();
     Gf2Poly::from_exponents(&exponents, limits)
+}
+
+/// Compose two binary polynomials by bounded Horner evaluation.
+///
+/// # Errors
+///
+/// Returns a typed resource decline when an intermediate exceeds `limits`.
+pub fn polynomial_compose(
+    outer: &Gf2Poly,
+    inner: &Gf2Poly,
+    limits: Gf2Limits,
+) -> Result<Gf2Poly, Gf2Error> {
+    let Some(outer_degree) = outer.degree() else {
+        return Ok(Gf2Poly::zero());
+    };
+    let Some(inner_degree) = inner.degree() else {
+        return Ok(if outer.coefficient(0) {
+            Gf2Poly::one()
+        } else {
+            Gf2Poly::zero()
+        });
+    };
+    let output_degree = outer_degree
+        .checked_mul(inner_degree)
+        .ok_or(Gf2Error::DegreeLimit {
+            observed: usize::MAX,
+            limit: limits.max_intermediate_degree,
+        })?;
+    if output_degree > limits.max_intermediate_degree {
+        return Err(Gf2Error::DegreeLimit {
+            observed: output_degree,
+            limit: limits.max_intermediate_degree,
+        });
+    }
+    let mut context = Gf2Context::new(limits);
+    let mut result = Gf2Poly::zero();
+    for exponent in (0..=outer_degree).rev() {
+        result = context.multiply(&result, inner)?;
+        if outer.coefficient(exponent) {
+            result = context.add(&result, &Gf2Poly::one())?;
+        }
+    }
+    Ok(result)
+}
+
+/// Classify exactly when composition preserves Lemire's half-degree shape.
+///
+/// Write the shaped source as `f=x^n+q`, and the monic substitution as
+/// `sigma=x^k+t`, with `s=deg(t)`.  Since `deg(q(sigma))<=k floor(n/2)`,
+/// only `sigma^n-x^(kn)` can cross the half-degree line.  In characteristic
+/// two, the binary Frobenius expansion has distinct term degrees, and its
+/// largest proper term is
+///
+/// ```text
+/// kn-(k-s) 2^v2(n).
+/// ```
+///
+/// Consequently a nonmonomial substitution works exactly when
+/// `(k-s)2^v2(n)>=ceil(kn/2)`.  Equivalently, `n` is a power of two and
+/// `sigma` is itself half-degree shaped.  A monomial substitution works for
+/// every `n`.
+///
+/// # Errors
+///
+/// Rejects a non-shaped or degree-zero source, a constant substitution, an
+/// arithmetic invariant mismatch, or bounded composition work beyond
+/// `limits`.
+pub fn composition_shape_criterion(
+    source: &Gf2Poly,
+    substitution: &Gf2Poly,
+    limits: Gf2Limits,
+) -> Result<CompositionShapeCriterion, Gf2Error> {
+    let source_degree = source.degree().ok_or(Gf2Error::NotPositiveDegree)?;
+    if source_degree == 0 {
+        return Err(Gf2Error::NotPositiveDegree);
+    }
+    if !source.is_half_degree_shaped() {
+        return Err(Gf2Error::InvalidCertificate(
+            "composition-shape source is not half-degree shaped",
+        ));
+    }
+    let substitution_degree = substitution.degree().ok_or(Gf2Error::InvalidCertificate(
+        "composition-shape substitution must have positive degree",
+    ))?;
+    if substitution_degree == 0 {
+        return Err(Gf2Error::InvalidCertificate(
+            "composition-shape substitution must have positive degree",
+        ));
+    }
+    let output_degree =
+        source_degree
+            .checked_mul(substitution_degree)
+            .ok_or(Gf2Error::DegreeLimit {
+                observed: usize::MAX,
+                limit: limits.max_intermediate_degree,
+            })?;
+    let substitution_tail_degree = substitution
+        .exponents()
+        .into_iter()
+        .filter(|&exponent| exponent != substitution_degree)
+        .max();
+    let least_binary_place = 1_usize << source_degree.trailing_zeros();
+    let leading_power_tail_degree = substitution_tail_degree.map(|tail_degree| {
+        output_degree - (substitution_degree - tail_degree) * least_binary_place
+    });
+    let arithmetic_shape_criterion =
+        leading_power_tail_degree.is_none_or(|degree| degree <= output_degree / 2);
+    let classified_shape_criterion = substitution_tail_degree.is_none()
+        || (source_degree.is_power_of_two() && substitution.is_half_degree_shaped());
+    if arithmetic_shape_criterion != classified_shape_criterion {
+        return Err(Gf2Error::InvalidCertificate(
+            "composition-shape arithmetic and classification disagree",
+        ));
+    }
+    let composition = polynomial_compose(source, substitution, limits)?;
+    if composition.is_half_degree_shaped() != arithmetic_shape_criterion {
+        return Err(Gf2Error::InvalidCertificate(
+            "composition-shape theorem disagrees with direct composition",
+        ));
+    }
+    Ok(CompositionShapeCriterion {
+        source_degree,
+        substitution_degree,
+        substitution_tail_degree,
+        least_binary_place,
+        leading_power_tail_degree,
+        composition,
+        arithmetic_shape_criterion,
+        classified_shape_criterion,
+    })
+}
+
+/// Search every nonmonomial shaped substitution `sigma` of degree `k`.
+///
+/// The source must have power-of-two degree, the only source degrees where
+/// the composition-shape theorem permits a nonmonomial substitution.  Search
+/// itself receives no trust: every retained output carries a Rabin
+/// certificate produced and replay-checked by the ordinary binary-polynomial
+/// route.
+///
+/// # Errors
+///
+/// Rejects malformed sources, non-power-of-two source degrees, a zero
+/// substitution degree, a candidate count above `max_candidates`, or any
+/// bounded polynomial/certificate operation that exceeds `limits`.
+pub fn search_shaped_compositions(
+    source: &IrreducibilityCertificate,
+    substitution_degree: usize,
+    max_candidates: usize,
+    limits: Gf2Limits,
+) -> Result<ShapedCompositionSearchReport, Gf2Error> {
+    check_irreducible_certificate(source, limits)?;
+    let source_degree = source
+        .polynomial
+        .degree()
+        .ok_or(Gf2Error::NotPositiveDegree)?;
+    if !source.polynomial.is_half_degree_shaped() {
+        return Err(Gf2Error::InvalidCertificate(
+            "composition-search source is not half-degree shaped",
+        ));
+    }
+    if !source_degree.is_power_of_two() {
+        return Err(Gf2Error::InvalidCertificate(
+            "nonmonomial composition search requires power-of-two source degree",
+        ));
+    }
+    if substitution_degree == 0 {
+        return Err(Gf2Error::InvalidCertificate(
+            "composition-search substitution degree must be positive",
+        ));
+    }
+    let free_width = substitution_degree / 2 + 1;
+    let candidate_shift = u32::try_from(free_width).map_err(|_| Gf2Error::WorkLimit {
+        used: u64::MAX,
+        limit: limits.max_word_ops,
+    })?;
+    let candidate_ceiling = 1_usize
+        .checked_shl(candidate_shift)
+        .ok_or(Gf2Error::WorkLimit {
+            used: u64::MAX,
+            limit: limits.max_word_ops,
+        })?;
+    let candidates_examined = candidate_ceiling - 1;
+    if candidates_examined > max_candidates {
+        return Err(Gf2Error::WorkLimit {
+            used: u64::try_from(candidates_examined).unwrap_or(u64::MAX),
+            limit: u64::try_from(max_candidates).unwrap_or(u64::MAX),
+        });
+    }
+    let mut hits = Vec::new();
+    for tail_bits in 1..candidate_ceiling {
+        let mut exponents = vec![substitution_degree];
+        exponents
+            .extend((0..free_width).filter(|&exponent| tail_bits & (1_usize << exponent) != 0));
+        let substitution = Gf2Poly::from_exponents(&exponents, limits)?;
+        let shape = composition_shape_criterion(&source.polynomial, &substitution, limits)?;
+        if !shape.arithmetic_shape_criterion {
+            return Err(Gf2Error::InvalidCertificate(
+                "enumerated shaped substitution failed the shape criterion",
+            ));
+        }
+        let Some(composition_certificate) = certify_irreducible(&shape.composition, limits)? else {
+            continue;
+        };
+        check_irreducible_certificate(&composition_certificate, limits)?;
+        hits.push(ShapedCompositionSearchHit {
+            substitution,
+            composition_certificate,
+        });
+    }
+    Ok(ShapedCompositionSearchReport {
+        source_degree,
+        substitution_degree,
+        candidates_examined,
+        hits,
+    })
 }
 
 fn distinct_prime_divisors(mut value: usize) -> Vec<usize> {
@@ -1991,6 +2250,163 @@ mod tests {
                 "monomial eligibility divisor must be prime"
             ))
         ));
+    }
+
+    #[test]
+    fn composition_shape_classification_is_exact() {
+        let limits = Gf2Limits::default();
+        let non_power_source = poly(&[0, 6]);
+        let shaped_substitution = poly(&[1, 3]);
+        let rejected =
+            composition_shape_criterion(&non_power_source, &shaped_substitution, limits).unwrap();
+        assert_eq!(rejected.least_binary_place, 2);
+        assert_eq!(rejected.substitution_tail_degree, Some(1));
+        assert_eq!(rejected.leading_power_tail_degree, Some(14));
+        assert!(!rejected.arithmetic_shape_criterion);
+        assert!(!rejected.composition.is_half_degree_shaped());
+
+        let power_source = poly(&[0, 8]);
+        let accepted =
+            composition_shape_criterion(&power_source, &shaped_substitution, limits).unwrap();
+        assert_eq!(accepted.least_binary_place, 8);
+        assert_eq!(accepted.leading_power_tail_degree, Some(8));
+        assert!(accepted.arithmetic_shape_criterion);
+        assert!(accepted.composition.is_half_degree_shaped());
+
+        let unshaped_substitution = poly(&[2, 3]);
+        let rejected =
+            composition_shape_criterion(&power_source, &unshaped_substitution, limits).unwrap();
+        assert_eq!(rejected.leading_power_tail_degree, Some(16));
+        assert!(!rejected.classified_shape_criterion);
+
+        let monomial = composition_shape_criterion(&non_power_source, &poly(&[3]), limits).unwrap();
+        assert_eq!(monomial.substitution_tail_degree, None);
+        assert!(monomial.arithmetic_shape_criterion);
+        assert!(monomial.composition.is_half_degree_shaped());
+    }
+
+    #[test]
+    fn composition_shape_classification_matches_all_small_maps_and_sources() {
+        let limits = Gf2Limits::default();
+        let mut map_degree_cells = 0_usize;
+        let mut source_cells = 0_usize;
+        for substitution_degree in 1..=5 {
+            for lower_bits in 0..(1_usize << substitution_degree) {
+                let mut substitution_exponents = vec![substitution_degree];
+                substitution_exponents.extend(
+                    (0..substitution_degree)
+                        .filter(|&exponent| lower_bits & (1_usize << exponent) != 0),
+                );
+                let substitution = poly(&substitution_exponents);
+                for source_degree in 1..=14 {
+                    let source = poly(&[0, source_degree]);
+                    let report =
+                        composition_shape_criterion(&source, &substitution, limits).unwrap();
+                    assert_eq!(
+                        report.arithmetic_shape_criterion,
+                        report.composition.is_half_degree_shaped()
+                    );
+                    map_degree_cells += 1;
+
+                    if source_degree <= 8 {
+                        let tail_width = source_degree / 2 + 1;
+                        for tail_bits in 0..(1_usize << tail_width) {
+                            let mut exponents = vec![source_degree];
+                            exponents.extend(
+                                (0..tail_width)
+                                    .filter(|&exponent| tail_bits & (1_usize << exponent) != 0),
+                            );
+                            let varied_source = poly(&exponents);
+                            let varied =
+                                composition_shape_criterion(&varied_source, &substitution, limits)
+                                    .unwrap();
+                            assert_eq!(
+                                varied.arithmetic_shape_criterion,
+                                report.arithmetic_shape_criterion
+                            );
+                            source_cells += 1;
+                        }
+                    }
+                }
+            }
+        }
+        assert_eq!(map_degree_cells, 868);
+        assert_eq!(source_cells, 5_580);
+    }
+
+    #[test]
+    fn shaped_composition_search_retains_only_certified_outputs() {
+        let limits = Gf2Limits::default();
+        let quartic = certify_irreducible(&poly(&[0, 1, 4]), limits)
+            .unwrap()
+            .unwrap();
+        let report = search_shaped_compositions(&quartic, 3, 3, limits).unwrap();
+        assert_eq!(report.source_degree, 4);
+        assert_eq!(report.substitution_degree, 3);
+        assert_eq!(report.candidates_examined, 3);
+        assert!(
+            report
+                .hits
+                .iter()
+                .any(|hit| hit.substitution == poly(&[0, 3]))
+        );
+        for hit in &report.hits {
+            assert!(hit.substitution.is_half_degree_shaped());
+            assert!(
+                hit.composition_certificate
+                    .polynomial
+                    .is_half_degree_shaped()
+            );
+            check_irreducible_certificate(&hit.composition_certificate, limits).unwrap();
+        }
+        assert_eq!(
+            search_shaped_compositions(&quartic, 3, 2, limits),
+            Err(Gf2Error::WorkLimit { used: 3, limit: 2 })
+        );
+
+        let sextic = certify_irreducible(&poly(&[0, 3, 6]), limits)
+            .unwrap()
+            .unwrap();
+        assert!(matches!(
+            search_shaped_compositions(&sextic, 3, 3, limits),
+            Err(Gf2Error::InvalidCertificate(
+                "nonmonomial composition search requires power-of-two source degree"
+            ))
+        ));
+    }
+
+    #[test]
+    fn no_degree_eight_source_has_a_two_step_octuple_composition_chain() {
+        let limits = Gf2Limits {
+            max_word_ops: 2_000_000_000,
+            ..Gf2Limits::default()
+        };
+        let mut irreducible_sources = 0_usize;
+        let mut first_step_hits = 0_usize;
+        let mut two_step_chains = 0_usize;
+        for tail_bits in 0..32_usize {
+            let mut exponents = vec![8_usize];
+            exponents.extend((0..=4).filter(|&exponent| tail_bits & (1_usize << exponent) != 0));
+            let source = poly(&exponents);
+            let Some(certificate) = certify_irreducible(&source, limits).unwrap() else {
+                continue;
+            };
+            irreducible_sources += 1;
+            let first = search_shaped_compositions(&certificate, 8, 31, limits).unwrap();
+            first_step_hits += first.hits.len();
+            for hit in first.hits {
+                let second =
+                    search_shaped_compositions(&hit.composition_certificate, 8, 31, limits)
+                        .unwrap();
+                two_step_chains += second.hits.len();
+            }
+        }
+        eprintln!(
+            "degree-eight octuple composition: sources={irreducible_sources}, first_hits={first_step_hits}, two_step_chains={two_step_chains}"
+        );
+        assert!(irreducible_sources > 0);
+        assert!(first_step_hits > 0);
+        assert_eq!(two_step_chains, 0);
     }
 
     #[test]
