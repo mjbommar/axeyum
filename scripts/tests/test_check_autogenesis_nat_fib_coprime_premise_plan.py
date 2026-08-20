@@ -204,6 +204,33 @@ class FibCoprimePremisePlanTests(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.PlanError, "identity or authority"):
             MODULE.validate(changed)
 
+    def test_nat_gcd_target_leaf_frontier_mutations_are_rejected(self) -> None:
+        changed = copy.deepcopy(self.manifest)
+        changed["nat_gcd_target_leaf_frontier"]["manifest_sha256"] = "0" * 64
+        with self.assertRaisesRegex(MODULE.PlanError, "changed or is mutable"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["nat_gcd_target_leaf_frontier"]["two_leaves"][
+            "source_closure"
+        ] = 58
+        with self.assertRaisesRegex(MODULE.PlanError, "probe result"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["nat_gcd_target_leaf_frontier"]["two_leaves"][
+            "contains_nat_div_mod_exec"
+        ] = True
+        with self.assertRaisesRegex(MODULE.PlanError, "probe result"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["nat_gcd_target_leaf_frontier"]["official_support"][
+            "Nat.gcd_succ"
+        ]["axiom_footprint"] = []
+        with self.assertRaisesRegex(MODULE.PlanError, "official support"):
+            MODULE.validate(changed)
+
     def test_nat_mod_lt_compatibility_mutations_are_rejected(self) -> None:
         changed = copy.deepcopy(self.manifest)
         changed["nat_mod_lt_compatibility_result"]["source_declaration_sha256"] = (

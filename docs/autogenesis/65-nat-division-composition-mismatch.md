@@ -130,6 +130,8 @@ implementation with two exact, independently checked induction primitives.
 The target-side fuel invariant now composes and specializes into an axiom-free
 `Nat.dvd_mod_iff` with exactly the native successor-divisor type shape. See the
 [constructive Nat.mod invariant specialization](67-constructive-nat-mod-invariant-specialization.md).
-The remaining blocker is closure semantics: composition must treat that
-compatible target theorem as an explicit leaf instead of traversing the
-unrelated native proof behind it and rediscovering `Nat.div_mod_exec`.
+The explicit target-leaf contract is now implemented. The real retry proves
+that both direct consumers must be cut: target `Nat.dvd_mod_iff` alone leaves
+native `Nat.mod_lt`'s proof branch, while cutting both removes
+`Nat.div_mod_exec` and advances the first rejection to `Nat.gcd_succ`. See
+[target-owned theorem leaves and the Nat.gcd frontier](68-target-owned-theorem-leaves-and-nat-gcd-frontier.md).

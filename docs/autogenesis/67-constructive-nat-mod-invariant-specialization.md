@@ -132,12 +132,14 @@ python3 -m unittest \
   scripts.tests.test_check_autogenesis_nat_fib_coprime_premise_plan
 ```
 
-## Next bounded increment
+## Subsequent foundation
 
-Define a target-leaf theorem composition contract: when the source closure
-reaches a theorem already present in the target, require explicit compatibility
-and stop traversing the unrelated source proof behind that theorem. Add
-positive and mutation controls proving that the cut is exact, target-owned,
-and replayable. Then retry the unchanged `Nat.dvd_gcd` root with the newly
-specialized `Nat.dvd_mod_iff` as the leaf. No ledger credit is due until the
-downstream theorem and its intended fact transition independently close.
+The target-owned theorem-leaf contract now cuts only explicitly compatible,
+footprint-empty proofs and replays the exact selection. The real retry shows
+that `Nat.dvd_mod_iff` alone still leaves the independent `Nat.mod_lt` proof
+branch; cutting both removes `Nat.div_mod_exec` and advances the first rejection
+to `Nat.gcd_succ`. See
+[target-owned theorem leaves and the Nat.gcd frontier](68-target-owned-theorem-leaves-and-nat-gcd-frontier.md).
+
+No ledger credit is due until the downstream theorem and its intended fact
+transition independently close.

@@ -365,6 +365,150 @@ def validate_nat_mod_invariant_pack(manifest: dict[str, Any]) -> None:
         raise PlanError("Nat.mod invariant specialization result changed")
 
 
+def validate_nat_gcd_target_leaf_frontier(manifest: dict[str, Any]) -> None:
+    tracked = manifest["nat_gcd_target_leaf_frontier"]
+    manifest_path = pathlib.Path(tracked["manifest"])
+    pack_dir = manifest_path.parent
+    expected_files = {
+        "manifest.json",
+        "nat-gcd-eq1-audit.txt",
+        "nat-gcd-eq1.ndjson",
+        "nat-gcd-succ-audit.txt",
+        "nat-gcd-succ.ndjson",
+        "target-leaf-probe.json",
+    }
+    if (
+        sha256(manifest_path) != tracked["manifest_sha256"]
+        or stat.S_IMODE(pack_dir.stat().st_mode) != 0o555
+        or {path.name for path in pack_dir.iterdir()} != expected_files
+        or any(
+            stat.S_IMODE((pack_dir / name).stat().st_mode) != 0o444
+            for name in expected_files
+        )
+    ):
+        raise PlanError("Nat.gcd target-leaf frontier pack changed or is mutable")
+
+    external = load(manifest_path)
+    if (
+        external.get("schema_version") != 1
+        or external.get("kind")
+        != "axeyum-lean430-nat-gcd-target-leaf-frontier-pack"
+        or external.get("lean_version") != manifest["source"]["lean_version"]
+        or external.get("lean_githash") != manifest["source"]["lean_githash"]
+        or external.get("repository_commit") != tracked["implementation_commit"]
+        or external["inputs"]["constructive_mod_pack_manifest_sha256"]
+        != manifest["nat_mod_invariant_pack"]["manifest_sha256"]
+        or sha256(pathlib.Path(external["inputs"]["constructive_mod_pack_manifest"]))
+        != external["inputs"]["constructive_mod_pack_manifest_sha256"]
+        or external["inputs"]["target_stream_sha256"]
+        != manifest["source"]["stream_sha256"]
+        or sha256(pathlib.Path(external["inputs"]["target_stream"]))
+        != external["inputs"]["target_stream_sha256"]
+        or external["inputs"]["target_declarations_admitted"] != 261
+        or external["inputs"]["target_axioms"] != []
+        or external["authority"]
+        != {
+            "proof_search_invocations": 0,
+            "target_outcome_accesses": 0,
+            "ledger_writes": 0,
+            "private_clone_publications": 0,
+            "official_support_is_reference_only": True,
+            "official_support_is_axiom_free": False,
+        }
+    ):
+        raise PlanError("Nat.gcd target-leaf frontier identity or authority changed")
+
+    expected_tools = {
+        "target_leaf_probe": "crates/axeyum-lean-import/examples/nat_mod_invariant_specialization.rs",
+        "composition_api": "crates/axeyum-lean-import/src/theorem_composition.rs",
+        "source_closure_api": "crates/axeyum-lean-kernel/src/lean_export.rs",
+        "theorem_audit": "crates/axeyum-lean-import/examples/lean4export_import.rs",
+    }
+    if set(external["tools"]) != set(expected_tools):
+        raise PlanError("Nat.gcd target-leaf tool set changed")
+    for role, expected_path in expected_tools.items():
+        tool = external["tools"][role]
+        if (
+            tool["path"] != expected_path
+            or git_blob_sha256(tracked["implementation_commit"], tool["path"])
+            != tool["sha256"]
+        ):
+            raise PlanError(f"Nat.gcd target-leaf historical tool changed for {role}")
+
+    probe_path = pack_dir / external["target_leaf_probe"]["path"]
+    observed = load(probe_path)
+    leaf_probe = observed["target_leaf_probe"]
+    single = leaf_probe["single_leaf"]
+    double = leaf_probe["two_leaves"]
+    if (
+        sha256(probe_path) != external["target_leaf_probe"]["sha256"]
+        or external["target_leaf_probe"]["sha256"] != tracked["probe_sha256"]
+        or observed.get("kind") != "axeyum-nat-mod-invariant-specialization"
+        or observed["specialization"]["target"] != "Nat.dvd_mod_iff"
+        or observed["specialization"]["axiom_footprint"] != []
+        or leaf_probe["root"] != tracked["root"]
+        or leaf_probe["private_clone_publications"] != 0
+        or leaf_probe["proof_search_invocations"] != 0
+        or leaf_probe["ledger_writes"] != 0
+        or single["target_theorem_leaves"] != tracked["single_leaf"]["leaves"]
+        or single["source_closure"] != tracked["single_leaf"]["source_closure"]
+        or single["contains_nat_div_mod_exec"]
+        != tracked["single_leaf"]["contains_nat_div_mod_exec"]
+        or single["first_rejected"] != tracked["single_leaf"]["first_rejected"]
+        or double["target_theorem_leaves"] != tracked["two_leaves"]["leaves"]
+        or double["source_closure"] != tracked["two_leaves"]["source_closure"]
+        or double["contains_nat_div_mod_exec"]
+        != tracked["two_leaves"]["contains_nat_div_mod_exec"]
+        or double["first_rejected"] != tracked["two_leaves"]["first_rejected"]
+        or single["outcome"] != "declined"
+        or double["outcome"] != "declined"
+        or single["error_kind"] != "TypeMismatch"
+        or double["error_kind"] != "TypeMismatch"
+        or single["caller_declarations_before"] != 315
+        or single["caller_declarations_after"] != 315
+        or double["caller_declarations_before"] != 315
+        or double["caller_declarations_after"] != 315
+    ):
+        raise PlanError("Nat.gcd target-leaf probe result changed")
+    for key, observed_row in [("single_leaf", single), ("two_leaves", double)]:
+        external_row = external["target_leaf_probe"][key]
+        if (
+            external_row["leaves"] != observed_row["target_theorem_leaves"]
+            or external_row["source_closure"] != observed_row["source_closure"]
+            or external_row["contains_nat_div_mod_exec"]
+            != observed_row["contains_nat_div_mod_exec"]
+            or external_row["first_rejected"] != observed_row["first_rejected"]
+            or external_row["error_kind"] != observed_row["error_kind"]
+            or external_row["error_sha256"] != observed_row["error_sha256"]
+        ):
+            raise PlanError(f"Nat.gcd target-leaf manifest drift for {key}")
+
+    expected_support = tracked["official_support"]
+    official = external["official_gcd_support"]
+    if {row["root"] for row in official} != set(expected_support) or len(official) != 2:
+        raise PlanError("Nat.gcd official support set changed")
+    for row in official:
+        expected = expected_support[row["root"]]
+        stream_path = pack_dir / row["stream"]
+        audit_path = pack_dir / row["audit"]
+        audit_text = audit_path.read_text()
+        if (
+            sha256(stream_path) != row["stream_sha256"]
+            or stream_path.stat().st_size != row["stream_bytes"]
+            or len(stream_path.read_bytes().splitlines()) != row["stream_lines"]
+            or sha256(audit_path) != row["audit_sha256"]
+            or row["declaration_sha256"] != expected["declaration_sha256"]
+            or row["axiom_footprint"] != expected["axiom_footprint"]
+            or row["axioms"] != ["Quot.sound"]
+            or row["axiom_footprint"] != ["Quot", "Quot.lift", "Quot.mk", "Quot.sound"]
+            or f"name={row['root']}|identity={row['declaration_sha256']}|axiom_free=false|"
+            not in audit_text
+            or "|axiom_footprint=Quot,Quot.lift,Quot.mk,Quot.sound|"
+            not in audit_text
+        ):
+            raise PlanError(f"Nat.gcd official support changed for {row['root']}")
+
+
 def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
     manifest = load(MANIFEST) if manifest is None else manifest
     if (
@@ -372,7 +516,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or manifest.get("kind")
         != "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan"
         or manifest.get("state")
-        != "target-nat-dvd-mod-iff-specialized-axiom-free"
+        != "target-leaf-cut-advances-to-axiom-bearing-nat-gcd-succ"
     ):
         raise PlanError("manifest identity changed")
     source = manifest["source"]
@@ -468,6 +612,8 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or not presence["Nat.rec"]
         or manifest["proof_plan"]["required_present_in_import"] != []
         or manifest["proof_plan"]["already_present_in_import"] != ["Nat.rec"]
+        or manifest["proof_plan"]["next_action"]
+        != "construct an axiom-free target-side Nat.gcd successor contract or replace the Nat.dvd_gcd proof route without importing Quot.sound"
         or probe["imported_division_declaration_names"] != expected_division_names
         or observation["source"]["imported_division_declaration_names"]
         != expected_division_names
@@ -780,6 +926,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
     validate_official_support_audit(manifest)
     validate_official_equation_pack(manifest)
     validate_nat_mod_invariant_pack(manifest)
+    validate_nat_gcd_target_leaf_frontier(manifest)
     return manifest
 
 
@@ -790,7 +937,7 @@ def main() -> int:
             "AUTOGENESIS_NAT_FIB_COPRIME_PREMISE_PLAN_OK|"
             f"required={len(manifest['proof_plan']['required_native_declarations'])}|"
             "present=0|exact=11|compatible=Nat.mod_lt,Acc,Nat.dvd_mod_iff|"
-            "next=target-leaf-cut|"
+            "next=target-gcd-successor-contract|"
             "submissions=24|evaluation=0|writes=0"
         )
         return 0

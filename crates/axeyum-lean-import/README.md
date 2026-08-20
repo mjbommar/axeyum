@@ -18,6 +18,8 @@ cargo run -p axeyum-lean-import --example lean4export_composition -- \
   support.ndjson target.ndjson Nat.example
 cargo run -p axeyum-lean-import --example nat_mod_invariant_specialization -- \
   nat-mod-invariant.ndjson target.ndjson
+cargo run -p axeyum-lean-import --example nat_mod_invariant_specialization -- \
+  nat-mod-invariant.ndjson target.ndjson --probe-dvd-gcd
 ```
 
 Autogenesis statement inputs use the stronger proof-isolated adapter boundary:
@@ -48,4 +50,6 @@ specialization boundary on the real remainder proof. It composes the generic
 proof and named native arithmetic helpers into a private target, applies those
 checked declarations, replays the specialization receipt, requires an empty
 footprint, and checks that the resulting `Nat.dvd_mod_iff` has the native
-theorem's kernel type shape.
+theorem's kernel type shape. Optional `--probe-dvd-gcd` additionally measures
+the exact checked target-leaf frontier without publishing a failed private
+clone or writing the ledger.

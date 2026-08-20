@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "kind": "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan",
-  "state": "target-nat-dvd-mod-iff-specialized-axiom-free",
+  "state": "target-leaf-cut-advances-to-axiom-bearing-nat-gcd-succ",
   "target": {
     "fact_id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
     "source_name": "Nat.fib_coprime_fib_succ",
@@ -208,6 +208,35 @@
       "axiom_footprint": []
     }
   },
+  "nat_gcd_target_leaf_frontier": {
+    "manifest": "/nas3/data/axeyum/autogenesis/reference-packs/5fb817301-lean430-nat-gcd-target-leaf-frontier-v1/manifest.json",
+    "manifest_sha256": "5619dcefce4aea6be55a3f66fa8d81d2a2869a654b5e5d036db3ccb848d21154",
+    "implementation_commit": "5fb8173012d5248118f9b564c2afb89c9532b9d7",
+    "probe_sha256": "af13fbc609a2158931509ac8d25aa290d4b35fb670502e968bc3873db3fa4514",
+    "root": "Nat.dvd_gcd",
+    "single_leaf": {
+      "leaves": ["Nat.dvd_mod_iff"],
+      "source_closure": 66,
+      "contains_nat_div_mod_exec": true,
+      "first_rejected": "Nat.div_mod_exec"
+    },
+    "two_leaves": {
+      "leaves": ["Nat.dvd_mod_iff", "Nat.mod_lt"],
+      "source_closure": 57,
+      "contains_nat_div_mod_exec": false,
+      "first_rejected": "Nat.gcd_succ"
+    },
+    "official_support": {
+      "Nat.gcd_succ": {
+        "declaration_sha256": "5508f854491d6efee655061a69710e2b7250883f6a4d08afa0f1472cee94e217",
+        "axiom_footprint": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound"]
+      },
+      "_private.Init.Data.Nat.Gcd.0.Nat.gcd.eq_1": {
+        "declaration_sha256": "9673ec16e49e53dffb698e4a2f7a8ff7c2791c5730805485d94d1ddd254f8bee",
+        "axiom_footprint": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound"]
+      }
+    }
+  },
   "nat_mod_lt_compatibility_result": {
     "name": "Nat.mod_lt",
     "compatibility": "translated-definitional-equality",
@@ -384,7 +413,8 @@
       "Nat.gcd_zero_left"
     ],
     "required_present_in_import": [],
-    "already_present_in_import": ["Nat.rec"]
+    "already_present_in_import": ["Nat.rec"],
+    "next_action": "construct an axiom-free target-side Nat.gcd successor contract or replace the Nat.dvd_gcd proof route without importing Quot.sound"
   },
   "next_capability_sequence": [
     "bind existing imported logic and Nat declarations to reusable prelude handles",
@@ -393,8 +423,8 @@
     "reconstruct the exact canonical native Acc package only through an atomic target-kernel inductive gate",
     "compose the authored fuel invariant over official Nat.mod and independently specialize its explicit arithmetic parameters",
     "retain the resulting successor-divisor Nat.dvd_mod_iff as an axiom-free target theorem with the native type shape",
-    "make theorem-root composition stop at an explicitly compatible target theorem leaf instead of traversing the unrelated source proof behind that leaf",
-    "retry Nat.dvd_gcd with target Nat.dvd_mod_iff as the checked dependency cut and without importing propext or native Nat.div_mod_exec",
+    "retain explicit target-owned theorem leaves only after type compatibility, empty target footprint, exact reachability, and receipt replay",
+    "replace the assumption-bearing official Nat.gcd_succ recursion equation with an axiom-free target contract or a Nat.dvd_gcd route that avoids it",
     "replay the seven-lemma surface before any coprimality target submission"
   ],
   "authority": {
@@ -407,5 +437,5 @@
     "ledger_writes": 0
   },
   "verification": "python3 scripts/check-autogenesis-nat-fib-coprime-premise-plan.py",
-  "limitations": "This freezes a proof plan and independently composes exact Nat.mul and Nat.dvd definitions, the exact official-order Bool and singleton Exists packages, the declaration-exact canonical native Acc package, and axiom-free control theorems. Native Nat.mod_lt has Lean's general positive-denominator contract and its distinct wrapper-level type is target-kernel definitionally equal to the imported theorem. An authored constructive fuel induction now composes over official Nat.mod and specializes checked Nat.dvd, Nat.dvd_add_iff_right, Nat.sub_add_cancel, and Nat.add_comm into an axiom-free target Nat.dvd_mod_iff whose successor-divisor type shape exactly matches the native theorem. Official Lean 4.30 Nat.dvd_mod_iff and Nat.mod_add_div still carry propext and remain audited references, not admissible support. The current source-root closure algorithm still walks through the native proof behind an already compatible target theorem, so Nat.dvd_gcd has not yet replayed across this new leaf. This does not authorize arbitrary recursive or mutual inductives, conflicting definitions, axioms, opaque declarations, quotient packages, unchecked theorem transport, recursor permutation, or weakening definitional equality; compose the remaining required lemmas; submit the Fibonacci target; inspect held-out data; write the ledger; or establish the fact."
+  "limitations": "This freezes a proof plan and independently composes exact Nat.mul and Nat.dvd definitions, the exact official-order Bool and singleton Exists packages, the declaration-exact canonical native Acc package, and axiom-free control theorems. Native Nat.mod_lt has Lean's general positive-denominator contract and its distinct wrapper-level type is target-kernel definitionally equal to the imported theorem. An authored constructive fuel induction composes over official Nat.mod and specializes into an axiom-free target Nat.dvd_mod_iff with the native theorem's type shape. Explicit target-owned theorem leaves are now checked, axiom-free, reachability-bound, and replayable. Cutting Nat.dvd_mod_iff alone leaves a 66-declaration closure and still reaches Nat.div_mod_exec; also cutting target Nat.mod_lt yields 57 declarations, removes Nat.div_mod_exec, and exposes Nat.gcd_succ. Official Lean 4.30 Nat.gcd_succ and its generated recursion equation both reach Quot.sound and remain audited references, not admissible support. A direct rfl proof does not elaborate. This does not authorize importing quotient assumptions, arbitrary recursive or mutual inductives, conflicting definitions, axioms, opaque declarations, unchecked theorem transport, recursor permutation, or weakening definitional equality; construct the remaining gcd foundation; compose the remaining required lemmas; submit the Fibonacci target; inspect held-out data; write the ledger; or establish the fact."
 }

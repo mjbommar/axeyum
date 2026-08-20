@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** The official-`Nat.mod` division seam now has an axiom-free target theorem. An authored Lean 4.30 fuel induction exports 211 declarations with no axioms; all three authored theorem footprints are empty. Its final generic theorem composes into r082, checked native `Nat.dvd`, `Nat.dvd_add_iff_right`, `Nat.sub_add_cancel`, and `Nat.add_comm` specialize through a replayable private-clone operation, and target `Nat.dvd_mod_iff` is footprint-empty with exactly the native successor-divisor type shape. Official high-level support remains reference-only because it reaches `propext`. The remaining `Nat.dvd_gcd` blocker is now closure semantics: source-root selection still traverses the native proof behind the compatible target theorem and unnecessarily reintroduces native `Nat.div_mod_exec`.
+**Status:** The official-`Nat.mod` seam has an axiom-free target `Nat.dvd_mod_iff`, and theorem composition can now stop at an explicit compatible, footprint-empty target-owned theorem with an exact replayable receipt. The real `Nat.dvd_gcd` retry needs two cuts: `Nat.dvd_mod_iff` alone leaves a 66-declaration closure and still reaches `Nat.div_mod_exec`; adding target `Nat.mod_lt` yields 57 declarations, removes `Nat.div_mod_exec`, and advances the first rejection to `Nat.gcd_succ`. Fresh official Lean 4.30 exports show both `Nat.gcd_succ` and its generated recursion equation reach `Quot.sound`; a direct `rfl` control fails. No ledger credit is due.
 
-**Next:** define an explicit target-theorem leaf contract for theorem composition: validate the same-name target theorem's type compatibility, stop the selected dependency traversal at that target-owned leaf, bind the cut in the receipt, and mutation-test wrong type, wrong leaf, missing leaf, hidden assumptions, replay drift, and unchanged caller state. Then retry unchanged `Nat.dvd_gcd` with target `Nat.dvd_mod_iff` as the leaf, without importing `propext` or native `Nat.div_mod_exec`.
+**Next:** construct an axiom-free target-side gcd successor contract, or replace the native `Nat.dvd_gcd` proof route so it does not need the assumption-bearing official recursion equation. Preserve imported `Nat.gcd` semantics explicitly; do not import `Quot.sound`, declare an equation, or infer compatibility from source text. Retry the unchanged root after the smallest checked foundation lands.
 
 <!-- plan-section: landed-changes -->
 
@@ -31,3 +31,5 @@
 | 2026-08-20 | `a12d44858` | Lean export audit reports canonical theorem identities, direct dependencies, and kernel-derived axiom footprints |
 | 2026-08-20 | `dd79317c5` | Proof-isolated theorem-pack composition replays two axiom-free official `Nat.mod` computation equations into r082 |
 | 2026-08-20 | `667201932` | Receipt-backed checked specialization admits constructive target `Nat.dvd_mod_iff` with an empty footprint and native type shape |
+| 2026-08-20 | `7e6e28c1f` | Explicit target-owned theorem leaves cut only compatible axiom-free source proofs and replay from a distinct receipt |
+| 2026-08-20 | `5fb817301` | Real r082 leaf probe removes `Nat.div_mod_exec` with two cuts and exposes assumption-bearing `Nat.gcd_succ` next |
