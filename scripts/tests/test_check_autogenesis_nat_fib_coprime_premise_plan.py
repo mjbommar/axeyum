@@ -69,21 +69,21 @@ class FibCoprimePremisePlanTests(unittest.TestCase):
             MODULE.validate(changed)
 
         changed = copy.deepcopy(self.manifest)
-        changed["implementation"]["native_prelude_sha256"] = "0" * 64
-        with self.assertRaisesRegex(MODULE.PlanError, "Bool implementation"):
+        changed["implementation"]["nat_mod_lt_sources"][0]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(MODULE.PlanError, "alignment implementation"):
             MODULE.validate(changed)
 
         changed = copy.deepcopy(self.manifest)
         changed["implementation"]["bool_constructor_order"].reverse()
-        with self.assertRaisesRegex(MODULE.PlanError, "Bool implementation"):
+        with self.assertRaisesRegex(MODULE.PlanError, "alignment implementation"):
             MODULE.validate(changed)
 
         changed = copy.deepcopy(self.manifest)
-        changed["implementation"]["commit"] = "0" * 40
-        with self.assertRaisesRegex(MODULE.PlanError, "Bool implementation"):
+        changed["implementation"]["evidence_commit"] = "0" * 40
+        with self.assertRaisesRegex(MODULE.PlanError, "alignment implementation"):
             MODULE.validate(changed)
 
-    def test_bool_overlap_and_next_mismatch_mutations_are_rejected(self) -> None:
+    def test_bool_overlap_and_next_boundary_mutations_are_rejected(self) -> None:
         observation = json.loads(
             pathlib.Path(self.manifest["composition_probe"]["observation"]).read_text()
         )
@@ -103,7 +103,7 @@ class FibCoprimePremisePlanTests(unittest.TestCase):
         )
         observation["source"]["structural_mismatch_control"]["error"] = (
             observation["source"]["structural_mismatch_control"]["error"].replace(
-                'name: "Nat.mod_lt"', 'name: "Nat.mod"'
+                'name: "Acc"', 'name: "WellFounded"'
             )
         )
         with pinned_observation(self.manifest, observation) as changed:
@@ -111,7 +111,7 @@ class FibCoprimePremisePlanTests(unittest.TestCase):
                 MODULE.validate(changed)
 
         changed = copy.deepcopy(self.manifest)
-        changed["composition_result"]["negative_control_source_sha256"] = "0" * 64
+        changed["composition_result"]["negative_control_missing_kind"] = "inductive"
         with self.assertRaisesRegex(MODULE.PlanError, "composition result"):
             MODULE.validate(changed)
 
@@ -121,6 +121,35 @@ class FibCoprimePremisePlanTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(MODULE.PlanError, "composition result"):
             MODULE.validate(changed)
+
+    def test_nat_mod_lt_compatibility_mutations_are_rejected(self) -> None:
+        changed = copy.deepcopy(self.manifest)
+        changed["nat_mod_lt_compatibility_result"]["source_declaration_sha256"] = (
+            "0" * 64
+        )
+        with self.assertRaisesRegex(MODULE.PlanError, "Nat.mod_lt"):
+            MODULE.validate(changed)
+
+        observation = json.loads(
+            pathlib.Path(self.manifest["composition_probe"]["observation"]).read_text()
+        )
+        observation["source"]["mod_lt_compatibility_control"]["compatibility"] = (
+            "kernel-type-shape"
+        )
+        with pinned_observation(self.manifest, observation) as changed:
+            with self.assertRaisesRegex(MODULE.PlanError, "Nat.mod_lt"):
+                MODULE.validate(changed)
+
+        observation = json.loads(
+            pathlib.Path(self.manifest["composition_probe"]["observation"]).read_text()
+        )
+        for row in observation["source"]["type_mismatched_overlaps"]:
+            if row["name"] == "Nat.mod_lt":
+                row["native_kernel_type_shape_sha256"] = "0" * 64
+                break
+        with pinned_observation(self.manifest, observation) as changed:
+            with self.assertRaisesRegex(MODULE.PlanError, "Nat.mod_lt"):
+                MODULE.validate(changed)
 
     def test_required_surface_mutation_is_rejected(self) -> None:
         changed = copy.deepcopy(self.manifest)

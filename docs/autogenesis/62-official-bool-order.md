@@ -82,12 +82,12 @@ TypeShapeMismatch {
 }
 ```
 
-The imported theorem says `0 < y -> x % y < y`; the native theorem says
-`n % (k + 1) < k + 1`. This is a specialization relationship, not constructor
-permutation. The next increment should construct the positive-successor premise
-and apply the imported general theorem in the target kernel, or decline with an
-equally exact blocker. It must remain theorem-specific until evidence supports
-a reusable checked adapter contract.
+The next increment resolved this seam by proving the general theorem natively,
+not by adding a transport exception. The named compatibility diagnostic records
+translated definitional equality through Mathlib's wrappers, and the unchanged
+control advances to missing recursive inductive `Acc`. See
+[general Nat.mod_lt compatibility](63-general-nat-mod-lt-compatibility.md) and
+[ADR-0528](../research/09-decisions/adr-0528-native-nat-mod-lt-uses-the-general-positive-denominator-contract.md).
 
 ## Reproduction
 
