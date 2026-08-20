@@ -118,6 +118,31 @@ pub struct ConductorLayer {
     pub value: i128,
 }
 
+/// Necessary divisibility test for supersingularity of one exact-conductor
+/// Carlitz cohomology component.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExactConductorSupersingularityDivisibility {
+    /// Exact Hayes conductor level.
+    pub level: usize,
+    /// Even Frobenius power at which the trace is tested.
+    pub degree: usize,
+    /// Exact conductor-layer trace, up to the immaterial global sign.
+    pub trace: i128,
+    /// Necessary divisor `2^(degree/2)` for a supersingular component.
+    pub necessary_divisor: BigUint,
+    /// Remainder of the trace magnitude modulo the necessary divisor.
+    pub magnitude_remainder: BigUint,
+}
+
+impl ExactConductorSupersingularityDivisibility {
+    /// Whether this exact trace rules out supersingularity of the whole
+    /// conductor component.
+    #[must_use]
+    pub fn obstructs_supersingularity(&self) -> bool {
+        self.magnitude_remainder != BigUint::from(0_u8)
+    }
+}
+
 /// Unconditional endpoint budget supplied by the ordinary Weil bound away
 /// from the highest conductor levels.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -9707,6 +9732,41 @@ pub fn conductor_layers(
     Ok(layers)
 }
 
+/// Test a necessary even-power trace divisibility for supersingularity.
+///
+/// If every Frobenius eigenvalue of the exact level were `sqrt(2)` times a
+/// root of unity, then at degree `2m` their integral trace would be divisible
+/// by `2^m`.  A nonzero remainder is therefore a rigorous obstruction to
+/// representing the whole component by supersingular quadratic
+/// Artin--Schreier/Heisenberg factors.  A zero remainder is inconclusive.
+///
+/// # Errors
+///
+/// Rejects zero or odd `degree`, then propagates the bounded exact-conductor
+/// computation's parameter and resource failures.
+pub fn exact_conductor_supersingularity_divisibility(
+    level: usize,
+    degree: usize,
+    limits: HayesLimits,
+) -> Result<ExactConductorSupersingularityDivisibility, HayesError> {
+    if degree == 0 || !degree.is_multiple_of(2) {
+        return Err(HayesError::InvalidParameter(
+            "supersingularity divisibility requires a positive even degree".to_owned(),
+        ));
+    }
+    let trace = conductor_layers(level, degree, limits)?[level - 1].value;
+    let necessary_divisor = BigUint::from(1_u8) << (degree / 2);
+    let magnitude = BigUint::from(trace.unsigned_abs());
+    let magnitude_remainder = &magnitude % &necessary_divisor;
+    Ok(ExactConductorSupersingularityDivisibility {
+        level,
+        degree,
+        trace,
+        necessary_divisor,
+        magnitude_remainder,
+    })
+}
+
 /// Compute the exact Fourier second moment of one conductor family.
 ///
 /// Two modular character tables are paired with their inverse characters;
@@ -12353,6 +12413,20 @@ mod tests {
         );
         assert_eq!(geometry.required_saving_ceiling, BigUint::from(80_u8));
         assert!(carlitz_connected_top_geometry(12, 24).is_err());
+    }
+
+    #[test]
+    fn exact_conductor_trace_obstructs_a_supersingular_heisenberg_decomposition() {
+        let limits = HayesLimits::default();
+        let witness = exact_conductor_supersingularity_divisibility(10, 22, limits).unwrap();
+        assert_eq!(witness.trace, -5_120);
+        assert_eq!(witness.necessary_divisor, BigUint::from(2_048_u16));
+        assert_eq!(witness.magnitude_remainder, BigUint::from(1_024_u16));
+        assert!(witness.obstructs_supersingularity());
+
+        let inconclusive = exact_conductor_supersingularity_divisibility(4, 4, limits).unwrap();
+        assert!(!inconclusive.obstructs_supersingularity());
+        assert!(exact_conductor_supersingularity_divisibility(4, 5, limits).is_err());
     }
 
     #[test]

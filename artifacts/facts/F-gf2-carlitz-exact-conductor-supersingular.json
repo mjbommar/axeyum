@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-carlitz-exact-conductor-supersingular",
+  "title": "Every new binary Carlitz exact-conductor component is supersingular",
+  "statement": "For every exact conductor level j, every Frobenius eigenvalue on the new cohomology of K_(t^(j+1))/K_(t^j) is sqrt(2) times a root of unity. THIS PROPOSITION IS FALSE; exact level ten supplies a trace-divisibility counterexample.",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"claim\":\"all exact-conductor Carlitz Frobenius eigenvalues are sqrt(2) times roots of unity\",\"counterexample\":{\"degree\":22,\"level\":10,\"remainder\":1024,\"required_divisor\":2048,\"trace\":-5120},\"field_order\":2,\"format\":\"axeyum-gf2-carlitz-supersingularity-divisibility\",\"version\":1}",
+    "fragment": "none",
+    "free_symbols": ["j"]
+  },
+  "epistemic_status": "refuted",
+  "external_status": "unknown",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "evidence": [
+    {
+      "id": "gf2-carlitz-level-ten-trace-divisibility-counterexample",
+      "kind": "witness-replay",
+      "supports": "At level 10 and degree 22 the exact trace is -5120, whose magnitude has remainder 1024 modulo the necessary supersingular divisor 2048.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-cas --all-features exact_conductor_trace_obstructs_a_supersingular_heisenberg_decomposition",
+      "artifact": "crates/axeyum-cas/src/gf2_hayes.rs",
+      "notes": "The exact conductor trace is reconstructed from native Hayes class populations. If all eigenvalues were sqrt(2) times roots of unity, their degree-22 powers would be 2^11 times roots of unity; the rational integral trace would therefore be divisible by 2^11. The nonzero remainder refutes the universal claim."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-19",
+    "established_by": "Axeyum gf2-lemire lane",
+    "source": "native exact-conductor Hayes trace and algebraic-integer divisibility"
+  },
+  "notes": "This refutes only a blanket supersingular decomposition of every new conductor component. It does not refute a smaller Heisenberg subquotient, a non-supersingular commutator-rank estimate, or the connected top-trace conjecture."
+}

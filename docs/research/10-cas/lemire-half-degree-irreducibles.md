@@ -2654,6 +2654,23 @@ or prove an analogous commutator-rank statement for the whole chain; matching
 terminology is not enough.  See [The L-polynomials of van der Geer--van der
 Vlugt curves in characteristic 2](https://arxiv.org/abs/2505.22036).
 
+There is now an exact obstruction to the strongest possible version of that
+bridge.  If a whole exact-conductor component were supersingular, then every
+Frobenius eigenvalue would be `sqrt(2)` times a root of unity.  At even degree
+`2m`, its integral trace would consequently be divisible by `2^m`.  The
+native exact-conductor computation gives
+
+```text
+T_(10,22) = -5120,
+```
+
+which has remainder `1024` modulo `2^11=2048`.  Hence even the *new*
+level-ten component is not supersingular; nonsupersingularity is not confined
+to the inherited level-four factor.  This rigorously rejects a decomposition
+of every new Carlitz layer into only the supersingular quadratic Heisenberg
+pieces.  It does not reject a useful smaller subquotient or a
+non-supersingular rank argument for the connected relative trace.
+
 Exact fleet runs at both endpoints for every `16<=ell<=20` satisfy the Haar
 triangle and (RF).  At `ell=20`, the odd and even triangle numerators are
 respectively `64,147,961,856` and `96,723,105,792`, against the common target
