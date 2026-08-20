@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-19 | `1b4f3503f` | Audited Ito--Takeuchi--Tsushima at equation level and required a checked linearized quadratic reduction or new mixed associative cocycle before importing its characteristic-two Heisenberg nondegeneracy. |
 | 2026-08-19 | `f01dfe8e0` | Extended both exact endpoint cumulant and local Witt-cylinder concentration diagnostics through `ell=23`, retaining exact ratios, fleet resource provenance, and the non-credit theorem boundary. |
 | 2026-08-19 | `540c4d41f` | Retained pairwise second-trace quadratic forms inside simultaneous buckets and refuted the raw high-rank Kerdock model with exact rank-zero/rank-two Gauss witnesses. |
 | 2026-08-19 | `9c24671a6` | Reconstructed the pinned dyadic product-discriminant fibre and used its exact mod-four additivity witness to reject every projection-preserving central extension. |
@@ -685,6 +686,14 @@ phase-trivial rank-zero pairs.  Thus the raw forms are not a uniformly
 high-rank Kerdock family.  Any Arf-based rescue must aggregate the same
 low-rank sectors across fibres or orders, so the selected proof architecture
 returns to the connected cross-order Witt-Haar/fourth-cumulant estimate.
+An equation-level audit of Ito--Takeuchi--Tsushima also closes direct import
+of their characteristic-two Heisenberg group: it assumes a linearized `R` and
+quadratic phase `xR(x)` before constructing its cocycle, whereas the retained
+Lemire fibres have degree-seven phases, no generalized-bent fibres, rank-zero
+second-trace differences, and the separate mod-four projection obstruction.
+Future use requires a checked reduction of the complete connected sum to
+their quadratic form or a genuinely new mixed-domain associative cocycle;
+nondegeneracy cannot be imported as an assumption.
 The multi-minute endpoint sweep is now an explicit ignored,
 environment-selected research probe; the ordinary theorem gate keeps the
 bounded `ell<=7` controls.  Three exact-commit fleet probes extend both the
