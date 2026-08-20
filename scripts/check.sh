@@ -219,6 +219,18 @@ step control-registration ./scripts/check-control-registration.sh
 # made the SAME tree report 7 orphans then 3, and `$?` after a pipeline
 # reported exit=0 for a script that exits 1.
 step shell-antipatterns ./scripts/check-shell-antipatterns.sh
+# The Lean-reconstruction unit tests, moved OUT of `hooks/pre-push` on
+# 2026-08-20. Measured idle: 268 tests, 294s, because each builds Lean
+# preludes -- 90% of the hook's unit sweep and ~45% of every Rust push. They
+# check that a Lean module is built correctly, not that a verdict is sound,
+# so a daily gate is the right home. Neither aggregate gate ran the solver
+# `--lib` sweep at all before this, so this is also the first time they are
+# gated anywhere except the push hook and local-ci.
+step solver-reconstruct-sweep cargo test -p axeyum-solver --lib --features full reconstruct::
+# The one evidence test that builds Lean preludes: 292.973s of a 293.08s
+# suite, measured idle. Skipped in `hooks/pre-push` for that reason, so this
+# is where it runs.
+step evidence-lean-module-wrapper cargo test -p axeyum-solver --features full --test evidence qf_nra_sos_certificate_wrapper_carries_lean_module
 # The axiom-freedom measurements. `axreal: axiom=30` is the whole remaining
 # trusted surface and the claim that the shipped route no longer reaches it
 # rested, until 2026-08-18, on three examples that NO gate ran -- zero

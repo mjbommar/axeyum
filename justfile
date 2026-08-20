@@ -369,6 +369,13 @@ gate-controls:
     # `grep -q` in a pipeline under pipefail, and `$?` read after a pipeline:
     # both print a wrong answer while exiting 0, and both shipped here.
     scripts/check-shell-antipatterns.sh
+    # Lean-reconstruction unit tests, moved out of hooks/pre-push (268 tests,
+    # 294s, each building Lean preludes). They belong in a daily gate, not on
+    # every push -- and before this neither aggregate gate ran them.
+    cargo test -p axeyum-solver --lib --features full reconstruct::
+    # The one evidence test that builds Lean preludes: 292.973s of a 293.08s
+    # suite. Skipped in hooks/pre-push; this is where it runs.
+    cargo test -p axeyum-solver --features full --test evidence qf_nra_sos_certificate_wrapper_carries_lean_module
 
 # Is there a FRESH, PASSING, fully-measured `local-ci --record` for (an
 # ancestor of) HEAD? A green record proves nothing on its own -- see
