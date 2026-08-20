@@ -233,6 +233,33 @@ pub struct HayesGaloisOrbitTraceReport {
     pub orders: Vec<HayesGaloisOrbitOrderRow>,
 }
 
+/// Exact size obstruction to extending the Gorodetsky--Kovaleva monomial
+/// symmetry to a complete primitive Hayes conductor layer.
+///
+/// Over `GF(2)`, every special power-sum character
+/// `chi_(k,psi)(f)=psi(p_(-k)(f))` is quadratic.  Products of such characters
+/// therefore remain in the order-two subgroup of the Hayes character group.
+/// This report counts the primitive part of that subgroup exactly, without
+/// assuming that the special characters generate all of it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HayesPowerSumCharacterCoverage {
+    /// Exact conductor level.
+    pub level: usize,
+    /// Number `2^(level-1)` of primitive characters at this level.
+    pub primitive_character_count: usize,
+    /// Primitive characters of order exactly two.
+    pub primitive_quadratic_character_count: usize,
+    /// Primitive characters of order greater than two.
+    pub primitive_higher_order_character_count: usize,
+    /// Number of primitive single-monomial characters `chi_(k,psi)` whose
+    /// conductor is exactly this level: one for odd level, zero for even.
+    pub primitive_single_monomial_character_count: usize,
+    /// Largest possible primitive coverage of the multiplicative span of all
+    /// binary power-sum characters through this level.  This is an upper
+    /// bound, equal to the primitive quadratic count.
+    pub maximum_power_sum_span_coverage: usize,
+}
+
 /// Compute the exact binary Hayes `L`-degree distribution.
 ///
 /// This replays the conductor-count proof behind the binary pattern
@@ -885,6 +912,84 @@ pub fn hayes_galois_orbit_trace_report(
         reconstructed_conductor_trace,
         direct_conductor_trace,
         orders,
+    })
+}
+
+/// Count how much of one primitive Hayes layer can possibly be reached by
+/// binary monomial power-sum characters and their products.
+///
+/// The special character used by Gorodetsky--Kovaleva takes values through
+/// the unique nontrivial additive character of `GF(2)`, hence has order two.
+/// Its conductor is `x^(k+1)` only for odd `k`; for even `k`, Frobenius gives
+/// `p_(-k)=p_(-k/2)` after repeatedly removing powers of two.  Consequently
+/// there is one primitive single-monomial character at odd level and none at
+/// even level, while the span of every such character is contained in the
+/// quadratic subgroup.
+///
+/// The routine independently enumerates the mixed-radix character group and
+/// checks the closed-form primitive quadratic count: `2^((level-1)/2)` for
+/// odd level and zero for even level.  It is a representation audit, not a
+/// character-sum estimate.
+///
+/// # Errors
+///
+/// Returns a resource decline outside the caller's level limit, a parameter
+/// error at level zero, or an invariant failure if enumeration disagrees with
+/// the group-theoretic count.
+pub fn hayes_power_sum_character_coverage(
+    level: usize,
+    limits: HayesLimits,
+) -> Result<HayesPowerSumCharacterCoverage, HayesError> {
+    if level == 0 {
+        return Err(HayesError::InvalidParameter(
+            "power-sum character coverage requires positive level".to_owned(),
+        ));
+    }
+    check_limit("ell", level, limits.max_ell)?;
+    let shift = u32::try_from(level).map_err(|_| {
+        HayesError::InvalidParameter("power-sum coverage level exceeds u32".to_owned())
+    })?;
+    let group_order = 1_usize.checked_shl(shift).ok_or_else(|| {
+        HayesError::InvalidParameter("power-sum coverage group order overflow".to_owned())
+    })?;
+    check_limit("group_order", group_order, limits.max_group_order)?;
+    let factors = principal_unit_factors(level);
+    let mut primitive_character_count = 0_usize;
+    let mut primitive_quadratic_character_count = 0_usize;
+    for character in 1..group_order {
+        if mixed_radix_character_conductor(character, &factors)? != Some(level) {
+            continue;
+        }
+        primitive_character_count += 1;
+        if mixed_radix_character_order(character, &factors)? == 2 {
+            primitive_quadratic_character_count += 1;
+        }
+    }
+    let expected_primitive = 1_usize << (level - 1);
+    if primitive_character_count != expected_primitive {
+        return Err(HayesError::Invariant(format!(
+            "level {level}: primitive character count {primitive_character_count} != {expected_primitive}"
+        )));
+    }
+    let expected_quadratic = if level % 2 == 1 {
+        1_usize << ((level - 1) / 2)
+    } else {
+        0
+    };
+    if primitive_quadratic_character_count != expected_quadratic {
+        return Err(HayesError::Invariant(format!(
+            "level {level}: primitive quadratic count {primitive_quadratic_character_count} != {expected_quadratic}"
+        )));
+    }
+    let primitive_single_monomial_character_count = level % 2;
+    Ok(HayesPowerSumCharacterCoverage {
+        level,
+        primitive_character_count,
+        primitive_quadratic_character_count,
+        primitive_higher_order_character_count: primitive_character_count
+            - primitive_quadratic_character_count,
+        primitive_single_monomial_character_count,
+        maximum_power_sum_span_coverage: primitive_quadratic_character_count,
     })
 }
 
@@ -14042,6 +14147,53 @@ mod tests {
         assert_eq!((worst.level, worst.degree), (11, 24));
         assert_eq!(worst.maximum_absolute_order_layer_trace, 663_552);
         assert_eq!(worst.order_layer_candidate_violation_count, 2);
+    }
+
+    #[test]
+    fn binary_power_sum_characters_cover_only_a_thin_quadratic_sector() {
+        let limits = HayesLimits {
+            max_ell: 16,
+            ..HayesLimits::default()
+        };
+        for level in 1..=16 {
+            let report = hayes_power_sum_character_coverage(level, limits).unwrap();
+            assert_eq!(report.primitive_character_count, 1 << (level - 1));
+            assert_eq!(
+                report.primitive_quadratic_character_count,
+                if level % 2 == 1 {
+                    1 << ((level - 1) / 2)
+                } else {
+                    0
+                }
+            );
+            assert_eq!(report.primitive_single_monomial_character_count, level % 2);
+            assert_eq!(
+                report.maximum_power_sum_span_coverage,
+                report.primitive_quadratic_character_count
+            );
+            assert_eq!(
+                report.primitive_higher_order_character_count
+                    + report.primitive_quadratic_character_count,
+                report.primitive_character_count
+            );
+        }
+        let level_eleven = hayes_power_sum_character_coverage(11, limits).unwrap();
+        assert_eq!(level_eleven.primitive_character_count, 1_024);
+        assert_eq!(level_eleven.primitive_quadratic_character_count, 32);
+        assert_eq!(level_eleven.primitive_higher_order_character_count, 992);
+        let level_twelve = hayes_power_sum_character_coverage(12, limits).unwrap();
+        assert_eq!(level_twelve.primitive_quadratic_character_count, 0);
+        assert_eq!(level_twelve.primitive_higher_order_character_count, 2_048);
+
+        assert!(hayes_power_sum_character_coverage(0, limits).is_err());
+        assert!(matches!(
+            hayes_power_sum_character_coverage(17, limits),
+            Err(HayesError::ResourceLimit {
+                resource: "ell",
+                requested: 17,
+                limit: 16
+            })
+        ));
     }
 
     #[test]

@@ -203,6 +203,27 @@ lemma.
   [Equidistribution of high traces of random
   matrices over finite fields and cancellation in character sums of high
   conductor](https://doi.org/10.1112/blms.13057).
+  The source-level obstruction is sharper in characteristic two.  Their Lemma
+  3.8 uses equality of the image and kernel of the two monomial maps
+  `x -> x^k` and `x -> x^gcd(k,2^n-1)` on `GF(2^n)^times`; it does not apply to
+  a general linear combination of reciprocal power sums.  More decisively,
+  the unique nontrivial additive character of `GF(2)` is sign-valued, so every
+  special `chi_(k,psi)` and every product of them has order at most two.
+  Frobenius also gives `p_(-2m)=p_(-m)`, hence a single special monomial is
+  primitive only at an odd level.  The public
+  `hayes_power_sum_character_coverage` report enumerates the full mixed-radix
+  character group and checks that the number of primitive quadratic
+  characters is exactly
+
+  ```text
+  2^((j-1)/2)  for odd j, and 0 for even j,
+  ```
+
+  versus `2^(j-1)` primitive characters in the complete layer.  Thus even the
+  multiplicative span of every binary power-sum character can cover at most
+  `32/1024` characters at level 11 and no primitive character at level 12.
+  This rules out extending the special high-trace symmetry by products or
+  Galois closure; a whole-family connected estimate is still required.
 - Sawin's stationary-phase analysis of wild hyper-Kloosterman sums is a direct
   warning against replacing the missing aggregate estimate by generic
   square-root cancellation for each convolution order.  In equal
