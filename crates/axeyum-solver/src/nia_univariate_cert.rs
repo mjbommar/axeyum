@@ -68,7 +68,7 @@
 //! naive, and *does not share the step that could be wrong*. A missing cofactor
 //! shows up as a checker rejection rather than as agreement.
 //!
-//! That naive scan is why [`CHECKER_SCAN_BOUND`] exists, and why it is a
+//! That naive scan is why `CHECKER_SCAN_BOUND` exists, and why it is a
 //! deliberate narrowing rather than an oversight — see its docs.
 
 use axeyum_ir::{TermArena, TermId};
@@ -186,7 +186,7 @@ fn normalized_equality(arena: &TermArena, assertions: &[TermId]) -> Option<Poly>
 ///
 /// Declines — soundly, always — on anything this module cannot make airtight:
 /// a non-equality, more than one assertion, degree 0, a coefficient outside the
-/// magnitude guard, an overflow, a constant term past [`CHECKER_SCAN_BOUND`],
+/// magnitude guard, an overflow, a constant term past `CHECKER_SCAN_BOUND`,
 /// and any query that is in fact *satisfiable*.
 #[must_use]
 pub fn int_univariate_refutation(
