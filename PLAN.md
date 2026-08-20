@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-20 | `9a49f2023` | Inserted Wan--Zhang's sharper complete-intersection Betti theorem into the exact Foulkes endpoint ledger and quantified its remaining 6,800-bit miss, isolating cyclic-eigenspace cancellation rather than generic total cohomology as the needed theorem. |
 | 2026-08-20 | `6f4a275db` | Audited the proposed Newton-polygon literature at source level, recording its odd-prime or `Z_p`-tower scope and preventing those nearby results from being substituted for the binary product-group theorem. |
 | 2026-08-20 | `29f3c4d94` | Stopped the fixed modulo-eight endpoint route after the exact degree-55 counterexample `I_55(1)=4883944`, marked the universal congruence refuted, and returned theorem effort to an aggregate trace estimate. |
 | 2026-08-20 | `2233fa65f` | Re-aimed the odd endpoint at exact normalized two-adic traces, proved Carlitz 2-rank zero is insufficient for the required modulo-eight precision, and added exact primitive-character Newton polygons that isolate aggregate low-slope cancellation as the open lemma. |
