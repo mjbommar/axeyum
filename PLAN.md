@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-20 | `2530ff1cb` | Repriced the surviving endpoint argument against the proved Haar triangle, selected the weaker TOP-POLY saving on only the top logarithmic conductor window, and added an exact parity-safe implication through the degree-400 handoff. |
 | 2026-08-20 | `c6c0dc238` | Refuted the absolute conductor-layer constant by exact fixed-level recurrence, retained the corrected polynomial-loss theorem, and reduced its open range to growing conductors above the individual-Weil prefix. |
 | 2026-08-20 | `d9380f0d7` | Reduced the wild fourth-moment target to exact-conductor delocalization, proved the `C=4` prefix through level three, and added a fail-closed finite diagnostic plus the polynomial-loss endpoint implication. |
 | 2026-08-20 | `f729f3ad1` | Translated Hast--Matei into the exact proper-power-aware endpoint normalization, exposed the missing degree-uniform wild constant, and sharpened the even proper-power envelope by eliminating all odd exponent layers. |
@@ -435,8 +436,8 @@ only the strict analytic bound `N_(2ell+1)(1)>1` remains there.  Even endpoints
 still require the checked general proper-power subtraction.  The CAS now also
 has proved closed forms for every pair of principal-unit interval degrees:
 exact mixed product energies and nonprincipal Fourier `L^2 x L^2` moments.
-The phase-two conductor audit has now reduced the selected wild fourth-moment
-target to one exact-conductor delocalization estimate `(SUP-L)`.  A native
+The phase-two conductor audit reduced the wild fourth-moment target to one
+exact-conductor delocalization estimate `(SUP-L)`.  A native
 integer diagnostic retains the finite rational constant without theorem
 credit, while a separate symbolic checker proves that any fixed polynomial
 loss yields `M_4<=625 C ell^(a+4)2^(3ell)` and completes the degree-400
@@ -446,10 +447,16 @@ handoff.  The initially selected absolute constant is now refuted exactly at
 no absolute constant can be uniform in the conductor.  The corrected target
 allows the squared polynomial loss `4ell^4`; ordinary Weil then discharges
 every level with `2^(j-1)<=4ell^4`.  Only the growing range above roughly
-`4log2(ell)+3` remains the current load-bearing proof obligation.
+`4log2(ell)+3` remains for that sufficient route.  Exact repricing against the
+already proved Haar triangle removes one factor of `ell` and most conductor
+levels: the selected `(TOP-POLY)` target asks only for a `12ell/5` improvement
+over individual Weil on the top `4ceil(log2 ell)+1` levels.  A native
+parity-safe integer implication and a uniform geometric proof show that this
+alone closes both endpoints after degree 400.  `(TOP-POLY)`, not the stronger
+fourth-moment premise, is the current load-bearing proof obligation.
 
-**Next:** prove a uniform endpoint discrepancy bound, encode it as replayable
-evidence, then write the paper.  The selected sufficient fourth-moment bound is
+**Next:** prove `(TOP-POLY)`, encode it as replayable evidence, then write the
+paper.  The stronger sufficient fourth-moment bound is
 experimentally true for `6<=ell<=23` but remains an open fact; curve positivity
 alone is non-strict.  The exact half-level Möbius sieve now has a native
 positive-composite counterexample, so the elementary divisor-density route
