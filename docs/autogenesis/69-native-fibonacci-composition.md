@@ -119,3 +119,12 @@ kernel. Its sole previously admitted theorem premise remains
 Nat library. The resulting theorem must pass the independent kernel,
 footprint, dependency, receipt, and crash-safe ledger gates before the target
 fact changes state.
+
+## Subsequent result
+
+The bounded induction has now been constructed and independently accepted
+twice; see [native Fibonacci coprimality](70-native-fibonacci-coprimality.md).
+That result moves the frontier to the explicit semantic bridge between
+official r082 `Nat.Coprime`/`Nat.gcd` and the native gcd definition. It does not
+retroactively grant this composition receipt authority to substitute same-name
+definitions.

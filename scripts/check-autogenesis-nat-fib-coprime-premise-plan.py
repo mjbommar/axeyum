@@ -643,6 +643,118 @@ def validate_native_fib_composition(manifest: dict[str, Any]) -> None:
         raise PlanError("native Fibonacci composition assurance changed")
 
 
+def validate_native_fib_coprimality(manifest: dict[str, Any]) -> None:
+    tracked = manifest["native_fib_coprimality"]
+    manifest_path = pathlib.Path(tracked["manifest"])
+    pack_dir = manifest_path.parent
+    expected_files = {
+        "manifest.json",
+        "native-coprimality.json",
+        "r082-target-goal.json",
+    }
+    if (
+        sha256(manifest_path) != tracked["manifest_sha256"]
+        or stat.S_IMODE(pack_dir.stat().st_mode) != 0o555
+        or {path.name for path in pack_dir.iterdir()} != expected_files
+        or any(stat.S_IMODE(path.stat().st_mode) != 0o444 for path in pack_dir.iterdir())
+    ):
+        raise PlanError("native Fibonacci coprimality pack changed or is mutable")
+    external = load(manifest_path)
+    if (
+        external.get("schema_version") != 1
+        or external.get("kind")
+        != "axeyum-native-fibonacci-coprimality-reference-pack"
+        or external.get("tooling_commit") != tracked["implementation_commit"]
+        or external.get("lean")
+        != {
+            "version": "4.30.0",
+            "githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+        }
+    ):
+        raise PlanError("native Fibonacci coprimality identity changed")
+    for row in external["implementation"]:
+        if row["sha256"] != git_blob_sha256(tracked["implementation_commit"], row["path"]):
+            raise PlanError("native Fibonacci coprimality implementation changed")
+    for row in external["inputs"]:
+        if sha256(pathlib.Path(row["path"])) != row["sha256"]:
+            raise PlanError("native Fibonacci coprimality input changed")
+
+    observations = {row["file"]: row for row in external["observations"]}
+    if set(observations) != expected_files - {"manifest.json"}:
+        raise PlanError("native Fibonacci coprimality observation set changed")
+    native_path = pack_dir / "native-coprimality.json"
+    target_path = pack_dir / "r082-target-goal.json"
+    native = load(native_path)
+    target = load(target_path)
+    for filename, path in [
+        ("native-coprimality.json", native_path),
+        ("r082-target-goal.json", target_path),
+    ]:
+        row = observations[filename]
+        if sha256(path) != row["sha256"] or path.stat().st_size != row["bytes"]:
+            raise PlanError(f"native Fibonacci coprimality observation changed for {filename}")
+    expected_dependencies = tracked["direct_theorem_dependencies"]
+    if (
+        native.get("schema_version") != 1
+        or native.get("kind") != "axeyum-native-fibonacci-coprimality-control"
+        or native.get("source_stream_sha256")
+        != manifest["native_fib_composition"]["r080"]["source_stream_sha256"]
+        or native.get("composition_receipt_sha256")
+        != manifest["native_fib_composition"]["r080"]["receipt_sha256"]
+        or native.get("target") != tracked["name"]
+        or native.get("goal_sha256") != tracked["goal_sha256"]
+        or native.get("proof_sha256") != tracked["proof_sha256"]
+        or native.get("theorem_declaration_sha256")
+        != tracked["declaration_sha256"]
+        or native.get("axiom_footprint") != tracked["axiom_footprint"]
+        or native.get("axiom_footprint") != []
+        or native.get("direct_theorem_dependencies") != expected_dependencies
+        or native.get("fresh_reconstructions") != tracked["fresh_reconstructions"]
+        or native.get("kernel_submissions") != tracked["kernel_submissions"]
+        or native.get("proof_search_invocations") != 0
+        or native.get("ledger_writes") != 0
+    ):
+        raise PlanError("native Fibonacci coprimality theorem changed")
+    external_native = external["native_theorem"]
+    if (
+        external_native["name"] != tracked["name"]
+        or external_native["goal_sha256"] != tracked["goal_sha256"]
+        or external_native["proof_sha256"] != tracked["proof_sha256"]
+        or external_native["declaration_sha256"] != tracked["declaration_sha256"]
+        or external_native["axiom_footprint"] != tracked["axiom_footprint"]
+        or external_native["direct_theorem_dependencies"] != expected_dependencies
+        or external_native["fresh_reconstructions"] != tracked["fresh_reconstructions"]
+        or external_native["kernel_submissions"] != tracked["kernel_submissions"]
+    ):
+        raise PlanError("native Fibonacci coprimality manifest theorem changed")
+    target_statement = external["target_statement"]
+    if (
+        target.get("target_goal_sha256") != tracked["target_goal_sha256"]
+        or target.get("target_goal")
+        != "((n : AxNat) -> AxNat.Coprime (AxNat.fib n) (AxNat.fib (HAdd.hAdd.{0, 0, 0} AxNat AxNat AxNat (instHAdd.{0} AxNat instAddNat) n (OfNat.ofNat.{0} AxNat 1 (instOfNatNat 1)))))"
+        or target_statement
+        != {
+            "definition": tracked["target_definition"],
+            "goal_sha256": tracked["target_goal_sha256"],
+            "head": tracked["target_head"],
+            "native_goal_uses": "Nat.gcd",
+            "semantic_transport_authorized": False,
+        }
+        or tracked["semantic_transport_authorized"] is not False
+        or tracked["semantic_theorem_receipts_issued"] != 0
+        or tracked["evaluation_credit"] != 0
+        or tracked["ledger_writes"] != 0
+        or external["authority"]
+        != {
+            "proof_search_invocations": 0,
+            "semantic_theorem_receipts_issued": 0,
+            "evaluation_credit": 0,
+            "ledger_writes": 0,
+        }
+    ):
+        raise PlanError("native Fibonacci coprimality target boundary changed")
+
+
 def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
     manifest = load(MANIFEST) if manifest is None else manifest
     if (
@@ -650,7 +762,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or manifest.get("kind")
         != "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan"
         or manifest.get("state")
-        != "native-fib-and-recurrence-composed-with-axiom-free-native-gcd-library"
+        != "native-coprimality-proved-semantic-transport-to-r082-unresolved"
     ):
         raise PlanError("manifest identity changed")
     source = manifest["source"]
@@ -747,7 +859,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or manifest["proof_plan"]["required_present_in_import"] != []
         or manifest["proof_plan"]["already_present_in_import"] != ["Nat.rec"]
         or manifest["proof_plan"]["next_action"]
-        != "construct the bounded Fibonacci coprimality induction directly in the completed native kernel, using the composed Nat.fib_add_two theorem and existing axiom-free native gcd library"
+        != "construct an explicit checked semantic bridge from the r082 Nat.Coprime statement over official Nat.gcd to the independently proved native-gcd theorem; same-name definitions alone are not transport authority"
         or probe["imported_division_declaration_names"] != expected_division_names
         or observation["source"]["imported_division_declaration_names"]
         != expected_division_names
@@ -1062,6 +1174,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
     validate_nat_mod_invariant_pack(manifest)
     validate_nat_gcd_target_leaf_frontier(manifest)
     validate_native_fib_composition(manifest)
+    validate_native_fib_coprimality(manifest)
     return manifest
 
 
@@ -1072,8 +1185,8 @@ def main() -> int:
             "AUTOGENESIS_NAT_FIB_COPRIME_PREMISE_PLAN_OK|"
             f"required={len(manifest['proof_plan']['required_native_declarations'])}|"
             "present=0|exact=11|compatible=Nat.mod_lt,Acc,Nat.dvd_mod_iff|"
-            "next=native-fib-coprimality-induction|"
-            "submissions=24|evaluation=0|writes=0"
+            "next=official-native-gcd-semantic-bridge|"
+            "submissions=24|native_submissions=2|evaluation=0|writes=0"
         )
         return 0
     except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError, PlanError) as error:

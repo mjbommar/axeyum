@@ -254,6 +254,32 @@ class FibCoprimePremisePlanTests(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.PlanError, "assurance"):
             MODULE.validate(changed)
 
+    def test_native_fib_coprimality_mutations_are_rejected(self) -> None:
+        changed = copy.deepcopy(self.manifest)
+        changed["native_fib_coprimality"]["manifest_sha256"] = "0" * 64
+        with self.assertRaisesRegex(MODULE.PlanError, "changed or is mutable"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["native_fib_coprimality"]["proof_sha256"] = "0" * 64
+        with self.assertRaisesRegex(MODULE.PlanError, "theorem changed"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["native_fib_coprimality"]["direct_theorem_dependencies"].pop()
+        with self.assertRaisesRegex(MODULE.PlanError, "theorem changed"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["native_fib_coprimality"]["semantic_transport_authorized"] = True
+        with self.assertRaisesRegex(MODULE.PlanError, "target boundary"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["native_fib_coprimality"]["semantic_theorem_receipts_issued"] = 1
+        with self.assertRaisesRegex(MODULE.PlanError, "target boundary"):
+            MODULE.validate(changed)
+
     def test_nat_mod_lt_compatibility_mutations_are_rejected(self) -> None:
         changed = copy.deepcopy(self.manifest)
         changed["nat_mod_lt_compatibility_result"]["source_declaration_sha256"] = (

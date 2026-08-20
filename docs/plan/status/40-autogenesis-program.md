@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** The official-`Nat.mod` seam has an axiom-free target `Nat.dvd_mod_iff`, and target-owned theorem leaves move the imported-to-official route to `Nat.gcd_succ`, whose official proof reaches `Quot.sound`. The selected route now goes the other direction: checked composition admits definitions and atomic singleton packages in one source-derived order, so the exact Lean 4.30 `Nat.fib` definition and the already admitted axiom-free `Nat.fib_add_two` theorem both live in Axeyum's 236-declaration native Nat kernel. The r080 and r082 `Nat.fib` declaration identity is equal; the recurrence footprint and direct theorem dependencies are empty; both receipts replay without caller mutation. No new ledger credit is due.
+**Status:** The exact Lean 4.30 `Nat.fib` definition and admitted `Nat.fib_add_two` theorem compose into Axeyum's native Nat kernel. The bounded Fibonacci-neighbor coprimality induction now reconstructs twice with identical goal, proof, and declaration identities; its kernel-derived footprint is empty and its direct dependencies are exactly the recurrence plus the seven planned native gcd/divisibility lemmas. The r082 target remains open: official `Nat.Coprime` closes over the official `Nat.gcd`, while the accepted theorem closes over the independently constructed native `Nat.gcd`. Same-name/type compatibility is not semantic transport authority. No receipt, evaluation, or ledger credit is due.
 
-**Next:** construct the bounded Fibonacci-coprimality induction directly in the completed native kernel, using composed `Nat.fib_add_two` as the sole admitted theorem premise and the existing axiom-free native gcd/divisibility library for the other seven lemmas. Independently audit the theorem footprint and dependencies before any receipt or ledger transition; do not import `Quot.sound` or infer a different Fibonacci semantics.
+**Next:** construct an explicit checked semantic bridge from the official r082 `Nat.Coprime`/`Nat.gcd` definition closure to the native gcd theorem. Prefer a pointwise equivalence or a residualized uniqueness contract independently specialized on both definitions. Do not infer equivalence from same-name declarations, import `Quot.sound`, or issue a target receipt before the ordinary kernel accepts the exact bridged statement.
 
 <!-- plan-section: landed-changes -->
 
@@ -34,3 +34,4 @@
 | 2026-08-20 | `7e6e28c1f` | Explicit target-owned theorem leaves cut only compatible axiom-free source proofs and replay from a distinct receipt |
 | 2026-08-20 | `5fb817301` | Real r082 leaf probe removes `Nat.div_mod_exec` with two cuts and exposes assumption-bearing `Nat.gcd_succ` next |
 | 2026-08-20 | `91d7df736` | Dependency-ordered mixed composition moves exact `Nat.fib` and the established recurrence into the axiom-free native gcd kernel |
+| 2026-08-20 | `8403e6f65` | Twice-reconstructed native Fibonacci coprimality theorem closes with the exact planned dependency set and exposes the official/native gcd semantic bridge |

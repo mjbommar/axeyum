@@ -96,3 +96,25 @@ Verify the tracked plan and its authority boundary with:
 ```sh
 python3 scripts/check-autogenesis-nat-fib-coprime-premise-plan.py
 ```
+
+## Current frontier
+
+Subsequent increments built the constructive target `Nat.dvd_mod_iff`, added
+checked target-owned theorem leaves, and moved the imported-to-official route
+to `Nat.gcd_succ`. Its official proof reaches `Quot.sound`. Rather than import
+that assumption, dependency-ordered mixed composition moved the exact
+`Nat.fib` definition and the admitted recurrence into the native gcd-capable
+kernel.
+
+The induction above is now a twice-reconstructed, axiom-free native theorem
+with exactly the eight planned direct theorem dependencies. See
+[constructive Nat.mod invariant specialization](67-constructive-nat-mod-invariant-specialization.md),
+[the Nat.gcd target-leaf frontier](68-target-owned-theorem-leaves-and-nat-gcd-frontier.md),
+[native Fibonacci composition](69-native-fibonacci-composition.md), and
+[native Fibonacci coprimality](70-native-fibonacci-coprimality.md).
+
+The Mathlib fact remains open at a narrower semantic boundary: r082's
+`Nat.Coprime` closes over official `Nat.gcd`, while the accepted theorem closes
+over native `Nat.gcd`. The next operation must check an explicit bridge between
+those definition closures; same-name compatibility alone receives no theorem
+or ledger credit.

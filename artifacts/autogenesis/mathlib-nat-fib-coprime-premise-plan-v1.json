@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "kind": "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan",
-  "state": "native-fib-and-recurrence-composed-with-axiom-free-native-gcd-library",
+  "state": "native-coprimality-proved-semantic-transport-to-r082-unresolved",
   "target": {
     "fact_id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
     "source_name": "Nat.fib_coprime_fib_succ",
@@ -267,6 +267,35 @@
     "proof_search_invocations": 0,
     "ledger_writes": 0
   },
+  "native_fib_coprimality": {
+    "manifest": "/nas3/data/axeyum/autogenesis/reference-packs/8403e6f65-native-fibonacci-coprimality-v1/manifest.json",
+    "manifest_sha256": "e068326d75717014d5425ff4566e4e3d0cc355a77fbf2b898fda004f037a86e6",
+    "implementation_commit": "8403e6f658aacb332acecc3afe3dbf6cb539f684",
+    "name": "Axeyum.Autogenesis.NatFibCoprimeSucc",
+    "goal_sha256": "36a50e432178b2a22463e13ace748a078b989f6670eb97638fb7884a3df2ba86",
+    "proof_sha256": "e4af20e137001895506d5ccc11e2f4aa5186fe575c9b0ce61bd3fa51c6ca9efe",
+    "declaration_sha256": "72edaaed9362afed68cfc03ff99b619435130bb16c8229e41b1c3188091a3e6a",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [
+      "Axeyum.Autogenesis.NatFibAddTwo",
+      "Nat.add_comm",
+      "Nat.dvd_add_iff_right",
+      "Nat.dvd_gcd",
+      "Nat.eq_one_of_dvd_one",
+      "Nat.gcd_dvd_left",
+      "Nat.gcd_dvd_right",
+      "Nat.gcd_zero_left"
+    ],
+    "fresh_reconstructions": 2,
+    "kernel_submissions": 2,
+    "target_definition": "Axeyum.Autogenesis.Coverage.r082",
+    "target_goal_sha256": "a053d8f483f2cc1e79c53924baf5f79e4897ce992ca77722168cee20a6f5150f",
+    "target_head": "Nat.Coprime",
+    "semantic_transport_authorized": false,
+    "semantic_theorem_receipts_issued": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
   "nat_mod_lt_compatibility_result": {
     "name": "Nat.mod_lt",
     "compatibility": "translated-definitional-equality",
@@ -444,7 +473,7 @@
     ],
     "required_present_in_import": [],
     "already_present_in_import": ["Nat.rec"],
-    "next_action": "construct the bounded Fibonacci coprimality induction directly in the completed native kernel, using the composed Nat.fib_add_two theorem and existing axiom-free native gcd library"
+    "next_action": "construct an explicit checked semantic bridge from the r082 Nat.Coprime statement over official Nat.gcd to the independently proved native-gcd theorem; same-name definitions alone are not transport authority"
   },
   "next_capability_sequence": [
     "bind existing imported logic and Nat declarations to reusable prelude handles",
@@ -455,7 +484,8 @@
     "retain the resulting successor-divisor Nat.dvd_mod_iff as an axiom-free target theorem with the native type shape",
     "retain explicit target-owned theorem leaves only after type compatibility, empty target footprint, exact reachability, and receipt replay",
     "compose the exact imported Nat.fib definition and the admitted Nat.fib_add_two theorem into the axiom-free native Nat kernel in source dependency order",
-    "construct and independently check the bounded coprimality induction against the completed native kernel before any ledger transition"
+    "retain the twice-reconstructed native Fibonacci coprimality theorem with its exact eight-theorem dependency set and empty footprint",
+    "bridge the official r082 Nat.Coprime definition closure to the native gcd theorem through independently checked semantics before any receipt or ledger transition"
   ],
   "authority": {
     "partitions_inspected": ["train"],
@@ -467,5 +497,5 @@
     "ledger_writes": 0
   },
   "verification": "python3 scripts/check-autogenesis-nat-fib-coprime-premise-plan.py",
-  "limitations": "The imported-to-official direction remains blocked at assumption-bearing Nat.gcd_succ, but it is no longer the selected route. Checked composition now follows the source dependency order across definitions and atomic singleton packages. The exact Lean 4.30 Nat.fib definition is identical in r080 and r082 and composes into the native Nat kernel; the already admitted axiom-free Nat.fib_add_two theorem composes with it and has no axiom footprint or direct theorem dependencies. This does not authorize importing quotient assumptions, arbitrary recursive or mutual inductives, conflicting definitions, axioms, opaque declarations, unchecked theorem transport, recursor permutation, or weakening definitional equality; construct and check the bounded native coprimality proof; submit the Fibonacci target; inspect held-out data; write the ledger; or establish the fact."
+  "limitations": "The bounded native Fibonacci-coprimality induction is independently kernel-accepted twice with an empty footprint and exactly the admitted recurrence plus seven planned native theorem dependencies. The imported-to-official direction still reaches assumption-bearing Nat.gcd_succ. The r082 target statement is headed by official Nat.Coprime and therefore closes over the official Nat.gcd definition, while the accepted native theorem closes over Axeyum's independently constructed Nat.gcd. Same spelling and compatible types do not prove those definition closures semantically interchangeable. This does not authorize importing quotient assumptions, unchecked same-name definition transport, arbitrary recursive or mutual inductives, conflicting definitions, axioms, opaque declarations, recursor permutation, or weakening definitional equality; construct a checked official/native gcd semantic bridge; issue a theorem receipt; submit the Fibonacci target; inspect held-out data; write the ledger; or establish the fact."
 }

@@ -22,6 +22,8 @@ cargo run -p axeyum-lean-import --example nat_mod_invariant_specialization -- \
   nat-mod-invariant.ndjson target.ndjson --probe-dvd-gcd
 cargo run -p axeyum-lean-import --example nat_fib_iterate_recurrence -- \
   --native-composition --stream r080.ndjson
+cargo run -p axeyum-lean-import --example nat_fib_iterate_recurrence -- \
+  --native-coprime-control --stream r080.ndjson
 cargo run -p axeyum-lean-import --example nat_fib_native_definition_probe -- \
   r082.ndjson
 ```
@@ -66,3 +68,11 @@ available before `Nat.fib`. The r080 mode reconstructs the already fixed
 Nat kernel; the r082 probe composes the exact target-side `Nat.fib` definition.
 Both operations replay their receipts, require empty theorem footprints, leave
 their callers unchanged, and write no ledger state.
+
+`--native-coprime-control` performs the next bounded mathematical step in that
+completed kernel. It reconstructs the induction twice, requires identical
+goal/proof/declaration identities, checks an empty axiom footprint, and requires
+exactly the admitted recurrence plus seven planned native theorem dependencies.
+It deliberately issues no semantic theorem receipt for r082: that target's
+official `Nat.Coprime` closes over a different `Nat.gcd` definition, so a
+checked semantic bridge remains necessary.
