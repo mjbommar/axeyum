@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import subprocess
 from collections import Counter
 from pathlib import Path
 
@@ -240,6 +241,50 @@ def pct(numerator: int, denominator: int) -> str:
     return f"{100.0 * numerator / denominator:.1f}%"
 
 
+def audit_provenance() -> list[tuple[str, str, str]]:
+    """`(audit, short sha, YYYY-MM-DD)` for every audit this report consumes.
+
+    Read from git rather than from the artifacts, because the artifacts do not
+    say: a dominance audit records `logic`, `slice`, `timeout_ms` and a `version`
+    integer, and **nothing about the code that produced it**. So a reader had no
+    way to tell a measurement taken today from one taken two months ago, and the
+    numbers below are reproduced verbatim into planning documents as if current.
+
+    Measured 2026-08-20: every one of the 35 committed audits predated the
+    newest solver-source commit, the oldest by **55 days** — and the drift ran
+    in BOTH directions. Instances the audits record as `bare-unsat` are now
+    certified (`unsat__replace_all__not-first-only` is `drat-unsat`,
+    `cli__regress0__nl__very-simple-unsat` is `nra-even-power-unsat`), while
+    others no longer decide at all: `replace-find-base` and
+    `str-code-unsat-2` are recorded as decided `unsat` and today return
+    `unknown` at a 60s budget, confirmed against the z3 binary with DISAGREE=0.
+    A capability regression sat unreported because the artifact that would show
+    it had no age on it.
+
+    Dates are commit dates of the audit FILES, so they are stable inputs: they
+    move only when an audit is actually refreshed, which is exactly when this
+    report should be regenerated.
+    """
+    rows: list[tuple[str, str, str]] = []
+    for path in sorted(AUDIT_DIR.glob("*.json")):
+        rel = path.relative_to(ROOT).as_posix()
+        try:
+            out = subprocess.run(
+                ["git", "log", "-1", "--format=%h %cs", "--", rel],
+                cwd=ROOT, capture_output=True, text=True, timeout=60, check=True,
+            ).stdout.strip()
+        except (subprocess.SubprocessError, OSError):
+            out = ""
+        if not out:
+            # Uncommitted or unreadable: say so rather than omitting the row,
+            # which would quietly shrink the provenance table.
+            rows.append((rel, "uncommitted", "-"))
+            continue
+        sha, _, date = out.partition(" ")
+        rows.append((rel, sha, date))
+    return rows
+
+
 def markdown(report: dict) -> str:
     summary = report["summary"]
     lines = [
@@ -251,6 +296,22 @@ def markdown(report: dict) -> str:
         "This matrix separates solver outcomes from evidence production, independent",
         "checking, declared trust, and Lean reconstruction. Counts cover baseline UNSAT",
         "instances only; SAT model replay is outside this report.",
+        "",
+        "## These numbers are AS OF the audits below, not as of HEAD",
+        "",
+        "Every figure here is replayed from committed `bench-results/dominance/*.json`,",
+        "and a dominance audit records nothing about the code that produced it. So the",
+        "table is only as current as the audits, and the audits are refreshed by hand.",
+        "",
+        "Measured 2026-08-20: all 35 committed audits predated the newest solver-source",
+        "commit, the oldest by **55 days**, and the drift ran in BOTH directions —",
+        "instances recorded as `bare-unsat` are now certified, and two recorded as",
+        "decided `unsat` (`replace-find-base`, `str-code-unsat-2`) now return `unknown`",
+        "at a 60s budget. That capability regression went unreported because the",
+        "artifact that would have shown it carried no age.",
+        "",
+        "Before quoting any number below, check the dates in **Audit provenance** at the",
+        "end of this file against `git log -1 crates/axeyum-solver/src`.",
         "",
         "## Pipeline snapshot",
         "",
@@ -389,6 +450,25 @@ def markdown(report: dict) -> str:
             "",
         ]
     )
+
+    lines.extend(
+        [
+            "## Audit provenance",
+            "",
+            "The commit that last touched each audit this report replays. Compare the",
+            "newest of these against `git log -1 crates/axeyum-solver/src`: anything",
+            "older means the corresponding rows describe a solver that no longer exists,",
+            "in either direction — newly certified instances still counted as bare, and",
+            "regressions to `unknown` still counted as decided.",
+            "",
+            "| Audit | Commit | Date |",
+            "|---|---|---|",
+        ]
+    )
+    for rel, sha, date in audit_provenance():
+        lines.append(f"| `{rel}` | `{sha}` | {date} |")
+    lines.append("")
+
     return "\n".join(lines)
 
 

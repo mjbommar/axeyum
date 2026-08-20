@@ -7,6 +7,22 @@ This matrix separates solver outcomes from evidence production, independent
 checking, declared trust, and Lean reconstruction. Counts cover baseline UNSAT
 instances only; SAT model replay is outside this report.
 
+## These numbers are AS OF the audits below, not as of HEAD
+
+Every figure here is replayed from committed `bench-results/dominance/*.json`,
+and a dominance audit records nothing about the code that produced it. So the
+table is only as current as the audits, and the audits are refreshed by hand.
+
+Measured 2026-08-20: all 35 committed audits predated the newest solver-source
+commit, the oldest by **55 days**, and the drift ran in BOTH directions —
+instances recorded as `bare-unsat` are now certified, and two recorded as
+decided `unsat` (`replace-find-base`, `str-code-unsat-2`) now return `unknown`
+at a 60s budget. That capability regression went unreported because the
+artifact that would have shown it carried no age.
+
+Before quoting any number below, check the dates in **Audit provenance** at the
+end of this file against `git log -1 crates/axeyum-solver/src`.
+
 ## Pipeline snapshot
 
 | Stage | Instances | Retained from baseline UNSAT |
@@ -172,3 +188,49 @@ correctness or certificate-production queue.
 These priorities are prevalence-ranked within the committed audits. They do
 not authorize a mechanism until an exact residual-shape census identifies a
 shared implementation boundary.
+
+## Audit provenance
+
+The commit that last touched each audit this report replays. Compare the
+newest of these against `git log -1 crates/axeyum-solver/src`: anything
+older means the corresponding rows describe a solver that no longer exists,
+in either direction — newly certified instances still counted as bare, and
+regressions to `unknown` still counted as decided.
+
+| Audit | Commit | Date |
+|---|---|---|
+| `bench-results/dominance/bv-bitwuzla-regress-clean-quantified-dominance-audit.json` | `a9b90777c` | 2026-07-12 |
+| `bench-results/dominance/bv-cvc5-regress-clean-quantified-dominance-audit.json` | `7345f30cd` | 2026-07-13 |
+| `bench-results/dominance/lia-cvc5-regress-clean-quantified-dominance-audit.json` | `9d12953c8` | 2026-07-07 |
+| `bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json` | `e7bfed4c0` | 2026-06-25 |
+| `bench-results/dominance/qf-alia-cvc5-regress-clean-dominance-audit.json` | `8f1e59ce6` | 2026-06-26 |
+| `bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json` | `c093fa911` | 2026-06-25 |
+| `bench-results/dominance/qf-aufbv-cvc5-regress-clean-dominance-audit.json` | `9d12953c8` | 2026-07-07 |
+| `bench-results/dominance/qf-auflia-cvc5-regress-clean-dominance-audit.json` | `8aff8d507` | 2026-07-21 |
+| `bench-results/dominance/qf-ax-cvc5-regress-clean-dominance-audit.json` | `0ed0c7990` | 2026-06-26 |
+| `bench-results/dominance/qf-bv-curated-bvred-dominance-audit.json` | `5d08e5a58` | 2026-06-25 |
+| `bench-results/dominance/qf-bvfp-bitwuzla-regress-clean-dominance-audit.json` | `7dc70f714` | 2026-06-26 |
+| `bench-results/dominance/qf-dt-cvc5-regress-clean-dominance-audit.json` | `708d47ca0` | 2026-06-26 |
+| `bench-results/dominance/qf-ff-cvc5-regress-clean-dominance-audit.json` | `40edf6e04` | 2026-06-25 |
+| `bench-results/dominance/qf-fp-bitwuzla-regress-clean-dominance-audit.json` | `9e016f825` | 2026-06-26 |
+| `bench-results/dominance/qf-lia-cvc5-regress-clean-dominance-audit.json` | `d3b0d2e17` | 2026-06-25 |
+| `bench-results/dominance/qf-lra-cvc5-regress-clean-dominance-audit.json` | `ca754615c` | 2026-06-25 |
+| `bench-results/dominance/qf-nia-curated-iand-dominance-audit.json` | `9d12953c8` | 2026-07-07 |
+| `bench-results/dominance/qf-nia-cvc5-regress-clean-dominance-audit.json` | `8aff8d507` | 2026-07-21 |
+| `bench-results/dominance/qf-nia-synthetic-graduated-dominance-audit.json` | `4fe9491f3` | 2026-06-25 |
+| `bench-results/dominance/qf-nra-cvc5-regress-clean-dominance-audit.json` | `8aff8d507` | 2026-07-21 |
+| `bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json` | `521976c4c` | 2026-06-25 |
+| `bench-results/dominance/qf-s-cvc5-regress-clean-dominance-audit.json` | `8aff8d507` | 2026-07-21 |
+| `bench-results/dominance/qf-seq-cvc5-regress-clean-dominance-audit.json` | `8aff8d507` | 2026-07-21 |
+| `bench-results/dominance/qf-slia-cvc5-regress-clean-dominance-audit.json` | `8aff8d507` | 2026-07-21 |
+| `bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-dominance-audit.json` | `9d12953c8` | 2026-07-07 |
+| `bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json` | `c890e4cbc` | 2026-06-26 |
+| `bench-results/dominance/qf-uf-cvc5-regress-clean-overbound-uninterp-sorts-dominance-audit.json` | `7d30c76b2` | 2026-06-26 |
+| `bench-results/dominance/qf-ufbv-bitwuzla-regress-clean-dominance-audit.json` | `184199e10` | 2026-06-25 |
+| `bench-results/dominance/qf-ufbv-cvc5-regress-clean-dominance-audit.json` | `c093fa911` | 2026-06-25 |
+| `bench-results/dominance/qf-ufff-cvc5-regress-clean-dominance-audit.json` | `dc5d0a9e9` | 2026-06-25 |
+| `bench-results/dominance/qf-uflia-curated-named-dominance-audit.json` | `0a83ffb71` | 2026-06-25 |
+| `bench-results/dominance/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json` | `9782ed4e4` | 2026-06-26 |
+| `bench-results/dominance/qf-uflia-cvc5-regress-clean-dominance-audit.json` | `8aff8d507` | 2026-07-21 |
+| `bench-results/dominance/qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts-dominance-audit.json` | `8aff8d507` | 2026-07-21 |
+| `bench-results/dominance/uf-cvc5-regress-clean-quantified-dominance-audit.json` | `9d12953c8` | 2026-07-07 |
