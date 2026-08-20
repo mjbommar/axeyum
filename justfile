@@ -366,6 +366,9 @@ gate-controls:
     # because registering a control is a manual step separate from writing it.
     # A control nobody runs cannot fail, so it is not a control.
     scripts/check-control-registration.sh
+    # `grep -q` in a pipeline under pipefail, and `$?` read after a pipeline:
+    # both print a wrong answer while exiting 0, and both shipped here.
+    scripts/check-shell-antipatterns.sh
 
 # Is there a FRESH, PASSING, fully-measured `local-ci --record` for (an
 # ancestor of) HEAD? A green record proves nothing on its own -- see

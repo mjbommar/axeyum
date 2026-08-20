@@ -650,6 +650,42 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   agents are routinely pointed at it for string triage — a whole lever can get
   built on a fabricated `unsat`. Cross-check any verdict it reports against the
   reference binary and the file's declared `:status` before believing it.
+- **BANNED SHELL IDIOMS. Every one of these has printed a WRONG ANSWER that was
+  then reported as fact, and none of them look broken when they fail.** The
+  shared failure mode: the command exits 0 and prints something plausible.
+
+  1. **`echo "exit=$?"` after a pipeline.** `$?` is the LAST stage. Measured
+     2026-08-20: `python3 scripts/create-autogenesis-nursery-dispatch-baseline.py
+     --check 2>&1 | tail -12; echo "exit=$?"` printed `exit=0` for a script that
+     exits **1** — `tail`'s status. Run the command bare, or use
+     `${PIPESTATUS[0]}`, or `set -o pipefail`.
+  2. **`grep -q` as a pipeline consumer under `set -o pipefail`.** `-q` exits at
+     the first match and SIGPIPEs the producer, so the pipeline status is 141 —
+     which `pipefail` turns into "not found". Measured 2026-08-20 in
+     `scripts/check-control-registration.sh`: the same unchanged tree reported
+     **7 orphans on one run and 3 on the next**, because whether the producer
+     finished writing first depends on buffering. Use `grep -c` and test the
+     count; it consumes all input and cannot SIGPIPE.
+  3. **`grep -B1`/`-A1` to pair a commit subject with its trailer.** With
+     `--format=%b` the line before a trailer is BLANK. Measured 2026-08-20:
+     reported **1 commit when there were 21**. Use
+     `git log --format='%H|%s|%(trailers:key=Agent,valueonly)'`.
+  4. **Reporting an empty `grep` as a negative result.** An empty answer and a
+     wrong query are the same observation. This is the grep-shaped case of the
+     coverage trap below; pair the negative with a positive control that MUST
+     produce output, in the same command.
+  5. **Fixed-name files in the session scratchpad.** It is per-SESSION, shared by
+     every lane (see the multi-agent section). `push.log`, `reg.log`, `audit.log`
+     collide; prefix with `$AXEYUM_AGENT`.
+  6. **A "did it finish?" check that has never been shown to fire.** Measured
+     2026-08-20: an end-marker sweep reported `!! NO END MARKER` for two jobs
+     that had completed normally — the scripts had never written markers. The
+     check was wrong, not the job, and the natural reading was the opposite.
+
+  The rule underneath all six, and the one to apply to any command not on this
+  list: **before believing a result, ask what the command would print if it were
+  broken.** If that is what it just printed, it is not evidence.
+
 - **Tools in this repo have lied more often than the solver has been weak.**
   In one session: a corpus gate that ran zero tests for 15 days while exiting 0;
   a pre-push hook that had never run because `core.hooksPath` was unset; a

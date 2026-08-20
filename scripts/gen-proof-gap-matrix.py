@@ -293,13 +293,14 @@ def audit_provenance() -> list[tuple[str, str, str]]:
         if isinstance(stamped, dict) and isinstance(stamped.get("sha"), str):
             sha = stamped["sha"][:9]
             dirty = stamped.get("dirty")
-            label = "stamped"
+            origin = stamped.get("source")
+            label = "stamped" if origin in (None, "git") else f"stamped via {origin}"
             if dirty is True:
                 # A dirty tree has no name and cannot be rebuilt; the sha is
                 # actively misleading unless this is said out loud.
-                label = "stamped, DIRTY TREE"
+                label = f"{label}, DIRTY TREE"
             elif dirty is None:
-                label = "stamped, dirty unknown"
+                label = f"{label}, dirty unknown"
             rows.append((rel, sha, label))
             continue
 

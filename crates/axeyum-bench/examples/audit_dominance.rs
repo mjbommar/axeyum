@@ -943,13 +943,34 @@ fn source_revision() -> JsonValue {
         .ok()
         .filter(|o| o.status.success())
         .map(|o| !String::from_utf8_lossy(&o.stdout).trim().is_empty());
-    match (rev, dirty) {
-        // `unknown` rather than an omitted field: a missing key reads as an old
-        // schema, which is exactly the ambiguity this exists to remove.
-        (None, _) => json!({ "sha": "unknown", "dirty": JsonValue::Null }),
-        (Some(sha), dirty) => json!({
+    if let Some(sha) = rev {
+        return json!({
             "sha": sha,
             "dirty": dirty.map_or(JsonValue::Null, JsonValue::from),
-        }),
+            "source": "git",
+        });
     }
+
+    // No git. That is the NORMAL case for the clean tree this audit most wants
+    // to run in: `scripts/lane-snapshot.sh` extracts `git archive <ref>`, which
+    // has no `.git` at all — so the recommended way to get an unmodified tree was
+    // also the only way to lose the sha. Measured here: a snapshot run stamped
+    // `sha: "unknown"` while the shared worktree, which DID have git, stamped
+    // `dirty: true` because other lanes had uncommitted files. Neither is the
+    // artifact anyone wants.
+    //
+    // `lane-snapshot.sh` already writes the ref it extracted to `.lane-ref`, so
+    // read that. A `git archive` of a commit is clean by construction — there is
+    // nowhere for a modification to have come from — which is why `dirty` is
+    // `false` here and not `null`.
+    if let Ok(text) = std::fs::read_to_string(".lane-ref") {
+        let sha = text.trim();
+        if !sha.is_empty() {
+            return json!({ "sha": sha, "dirty": false, "source": "lane-snapshot" });
+        }
+    }
+
+    // `unknown` rather than an omitted field: a missing key reads as an old
+    // schema, which is exactly the ambiguity this exists to remove.
+    json!({ "sha": "unknown", "dirty": JsonValue::Null, "source": "none" })
 }

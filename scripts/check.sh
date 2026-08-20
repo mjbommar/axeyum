@@ -214,6 +214,11 @@ step lean-golden-pin-controls ./scripts/tests/test-check-lean-golden-pins.sh
 # were written, both pass, and one of them was invoked by nothing for a day
 # because registering a control is a manual step separate from writing it.
 step control-registration ./scripts/check-control-registration.sh
+# Ban the shell idioms that print a WRONG ANSWER while exiting 0. Both pinned
+# patterns were real defects on 2026-08-20: `grep -q` piped under pipefail
+# made the SAME tree report 7 orphans then 3, and `$?` after a pipeline
+# reported exit=0 for a script that exits 1.
+step shell-antipatterns ./scripts/check-shell-antipatterns.sh
 # The axiom-freedom measurements. `axreal: axiom=30` is the whole remaining
 # trusted surface and the claim that the shipped route no longer reaches it
 # rested, until 2026-08-18, on three examples that NO gate ran -- zero
