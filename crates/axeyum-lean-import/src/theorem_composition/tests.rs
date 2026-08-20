@@ -1,4 +1,4 @@
-use axeyum_lean_kernel::{Declaration, Kernel, ReducibilityHint, build_logic_prelude};
+use axeyum_lean_kernel::{BinderInfo, Declaration, Kernel, ReducibilityHint, build_logic_prelude};
 
 use super::*;
 
@@ -60,6 +60,7 @@ fn roots_and_missing_non_theorems_fail_closed() {
         build_logic_prelude(&mut kernel).expect("target logic");
         kernel
     };
+    add_true_theorem(&mut source, "Composition.duplicate");
     assert!(matches!(
         compose_checked_theorem_slice(&source, &target, &[]),
         Err(CheckedTheoremCompositionError::EmptyRoots)
@@ -67,6 +68,15 @@ fn roots_and_missing_non_theorems_fail_closed() {
     assert!(matches!(
         compose_checked_theorem_slice(&source, &target, &["missing"]),
         Err(CheckedTheoremCompositionError::MissingRoot(name)) if name == "missing"
+    ));
+    assert!(matches!(
+        compose_checked_theorem_slice(
+            &source,
+            &target,
+            &["Composition.duplicate", "Composition.duplicate"]
+        ),
+        Err(CheckedTheoremCompositionError::DuplicateRoot(name))
+            if name == "Composition.duplicate"
     ));
     assert!(matches!(
         compose_checked_theorem_slice(&source, &target, &["True"]),
@@ -102,6 +112,120 @@ fn roots_and_missing_non_theorems_fail_closed() {
         Err(CheckedTheoremCompositionError::UnsupportedMissingDeclaration { name, kind })
             if name == "Composition.payload" && kind == "definition"
     ));
+}
+
+fn source_with_missing_proof_dependency(kind: &str) -> (Kernel, Kernel, &'static str) {
+    let mut source = Kernel::new();
+    let logic = build_logic_prelude(&mut source).unwrap();
+    let mut target = Kernel::new();
+    build_logic_prelude(&mut target).unwrap();
+    let dependency = name(&mut source, "Composition.missingProof");
+    let true_type = source.const_(logic.true_, vec![]);
+    let true_intro = source.const_(logic.true_intro, vec![]);
+    let declaration = match kind {
+        "axiom" => Declaration::Axiom {
+            name: dependency,
+            uparams: vec![],
+            ty: true_type,
+        },
+        "opaque" => Declaration::Opaque {
+            name: dependency,
+            uparams: vec![],
+            ty: true_type,
+            value: true_intro,
+        },
+        _ => unreachable!(),
+    };
+    source.add_declaration(declaration).unwrap();
+    let root = name(&mut source, "Composition.missingKindRoot");
+    let proof = source.const_(dependency, vec![]);
+    source
+        .add_declaration(Declaration::Theorem {
+            name: root,
+            uparams: vec![],
+            ty: true_type,
+            value: proof,
+        })
+        .unwrap();
+    (source, target, "Composition.missingKindRoot")
+}
+
+#[test]
+fn missing_axiom_opaque_and_inductive_dependencies_decline() {
+    for kind in ["axiom", "opaque"] {
+        let (source, target, root) = source_with_missing_proof_dependency(kind);
+        assert!(matches!(
+            compose_checked_theorem_slice(&source, &target, &[root]),
+            Err(CheckedTheoremCompositionError::UnsupportedMissingDeclaration {
+                name,
+                kind: got,
+            }) if name == "Composition.missingProof" && got == kind
+        ));
+    }
+
+    let mut source = Kernel::new();
+    add_true_theorem(&mut source, "Composition.inductiveRoot");
+    let target = Kernel::new();
+    assert!(matches!(
+        compose_checked_theorem_slice(&source, &target, &["Composition.inductiveRoot"]),
+        Err(CheckedTheoremCompositionError::UnsupportedMissingDeclaration { kind, .. })
+            if kind == "inductive"
+    ));
+}
+
+#[test]
+fn binder_info_only_type_difference_authorizes_a_fresh_gate_check() {
+    fn add_compatible_surface(kernel: &mut Kernel, info: BinderInfo, add_root: bool) {
+        let logic = build_logic_prelude(kernel).unwrap();
+        let true_type = kernel.const_(logic.true_, vec![]);
+        let binder = kernel.anon();
+        let surface_type = kernel.pi(binder, true_type, true_type, info);
+        let witness = name(kernel, "Composition.surfaceWitness");
+        kernel
+            .add_declaration(Declaration::Axiom {
+                name: witness,
+                uparams: vec![],
+                ty: surface_type,
+            })
+            .unwrap();
+        if add_root {
+            let root = name(kernel, "Composition.compatibleRoot");
+            let proof = kernel.const_(witness, vec![]);
+            kernel
+                .add_declaration(Declaration::Theorem {
+                    name: root,
+                    uparams: vec![],
+                    ty: surface_type,
+                    value: proof,
+                })
+                .unwrap();
+        }
+    }
+
+    let mut source = Kernel::new();
+    add_compatible_surface(&mut source, BinderInfo::Default, true);
+    let mut target = Kernel::new();
+    add_compatible_surface(&mut target, BinderInfo::Implicit, false);
+    let completed =
+        compose_checked_theorem_slice(&source, &target, &["Composition.compatibleRoot"]).unwrap();
+    let surface = completed
+        .receipt()
+        .reused_declarations
+        .iter()
+        .find(|row| row.name == "Composition.surfaceWitness")
+        .unwrap();
+    assert_ne!(
+        surface.source_declaration_sha256,
+        surface.target_declaration_sha256
+    );
+    assert_eq!(
+        surface.source_type_shape_sha256,
+        surface.target_type_shape_sha256
+    );
+    assert_eq!(
+        completed.receipt().added_theorems[0].axiom_footprint,
+        ["Composition.surfaceWitness"]
+    );
 }
 
 #[test]
