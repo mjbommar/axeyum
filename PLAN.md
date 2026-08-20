@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-19 | `f01dfe8e0` | Extended both exact endpoint cumulant and local Witt-cylinder concentration diagnostics through `ell=23`, retaining exact ratios, fleet resource provenance, and the non-credit theorem boundary. |
 | 2026-08-19 | `540c4d41f` | Retained pairwise second-trace quadratic forms inside simultaneous buckets and refuted the raw high-rank Kerdock model with exact rank-zero/rank-two Gauss witnesses. |
 | 2026-08-19 | `9c24671a6` | Reconstructed the pinned dyadic product-discriminant fibre and used its exact mod-four additivity witness to reject every projection-preserving central extension. |
 | 2026-08-19 | `d56410d21` | Certified the exact dyadic auxiliary-unit quadratic projector, including its cyclotomic Gauss identity, polarization, radicals, and squareful-zero cancellation. |
@@ -684,11 +685,14 @@ phase-trivial rank-zero pairs.  Thus the raw forms are not a uniformly
 high-rank Kerdock family.  Any Arf-based rescue must aggregate the same
 low-rank sectors across fibres or orders, so the selected proof architecture
 returns to the connected cross-order Witt-Haar/fourth-cumulant estimate.
-The multi-minute endpoint
-sweep is now an explicit
-ignored, environment-selected research probe; the ordinary theorem gate keeps
-the bounded `ell<=7` controls and the earlier `ell<=9` results remain
-uncredited finite evidence.
+The multi-minute endpoint sweep is now an explicit ignored,
+environment-selected research probe; the ordinary theorem gate keeps the
+bounded `ell<=7` controls.  Three exact-commit fleet probes extend both the
+root connected target and the stronger local linear cylinder ceiling through
+both endpoints at `ell=23`; every new row still rejects the max-to-average
+shortcut.  The canonical note retains their exact ratios, resource use, and
+log hashes.  These results remain uncredited finite evidence and do not move
+the universal proof frontier.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
