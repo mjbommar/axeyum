@@ -3478,6 +3478,26 @@ pub struct ConnectedTopInverseMobiusFourierRegroupReport {
     /// Absolute total after the frequencywise sums are further grouped by
     /// annihilator depth.
     pub layerwise_absolute_numerator: u128,
+    /// Exact sum of squares of the connected frequency numerators.
+    pub frequency_square_sum: BigUint,
+    /// Cauchy square using the full structural high-frequency support bound.
+    pub frequency_cauchy_bound_square: BigUint,
+    /// Square of the selected connected trace allowance.
+    pub connected_allowance_square: BigUint,
+    /// Largest frequency square sum for which structural-support Cauchy would
+    /// prove the connected trace allowance.
+    pub maximum_frequency_square_sum_for_candidate: BigUint,
+    /// Smallest integral factor by which the exact square sum would have to
+    /// improve for structural-support Cauchy to close.
+    pub required_frequency_square_sum_saving_ceiling: BigUint,
+}
+
+impl ConnectedTopInverseMobiusFourierRegroupReport {
+    /// Whether structural-support Cauchy proves the connected trace candidate.
+    #[must_use]
+    pub fn frequency_cauchy_proves_candidate(&self) -> bool {
+        self.frequency_cauchy_bound_square <= self.connected_allowance_square
+    }
 }
 
 /// One exact low-degree term in the identity-class Möbius convolution.
@@ -11235,6 +11255,38 @@ fn check_inverse_mobius_spectrum_quotient(
     Ok(())
 }
 
+struct ConnectedTopFourierNormLedger {
+    square_sum: BigUint,
+    cauchy_bound_square: BigUint,
+    allowance_square: BigUint,
+    maximum_square_sum: BigUint,
+    required_saving_ceiling: BigUint,
+}
+
+fn connected_top_fourier_norm_ledger(
+    frequencies: &[i128],
+    support_bound: u128,
+    allowance: &BigUint,
+) -> ConnectedTopFourierNormLedger {
+    let square_sum = frequencies.iter().fold(BigUint::from(0_u8), |sum, value| {
+        let magnitude = BigUint::from(value.unsigned_abs());
+        sum + &magnitude * &magnitude
+    });
+    let support = BigUint::from(support_bound);
+    let cauchy_bound_square = &support * &square_sum;
+    let allowance_square = allowance.pow(2);
+    let maximum_square_sum = &allowance_square / &support;
+    let required_saving_ceiling =
+        (&square_sum + &maximum_square_sum - BigUint::from(1_u8)) / &maximum_square_sum;
+    ConnectedTopFourierNormLedger {
+        square_sum,
+        cauchy_bound_square,
+        allowance_square,
+        maximum_square_sum,
+        required_saving_ceiling,
+    }
+}
+
 /// Combine the top-conductor quotient and every Möbius order in one additive
 /// Fourier domain.
 ///
@@ -11324,19 +11376,30 @@ pub fn connected_top_inverse_mobius_fourier_regroup(
                 )
             })
     })?;
+    let high_frequency_support_bound = fine.denominator - coarse.denominator;
+    let norm = connected_top_fourier_norm_ledger(
+        &frequency_numerators,
+        high_frequency_support_bound,
+        &implication.connected_top_assumption_numerator,
+    );
     Ok(ConnectedTopInverseMobiusFourierRegroupReport {
         ell,
         degree,
         first_top_level,
         coarse_level,
         cancelled_coarse_frequency_count: coarse.denominator,
-        high_frequency_support_bound: fine.denominator - coarse.denominator,
+        high_frequency_support_bound,
         layers,
         connected_trace,
         cellwise_absolute_numerator,
         orderwise_absolute_numerator,
         frequencywise_absolute_numerator,
         layerwise_absolute_numerator,
+        frequency_square_sum: norm.square_sum,
+        frequency_cauchy_bound_square: norm.cauchy_bound_square,
+        connected_allowance_square: norm.allowance_square,
+        maximum_frequency_square_sum_for_candidate: norm.maximum_square_sum,
+        required_frequency_square_sum_saving_ceiling: norm.required_saving_ceiling,
     })
 }
 
@@ -16190,6 +16253,8 @@ mod tests {
                 60_416_u128,
                 162_672_u128,
                 71_280_u128,
+                1_541_548_032_u128,
+                1_425_u128,
                 vec![0_i128, -2_560, 5_952, 896, -944, 13_904, 20_520, -26_504, 0],
             ),
             (
@@ -16199,6 +16264,8 @@ mod tests {
                 43_776,
                 205_856,
                 70_208,
+                1_604_489_216,
+                1_483,
                 vec![
                     0_i128, 2_560, 256, 10_624, -14_112, 23_008, 7_744, -11_904, 0,
                 ],
@@ -16211,6 +16278,8 @@ mod tests {
             expected_orderwise,
             expected_frequencywise,
             expected_layerwise,
+            expected_square_sum,
+            expected_saving,
             expected_layers,
         ) in expected
         {
@@ -16238,6 +16307,27 @@ mod tests {
             assert!(report.cellwise_absolute_numerator >= report.orderwise_absolute_numerator);
             assert!(report.cellwise_absolute_numerator >= report.frequencywise_absolute_numerator);
             assert!(report.frequencywise_absolute_numerator >= report.layerwise_absolute_numerator);
+            assert_eq!(
+                report.frequency_square_sum,
+                BigUint::from(expected_square_sum)
+            );
+            assert_eq!(
+                report.frequency_cauchy_bound_square,
+                BigUint::from(expected_square_sum) * BigUint::from(248_u16)
+            );
+            assert_eq!(
+                report.connected_allowance_square,
+                BigUint::from(268_435_456_u32)
+            );
+            assert_eq!(
+                report.maximum_frequency_square_sum_for_candidate,
+                BigUint::from(1_082_401_u32)
+            );
+            assert_eq!(
+                report.required_frequency_square_sum_saving_ceiling,
+                BigUint::from(expected_saving)
+            );
+            assert!(!report.frequency_cauchy_proves_candidate());
         }
         for ell in 6_usize..=8 {
             for degree in [2 * ell + 1, 2 * ell + 2] {

@@ -3134,6 +3134,25 @@ Identity (HFC) is a sharper statement of the analytic target, but its
 surviving support has size `2^ell-2^c`; it is not itself the missing
 cancellation estimate (ADR-0544).
 
+Even one Cauchy inequality after all of that exact cancellation is too lossy
+on the pinned rows.  Write `F(alpha)` for the inner signed sum in (HFC).
+The structural-support estimate would be
+
+```text
+abs((CT))^2 <= (2^ell-2^c) sum_alpha abs(F(alpha))^2.       (HC2)
+```
+
+At `ell=8`, the exact square sums at degrees 17 and 18 are `1541548032` and
+`1604489216`.  The connected allowance square is `268435456`; after division
+by the support size `248`, (HC2) can tolerate square sum only `1082401`.
+Thus the exact rows would require further integral savings `1425` and `1483`,
+although their original signed traces already satisfy (CRT).  The native
+report pins the square sums, Cauchy products, thresholds, and rejection
+predicate.  This is a finite stopping test, not an asymptotic counterexample:
+a theorem only for `ell>=200` could still prove a new normalized norm collapse.
+But absent that explicit saving, a positive `L2` argument still erases the
+essential high-frequency phases and receives no endpoint credit (ADR-0545).
+
 This exact tower does **not** by itself put (RC) under the available
 Ito--Takeuchi--Tsushima theorem.  Their Heisenberg construction treats the
 special one-equation curves `y^2-y=xR(x)` for linearized `R` and a length-two
