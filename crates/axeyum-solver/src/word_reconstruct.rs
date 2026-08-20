@@ -556,8 +556,8 @@ impl WordCtx {
         let motive = self.kernel.lam(anon, bool_const, prop, BinderInfo::Default);
         let discr = {
             let e = self.kernel.app(rec, motive);
-            let e = self.kernel.app(e, false_const); // minor for Bool.true
             let e = self.kernel.app(e, true_const); // minor for Bool.false
+            let e = self.kernel.app(e, false_const); // minor for Bool.true
             let b = self.kernel.bvar(0);
             let body = self.kernel.app(e, b);
             self.kernel.lam(anon, bool_const, body, BinderInfo::Default)

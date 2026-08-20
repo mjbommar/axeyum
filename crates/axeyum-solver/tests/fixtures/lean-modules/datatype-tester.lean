@@ -43,8 +43,8 @@ inductive False : Prop where
 inductive Eq.{u} (x0 : Sort (u)) (x1 : x0) : ((x2 : x0) -> Prop) where
   | refl : Eq x0 x1 x1
 inductive Bool : Sort (1) where
-  | true : Bool
   | false : Bool
+  | true : Bool
 axiom α : Sort (1)
 inductive axeyum.reconstruct.dtfam._0 : Sort (1) where
   | c0 : ((x0 : α) -> axeyum.reconstruct.dtfam._0)
@@ -53,6 +53,6 @@ axiom axeyum.reconstruct.fld_0._1 : α
 axiom axeyum.reconstruct.hyp._2 : Eq.{1} Bool ((fun (x0 : axeyum.reconstruct.dtfam._0) => @axeyum.reconstruct.dtfam._0.rec.{1} (fun (x1 : axeyum.reconstruct.dtfam._0) => Bool) (fun (x1 : α) => @Bool.true) (fun (x1 : α) => @Bool.false) x0) (@axeyum.reconstruct.dtfam._0.c1 axeyum.reconstruct.fld_0._1)) @Bool.true
 
 theorem axeyum_refutation : False :=
-  @Eq.rec.{0, 1} Bool ((fun (x0 : axeyum.reconstruct.dtfam._0) => @axeyum.reconstruct.dtfam._0.rec.{1} (fun (x1 : axeyum.reconstruct.dtfam._0) => Bool) (fun (x1 : α) => @Bool.true) (fun (x1 : α) => @Bool.false) x0) (@axeyum.reconstruct.dtfam._0.c1 axeyum.reconstruct.fld_0._1)) (fun (x0 : Bool) => fun (x1 : Eq.{1} Bool ((fun (x1 : axeyum.reconstruct.dtfam._0) => @axeyum.reconstruct.dtfam._0.rec.{1} (fun (x2 : axeyum.reconstruct.dtfam._0) => Bool) (fun (x2 : α) => @Bool.true) (fun (x2 : α) => @Bool.false) x1) (@axeyum.reconstruct.dtfam._0.c1 axeyum.reconstruct.fld_0._1)) x0) => (fun (x2 : Bool) => @Bool.rec.{1} (fun (x3 : Bool) => Prop) False True x2) x0) @True.intro @Bool.true axeyum.reconstruct.hyp._2
+  @Eq.rec.{0, 1} Bool ((fun (x0 : axeyum.reconstruct.dtfam._0) => @axeyum.reconstruct.dtfam._0.rec.{1} (fun (x1 : axeyum.reconstruct.dtfam._0) => Bool) (fun (x1 : α) => @Bool.true) (fun (x1 : α) => @Bool.false) x0) (@axeyum.reconstruct.dtfam._0.c1 axeyum.reconstruct.fld_0._1)) (fun (x0 : Bool) => fun (x1 : Eq.{1} Bool ((fun (x1 : axeyum.reconstruct.dtfam._0) => @axeyum.reconstruct.dtfam._0.rec.{1} (fun (x2 : axeyum.reconstruct.dtfam._0) => Bool) (fun (x2 : α) => @Bool.true) (fun (x2 : α) => @Bool.false) x1) (@axeyum.reconstruct.dtfam._0.c1 axeyum.reconstruct.fld_0._1)) x0) => (fun (x2 : Bool) => @Bool.rec.{1} (fun (x3 : Bool) => Prop) True False x2) x0) @True.intro @Bool.true axeyum.reconstruct.hyp._2
 
 #print axioms axeyum_refutation

@@ -116,10 +116,13 @@ fn small_cover_generated_module_is_byte_stable() {
     // covers the module BODY, and the banner is pinned once in
     // `axeyum-lean-kernel --test module_banner_pin`. If this moves, PROOF text
     // moved. See `crates/axeyum-lean-kernel/tests/support/lean_golden.rs`.
+    // Re-pinned 2026-08-20 at the same 14_912-byte length: the native Bool
+    // package now uses official Lean constructor order `[false, true]`, so the
+    // checked `Bool.rec` proof writes its false minor before its true minor.
     lean_golden::assert_golden_module(
         "counterexample-cover",
         &module,
-        (14_912, 0x873f_0c80_83b0_a826),
+        (14_912, 0xe36b_bf15_f4d4_f75e),
     );
 }
 

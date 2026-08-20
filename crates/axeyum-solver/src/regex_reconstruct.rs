@@ -403,13 +403,13 @@ impl RegexCtx {
         let false_prop = self.kernel.const_(self.sp.logic.false_, vec![]);
         let bool_true = self.bool_true();
 
-        // d : Bool → Prop = λ b, Bool.rec.{1} (λ_,Prop) True False b.
+        // d : Bool → Prop = λ b, Bool.rec.{1} (λ_,Prop) False True b.
         let discr = {
             let rec = self.kernel.const_(self.sp.logic.bool_rec, vec![self.one]);
             let motive = self.kernel.lam(anon, bool_const, prop, BinderInfo::Default);
             let e = self.kernel.app(rec, motive);
-            let e = self.kernel.app(e, true_prop); // minor for Bool.true  ⇒ True
             let e = self.kernel.app(e, false_prop); // minor for Bool.false ⇒ False
+            let e = self.kernel.app(e, true_prop); // minor for Bool.true  ⇒ True
             let b = self.kernel.bvar(0);
             let body = self.kernel.app(e, b);
             self.kernel.lam(anon, bool_const, body, BinderInfo::Default)

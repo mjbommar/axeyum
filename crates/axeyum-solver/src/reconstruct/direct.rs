@@ -267,8 +267,8 @@ fn finite_domain_bool_rec(
     let zero = ctx.kernel.level_zero();
     let rec = ctx.kernel.const_(ctx.prelude.bool_rec, vec![zero]);
     let e = ctx.kernel.app(rec, motive);
-    let e = ctx.kernel.app(e, true_case);
-    ctx.kernel.app(e, false_case)
+    let e = ctx.kernel.app(e, false_case);
+    ctx.kernel.app(e, true_case)
 }
 
 fn finite_domain_refl_f(ctx: &mut ReconstructCtx, f: ExprId, value: bool) -> ExprId {
