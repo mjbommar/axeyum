@@ -3441,6 +3441,45 @@ pub struct InverseMobiusFourierRegroupReport {
     pub layerwise_absolute_numerator: u128,
 }
 
+/// Joint conductor/order Fourier regrouping of the connected top trace.
+///
+/// Every quantity is already scaled to the common selected-trace identity
+/// `2^ell Delta_ell-2^coarse Delta_coarse`; there is no remaining Fourier
+/// denominator.  The absolute totals show the loss from stopping at different
+/// stages of the exact regrouping without asserting an asymptotic bound.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConnectedTopInverseMobiusFourierRegroupReport {
+    /// Fine coefficient-prefix length.
+    pub ell: usize,
+    /// Endpoint degree.
+    pub degree: usize,
+    /// First retained exact-conductor level.
+    pub first_top_level: usize,
+    /// Coarse quotient level `first_top_level-1`.
+    pub coarse_level: usize,
+    /// Number `2^coarse_level` of inflated coarse frequencies cancelled
+    /// identically by the connected projector.
+    pub cancelled_coarse_frequency_count: u128,
+    /// Structural upper bound `2^ell-2^coarse_level` on the remaining
+    /// additive-frequency support.
+    pub high_frequency_support_bound: u128,
+    /// Fine-domain layers after combining conductors and Möbius orders at
+    /// every frequency.
+    pub layers: Vec<InverseMobiusFourierLayer>,
+    /// Exact selected connected top-conductor trace.
+    pub connected_trace: i128,
+    /// Absolute total before conductors, orders, or frequencies are combined.
+    pub cellwise_absolute_numerator: u128,
+    /// Absolute total after frequencies and conductors are combined for each
+    /// Möbius order.
+    pub orderwise_absolute_numerator: u128,
+    /// Absolute total after conductors and orders are combined frequencywise.
+    pub frequencywise_absolute_numerator: u128,
+    /// Absolute total after the frequencywise sums are further grouped by
+    /// annihilator depth.
+    pub layerwise_absolute_numerator: u128,
+}
+
 /// One exact low-degree term in the identity-class Möbius convolution.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MobiusConvolutionTerm {
@@ -10927,6 +10966,14 @@ fn inverse_mobius_fourier_weight(interval_degree: usize) -> Result<i128, HayesEr
         .ok_or_else(|| HayesError::InvalidParameter("Fourier regroup weight overflow".to_owned()))
 }
 
+struct InverseMobiusFourierNumerators {
+    convolution: IdentityClassMobiusConvolution,
+    denominator: u128,
+    frequency_numerators: Vec<i128>,
+    cellwise_absolute_numerator: u128,
+    orderwise_absolute_numerator: u128,
+}
+
 fn accumulate_inverse_mobius_fourier_order(
     spectrum: &InverseAdditiveMobiusSpectrum,
     interval_degree: usize,
@@ -10997,30 +11044,11 @@ fn inverse_mobius_fourier_layers(
     Ok(layers)
 }
 
-/// Regroup the exact signed Möbius convolution across Fourier frequencies.
-///
-/// If `v(a)` is the number of vanishing low bits of packed frequency `a`,
-/// additive orthogonality gives the checked identity
-///
-/// ```text
-/// 2^ell Delta_(ell,n)
-///   = sum_a sum_(1<=d<=v(a), d<ell) d 2^d H_(n-d)(a).
-/// ```
-///
-/// The returned layers combine all eligible `d` before taking an absolute
-/// value.  They are finite diagnostics and make no uniform cancellation
-/// claim.
-///
-/// # Errors
-///
-/// Returns a typed resource/representation decline from the exact spectra,
-/// rejects the convolution domain, and fails if either the orderwise Fourier
-/// bridge or the final regrouped identity does not reconstruct exactly.
-pub fn inverse_mobius_fourier_regroup(
+fn inverse_mobius_fourier_numerators(
     ell: usize,
     degree: usize,
     limits: HayesLimits,
-) -> Result<InverseMobiusFourierRegroupReport, HayesError> {
+) -> Result<InverseMobiusFourierNumerators, HayesError> {
     let convolution = identity_class_mobius_convolution(ell, degree, limits)?;
     let denominator = 1_u128
         .checked_shl(u32::try_from(ell).map_err(|_| {
@@ -11063,6 +11091,49 @@ pub fn inverse_mobius_fourier_regroup(
                 HayesError::InvalidParameter("Fourier orderwise total overflow".to_owned())
             })?;
     }
+    Ok(InverseMobiusFourierNumerators {
+        convolution,
+        denominator,
+        frequency_numerators,
+        cellwise_absolute_numerator,
+        orderwise_absolute_numerator,
+    })
+}
+
+/// Regroup the exact signed Möbius convolution across Fourier frequencies.
+///
+/// If `v(a)` is the number of vanishing low bits of packed frequency `a`,
+/// additive orthogonality gives the checked identity
+///
+/// ```text
+/// 2^ell Delta_(ell,n)
+///   = sum_a sum_(1<=d<=v(a), d<ell) d 2^d H_(n-d)(a).
+/// ```
+///
+/// The returned layers combine all eligible `d` before taking an absolute
+/// value.  They are finite diagnostics and make no uniform cancellation
+/// claim.
+///
+/// # Errors
+///
+/// Returns a typed resource/representation decline from the exact spectra,
+/// rejects the convolution domain, and fails if either the orderwise Fourier
+/// bridge or the final regrouped identity does not reconstruct exactly.
+pub fn inverse_mobius_fourier_regroup(
+    ell: usize,
+    degree: usize,
+    limits: HayesLimits,
+) -> Result<InverseMobiusFourierRegroupReport, HayesError> {
+    let numerators = inverse_mobius_fourier_numerators(ell, degree, limits)?;
+    let InverseMobiusFourierNumerators {
+        convolution,
+        denominator,
+        frequency_numerators,
+        cellwise_absolute_numerator,
+        orderwise_absolute_numerator,
+    } = numerators;
+    let denominator_i128 = i128::try_from(denominator)
+        .map_err(|_| HayesError::InvalidParameter("Fourier denominator exceeds i128".to_owned()))?;
     let layers = inverse_mobius_fourier_layers(ell, &frequency_numerators)?;
     let regrouped_numerator = layers.iter().try_fold(0_i128, |sum, layer| {
         sum.checked_add(layer.weighted_numerator).ok_or_else(|| {
@@ -11095,6 +11166,176 @@ pub fn inverse_mobius_fourier_regroup(
         discrepancy: convolution.discrepancy,
         cellwise_absolute_numerator,
         orderwise_absolute_numerator,
+        layerwise_absolute_numerator,
+    })
+}
+
+fn connected_top_fourier_frequencies(
+    fine: &InverseMobiusFourierNumerators,
+    coarse: &InverseMobiusFourierNumerators,
+) -> Result<(Vec<i128>, i128), HayesError> {
+    if coarse.frequency_numerators.len() > fine.frequency_numerators.len() {
+        return Err(HayesError::Invariant(
+            "coarse Fourier data does not embed in the fine domain".to_owned(),
+        ));
+    }
+    let mut frequencies = fine.frequency_numerators.clone();
+    for (fine_value, coarse_value) in frequencies.iter_mut().zip(&coarse.frequency_numerators) {
+        *fine_value = fine_value.checked_sub(*coarse_value).ok_or_else(|| {
+            HayesError::InvalidParameter("connected Fourier frequency overflow".to_owned())
+        })?;
+    }
+    let fine_scale = i128::try_from(fine.denominator)
+        .map_err(|_| HayesError::InvalidParameter("fine denominator exceeds i128".to_owned()))?;
+    let coarse_scale = i128::try_from(coarse.denominator)
+        .map_err(|_| HayesError::InvalidParameter("coarse denominator exceeds i128".to_owned()))?;
+    let connected_trace = fine
+        .convolution
+        .discrepancy
+        .checked_mul(fine_scale)
+        .and_then(|value| {
+            coarse
+                .convolution
+                .discrepancy
+                .checked_mul(coarse_scale)
+                .and_then(|coarse_value| value.checked_sub(coarse_value))
+        })
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("connected Fourier trace overflow".to_owned())
+        })?;
+    let reconstructed = frequencies.iter().try_fold(0_i128, |sum, value| {
+        sum.checked_add(*value).ok_or_else(|| {
+            HayesError::InvalidParameter("connected Fourier reconstruction overflow".to_owned())
+        })
+    })?;
+    if reconstructed != connected_trace {
+        return Err(HayesError::Invariant(format!(
+            "connected Fourier frequencies give {reconstructed}, expected {connected_trace}"
+        )));
+    }
+    Ok((frequencies, connected_trace))
+}
+
+fn check_inverse_mobius_spectrum_quotient(
+    ell: usize,
+    coarse_level: usize,
+    degree: usize,
+    limits: HayesLimits,
+) -> Result<(), HayesError> {
+    for interval_degree in 1..coarse_level {
+        let mobius_degree = degree - interval_degree;
+        let fine = inverse_additive_mobius_spectrum(ell, mobius_degree, limits)?;
+        let coarse = inverse_additive_mobius_spectrum(coarse_level, mobius_degree, limits)?;
+        if fine.values[..coarse.values.len()] != coarse.values {
+            return Err(HayesError::Invariant(format!(
+                "coarse inverse spectrum fails quotient embedding at d={interval_degree}"
+            )));
+        }
+    }
+    Ok(())
+}
+
+/// Combine the top-conductor quotient and every Möbius order in one additive
+/// Fourier domain.
+///
+/// Projection `E_ell -> E_coarse` commutes with unit inversion.  Consequently
+/// the coarse Walsh spectrum at each shared Möbius degree must equal the slice
+/// of the fine spectrum whose higher frequency bits vanish.  This operation
+/// checks that compatibility exactly, inflates the coarse contribution into
+/// the fine domain, subtracts it frequencywise, and only then groups by
+/// annihilator depth.
+///
+/// # Errors
+///
+/// Returns a typed admission or checked-arithmetic decline, rejects a
+/// nonpositive coarse level, and fails closed if quotient compatibility or
+/// any independent connected-trace reconstruction is violated.
+pub fn connected_top_inverse_mobius_fourier_regroup(
+    ell: usize,
+    degree: usize,
+    limits: HayesLimits,
+) -> Result<ConnectedTopInverseMobiusFourierRegroupReport, HayesError> {
+    let implication = population_refinement_connected_top_implication(ell, degree)?;
+    let first_top_level = implication.first_top_level;
+    let coarse_level = first_top_level.checked_sub(1).ok_or_else(|| {
+        HayesError::InvalidParameter("connected top coarse level underflow".to_owned())
+    })?;
+    if coarse_level == 0 {
+        return Err(HayesError::InvalidParameter(
+            "connected Fourier regroup requires a positive coarse level".to_owned(),
+        ));
+    }
+    check_inverse_mobius_spectrum_quotient(ell, coarse_level, degree, limits)?;
+    let fine = inverse_mobius_fourier_numerators(ell, degree, limits)?;
+    let coarse = inverse_mobius_fourier_numerators(coarse_level, degree, limits)?;
+    let (frequency_numerators, connected_trace) =
+        connected_top_fourier_frequencies(&fine, &coarse)?;
+    if frequency_numerators[..coarse.frequency_numerators.len()]
+        .iter()
+        .any(|value| *value != 0)
+    {
+        return Err(HayesError::Invariant(
+            "connected projector retains an inflated coarse frequency".to_owned(),
+        ));
+    }
+
+    let connected_orders = connected_top_mobius_convolution(ell, degree, limits)?;
+    if connected_orders.signed_connected_trace != BigInt::from(connected_trace) {
+        return Err(HayesError::Invariant(
+            "connected Fourier and order reconstructions disagree".to_owned(),
+        ));
+    }
+    let orderwise_absolute_numerator =
+        connected_orders
+            .terms
+            .iter()
+            .try_fold(0_u128, |sum, term| {
+                let magnitude = u128::try_from(term.connected_value.magnitude()).map_err(|_| {
+                    HayesError::InvalidParameter(
+                        "connected Fourier order magnitude exceeds u128".to_owned(),
+                    )
+                })?;
+                sum.checked_add(magnitude).ok_or_else(|| {
+                    HayesError::InvalidParameter(
+                        "connected Fourier order total overflow".to_owned(),
+                    )
+                })
+            })?;
+    let cellwise_absolute_numerator = fine
+        .cellwise_absolute_numerator
+        .checked_add(coarse.cellwise_absolute_numerator)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("connected Fourier cellwise total overflow".to_owned())
+        })?;
+    let frequencywise_absolute_numerator =
+        frequency_numerators.iter().try_fold(0_u128, |sum, value| {
+            sum.checked_add(value.unsigned_abs()).ok_or_else(|| {
+                HayesError::InvalidParameter(
+                    "connected Fourier frequencywise total overflow".to_owned(),
+                )
+            })
+        })?;
+    let layers = inverse_mobius_fourier_layers(ell, &frequency_numerators)?;
+    let layerwise_absolute_numerator = layers.iter().try_fold(0_u128, |sum, layer| {
+        sum.checked_add(layer.weighted_numerator.unsigned_abs())
+            .ok_or_else(|| {
+                HayesError::InvalidParameter(
+                    "connected Fourier layerwise total overflow".to_owned(),
+                )
+            })
+    })?;
+    Ok(ConnectedTopInverseMobiusFourierRegroupReport {
+        ell,
+        degree,
+        first_top_level,
+        coarse_level,
+        cancelled_coarse_frequency_count: coarse.denominator,
+        high_frequency_support_bound: fine.denominator - coarse.denominator,
+        layers,
+        connected_trace,
+        cellwise_absolute_numerator,
+        orderwise_absolute_numerator,
+        frequencywise_absolute_numerator,
         layerwise_absolute_numerator,
     })
 }
@@ -15936,6 +16177,74 @@ mod tests {
                 assert!(report.cellwise_absolute_numerator >= report.layerwise_absolute_numerator);
             }
         }
+    }
+
+    #[test]
+    fn connected_top_fourier_regroup_combines_conductors_and_orders() {
+        let limits = HayesLimits::default();
+        let expected = [
+            (
+                17_usize,
+                11_264_i128,
+                313_952_u128,
+                60_416_u128,
+                162_672_u128,
+                71_280_u128,
+                vec![0_i128, -2_560, 5_952, 896, -944, 13_904, 20_520, -26_504, 0],
+            ),
+            (
+                18,
+                18_176,
+                415_264,
+                43_776,
+                205_856,
+                70_208,
+                vec![
+                    0_i128, 2_560, 256, 10_624, -14_112, 23_008, 7_744, -11_904, 0,
+                ],
+            ),
+        ];
+        for (
+            degree,
+            expected_trace,
+            expected_cellwise,
+            expected_orderwise,
+            expected_frequencywise,
+            expected_layerwise,
+            expected_layers,
+        ) in expected
+        {
+            let report = connected_top_inverse_mobius_fourier_regroup(8, degree, limits).unwrap();
+            assert_eq!(report.first_top_level, 4);
+            assert_eq!(report.coarse_level, 3);
+            assert_eq!(report.cancelled_coarse_frequency_count, 8);
+            assert_eq!(report.high_frequency_support_bound, 248);
+            assert_eq!(report.connected_trace, expected_trace);
+            assert_eq!(report.cellwise_absolute_numerator, expected_cellwise);
+            assert_eq!(report.orderwise_absolute_numerator, expected_orderwise);
+            assert_eq!(
+                report.frequencywise_absolute_numerator,
+                expected_frequencywise
+            );
+            assert_eq!(report.layerwise_absolute_numerator, expected_layerwise);
+            assert_eq!(
+                report
+                    .layers
+                    .iter()
+                    .map(|layer| layer.weighted_numerator)
+                    .collect::<Vec<_>>(),
+                expected_layers
+            );
+            assert!(report.cellwise_absolute_numerator >= report.orderwise_absolute_numerator);
+            assert!(report.cellwise_absolute_numerator >= report.frequencywise_absolute_numerator);
+            assert!(report.frequencywise_absolute_numerator >= report.layerwise_absolute_numerator);
+        }
+        for ell in 6_usize..=8 {
+            for degree in [2 * ell + 1, 2 * ell + 2] {
+                connected_top_inverse_mobius_fourier_regroup(ell, degree, limits).unwrap();
+            }
+        }
+        assert!(connected_top_inverse_mobius_fourier_regroup(4, 9, limits).is_err());
     }
 
     #[test]

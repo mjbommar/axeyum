@@ -3103,6 +3103,37 @@ every scaled order, and the final reconstruction.  A proof must preserve the
 signed cancellation across these orders as well as across conductors; taking
 orderwise absolute values is not a justified endpoint bridge (ADR-0543).
 
+The fine and coarse Möbius Fourier expansions can in fact be placed in one
+domain.  Projection from level `ell` to level `c=a-1` commutes with unit
+inversion, so for every shared degree and `0<=alpha<2^c`,
+
+```text
+H_k^(ell)(alpha)=H_k^(c)(alpha).
+```
+
+If `alpha` is nonzero, its low-bit annihilator depth is below `c`, and the
+eligible convolution orders at the two levels are identical.  At the zero
+frequency, `H_k(0)=0` for every relevant `k>=2`.  Therefore the connected
+projector cancels the complete inflated coarse spectrum and gives the exact
+high-frequency identity
+
+```text
+(CT) = sum_(2^c<=alpha<2^ell)
+         sum_(1<=d<=v(alpha)) d 2^d H_(n-d)^(ell)(alpha),       (HFC)
+```
+
+where `v(alpha)` counts vanishing low bits.  The native
+`connected_top_inverse_mobius_fourier_regroup` checks the quotient embedding,
+all `2^c` zero connected frequencies, both independent trace
+reconstructions, and the final annihilator layers.  At `ell=8`, the raw
+cellwise, connected-order, frequencywise, and layerwise absolute totals are
+`313952,60416,162672,71280` for `n=17` and
+`415264,43776,205856,70208` for `n=18`.  Order and annihilator regroupings are
+thus cross-cutting: neither intermediate absolute total dominates the other.
+Identity (HFC) is a sharper statement of the analytic target, but its
+surviving support has size `2^ell-2^c`; it is not itself the missing
+cancellation estimate (ADR-0544).
+
 This exact tower does **not** by itself put (RC) under the available
 Ito--Takeuchi--Tsushima theorem.  Their Heisenberg construction treats the
 special one-equation curves `y^2-y=xR(x)` for linearized `R` and a length-two
