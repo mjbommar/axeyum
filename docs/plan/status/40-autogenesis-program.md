@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** The exact Lean 4.30 `Nat.fib` definition and admitted `Nat.fib_add_two` theorem compose into Axeyum's native Nat kernel, where Fibonacci-neighbor coprimality reconstructs twice with an empty footprint and the exact planned dependency set. The imported-to-official route now also has an axiom-free `Nat.gcd_succ`: a target-specific pointwise fuel proof avoids the generic `funext`/`Quot.sound` equation, specializes over the checked target `Nat.mod_lt`, and passes translated-definitional-equality compatibility against the native theorem. With `Nat.dvd_mod_iff`, `Nat.mod_lt`, and `Nat.gcd_succ` as explicit target leaves, native `Nat.dvd_gcd` composes and replays in the official r082 target. The exact r082 Fibonacci theorem remains open; no receipt, evaluation, or ledger credit is due.
+**Status:** The exact Lean 4.30 `Nat.fib` definition and admitted `Nat.fib_add_two` theorem compose into Axeyum's native Nat kernel, where Fibonacci-neighbor coprimality reconstructs twice with an empty footprint and the exact planned dependency set. The imported-to-official route has an axiom-free `Nat.gcd_succ`: a target-specific pointwise fuel proof avoids the generic `funext`/`Quot.sound` equation and specializes over checked target `Nat.mod_lt`. All seven preregistered native gcd/divisibility roots now compose together over the explicit `Nat.dvd_mod_iff`, `Nat.mod_lt`, and `Nat.gcd_succ` target leaves. The 92-declaration closure adds 14 empty-footprint theorems and four definitions and replays exactly. Only the exact r082 Fibonacci theorem remains open; no receipt, evaluation, or ledger credit is due.
 
-**Next:** compose the remaining six planned native gcd/divisibility support theorems over the new official target, then reconstruct the exact r082 `Nat.Coprime (Nat.fib n) (Nat.fib (n + 1))` statement. Keep every support theorem as an explicit compatible empty-footprint target leaf where needed. Do not infer equivalence from names, import quotient assumptions, or issue a semantic receipt before the exact target passes the ordinary kernel.
+**Next:** reuse the completed official support environment and reconstruct the exact r082 `Nat.Coprime (Nat.fib n) (Nat.fib (n + 1))` statement twice in fresh kernels. If both admissions and identities agree with an empty footprint, issue and replay the semantic theorem receipt, then attempt the crash-safe fact transition. Do not infer equivalence from names, import quotient assumptions, or credit the support surface as the final theorem.
 
 <!-- plan-section: landed-changes -->
 
@@ -36,3 +36,4 @@
 | 2026-08-20 | `91d7df736` | Dependency-ordered mixed composition moves exact `Nat.fib` and the established recurrence into the axiom-free native gcd kernel |
 | 2026-08-20 | `8403e6f65` | Twice-reconstructed native Fibonacci coprimality theorem closes with the exact planned dependency set and exposes the official/native gcd semantic bridge |
 | 2026-08-20 | `f94489c74` | Pointwise well-founded fuel congruence reconstructs axiom-free official `Nat.gcd_succ` and advances the checked target through `Nat.dvd_gcd` |
+| 2026-08-20 | `9e83ab67a` | All seven planned Fibonacci gcd/divisibility support roots compose and replay together in the official r082 target |

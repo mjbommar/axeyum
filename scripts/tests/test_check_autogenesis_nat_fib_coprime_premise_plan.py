@@ -254,6 +254,27 @@ class FibCoprimePremisePlanTests(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.PlanError, "result or authority"):
             MODULE.validate(changed)
 
+    def test_fibonacci_support_surface_mutations_are_rejected(self) -> None:
+        changed = copy.deepcopy(self.manifest)
+        changed["fibonacci_support_surface"]["manifest_sha256"] = "0" * 64
+        with self.assertRaisesRegex(MODULE.PlanError, "changed or is mutable"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["fibonacci_support_surface"]["roots"].pop()
+        with self.assertRaisesRegex(MODULE.PlanError, "identity or result"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["fibonacci_support_surface"]["axiom_footprints"] = ["propext"]
+        with self.assertRaisesRegex(MODULE.PlanError, "identity or result"):
+            MODULE.validate(changed)
+
+        changed = copy.deepcopy(self.manifest)
+        changed["fibonacci_support_surface"]["exact_target_theorem_admitted"] = True
+        with self.assertRaisesRegex(MODULE.PlanError, "identity or result"):
+            MODULE.validate(changed)
+
     def test_native_fib_composition_mutations_are_rejected(self) -> None:
         changed = copy.deepcopy(self.manifest)
         changed["native_fib_composition"]["manifest_sha256"] = "0" * 64

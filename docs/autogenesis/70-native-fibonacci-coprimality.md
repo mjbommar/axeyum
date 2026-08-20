@@ -116,9 +116,10 @@ proof reconstructs official `Nat.gcd_succ` without `Quot.sound`, and
 `Nat.dvd_gcd` composes over that checked target leaf. See
 [Axiom-free official `Nat.gcd_succ`](71-axiom-free-official-nat-gcd-succ.md).
 
-Next compose the remaining six planned gcd/divisibility support theorems and
-reconstruct this exact official target statement. Same-name reuse, quotient
-assumptions, and unproved computation equations remain forbidden.
+All seven planned support roots now compose together; see
+[Official Fibonacci coprimality support surface](72-official-fibonacci-support-surface.md).
+Reconstruct this exact official target statement next. Same-name reuse,
+quotient assumptions, and unproved computation equations remain forbidden.
 
 Only after that bridge lets the target statement pass an ordinary kernel gate
 may Autogenesis issue a semantic theorem receipt and attempt the crash-safe fact

@@ -670,6 +670,91 @@ def validate_nat_gcd_succ_bridge(manifest: dict[str, Any]) -> None:
         raise PlanError("Nat.gcd successor bridge authority changed")
 
 
+def validate_fibonacci_support_surface(manifest: dict[str, Any]) -> None:
+    tracked = manifest["fibonacci_support_surface"]
+    manifest_path = pathlib.Path(tracked["manifest"])
+    pack_dir = manifest_path.parent
+    expected_files = {
+        "manifest.json",
+        "support-composition-replay.json",
+        "support-composition.json",
+    }
+    if (
+        sha256(manifest_path) != tracked["manifest_sha256"]
+        or stat.S_IMODE(pack_dir.stat().st_mode) != 0o555
+        or {path.name for path in pack_dir.iterdir()} != expected_files
+        or any(
+            stat.S_IMODE((pack_dir / name).stat().st_mode) != 0o444
+            for name in expected_files
+        )
+    ):
+        raise PlanError("Fibonacci support-surface pack changed or is mutable")
+    external = load(manifest_path)
+    result = external["result"]
+    result_path = pack_dir / result["path"]
+    replay_path = pack_dir / result["replay_path"]
+    observed = load(result_path)
+    support = observed["dvd_gcd_frontier"]
+    if (
+        external.get("schema_version") != 1
+        or external.get("kind")
+        != "axeyum-lean430-fibonacci-coprimality-support-surface-pack"
+        or external.get("repository_commit") != tracked["implementation_commit"]
+        or external.get("lean_version") != manifest["source"]["lean_version"]
+        or external.get("lean_githash") != manifest["source"]["lean_githash"]
+        or external["inputs"]["gcd_bridge_manifest_sha256"]
+        != manifest["nat_gcd_succ_bridge"]["manifest_sha256"]
+        or sha256(pathlib.Path(external["inputs"]["gcd_bridge_manifest"]))
+        != external["inputs"]["gcd_bridge_manifest_sha256"]
+        or external["inputs"]["nat_mod_invariant_sha256"]
+        != manifest["nat_mod_invariant_pack"]["source_stream_sha256"]
+        or external["inputs"]["target_stream_sha256"]
+        != manifest["source"]["stream_sha256"]
+        or external["implementation"]["path"]
+        != "crates/axeyum-lean-import/examples/nat_gcd_succ_specialization.rs"
+        or external["implementation"]["mode"] != "--all-support"
+        or git_blob_sha256(
+            tracked["implementation_commit"], external["implementation"]["path"]
+        )
+        != external["implementation"]["sha256"]
+        or result["sha256"] != tracked["result_sha256"]
+        or sha256(result_path) != result["sha256"]
+        or sha256(replay_path) != result["sha256"]
+        or result_path.read_bytes() != replay_path.read_bytes()
+        or result["bytes"] != result_path.stat().st_size
+        or result["lines"] != len(result_path.read_bytes().splitlines())
+        or result["roots"] != tracked["roots"]
+        or result["target_theorem_leaves"] != tracked["target_theorem_leaves"]
+        or result["source_closure"] != tracked["source_closure"]
+        or result["added_theorems"] != tracked["added_theorems"]
+        or result["added_definitions"] != tracked["added_definitions"]
+        or result["receipt_sha256"] != tracked["receipt_sha256"]
+        or result["axiom_footprints"] != tracked["axiom_footprints"]
+        or result["fresh_full_runs"] != tracked["fresh_full_runs"]
+        or not result["byte_identical_replay"]
+        or support["outcome"] != "composed"
+        or support["roots"] != tracked["roots"]
+        or support["target_theorem_leaves"] != tracked["target_theorem_leaves"]
+        or support["source_closure"] != tracked["source_closure"]
+        or support["added_theorems"] != tracked["added_theorems"]
+        or support["added_definitions"] != tracked["added_definitions"]
+        or support["receipt_sha256"] != tracked["receipt_sha256"]
+        or observed["proof_search_invocations"] != 0
+        or observed["ledger_writes"] != 0
+        or tracked["exact_target_theorem_admitted"]
+        or tracked["fact_status_changes"] != 0
+    ):
+        raise PlanError("Fibonacci support-surface identity or result changed")
+    if external["authority"] != {
+        "proof_search_invocations": 0,
+        "fact_status_changes": 0,
+        "evaluation_credit": 0,
+        "ledger_writes": 0,
+        "exact_target_theorem_admitted": False,
+    }:
+        raise PlanError("Fibonacci support-surface authority changed")
+
+
 def validate_native_fib_composition(manifest: dict[str, Any]) -> None:
     pack = manifest["native_fib_composition"]
     manifest_path = pathlib.Path(pack["manifest"])
@@ -923,7 +1008,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or manifest.get("kind")
         != "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan"
         or manifest.get("state")
-        != "official-gcd-succ-and-dvd-gcd-composed-full-target-theorem-pending"
+        != "official-support-surface-composed-exact-target-theorem-pending"
     ):
         raise PlanError("manifest identity changed")
     source = manifest["source"]
@@ -1020,7 +1105,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or manifest["proof_plan"]["required_present_in_import"] != []
         or manifest["proof_plan"]["already_present_in_import"] != ["Nat.rec"]
         or manifest["proof_plan"]["next_action"]
-        != "compose the remaining six planned native gcd/divisibility support theorems over the new axiom-free official Nat.gcd_succ leaf, then independently reconstruct the exact r082 Fibonacci-coprimality target"
+        != "reuse the fully composed official support surface and independently reconstruct the exact r082 Fibonacci-coprimality target; only then issue a semantic receipt and attempt the crash-safe fact transition"
         or probe["imported_division_declaration_names"] != expected_division_names
         or observation["source"]["imported_division_declaration_names"]
         != expected_division_names
@@ -1335,6 +1420,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
     validate_nat_mod_invariant_pack(manifest)
     validate_nat_gcd_target_leaf_frontier(manifest)
     validate_nat_gcd_succ_bridge(manifest)
+    validate_fibonacci_support_surface(manifest)
     validate_native_fib_composition(manifest)
     validate_native_fib_coprimality(manifest)
     return manifest
@@ -1348,7 +1434,7 @@ def main() -> int:
             f"required={len(manifest['proof_plan']['required_native_declarations'])}|"
             "present=0|exact=11|"
             "compatible=Nat.mod_lt,Acc,Nat.dvd_mod_iff,Nat.gcd_succ,Nat.dvd_gcd|"
-            "next=remaining-gcd-support-then-exact-target|"
+            "next=exact-r082-fibonacci-target|"
             "submissions=52|native_submissions=2|evaluation=0|writes=0"
         )
         return 0

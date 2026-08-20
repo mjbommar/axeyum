@@ -28,6 +28,8 @@ cargo run -p axeyum-lean-import --example nat_fib_native_definition_probe -- \
   r082.ndjson
 cargo run -p axeyum-lean-import --example nat_gcd_succ_specialization -- \
   nat-mod-invariant.ndjson r082.ndjson nat-gcd-bridge.ndjson
+cargo run -p axeyum-lean-import --example nat_gcd_succ_specialization -- \
+  nat-mod-invariant.ndjson r082.ndjson nat-gcd-bridge.ndjson --all-support
 ```
 
 Autogenesis statement inputs use the stronger proof-isolated adapter boundary:

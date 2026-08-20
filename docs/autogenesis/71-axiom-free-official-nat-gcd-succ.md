@@ -94,7 +94,8 @@ python3 -m unittest \
 
 ## Next
 
-Compose the remaining six required gcd/divisibility support theorems over this
-new target, then reconstruct the exact official r082 Fibonacci-coprimality
-statement. A semantic theorem receipt and fact-ledger transition remain
-forbidden until that exact target passes an ordinary kernel gate.
+The remaining six required roots now compose together with `Nat.dvd_gcd`; see
+[Official Fibonacci coprimality support surface](72-official-fibonacci-support-surface.md).
+Reconstruct the exact official r082 Fibonacci-coprimality statement next. A
+semantic theorem receipt and fact-ledger transition remain forbidden until
+that exact target passes an ordinary kernel gate.

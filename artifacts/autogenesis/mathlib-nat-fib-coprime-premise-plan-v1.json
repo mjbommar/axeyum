@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "kind": "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan",
-  "state": "official-gcd-succ-and-dvd-gcd-composed-full-target-theorem-pending",
+  "state": "official-support-surface-composed-exact-target-theorem-pending",
   "target": {
     "fact_id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
     "source_name": "Nat.fib_coprime_fib_succ",
@@ -263,6 +263,32 @@
     "fact_status_changes": 0,
     "ledger_writes": 0
   },
+  "fibonacci_support_surface": {
+    "manifest": "/nas3/data/axeyum/autogenesis/reference-packs/9e83ab67a-lean430-fibonacci-support-surface-v1/manifest.json",
+    "manifest_sha256": "ed9f461b8f36018b91fa865e7b552bd06e3fcc438f08655ec2c3cbc2a793b16c",
+    "implementation_commit": "9e83ab67a659ad0de760678c752ac238b3a5247e",
+    "result_sha256": "a015fcfa54805ce5e989447cab240e33b36cbb98103f073e61f476a6fe763ff0",
+    "roots": [
+      "Nat.add_comm",
+      "Nat.dvd_add_iff_right",
+      "Nat.dvd_gcd",
+      "Nat.eq_one_of_dvd_one",
+      "Nat.gcd_dvd_left",
+      "Nat.gcd_dvd_right",
+      "Nat.gcd_zero_left"
+    ],
+    "target_theorem_leaves": ["Nat.dvd_mod_iff", "Nat.mod_lt", "Nat.gcd_succ"],
+    "source_closure": 92,
+    "added_theorems": 14,
+    "added_definitions": 4,
+    "receipt_sha256": "c4cedfbc21119852cd885829601434015971582165103f2580f29ea4e677ec67",
+    "axiom_footprints": [],
+    "fresh_full_runs": 2,
+    "exact_target_theorem_admitted": false,
+    "proof_search_invocations": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
   "native_fib_composition": {
     "manifest": "/nas3/data/axeyum/autogenesis/reference-packs/91d7df736-lean430-native-fib-composition-v1/manifest.json",
     "manifest_sha256": "b797f5876ca3d033a5e58424573a774e3cad1af6dc9723059555a779d3028877",
@@ -499,7 +525,7 @@
     ],
     "required_present_in_import": [],
     "already_present_in_import": ["Nat.rec"],
-    "next_action": "compose the remaining six planned native gcd/divisibility support theorems over the new axiom-free official Nat.gcd_succ leaf, then independently reconstruct the exact r082 Fibonacci-coprimality target"
+    "next_action": "reuse the fully composed official support surface and independently reconstruct the exact r082 Fibonacci-coprimality target; only then issue a semantic receipt and attempt the crash-safe fact transition"
   },
   "next_capability_sequence": [
     "bind existing imported logic and Nat declarations to reusable prelude handles",
@@ -511,9 +537,10 @@
     "retain explicit target-owned theorem leaves only after type compatibility, empty target footprint, exact reachability, and receipt replay",
     "replace the quotient-bearing official Nat.gcd successor equation with a target-specific pointwise fuel proof and independently specialize it over the axiom-free Nat.mod_lt target theorem",
     "compose Nat.dvd_gcd over the new Nat.gcd_succ target leaf and retain its replayable empty-footprint receipt",
+    "compose all seven planned gcd/divisibility support roots together over the checked target leaves and replay the resulting 92-declaration closure",
     "compose the exact imported Nat.fib definition and the admitted Nat.fib_add_two theorem into the axiom-free native Nat kernel in source dependency order",
     "retain the twice-reconstructed native Fibonacci coprimality theorem with its exact eight-theorem dependency set and empty footprint",
-    "compose the remaining required support and reconstruct the exact official r082 Nat.Coprime theorem before any receipt or ledger transition"
+    "reconstruct the exact official r082 Nat.Coprime theorem over the completed support surface before any receipt or ledger transition"
   ],
   "authority": {
     "partitions_inspected": ["train"],
@@ -525,5 +552,5 @@
     "ledger_writes": 0
   },
   "verification": "python3 scripts/check-autogenesis-nat-fib-coprime-premise-plan.py",
-  "limitations": "The bounded native Fibonacci-coprimality induction is independently kernel-accepted twice with an empty footprint and exactly the admitted recurrence plus seven planned native theorem dependencies. A target-specific pointwise fuel proof now reconstructs official Nat.gcd_succ without Quot.sound or propext, and Nat.dvd_gcd composes over that checked target leaf. The exact r082 Nat.Coprime theorem has not yet been reconstructed: six additional planned gcd/divisibility support theorems and the final target proof still require ordinary target-kernel gates. This does not authorize importing quotient assumptions, unchecked same-name definition transport, arbitrary recursive or mutual inductives, conflicting definitions, axioms, opaque declarations, recursor permutation, weakening definitional equality, issuing a theorem receipt, submitting the Fibonacci target, inspecting held-out data, writing the ledger, or establishing the fact."
+  "limitations": "The bounded native Fibonacci-coprimality induction is independently kernel-accepted twice with an empty footprint and exactly the admitted recurrence plus seven planned native theorem dependencies. A target-specific pointwise fuel proof reconstructs official Nat.gcd_succ without Quot.sound or propext. All seven planned gcd/divisibility roots now compose together over the checked official target leaves with empty added footprints and exact replay. The final proof term has not yet been reconstructed against the exact r082 Nat.Coprime goal. This does not authorize importing quotient assumptions, unchecked same-name definition transport, arbitrary recursive or mutual inductives, conflicting definitions, axioms, opaque declarations, recursor permutation, weakening definitional equality, issuing a theorem receipt, submitting the Fibonacci target, inspecting held-out data, writing the ledger, or establishing the fact."
 }
