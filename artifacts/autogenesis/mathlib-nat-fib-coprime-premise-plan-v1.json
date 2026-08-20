@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "kind": "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan",
-  "state": "exact-official-target-dependencies-preregistered-receipt-pending",
+  "state": "exact-official-semantic-receipt-issued-fact-transition-pending",
   "target": {
     "fact_id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
     "source_name": "Nat.fib_coprime_fib_succ",
@@ -368,6 +368,24 @@
     "evaluation_credit": 0,
     "ledger_writes": 0
   },
+  "fibonacci_semantic_receipt": {
+    "manifest": "/nas3/data/axeyum/autogenesis/reference-packs/169aab71b-exact-fibonacci-semantic-receipt-v1/manifest.json",
+    "manifest_sha256": "eb965a345686d349c9615199a7009730152edefdbf9c49d454bdb95e0c3b427e",
+    "implementation_commit": "169aab71b1f03a6b5af97d769f475e729dd81c0e",
+    "result_sha256": "70862ddfb6ce5e66e0320cb4f4e2bf54e4d33da31ece5b7cbe8484fc0e8a80cf",
+    "schema": "axeyum-checked-dependency-theorem-receipt-v1",
+    "receipt_sha256": "34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e",
+    "transitive_theorem_dependencies": 115,
+    "transitive_dependency_set_sha256": "fa08448a022db2ba1fdd4226979a86854e561888658801d295f4dba0dc3ef84e",
+    "fresh_full_reconstructions": 2,
+    "kernel_submissions": 2,
+    "receipt_reissued_exactly": true,
+    "axiom_footprint": [],
+    "semantic_theorem_receipts_issued": 1,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
   "native_fib_composition": {
     "manifest": "/nas3/data/axeyum/autogenesis/reference-packs/91d7df736-lean430-native-fib-composition-v1/manifest.json",
     "manifest_sha256": "b797f5876ca3d033a5e58424573a774e3cad1af6dc9723059555a779d3028877",
@@ -604,7 +622,7 @@
     ],
     "required_present_in_import": [],
     "already_present_in_import": ["Nat.rec"],
-    "next_action": "issue and independently replay one dependency-bound semantic theorem receipt from the preregistered exact official authority, then attempt the crash-safe fact transition"
+    "next_action": "register an exact receipt-consuming admission operation and execute the ordinary crash-safe prepare, apply, event-replay, fact-replay, and child-readiness transaction"
   },
   "next_capability_sequence": [
     "bind existing imported logic and Nat declarations to reusable prelude handles",
@@ -630,9 +648,11 @@
     "kernel_submissions": 52,
     "exact_target_kernel_submissions": 4,
     "authority_audit_kernel_submissions": 4,
+    "receipt_kernel_submissions": 2,
+    "semantic_theorem_receipts_issued": 1,
     "evaluation_credit": 0,
     "ledger_writes": 0
   },
   "verification": "python3 scripts/check-autogenesis-nat-fib-coprime-premise-plan.py",
-  "limitations": "The exact official r082 Fibonacci-coprimality theorem is independently reconstructed in two fresh full executions, with two fresh admissions per execution, an empty footprint, and exactly the authored recurrence plus seven planned theorem dependencies. A second pair of full executions preregisters every direct premise by name and canonical declaration identity without issuing a receipt. This proves and freezes the checked candidate and its intended library basis, but does not itself issue the dependency-bound semantic theorem receipt or authorize evaluation credit. It does not authorize importing quotient assumptions, unchecked same-name definition transport, arbitrary recursive or mutual inductives, conflicting definitions, axioms, opaque declarations, recursor permutation, weakening definitional equality, inspecting held-out data, writing the ledger, or establishing the fact before receipt replay and the crash-safe transaction."
+  "limitations": "The exact official r082 Fibonacci-coprimality theorem has one dependency-bound semantic receipt reissued identically from two fresh full reconstructions. It binds the exact target, candidate, operation, budget, eight direct premise identities, 115 transitive diagnostic theorem identities, and an empty complete axiom footprint. This is checked candidate evidence, not ledger admission: no fact status, evaluation credit, or durable ledger state has changed. It does not authorize importing quotient assumptions, unchecked same-name definition transport, arbitrary recursive or mutual inductives, conflicting definitions, axioms, opaque declarations, recursor permutation, weakening definitional equality, inspecting held-out data, or establishing the fact outside the exact registered receipt-consuming crash-safe transaction."
 }

@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** The exact official Lean 4.30 `Nat.fib_coprime_fib_succ` theorem reconstructs against the frozen r082 goal with an empty footprint and exactly eight direct theorem premises. ADR-0534 preserves the zero-dependency receipt and adds a separate library-theorem receipt whose direct premises must be preregistered by sorted name and canonical declaration identity. Two fresh full authority audits agree byte-for-byte on all eight identities; the dependency-set digest and zero-credit boundary are sealed in the read-only `b55bc977e` pack. No semantic theorem receipt, fact transition, evaluation credit, or ledger write has occurred.
+**Status:** The exact official Lean 4.30 `Nat.fib_coprime_fib_succ` theorem now has dependency-bound semantic receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, independently reissued from two fresh complete target reconstructions. It binds the frozen source, candidate, target, operation and budget; all eight preregistered direct premise identities; 115 replayed transitive diagnostic identities; and an empty complete axiom footprint. The byte-identical observations and zero-credit boundary are sealed in the read-only `169aab71b` pack. No fact transition, evaluation credit, or ledger write has occurred.
 
-**Next:** issue the dependency-bound semantic theorem receipt from one fresh exact reconstruction and reissue it identically from another using only the preregistered target, proof, declaration, source, operation, budget, and eight premise identities. Then use only that checked receipt to attempt the ordinary crash-safe fact transition. Do not treat theorem admission or authority audit alone as ledger authority or inspect held-out data.
+**Next:** register one exact operation that consumes only the sealed dependency-bound receipt and its frozen source/candidate authority, then execute the ordinary crash-safe prepare, apply, event replay, settled-fact replay, and derived child-readiness checks. Do not mutate the fact from the receipt issuer, skip transaction recovery, or inspect held-out data.
 
 <!-- plan-section: landed-changes -->
 
@@ -40,3 +40,4 @@
 | 2026-08-20 | `d12736b63` | Exact official Fibonacci coprimality reconstructs four times with an empty footprint and sealed deterministic evidence |
 | 2026-08-20 | `b44bf0ecb` | Dependency-bound theorem receipts require exact sorted premise names and canonical declaration identities |
 | 2026-08-20 | `b55bc977e` | Two fresh full audits preregister the exact eight-premise authority for the official Fibonacci receipt |
+| 2026-08-20 | `169aab71b` | Two fresh official reconstructions issue and replay one exact dependency-bound Fibonacci theorem receipt |

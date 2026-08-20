@@ -71,7 +71,7 @@ python3 scripts/check-autogenesis-nat-fib-coprime-premise-plan.py
 
 ## Next
 
-Use exactly this dependency set with the sealed candidate identities to issue
-the dependency-bound semantic theorem receipt in one fresh reconstruction and
-reissue it identically in another. Only the resulting checked receipt may be
-registered as evidence for the separate crash-safe fact transaction.
+The dependency-bound receipt now issues and replays exactly; see
+[Exact Fibonacci semantic receipt](75-exact-fibonacci-semantic-receipt.md).
+Only that checked receipt may now be registered as evidence for the separate
+crash-safe fact transaction.

@@ -1038,6 +1038,199 @@ def validate_fibonacci_receipt_authority(manifest: dict[str, Any]) -> None:
         raise PlanError("Fibonacci receipt-authority boundary changed")
 
 
+def validate_fibonacci_semantic_receipt(manifest: dict[str, Any]) -> None:
+    tracked = manifest["fibonacci_semantic_receipt"]
+    manifest_path = pathlib.Path(tracked["manifest"])
+    pack_dir = manifest_path.parent
+    expected_files = {
+        "manifest.json",
+        "semantic-receipt-replay.json",
+        "semantic-receipt.json",
+    }
+    if (
+        sha256(manifest_path) != tracked["manifest_sha256"]
+        or stat.S_IMODE(pack_dir.stat().st_mode) != 0o555
+        or {path.name for path in pack_dir.iterdir()} != expected_files
+        or any(stat.S_IMODE(path.stat().st_mode) != 0o444 for path in pack_dir.iterdir())
+    ):
+        raise PlanError("Fibonacci semantic-receipt pack changed or is mutable")
+
+    external = load(manifest_path)
+    inputs = external["inputs"]
+    result = external["result"]
+    result_path = pack_dir / result["path"]
+    replay_path = pack_dir / result["replay_path"]
+    observed = load(result_path)
+    exact = observed["dvd_gcd_frontier"]["exact_target"]
+    receipt = exact["semantic_theorem_receipt"]
+    receipt_authority = receipt["authority"]
+    receipt_theorem = receipt["theorem"]
+    receipt_dependencies = receipt["dependencies"]
+    unsigned_receipt = dict(receipt)
+    claimed_receipt_sha256 = unsigned_receipt.pop("receipt_sha256")
+    computed_receipt_sha256 = hashlib.sha256(
+        json.dumps(unsigned_receipt, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    transitive = receipt_dependencies["transitive_theorems"]
+    transitive_payload = (
+        json.dumps(transitive, sort_keys=True, separators=(",", ":")) + "\n"
+    ).encode()
+    implementation_paths = {
+        "crates/axeyum-lean-import/examples/nat_gcd_succ_specialization.rs",
+        "crates/axeyum-lean-import/src/checked_theorem_receipt.rs",
+        "crates/axeyum-lean-import/src/lib.rs",
+    }
+    direct_dependencies = manifest["fibonacci_receipt_authority"][
+        "direct_theorem_dependencies"
+    ]
+    if (
+        external.get("schema_version") != 1
+        or external.get("kind")
+        != "axeyum-exact-fibonacci-semantic-theorem-receipt-pack"
+        or external.get("repository_commit") != tracked["implementation_commit"]
+        or {row["path"] for row in external["implementation"]}
+        != implementation_paths
+        or any(
+            git_blob_sha256(tracked["implementation_commit"], row["path"])
+            != row["sha256"]
+            for row in external["implementation"]
+        )
+        or inputs["exact_candidate_manifest_sha256"]
+        != manifest["exact_fibonacci_coprimality"]["manifest_sha256"]
+        or sha256(pathlib.Path(inputs["exact_candidate_manifest"]))
+        != inputs["exact_candidate_manifest_sha256"]
+        or inputs["candidate_observation_sha256"]
+        != manifest["exact_fibonacci_coprimality"]["result_sha256"]
+        or inputs["receipt_authority_manifest_sha256"]
+        != manifest["fibonacci_receipt_authority"]["manifest_sha256"]
+        or sha256(pathlib.Path(inputs["receipt_authority_manifest"]))
+        != inputs["receipt_authority_manifest_sha256"]
+        or inputs["target_stream_sha256"] != manifest["source"]["stream_sha256"]
+        or result["sha256"] != tracked["result_sha256"]
+        or sha256(result_path) != result["sha256"]
+        or sha256(replay_path) != result["sha256"]
+        or result_path.read_bytes() != replay_path.read_bytes()
+        or result_path.stat().st_size != result["bytes"]
+        or len(result_path.read_bytes().splitlines()) != result["lines"]
+        or observed.get("kind")
+        != "axeyum-exact-fibonacci-dependency-theorem-receipt"
+        or exact["target"] != manifest["exact_fibonacci_coprimality"]["name"]
+        or exact["target_goal_sha256"]
+        != manifest["exact_fibonacci_coprimality"]["target_goal_sha256"]
+        or exact["proof_sha256"]
+        != manifest["exact_fibonacci_coprimality"]["proof_sha256"]
+        or exact["target_declaration_sha256"]
+        != manifest["exact_fibonacci_coprimality"]["declaration_sha256"]
+        or exact["target_axiom_footprint"] != []
+        or exact["candidate_observation_sha256"]
+        != manifest["exact_fibonacci_coprimality"]["result_sha256"]
+        or exact["receipt_authority_manifest_sha256"]
+        != manifest["fibonacci_receipt_authority"]["manifest_sha256"]
+    ):
+        raise PlanError("Fibonacci semantic-receipt identity or result changed")
+
+    if (
+        receipt.get("schema_version") != tracked["schema"]
+        or result["receipt_schema"] != tracked["schema"]
+        or claimed_receipt_sha256 != tracked["receipt_sha256"]
+        or result["receipt_sha256"] != tracked["receipt_sha256"]
+        or computed_receipt_sha256 != tracked["receipt_sha256"]
+        or receipt_authority["policy_version"]
+        != external["authority"]["policy_version"]
+        or receipt_authority["source_artifact_sha256"]
+        != manifest["source"]["stream_sha256"]
+        or receipt_authority["target_definition"]
+        != manifest["exact_fibonacci_coprimality"]["target_definition"]
+        or receipt_authority["fact_id"] != manifest["target"]["fact_id"]
+        or receipt_authority["goal_sha256"]
+        != manifest["exact_fibonacci_coprimality"]["target_goal_sha256"]
+        or receipt_authority["candidate_observation_sha256"]
+        != manifest["exact_fibonacci_coprimality"]["result_sha256"]
+        or receipt_authority["expected_proof_sha256"]
+        != manifest["exact_fibonacci_coprimality"]["proof_sha256"]
+        or receipt_authority["expected_theorem_content_sha256"]
+        != manifest["exact_fibonacci_coprimality"]["declaration_sha256"]
+        or receipt_authority["operation"] != external["authority"]["operation"]
+        or receipt_authority["budget"]
+        != {
+            "max_plan_templates": 1,
+            "max_kernel_submissions": 2,
+            "max_executor_invocations": 1,
+            "max_retries": 0,
+        }
+        or receipt_authority["expected_direct_theorem_dependencies"]
+        != direct_dependencies
+        or receipt_theorem["name"]
+        != manifest["exact_fibonacci_coprimality"]["name"]
+        or receipt_theorem["content_sha256"]
+        != manifest["exact_fibonacci_coprimality"]["declaration_sha256"]
+        or receipt_theorem["type_sha256"]
+        != manifest["exact_fibonacci_coprimality"]["target_goal_sha256"]
+        or receipt_theorem["proof_sha256"]
+        != manifest["exact_fibonacci_coprimality"]["proof_sha256"]
+        or receipt["axiom_footprint"] != []
+        or receipt_dependencies["direct_theorems"] != direct_dependencies
+        or result["direct_theorem_dependencies"] != len(direct_dependencies)
+        or result["dependency_set_sha256"]
+        != manifest["fibonacci_receipt_authority"]["dependency_set_sha256"]
+        or len(transitive) != tracked["transitive_theorem_dependencies"]
+        or result["transitive_theorem_dependencies"]
+        != tracked["transitive_theorem_dependencies"]
+        or hashlib.sha256(transitive_payload).hexdigest()
+        != tracked["transitive_dependency_set_sha256"]
+        or result["transitive_dependency_set_sha256"]
+        != tracked["transitive_dependency_set_sha256"]
+    ):
+        raise PlanError("Fibonacci semantic theorem receipt changed")
+
+    expected_assurance = {
+        "fresh_full_reconstructions": 2,
+        "target_theorem_submissions": 2,
+        "receipt_reissued_exactly": True,
+        "axiom_footprint": [],
+        "direct_theorem_dependencies": direct_dependencies,
+        "proof_search_invocations": 0,
+    }
+    expected_observed_authority = {
+        "held_out_inspected": False,
+        "semantic_theorem_receipts_issued": 1,
+        "fact_status_changes": 0,
+        "evaluation_credit": 0,
+        "ledger_writes": 0,
+    }
+    expected_external_authority = {
+        "policy_version": "nat-fib-coprime-official-receipt-v1",
+        "operation": "official-fibonacci-coprimality-induction-v1",
+        "max_plan_templates": 1,
+        "max_kernel_submissions": 2,
+        "max_executor_invocations": 1,
+        "max_retries": 0,
+        "held_out_inspected": False,
+        "proof_search_invocations": 0,
+        "semantic_theorem_receipts_issued": 1,
+        "fact_status_changes": 0,
+        "evaluation_credit": 0,
+        "ledger_writes": 0,
+    }
+    if (
+        exact["assurance"] != expected_assurance
+        or exact["authority"] != expected_observed_authority
+        or external["authority"] != expected_external_authority
+        or result["fresh_full_reconstructions"]
+        != tracked["fresh_full_reconstructions"]
+        or result["target_theorem_submissions"] != tracked["kernel_submissions"]
+        or result["receipt_reissued_exactly"] is not True
+        or result["axiom_footprint"] != []
+        or tracked["semantic_theorem_receipts_issued"] != 1
+        or tracked["fact_status_changes"] != 0
+        or tracked["evaluation_credit"] != 0
+        or tracked["ledger_writes"] != 0
+        or observed["proof_search_invocations"] != 0
+        or observed["ledger_writes"] != 0
+    ):
+        raise PlanError("Fibonacci semantic-receipt authority changed")
+
+
 def validate_native_fib_composition(manifest: dict[str, Any]) -> None:
     pack = manifest["native_fib_composition"]
     manifest_path = pathlib.Path(pack["manifest"])
@@ -1291,7 +1484,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or manifest.get("kind")
         != "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan"
         or manifest.get("state")
-        != "exact-official-target-dependencies-preregistered-receipt-pending"
+        != "exact-official-semantic-receipt-issued-fact-transition-pending"
     ):
         raise PlanError("manifest identity changed")
     source = manifest["source"]
@@ -1388,7 +1581,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or manifest["proof_plan"]["required_present_in_import"] != []
         or manifest["proof_plan"]["already_present_in_import"] != ["Nat.rec"]
         or manifest["proof_plan"]["next_action"]
-        != "issue and independently replay one dependency-bound semantic theorem receipt from the preregistered exact official authority, then attempt the crash-safe fact transition"
+        != "register an exact receipt-consuming admission operation and execute the ordinary crash-safe prepare, apply, event-replay, fact-replay, and child-readiness transaction"
         or probe["imported_division_declaration_names"] != expected_division_names
         or observation["source"]["imported_division_declaration_names"]
         != expected_division_names
@@ -1696,6 +1889,8 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         "kernel_submissions": 52,
         "exact_target_kernel_submissions": 4,
         "authority_audit_kernel_submissions": 4,
+        "receipt_kernel_submissions": 2,
+        "semantic_theorem_receipts_issued": 1,
         "evaluation_credit": 0,
         "ledger_writes": 0,
     }:
@@ -1708,6 +1903,7 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
     validate_fibonacci_support_surface(manifest)
     validate_exact_fibonacci_coprimality(manifest)
     validate_fibonacci_receipt_authority(manifest)
+    validate_fibonacci_semantic_receipt(manifest)
     validate_native_fib_composition(manifest)
     validate_native_fib_coprimality(manifest)
     return manifest
@@ -1721,8 +1917,8 @@ def main() -> int:
             f"required={len(manifest['proof_plan']['required_native_declarations'])}|"
             "present=0|exact=11|"
             "compatible=Nat.mod_lt,Acc,Nat.dvd_mod_iff,Nat.gcd_succ,Nat.dvd_gcd|"
-            "next=issue-dependency-receipt|"
-            "submissions=52|native_submissions=2|exact_submissions=4|authority_submissions=4|evaluation=0|writes=0"
+            "next=receipt-bound-fact-transition|"
+            "submissions=52|native_submissions=2|exact_submissions=4|authority_submissions=4|receipt_submissions=2|receipts=1|evaluation=0|writes=0"
         )
         return 0
     except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError, PlanError) as error:

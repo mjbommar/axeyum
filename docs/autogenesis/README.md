@@ -171,6 +171,7 @@ compounding, not automation theatre.
 | [Official Fibonacci coprimality support surface](72-official-fibonacci-support-surface.md) | Do all seven preregistered native dependencies compose together over the checked official gcd leaves, leaving only the exact target theorem? |
 | [Exact official Fibonacci coprimality](73-exact-official-fibonacci-coprimality.md) | Does the exact frozen r082 theorem pass ordinary kernel admission twice per run with an empty footprint, and what authority still precedes ledger credit? |
 | [Fibonacci receipt authority](74-fibonacci-receipt-authority.md) | Which exact library-premise identities may the semantic receipt authorize, and how are they frozen before issuance? |
+| [Exact Fibonacci semantic receipt](75-exact-fibonacci-semantic-receipt.md) | Did two fresh complete official reconstructions issue one identical dependency-bound receipt, and which transaction boundary still keeps the fact open? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
