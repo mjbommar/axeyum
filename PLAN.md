@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-20 | `783006fcd` | Added an exact two-prime Galois/Ramanujan orbit trace decomposition, refuted one-unit orbit and coefficient-four order-layer bounds, and retained the connected cross-order target. |
 | 2026-08-20 | `0a459d914` | Made the exact Hayes root-number audit fail closed with a quadratic work-cell admission and checked the primitive functional equation coefficient by coefficient. |
 | 2026-08-20 | `8b07f7a45` | Added exact integral cyclotomic Hayes L-polynomials and proved that every pinned primitive root-number fibre contains distinct endpoint power sums, rejecting root-number-only Gauss control. |
 | 2026-08-20 | `726bd8411` | Audited the 2026 function-field Linnik--Selberg input at equation level and rejected its varying-modulus average as a substitute for the fixed-wild-modulus, Möbius-weighted endpoint sum. |
@@ -792,6 +793,18 @@ obstruction grants no Lemire theorem credit.  The same audit now checks the
 coefficientwise primitive functional equation exactly and prices its direct
 enumeration as `4^level` work cells, declining before allocation when the
 caller's explicit ceiling is exceeded.
+The full character data now also has an exact Galois/Ramanujan decomposition.
+Odd powering partitions every primitive conductor family into rational
+cyclotomic orbits; two NTT primes reconstruct each integral orbit trace, and
+exact-order regrouping independently recovers the conductor layer.  The
+one-Weil-unit orbit target is refuted at `(j,n)=(7,15)`, where 18 of 28 orbits
+violate it and the maximum is `1696>256`.  Delaying absolute values until
+exact character order helps but does not give a fixed small constant: the
+`(11,24)` order layer `663552` needs coefficient 17 relative to
+`(j-1)2^ceil(n/2)`.  Both endpoint parities are pinned through level 12.
+Thus a viable order-layer theorem must expose and ledger its conductor growth,
+or cancellation must remain across character orders inside the selected
+connected Carlitz trace; no theorem credit moves.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
