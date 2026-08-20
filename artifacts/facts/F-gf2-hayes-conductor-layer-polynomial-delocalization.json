@@ -24,5 +24,5 @@
     "established_by": "not established in this ledger",
     "source": "Axeyum gf2-lemire lane; corrected conductor martingale reduction after the absolute-constant recurrence obstruction"
   },
-  "notes": "This is the corrected open SUP-L target. The individual Weil triangle bound proves it whenever 2^(j-1)<=4 ell^4, so only levels above about 4 log2(ell) remain new. The native implication derives M_4 <= 2500 ell^8 2^(3ell) and checks the proper-power-aware finite handoff at degrees 401 and 402. The exact finite diagnostic is useful for falsification but cannot establish the quantified statement. No Autogenesis operation is registered because no universal checker exists."
+  "notes": "This is a valid sufficient SUP-L target, but ADR-0570 no longer selects it: at the top conductor it asks roughly one extra factor ell of saving compared with the Haar-triangle TOP-POLY fact. The individual Weil triangle bound proves it whenever 2^(j-1)<=4 ell^4. The native implication derives M_4 <= 2500 ell^8 2^(3ell) and checks the proper-power-aware finite handoff at degrees 401 and 402. The exact finite diagnostic is useful for falsification but cannot establish the quantified statement. No Autogenesis operation is registered because no universal checker exists."
 }

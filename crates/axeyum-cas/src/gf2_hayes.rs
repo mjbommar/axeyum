@@ -5132,6 +5132,28 @@ pub struct PopulationRefinementHybridImplication {
     pub candidate_target_numerator: BigUint,
 }
 
+/// Exact Haar-triangle implication of a polynomial saving over Weil only in
+/// the top conductor window.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PopulationRefinementTopPolynomialImplication {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// Endpoint degree `2ell+1` or `2ell+2`.
+    pub degree: usize,
+    /// First level on which the top-polynomial assumption is used.
+    pub first_top_level: usize,
+    /// Number of levels in the assumed top window.
+    pub top_level_count: usize,
+    /// Common integer denominator used to compare the triangle contributions.
+    pub common_denominator: usize,
+    /// Scaled contribution of the proved individual-Weil low levels.
+    pub low_weil_scaled_numerator: BigUint,
+    /// Scaled contribution of the assumed top-polynomial levels.
+    pub top_polynomial_scaled_numerator: BigUint,
+    /// Scaled target `common_denominator * 2^(2ell)`.
+    pub candidate_target_scaled_numerator: BigUint,
+}
+
 /// Symbolic implication from one connected top-conductor trace bound.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PopulationRefinementConnectedTopImplication {
@@ -5213,6 +5235,16 @@ impl PopulationRefinementHybridImplication {
     pub fn proves_candidate_discrepancy_bound(&self) -> bool {
         &self.weil_triangle_numerator + &self.square_root_fibre_triangle_numerator
             <= self.candidate_target_numerator
+    }
+}
+
+impl PopulationRefinementTopPolynomialImplication {
+    /// Whether the proved low part and assumed top part close the endpoint
+    /// Haar triangle.
+    #[must_use]
+    pub fn proves_candidate_discrepancy_bound(&self) -> bool {
+        &self.low_weil_scaled_numerator + &self.top_polynomial_scaled_numerator
+            <= self.candidate_target_scaled_numerator
     }
 }
 
@@ -5365,6 +5397,93 @@ pub fn population_refinement_hybrid_implication(
     Err(HayesError::Invariant(
         "full square-root-fibre envelope did not close the endpoint".to_owned(),
     ))
+}
+
+/// Substitute the residual top-conductor polynomial saving into the exact
+/// Haar triangle.
+///
+/// On the top window
+///
+/// ```text
+/// ell - 4 ceil(log2 ell) <= j <= ell
+/// ```
+///
+/// the sole assumption is the integer inequality
+///
+/// ```text
+/// (12 ell H_j^*)^2 <= 25 (j-1)^2 2^degree.          (TOP-POLY)
+/// ```
+///
+/// Equivalently, `H_j^* <= (j-1) 2^(degree/2)/(2.4 ell)`.  Below that
+/// window the operation uses the proved individual-character Weil estimate.
+/// For odd degree, `sqrt(2)<3/2` converts both contributions to rational
+/// integer upper bounds; no floating-point comparison is used.  The report
+/// proves only this arithmetic implication, not `(TOP-POLY)` itself.
+///
+/// # Errors
+///
+/// Rejects `ell<200`, a non-endpoint degree, or host-width overflow.
+pub fn population_refinement_top_polynomial_implication(
+    ell: usize,
+    degree: usize,
+) -> Result<PopulationRefinementTopPolynomialImplication, HayesError> {
+    let doubled = ell.checked_mul(2).ok_or_else(|| {
+        HayesError::InvalidParameter("top-polynomial refinement ell overflow".to_owned())
+    })?;
+    if ell < 200 || !matches!(degree.checked_sub(doubled), Some(1 | 2)) {
+        return Err(HayesError::InvalidParameter(
+            "top-polynomial implication requires ell>=200 and degree=2ell+1 or 2ell+2".to_owned(),
+        ));
+    }
+    let ceil_log = ell.ilog2() as usize + usize::from(!ell.is_power_of_two());
+    let top_width = 4_usize
+        .checked_mul(ceil_log)
+        .ok_or_else(|| HayesError::InvalidParameter("top-polynomial window overflow".to_owned()))?;
+    let first_top_level = ell.checked_sub(top_width).ok_or_else(|| {
+        HayesError::InvalidParameter("top-polynomial window underflow".to_owned())
+    })?;
+    if first_top_level == 0 {
+        return Err(HayesError::InvalidParameter(
+            "top-polynomial window reaches level zero".to_owned(),
+        ));
+    }
+
+    let odd_degree = !degree.is_multiple_of(2);
+    let common_denominator = if odd_degree {
+        8_usize.checked_mul(ell)
+    } else {
+        12_usize.checked_mul(ell)
+    }
+    .ok_or_else(|| {
+        HayesError::InvalidParameter("top-polynomial denominator overflow".to_owned())
+    })?;
+    let low_coefficient = 12_usize.checked_mul(ell).ok_or_else(|| {
+        HayesError::InvalidParameter("top-polynomial low coefficient overflow".to_owned())
+    })?;
+    let base_exponent = ell + usize::from(!odd_degree);
+    let mut low_weil_scaled_numerator = BigUint::from(0_u8);
+    let mut top_polynomial_scaled_numerator = BigUint::from(0_u8);
+    for level in 1..=ell {
+        let exponent = base_exponent.checked_add(level - 1).ok_or_else(|| {
+            HayesError::InvalidParameter("top-polynomial exponent overflow".to_owned())
+        })?;
+        let weighted = BigUint::from(level - 1) << exponent;
+        if level < first_top_level {
+            low_weil_scaled_numerator += BigUint::from(low_coefficient) * weighted;
+        } else {
+            top_polynomial_scaled_numerator += BigUint::from(5_u8) * weighted;
+        }
+    }
+    Ok(PopulationRefinementTopPolynomialImplication {
+        ell,
+        degree,
+        first_top_level,
+        top_level_count: ell + 1 - first_top_level,
+        common_denominator,
+        low_weil_scaled_numerator,
+        top_polynomial_scaled_numerator,
+        candidate_target_scaled_numerator: BigUint::from(common_denominator) << doubled,
+    })
 }
 
 /// Combine the proved low-conductor Weil bounds with one connected signed
@@ -18646,6 +18765,33 @@ mod tests {
                 &connected.connected_top_assumption_numerator * BigUint::from(50_641_u16)
             );
         }
+    }
+
+    #[test]
+    fn top_polynomial_refinement_closes_the_finite_handoff() {
+        let odd = population_refinement_top_polynomial_implication(200, 401).unwrap();
+        let even = population_refinement_top_polynomial_implication(200, 402).unwrap();
+        for report in [&odd, &even] {
+            assert_eq!(report.first_top_level, 168);
+            assert_eq!(report.top_level_count, 33);
+            assert!(report.low_weil_scaled_numerator > BigUint::from(0_u8));
+            assert!(report.top_polynomial_scaled_numerator > BigUint::from(0_u8));
+            assert!(report.proves_candidate_discrepancy_bound());
+        }
+        assert_eq!(odd.common_denominator, 1_600);
+        assert_eq!(even.common_denominator, 2_400);
+
+        for ell in 200_usize..=1_024 {
+            let ceil_log = ell.ilog2() as usize + usize::from(!ell.is_power_of_two());
+            for degree in [2 * ell + 1, 2 * ell + 2] {
+                let report = population_refinement_top_polynomial_implication(ell, degree).unwrap();
+                assert_eq!(report.first_top_level, ell - 4 * ceil_log);
+                assert_eq!(report.top_level_count, 4 * ceil_log + 1);
+                assert!(report.proves_candidate_discrepancy_bound());
+            }
+        }
+        assert!(population_refinement_top_polynomial_implication(199, 399).is_err());
+        assert!(population_refinement_top_polynomial_implication(200, 400).is_err());
     }
 
     #[test]

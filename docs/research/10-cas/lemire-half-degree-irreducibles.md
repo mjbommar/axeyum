@@ -3395,6 +3395,58 @@ rapidly with `j`.  Applying the individual Weil estimate inside (HF) proves
 
 or roughly `j>4log2(ell)+3`, remains genuinely open.
 
+That conductor-layer fourth-moment target is sufficient but is not the
+shortest route.  Repricing the already proved weighted Haar triangle removes
+one factor of `ell` from the required top-level saving.  In the ledger's
+original sibling notation
+
+```text
+H_j^* = max_b |N_j(b)-N_j(b(1+x^j))|,
+```
+
+the selected residual statement is now
+
+```text
+(TOP-POLY)  (12ell H_j^*)^2 <= 25(j-1)^2 2^n
+```
+
+only for
+
+```text
+ell-4ceil(log2 ell) <= j <= ell.                     (TW)
+```
+
+Thus the proved individual-Weil estimate needs improvement by only
+`12ell/5`, on `4ceil(log2 ell)+1` levels.  Below (TW), individual Weil is used
+unchanged.
+
+The implication is elementary and uniform.  Put `c=ceil(log2 ell)` and
+`a=ell-4c`.  If
+
+```text
+S_low = sum_(j<a) (j-1)2^(j-1),
+S_high = sum_(a<=j<=ell) (j-1)2^(j-1),
+```
+
+then `S_low<=ell 2^(ell-4c-1)<=2^ell/(2ell^3)` and
+`S_high<=ell 2^ell`.  At an odd endpoint, `sqrt(2)<3/2` bounds the scaled Haar
+triangle by
+
+```text
+2^ell ((3/2)S_low+(5/(8ell))S_high) < 2^(2ell).
+```
+
+At an even endpoint it is bounded by
+
+```text
+2^(ell+1) (S_low+(5/(12ell))S_high) < 2^(2ell).
+```
+
+Both strict inequalities follow already for `ell>=2`; the statement is used
+only after the certified `ell>=200` handoff.  The native
+`population_refinement_top_polynomial_implication` retains the exact scaled
+integers and checks both parities without floating point.
+
 `conductor_layer_sup_norm_diagnostic` records the exact rational squared
 constant required at each enumerated level, using only integer sibling
 differences.  `check_conductor_layer_sup_bound_sufficiency` separately checks
@@ -3409,9 +3461,10 @@ telescopes multiplicatively as
 ```
 
 which is retained as an invariant rather than mistaken for a bound.  The
-remaining load-bearing lemma is polynomial-loss `(SUP-L)` in the growing
-high-conductor range, most plausibly as a relative trace/purity statement for
-one exact conductor family.  See ADR-0569.
+remaining load-bearing lemma is `(TOP-POLY)`, a polynomial improvement over
+Weil on the moving top logarithmic window.  The stronger polynomial-loss
+`(SUP-L)` remains a valid sufficient premise but is no longer selected.  See
+ADR-0570.
 
 There is a weaker and better-connected target.  Lemire needs only the identity
 class, and along its path the weighted increments telescope.  Put

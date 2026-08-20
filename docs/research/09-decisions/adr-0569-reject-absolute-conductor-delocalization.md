@@ -1,6 +1,6 @@
 # ADR-0569: Reject absolute conductor delocalization
 
-Status: accepted
+Status: superseded by ADR-0570
 Date: 2026-08-20
 Index-summary: Refute the absolute SUP-L constant by exact endpoint recurrence and retain only a polynomial-loss high-conductor target
 
@@ -92,3 +92,5 @@ the independently certified degree-400 range.
 - The exact level-four counterexample is retained as a regression so bounded
   experiments cannot select the same false constant again.
 - The polynomial-loss statement remains open; no Lemire theorem is claimed.
+- ADR-0570 retains it as a sufficient condition but selects the strictly weaker
+  top-window Haar target for further proof work.
