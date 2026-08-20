@@ -265,6 +265,13 @@ entire separate-Weil envelope: at `ell=200` a proof must save exactly
 available Ito--Takeuchi--Tsushima Heisenberg theorem concerns a single
 quadratic `y^2-y=xR(x)` curve and a length-two Witt torsor, so it is not
 credited for this growing relative chain without a new checked reduction.
+The strongest such reduction is now refuted by an exact-conductor rather than
+whole-curve witness.  Supersingularity would force the degree-`2m` trace to be
+divisible by `2^m`, but the native level-ten degree-22 trace is `-5120`, with
+remainder `1024` modulo `2048`.  Thus the new layer itself cannot consist only
+of supersingular quadratic Heisenberg pieces; a useful argument must isolate a
+smaller cancelling subquotient or handle non-supersingular relative
+cohomology.
 The multi-minute endpoint
 sweep is now an explicit
 ignored, environment-selected research probe; the ordinary theorem gate keeps
@@ -276,6 +283,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-19 | `74c40427e` | Refuted a blanket supersingular decomposition of every new Carlitz conductor layer using the exact level-ten degree-22 trace-divisibility obstruction. |
 | 2026-08-19 | `7cb9c1ce3` | Identified the connected top-conductor trace with a relative Carlitz point trace, checked its Artin--Schreier tower and genus ledger, and quantified the exact linear saving still missing beyond relative Hasse--Weil. |
 | 2026-08-19 | `7582fbf7b` | Telescoped the identity path into one signed relative top-conductor trace, added a quarter-scale connected endpoint budget, and retained all cross-conductor cancellation before absolute values. |
 | 2026-08-19 | `9c146dcc9` | Combined exact-conductor Fourier inversion with the proved individual Weil bound, reducing the open square-root-fibre estimate from every level to only `ceil(log2 ell)+1` top conductor levels. |
