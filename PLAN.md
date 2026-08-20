@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-20 | `a38675b8f` | Expanded the fourth cumulant into exact positive fibre products and proved that the connected target is a signed virtual trace, not an off-diagonal point count. |
 | 2026-08-20 | `0b6d6d79a` | Proved that binary monomial power-sum characters cover at most the thin primitive quadratic sector and none of every even conductor layer. |
 | 2026-08-20 | `783006fcd` | Added an exact two-prime Galois/Ramanujan orbit trace decomposition, refuted one-unit orbit and coefficient-four order-layer bounds, and retained the connected cross-order target. |
 | 2026-08-20 | `0a459d914` | Made the exact Hayes root-number audit fail closed with a quadratic work-cell admission and checked the primitive functional equation coefficient by coefficient. |
@@ -815,6 +816,15 @@ primitive level contains none.  Thus the maximum eligible coverage is
 `32/1024` at level 11 and `0/2048` at level 12.  Gorodetsky--Kovaleva's
 monomial image/kernel identity cannot reach the full higher-Witt family or
 the connected fourth cumulant; the whole-family target remains unchanged.
+The complete fibre-product formulation is now exact and fail closed.  Raw
+`r`-fold characteristic-polynomial fibres give the positive counts
+`C_r=sum_e N_e^r` for `r=2,3,4`; centering and subtracting all three Wick
+pairings reconstructs the existing `M_2`, `M_4`, and `K_4` independently.
+The pinned `(9,19)` connected value is `-2086965956608`, proving that the live
+cumulant is a signed virtual Frobenius trace rather than an honest
+off-diagonal point count.  A geometric proof must control the centering
+complex and pairing projectors, or the equivalent conductor-Haar differences;
+irreducibility of only the raw fourfold fibre product is insufficient.
 Full definitions,
 proofs, controls, and literature record:
 `docs/research/10-cas/lemire-half-degree-irreducibles.md`.
