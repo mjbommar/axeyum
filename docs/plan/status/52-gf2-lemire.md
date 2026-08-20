@@ -279,6 +279,13 @@ exceeds the connected allowance squared by factors about `303.92` and
 The native ledger reports the exact moments, thresholds, and integral savings
 `304/633`; any next lemma must retain phase alignment rather than take an
 absolute square across the full character family.
+The dyadic auxiliary-unit projector proposed by the bridge audit is now a
+proved native CAS fact.  Over `(Z/8Z)^x=<3,5>`, all eight discriminant
+residues satisfy the exact four-phase projector, polarization
+`(-1)^(D u u')`, and the claimed radical classification.  This preserves the
+Möbius zero/sign cancellation in one quadratic Gauss object.  It still does
+not supply the larger joined fibre/valuation/Witt group law: the next
+fail-fast condition is additivity of the discriminant difference modulo four.
 The multi-minute endpoint
 sweep is now an explicit
 ignored, environment-selected research probe; the ordinary theorem gate keeps
@@ -290,6 +297,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-19 | `d56410d21` | Certified the exact dyadic auxiliary-unit quadratic projector, including its cyclotomic Gauss identity, polarization, radicals, and squareful-zero cancellation. |
 | 2026-08-19 | `786a16b5c` | Summed the exact top-conductor character second moments and showed that direct Cauchy loses factors 304/633 at the pinned endpoints, selecting a phase-preserving argument instead. |
 | 2026-08-19 | `74c40427e` | Refuted a blanket supersingular decomposition of every new Carlitz conductor layer using the exact level-ten degree-22 trace-divisibility obstruction. |
 | 2026-08-19 | `7cb9c1ce3` | Identified the connected top-conductor trace with a relative Carlitz point trace, checked its Artin--Schreier tower and genus ledger, and quantified the exact linear saving still missing beyond relative Hasse--Weil. |
