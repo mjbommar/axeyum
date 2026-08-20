@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-20 | `29f3c4d94` | Stopped the fixed modulo-eight endpoint route after the exact degree-55 counterexample `I_55(1)=4883944`, marked the universal congruence refuted, and returned theorem effort to an aggregate trace estimate. |
 | 2026-08-20 | `2233fa65f` | Re-aimed the odd endpoint at exact normalized two-adic traces, proved Carlitz 2-rank zero is insufficient for the required modulo-eight precision, and added exact primitive-character Newton polygons that isolate aggregate low-slope cancellation as the open lemma. |
 | 2026-08-20 | `3c332b648` | Replaced the overstrong characteristic-delta common-period target by the exact product of maximal-subfield differences, added charged native support witnesses and an independent field oracle, and retained universal nonvanishing as the explicit open lemma. |
 | 2026-08-20 | `40df3c8ee` | Added uniqueness-bounded one-prime odd-endpoint reconstruction, blocked conductor-width power-sum history, executable NTT assumptions, and exact fleet rows through degree 51 without granting the surviving mod-eight pattern theorem credit. |
