@@ -369,6 +369,9 @@ gate-controls:
     # `grep -q` in a pipeline under pipefail, and `$?` read after a pipeline:
     # both print a wrong answer while exiting 0, and both shipped here.
     scripts/check-shell-antipatterns.sh
+    # DOMINANCE.md is generated; without a --check it sat six audits stale
+    # while reading as current.
+    python3 scripts/gen-dominance-scoreboard.py --check
     # Lean-reconstruction unit tests, moved out of hooks/pre-push (268 tests,
     # 294s, each building Lean preludes). They belong in a daily gate, not on
     # every push -- and before this neither aggregate gate ran them.
