@@ -12,7 +12,8 @@ order-wrapper differences, atomic singleton composition reconstructs the
 absent `Exists` package, and checked definition composition admits exact
 `Nat.mul` and `Nat.dvd` definitions plus eight axiom-free theorems. The larger
 `Nat.dvd_gcd` control now passes the exact official-order Bool package and
-stops at the imported/native `Nat.mod_lt` statement mismatch.
+the general, definitionally compatible `Nat.mod_lt`, then stops at the missing
+recursive inductive `Acc` package.
 
 The exact `r082` train stream imports 261 declarations and 52 theorems with no
 axioms. It contains `Nat.rec`, but none of the seven native lemmas required by
@@ -53,9 +54,11 @@ ordinary target gate, and binds both source and target identities. Opaque,
 conflicting, and unsupported declaration kinds still decline. The Bool
 increment aligned the native package to official Lean's `false`, `true` order,
 migrated every branch-sensitive consumer, and retained independent replay. The
-next increment must explicitly specialize or adapt imported general
-`Nat.mod_lt` to the native successor-denominator statement without granting
-generic theorem transport.
+next increment generalized native `Nat.mod_lt` to Lean's positive-denominator
+contract and proved it in the native kernel. A read-only named compatibility
+check crosses wrapper differences by target-kernel definitional equality. The
+next increment must reconstruct the complete recursive `Acc` package atomically
+without granting partial or generic recursive-inductive transport.
 
 This is the holistic point: theorem search cannot use the library until the
 library and imported target share one checked environment. Solving this seam
@@ -64,7 +67,7 @@ also benefits every later Mathlib target that needs native arithmetic facts.
 ## Evidence
 
 The current read-only observation is
-`/nas3/data/axeyum/autogenesis/probes/772646c0d-official-bool-order-v11/observation.json`.
+`/nas3/data/axeyum/autogenesis/probes/ac33a0a2d-nat-mod-lt-compatibility-v13/observation.json`.
 It binds the public API, exact source closure, reused declaration identities,
 added theorem identities, environment transition, and composition receipt. The
 history is recorded in
@@ -75,7 +78,8 @@ and the next compatibility result in
 [translated definitional reuse](59-translated-definitional-reuse.md), followed
 by [atomic singleton-inductive composition](60-atomic-singleton-inductive-composition.md),
 [checked definition composition](61-checked-definition-composition.md), and
-[official Bool order](62-official-bool-order.md).
+[official Bool order](62-official-bool-order.md), followed by
+[general Nat.mod_lt compatibility](63-general-nat-mod-lt-compatibility.md).
 Verify the tracked plan and its authority boundary with:
 
 ```sh

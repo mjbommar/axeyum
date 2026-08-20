@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** ADR-0527 aligns native Bool with official Lean's `false`, `true` constructor order and requires every branch-sensitive proof/reconstruction site to migrate atomically. On exact Mathlib 4.30.0 r082 evidence, `Bool`, `Bool.false`, `Bool.rec`, and `Bool.true` are now exact overlaps; the unchanged `Nat.dvd_gcd` control advances to the imported-general/native-specialized `Nat.mod_lt` statement mismatch with an unchanged target environment.
+**Status:** ADR-0528 generalizes native `Nat.mod_lt` to Lean's `forall x y, 0 < y -> x % y < y` contract with an axiom-free kernel proof. A read-only named compatibility receipt records `translated-definitional-equality` through imported wrappers without publication authority. On exact Mathlib 4.30.0 r082 evidence, the unchanged `Nat.dvd_gcd` control advances to missing recursive inductive `Acc` with an unchanged target environment.
 
-**Next:** design the narrowest checked specialization/adapter that derives the native successor-denominator `Nat.mod_lt` statement from the imported general positive-denominator theorem, reconstruct the premise and application in the target kernel, then retry `Nat.dvd_gcd` unchanged. Do not authorize generic mismatched-theorem transport from one instance.
+**Next:** measure the complete native/imported `Acc` family, constructor, and generated recursor package; add an atomic target-kernel reconstruction path for exactly this recursive singleton; mutation-test incompleteness, metadata mismatch, and rollback; then retry `Nat.dvd_gcd` unchanged. Do not authorize arbitrary recursive/mutual inductive transport from one package.
 
 <!-- plan-section: landed-changes -->
 
@@ -24,3 +24,5 @@
 | 2026-08-20 | `502184d3f` | Native Bool adopts official Lean constructor order with kernel-prelude consumers migrated |
 | 2026-08-20 | `012c6b4f6` | Solver reconstruction preserves semantic false/true branches under the official order |
 | 2026-08-20 | `866add778` | Official-order fixtures and golden reconstruction bodies pass the authoritative pre-push gate |
+| 2026-08-20 | `a5a111498` | Native `Nat.mod_lt` proves Lean's general positive-denominator contract and migrates GCD/Bezout consumers |
+| 2026-08-20 | `ac33a0a2d` | Named compatibility diagnostics bind `Nat.mod_lt` translated definitional equality and expose `Acc` next |

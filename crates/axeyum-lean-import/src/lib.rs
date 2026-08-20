@@ -77,7 +77,8 @@ pub use theorem_composition::{
     AddedDefinitionReceipt, AddedSingletonInductiveReceipt, AddedTheoremReceipt,
     CHECKED_THEOREM_COMPOSITION_VERSION, CheckedTheoremCompositionError,
     CheckedTheoremCompositionReceipt, CompletedTheoremComposition, ReusedDeclarationReceipt,
-    ReusedTypeCompatibility, compose_checked_theorem_slice, verify_checked_theorem_composition,
+    ReusedTypeCompatibility, checked_reused_declaration_compatibility,
+    compose_checked_theorem_slice, verify_checked_theorem_composition,
 };
 pub use trace_contract_receipt::{
     TRACE_BACKED_SOURCE_CONTRACT_RECEIPT_VERSION, TraceBackedSourceContractReceipt,
