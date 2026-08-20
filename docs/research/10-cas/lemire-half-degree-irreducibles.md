@@ -163,6 +163,26 @@ lemma.
   positivity here. With `ell = ceil(n/2) - 1`, `q = 2`, and the identity type-II
   class, the main term and the published absolute error are of the same
   exponential order; the coefficient multiplying the error is too large.
+  The binary degree pattern left as a conjectural observation in the latter
+  paper can be settled directly, but it confirms rather than removes this
+  loss.  A character of exact Hayes level `j` has conductor `x^(j+1)` and,
+  over `GF(2)`, is even; primitivity therefore gives exact `L`-degree `j-1`.
+  Restriction from level `j` to `j-1` has a kernel of order two, so there are
+  exactly `2^(j-1)` characters of that degree.  Consequently Gao's vector is
+
+  ```text
+  d_h = 2^h  (1 <= h < ell),
+  D = sum_(h=1)^(ell-1) h 2^h = (ell-2)2^ell+2.       (proved)
+  ```
+
+  The public `binary_hayes_l_degree_distribution` report replays this exact
+  conductor count and checks the closed form; an independent mixed-radix
+  enumeration checks every character through level six.  Thus replacing the
+  coarse bound on `D` by its exact value still leaves an asymptotic factor
+  `ell-2` multiplying `2^(n/2)`.  It cannot establish positivity at the
+  binary half endpoint.  This closes a useful literature ambiguity without
+  promoting an aggregate-degree calculation into the missing connected
+  trace estimate.
 - Gao's 2023 follow-up advertises existence with *roughly* half the
   coefficients prescribed, including positions near the middle.  Its published
   abstract does not claim the exact all-degree fixed-`GF(2)` endpoint needed

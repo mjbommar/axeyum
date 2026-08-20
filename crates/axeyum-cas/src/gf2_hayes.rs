@@ -118,6 +118,87 @@ pub struct ConductorLayer {
     pub value: i128,
 }
 
+/// Exact degree distribution of the nontrivial binary Hayes `L`-polynomials.
+///
+/// A character of exact level `j` has conductor `x^(j+1)`.  Because every
+/// character over `GF(2)` is even, primitivity makes its `L`-polynomial have
+/// exact degree `j-1`.  The kernel of the restriction from level `j` to
+/// level `j-1` has order two, so there are exactly `2^(j-1)` characters at
+/// exact level `j`.  Thus the number of `L`-polynomials of degree `d` is
+/// `2^d` for `1 <= d < ell`; the one nontrivial level-one character has
+/// degree zero and contributes nothing to the aggregate degree.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BinaryHayesLDegreeDistribution {
+    /// Hayes coefficient-prefix level.
+    pub ell: usize,
+    /// `(degree, character count)` for every positive degree below `ell`.
+    pub positive_degree_counts: Vec<(usize, BigUint)>,
+    /// Number `2^ell-1` of nontrivial characters, including degree zero.
+    pub nontrivial_character_count: BigUint,
+    /// Exact sum of all nontrivial `L`-polynomial degrees.
+    pub aggregate_degree: BigUint,
+    /// Closed form `(ell-2)2^ell+2` for the aggregate degree.
+    pub aggregate_degree_closed_form: BigUint,
+}
+
+/// Compute the exact binary Hayes `L`-degree distribution.
+///
+/// This replays the conductor-count proof behind the binary pattern
+/// `d_j=2^j` observed by Gao.  It also exposes the aggregate degree entering
+/// the standard characterwise Weil error: asymptotically it is
+/// `(ell-2)2^ell`, so this exact refinement does not remove the linear factor
+/// at Lemire's half-degree endpoint.
+///
+/// # Errors
+///
+/// Returns a resource decline when `ell` exceeds `limits.max_ell`, or a
+/// parameter error when `ell` is zero.
+pub fn binary_hayes_l_degree_distribution(
+    ell: usize,
+    limits: HayesLimits,
+) -> Result<BinaryHayesLDegreeDistribution, HayesError> {
+    if ell == 0 {
+        return Err(HayesError::InvalidParameter(
+            "binary Hayes L-degree distribution requires positive ell".to_owned(),
+        ));
+    }
+    if ell > limits.max_ell {
+        return Err(HayesError::ResourceLimit {
+            resource: "ell",
+            requested: ell,
+            limit: limits.max_ell,
+        });
+    }
+
+    let group_order = BigUint::from(1_u8) << ell;
+    let positive_degree_counts = (1..ell)
+        .map(|degree| (degree, BigUint::from(1_u8) << degree))
+        .collect::<Vec<_>>();
+    let aggregate_degree = positive_degree_counts
+        .iter()
+        .fold(BigUint::from(0_u8), |sum, (degree, count)| {
+            sum + BigUint::from(*degree) * count
+        });
+    let aggregate_degree_closed_form = if ell == 1 {
+        BigUint::from(0_u8)
+    } else {
+        BigUint::from(ell - 2) * &group_order + BigUint::from(2_u8)
+    };
+    if aggregate_degree != aggregate_degree_closed_form {
+        return Err(HayesError::Invariant(
+            "binary Hayes L-degree sum disagrees with its closed form".to_owned(),
+        ));
+    }
+
+    Ok(BinaryHayesLDegreeDistribution {
+        ell,
+        positive_degree_counts,
+        nontrivial_character_count: group_order - BigUint::from(1_u8),
+        aggregate_degree,
+        aggregate_degree_closed_form,
+    })
+}
+
 /// Necessary divisibility test for supersingularity of one exact-conductor
 /// Carlitz cohomology component.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -13108,6 +13189,66 @@ mod tests {
         );
         assert_eq!(geometry.required_saving_ceiling, BigUint::from(80_u8));
         assert!(carlitz_connected_top_geometry(12, 24).is_err());
+    }
+
+    #[test]
+    fn binary_hayes_l_degrees_follow_exact_conductors() {
+        let limits = HayesLimits {
+            max_ell: 8,
+            ..HayesLimits::default()
+        };
+        let level_five = binary_hayes_l_degree_distribution(5, limits).unwrap();
+        assert_eq!(
+            level_five.positive_degree_counts,
+            vec![
+                (1, BigUint::from(2_u8)),
+                (2, BigUint::from(4_u8)),
+                (3, BigUint::from(8_u8)),
+                (4, BigUint::from(16_u8)),
+            ]
+        );
+        assert_eq!(level_five.nontrivial_character_count, BigUint::from(31_u8));
+        assert_eq!(level_five.aggregate_degree, BigUint::from(98_u8));
+
+        let level_eight = binary_hayes_l_degree_distribution(8, limits).unwrap();
+        assert_eq!(
+            level_eight.positive_degree_counts,
+            (1_usize..8)
+                .map(|degree| (degree, BigUint::from(1_u8) << degree))
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(level_eight.aggregate_degree, BigUint::from(1_538_u16));
+
+        for ell in 1_usize..=6 {
+            let report = binary_hayes_l_degree_distribution(ell, limits).unwrap();
+            let factors = principal_unit_factors(ell);
+            let mut direct = BTreeMap::<usize, BigUint>::new();
+            for character in 1..(1_usize << ell) {
+                let level = mixed_radix_character_conductor(character, &factors)
+                    .unwrap()
+                    .unwrap();
+                if level > 1 {
+                    *direct.entry(level - 1).or_default() += BigUint::from(1_u8);
+                }
+            }
+            assert_eq!(
+                report
+                    .positive_degree_counts
+                    .into_iter()
+                    .collect::<BTreeMap<_, _>>(),
+                direct
+            );
+        }
+
+        assert!(binary_hayes_l_degree_distribution(0, limits).is_err());
+        assert!(matches!(
+            binary_hayes_l_degree_distribution(9, limits),
+            Err(HayesError::ResourceLimit {
+                resource: "ell",
+                requested: 9,
+                limit: 8
+            })
+        ));
     }
 
     #[test]
