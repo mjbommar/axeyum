@@ -91,6 +91,7 @@ use crate::lia_gcd::{
 use crate::lra::{FarkasCertificate, lra_farkas_certificate};
 use crate::model::Model;
 use crate::nia_square::IntQuadraticNegativeDiscriminantCertificate;
+use crate::nia_univariate_cert::IntUnivariateRefutationCertificate;
 use crate::nra_even_power::NraEvenPowerRefutationCertificate;
 use crate::nra_real_root::{self, SosCertificate};
 use crate::proof::{UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof_within};
@@ -545,6 +546,19 @@ pub enum Evidence {
     /// Replay re-collects the exact original assertion and recomputes the
     /// discriminant; no producer-local term identity is trusted.
     UnsatIntQuadraticNegativeDiscriminant(IntQuadraticNegativeDiscriminantCertificate),
+    /// Unsatisfiable (`QF_NIA`): a single-variable integer polynomial
+    /// **equality** refuted by one of three exact arguments — a non-square
+    /// discriminant, rational-but-non-integral quadratic roots, or exhaustion of
+    /// the rational-root candidates for degree ≥ 3. `nia_square` decided these
+    /// exactly all along; nothing emitted the reasoning, so they shipped as bare
+    /// `Evidence::Unsat(None)` and `QF_NIA` sat in *band 2 — model replay only*.
+    ///
+    /// The checker re-collects the polynomial from the untouched assertion and
+    /// then re-derives the refutation **from the coefficients alone**, using an
+    /// argument that shares no code with the producer — so unlike a
+    /// `fresh == cert` re-execution it can disagree with the producer rather
+    /// than only with a different query.
+    UnsatIntUnivariatePoly(IntUnivariateRefutationCertificate),
     /// Unsatisfiable (`NRA`): the query asserts a syntactic sum of even powers
     /// plus a nonnegative rational constant is strictly negative. The checker
     /// re-scans the original assertions and re-matches the exact nonnegativity
@@ -779,6 +793,7 @@ impl Evidence {
             Evidence::UnsatIntQuadraticNegativeDiscriminant(_) => {
                 "unsat-int-quadratic-negative-discriminant"
             }
+            Evidence::UnsatIntUnivariatePoly(_) => "unsat-int-univariate-poly",
             Evidence::UnsatNraEvenPower(_) => "unsat-nra-even-power",
             Evidence::UnsatDiophantine { .. } => "unsat-diophantine",
             Evidence::UnsatBoundedIntBlast(_) => "unsat-bounded-int-blast",
@@ -993,6 +1008,13 @@ impl Evidence {
                     certificate,
                 ),
             ),
+            Evidence::UnsatIntUnivariatePoly(certificate) => {
+                Ok(crate::nia_univariate_cert::check_int_univariate_refutation(
+                    arena,
+                    assertions,
+                    certificate,
+                ))
+            }
             Evidence::UnsatDiophantine {
                 equalities,
                 certificate,
@@ -1154,6 +1176,7 @@ impl Evidence {
                 | Evidence::UnsatArithDpll(_)
                 | Evidence::UnsatSos { .. }
                 | Evidence::UnsatIntQuadraticNegativeDiscriminant(_)
+                | Evidence::UnsatIntUnivariatePoly(_)
                 | Evidence::UnsatNraEvenPower(_)
                 | Evidence::UnsatDiophantine { .. }
                 | Evidence::UnsatBoundedIntBlast(_)
@@ -2662,6 +2685,36 @@ pub fn produce_nra_even_power_evidence(
     }))
 }
 
+/// Produce source-bound evidence for a single-variable integer polynomial
+/// equality refuted by a non-square discriminant, non-integral rational roots,
+/// or rational-root exhaustion.
+///
+/// Runs *after* [`produce_int_quadratic_negative_discriminant_evidence`] and
+/// declines on the negative-discriminant shape, so one query never has two
+/// competing artifacts to keep in agreement.
+pub fn produce_int_univariate_poly_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<EvidenceReport> {
+    let certificate = crate::nia_univariate_cert::int_univariate_refutation(arena, assertions)?;
+    Some(EvidenceReport {
+        evidence: Evidence::UnsatIntUnivariatePoly(certificate),
+        provenance: Provenance {
+            semantics_version: SEMANTICS_VERSION,
+            layers: LayerVersions::CURRENT,
+            backend: "nia-univariate-polynomial-certificate".to_owned(),
+            assertion_count: assertions.len(),
+            timeout: None,
+            resource_limit: None,
+            node_budget: None,
+            cnf_variable_budget: None,
+            cnf_clause_budget: None,
+            prove_unsat: true,
+        },
+        trusted_steps: Vec::new(),
+    })
+}
+
 /// Produce source-bound evidence for the negative-discriminant subset of
 /// single-variable integer quadratic equalities.
 pub fn produce_int_quadratic_negative_discriminant_evidence(
@@ -2869,6 +2922,9 @@ pub fn produce_evidence(
         return Ok(report);
     }
     if let Some(report) = produce_int_quadratic_negative_discriminant_evidence(arena, assertions) {
+        return Ok(report);
+    }
+    if let Some(report) = produce_int_univariate_poly_evidence(arena, assertions) {
         return Ok(report);
     }
     if let Some(report) = residue_report(arena, assertions, &provenance) {
@@ -3937,6 +3993,7 @@ pub fn prove(
         | Evidence::UnsatArithDpll(_)
         | Evidence::UnsatSos { .. }
         | Evidence::UnsatIntQuadraticNegativeDiscriminant(_)
+        | Evidence::UnsatIntUnivariatePoly(_)
         | Evidence::UnsatNraEvenPower(_)
         | Evidence::UnsatDiophantine { .. }
         | Evidence::UnsatBoundedIntBlast(_)

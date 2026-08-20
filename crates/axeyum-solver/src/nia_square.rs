@@ -100,7 +100,7 @@ use crate::route_trace::DeclineReason;
 /// divisor enumeration: at `2^40` the trial-division loop is `~2^20` iterations
 /// worst case, comfortably bounded. Larger coefficients are left to the existing
 /// NIA dispatch (sound).
-const MAX_ABS_COEFF: i128 = 1i128 << 40;
+pub(crate) const MAX_ABS_COEFF: i128 = 1i128 << 40;
 
 /// Outward scan bound (in integer steps from a vertex neighbor) for finding a
 /// witness in the "always Sat" tail cases (`f > 0` / `f ≥ 0` / `f ≠ 0`). `f`
@@ -112,7 +112,7 @@ const TAIL_SCAN: i128 = 64;
 /// decline (sound): an absurd degree (deeply nested products) would otherwise
 /// let collection and Horner evaluation do unbounded work. 64 is far above any
 /// realistic single-variable polynomial goal.
-const MAX_DEGREE: usize = 64;
+pub(crate) const MAX_DEGREE: usize = 64;
 
 /// Bounded scan for a degree-`≥ 3` `≠` non-root witness. A degree-`n` polynomial
 /// has at most `n` integer roots, so among `MAX_DEGREE + 2` distinct integers at
@@ -123,7 +123,7 @@ const NE_SCAN: i128 = (MAX_DEGREE as i128) + 8;
 /// The six integer comparison shapes the quadratic pass decides, oriented as
 /// `f(x) ⋈ 0`.
 #[derive(Clone, Copy)]
-enum Cmp {
+pub(crate) enum Cmp {
     Eq,
     Ne,
     Lt,
@@ -162,9 +162,9 @@ enum MergeVar {
 /// the last entry is the genuine leading coefficient (except for the zero
 /// polynomial, kept as `[0]`).
 #[derive(Clone)]
-struct Poly {
+pub(crate) struct Poly {
     var: Option<SymbolId>,
-    coeffs: Vec<i128>,
+    pub(crate) coeffs: Vec<i128>,
 }
 
 impl Poly {
@@ -183,29 +183,29 @@ impl Poly {
     }
 
     /// Coefficient of `xⁱ` (`0` past the stored length).
-    fn coeff(&self, i: usize) -> i128 {
+    pub(crate) fn coeff(&self, i: usize) -> i128 {
         self.coeffs.get(i).copied().unwrap_or(0)
     }
 
     /// Constant term `c0` (coefficient of `x⁰`).
-    fn c0(&self) -> i128 {
+    pub(crate) fn c0(&self) -> i128 {
         self.coeff(0)
     }
 
     /// Linear coefficient `c1` (coefficient of `x¹`).
-    fn c1(&self) -> i128 {
+    pub(crate) fn c1(&self) -> i128 {
         self.coeff(1)
     }
 
     /// Quadratic coefficient `c2` (coefficient of `x²`).
-    fn c2(&self) -> i128 {
+    pub(crate) fn c2(&self) -> i128 {
         self.coeff(2)
     }
 
     /// Degree: the highest index with a nonzero coefficient, or `0` for a
     /// constant (including the zero polynomial). Trailing zeros are trimmed on
     /// construction, so this is `coeffs.len() − 1` once non-empty and trimmed.
-    fn degree(&self) -> usize {
+    pub(crate) fn degree(&self) -> usize {
         self.coeffs.len().saturating_sub(1)
     }
 
@@ -229,7 +229,7 @@ impl Poly {
         }
     }
 
-    fn neg(self) -> Option<Self> {
+    pub(crate) fn neg(self) -> Option<Self> {
         let mut coeffs = Vec::with_capacity(self.coeffs.len());
         for &c in &self.coeffs {
             coeffs.push(c.checked_neg()?);
@@ -285,7 +285,7 @@ impl Poly {
     }
 
     /// Evaluate `f(k)` exactly by Horner's method, declining on `i128` overflow.
-    fn eval_at(&self, k: i128) -> Option<i128> {
+    pub(crate) fn eval_at(&self, k: i128) -> Option<i128> {
         let mut acc = 0i128;
         // Horner: acc = ((cₙ·k + cₙ₋₁)·k + … )·k + c₀.
         for &c in self.coeffs.iter().rev() {
@@ -295,7 +295,7 @@ impl Poly {
     }
 
     /// `true` iff every coefficient is within the safe magnitude guard.
-    fn coeffs_in_guard(&self) -> bool {
+    pub(crate) fn coeffs_in_guard(&self) -> bool {
         self.coeffs.iter().all(|c| c.abs() < MAX_ABS_COEFF)
     }
 }
@@ -435,7 +435,9 @@ pub fn int_quadratic_negative_discriminant_refutation(
     if a <= 0 {
         return None;
     }
-    let discriminant = b.checked_mul(b)?.checked_sub(4i128.checked_mul(a)?.checked_mul(c)?)?;
+    let discriminant = b
+        .checked_mul(b)?
+        .checked_sub(4i128.checked_mul(a)?.checked_mul(c)?)?;
     if discriminant >= 0 {
         return None;
     }
@@ -708,7 +710,10 @@ fn isqrt(c: i128) -> i128 {
 /// for `≠`) where `lhs − rhs` collects to a single-variable integer polynomial.
 /// Returns `(x_symbol, comparison-as-`f ⋈ 0`, polynomial f = lhs − rhs)` or
 /// `None` to decline.
-fn match_poly_constraint(arena: &TermArena, assertion: TermId) -> Option<(SymbolId, Cmp, Poly)> {
+pub(crate) fn match_poly_constraint(
+    arena: &TermArena,
+    assertion: TermId,
+) -> Option<(SymbolId, Cmp, Poly)> {
     let TermNode::App { op, args } = arena.node(assertion) else {
         return None;
     };

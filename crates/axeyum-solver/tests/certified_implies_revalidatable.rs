@@ -100,6 +100,33 @@ const QUERIES: &[(&str, &str)] = &[
          (assert (not (= (+ (f 5) (f 7) (g 9) (g 11)) 2)))\n\
          (check-sat)",
     ),
+    // QF_NIA single-variable polynomial equalities. Added with the certificate
+    // itself: this suite is the general obligation a new variant must meet, and
+    // meeting it only inside the variant's own suite is how
+    // `UnsatQuantInstanceSet` shipped `certified=1` over a FAILED re-check.
+    // All three carry `TermId`-free certificates, which is exactly what the
+    // fresh-parse re-validation below is able to distinguish.
+    (
+        "nia_non_square_discriminant",
+        "(set-logic QF_NIA)\n\
+         (declare-fun x () Int)\n\
+         (assert (= (+ (* x x) x (- 1)) 0))\n\
+         (check-sat)",
+    ),
+    (
+        "nia_non_integral_rational_roots",
+        "(set-logic QF_NIA)\n\
+         (declare-fun x () Int)\n\
+         (assert (= (+ (* 4 x x) (- 1)) 0))\n\
+         (check-sat)",
+    ),
+    (
+        "nia_rational_root_exhausted",
+        "(set-logic QF_NIA)\n\
+         (declare-fun x () Int)\n\
+         (assert (= (+ (* x x x) x 1) 0))\n\
+         (check-sat)",
+    ),
     (
         "skolemised_existential",
         "(set-logic UF)\n\

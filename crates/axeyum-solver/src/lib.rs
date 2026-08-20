@@ -131,6 +131,7 @@ macro_rules! full_modules {
         mod nat_induction;
         mod nia_linearize;
         mod nia_square;
+        mod nia_univariate_cert;
         mod nra;
         mod nra_even_power;
         mod nra_real_root;
@@ -441,6 +442,10 @@ pub mod certificates {
             IntQuadraticNegativeDiscriminantCertificate,
             check_int_quadratic_negative_discriminant_refutation,
             int_quadratic_negative_discriminant_refutation,
+        };
+        pub use crate::nia_univariate_cert::{
+            IntUnivariateRefutationCertificate, IntUnivariateRefutationReason,
+            check_int_univariate_refutation, int_univariate_refutation,
         };
         pub use crate::nra_even_power::{
             NraEvenPowerRefutationCertificate, nra_even_power_refutation,

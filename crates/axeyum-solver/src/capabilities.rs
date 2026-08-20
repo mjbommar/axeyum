@@ -981,7 +981,20 @@ pub const CAPABILITIES: &[Capability] = &[
                    undecidable for bounded blasting ⇒ sound Unknown (never wrong unsat); \
                    differentially VALIDATED DISAGREE=0 vs Z3 over the NIA fuzz; proof \
                    export is fail-closed (Inconclusive) when overflow guards restrict the \
-                   blast",
+                   blast. UNSAT REFUTATION ARTIFACT, single-variable polynomial \
+                   EQUALITIES only: a source-bound certificate carrying the normalized \
+                   integer coefficients plus one of four exact arguments — negative \
+                   discriminant, non-square discriminant, rational-but-non-integral \
+                   quadratic roots, or rational-root exhaustion at degree >= 3. The \
+                   checker re-collects the polynomial from the untouched assertion and \
+                   then re-derives the refutation FROM THE COEFFICIENTS ALONE, sharing no \
+                   code with the producer (it enumerates divisors linearly where the \
+                   producer pairs cofactors to sqrt|a0|), so it can disagree with the \
+                   producer and not merely with a different query. The certificate holds \
+                   integers only and re-validates against a FRESH PARSE. This does NOT \
+                   cover multivariate NIA, inequalities of degree >= 3, or |a0| past the \
+                   checker's scan bound: those stay decided-but-not-certified, and saying \
+                   otherwise would be the overstatement this column exists to remove",
         checked_by: CheckedBy::SelfChecker,
         reference: "ADR-0024 + the no-overflow multiplier guard / fail-closed proof export",
     },
