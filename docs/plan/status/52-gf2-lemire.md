@@ -336,6 +336,14 @@ the ignored release probe independently enumerated the 33,554,432-candidate
 four-coefficient `GF(32)` row in 206.15 seconds and recovered
 `A_5(9,4)=-28675`.  This refutes the two-mode recurrence but remains finite
 diagnostic evidence, not an ordinary-gate or uniform theorem.
+The binary Hayes `L`-degree pattern from Gao's examples is now proved for
+every level from the exact conductor filtration and exposed as a bounded
+native report.  Exact level `j` contributes `2^(j-1)` characters of degree
+`j-1`, hence `D=(ell-2)2^ell+2`; direct mixed-radix enumeration checks the
+classification through level six.  This closes the source's conjectural
+degree-distribution pattern but also proves that the refined characterwise
+Weil ledger retains the fatal linear factor.  It does not move the connected
+top-trace obligation or grant Lemire theorem credit.
 The multi-minute endpoint sweep is now an explicit ignored,
 environment-selected research probe; the ordinary theorem gate keeps the
 bounded `ell<=7` controls.  Three exact-commit fleet probes extend both the
@@ -350,6 +358,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-19 | `1705eb688` | Proved Gao's binary Hayes L-degree distribution from exact conductors and quantified why its aggregate degree retains the fatal endpoint factor. |
 | 2026-08-19 | `0db0c7ffd` | Added bounded native fixed-degree traces over binary extension fields, separating genuine Frobenius-power long-cycle diagnostics from the base-field Hayes population. |
 | 2026-08-19 | `9e3cb37a4` | Audited Sawin's characteristic-two singular-support argument, rejected every elementary-abelian Fomenko small-kernel variant, and required genuinely equivariant or higher-Witt input. |
 | 2026-08-19 | `1b4f3503f` | Audited Ito--Takeuchi--Tsushima at equation level and required a checked linearized quadratic reduction or new mixed associative cocycle before importing its characteristic-two Heisenberg nondegeneracy. |
