@@ -3587,6 +3587,28 @@ over both (CRT) and the stronger TOP-POLY statement.
 A relative characteristic-two theorem should now target this one harmful
 sign of the single trace (CT), preserving cross-conductor cancellation.
 
+The most direct zero-`2`-rank shortcut is now priced exactly and gives no
+endpoint information.  Deuring--Shafarevich gives `2`-rank zero at both
+Carlitz levels, hence also on the relative Jacobian quotient.  But the general
+Cramer--Xing trace theorem supplies only
+
+```text
+2^ceil(n/g_rel) | (CT),
+g_rel = (2g_ell-2g_(a-1))/2.
+```
+
+Here `g_rel>n` for both endpoints throughout `ell>=200`, so the exponent is
+one and the guaranteed divisor is two.  Rounding a Weil--Serre envelope to an
+even integer can save at most one, versus the required multiplicative factor
+626 at `ell=200`.  The native Carlitz geometry report checks this through
+`ell=1024`.  Ma--Xing's stronger code bound concerns one
+scalar Artin--Schreier character, while (CT) is a complete non-elementary Witt
+zero fibre; summing scalar bounds separately recovers the existing relative
+Hasse--Weil envelope.  Yoo--Lee's elementary-abelian applications likewise do
+not apply to the cyclic `2`-power blocks of this quotient.  ADR-0573 records
+the source-level audit and selects a collective Witt complete-weight or
+zero-fibre estimate as the necessary form of any coding bridge.
+
 The top-conductor projector also has an exact Möbius-order decomposition.
 Applying the fine-minus-coarse scales before absolute values gives, at
 `ell=8`,

@@ -5243,6 +5243,14 @@ pub struct CarlitzConnectedTopGeometry {
     pub coarse_twice_genus: BigUint,
     /// Dimension of the relative first cohomology.
     pub relative_first_cohomology_dimension: BigUint,
+    /// Dimension of the relative Jacobian quotient.
+    pub relative_abelian_dimension: BigUint,
+    /// Cramer--Xing's guaranteed `2`-adic trace-divisibility exponent
+    /// `ceil(degree / relative_abelian_dimension)` for a `2`-rank-zero
+    /// abelian variety over `GF(2^degree)`.
+    pub p_zero_trace_divisibility_exponent: usize,
+    /// Corresponding guaranteed trace divisor.
+    pub p_zero_trace_divisor: BigUint,
     /// Integer relative Hasse--Weil envelope using `2^ceil(degree/2)`.
     pub integer_relative_weil_numerator: BigUint,
     /// Connected trace allowance `2^(2ell-2)`.
@@ -5693,6 +5701,19 @@ fn carlitz_twice_genus(level: usize) -> BigUint {
 /// `2g_j=(j-2)2^j+2` then makes the relative cohomology dimension equal to
 /// the exact sum of separate conductor-level Weil degrees.
 ///
+/// Deuring--Shafarevich gives `2`-rank zero at the fine and coarse levels.
+/// Since the coarse Jacobian is an isogeny factor of the fine Jacobian, the
+/// relative quotient also has `2`-rank zero.  Cramer--Xing's general
+/// `2`-rank-zero trace theorem then guarantees divisibility only by
+///
+/// ```text
+/// 2^ceil(degree / relative_abelian_dimension).
+/// ```
+///
+/// The report prices that exponent exactly.  It is one throughout the Lemire
+/// endpoint range, so zero `2`-rank supplies only parity and can improve the
+/// integral relative Hasse--Weil envelope by at most one.
+///
 /// # Errors
 ///
 /// Rejects the same invalid endpoints as
@@ -5716,6 +5737,24 @@ pub fn carlitz_connected_top_geometry(
         ));
     }
     let relative_first_cohomology_dimension = &fine_twice_genus - &coarse_twice_genus;
+    if relative_first_cohomology_dimension.bit(0) {
+        return Err(HayesError::Invariant(
+            "Carlitz relative cohomology dimension is odd".to_owned(),
+        ));
+    }
+    let relative_abelian_dimension: BigUint = &relative_first_cohomology_dimension >> 1_usize;
+    let relative_abelian_dimension_usize = relative_abelian_dimension.to_usize();
+    let p_zero_trace_divisibility_exponent = match relative_abelian_dimension_usize {
+        Some(0) => {
+            return Err(HayesError::Invariant(
+                "Carlitz relative Jacobian quotient has dimension zero".to_owned(),
+            ));
+        }
+        Some(dimension) => degree.div_ceil(dimension),
+        // A positive BigUint that does not fit usize is larger than `degree`.
+        None => 1,
+    };
+    let p_zero_trace_divisor = BigUint::from(1_u8) << p_zero_trace_divisibility_exponent;
     let integer_relative_weil_numerator =
         &relative_first_cohomology_dimension << degree.div_ceil(2);
     if integer_relative_weil_numerator != implication.connected_top_individual_weil_numerator {
@@ -5735,6 +5774,9 @@ pub fn carlitz_connected_top_geometry(
         fine_twice_genus,
         coarse_twice_genus,
         relative_first_cohomology_dimension,
+        relative_abelian_dimension,
+        p_zero_trace_divisibility_exponent,
+        p_zero_trace_divisor,
         integer_relative_weil_numerator,
         connected_top_allowance_numerator: implication.connected_top_assumption_numerator,
         required_saving_ceiling: implication.connected_top_required_saving_ceiling,
@@ -18999,6 +19041,12 @@ mod tests {
             BigUint::from(40_704_u16)
         );
         assert_eq!(
+            geometry.relative_abelian_dimension,
+            BigUint::from(20_352_u16)
+        );
+        assert_eq!(geometry.p_zero_trace_divisibility_exponent, 1);
+        assert_eq!(geometry.p_zero_trace_divisor, BigUint::from(2_u8));
+        assert_eq!(
             geometry.integer_relative_weil_numerator,
             BigUint::from(333_447_168_u32)
         );
@@ -19013,6 +19061,19 @@ mod tests {
         );
         assert!(geometry.one_sided_required_saving_ceiling < geometry.required_saving_ceiling);
         assert!(carlitz_connected_top_geometry(12, 24).is_err());
+    }
+
+    #[test]
+    fn p_zero_trace_divisibility_is_trivial_on_every_lemire_endpoint() {
+        for ell in 200..=1_024 {
+            for degree in [2 * ell + 1, 2 * ell + 2] {
+                let geometry = carlitz_connected_top_geometry(ell, degree).unwrap();
+                assert!(geometry.relative_abelian_dimension > BigUint::from(degree));
+                assert_eq!(geometry.p_zero_trace_divisibility_exponent, 1);
+                assert_eq!(geometry.p_zero_trace_divisor, BigUint::from(2_u8));
+                assert!(geometry.one_sided_required_saving_ceiling > BigUint::from(1_u8));
+            }
+        }
     }
 
     #[test]
