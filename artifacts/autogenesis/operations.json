@@ -590,6 +590,7 @@
       "scope": "authoritative",
       "reviewed_gate_mentions": [
         "check-autogenesis-int-fib-add-two-capsule.py",
+        "check-autogenesis-int-fib-natcast-admission-plan.py",
         "validate-autogenesis-operations.py"
       ],
       "applicability": {
