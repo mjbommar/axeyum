@@ -45,7 +45,15 @@ const MAX_DPLL_ROUNDS: usize = 10_000;
 const MAX_INITIAL_BOUND_MUTEX_LEMMAS: usize = 8_192;
 const MAX_INITIAL_BOUND_IMPLICATION_LEMMAS: usize = 4_096;
 const MAX_INITIAL_BOUND_IMPLICATION_ATOMS: usize = 512;
-const MAX_MINIMIZED_THEORY_CORE_ATOMS: usize = 128;
+/// Width above which a **retained** theory core counts against
+/// [`MAX_DYNAMIC_LARGE_CORE_LITERALS`].
+///
+/// This is an accounting threshold, not an admission gate: it describes what the
+/// warm propositional solver actually receives, which is the quantity that
+/// budget was measured against. Until 2026-08-21 the same constant also decided
+/// whether deletion minimization was *attempted*, and the two jobs pull in
+/// opposite directions -- see [`MINIMIZATION_ORACLE_CALL_BUDGET`].
+const WIDE_THEORY_CORE_ATOMS: usize = 128;
 const MAX_TWO_EDGE_DIFF_EDGES: usize = 512;
 const MAX_BELLMAN_FORD_DIFF_EDGES: usize = 256;
 const MAX_DYNAMIC_BOUND_CONFLICT_BATCH: usize = 32;
@@ -84,6 +92,40 @@ const MAX_MODERATE_PRE_SAT_CNF_VARS: usize = 8_192;
 /// resource limit before starting the next SAT round.  Small/minimized cores do
 /// not consume this budget.
 const MAX_DYNAMIC_LARGE_CORE_LITERALS: usize = 8_192;
+
+/// Deterministic work budget for deletion-based theory-core minimization,
+/// counted in **conjunctive theory-oracle calls** and cumulative over the
+/// lifetime of one [`IncrementalArithDpll`].
+///
+/// **Why a budget and not a width gate.** Until 2026-08-21 a core wider than
+/// [`WIDE_THEORY_CORE_ATOMS`] was not minimized *at all*, reasoning that
+/// minimization costs one oracle call per atom. Width is only a proxy for that
+/// cost, and it is the wrong proxy in the worst possible direction: the cores too
+/// wide to minimize are exactly the cores whose width then exhausts
+/// [`MAX_DYNAMIC_LARGE_CORE_LITERALS`], so the solve declined for want of the
+/// narrow clauses it had refused to narrow. Measured over the pinned `QF_UFLIA`
+/// competition list -- see the linear-arithmetic deficit diagnosis of 2026-08-21
+/// under `docs/research/05-algorithms/`, section 5.2 -- 48 files
+/// returned `unknown` after a median 1.3 s of a 24 s budget, reporting
+/// `core_src_minimized=0` beside `core_src_large=24` averaging 351 literals each.
+///
+/// **Why oracle calls and not wall clock.** Determinism is a public API promise
+/// here, and a wall-clock budget would make the learned clause set -- and so the
+/// verdict on a marginal instance -- a function of machine load. One deletion
+/// candidate is exactly one conjunctive theory solve, so oracle calls are both
+/// machine-independent and directly proportional to the cost being rationed. The
+/// pre-existing deadline poll inside [`minimize_core`] stays as the outer safety
+/// bound, because a single oracle call can run for tens of seconds; it is simply
+/// no longer the only thing bounding this work.
+///
+/// **Why this size.** Fully minimizing every wide core the measured `QF_UFLIA`
+/// solves produce costs about 8.4k calls (24 cores of roughly 351 atoms). Four
+/// full deletion passes over the entire retained-wide-literal budget covers that
+/// with headroom for solves several times as conflict-heavy, while keeping the
+/// worst case bounded by a number rather than by a clock. Exhaustion is not an
+/// error: a partially minimized core is still a valid conflict core, and the loop
+/// retains it as [`ArithCoreSource::Large`].
+const MINIMIZATION_ORACLE_CALL_BUDGET: usize = 4 * MAX_DYNAMIC_LARGE_CORE_LITERALS;
 
 /// The arithmetic theory an atom belongs to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -629,10 +671,22 @@ impl ArithCoreStats {
             ArithCoreSource::AffineBound => self.affine_count += 1,
             ArithCoreSource::LpRelaxation => self.lp_count += 1,
             ArithCoreSource::Minimized => self.minimized_count += 1,
-            ArithCoreSource::Large => {
-                self.large_count += 1;
-                self.large_literals = self.large_literals.saturating_add(len);
-            }
+            ArithCoreSource::Large => self.large_count += 1,
+        }
+        // Charge the retention budget by the core's RETAINED WIDTH, not by
+        // whether minimization was attempted. `MAX_DYNAMIC_LARGE_CORE_LITERALS`
+        // rations what the warm propositional solver actually receives -- 24
+        // clauses of roughly 430 literals grew `BatSat` from 1.8 GiB to an 8 GiB
+        // abort -- and a core that *was* minimized and is still wide costs
+        // exactly as much as one that never was. While minimization was
+        // width-gated that case could not arise, so provenance and width agreed;
+        // now that it is budget-gated they do not, and width is the one that
+        // matches the hazard. Cores from the cheap extractors above
+        // (bound/difference/affine/LP) are unchanged: they never fed this budget.
+        if matches!(source, ArithCoreSource::Minimized | ArithCoreSource::Large)
+            && len > WIDE_THEORY_CORE_ATOMS
+        {
+            self.large_literals = self.large_literals.saturating_add(len);
         }
     }
 
@@ -657,6 +711,57 @@ impl ArithCoreStats {
             self.minimized_count,
             self.large_count,
             self.large_literals
+        )
+    }
+}
+
+/// Remaining deletion-minimization oracle calls for one lazy-SMT solver, with
+/// the spend and the number of cores retained unminimized for want of budget.
+///
+/// Cumulative across `solve` calls, exactly like the wide-core retention budget
+/// it is paired with: both ration a resource whose danger is cumulative.
+struct MinimizationBudget {
+    remaining: usize,
+    spent: usize,
+    declined_cores: usize,
+}
+
+impl Default for MinimizationBudget {
+    fn default() -> Self {
+        Self {
+            remaining: MINIMIZATION_ORACLE_CALL_BUDGET,
+            spent: 0,
+            declined_cores: 0,
+        }
+    }
+}
+
+impl MinimizationBudget {
+    /// Whether any minimization work at all may still be done.
+    fn is_exhausted(&self) -> bool {
+        self.remaining == 0
+    }
+
+    /// Charges one oracle call, returning `false` when nothing is left -- in
+    /// which case the caller must stop *without* issuing the call.
+    fn charge(&mut self) -> bool {
+        if self.remaining == 0 {
+            return false;
+        }
+        self.remaining -= 1;
+        self.spent += 1;
+        true
+    }
+
+    /// Records that a whole core was retained unminimized for want of budget.
+    fn note_declined_core(&mut self) {
+        self.declined_cores += 1;
+    }
+
+    fn summary(&self) -> String {
+        format!(
+            "min_oracle_calls={}, min_oracle_budget_left={}, min_declined_cores={}",
+            self.spent, self.remaining, self.declined_cores
         )
     }
 }
@@ -718,6 +823,7 @@ pub(crate) struct IncrementalArithDpll {
     lemmas: Vec<Vec<ArithLemmaLiteral>>,
     initial_lemma_count: usize,
     core_stats: ArithCoreStats,
+    min_budget: MinimizationBudget,
     support_stats: ArithSupportStats,
     total_rounds: usize,
     solve_calls: usize,
@@ -753,6 +859,7 @@ impl IncrementalArithDpll {
             lemmas: Vec::new(),
             initial_lemma_count: 0,
             core_stats: ArithCoreStats::default(),
+            min_budget: MinimizationBudget::default(),
             support_stats: ArithSupportStats::default(),
             total_rounds: 0,
             solve_calls: 0,
@@ -858,9 +965,10 @@ impl IncrementalArithDpll {
                     kind: UnknownKind::ResourceLimit,
                     detail: format!(
                         "lazy linear arithmetic retained {} literals in unminimized theory \
-                         cores (limit {MAX_DYNAMIC_LARGE_CORE_LITERALS}) after {round} rounds \
-                         this solve; declining before the next SAT round (solve_calls={}, \
-                         total_rounds={}, atoms={}, bound_lemmas={}, blocking_lemmas={}, {}, {})",
+                         cores (limit {MAX_DYNAMIC_LARGE_CORE_LITERALS}, wide above \
+                         {WIDE_THEORY_CORE_ATOMS}) after {round} rounds this solve; declining \
+                         before the next SAT round (solve_calls={}, total_rounds={}, atoms={}, \
+                         bound_lemmas={}, blocking_lemmas={}, {}, {}, {})",
                         self.core_stats.large_literals,
                         self.solve_calls,
                         self.total_rounds,
@@ -868,7 +976,8 @@ impl IncrementalArithDpll {
                         self.initial_clauses.len(),
                         self.blocking.len(),
                         self.core_stats.summary(),
-                        self.support_stats.summary()
+                        self.support_stats.summary(),
+                        self.min_budget.summary()
                     ),
                 }));
             }
@@ -878,14 +987,15 @@ impl IncrementalArithDpll {
                     detail: format!(
                         "lazy linear arithmetic exhausted the configured timeout after {round} \
                          rounds this solve (solve_calls={}, total_rounds={}, atoms={}, \
-                         bound_lemmas={}, blocking_lemmas={}, {}, {})",
+                         bound_lemmas={}, blocking_lemmas={}, {}, {}, {})",
                         self.solve_calls,
                         self.total_rounds,
                         self.ctx.atoms.len(),
                         self.initial_clauses.len(),
                         self.blocking.len(),
                         self.core_stats.summary(),
-                        self.support_stats.summary()
+                        self.support_stats.summary(),
+                        self.min_budget.summary()
                     ),
                 }));
             }
@@ -939,6 +1049,7 @@ impl IncrementalArithDpll {
                     &lits,
                     &support,
                     TheoryProbe::int(enable_affine_bound_cores, deadline),
+                    &mut self.min_budget,
                 )?;
                 if !int_conflicts.is_empty() {
                     self.support_stats.conflict_batches += 1;
@@ -964,6 +1075,7 @@ impl IncrementalArithDpll {
                     &lits,
                     &support,
                     TheoryProbe::real(enable_affine_bound_cores, deadline),
+                    &mut self.min_budget,
                 )?;
                 if !real_conflicts.is_empty() {
                     self.support_stats.conflict_batches += 1;
@@ -1010,6 +1122,7 @@ impl IncrementalArithDpll {
                 &self.ctx,
                 &lits,
                 TheoryProbe::int(enable_affine_bound_cores, deadline),
+                &mut self.min_budget,
             )?;
             if !int_conflicts.is_empty() {
                 let mut learn = ArithLearnState {
@@ -1033,6 +1146,7 @@ impl IncrementalArithDpll {
                 &self.ctx,
                 &lits,
                 TheoryProbe::real(enable_affine_bound_cores, deadline),
+                &mut self.min_budget,
             )?;
             if !real_conflicts.is_empty() {
                 let mut learn = ArithLearnState {
@@ -1260,11 +1374,12 @@ fn theory_conflicts(
     ctx: &ArithAbstractor,
     lits: &[TermId],
     probe: TheoryProbe,
+    budget: &mut MinimizationBudget,
 ) -> Result<Vec<ArithConflictCore>, SolverError> {
     let indices: Vec<usize> = (0..ctx.atoms.len())
         .filter(|&i| ctx.atoms[i].theory == probe.theory)
         .collect();
-    theory_conflicts_for_indices(arena, ctx, lits, &indices, probe)
+    theory_conflicts_for_indices(arena, ctx, lits, &indices, probe, budget)
 }
 
 fn theory_conflicts_for_indices(
@@ -1273,6 +1388,7 @@ fn theory_conflicts_for_indices(
     lits: &[TermId],
     indices: &[usize],
     probe: TheoryProbe,
+    budget: &mut MinimizationBudget,
 ) -> Result<Vec<ArithConflictCore>, SolverError> {
     let TheoryProbe {
         theory,
@@ -1327,11 +1443,19 @@ fn theory_conflicts_for_indices(
             )]);
         }
     }
-    // Deletion minimization costs up to one oracle call per atom. Past the
-    // deadline that is exactly the work the caller no longer has time for, and the
-    // unminimized index set is already a valid conflict core — so hand it back as
-    // `Large` rather than spending another `indices.len()` theory checks.
-    if indices.len() > MAX_MINIMIZED_THEORY_CORE_ATOMS || past_deadline(deadline) {
+    // Deletion minimization costs up to one oracle call per atom, so it is
+    // rationed -- but by the WORK BUDGET, never by the core's width. Past the
+    // deadline that work is exactly what the caller no longer has time for, and
+    // the unminimized index set is already a valid conflict core, so hand it back
+    // as `Large` rather than spending another `indices.len()` theory checks.
+    if past_deadline(deadline) {
+        return Ok(vec![ArithConflictCore::new(
+            ArithCoreSource::Large,
+            indices,
+        )]);
+    }
+    if budget.is_exhausted() {
+        budget.note_declined_core();
         return Ok(vec![ArithConflictCore::new(
             ArithCoreSource::Large,
             indices,
@@ -1339,7 +1463,7 @@ fn theory_conflicts_for_indices(
     }
     Ok(vec![ArithConflictCore::new(
         ArithCoreSource::Minimized,
-        minimize_core(arena, &indices, lits, oracle, deadline)?,
+        minimize_core(arena, &indices, lits, oracle, deadline, budget)?,
     )])
 }
 
@@ -1946,6 +2070,7 @@ fn minimize_core(
     lits: &[TermId],
     oracle: DeadlinedTheoryOracle,
     deadline: Option<Instant>,
+    budget: &mut MinimizationBudget,
 ) -> Result<Vec<usize>, SolverError> {
     let mut core: Vec<usize> = indices.to_vec();
     for &candidate in indices {
@@ -1966,7 +2091,18 @@ fn minimize_core(
             .filter(|&&i| i != candidate)
             .map(|&i| lits[i])
             .collect();
-        if !trial.is_empty() && matches!(oracle(arena, &trial, deadline)?, CheckResult::Unsat) {
+        if trial.is_empty() {
+            continue;
+        }
+        // One trial is exactly one conjunctive theory solve, which is the unit
+        // `MINIMIZATION_ORACLE_CALL_BUDGET` rations. Charge before issuing it and
+        // stop rather than overspend: the current `core` is always valid, so an
+        // exhausted budget degrades core quality and never soundness -- the same
+        // contract the deadline poll above has.
+        if !budget.charge() {
+            break;
+        }
+        if matches!(oracle(arena, &trial, deadline)?, CheckResult::Unsat) {
             core.retain(|&i| i != candidate);
         }
     }
@@ -4363,9 +4499,16 @@ mod tests {
         let lits = ctx.atoms.iter().map(|atom| atom.term).collect::<Vec<_>>();
         let all = (0..ctx.atoms.len()).collect::<Vec<_>>();
         assert!(
-            !theory_conflicts_for_indices(&arena, &ctx, &lits, &all, TheoryProbe::int(true, None),)
-                .unwrap()
-                .is_empty(),
+            !theory_conflicts_for_indices(
+                &arena,
+                &ctx,
+                &lits,
+                &all,
+                TheoryProbe::int(true, None),
+                &mut MinimizationBudget::default(),
+            )
+            .unwrap()
+            .is_empty(),
             "the full arbitrary SAT assignment is theory-inconsistent"
         );
         assert!(
@@ -4375,6 +4518,7 @@ mod tests {
                 &lits,
                 &support,
                 TheoryProbe::int(true, None),
+                &mut MinimizationBudget::default(),
             )
             .unwrap()
             .is_empty(),
@@ -4569,7 +4713,6 @@ mod tests {
         assert!(summary.contains("core_src_lp=1"));
         assert!(summary.contains("core_src_minimized=0"));
         assert!(summary.contains("core_src_large=1"));
-        assert!(summary.contains("core_large_literals=20"));
     }
 
     #[test]
@@ -4973,5 +5116,278 @@ mod tests {
             check_with_lia_simplex(&arena, &core_lits).unwrap(),
             CheckResult::Unsat
         ));
+    }
+    /// GUARD: a core that *was* minimized and is still wider than
+    /// [`WIDE_THEORY_CORE_ATOMS`] costs the warm propositional solver exactly what
+    /// an unminimized one of the same width costs, so it must consume the same
+    /// retention budget. Before minimization became budget-gated this case could
+    /// not arise -- the width gate made "minimized" imply "narrow" -- which is why
+    /// the accounting used to key off provenance.
+    #[test]
+    fn a_minimized_but_still_wide_core_consumes_the_retention_budget() {
+        let mut stats = ArithCoreStats::default();
+        stats.record(ArithCoreSource::Minimized, WIDE_THEORY_CORE_ATOMS + 1);
+        assert_eq!(
+            stats.large_literals,
+            WIDE_THEORY_CORE_ATOMS + 1,
+            "a wide retained core charges the retention budget whatever its provenance"
+        );
+    }
+
+    /// GUARD: the retention budget is charged by WIDTH, not by provenance. A
+    /// narrow core -- however it was produced -- is not the hazard
+    /// [`MAX_DYNAMIC_LARGE_CORE_LITERALS`] exists for, and charging it would
+    /// re-create the decline this change removes.
+    #[test]
+    fn narrow_retained_cores_do_not_consume_the_retention_budget() {
+        let mut stats = ArithCoreStats::default();
+        stats.record(ArithCoreSource::Large, WIDE_THEORY_CORE_ATOMS);
+        stats.record(ArithCoreSource::Minimized, 2);
+        assert_eq!(
+            stats.large_literals, 0,
+            "cores at or below the wide threshold are free"
+        );
+    }
+
+    /// GUARD: deletion minimization stops when the work budget is spent, having
+    /// issued exactly the budgeted number of oracle calls -- and the core it hands
+    /// back is the partially minimized one, which is still a valid conflict core.
+    #[test]
+    fn the_minimization_budget_bounds_deletion_work_in_oracle_calls() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let zero = arena.int_const(0);
+        let one = arena.int_const(1);
+
+        // Eight irrelevant satisfiable atoms in front of the two-atom
+        // contradiction, so deletion has to spend calls before it can shrink.
+        let mut lits = Vec::new();
+        for i in 0..8u32 {
+            let y = arena.declare(&format!("y{i}"), Sort::Int).unwrap();
+            let yv = arena.var(y);
+            lits.push(arena.int_le(zero, yv).unwrap());
+        }
+        lits.push(arena.int_le(one, xv).unwrap());
+        lits.push(arena.int_le(xv, zero).unwrap());
+        let indices: Vec<usize> = (0..lits.len()).collect();
+
+        let mut generous = MinimizationBudget::default();
+        let full = minimize_core(
+            &arena,
+            &indices,
+            &lits,
+            int_theory_oracle,
+            None,
+            &mut generous,
+        )
+        .unwrap();
+        assert_eq!(
+            full.len(),
+            2,
+            "an unrationed pass minimizes to the two-atom conflict"
+        );
+        assert_eq!(
+            generous.spent,
+            indices.len(),
+            "one candidate is exactly one oracle call"
+        );
+
+        let mut rationed = MinimizationBudget {
+            remaining: 3,
+            spent: 0,
+            declined_cores: 0,
+        };
+        let partial = minimize_core(
+            &arena,
+            &indices,
+            &lits,
+            int_theory_oracle,
+            None,
+            &mut rationed,
+        )
+        .unwrap();
+        assert_eq!(
+            rationed.spent, 3,
+            "the budget is spent exactly, not overspent"
+        );
+        assert!(rationed.is_exhausted());
+        assert_eq!(
+            partial.len(),
+            indices.len() - 3,
+            "minimization stopped mid-pass and kept the still-valid partial core"
+        );
+    }
+
+    /// GUARD: with the work budget gone the conflict is retained unminimized and
+    /// the decline is counted, rather than the loop paying for a pass it cannot
+    /// afford. This is the fail-closed half of the budget: the old width gate's
+    /// job, done against cost instead of against a proxy for cost.
+    #[test]
+    fn an_exhausted_minimization_budget_retains_the_core_unminimized() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let one = arena.int_const(1);
+        let two_x = arena.int_add(xv, xv).unwrap();
+        // 1 <= 2x <= 1 is LP-feasible at x = 1/2 and integer-infeasible, so none
+        // of the cheap extractors above the minimization decision point fire.
+        let lo = arena.int_le(one, two_x).unwrap();
+        let hi = arena.int_le(two_x, one).unwrap();
+        let both = arena.and(lo, hi).unwrap();
+
+        let mut ctx = ArithAbstractor::default();
+        let _ = ctx.abstract_term(&mut arena, both).unwrap();
+        let lits: Vec<TermId> = ctx.atoms.iter().map(|atom| atom.term).collect();
+        let indices: Vec<usize> = (0..ctx.atoms.len()).collect();
+
+        let mut fresh = MinimizationBudget::default();
+        let baseline = theory_conflicts_for_indices(
+            &arena,
+            &ctx,
+            &lits,
+            &indices,
+            TheoryProbe::int(false, None),
+            &mut fresh,
+        )
+        .unwrap();
+        assert_eq!(baseline.len(), 1);
+        assert!(
+            matches!(baseline[0].source, ArithCoreSource::Minimized),
+            "control: with budget available this conflict reaches the minimizer"
+        );
+
+        let mut spent = MinimizationBudget {
+            remaining: 0,
+            spent: MINIMIZATION_ORACLE_CALL_BUDGET,
+            declined_cores: 0,
+        };
+        let cores = theory_conflicts_for_indices(
+            &arena,
+            &ctx,
+            &lits,
+            &indices,
+            TheoryProbe::int(false, None),
+            &mut spent,
+        )
+        .unwrap();
+        assert_eq!(cores.len(), 1);
+        assert!(
+            matches!(cores[0].source, ArithCoreSource::Large),
+            "with no budget left the conflict is retained unminimized"
+        );
+        assert_eq!(cores[0].indices, indices);
+        assert_eq!(
+            spent.declined_cores, 1,
+            "a core retained for want of budget is counted, so the decline is visible"
+        );
+    }
+
+    /// CHARACTERIZATION, not a guard, and the distinction is the point. Past the
+    /// deadline this route spends **no** minimization work -- but not via the
+    /// `past_deadline` arm at the decision point, which is unreachable this way:
+    /// the top-of-function oracle call itself declines on an expired deadline and
+    /// the function returns no cores at all. That arm is reachable only when the
+    /// deadline expires *inside* the cheap extractors above it, which is a timing
+    /// race no deterministic fixture can force -- so its mutant survives, and
+    /// this test records why rather than pretending otherwise. It is not a
+    /// soundness hole: [`minimize_core`] polls the same deadline itself and
+    /// returns the unmodified core, so deleting the arm changes a provenance tag
+    /// and one vector copy, nothing else.
+    #[test]
+    fn an_expired_deadline_spends_no_minimization_work() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let one = arena.int_const(1);
+        let two_x = arena.int_add(xv, xv).unwrap();
+        let lo = arena.int_le(one, two_x).unwrap();
+        let hi = arena.int_le(two_x, one).unwrap();
+        let both = arena.and(lo, hi).unwrap();
+
+        let mut ctx = ArithAbstractor::default();
+        let _ = ctx.abstract_term(&mut arena, both).unwrap();
+        let lits: Vec<TermId> = ctx.atoms.iter().map(|atom| atom.term).collect();
+        let indices: Vec<usize> = (0..ctx.atoms.len()).collect();
+
+        let expired = Instant::now()
+            .checked_sub(Duration::from_secs(3600))
+            .expect("an hour before now is representable");
+        assert!(past_deadline(Some(expired)));
+        let mut budget = MinimizationBudget::default();
+        let cores = theory_conflicts_for_indices(
+            &arena,
+            &ctx,
+            &lits,
+            &indices,
+            TheoryProbe::int(false, Some(expired)),
+            &mut budget,
+        )
+        .unwrap();
+        assert!(
+            cores.is_empty(),
+            "the deadline-expired oracle declines, so no conflict is reported"
+        );
+        assert_eq!(
+            budget.spent, 0,
+            "and no oracle call is charged for a pass that was never started"
+        );
+    }
+
+    /// GUARD: minimization is no longer refused on WIDTH. A conflict far wider
+    /// than the old `MAX_MINIMIZED_THEORY_CORE_ATOMS = 128` gate must now reach
+    /// the minimizer and come back narrow -- this is the whole measured defect:
+    /// the cores too wide to minimize were the cores whose width then exhausted
+    /// the retention budget.
+    #[test]
+    fn a_core_wider_than_the_old_width_gate_is_minimized() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let one = arena.int_const(1);
+        let two_x = arena.int_add(xv, xv).unwrap();
+        let lo = arena.int_le(one, two_x).unwrap();
+        let hi = arena.int_le(two_x, one).unwrap();
+        let mut conjuncts = vec![lo, hi];
+        // 200 irrelevant satisfiable atoms: 202 > 128, so the old gate refused.
+        for i in 0..200u32 {
+            let y = arena.declare(&format!("y{i}"), Sort::Int).unwrap();
+            let yv = arena.var(y);
+            let zero = arena.int_const(0);
+            conjuncts.push(arena.int_le(zero, yv).unwrap());
+        }
+        let mut both = conjuncts[0];
+        for &c in &conjuncts[1..] {
+            both = arena.and(both, c).unwrap();
+        }
+
+        let mut ctx = ArithAbstractor::default();
+        let _ = ctx.abstract_term(&mut arena, both).unwrap();
+        let lits: Vec<TermId> = ctx.atoms.iter().map(|atom| atom.term).collect();
+        let indices: Vec<usize> = (0..ctx.atoms.len()).collect();
+        assert!(
+            indices.len() > 128,
+            "the fixture must exceed the width gate this change removed"
+        );
+
+        let mut budget = MinimizationBudget::default();
+        let cores = theory_conflicts_for_indices(
+            &arena,
+            &ctx,
+            &lits,
+            &indices,
+            TheoryProbe::int(false, None),
+            &mut budget,
+        )
+        .unwrap();
+        assert_eq!(cores.len(), 1);
+        assert!(
+            matches!(cores[0].source, ArithCoreSource::Minimized),
+            "a wide conflict must be minimized, not banked as `Large`"
+        );
+        assert!(
+            cores[0].indices.len() <= WIDE_THEORY_CORE_ATOMS,
+            "and it must come back narrow enough to stop charging the retention budget"
+        );
     }
 }
