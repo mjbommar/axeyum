@@ -214,6 +214,7 @@ compounding, not automation theatre.
 | [Generated gcd novel-dependency audit result](115-generated-gcd-novel-dependency-audit-result.md) | Why is a bounded official-gcd equation reconstruction now justified? |
 | [Public gcd definition direct-reconstruction plan](116-public-gcd-def-direct-reconstruction-plan.md) | Does the stable official equation follow without the isolated well-founded fix theorem? |
 | [Public gcd definition direct-reconstruction decline](117-public-gcd-def-direct-reconstruction-decline.md) | Why does direct reduction fail even for the zero constructor, and which target-side route remains? |
+| [Exact `Nat.fib_gcd` admission](189-exact-nat-fib-gcd-admission.md) | Did the exact reconstructed theorem survive crash-safe admission and clean replay, and which descendant actually became ready? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

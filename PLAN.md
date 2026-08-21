@@ -121,6 +121,11 @@ now. Nothing was deleted.
 | 2026-08-21 | `a3799dca2` | **`QF_FP/fp_misc`'s "timeout" was an unmemoized DAG walk in the classifier.** `array_bv_abs::abstract_term` re-explored shared subterms once per path; 8/8 `gdb` samples sat in it. Memo + visit budget, each guard mutation-verified to kill exactly one test: **124.7 s timeout → 314 ms**, 4,194,309 visits → 4,365 over 5,762 nodes. QF_FP `timeouts 1 → 0`, certified/checked 15/16 → **16/16**; `dominant` stays 15/16 and the row now declares `bit-blast` instead of `timeout`, because `887b52e64` withdrew its term-level FP route on purpose. Also measured and pinned: `QF_BVFP/Float-no-simp3-main` is not the "evidence exceeds 120 s" it was recorded as — its reduction certificate is `proved` in **28.3 ms** and is withheld only by `produce_evidence`'s blanket "timeout set → skip", whose deadline covers the SAT search and none of `lower_terms` / `tseitin_encode` / `check_drat` / LRAT. QF_FP and QF_BVFP audits re-run at `a3799dca2`; `proof_errors` 4 → **3**, certified/checked 280 → **281**, and the four moved markers in `PROJECT-STATE.md` and the gap analysis renumbered with the account of what moved them. |
 | 2026-08-21 | `17079b33d` | `:pattern` was parsed and dropped; the author's trigger now decides. Arena side table, alternatives unioned, multi-patterns joined, declines explicit. ADR-0537. |
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
+| 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
+| 2026-08-21 | `a9610560c` | The durable construction checker binds the separately stored target goal identity without weakening capsule checks |
+| 2026-08-21 | `d357b3307` | A registered sealed-capsule operation makes the frontier select exactly `Nat.fib_gcd` |
+| 2026-08-21 | `e242b72b3` | Crash-safe recovery admits exact `Nat.fib_gcd` with one authoritative write and unlocks `Nat.fib_dvd` |
+| 2026-08-21 | (pending) | Immutable primary evidence and isolated clean replay seal the exact `Nat.fib_gcd` admission |
 | 2026-08-21 | `9ff54f11c` | Six clean order/divisibility supports reconstruct twice over r091 with empty footprints and byte-identical capsules |
 | 2026-08-21 | `dfc8874ca` | Target-owned divisibility addition and divisor-of-one supports reconstruct reproducibly without importing `Iff` |
 | 2026-08-21 | `5cdd964ba` | Divisibility reflexivity and multiplication utilities reconstruct twice and bind sealed evidence |
@@ -1132,9 +1137,9 @@ declines any trigger outside an application tree over declared uninterpreted
 functions, which rules out arithmetic subterms — the first real workload with
 `(f (+ x 1))` as a pattern will want that.
 
-**Status:** The exact `Nat.fib_gcd` route is now past its first proof-term defect. One preregistered source edit corrected the quotient-iteration helper's final associativity transport from `m*q + (m + r)` to the already-derived `m*q + (r + m)`. The existing no-submission diagnostic now infers the complete helper proof and confirms it definitionally equal to the frozen target type. No theorem was submitted, no capsule was written, and no ledger state changed; the spent first construction attempt remains spent.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd` is durably proved on the authoritative ledger. The repaired target reconstructed twice to the same 1,053,571-byte capsule, survived four fresh imports with an empty axiom footprint, and then passed one crash-injected authoritative admission plus an isolated clean-worktree replay. The measured DAG delta made `Nat.fib_dvd` ready; `Int.gcd_fib` remains blocked by its separate open `Int.fib_neg` premise.
 
-**Next:** preregister a fresh bounded helper-plus-target construction attempt over the unchanged exact route, reconcile the two historical `Nat.fib_gcd` gate couplings monotonically, and only then execute its first zero-retry reconstruction.
+**Next:** qualify the newly ready exact `Nat.fib_dvd` proposition, measure its smallest proof-isolated dependency boundary, and preregister one bounded construction before any target submission. Keep `Int.fib_neg` as the parallel horizon prerequisite for `Int.gcd_fib`.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
