@@ -631,6 +631,52 @@
         "axiom_footprint_policy": "must-be-empty",
         "axiom_footprint": []
       }
+    },
+    {
+      "id": "authoritative-mathlib-int-fib-recurrence-corollary-kernel-capsule-v1",
+      "scope": "authoritative",
+      "reviewed_gate_mentions": [
+        "check-autogenesis-int-fib-recurrence-corollary-capsule.py",
+        "validate-autogenesis-operations.py"
+      ],
+      "applicability": {
+        "fact_ids": ["F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d"],
+        "formal_languages": ["lean4-surface"],
+        "fragments": ["Int"]
+      },
+      "producer": {
+        "operation": "three-root-integer-fibonacci-recurrence-corollary-composition-v1",
+        "implementation": "crates/axeyum-lean-import/examples/int_fib_recurrence_corollary_composition.rs",
+        "input_kind": "axeyum-checked-theorem-slices",
+        "output_kind": "axeyum-sealed-kernel-theorem-capsule"
+      },
+      "checker": {
+        "operation": "axeyum-lean-import/sealed-int-fib-recurrence-corollary-capsule-receipt-v1",
+        "implementation": "scripts/check-autogenesis-int-fib-recurrence-corollary-capsule.py",
+        "input_kind": "axeyum-sealed-kernel-theorem-capsule",
+        "output_kind": "axeyum-checked-sealed-kernel-capsule-receipt-v1"
+      },
+      "executor": {
+        "driver": "axeyum-lean-import/sealed-kernel-capsule-v1",
+        "implementation": "scripts/execute-autogenesis-operation.py",
+        "input_fact_id": "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
+        "result_manifest": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-goal-identity-result-v1.json",
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-recurrence-corollary-composition-v3/int-fib-recurrence-corollary-1.ndjson",
+        "capsule_sha256": "d8823373479dce23213aa004b58e9e0c8912fd413b2cb29e52195639f57a7987",
+        "target_theorem": "Int.fib_eq_fib_add_two_sub_fib_add_one",
+        "goal_sha256": "2295addae4552672b3f69a9a489c9173deddc7e68c74cfa12429490fffc825ad",
+        "declaration_sha256": "095a25341329591091b618d64fbc2f249ed3d33337bf06e499d0c9a10f436a93",
+        "receipt_sha256": "90360a5c12c827afcdcd77fc9b02ff2ef2868b74a71010dddc19d67de65fe276",
+        "timeout_seconds": 120,
+        "expected_evidence_label": "kernel-term-mathlib-int-fib-recurrence-corollary-capsule-axiom-free"
+      },
+      "admission": {
+        "epistemic_status": "proved",
+        "proof_route": "kernel-lean",
+        "evidence_kind": "kernel-term",
+        "axiom_footprint_policy": "must-be-empty",
+        "axiom_footprint": []
+      }
     }
   ]
 }

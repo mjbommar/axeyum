@@ -23,6 +23,9 @@ REFLEXIVITY_FACT = "F:ml430-nat-descfactorial-zero-966b01df"
 FIB_FACT = "F:ml430-nat-fib-add-two-b86e0c82"
 FIB_COPRIME_FACT = "F:ml430-nat-fib-coprime-fib-succ-162fc738"
 GCD_GREATEST_FACT = "F:ml430-nat-gcd-greatest-0a04214a"
+INT_FIB_COROLLARY_FACT = (
+    "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d"
+)
 
 
 def settle_reflexivity_fact(facts):
@@ -31,6 +34,7 @@ def settle_reflexivity_fact(facts):
         FIB_FACT,
         FIB_COPRIME_FACT,
         GCD_GREATEST_FACT,
+        INT_FIB_COROLLARY_FACT,
     ):
         target = copy.deepcopy(facts[fact_id])
         target["epistemic_status"] = "proved"

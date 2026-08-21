@@ -5,6 +5,13 @@
     "sha256": "d8823373479dce23213aa004b58e9e0c8912fd413b2cb29e52195639f57a7987"
   },
   "kind": "axeyum-theorem-goal-identity-audit",
+  "state": "exact-goal-identity-bound-without-rendering",
+  "execution": {
+    "importer_runs": 1,
+    "stream_reads": 1,
+    "retries": 0,
+    "ledger_writes": 0
+  },
   "rendered_material": {
     "proof_terms": 0,
     "theorem_types": 0,

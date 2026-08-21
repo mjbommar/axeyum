@@ -11,7 +11,7 @@
     "construction_result": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-composition-result-v3.json",
     "construction_result_sha256": "11be30622a78fce1eed8accca59dceb254c5cf3a3bf05d15e237aad295cac907",
     "identity_result": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-goal-identity-result-v1.json",
-    "identity_result_sha256": "c434952c4d9b92f1e7b256c25bc22ae14e2657ed9242d4f05e90dc1192edd87c",
+    "identity_result_sha256": "b48540b031c0fd0ddd2e23cf6ed03f1339f847a01e8102c5b7edccee6df4e0f2",
     "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-recurrence-corollary-composition-v3/int-fib-recurrence-corollary-1.ndjson",
     "capsule_sha256": "d8823373479dce23213aa004b58e9e0c8912fd413b2cb29e52195639f57a7987",
     "capsule_bytes": 879304,
