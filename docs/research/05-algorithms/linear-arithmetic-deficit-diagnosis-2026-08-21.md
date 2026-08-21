@@ -447,12 +447,13 @@ pushed over the line, and it was the patched binary's turn to lose it.
 
 ### What it would buy
 
-+17 files on QF_UFLIA, measured. The recorded ledger entry is 94/200 against
-cvc5's 180 = **52.2 %**; the same +17 applied to that baseline is 111/180 =
-**61.7 %**, which would move QF_UFLIA from the *worst* of the four divisions to
-better than QF_RDL. This is a projection from an A/B, **not** a parity result —
-only `scripts/parity-run.sh` against cvc5 may move the number in `PARITY.md`, and
-that sweep has not been run.
++17 files on QF_UFLIA, measured. The recorded ledger entry is **94/180 =
+52.2 %** (axeyum 94 of 200, cvc5 180 of 200); the same +17 on that baseline is
+111/180 = **61.7 %**, which moves QF_UFLIA from the *worst* of the four to
+second, ahead of QF_LRA (58.9 %) and QF_IDL (54.8 %) and still behind QF_RDL
+(67.7 %). This is a projection from an A/B, **not** a parity result — only
+`scripts/parity-run.sh` against cvc5 may move a number in `PARITY.md`, and that
+sweep has not been run.
 
 ### Why this one and not the others
 
