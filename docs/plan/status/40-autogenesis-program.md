@@ -4,7 +4,7 @@
 
 **Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction now includes unconditional official balanced Bézout, official coprime-factor divisibility cancellation, and a clean divisibility-antisymmetry closure. V5 transports all three clean order supports into r091 twice with byte-identical source/target evidence and empty footprints; no exact Fibonacci target has yet been submitted.
 
-**Next:** preregister the exact `Nat.gcd_fib_add_self` construction using accepted Fibonacci addition, official cancellation, and clean divisibility antisymmetry before any target submission.
+**Next:** implement four root-selected, independently reimported support capsules for Fibonacci addition, Fibonacci coprimality, official cancellation, and clean divisibility antisymmetry. Keep proof-bearing NDJSON only in the sealed NAS pack; no target submission is authorized yet.
 
 <!-- plan-section: landed-changes -->
 
@@ -169,3 +169,4 @@
 | 2026-08-21 | (pending) | V5 freezes the complete antisymmetry proposition as the inner induction motive so each branch binds already-specialized divisibility hypotheses |
 | 2026-08-21 | (pending) | V5 clean order driver moves both divisibility binders inside the specialized induction branches and passes focused gates without reading r091 |
 | 2026-08-21 | (pending) | V5 clean zero-divisibility, divisor-bound, and divisibility-antisymmetry supports transport twice into r091 with byte-identical empty-footprint evidence |
+| 2026-08-21 | (pending) | Four portable root-selected support capsules are frozen before code or export so the exact target no longer depends on one monolithic reconstruction process |
