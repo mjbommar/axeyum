@@ -343,6 +343,52 @@ pub struct HayesGaloisOrbitTraceReport {
     pub orders: Vec<HayesGaloisOrbitOrderRow>,
 }
 
+/// One exact-order layer reconstructed by subgroup orthogonality in class space.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HayesExactOrderSpatialTraceRow {
+    /// Exact character order `2^s`.
+    pub character_order: usize,
+    /// Number of exact-conductor characters of this exact order.
+    pub exact_character_count: usize,
+    /// Number of characters on `E_level` whose order divides `character_order`.
+    pub full_cumulative_character_count: usize,
+    /// Number of characters on `E_(level-1)` whose order divides `character_order`.
+    pub lower_cumulative_character_count: usize,
+    /// Mangoldt mass on the `character_order`-th powers in `E_level`.
+    pub full_power_subgroup_population: u128,
+    /// Mangoldt mass whose projection is a `character_order`-th power in
+    /// `E_(level-1)`.
+    pub lower_power_subgroup_population: u128,
+    /// Whether the newly exposed coefficient at `level` is forbidden by the
+    /// `character_order`-power condition.
+    pub new_coefficient_forced_zero: bool,
+    /// Signed imbalance `2 P_(level,s)-P_(level-1,s)` when the new
+    /// coefficient is forced to zero, and zero when it is allowed.
+    pub coefficient_imbalance: i128,
+    /// Trace over exact-conductor characters of order dividing
+    /// `character_order`.
+    pub cumulative_conductor_trace: i128,
+    /// Signed trace of the exact-order, exact-conductor character layer.
+    pub signed_trace_sum: i128,
+}
+
+/// Exact-order conductor trace reconstructed without cyclotomic evaluation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HayesExactOrderSpatialTraceReport {
+    /// Exact conductor level.
+    pub level: usize,
+    /// Logarithmic power-sum degree.
+    pub degree: usize,
+    /// Number `2^(level-1)` of primitive characters.
+    pub primitive_character_count: usize,
+    /// Sum of all exact-order spatial trace layers.
+    pub reconstructed_conductor_trace: i128,
+    /// Independent conductor-layer trace from class populations.
+    pub direct_conductor_trace: i128,
+    /// Spatial orthogonality data by exact character order.
+    pub orders: Vec<HayesExactOrderSpatialTraceRow>,
+}
+
 /// Exact Galois-closed primitive trace packets induced by a generalized
 /// Fomenko coefficient-zero restriction.
 ///
@@ -1352,6 +1398,324 @@ pub fn hayes_galois_orbit_trace_report(
         maximum_absolute_order_layer_trace,
         order_layer_candidate_violation_count,
         required_order_layer_coefficient,
+        reconstructed_conductor_trace,
+        direct_conductor_trace,
+        orders,
+    })
+}
+
+fn bounded_order_character_count(
+    factors: &[PrincipalUnitFactor],
+    character_order: usize,
+) -> Result<usize, HayesError> {
+    if !character_order.is_power_of_two() {
+        return Err(HayesError::InvalidParameter(
+            "character-order bound must be a power of two".to_owned(),
+        ));
+    }
+    factors.iter().try_fold(1_usize, |count, factor| {
+        count
+            .checked_mul(factor.order.min(character_order))
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("bounded-order character count overflow".to_owned())
+            })
+    })
+}
+
+fn bounded_order_character_count_closed(
+    level: usize,
+    character_order: usize,
+) -> Result<BigUint, HayesError> {
+    if !character_order.is_power_of_two() {
+        return Err(HayesError::InvalidParameter(
+            "character-order bound must be a power of two".to_owned(),
+        ));
+    }
+    // One binary Witt slot is charged for every index in `1..=level` not
+    // divisible by `character_order`.
+    Ok(BigUint::from(1_u8) << (level - level / character_order))
+}
+
+fn mixed_radix_index_is_power(
+    mut index: usize,
+    factors: &[PrincipalUnitFactor],
+    exponent: usize,
+) -> Result<bool, HayesError> {
+    if !exponent.is_power_of_two() {
+        return Err(HayesError::InvalidParameter(
+            "principal-unit power exponent must be a power of two".to_owned(),
+        ));
+    }
+    for factor in factors {
+        let coordinate = index % factor.order;
+        index /= factor.order;
+        if !coordinate.is_multiple_of(factor.order.min(exponent)) {
+            return Ok(false);
+        }
+    }
+    if index != 0 {
+        return Err(HayesError::Invariant(
+            "power-subgroup test left unused coordinates".to_owned(),
+        ));
+    }
+    Ok(true)
+}
+
+fn weighted_population_term(character_count: usize, population: u128) -> Result<i128, HayesError> {
+    let product = (character_count as u128)
+        .checked_mul(population)
+        .ok_or_else(|| HayesError::InvalidParameter("orthogonality term overflow".to_owned()))?;
+    i128::try_from(product).map_err(|_| {
+        HayesError::InvalidParameter("orthogonality term does not fit signed domain".to_owned())
+    })
+}
+
+/// Reconstruct exact-order, exact-conductor Hayes traces in class space.
+///
+/// Let `H_(j,s)` be the characters of `E_j` killed by `2^s`.  Finite-group
+/// orthogonality gives
+///
+/// ```text
+/// sum_(chi in H_(j,s)) chi(g) = |H_(j,s)| 1_(g in 2^s E_j).
+/// ```
+///
+/// Exact order is the difference between `s` and `s-1`; exact conductor is
+/// the difference between levels `j` and `j-1`.  Their product is therefore
+/// a four-term inclusion--exclusion.  This operation evaluates those four
+/// ordinary population sums directly, without cyclotomic character values or
+/// the Galois-orbit transform used by [`hayes_galois_orbit_trace_report`].
+///
+/// # Errors
+///
+/// Returns a typed admission, overflow, projection, or population invariant
+/// failure.  Level must be at least two.
+#[allow(clippy::too_many_lines)]
+pub fn hayes_exact_order_spatial_trace_report(
+    level: usize,
+    degree: usize,
+    limits: HayesLimits,
+) -> Result<HayesExactOrderSpatialTraceReport, HayesError> {
+    if level < 2 {
+        return Err(HayesError::InvalidParameter(
+            "exact-order spatial trace requires level at least two".to_owned(),
+        ));
+    }
+    admit(level, degree, limits)?;
+    let distribution = class_population_distribution_admitted(level, degree)?;
+    let full_factors = principal_unit_factors(level);
+    let lower_factors = principal_unit_factors(level - 1);
+    let maximum_order = full_factors
+        .iter()
+        .map(|factor| factor.order)
+        .max()
+        .unwrap_or(1);
+    let mut orders = Vec::new();
+    let mut previous_order = 1_usize;
+    let mut character_order = 2_usize;
+    while character_order <= maximum_order {
+        let full_cumulative_character_count =
+            bounded_order_character_count(&full_factors, character_order)?;
+        let full_previous_character_count =
+            bounded_order_character_count(&full_factors, previous_order)?;
+        let lower_cumulative_character_count =
+            bounded_order_character_count(&lower_factors, character_order)?;
+        let lower_previous_character_count =
+            bounded_order_character_count(&lower_factors, previous_order)?;
+
+        let mut full_power_subgroup_population = 0_u128;
+        let mut full_previous_power_subgroup_population = 0_u128;
+        let mut lower_power_subgroup_population = 0_u128;
+        let mut lower_previous_power_subgroup_population = 0_u128;
+        for (class, population) in distribution.counts.iter().copied().enumerate() {
+            if mixed_radix_index_is_power(class, &full_factors, character_order)? {
+                full_power_subgroup_population = full_power_subgroup_population
+                    .checked_add(population)
+                    .ok_or_else(|| {
+                        HayesError::InvalidParameter(
+                            "full power-subgroup population overflow".to_owned(),
+                        )
+                    })?;
+            }
+            if mixed_radix_index_is_power(class, &full_factors, previous_order)? {
+                full_previous_power_subgroup_population = full_previous_power_subgroup_population
+                    .checked_add(population)
+                    .ok_or_else(|| {
+                        HayesError::InvalidParameter(
+                            "previous full power-subgroup population overflow".to_owned(),
+                        )
+                    })?;
+            }
+            let lower_class = project_mixed_radix_index(class, &full_factors, &lower_factors)?;
+            if mixed_radix_index_is_power(lower_class, &lower_factors, character_order)? {
+                lower_power_subgroup_population = lower_power_subgroup_population
+                    .checked_add(population)
+                    .ok_or_else(|| {
+                        HayesError::InvalidParameter(
+                            "lower power-subgroup population overflow".to_owned(),
+                        )
+                    })?;
+            }
+            if mixed_radix_index_is_power(lower_class, &lower_factors, previous_order)? {
+                lower_previous_power_subgroup_population = lower_previous_power_subgroup_population
+                    .checked_add(population)
+                    .ok_or_else(|| {
+                        HayesError::InvalidParameter(
+                            "previous lower power-subgroup population overflow".to_owned(),
+                        )
+                    })?;
+            }
+        }
+
+        let full_current = weighted_population_term(
+            full_cumulative_character_count,
+            full_power_subgroup_population,
+        )?;
+        let full_previous = weighted_population_term(
+            full_previous_character_count,
+            full_previous_power_subgroup_population,
+        )?;
+        let lower_current = weighted_population_term(
+            lower_cumulative_character_count,
+            lower_power_subgroup_population,
+        )?;
+        let lower_previous = weighted_population_term(
+            lower_previous_character_count,
+            lower_previous_power_subgroup_population,
+        )?;
+        let cumulative_conductor_trace =
+            full_current.checked_sub(lower_current).ok_or_else(|| {
+                HayesError::InvalidParameter("cumulative conductor trace overflow".to_owned())
+            })?;
+        let previous_cumulative_conductor_trace =
+            full_previous.checked_sub(lower_previous).ok_or_else(|| {
+                HayesError::InvalidParameter(
+                    "previous cumulative conductor trace overflow".to_owned(),
+                )
+            })?;
+        let signed_trace_sum = cumulative_conductor_trace
+            .checked_sub(previous_cumulative_conductor_trace)
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("spatial exact-order trace overflow".to_owned())
+            })?;
+        let new_coefficient_forced_zero = !level.is_multiple_of(character_order);
+        let coefficient_imbalance = if new_coefficient_forced_zero {
+            let doubled = i128::try_from(full_power_subgroup_population)
+                .ok()
+                .and_then(|value| value.checked_mul(2))
+                .ok_or_else(|| {
+                    HayesError::InvalidParameter("coefficient imbalance overflow".to_owned())
+                })?;
+            doubled
+                .checked_sub(
+                    i128::try_from(lower_power_subgroup_population).map_err(|_| {
+                        HayesError::InvalidParameter(
+                            "lower population does not fit signed domain".to_owned(),
+                        )
+                    })?,
+                )
+                .ok_or_else(|| {
+                    HayesError::InvalidParameter("coefficient imbalance overflow".to_owned())
+                })?
+        } else {
+            0
+        };
+        if new_coefficient_forced_zero {
+            if full_cumulative_character_count
+                != lower_cumulative_character_count
+                    .checked_mul(2)
+                    .ok_or_else(|| {
+                        HayesError::InvalidParameter(
+                            "cumulative character count overflow".to_owned(),
+                        )
+                    })?
+                || cumulative_conductor_trace
+                    != weighted_population_term(
+                        lower_cumulative_character_count,
+                        coefficient_imbalance.unsigned_abs(),
+                    )? * coefficient_imbalance.signum()
+            {
+                return Err(HayesError::Invariant(
+                    "forced coefficient imbalance identity failed".to_owned(),
+                ));
+            }
+        } else if full_cumulative_character_count != lower_cumulative_character_count
+            || full_power_subgroup_population != lower_power_subgroup_population
+            || cumulative_conductor_trace != 0
+        {
+            return Err(HayesError::Invariant(
+                "allowed coefficient should add no cumulative conductor trace".to_owned(),
+            ));
+        }
+        let current_conductor_character_count = full_cumulative_character_count
+            .checked_sub(lower_cumulative_character_count)
+            .ok_or_else(|| {
+                HayesError::Invariant("cumulative conductor character count underflow".to_owned())
+            })?;
+        let previous_conductor_character_count = full_previous_character_count
+            .checked_sub(lower_previous_character_count)
+            .ok_or_else(|| {
+                HayesError::Invariant("previous conductor character count underflow".to_owned())
+            })?;
+        let exact_character_count = current_conductor_character_count
+            .checked_sub(previous_conductor_character_count)
+            .ok_or_else(|| {
+                HayesError::Invariant("exact-order character count underflow".to_owned())
+            })?;
+        if exact_character_count == 0 {
+            if signed_trace_sum != 0 {
+                return Err(HayesError::Invariant(
+                    "empty exact-order character layer has nonzero trace".to_owned(),
+                ));
+            }
+        } else {
+            orders.push(HayesExactOrderSpatialTraceRow {
+                character_order,
+                exact_character_count,
+                full_cumulative_character_count,
+                lower_cumulative_character_count,
+                full_power_subgroup_population,
+                lower_power_subgroup_population,
+                new_coefficient_forced_zero,
+                coefficient_imbalance,
+                cumulative_conductor_trace,
+                signed_trace_sum,
+            });
+        }
+        previous_order = character_order;
+        character_order = character_order.checked_mul(2).ok_or_else(|| {
+            HayesError::InvalidParameter("character order iteration overflow".to_owned())
+        })?;
+    }
+    let primitive_character_count = orders
+        .iter()
+        .try_fold(0_usize, |sum, row| {
+            sum.checked_add(row.exact_character_count)
+        })
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("primitive character count overflow".to_owned())
+        })?;
+    let expected_primitive_character_count = 1_usize << (level - 1);
+    if primitive_character_count != expected_primitive_character_count {
+        return Err(HayesError::Invariant(format!(
+            "spatial order layers contain {primitive_character_count} primitive characters, expected {expected_primitive_character_count}"
+        )));
+    }
+    let reconstructed_conductor_trace = orders
+        .iter()
+        .try_fold(0_i128, |sum, row| sum.checked_add(row.signed_trace_sum))
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("spatial conductor trace overflow".to_owned())
+        })?;
+    let direct_conductor_trace = conductor_layers(level, degree, limits)?[level - 1].value;
+    if reconstructed_conductor_trace != direct_conductor_trace {
+        return Err(HayesError::Invariant(format!(
+            "spatial order sum {reconstructed_conductor_trace} does not recover conductor trace {direct_conductor_trace}"
+        )));
+    }
+    Ok(HayesExactOrderSpatialTraceReport {
+        level,
+        degree,
+        primitive_character_count,
         reconstructed_conductor_trace,
         direct_conductor_trace,
         orders,
@@ -5407,6 +5771,77 @@ pub struct TranslationAdjustedOneSidedConnectedImplication {
     pub top_forced_vanishing_character_count: BigUint,
 }
 
+/// Endpoint ledger under a polynomial exact-order trace hypothesis.
+///
+/// The unproved input is
+///
+/// ```text
+/// |T_(j,s)(n)| <= j^2 (j-1) 2^ceil(n/2)
+/// ```
+///
+/// for every nonempty exact-order layer in the retained top conductor
+/// window.  The report prices that statement without granting it theorem
+/// credit.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExactOrderPolynomialEndpointImplication {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// Endpoint degree `2ell+1` or `2ell+2`.
+    pub degree: usize,
+    /// First conductor level governed by the order-layer hypothesis.
+    pub first_top_level: usize,
+    /// Proved low-conductor individual-Weil envelope.
+    pub low_weil_numerator: BigUint,
+    /// Triangle envelope supplied by the polynomial order-layer hypothesis.
+    pub assumed_top_order_layer_numerator: BigUint,
+    /// Number of nonempty exact-order layers charged in the top window.
+    pub charged_order_layer_count: usize,
+    /// Largest uniform integer `C` for which
+    /// `|T_(j,s)| <= C (j-1) 2^ceil(n/2)` on every charged layer still proves
+    /// the endpoint by the triangle inequality.
+    pub maximum_uniform_order_layer_coefficient: BigUint,
+    /// Required Haar discrepancy numerator `2^(2ell)`.
+    pub candidate_target_numerator: BigUint,
+    /// Whether the assumed bound and proved low envelope are strictly below
+    /// the endpoint target.
+    pub proves_endpoint: bool,
+}
+
+/// Endpoint ledger under a linear saving on every exact-order layer.
+///
+/// The unproved input is the much weaker estimate
+///
+/// ```text
+/// 4 ell |T_(j,s)(n)|
+///   <= #X_(j,s) (j-1) 2^ceil(n/2),
+/// ```
+///
+/// where `#X_(j,s)` is the exact number of conductor-`j`, order-`2^s`
+/// characters.  Thus only a factor `4ell` is saved over the ordinary summed
+/// Weil envelope.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExactOrderLinearSavingEndpointImplication {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// Endpoint degree `2ell+1` or `2ell+2`.
+    pub degree: usize,
+    /// First conductor level governed by the order-layer hypothesis.
+    pub first_top_level: usize,
+    /// Proved low-conductor individual-Weil envelope.
+    pub low_weil_numerator: BigUint,
+    /// Sum of the integer order-layer envelopes after division by `4ell`.
+    pub assumed_top_order_layer_numerator: BigUint,
+    /// Number of nonempty exact-order layers charged in the top window.
+    pub charged_order_layer_count: usize,
+    /// Total exact-conductor characters charged in the top window.
+    pub charged_character_count: BigUint,
+    /// Required Haar discrepancy numerator `2^(2ell)`.
+    pub candidate_target_numerator: BigUint,
+    /// Whether the assumed saving and proved low envelope are strictly below
+    /// the endpoint target.
+    pub proves_endpoint: bool,
+}
+
 /// Exact conditional variance inside the identity coarse Witt cylinder.
 ///
 /// Let `c=first_top_level-1`, let `R=2^(ell-c)`, and let `x_e` be the fine
@@ -6408,6 +6843,157 @@ pub fn population_refinement_one_sided_connected_implication(
         negative_allowance_numerator,
         required_saving_ceiling,
         candidate_target_numerator: symmetric.candidate_target_numerator,
+    })
+}
+
+/// Price a polynomial exact-order trace estimate against the Lemire endpoint.
+///
+/// At level `j`, the largest principal-unit cyclic factor has order
+/// `2^ceil(log2(j+1))`.  Exact conductor `j` forces character order at least
+/// `2^(v_2(j)+1)`, so exactly
+/// `ceil(log2(j+1))-v_2(j)` order layers can be nonempty.  Summing the assumed
+/// `j^2 (j-1) 2^ceil(n/2)` bound over those layers and the retained conductor
+/// window is exponentially smaller than the Haar target.  This operation
+/// checks the integer inequality; it does not prove the assumed trace bound.
+///
+/// # Errors
+///
+/// Rejects the same invalid endpoints as
+/// [`population_refinement_one_sided_connected_implication`] or arithmetic
+/// overflow.
+pub fn exact_order_polynomial_endpoint_implication(
+    ell: usize,
+    degree: usize,
+) -> Result<ExactOrderPolynomialEndpointImplication, HayesError> {
+    let baseline = population_refinement_one_sided_connected_implication(ell, degree)?;
+    let square_root_scale = BigUint::from(1_u8) << degree.div_ceil(2);
+    let mut assumed_top_order_layer_numerator = BigUint::from(0_u8);
+    let mut uniform_coefficient_denominator = BigUint::from(0_u8);
+    let mut charged_order_layer_count = 0_usize;
+    for level in baseline.first_top_level..=ell {
+        let maximum_order = principal_unit_factors(level)
+            .iter()
+            .map(|factor| factor.order)
+            .max()
+            .unwrap_or(1);
+        let order_layer_count = maximum_order
+            .trailing_zeros()
+            .checked_sub(level.trailing_zeros())
+            .ok_or_else(|| HayesError::Invariant("exact-order layer count underflow".to_owned()))?
+            as usize;
+        charged_order_layer_count = charged_order_layer_count
+            .checked_add(order_layer_count)
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("charged order-layer count overflow".to_owned())
+            })?;
+        assumed_top_order_layer_numerator += BigUint::from(order_layer_count)
+            * BigUint::from(level).pow(2)
+            * BigUint::from(level - 1)
+            * &square_root_scale;
+        uniform_coefficient_denominator +=
+            BigUint::from(order_layer_count) * BigUint::from(level - 1) * &square_root_scale;
+    }
+    let total = &baseline.low_weil_triangle_numerator + &assumed_top_order_layer_numerator;
+    let proves_endpoint = total < baseline.candidate_target_numerator;
+    let remaining_numerator = &baseline.candidate_target_numerator
+        - &baseline.low_weil_triangle_numerator
+        - BigUint::from(1_u8);
+    let maximum_uniform_order_layer_coefficient =
+        remaining_numerator / uniform_coefficient_denominator;
+    Ok(ExactOrderPolynomialEndpointImplication {
+        ell,
+        degree,
+        first_top_level: baseline.first_top_level,
+        low_weil_numerator: baseline.low_weil_triangle_numerator,
+        assumed_top_order_layer_numerator,
+        charged_order_layer_count,
+        maximum_uniform_order_layer_coefficient,
+        candidate_target_numerator: baseline.candidate_target_numerator,
+        proves_endpoint,
+    })
+}
+
+/// Price a factor-`4ell` saving on each exact-order trace layer.
+///
+/// The ordinary summed Weil envelope for one layer is its exact character
+/// count times `(j-1)2^ceil(n/2)`.  The assumed statement divides that exact
+/// integer envelope by `4ell`; no cancellation between order layers or
+/// conductor levels is used by this implication.
+///
+/// # Errors
+///
+/// Rejects the same invalid endpoints as
+/// [`population_refinement_one_sided_connected_implication`] or arithmetic
+/// overflow.
+pub fn exact_order_linear_saving_endpoint_implication(
+    ell: usize,
+    degree: usize,
+) -> Result<ExactOrderLinearSavingEndpointImplication, HayesError> {
+    let baseline = population_refinement_one_sided_connected_implication(ell, degree)?;
+    let square_root_scale = BigUint::from(1_u8) << degree.div_ceil(2);
+    let saving_denominator = BigUint::from(4_usize.checked_mul(ell).ok_or_else(|| {
+        HayesError::InvalidParameter("linear order-layer saving overflow".to_owned())
+    })?);
+    let mut assumed_top_order_layer_numerator = BigUint::from(0_u8);
+    let mut charged_order_layer_count = 0_usize;
+    let mut charged_character_count = BigUint::from(0_u8);
+    for level in baseline.first_top_level..=ell {
+        let full_factors = principal_unit_factors(level);
+        let maximum_order = full_factors
+            .iter()
+            .map(|factor| factor.order)
+            .max()
+            .unwrap_or(1);
+        let mut previous_order = 1_usize;
+        let mut character_order = 2_usize;
+        while character_order <= maximum_order {
+            let full_current = bounded_order_character_count_closed(level, character_order)?;
+            let full_previous = bounded_order_character_count_closed(level, previous_order)?;
+            let lower_current = bounded_order_character_count_closed(level - 1, character_order)?;
+            let lower_previous = bounded_order_character_count_closed(level - 1, previous_order)?;
+            if full_current < lower_current || full_previous < lower_previous {
+                return Err(HayesError::Invariant(
+                    "linear-saving conductor count underflow".to_owned(),
+                ));
+            }
+            let cumulative_current = full_current - lower_current;
+            let cumulative_previous = full_previous - lower_previous;
+            if cumulative_current < cumulative_previous {
+                return Err(HayesError::Invariant(
+                    "linear-saving exact-order count underflow".to_owned(),
+                ));
+            }
+            let exact_character_count = cumulative_current - cumulative_previous;
+            if exact_character_count != BigUint::from(0_u8) {
+                charged_order_layer_count =
+                    charged_order_layer_count.checked_add(1).ok_or_else(|| {
+                        HayesError::InvalidParameter(
+                            "linear-saving layer count overflow".to_owned(),
+                        )
+                    })?;
+                charged_character_count += &exact_character_count;
+                assumed_top_order_layer_numerator +=
+                    (&exact_character_count * BigUint::from(level - 1) * &square_root_scale)
+                        / &saving_denominator;
+            }
+            previous_order = character_order;
+            character_order = character_order.checked_mul(2).ok_or_else(|| {
+                HayesError::InvalidParameter("linear-saving order iteration overflow".to_owned())
+            })?;
+        }
+    }
+    let total = &baseline.low_weil_triangle_numerator + &assumed_top_order_layer_numerator;
+    let proves_endpoint = total < baseline.candidate_target_numerator;
+    Ok(ExactOrderLinearSavingEndpointImplication {
+        ell,
+        degree,
+        first_top_level: baseline.first_top_level,
+        low_weil_numerator: baseline.low_weil_triangle_numerator,
+        assumed_top_order_layer_numerator,
+        charged_order_layer_count,
+        charged_character_count,
+        candidate_target_numerator: baseline.candidate_target_numerator,
+        proves_endpoint,
     })
 }
 
@@ -22200,12 +22786,16 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn galois_orbit_traces_reconstruct_exact_conductor_layers() {
         let mut worst = (0_u128, None);
         for level in 2..=12 {
             for degree in [2 * level + 1, 2 * level + 2] {
                 let report =
                     hayes_galois_orbit_trace_report(level, degree, HayesLimits::default()).unwrap();
+                let spatial =
+                    hayes_exact_order_spatial_trace_report(level, degree, HayesLimits::default())
+                        .unwrap();
                 assert_eq!(report.primitive_character_count, 1 << (level - 1));
                 assert_eq!(
                     report.reconstructed_conductor_trace,
@@ -22237,6 +22827,55 @@ mod tests {
                         .sum::<i128>(),
                     report.direct_conductor_trace
                 );
+                assert_eq!(
+                    spatial.primitive_character_count,
+                    report.primitive_character_count
+                );
+                assert_eq!(
+                    spatial.direct_conductor_trace,
+                    report.direct_conductor_trace
+                );
+                assert_eq!(
+                    spatial
+                        .orders
+                        .iter()
+                        .map(|row| (row.character_order, row.signed_trace_sum))
+                        .collect::<Vec<_>>(),
+                    report
+                        .orders
+                        .iter()
+                        .map(|row| (row.character_order, row.signed_trace_sum))
+                        .collect::<Vec<_>>()
+                );
+                assert_eq!(
+                    spatial
+                        .orders
+                        .iter()
+                        .map(|row| row.exact_character_count)
+                        .sum::<usize>(),
+                    1 << (level - 1)
+                );
+                let maximum_order = principal_unit_factors(level)
+                    .iter()
+                    .map(|factor| factor.order)
+                    .max()
+                    .unwrap();
+                assert_eq!(
+                    report.orders.len(),
+                    (maximum_order.trailing_zeros() - level.trailing_zeros()) as usize
+                );
+                for row in &report.orders {
+                    assert_eq!(
+                        bounded_order_character_count_closed(level, row.character_order).unwrap(),
+                        BigUint::from(
+                            bounded_order_character_count(
+                                &principal_unit_factors(level),
+                                row.character_order
+                            )
+                            .unwrap()
+                        )
+                    );
+                }
                 if (level, degree) == (7, 15) {
                     assert_eq!(report.candidate_orbit_allowance, 256);
                     assert_eq!(report.maximum_absolute_orbit_trace, 1_696);
@@ -22261,6 +22900,40 @@ mod tests {
         assert_eq!((worst.level, worst.degree), (11, 24));
         assert_eq!(worst.maximum_absolute_order_layer_trace, 663_552);
         assert_eq!(worst.order_layer_candidate_violation_count, 2);
+    }
+
+    #[test]
+    fn polynomial_exact_order_layers_would_close_both_endpoints() {
+        for ell in 200..=1_024 {
+            for degree in [2 * ell + 1, 2 * ell + 2] {
+                let report = exact_order_polynomial_endpoint_implication(ell, degree).unwrap();
+                assert!(report.proves_endpoint, "{report:?}");
+                assert!(
+                    report.low_weil_numerator + report.assumed_top_order_layer_numerator
+                        < report.candidate_target_numerator
+                );
+                let linear = exact_order_linear_saving_endpoint_implication(ell, degree).unwrap();
+                assert!(linear.proves_endpoint, "{linear:?}");
+                assert_eq!(
+                    linear.charged_order_layer_count,
+                    report.charged_order_layer_count
+                );
+                assert!(
+                    linear.low_weil_numerator + linear.assumed_top_order_layer_numerator
+                        < linear.candidate_target_numerator
+                );
+            }
+        }
+        let first = exact_order_polynomial_endpoint_implication(200, 401).unwrap();
+        assert_eq!(first.first_top_level, 191);
+        assert_eq!(first.charged_order_layer_count, 67);
+        assert!(first.maximum_uniform_order_layer_coefficient > BigUint::from(200_u16).pow(2));
+        let linear = exact_order_linear_saving_endpoint_implication(200, 401).unwrap();
+        assert_eq!(linear.charged_order_layer_count, 67);
+        assert_eq!(
+            linear.charged_character_count,
+            (BigUint::from(1_u8) << 200) - (BigUint::from(1_u8) << 190)
+        );
     }
 
     #[test]
