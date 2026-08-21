@@ -937,7 +937,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-21 | pending | Proved that exact character orders at most the largest `Q` with `2Q^2<=ell` fit by individual Weil alone, removing the Artin--Schreier and first low-Witt layers from the factor-`4ell` endpoint hypothesis. |
+| 2026-08-21 | `013b2eb18` | Proved that exact character orders at most the largest `Q` with `2Q^2<=ell` fit by individual Weil alone, removing the Artin--Schreier and first low-Witt layers from the factor-`4ell` endpoint hypothesis. |
 | 2026-08-21 | `1810a8ea4` | Reconstructed every exact-order conductor trace from four power-subgroup populations and proved that a factor-`4ell` saving per order layer closes both endpoints after the degree-400 handoff. |
 | 2026-08-21 | `d7f05ba53` | Classified all six binary projective transformations and proved translation is the only nonidentity element acting on the monic fixed-degree Hayes quotient. |
 | 2026-08-21 | `1e6d1aeef` | Spent every exact translation-forced zero in the one-sided endpoint ledger; the odd endpoint improves strictly but still requires saving 626, while the even endpoint is unchanged. |
