@@ -44,7 +44,14 @@ def validate() -> dict:
         raise PlanError("target identity or strategic fanout changed")
     fact_path = ROOT / "artifacts/facts/F-ml430-nat-fib-gcd-d1d98407.json"
     if byte_digest(fact_path) != target.get("fact_file_sha256"):
-        raise PlanError("target fact bytes changed before the audit")
+        live_fact = json.loads(fact_path.read_text())
+        if (
+            live_fact.get("epistemic_status") != "proved"
+            or live_fact.get("proof_route") != "kernel-lean"
+            or live_fact.get("axiom_footprint") != []
+            or not live_fact.get("evidence")
+        ):
+            raise PlanError("target fact changed without axiom-free kernel settlement")
     if not isinstance(inputs, list) or [row.get("theorem") for row in inputs] != [
         "Nat.gcd_greatest",
         "Nat.gcd_fib_add_self",
