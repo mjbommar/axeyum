@@ -1,32 +1,79 @@
 {
-  "schema_version": 1,
-  "id": "F:ml430-nat-gcd-fib-add-self-5a92d5e3",
-  "title": "Mathlib v4.30 source proposition Nat.gcd_fib_add_self",
-  "statement": "The proposition declared as `Nat.gcd_fib_add_self` in the pinned Mathlib v4.30 source.",
-  "formal": {
-    "language": "lean4-surface",
-    "statement": "∀ (m n : ℕ), (Nat.fib m).gcd (Nat.fib (n + m)) = (Nat.fib m).gcd (Nat.fib n)",
-    "fragment": "Nat"
-  },
-  "epistemic_status": "open",
-  "external_status": "proved",
+  "axiom_footprint": [],
   "depends_on": [
     "F:ml430-nat-fib-coprime-fib-succ-162fc738"
   ],
-  "evidence": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "artifact": "sha256:8bcf8e56851b7ab1d7614c0fbe55eb6fd09ef4f6c33f85f518c378e035fc946b",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-autogenesis-fact-operation.py --fact artifacts/facts/F-ml430-nat-gcd-fib-add-self-5a92d5e3.json",
+      "checker_operation": {
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/dfa79618c-target-native-exact-v3/target-1.ndjson",
+        "capsule_sha256": "279dc4db5daa6dc2f532f9876052500a7e278c54264b32ccbc9d4256907dfc24",
+        "declaration_sha256": "2d61bf57db3bc182300f1cc1317269eb68e94b5a05a1f0ed4e501f3049303e37",
+        "direct_theorem_dependencies": [
+          "Axeyum.Autogenesis.NatFibSuccessorAddition",
+          "Axeyum.Autogenesis.dvdAddCancelAllNatClosedV1",
+          "Axeyum.Autogenesis.dvdAddOfficialV1",
+          "Axeyum.Autogenesis.dvdAntisymmOfficialV1",
+          "Axeyum.Autogenesis.dvdGcdOfficialV1",
+          "Axeyum.Autogenesis.dvdMulRightOfficialV1",
+          "Axeyum.Autogenesis.fibCoprimeFibSuccOfficialV1",
+          "Axeyum.Autogenesis.gcdCommCleanV1",
+          "Axeyum.Autogenesis.gcdDvdLeftOfficialV1",
+          "Axeyum.Autogenesis.gcdDvdRightOfficialV1",
+          "Axeyum.Autogenesis.officialCoprimeFactorDivisibilityCancellationV1",
+          "Nat.mul_comm"
+        ],
+        "execution_sha256": "8bcf8e56851b7ab1d7614c0fbe55eb6fd09ef4f6c33f85f518c378e035fc946b",
+        "formal_statement_sha256": "50e8b2199101f876f48e246e4c64fe97c2a09af5a4e1c4dec38d933c332690f1",
+        "frontier_sha256": "c15cf6f99896d2c3a8b43cab6065c1aae1ed239f980066f61e9bb5954fbda613",
+        "goal_sha256": "0ac365e0654218862f44cc19391e699b85e495ab1b9608fc3eca79585c0e0475",
+        "id": "authoritative-mathlib-nat-gcd-fib-add-self-kernel-capsule-v1",
+        "operation_sha256": "fc7d3777f88c1e21da1a3ad9f28a1edab4eddb375344b78b1d980d8b809c9b34",
+        "receipt_sha256": "f7f568faf86f908de721b33de3fcbe766e12fae8fab4e1d738eb592eddf9306e",
+        "registry_sha256_at_execution": "f92256c6bb9ff781a3b86c3f7c1bdbf58adef8fdcec38ab9224340ccba67d140",
+        "result_manifest": "artifacts/autogenesis/nat-gcd-fib-add-self-target-native-exact-result-v3.json",
+        "result_manifest_sha256": "336b1ca571255ef945a1e49241a763fa49fba546787ea82732946047275cf4e9",
+        "target_theorem": "Nat.gcd_fib_add_self"
+      },
+      "checkers": [
+        "target-native-fibonacci-gcd-shift-v1",
+        "axeyum-lean-import/sealed-kernel-capsule-receipt-v1",
+        "axeyum-lean-import/sealed-kernel-capsule-v1"
+      ],
+      "id": "autogenesis-operation-8bcf8e56851b7ab1",
+      "kind": "kernel-term",
+      "notes": "Derived from a clean-commit typed execution receipt. The registered fact-operation checker replays the immutable capsule and committed result manifest and requires their exact twice-reconstructed theorem identity, empty axiom footprint, and named direct theorem dependencies; no caller-authored route, footprint, checker, or shell command is accepted.",
+      "supports": "The proposition declared as `Nat.gcd_fib_add_self` in the pinned Mathlib v4.30 source."
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "language": "lean4-surface",
+    "statement": "\u2200 (m n : \u2115), (Nat.fib m).gcd (Nat.fib (n + m)) = (Nat.fib m).gcd (Nat.fib n)"
+  },
+  "id": "F:ml430-nat-gcd-fib-add-self-5a92d5e3",
+  "notes": "CLOSED BY AXEYUM AUTOGENESIS. The machine frontier selected this exact fact for registered operation `authoritative-mathlib-nat-gcd-fib-add-self-kernel-capsule-v1`; execution receipt `8bcf8e56851b7ab1d7614c0fbe55eb6fd09ef4f6c33f85f518c378e035fc946b` produced a twice-reconstructed axiom-free sealed kernel theorem capsule, and the typed transaction derived this status, route, footprint, evidence row, checker, and provenance without caller-authored admission metadata.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
   "provenance": {
     "date": "2026-08-18",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Nat.gcd_fib_add_self` from Mathlib v4.30.0; no proof value was exposed",
+    "established_by": "axeyum-autogenesis execution 5a7e3ee3247b29237aeb20cfab9f6c2546eed648f38e1962f1ed8bce5cf062d4",
     "prior_art": [
       {
-        "who": "the Mathlib contributors",
+        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted",
         "what": "the theorem declaration `Nat.gcd_fib_add_self`",
         "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
-        "year": 2026,
-        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted"
+        "who": "the Mathlib contributors",
+        "year": 2026
       }
-    ]
+    ],
+    "source": "statement-only extraction of `Nat.gcd_fib_add_self` from Mathlib v4.30.0; no proof value was exposed"
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "schema_version": 1,
+  "statement": "The proposition declared as `Nat.gcd_fib_add_self` in the pinned Mathlib v4.30 source.",
+  "title": "Mathlib v4.30 source proposition Nat.gcd_fib_add_self"
 }
