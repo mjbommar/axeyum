@@ -87,13 +87,27 @@ def validate(plan: dict[str, Any] | None = None) -> dict[str, Any]:
         raise SubtractiveGcdAuditPlanError("subtractive gcd audit identity changed")
     if plan.get("fixed_roots") != inventory_roots():
         raise SubtractiveGcdAuditPlanError("fixed proof-free gcd roots changed")
-    for key, expected in {
-        "declined_target_shortcut": "40bdb03cc7319228187e94d9316537a662b017113cf30ab1ed29463dd09a96e5",
-        "public_equation_carrier_audit": "544bde51a25e42f309ef7fecd1dae521527cf4efd2b1b01dccca9c0f07556edd",
-    }.items():
+    for key, path, expected in [
+        (
+            "declined_target_shortcut",
+            "artifacts/autogenesis/coprime-target-cancellation-root-audit-result-v1.json",
+            "40bdb03cc7319228187e94d9316537a662b017113cf30ab1ed29463dd09a96e5",
+        ),
+        (
+            "public_equation_carrier_audit",
+            "artifacts/autogenesis/euclidean-public-equation-carrier-audit-result-v1.json",
+            "544bde51a25e42f309ef7fecd1dae521527cf4efd2b1b01dccca9c0f07556edd",
+        ),
+    ]:
         row = plan["inputs"][key]
-        if row.get("sha256") != expected or sha256(ROOT / row["path"]) != expected:
+        if row != {"path": path, "sha256": expected} or sha256(ROOT / path) != expected:
             raise SubtractiveGcdAuditPlanError(f"{key} identity changed")
+    if plan["inputs"].get("statement_inventory") != {
+        "path": str(INVENTORY),
+        "sha256": "4285e551680abf3b0cafb11709015f04b3aef3eb05ce23af2392b12cec31aecc",
+        "mode": "0444",
+    }:
+        raise SubtractiveGcdAuditPlanError("statement inventory identity changed")
     measurement = plan["fixed_measurement"]
     if (
         measurement.get("export_module") != "Init"
@@ -128,6 +142,21 @@ def validate(plan: dict[str, Any] | None = None) -> dict[str, Any]:
         "ledger_writes": 0,
     }:
         raise SubtractiveGcdAuditPlanError("audit authority changed")
+    if plan.get("proposed_successor") != {
+        "construction": "primitive induction on a + c using gcd-preserving subtraction and balanced natural coefficients",
+        "division_or_modulo_dependencies_allowed": False,
+        "successor_bezout_authorized_after_audit": False,
+    }:
+        raise SubtractiveGcdAuditPlanError("successor boundary changed")
+    if (
+        plan.get("output")
+        != "artifacts/autogenesis/subtractive-gcd-root-audit-result-v1.json"
+        or plan.get("verification")
+        != "python3 scripts/check-autogenesis-subtractive-gcd-root-audit-plan.py"
+        or plan.get("limitations")
+        != "The audit tests only whether the official gcd subtraction/base interface is an axiom-free foundation. It proves no Bezout or cancellation theorem."
+    ):
+        raise SubtractiveGcdAuditPlanError("output or limitation boundary changed")
     return plan
 
 

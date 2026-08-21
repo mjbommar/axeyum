@@ -50,6 +50,14 @@ class SubtractiveGcdRootAuditPlanTests(unittest.TestCase):
             "audit authority",
         )
 
+    def test_division_successor_is_rejected(self) -> None:
+        self.reject(
+            lambda value: value["proposed_successor"].__setitem__(
+                "division_or_modulo_dependencies_allowed", True
+            ),
+            "successor boundary",
+        )
+
     def test_ledger_authority_is_rejected(self) -> None:
         self.reject(
             lambda value: value["authority"].__setitem__("ledger_writes", 1),
