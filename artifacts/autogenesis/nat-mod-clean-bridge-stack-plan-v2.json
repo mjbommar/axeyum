@@ -1,0 +1,12 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-clean-reconstruction-plan",
+  "state": "preregistered-after-self-containment-audit-before-v2-source",
+  "predecessor": {"path": "artifacts/autogenesis/nat-mod-clean-bridge-stack-result-v1.json", "required_state": "plan-self-containment-conflicts-with-blanket-simp-ban"},
+  "targets": ["Axeyum.NatMod.modCoreEqMod", "Axeyum.NatMod.modEq", "Axeyum.NatMod.modEqSubMod"],
+  "support": {"duplicated_roots": ["Axeyum.NatMod.fuelCongr", "Axeyum.NatMod.modCoreEq"], "required_identity": "same statements and proof bodies as qualified V3 source", "sole_simp_exception": "simp only [Nat.modCore.go] inside fuelCongr"},
+  "proof_route": {"modCoreEqMod": "official Nat.modCore_eq_mod proof with Axeyum.NatMod.modCoreEq substituted", "modEq": "compose two symmetric modCoreEqMod bridges with modCoreEq", "modEqSubMod": "official zero-or-positive divisor split with modEq substituted"},
+  "forbidden_for_new_targets": ["Nat.modCore_eq", "Nat.modCore_eq_mod", "Nat.mod_eq", "Nat.mod_eq_sub_mod", "propext", "simp", "simpa", "omega", "native_decide"],
+  "execution": {"source": "artifacts/autogenesis/sources/nat-mod-clean-bridge-stack-v2.lean", "source_present_at_plan_commit": false, "pack": "/nas3/data/axeyum/autogenesis/reference-packs/nat-mod-clean-bridge-stack-v2", "max_compiler_invocations": 1, "max_exporter_invocations": 1, "max_importer_runs": 1, "max_retries": 0, "max_theorem_submissions": 5, "max_ledger_writes": 0},
+  "output": "artifacts/autogenesis/nat-mod-clean-bridge-stack-result-v2.json"
+}

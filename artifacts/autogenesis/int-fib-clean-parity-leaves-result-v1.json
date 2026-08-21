@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-clean-reconstruction-result",
+  "state": "specialized-mod-step-already-normalized",
+  "plan_sha256": "20ad1890e913dbea3eea7984a011aafe49b3637b582145956c8e669e24c54a7a",
+  "source": {"path": "artifacts/autogenesis/sources/int-fib-clean-parity-leaves-v1.lean", "sha256": "14d74878d20281a20d0ce830cab0a12b062c9942e562b8bc9d89c4b64304c699"},
+  "execution": {"compiler_invocations": 1, "compiler_exit_status": 1, "exporter_invocations": 0, "importer_runs": 0, "retries": 0, "theorem_submissions": 0, "ledger_writes": 0},
+  "diagnostic": {"failed_operation": "dsimp only [Nat.add, Nat.sub] at h", "cause": "the specialized modEqSubMod proof is already definitionally normalized to the modStepTwo target", "repair": "remove only the redundant dsimp and exact h directly"},
+  "cleanup": {"temporary_source_removed": true, "temporary_olean_removed": true, "temporary_ilean_removed": true, "checkout_baseline_restored": true},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}

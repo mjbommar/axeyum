@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-clean-reconstruction-result",
+  "state": "private-clean-fuel-root-not-source-addressable",
+  "plan_sha256": "6c9d286e3810ed8ffcafa8e7593b06380b64e413f7ff6e8c02faa0a3ce4a1bf1",
+  "source": {"path": "artifacts/autogenesis/sources/nat-mod-core-clean-reconstruction-v2.lean", "sha256": "9fb69dafb0b2981d88951ed286827ef738c5a0b40c8f3ce0a22a1b733b69346f"},
+  "execution": {"compiler_invocations": 1, "compiler_exit_status": 1, "exporter_invocations": 0, "importer_runs": 0, "retries": 0, "theorem_submissions": 0, "ledger_writes": 0},
+  "diagnostic": {"unknown_identifier": "_private.Init.Data.Nat.Div.Basic.0.Nat.modCore.go.fuel_congr", "audited_root_footprint": [], "repair": "duplicate its small structurally recursive proof under a local public name and call that theorem"},
+  "cleanup": {"temporary_source_removed": true, "temporary_olean_removed": true, "temporary_ilean_removed": true, "checkout_baseline_restored": true},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}
