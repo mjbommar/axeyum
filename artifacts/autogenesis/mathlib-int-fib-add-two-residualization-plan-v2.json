@@ -1,0 +1,32 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-int-fib-add-two-residualization-plan",
+  "state": "preregistered-after-v1-match-reduction-failure-before-v2-source",
+  "prior_result": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-add-two-residualization-result-v1.json",
+    "required_state": "parameterized-source-stops-at-negative-match-reduction-no-export"
+  },
+  "repair": {
+    "only_change": "replace unfold fib in each negative parity branch with an explicit change to the three conditional Nat.fib expressions",
+    "contracts_unchanged": true,
+    "proof_route_unchanged": true,
+    "new_automation": false
+  },
+  "execution": {
+    "source": "artifacts/autogenesis/sources/int-fib-add-two-residual-v2.lean",
+    "source_present_at_plan_commit": false,
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-residual-v2",
+    "pack_present_at_plan_commit": false
+  },
+  "budget": {
+    "max_compiler_invocations": 1,
+    "max_exporter_invocations": 1,
+    "max_importer_runs": 2,
+    "max_retries": 0,
+    "max_parameterized_theorem_submissions": 1,
+    "max_closed_target_submissions": 0,
+    "max_search_invocations": 0,
+    "max_ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-add-two-residualization-result-v2.json"
+}
