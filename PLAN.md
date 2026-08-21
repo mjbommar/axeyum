@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-20 | `0d6b5a524` | Added bounded binary Hankel `(rho,pi)` characteristics with exhaustive independent rank controls, while proving from source scope that the published divisor variance does not supply the signed prime-weighted higher moment or REL. |
 | 2026-08-20 | `7e1c34a41` | Applied the zero-2-rank trace theorem to the exact relative Carlitz Jacobian quotient, proved its endpoint content is only parity, and stopped scalar Artin--Schreier or elementary-abelian bounds from receiving REL credit. |
 | 2026-08-20 | `33a259776` | Replaced the uniform TOP-POLY maxima by the exact one-sided relative identity trace, lowered the first endpoint saving price from 1,583 to 626, and rewrote the two-page manuscript around the weaker REL obligation. |
 | 2026-08-20 | `604504e20` | Wrote the two-page paper-facing Lemire reduction, marked TOP-POLY as its sole open lemma, and froze the fail-closed manuscript contract in ADR-0571. |
@@ -468,14 +469,22 @@ parity because its relative abelian dimension exceeds the endpoint extension
 degree.  The resulting rounding gain is at most one integer, versus REL's
 factor-626 saving at `ell=200`.  Scalar Artin--Schreier code bounds and
 elementary-abelian point-count bounds do not apply to the complete
-non-elementary Witt zero fibre.
+non-elementary Witt zero fibre.  The fixed-`q` Hankel route is now natively
+representable by an exact bounded binary `(rho,pi)` rank primitive, exhaustively
+cross-checked against independent row-span enumeration.  Its source theorem is
+only a divisor-function second moment: the higher-moment extension retains the
+all-quasi-regular additive stratum, and `Lambda=mu*deg` restores the signed
+cross-order convolution.  It therefore supplies representation, not REL.
 
 **Next:** prove `(REL)`, encode it as replayable evidence, remove the
 manuscript's fail-visible warning, and perform the final source audit.  The
 next coding/geometric bridge must control the complete relative Witt
 weight/zero-fibre distribution before characterwise absolute values; zero
 `2`-rank, a scalar minimum distance, or an elementary-abelian cover theorem is
-not sufficient.  The stronger sufficient fourth-moment bound is
+not sufficient.  A Hankel continuation must prove a signed prime-weighted
+all-quasi-regular estimate and immediately discharge the endpoint ledger;
+rank-only or divisor-only tables receive no proof credit.  The stronger
+sufficient fourth-moment bound is
 experimentally true for `6<=ell<=23` but remains an open fact; curve positivity
 alone is non-strict.  The exact half-level Möbius sieve now has a native
 positive-composite counterexample, so the elementary divisor-density route
