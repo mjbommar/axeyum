@@ -612,10 +612,23 @@ def measured_snapshot() -> dict[str, int]:
         "baseline_unsat": sum(
             audit["summary"]["audited_unsat"] for audit in audits
         ),
+        # RESTRICTED TO baseline-UNSAT instances on purpose. This metric answers
+        # "how many of the baseline `unsat` decisions did the evidence audit
+        # reproduce?", and the prose pairs it with `baseline_unsat` as N of M.
+        #
+        # Counting `audit_outcome == "unsat"` over ALL instances used to be the
+        # same number only because every recorded instance was baseline-decided.
+        # `audit_dominance` now re-probes the baseline-UNDECIDED set and appends
+        # those records (with `baseline_outcome: "unknown"`), so the unrestricted
+        # form measured 358 against a `baseline_unsat` of 326 on 2026-08-21 --
+        # i.e. more reproduced than exist, published as a +35 gain that is
+        # entirely the audit's population widening. `gen-proof-gap-matrix.py`
+        # already filters this way; this is the same filter one level up.
+        # Newly-decided instances are reported by the audit's own
+        # `newly_decided` summary field, which is where that gain belongs.
         "audit_reproduced_unsat": sum(
             instance.get("audit_outcome") == "unsat"
-            for audit in audits
-            for instance in audit["instances"]
+            for instance in baseline_unsat_instances
         ),
         "dominant_unsat": dominant_unsat,
         "uncertified_unsat": uncertified_unsat,

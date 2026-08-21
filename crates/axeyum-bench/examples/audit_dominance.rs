@@ -503,6 +503,24 @@ fn audit_instance(
                 lean_fragment = json!("RegexEmptiness");
                 lean_module_bytes = json!(lean_module.len());
                 lean_checked = true;
+                // CLASSIFY THE STRING ROUTE TOO. These two labels are not
+                // `ProofFragment` variants, so `lean_module_content()` never
+                // sees them and this branch used to leave `lean_content` null.
+                // Measured 2026-08-21: that silently left 13 of 269
+                // Lean-reconstructed `unsat` unclassified (11 `RegexEmptiness`,
+                // 2 `StringLength`), so `lean_theory_unsat` read 129 where the
+                // reasoning half is 142 -- an undercount of the REASONING side,
+                // i.e. in the direction that makes the claim look weaker.
+                //
+                // Read the module rather than a table: `of_module_source` keys
+                // on `STRUCTURAL_ATTESTATION_MARKER`, which only the shared
+                // structural emitter in `reconstruct/direct.rs` writes. The
+                // string reconstructors do not use it, so this is a measurement
+                // of the artifact and not an assumption about the route.
+                lean_content = match LeanModuleContent::of_module_source(lean_module) {
+                    LeanModuleContent::TheoryReconstruction => json!("theory"),
+                    LeanModuleContent::StructuralAttestation => json!("attestation"),
+                };
             }
             Evidence::UnsatStringLength {
                 lean_module: Some(module),
@@ -511,6 +529,10 @@ fn audit_instance(
                 lean_fragment = json!("StringLength");
                 lean_module_bytes = json!(module.len());
                 lean_checked = true;
+                lean_content = match LeanModuleContent::of_module_source(module) {
+                    LeanModuleContent::TheoryReconstruction => json!("theory"),
+                    LeanModuleContent::StructuralAttestation => json!("attestation"),
+                };
             }
             _ => {}
         }
@@ -553,6 +575,12 @@ fn audit_instance(
                         // floors this split for the crosscheck families; the
                         // dominance denominator did not, so the headline read
                         // stronger than it was by a factor of nearly two.
+                        //
+                        // The 142 counts the 13 string-route modules classified
+                        // in the `is_string_script` branch above. Before that
+                        // branch classified them this field recorded only 129,
+                        // so a reader summing `lean_theory_unsat` got a
+                        // different number from the one written here.
                         lean_content = match fragment.lean_module_content() {
                             Some(LeanModuleContent::TheoryReconstruction) => {
                                 json!("theory")

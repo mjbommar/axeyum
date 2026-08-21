@@ -1281,3 +1281,53 @@ it records. No protocol knob was set: no `PARITY_BUDGET_S`, no
 `PARITY_REFERENCE_OPTS`, no `PARITY_RESUME`, no `PARITY_ALLOW_DIRTY`, no
 `PARITY_ALLOW_WEAK_REFERENCE`.
 
+## QF_NIA — 2026-08-21T22:17:23Z
+
+| field | value |
+|---|---|
+| axeyum solved | 39/200 |
+| reference solved | 83/200 |
+| **ratio (axeyum / reference)** | **47.0%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 27 / 12 / 56 |
+| reference | `cvc5 1.3.4 [git f3b21c4 on branch HEAD]` |
+| reference options | `<none — plain invocation, NOT a competition portfolio>` |
+| axeyum options | `<none — shipped default configuration>` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_NIA.txt` (sha256 19b334d3b910, 200 files) |
+| solver commit | `cb4a391c9` |
+| load average (start / end) | 8.95 8.11 8.86 / 1.30 1.74 1.82 — 16 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_NIA.tsv` |
+
+## Addendum — 2026-08-21: QF_NIA's post-fix entry, and a correction to the note above
+
+The note above was written while QF_NIA's `cb4a391c9` sweep was still running.
+It has landed, and it changes that note's account of what `40a1ab969` (ADR-0538)
+moved:
+
+| division | pre-fix `9333f779d` | post-fix `cb4a391c9` | our count |
+|---|---:|---:|---|
+| QF_UFLIA | 95/180 = 52.8% | 113/180 = 62.8% | **+18** |
+| QF_NIA | 33/81 = 40.7% | **39/83 = 47.0%** | **+6** |
+| QF_SLIA | 191/193 = 99.0% | 193/193 = 100.0% | +2 |
+| QF_RDL | 101/147 = 68.7% | 102/148 = 68.9% | +1 |
+| QF_LIA | 113/138 = 81.9% | 113/139 = 81.3% | 0 |
+| QF_LRA | 88/137 = 64.2% | 88/134 = 65.7% | 0 |
+| QF_IDL | 66/115 = 57.4% | 66/118 = 55.9% | 0 |
+
+A one-file change to `crates/axeyum-solver/src/dpll_lia.rs` moved **four**
+divisions — one of them (QF_SLIA) strings, one (QF_NIA) nonlinear integer.
+
+QF_NIA's `both / axeyum-only / reference-only` goes 21/12/55 → 27/12/56, so the
+gain is in the overlap rather than in files the reference cannot decide; the 12
+files we solve and cvc5 does not are unchanged across every QF_NIA sweep today
+and on 2026-08-06.
+
+The transferable point is about scoping a re-measurement, not about this change.
+The re-sweep covered every division routing through the touched file rather than
+the one the change was expected to move. Scoped to the expected one, three of
+these four rows would have been recorded at their PRE-FIX values, stamped with
+today's date, and `scripts/check-parity-freshness.py` would have been green over
+all three.
+

@@ -78,7 +78,7 @@ The latest credited weak arithmetic and combination edges are:
 
 | Division | Axeyum | Reference | Ratio | Disagreements |
 |---|---:|---:|---:|---:|
-| QF_NIA | 33/200 | 81/200 | 40.7% | 0 |
+| QF_NIA | 39/200 | 83/200 | 47.0% | 0 |
 | QF_UFLIA | 113/200 | 180/200 | 62.8% | 0 |
 | QF_IDL | 66/200 | 118/200 | 55.9% | 0 |
 | QF_LRA | 88/200 | 134/200 | 65.7% | 0 |
