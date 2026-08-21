@@ -169,6 +169,17 @@ eight this is eight of sixteen fixed characters for degree 17 and zero for
 degree 18.  The theorem promotes useful AC-bridge structure into Axeyum, but
 the odd vanishing fraction decays with conductor and the even endpoint gets no
 `(WITT-LOW)` saving, so ADR-0587 assigns no `(REL)` proof credit.
+The complete fixed dual is now priced at exact conductor rather than only
+cumulatively.  Restriction gives one fixed character at level one, none at
+even levels, and `2^((j-1)/2)` at odd `j>=3`.  At odd polynomial degree only
+`2^((j-3)/2)` of those primitive odd-level characters have negative
+translation sign; their fraction among all exact-level characters is
+`2^(-(j+1)/2)`.  At even polynomial degree it remains zero.  The bounded CAS
+enumerates every admitted Witt character, checks its conductor, commutator
+fixedness, and sign, and rejects disagreement with the closed forms or
+cumulative totals.  This corrects the tempting factor-two overcount and proves
+that translation alone supplies no conductor-uniform density saving
+(ADR-0588).
 The companion characteristic-two Newton-over-Hodge result has also been
 priced conditionally: it forces only divisibility of the connected endpoint
 trace by eight.  At `ell=200` the existing envelope is already divisible by
@@ -877,6 +888,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-21 | `76e14f95e` | Refined translation cancellation by exact conductor, proving the odd-level forced-zero count is `2^((j-3)/2)` and zero at every even level and at every level of the even endpoint. |
 | 2026-08-21 | `56b2a94da` | Proved the translation-fixed dual has exact order `2^ceil(ell/2)` at every level and made the bounded CAS reject any disagreement with the triangular rank theorem. |
 | 2026-08-21 | `7d194f794` | Promoted the complete translation involution to the bounded CAS, proved its spectral functional equation, and showed it forces half of the fixed dual to vanish only at odd degrees and none at even degrees. |
 | 2026-08-21 | `1a5f30b31` | Added the exact extension-field high-character/low-twist trace, proved `T_1(q)=0` and `T_2(q)=q^9(q-1)^2` at `(ell,n,c)=(3,7,2)`, and rejected repeated cohomology drops from affine-shell dimension alone. |

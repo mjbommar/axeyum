@@ -4775,6 +4775,19 @@ one-character zero, but the odd vanishing fraction shrinks with conductor and
 the even endpoint receives no cancellation.  Thus it is reusable exact
 structure, not a proof of `(WITT-LOW)` or `(REL)` (ADR-0587).
 
+The conductor filtration prices that shrinkage exactly.  If `F_j` denotes the
+fixed-dual count through level `j`, then `F_j=2^ceil(j/2)` and restriction gives
+`f_j=F_j-F_(j-1)`: one fixed character at level one, none at even levels, and
+`2^((j-1)/2)` at odd `j>=3`.  For odd polynomial degree the cumulative
+negative-sign population is `F_j/2`, so differencing again gives one forced
+zero at level one, none at even levels, and only `2^((j-3)/2)` at odd `j>=3`.
+Thus the exact-level forced-zero fraction is `2^(-(j+1)/2)`, not
+`2^(-(j-1)/2)`; at even polynomial degree it is zero.  The CAS enumerates the
+complete admitted character group in Witt coordinates, checks these closed
+forms at every level, and requires the rows to recover the cumulative totals
+(ADR-0588).  This rules out extracting a conductor-uniform density saving from
+translation alone.
+
 The exact algebra is no longer trapped in that executable. ADR-0486 extracts a
 bounded `axeyum_cas::gf2_hayes` API for the principal-unit cyclic structure,
 identity-class populations, endpoint discrepancies, conductor layers, and the

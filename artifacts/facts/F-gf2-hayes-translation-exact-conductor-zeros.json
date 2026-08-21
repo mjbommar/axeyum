@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-hayes-translation-exact-conductor-zeros",
+  "title": "Exact-conductor translation-forced Hayes zeros",
+  "statement": "Let j>=1. Among binary Hayes characters of exact level j, translation fixes one character for j=1, no characters for even j, and 2^((j-1)/2) characters for odd j>=3. At odd polynomial degree, the number of these fixed characters with negative translation sign, hence with zero Mangoldt and squared-discrepancy Fourier coefficient, is one for j=1, zero for even j, and 2^((j-3)/2) for odd j>=3. At even polynomial degree the forced-zero count is zero at every level.",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"format\":\"axeyum-gf2-hayes-translation-exact-conductor-zeros\",\"parameters\":{\"degree\":\"n>=1\",\"level\":\"j>=1\"},\"version\":1}",
+    "fragment": "gf2-principal-unit-character-duality",
+    "free_symbols": ["j", "n"]
+  },
+  "epistemic_status": "proved",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:gf2-hayes-translation-spectral-involution"
+  ],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "finite-abelian-character-duality",
+    "truncated-principal-unit-semantics-v1",
+    "witt-character-conductor-semantics-v1"
+  ],
+  "evidence": [
+    {
+      "id": "gf2-hayes-translation-conductor-native-check",
+      "kind": "exhaustive-enumeration",
+      "supports": "Exact character, translation-fixed, and negative-sign counts at every admitted conductor level, together with recovery of the cumulative totals.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-cas --all-features translation_spectral_involution",
+      "artifact": "crates/axeyum-cas/src/gf2_hayes.rs",
+      "notes": "The universal proof is the difference of the cumulative fixed-dual and negative-sign counts under restriction. Exhaustion through level eight is a mutation control, not quantifier evidence."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-21",
+    "established_by": "Axeyum gf2-lemire lane",
+    "source": "exact conductor filtration of the Hayes translation-fixed dual"
+  },
+  "notes": "For odd j>=3 the forced-zero fraction is 2^(-(j+1)/2), not 2^(-(j-1)/2). The theorem does not supply WITT-LOW or REL credit."
+}
