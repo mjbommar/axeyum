@@ -39,6 +39,16 @@ class StableStatementComparisonTests(unittest.TestCase):
             )
         )
 
+    def test_structural_constant_delta_is_rejected(self) -> None:
+        row = next(
+            index
+            for index, value in enumerate(self.comparison["rows"])
+            if value["name"] == "Nat.Prime.dvd_of_dvd_pow"
+        )
+        self.reject(
+            lambda value: value["rows"][row]["constant_multiset_delta"]["added"].pop()
+        )
+
     def test_inventory_identity_is_rejected(self) -> None:
         self.reject(
             lambda value: value["comparison"].__setitem__("inventory_sha256", "0" * 64)

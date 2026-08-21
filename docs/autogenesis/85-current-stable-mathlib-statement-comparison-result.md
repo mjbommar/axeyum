@@ -42,7 +42,10 @@ The six non-identical rows are concentrated in three themes:
 The comparator deliberately labels the prime row structural drift despite its
 identical pretty text. Human-readable equality is not kernel identity, so that
 row requires a later expression-level explanation before it can count as
-portable.
+portable. The generated result now binds the exact constant-multiset deltas:
+`IsDvdSequence` replaces the expanded Fibonacci relation, `Std.Symm` replaces
+`Symmetric`, and the prime theorem's power instance changes from
+`Monoid.toPow` to `NPow.toPow` through `Monoid.toNPow`.
 
 ## External inventory
 

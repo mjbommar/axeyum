@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 import pathlib
+import re
 import stat
 import subprocess
 import sys
@@ -21,6 +22,10 @@ INVENTORY = pathlib.Path(
     "/nas3/data/axeyum/autogenesis/sources/"
     "mathlib-v4.32.1-nat-int-statement-inventory-v1.ndjson"
 )
+BASELINE_INVENTORY = pathlib.Path(
+    "/nas3/data/axeyum/autogenesis/sources/"
+    "mathlib-v4.30.0-nat-int-statement-inventory-v2.ndjson"
+)
 CHECKOUT = pathlib.Path(
     "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.32.1-checkout"
 )
@@ -32,7 +37,9 @@ OUTPUT = ROOT / (
 PLAN_SHA256 = "19db7a3bf8260f5bad342f3895395102214a9bdedd95ff22cc556502a7b1544a"
 CANDIDATES_SHA256 = "adbb3aff520664495089312a35ac2be1fd017a4ce39e4eff6443ea067d5c0704"
 INVENTORY_SHA256 = "22246f40ae5a9b7f44a914313a5a212104b541d48974df4bf439da4006e61e5e"
+BASELINE_INVENTORY_SHA256 = "4285e551680abf3b0cafb11709015f04b3aef3eb05ce23af2392b12cec31aecc"
 EXPECTED_FIELDS = {"level_params", "module", "name", "type", "type_repr"}
+CONSTANT = re.compile(r"Lean\.Expr\.const\s+`([^\s\[\)]+)")
 CLASS_ORDER = [
     "absent-in-current-stable",
     "structurally-identical",
@@ -59,7 +66,7 @@ def text_sha256(value: str) -> str:
 
 
 def canonical(value: Any) -> str:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return json.dumps(value, sort_keys=True, separators=(",", ":"))
 
 
 def row_sha256(value: dict[str, Any]) -> str:
@@ -82,6 +89,11 @@ def verify_inputs() -> None:
         or sha256(INVENTORY) != INVENTORY_SHA256
     ):
         raise ComparisonError("current-stable inventory changed or is mutable")
+    if (
+        stat.S_IMODE(BASELINE_INVENTORY.stat().st_mode) != 0o444
+        or sha256(BASELINE_INVENTORY) != BASELINE_INVENTORY_SHA256
+    ):
+        raise ComparisonError("baseline inventory changed or is mutable")
     completed = subprocess.run(
         ["git", "-C", str(CHECKOUT), "rev-parse", "HEAD"],
         check=False,
@@ -129,7 +141,47 @@ def load_inventory() -> dict[str, dict[str, Any]]:
     return rows
 
 
-def classify(candidate: dict[str, Any], current: dict[str, Any] | None) -> dict[str, Any]:
+def load_baseline_selected(names: set[str]) -> dict[str, dict[str, Any]]:
+    selected: dict[str, dict[str, Any]] = {}
+    with BASELINE_INVENTORY.open() as source:
+        for line in source:
+            row = json.loads(line)
+            name = row.get("name")
+            if name in names:
+                if name in selected or set(row) != EXPECTED_FIELDS:
+                    raise ComparisonError(f"baseline selected row {name} is invalid")
+                selected[name] = row
+    missing = sorted(names - set(selected))
+    if missing:
+        raise ComparisonError(f"baseline selected rows are missing: {', '.join(missing)}")
+    return selected
+
+
+def constant_delta(baseline_repr: str, current_repr: str) -> dict[str, list[str]]:
+    baseline = Counter(CONSTANT.findall(baseline_repr))
+    current = Counter(CONSTANT.findall(current_repr))
+    return {
+        "removed": sorted((baseline - current).elements()),
+        "added": sorted((current - baseline).elements()),
+    }
+
+
+def classify(
+    candidate: dict[str, Any],
+    baseline: dict[str, Any],
+    current: dict[str, Any] | None,
+) -> dict[str, Any]:
+    baseline_constants = sorted(set(CONSTANT.findall(baseline["type_repr"])))
+    enriched_baseline = {**baseline, "type_constants": baseline_constants}
+    if (
+        row_sha256(enriched_baseline) != candidate["source_row_sha256"]
+        or baseline["module"] != candidate["module"]
+        or baseline["level_params"] != candidate["level_params"]
+        or baseline["type"] != candidate["type"]
+        or text_sha256(baseline["type_repr"]) != candidate["type_repr_sha256"]
+        or len(baseline_constants) != candidate["shape"]["distinct_type_constants"]
+    ):
+        raise ComparisonError(f"baseline candidate binding changed for {candidate['name']}")
     baseline_type_sha256 = text_sha256(candidate["type"])
     base = {
         "candidate_id": candidate["candidate_id"],
@@ -154,7 +206,7 @@ def classify(candidate: dict[str, Any], current: dict[str, Any] | None) -> dict[
         classification = "module-only-drift"
     else:
         classification = "structurally-identical"
-    return {
+    result = {
         **base,
         "class": classification,
         "current": {
@@ -165,6 +217,11 @@ def classify(candidate: dict[str, Any], current: dict[str, Any] | None) -> dict[
             "source_row_sha256": row_sha256(current),
         },
     }
+    if classification == "structural-type-drift":
+        result["constant_multiset_delta"] = constant_delta(
+            baseline["type_repr"], current["type_repr"]
+        )
+    return result
 
 
 def build_comparison() -> dict[str, Any]:
@@ -177,7 +234,11 @@ def build_comparison() -> dict[str, Any]:
     names = [candidate.get("name") for candidate in candidates]
     if len(set(names)) != 240 or not all(isinstance(name, str) for name in names):
         raise ComparisonError("selected candidate names are invalid")
-    rows = [classify(candidate, inventory.get(candidate["name"])) for candidate in candidates]
+    baseline = load_baseline_selected(set(names))
+    rows = [
+        classify(candidate, baseline[candidate["name"]], inventory.get(candidate["name"]))
+        for candidate in candidates
+    ]
     counts = Counter(row["class"] for row in rows)
     return {
         "schema_version": 1,
