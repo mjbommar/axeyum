@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-euclidean-local-subtraction-replacement-result",
+  "state": "private-joint-invariant-reconstructed-twice-empty-footprint",
+  "plan": {
+    "path": "artifacts/autogenesis/euclidean-joint-div-mod-local-subtraction-replacement-plan-v1.json",
+    "sha256": "6a54f6d3a3fddc279e3718aeed1293be503f9092e7da84869edbe67f0e329420"
+  },
+  "statement_addendum": {
+    "path": "artifacts/autogenesis/euclidean-local-subtraction-equation-addendum-v1.json",
+    "sha256": "87858ff825369c5900eb7707e7ffff578634c4e1f31f36686efc7320cb117aec"
+  },
+  "authored_source": {
+    "path": "scripts/lean/autogenesis_div_mod_go_reconstruct_v2.lean",
+    "sha256": "d6daa848bea4fe5a86e9d180f2256a8b0851d44b3dd9c7245ab0c71d344599bf",
+    "proof_search_invocations": 0,
+    "upstream_proof_bodies_read": 0,
+    "original_v1_source_changed": false
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/d6daa848b-proof-isolated-div-mod-go-v2-v1/manifest.json",
+    "sha256": "e140c77f571b73a45bfe7260ca5a9ffc56555201538a3684e3783644fc2de777",
+    "mode": "0444"
+  },
+  "theorem": {
+    "name": "Axeyum.Autogenesis.divModGoReconstruct",
+    "declaration_sha256": "f8d6592cd39d5f249acf0f695b1d77bd255dc9f630e3a588a0044fe62d3360a4",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [
+      "Eq.symm",
+      "Nat.add_assoc",
+      "Nat.add_comm",
+      "Nat.div.go.eq_1",
+      "Nat.div_rec_fuel_lemma",
+      "Nat.le_of_succ_le_succ",
+      "Nat.modCore.go.eq_1",
+      "Nat.mul_add",
+      "Nat.mul_one",
+      "Nat.not_lt_zero",
+      "Nat.not_succ_le_zero",
+      "Nat.succ_sub_succ_eq_sub",
+      "congr",
+      "congrArg",
+      "congrFun'",
+      "dif_neg",
+      "dif_pos"
+    ],
+    "forbidden_dependencies_present": [],
+    "fresh_reconstructions": 2,
+    "identities_match": true,
+    "accepted_private_support": true
+  },
+  "knowledge_delta": {
+    "removed_assumption_bearing_dependency": "Nat.sub_add_cancel",
+    "replacement": "local primitive-recursive subtraction restoration",
+    "statement_only_equation_added": "Nat.succ_sub_succ_eq_sub",
+    "v1_axiom_footprint": ["propext"],
+    "v2_axiom_footprint": []
+  },
+  "budget": {
+    "revised_source_paths": 1,
+    "new_support_theorem_declarations": 1,
+    "kernel_theorem_submissions": 2,
+    "exact_target_submissions": 0,
+    "executor_invocations": 0,
+    "retries_after_kernel_decline": 0
+  },
+  "authority": {
+    "public_euclidean_lift_submissions": 0,
+    "balanced_bezout_reconstructions": 0,
+    "coprime_cancellation_reconstructions": 0,
+    "semantic_theorem_receipts": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Preregister the wrapper lift from the accepted private fuel invariant through official Nat.div and Nat.mod, including the zero-divisor case, and require exact Nat.div_add_mod type identity before either of two fresh public-equation submissions.",
+  "limitations": "The joint fuel invariant is accepted private support. No public Euclidean equation, Bezout theorem, cancellation theorem, Fibonacci target, or ledger fact has been established by this result."
+}
