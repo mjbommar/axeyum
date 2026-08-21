@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-sealed-kernel-capsule-admission",
+  "state": "durably-admitted-archived-and-clean-replayed",
+  "fact_id": "F:ml430-int-fib-natcast-d5886be4",
+  "operation_id": "authoritative-mathlib-int-fib-natcast-kernel-capsule-v1",
+  "registration_commit": "bd55299d4b0ae25b47a9e4b2ebbbebc6d25f99be",
+  "external_root": "/nas3/data/axeyum/autogenesis/admissions/bd55299d4-mathlib-int-fib-natcast-v1",
+  "external_index_sha256": "897081a2d77b78286d903276dd0ae5b867d65cd04d7da919214478e2d0e9a758",
+  "source_bundle_sha256": "ddf17dd175dc48976b2d0ae53fc2313ed08cdf934ee656d5cf98035081def183",
+  "identities": {
+    "frontier_before_sha256": "10f5b23d81595de0ff84f69e4ebdb550e47801befc7aaaf39cae53b5aeb0a0cf",
+    "execution_sha256": "b61cde2003f8690f7e5fbd68c3c42dc89427377f3c8d281c2fa359210726af27",
+    "transaction_sha256": "285a32294c411e3754a7f14532a8ecae0f5cd8bdc40b5354c1617809d9d22560",
+    "admission_event_sha256": "00075835e11a9845b67fd6ae122dd4ef2eaa3ffb07b1618385438c3da642d42c",
+    "frontier_after_sha256": "ee6e039cd58f71554d24078afc710589af65a6f3da8c6ce1796daf346814da29",
+    "readiness_delta_sha256": "db1b5900666fd1df311a7e00378ef276f4fe9106dbd5150173a1af85755ab5f5",
+    "before_fact_sha256": "865cb1ecce45f5e303cca43b3c31eec20deb06a4d881c10423cbfc200609f932",
+    "after_fact_sha256": "8c5b962eedce796d60bd0331446a4becefd2c34704fffaf6839e4a7c902bd4d4"
+  },
+  "external_files": {
+    "frontier-before.json": "9b0efa83f361d4349b6683a9c62c0c4f9b836c78ecbf5df3279daf5c55b4ec2b",
+    "execution.json": "c5876d2599646cbc12c8a8475e22e09ebd83238724b5838740ed23c4f62fa4ae",
+    "transaction.json": "c0375276ca9f932a3a7d76cc3a5602b40aa87c2ad503201311ab6f849af18d64",
+    "admission-event.json": "9cc3ba8e31e0c8a8b44ce344cc80e1db45fde98f533639923b261a0410f63b2a",
+    "frontier-after.json": "1f079613140c620c40964b6244339ec484eab05ec11412af86d49aea4bbe47f2",
+    "readiness.json": "17f7d9d91c2146af8274ccfd974007901fcb919cd98b0a34f6a0e5421545800e",
+    "before-fact.json": "45bec051f4f54a14956697f68f193f4f9f0c6e14d6536886a60bfc01aab59d42",
+    "after-fact.json": "0dfd31df66db432fec7a7b84c0792bf904f3eb036321e7f615b8fa686a657b79"
+  },
+  "fault_injection": {
+    "boundary": "after-intent",
+    "exit_status": 75,
+    "fact_unchanged_before_recovery": true
+  },
+  "result": {
+    "authoritative_ledger_writes": 1,
+    "fixture_writes": 0,
+    "newly_ready": [
+      "F:ml430-int-fib-add-two-739358dd"
+    ],
+    "axiom_footprint": [],
+    "theorem_dependencies": [],
+    "target_dependency": null
+  },
+  "clean_replay": {
+    "source_commit": "4309e904f3cf4eb5f68f5e06adc462f27aaba1a2",
+    "external_root": "/nas3/data/axeyum/autogenesis/replays/4309e904f-int-fib-natcast-v1",
+    "external_index_sha256": "239b1ea4b95f0de56c17d0ff0871f5d8057070c29318b4c8810e656e09a483f7",
+    "replay_file_sha256": "d43e4c180691964588fabefcb7da8e0b0c0bcf12b2fcda25ccec3de94ebea159",
+    "replay_sha256": "df3b00a2c747d38ded2b1ad8fd6703e0abe310f67a1e92b8e15211f02c5bd27d",
+    "fresh_execution_sha256": "5510baf62ac7b22c21b213bf40e492856a3891f6801dd4e5b695610147c4d02f",
+    "fresh_transaction_sha256": "d5bdcc053c2f240d81aa2a91deabc7a11a25a568dd35778faed20ff97fe961f0",
+    "fresh_event_sha256": "69867f6520508d5252b458c2265e9d189fe9e81064aa109e05c69cbe51bebaee",
+    "fresh_readiness_delta_sha256": "6bc8010b7d4364ae54ba31fee8580e1ebc87afaa03a5b5ca6a2f8fe161658f09"
+  },
+  "reproduction": "python3 scripts/check-autogenesis-statement-reflexivity-admission.py --manifest artifacts/autogenesis/mathlib-int-fib-natcast-admission-v1.json",
+  "limitations": "This admits one exact Mathlib v4.30 theorem from a fixed target-owned integer Fibonacci capsule. It grants no authority to close the newly ready recurrence fact or any other proposition."
+}

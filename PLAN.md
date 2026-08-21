@@ -142,7 +142,8 @@ now. Nothing was deleted.
 | 2026-08-21 | `1ebf8e8e0` | Exact crash-safe `Int.fib_natCast` admission is frozen against its sealed capsule before operation code or ledger mutation |
 | 2026-08-21 | `e4d92ddb0` | An exact authoritative operation binds the clean integer Fibonacci capsule, theorem identity, and empty-footprint admission contract |
 | 2026-08-21 | `bd55299d4` | First transaction preparation fails closed because the generic capsule path required nonempty dependencies and two submissions; exact zero-dependency definitional assurance is added with mutation coverage |
-| 2026-08-21 | (pending) | Crash-safe recovery admits exact `Int.fib_natCast` with one authoritative write and makes exact `Int.fib_add_two` newly ready |
+| 2026-08-21 | `4309e904f` | Crash-safe recovery admits exact `Int.fib_natCast` with one authoritative write and makes exact `Int.fib_add_two` newly ready |
+| 2026-08-21 | (pending) | Immutable primary evidence and isolated clean replay seal the exact `Int.fib_natCast` admission and its one-fact readiness delta |
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
 | 2026-08-21 | `a9610560c` | The durable construction checker binds the separately stored target goal identity without weakening capsule checks |
@@ -1167,7 +1168,7 @@ functions, which rules out arithmetic subterms — the first real workload with
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, and now `Int.fib_natCast` are durably proved. The target-owned integer Fibonacci definition replaces the official `Int.instDecidablePredEven` closure with constructor matching and explicit Nat parity; crash-safe recovery admitted its exact natural-cast theorem with an empty footprint and made `Int.fib_add_two` newly ready.
 
-**Next:** archive and clean-replay the exact `Int.fib_natCast` admission, then rebuild `Int.fib_add_two` and `Int.fib_neg_natCast` over the admitted target-owned integer Fibonacci definition.
+**Next:** rebuild exact `Int.fib_add_two` over the admitted target-owned integer Fibonacci definition, then use it with the clean sign/parity transports to reconstruct `Int.fib_neg_natCast`.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
