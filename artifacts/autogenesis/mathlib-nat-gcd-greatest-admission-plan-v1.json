@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-gcd-greatest-admission-plan-v1",
+  "state": "preregistered-sealed-capsule-admission-before-operation-code-or-ledger-write",
+  "target": {
+    "fact_id": "F:ml430-nat-gcd-greatest-0a04214a",
+    "fact_sha256": "fd8ff0e7627b03b0727e651f797218a6db938453edad70e86d10ba9c73429f77",
+    "name": "Nat.gcd_greatest"
+  },
+  "evidence": {
+    "result_manifest": "artifacts/autogenesis/mathlib-nat-gcd-greatest-result-v3.json",
+    "result_manifest_sha256": "eddfb053b5d0c9620fa2dae26a9adf6b61ff0b39f14e7fd9d1ba3d06371f8ba9",
+    "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/85b9d4243-target-native-gcd-greatest-v4/target-1.ndjson",
+    "capsule_sha256": "c233478948b4d4aedc01c839ef9013c3feb2ddb0009d8b57699d7efb755375e6",
+    "goal_sha256": "0977f9584b62cf5c5140f32ea2d4bf726c9c42aa3cef9f98afdea5d13810af90",
+    "declaration_sha256": "b54b6ab061abba5ea42ca3b0451cd240071b4d535e77bed003d54c78115b03bc",
+    "axiom_footprint": []
+  },
+  "protocol": {
+    "register_exact_operation": true,
+    "derive_transaction_from_clean_commit": true,
+    "fault_injection_after_intent_exit": 75,
+    "require_fact_unchanged_before_recovery": true,
+    "authoritative_ledger_writes": 1,
+    "fixture_writes": 0,
+    "archive_primary_run": true,
+    "isolated_clean_replay": true
+  },
+  "budget": {
+    "max_operation_registrations": 1,
+    "max_fault_injection_executions": 1,
+    "max_authoritative_ledger_writes": 1,
+    "max_recovery_executions": 1,
+    "max_clean_replays": 1,
+    "max_search_invocations": 0,
+    "max_evaluations": 0
+  },
+  "next_on_accept": "measure newly ready facts and resume the strategic Nat.fib_gcd dependency chain",
+  "limitations": "This authorizes only one exact fact transition from the named immutable capsule and grants no authority to close any other proposition."
+}
