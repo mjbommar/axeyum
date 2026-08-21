@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-gcd-balanced-bezout-reconstruction-result",
+  "state": "main-source-compilation-declined-no-retry-no-theorem-credit",
+  "plan": {
+    "path": "artifacts/autogenesis/official-gcd-balanced-bezout-reconstruction-plan-v1.json",
+    "sha256": "f7e1c432e25c1e47f42eddd18a4686f58e6de9df855e612c5e8d6723357def4e",
+    "commit": "3af768dc5274984cc0f66a07ec1d3b890b9ffcec"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/72bbf331d-official-gcd-balanced-bezout-v1/manifest.json",
+    "sha256": "958d0a12b25c94f667d7ad1418d223c58e37098f31a474168f1fcc4370e16e1c",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "execution": {
+    "source_copies": 2,
+    "compiler_invocations": 2,
+    "successful_compilations": 1,
+    "failed_compilations": 1,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "proof_bearing_stream_reads": 0,
+    "retries_after_compilation": 0,
+    "shell_preflight_failures_before_compiler": 1
+  },
+  "result": {
+    "accepted_private_support_recompiled": true,
+    "generic_main_source_compiled": false,
+    "generic_theorems_reconstructed": 0,
+    "diagnostic_count": 3,
+    "diagnostic_classes": [
+      "direct Nat.mod equation rewrite did not match elaborated HMod notation",
+      "successor Nat.mod equation rewrite did not match elaborated HMod notation",
+      "global quotient-equation rewrite also changed the gcd remainder subterm"
+    ],
+    "proof_material_rendered": false
+  },
+  "cleanup": {
+    "exact_temporary_paths_removed": 6,
+    "preexisting_status_entries_before": 3,
+    "preexisting_status_entries_after": 3,
+    "preexisting_baseline_unchanged": true
+  },
+  "next_boundary": {
+    "requires_new_preregistration": true,
+    "source_corrections": [
+      "state the quotient witness with direct Nat.mod applications so Nat.mod.eq_1 and Nat.mod.eq_2 match",
+      "transport only the dividend factors across the quotient equation instead of globally rewriting n"
+    ],
+    "reuse_successful_private_support_compilation_as_theorem_credit": false
+  },
+  "authority": {
+    "generic_balanced_bezout_credit": 0,
+    "target_specialization_credit": 0,
+    "cancellation_credit": 0,
+    "exact_fibonacci_target_submissions": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "verification": "python3 scripts/check-autogenesis-official-gcd-balanced-bezout-reconstruction-result.py",
+  "limitations": "This is a source-compilation decline. It establishes no quotient witness, balanced Bezout theorem, closed target specialization, cancellation theorem, Fibonacci target, receipt, evaluation result, fact transition, or ledger write."
+}
