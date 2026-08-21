@@ -36,10 +36,20 @@ def validate() -> dict:
         != target.get("fact_file_sha256")
     ):
         raise PlanError("target identity changed")
-    for key in ["contract_result", "repair_result", "implementation"]:
+    for key in ["contract_result", "repair_result"]:
         row = authority.get(key) or {}
         if sha(ROOT / row["path"]) != row.get("sha256"):
             raise PlanError(f"{key} identity changed")
+    implementation = authority.get("implementation") or {}
+    result_path = ROOT / "artifacts/autogenesis/mathlib-nat-fib-gcd-construction-result-v2.json"
+    if sha(ROOT / implementation["path"]) != implementation.get("sha256"):
+        result = json.loads(result_path.read_text())
+        if (
+            result.get("state")
+            != "helper-accepted-target-type-mismatch-second-run-skipped-zero-credit"
+            or result.get("plan", {}).get("sha256") != sha(PLAN)
+        ):
+            raise PlanError("implementation changed without the exact spent-attempt result")
     if authority["implementation"].get("permitted_source_edits") != 0:
         raise PlanError("source edit authority changed")
     couplings = plan.get("historical_gate_couplings") or []
@@ -94,7 +104,7 @@ def main() -> int:
     except (OSError, ValueError, KeyError, TypeError, PlanError) as error:
         print(f"autogenesis-nat-fib-gcd-construction-plan-v2: FAIL: {error}", file=sys.stderr)
         return 1
-    print("AUTOGENESIS_NAT_FIB_GCD_CONSTRUCTION_PLAN_V2_OK|runs=0/2|helper=0/2|target=0/2|retries=0|edits=0")
+    print("AUTOGENESIS_NAT_FIB_GCD_CONSTRUCTION_PLAN_V2_OK|budget=spent|run2=skipped|retries=0|edits=0")
     return 0
 
 
