@@ -1084,9 +1084,9 @@ budget guard to a real remaining-time attempt (this alone would move
 then `Fpa2Bv` certification, which is what both FP rows actually need for
 dominance.
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains proved; its ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Official `Acc` and cancellation composition are accepted. V7 accepted local zero-divisibility and the new positive-product factor proof, then stopped at absent `Nat.mul_le_mul_left`; no export occurred, run two was skipped, and support credit remains zero. The accepted cancellation receipt also proves official `Nat.le_antisymm` absent, so V8 freezes exact target-owned replacements for both order leaves before another run.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains proved; its ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Official clean divisibility antisymmetry now reconstructs twice over r091 with six empty-footprint supports and byte-identical capsules. The exact Fibonacci GCD-shift route composes official order, cancellation, and addition; exact `nat_gcd_succ` target-leaf pruning advances coprimality composition, and the measured `WellFounded.fix` path selects a target-native public `Nat.gcd_zero_left` alias. V7 proved the generic zero-left root is already present (`NoAdditions`), so V8 freezes exact reuse rather than redundant composition.
 
-**Next:** implement V8 target-owned multiplicative monotonicity and order antisymmetry, then execute two fresh official clean-order reconstructions and four imports. Do not submit `Nat.gcd_fib_add_self` until that capsule is deterministic and empty-footprint.
+**Next:** implement exact V8 by requiring the existing generic zero-left declaration hash, submitting only the checked public alias, and composing coprimality with the exact `nat_gcd_succ` plus `Nat.gcd_zero_left` leaves. Execute two fresh exact-target runs; on acceptance issue the dependency-bound receipt and use the crash-safe ledger transaction.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
