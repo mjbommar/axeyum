@@ -1379,143 +1379,143 @@
   "sources": [
     {
       "path": "bench-results/dominance/bv-bitwuzla-regress-clean-quantified-dominance-audit.json",
-      "sha256": "f338919dc61bb94174170af97e424810787d08d6b1466d0d1a1f5193f0a0ae07"
+      "sha256": "eb845d7cd9589fa4c07d2b571599a5ae7ba9a18ad10a90b8f8e66bac6f1186a9"
     },
     {
       "path": "bench-results/dominance/bv-cvc5-regress-clean-quantified-dominance-audit.json",
-      "sha256": "8fd825e874adf1f4e70626578d42b1693c6ad2d81dcb531c493ff641b691c1e6"
+      "sha256": "9f62fad68784f5394fdbdc9da03209f62672754d2356113cd42a690e3bd98a67"
     },
     {
       "path": "bench-results/dominance/lia-cvc5-regress-clean-quantified-dominance-audit.json",
-      "sha256": "683bbf5bc49b5d226bee58f2c6f85a930655cfc7e891ac41f616559ffece6040"
+      "sha256": "dc763d9dd9ab847a563bececaa76a349265f0dddf19f0e65318cb2a6d9f33559"
     },
     {
       "path": "bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json",
-      "sha256": "5e85c941ba853e53dd45d1877b0631de1d55026e8029fcbd4424d8c77a32214d"
+      "sha256": "1f76a7c0b3e1b0fb593b0f398ecc8d0d24aeebcaa32e90c88d8ebd81354b926e"
     },
     {
       "path": "bench-results/dominance/qf-alia-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "e168eca5362d694d5ebfb0300fdbdb5be635257e04ce02c5646ee47494fbab00"
+      "sha256": "8029454cc576d218ab158fe2ce9aafb926225f28597820d8d35a4df35f2f873a"
     },
     {
       "path": "bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json",
-      "sha256": "67f4236ae0d8a2bb7396aa873438f9d76158f3129fb21fe1b1e26d71730f6043"
+      "sha256": "6515e9b4cb4b08693ccb7a21533f04ed70cb1d4a54e8580a382c6293bd41fad3"
     },
     {
       "path": "bench-results/dominance/qf-aufbv-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "4ec1e53e6ae75222f72d4f8be5facf71cf273b1400f1cda2dadf3650dcad366a"
+      "sha256": "1e6a803b5a2f43176349a3e63fc3811cceb56271938287ebb4e3d009ffe674d6"
     },
     {
       "path": "bench-results/dominance/qf-auflia-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "1e701a0cfc39bdde86dbdbece3bc0c01e0752a32fecce24b53bfab8cc1d2c7cc"
+      "sha256": "49f39f4ce00b1ceba5c684e9850a0a31994e3fb0dc6a8e18f51c01f3297025fc"
     },
     {
       "path": "bench-results/dominance/qf-ax-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "ba552c1f3f99c46b008e845add673c6ee860ab44706a7eeed7ec0cb899100c43"
+      "sha256": "c6bbf9db4226fcb4bbd88d0e3f788cfb49bbc0870594cfb5d11c4584c2b79382"
     },
     {
       "path": "bench-results/dominance/qf-bv-curated-bvred-dominance-audit.json",
-      "sha256": "f544962afd54ff66c46e767ebfa60680eca328402fb02b00ab4dbcbe431ca2ce"
+      "sha256": "d773c78611718fc91b366882e0aefea1d7225d105cd1f7235b9aa39862f1172f"
     },
     {
       "path": "bench-results/dominance/qf-bvfp-bitwuzla-regress-clean-dominance-audit.json",
-      "sha256": "19a0c3ec34d2005b5de1f821614a7ce6a20b0f2b51d795a524b0d981f0b0946d"
+      "sha256": "f8a2c7ed9a7063f7f504ac9148f178d777925c35bb8698989105e3a93c5b1177"
     },
     {
       "path": "bench-results/dominance/qf-dt-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "fc2416b51321cd07b295c4afda30ef07505d6f5164b6e2e2dc254ec7cd7a71e2"
+      "sha256": "a31ea29f774b4381102e416187aac16ff794fc3f44305eec967e37b5336d6733"
     },
     {
       "path": "bench-results/dominance/qf-ff-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "b1444a20607944e79a667a9a62964586486f80fc6c9ddb71f480a7cba0d62df5"
+      "sha256": "259c13bd2a9eb61f68aee0be05b2882b4703ae7cad3ea3243b6e944f7a0b4055"
     },
     {
       "path": "bench-results/dominance/qf-fp-bitwuzla-regress-clean-dominance-audit.json",
-      "sha256": "e3a6fbcdd9262f905012a64080667e67b07d1d5495b0bbcef17649208086144f"
+      "sha256": "edefc67133698386190d239b40bf9af7a737b9178d875abcd3306f792e8336b0"
     },
     {
       "path": "bench-results/dominance/qf-lia-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "522117430e2314afc5956fb54ca04f238e7067717585e3d4fc4797da5bf3820e"
+      "sha256": "838a689a372ede91eff1120852f1f7f4c6b78a1039b3b9d011caee7714f2353d"
     },
     {
       "path": "bench-results/dominance/qf-lra-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "51ff236f76e73c568f3237bcf5b17a6e3a8add6961b8870f1251216d61196ca7"
+      "sha256": "e92584d4a62d1eb3e0aa50bc5790b52143fa1ac7a85eb0509a6e074b0292fb65"
     },
     {
       "path": "bench-results/dominance/qf-nia-curated-iand-dominance-audit.json",
-      "sha256": "39778ea8ca6722d6216524e600a38019912e37eb05cf5f9261aeb6e627fb37a4"
+      "sha256": "a77bd0d12456885f3e83512a0b8bc04959a5bd3f898baa87393133f50e6a9f55"
     },
     {
       "path": "bench-results/dominance/qf-nia-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "d2c19470944a3d3d31826ae8f975e1e96ef6126c348bc4cc137f02952f435ac8"
+      "sha256": "46aaded57cb32322a2570d502eeb6818a575e74a09eec86d2bb1782084c88000"
     },
     {
       "path": "bench-results/dominance/qf-nia-synthetic-graduated-dominance-audit.json",
-      "sha256": "d3e0e6fd11aa424ffa78988def5126a5c68fd3d56043ddc8d92adda9094331da"
+      "sha256": "b88ffaa0afea331eb94d03c290a43adb3f6b19fc04cb9c41d2882b508327e1e8"
     },
     {
       "path": "bench-results/dominance/qf-nra-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "640913399a9e5bacc3b92dde5aa3d790da8569d355bcf1b3245e5c82dc63a7db"
+      "sha256": "af595486385f5fe18e7c3c6a4cce4e20fe475ac75d8cceeb0677c73d94fefa1c"
     },
     {
       "path": "bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json",
-      "sha256": "7a522d5ee2b16b73705d2d06eb05591fa5d278c6fd8680519ea0fb16a18aeb80"
+      "sha256": "7ee55056b5c30332c895570280cb11daf4e7c05fdc43918d36fd6b469a61b9df"
     },
     {
       "path": "bench-results/dominance/qf-s-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "b770252f0a66ed3602dd1aaeb647de09dea7ae93db5b6477f90a1d63f381371c"
+      "sha256": "761720854c5009871ae659841f09d26d3688be649d1b9a8eaa7c20043fe6a4a8"
     },
     {
       "path": "bench-results/dominance/qf-seq-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "aea4c5e479b3c312a21db22be57ae00ba865bc199541a81dac820a8c98f122a7"
+      "sha256": "a65aec0f5813065fa799f354a49ef9c2e4fac3ce82062df0807cdd6cdd12234e"
     },
     {
       "path": "bench-results/dominance/qf-slia-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "6a06dce3aa4a0edae608ddfbede636d0bf225bc3273ed4d2259ce50e83d042d9"
+      "sha256": "6e92a46b851b95ddd6e4b3880d3a9bf09a74ec4b005dcc4aaa53a55f92f3019b"
     },
     {
       "path": "bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-dominance-audit.json",
-      "sha256": "db9fe2dcce8cee3182e4331e5eb0a46b32fd7fd04db504cacf46054314b2bb80"
+      "sha256": "6b8e0b4ce388718d8bd90fcfa24d1f8ae49ad3af0fb5410e7df6fd73b0f52528"
     },
     {
       "path": "bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json",
-      "sha256": "99f3f4c402062d69ffe583e59c8d5d30e035d42379ea5ae4bf7edb3fe69c9979"
+      "sha256": "7f4c7dc2cf4dceb216aaec117e581c84a8b62ab6a735060e3861862467207704"
     },
     {
       "path": "bench-results/dominance/qf-uf-cvc5-regress-clean-overbound-uninterp-sorts-dominance-audit.json",
-      "sha256": "fd4a25c78e5474816fefbc0a649d867dfd5e3e9a2f098082a23ed8e235fe722e"
+      "sha256": "6c4dab226d56a6bd68084ed254e2a7a756faa9fdad5391b316e72bd5035f3440"
     },
     {
       "path": "bench-results/dominance/qf-ufbv-bitwuzla-regress-clean-dominance-audit.json",
-      "sha256": "b10c3cbcfcc77fbc040f23f8086acd52b7262d2fe4450eaa929f4ac3af1cf392"
+      "sha256": "ce0a8931d90dea49bf05222646b99e1ec3281f3bab8dea07d20a29986ca85b72"
     },
     {
       "path": "bench-results/dominance/qf-ufbv-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "5334c355df006b6ca259ae4618ed054a17c929b9f56e1b553b9a36dabc266bad"
+      "sha256": "1c6015835d72985fff0e5c9b6f6e04e430a513c812e958d5c7f225c25e3a4b30"
     },
     {
       "path": "bench-results/dominance/qf-ufff-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "ce323deb5d01660b557713c22d89392ffce56d5a9075de5ab00d6605d602724b"
+      "sha256": "3faca173ac438a663bddf1a0bdcdabe3b66433c300b76277a2ca7a62b1482179"
     },
     {
       "path": "bench-results/dominance/qf-uflia-curated-named-dominance-audit.json",
-      "sha256": "13d579937b103e1e348596e348da8c2ca36271bb65df7cab6969471e56e022d8"
+      "sha256": "7d03b9c46b059252dbbcaa2ae9e04ff6799fd72131c1de9553da75eea25381f6"
     },
     {
       "path": "bench-results/dominance/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json",
-      "sha256": "a04cfa7dd41d239de6531d3702e73b77a97bb4124213d0ba55b863748bc8e757"
+      "sha256": "404f268047ec5af2dde8723dca7b5110c448530a191ff61e44297727f8a78181"
     },
     {
       "path": "bench-results/dominance/qf-uflia-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "5c10e9dd0a503a4000764044c4c1a85ff092c9db7bfffeef712fe05a6bde3418"
+      "sha256": "dd7420df1e044d8c712a5743430b95ee1f3af12b5a14df7e045415f9a5cd4bf7"
     },
     {
       "path": "bench-results/dominance/qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts-dominance-audit.json",
-      "sha256": "cad5129ecdd32bc5c5cbe39427816bb611b1259e03c75d34224772c8d38582a6"
+      "sha256": "b74ce6b2f420543bfd0146ea3526e4558c4e1b21b167828df1d6acb1a5972ff0"
     },
     {
       "path": "bench-results/dominance/uf-cvc5-regress-clean-quantified-dominance-audit.json",
-      "sha256": "c6656a7cbbeb0dc67f503de7570773d0bff2fa536ebdd051b40b92da421dca9c"
+      "sha256": "ca99dc20a54df1721b1fadf172b4b4438d62ae043cf247dddcac64d747c1ef94"
     }
   ],
   "summary": {
