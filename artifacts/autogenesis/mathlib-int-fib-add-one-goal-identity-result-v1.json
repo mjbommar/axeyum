@@ -1,0 +1,33 @@
+{
+  "input": {
+    "bytes": 880392,
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-one-composition-v1/int-fib-add-one.ndjson",
+    "sha256": "81fb760e78ee25d12fa7b78f8e2d84892809a36db8a4f8d9cc63fda6be66f27c"
+  },
+  "kind": "axeyum-theorem-goal-identity-audit",
+  "state": "exact-goal-identity-bound-without-rendering",
+  "execution": {
+    "importer_runs": 1,
+    "stream_reads": 1,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "rendered_material": {
+    "proof_terms": 0,
+    "theorem_types": 0,
+    "theorem_values": 0
+  },
+  "schema_version": 1,
+  "theorem": {
+    "axiom_footprint": [],
+    "canonical_declaration_sha256": "2ee4a2c5dbea36f73b7fea51b74d134e75630e3f860c033720a7e679cabfb5a7",
+    "canonical_type_sha256": "b9c99a22010f3a1e749e9647604da9107259f8ed6bd3010a2520778efcff41c6",
+    "direct_theorem_dependencies": [
+      "Axeyum.Autogenesis.intFibAddOneResidualV3",
+      "Int.add_comm",
+      "Int.add_neg_cancel_right",
+      "Int.fib_add_two"
+    ],
+    "name": "Int.fib_add_one"
+  }
+}
