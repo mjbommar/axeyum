@@ -439,6 +439,57 @@
         "axiom_footprint_policy": "must-be-empty",
         "axiom_footprint": []
       }
+    },
+    {
+      "id": "authoritative-mathlib-nat-fib-gcd-kernel-capsule-v1",
+      "scope": "authoritative",
+      "reviewed_gate_mentions": [
+        "check-autogenesis-nat-fib-gcd-capsule.py",
+        "check-autogenesis-nat-fib-gcd-construction-plan-v2.py",
+        "check-autogenesis-nat-fib-gcd-construction-plan.py",
+        "check-autogenesis-nat-fib-gcd-premise-selection-policy.py",
+        "check-autogenesis-nat-fib-gcd-surface-plan.py",
+        "check-autogenesis-int-gcd-contract-theorem-control-policy.py",
+        "validate-autogenesis-operations.py"
+      ],
+      "applicability": {
+        "fact_ids": ["F:ml430-nat-fib-gcd-d1d98407"],
+        "formal_languages": ["lean4-surface"],
+        "fragments": ["Nat"]
+      },
+      "producer": {
+        "operation": "target-native-fibonacci-gcd-v1",
+        "implementation": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+        "input_kind": "axeyum-proof-isolated-kernel-goal",
+        "output_kind": "axeyum-sealed-kernel-theorem-capsule"
+      },
+      "checker": {
+        "operation": "axeyum-lean-import/sealed-fib-gcd-capsule-receipt-v1",
+        "implementation": "scripts/check-autogenesis-nat-fib-gcd-capsule.py",
+        "input_kind": "axeyum-sealed-kernel-theorem-capsule",
+        "output_kind": "axeyum-checked-sealed-kernel-capsule-receipt-v1"
+      },
+      "executor": {
+        "driver": "axeyum-lean-import/sealed-kernel-capsule-v1",
+        "implementation": "scripts/execute-autogenesis-operation.py",
+        "input_fact_id": "F:ml430-nat-fib-gcd-d1d98407",
+        "result_manifest": "artifacts/autogenesis/mathlib-nat-fib-gcd-construction-result-v3.json",
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/749f30f65-nat-fib-gcd-v3/target-1.ndjson",
+        "capsule_sha256": "8ac3c35874540a10e5fa393c65f3ad313a6cf6a06303cec68fec3ec45d0f04cd",
+        "target_theorem": "Nat.fib_gcd",
+        "goal_sha256": "eb65db781afc310abd8a714f7f5b426c7a11daae78e737ea40a81612f23277d5",
+        "declaration_sha256": "2b5f52996fdc275c859364de7b99bf32ab4ba01e24fc14e10cf65bbd5724ea8d",
+        "receipt_sha256": "1e65caac2183d493f517a9d78dc789b78a530cbaaf90a95fd07cf19dd7940bc8",
+        "timeout_seconds": 120,
+        "expected_evidence_label": "kernel-term-mathlib-nat-fib-gcd-capsule-axiom-free"
+      },
+      "admission": {
+        "epistemic_status": "proved",
+        "proof_route": "kernel-lean",
+        "evidence_kind": "kernel-term",
+        "axiom_footprint_policy": "must-be-empty",
+        "axiom_footprint": []
+      }
     }
   ]
 }
