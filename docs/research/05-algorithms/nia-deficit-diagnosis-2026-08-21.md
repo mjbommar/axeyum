@@ -59,11 +59,13 @@ touches three unrelated `examples/*.rs`).
 
 ### Five checks that this instrument is not lying
 
-1. **It reproduces the recorded score, and slightly beats it.** This run decides
-   **38/200** where the ledger entry records **34/200** at commit `a505e67e7`,
-   15 days earlier. The direction matters: a contended sweep loses marginal
-   files, so a run coming in *high* cannot be explained by load, and the +4 is
-   ordinary progress since 2026-08-06.
+1. **It reproduces the recorded score.** This run decides **38/200** where the
+   ledger entry this row is priced off records **34/200** at commit `a505e67e7`,
+   15 days earlier. Two `parity-run.sh` sweeps landed for this division hours
+   after this note was written (§8): both put axeyum at **33/200** at commit
+   `9333f779d`, one of them started at load **32**. So the honest reading of the
+   38 is "within five files of three independent measurements of the same
+   population", not "+4 of progress"; §8 says what changes and what does not.
 2. **Zero disagreements, four ways.** Across the 200 files no decided verdict
    disagrees with any other decided verdict (axeyum/z3/cvc5) or with the
    benchmark's declared `:status`.
@@ -82,11 +84,14 @@ touches three unrelated `examples/*.rs`).
 throughout, other lanes on the box. Wall times are an upper bound and decided
 counts a lower bound.
 
-**One number I cannot fully account for.** My cvc5 run decides 76/200 where the
-ledger records 89/200. A deterministic sample of 20 of its 124 timeouts, re-run
-**serially** on a quiet box (load 2.8), flipped **0**. So contention does not
-obviously explain the 13-file shortfall and I am not claiming it does. It does
-not affect the z3-vs-cvc5 comparison, which is internal to one run.
+**One number I could not account for, and now can.** My cvc5 run decides 76/200
+where the ledger recorded 89/200, and a deterministic sample of 20 of its 124
+timeouts re-run **serially** on a quiet box (load 2.8) flipped **0** — so
+contention did not explain it and I did not claim it did. Two independent
+`parity-run.sh` sweeps landed the same evening (§8) and give cvc5 **76** and
+**81** on the same list. Three same-day measurements at 76 / 76 / 81 against one
+15-day-old measurement at 89: the **89 is the outlier**, and this note's
+denominator is the reproducible one.
 
 Raw per-file data and its column dictionary:
 [`bench-results/nia-diagnosis-20260821/`](../../../bench-results/nia-diagnosis-20260821/README.md).
@@ -538,6 +543,44 @@ Data committed with this note, under
 | `ab-clause-ceiling.tsv` | §4.1, 49 files |
 | `ab-presat-envelope.tsv` | §4.2, the full 200-file A/B |
 | `calibration-4x-budget.tsv` | §4.3, 35 files at 96 s |
+
+## 8. Postscript — the board was re-measured two minutes after this landed
+
+`45587c513` (this note) and `5be2b296c` (agent-parity-gate's re-measurement of
+all nine divisions) are 127 seconds apart, and the sweeps overlapped on this box.
+The two runs are independent instruments on the same pinned list, so it is worth
+recording what they agree on.
+
+| | axeyum | cvc5 | ratio | load at start |
+|---|---:|---:|---:|---|
+| ledger, 2026-08-06, commit `a505e67e7` | 34 | **89** | 38.2 % | 11.7 |
+| parity-run, 2026-08-21T16:01Z, `9333f779d` | 33 | **76** | 43.4 % | **32.1** |
+| parity-run, 2026-08-21T20:12Z, `9333f779d` | 33 | **81** | 40.7 % | 2.5 |
+| **this note**, `cb4a391c9` | **38** | **76** | 50.0 % | 7.4 |
+
+**What this changes.** The row's headline is now **40.7 %**, not 38.2 %, and the
+denominator that produced 38.2 % does not reproduce: three measurements on
+2026-08-21 put plain cvc5 at 76–81, against the 89 recorded 15 days earlier. The
+89 is the outlier, and every "N files behind" figure priced off it — including
+the "55 files" in the brief for this work — is a few files too large.
+
+**What this does not change.** Nothing in §1–§5. The taxonomy, the route ladder,
+the live-rung table, the family split and all three A/Bs are properties of
+axeyum's own failures on a fixed 200-file list; the reference only decides which
+of them count, and it moves the miss count by single digits. Specifically: the
+z3-vs-cvc5 divergence (§3.1) is measured *inside one run* and is unaffected; the
+family concentration (§3.2) is 74 of 104 misses against z3, which no cvc5 run
+touches; and the three yields (0, +1, +3) are axeyum-vs-axeyum.
+
+**What it costs the instrument.** My 38 is five above both same-day parity runs
+at a commit three days newer than theirs, which is more than "ordinary progress"
+comfortably explains. The most likely reading is load — their 16:01 sweep started
+at load 32, and `parity-run.sh` runs both solvers per file where this note ran
+axeyum and each reference in separate passes — but I did not measure it and do
+not get to assume it. Treat the 38 as this instrument's count, not as a
+correction to the board. Nothing in §1–§5 depends on which of 33 or 38 is right:
+the classes are read per file, and a five-file boundary shift moves no class
+across a conclusion.
 
 ## Provenance
 
