@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-balanced-bezout-euclidean-update-result",
+  "state": "compiled-exported-first-import-propext-second-import-forbidden",
+  "plan": {
+    "path": "artifacts/autogenesis/balanced-bezout-euclidean-update-plan-v1.json",
+    "sha256": "e098fcedfd78866bf33cae386bf69ea14f698a582bcd1c1a51b5b9140d6f0adb",
+    "commit": "8dc795c1a857599bd83c37ba71c399f1500c3ff4"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/5a2d0d397-balanced-bezout-euclidean-update-v1/manifest.json",
+    "sha256": "20c86d1f3bf95b69cb2484e847393f126680f9453406713a0c080e1a8208126c",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "execution": {
+    "source_copies": 1,
+    "compiler_invocations": 1,
+    "successful_compilations": 1,
+    "exporter_invocations": 1,
+    "importer_runs": 1,
+    "proof_bearing_stream_reads": 1,
+    "second_import_forbidden_by_first_gate": true,
+    "retries": 0
+  },
+  "theorem": {
+    "name": "Axeyum.Autogenesis.balancedBezoutEuclideanUpdateV1",
+    "declaration_sha256": "6c4cabffc2b519de087c3b31efd85d8b5b76239b4a4c87687d2224af865fe0c5",
+    "axiom_footprint": ["propext"],
+    "direct_theorem_dependencies": [
+      "Eq.symm",
+      "Eq.trans",
+      "Nat.add_assoc",
+      "Nat.left_distrib",
+      "Nat.mul_assoc",
+      "Nat.right_distrib",
+      "_private.AxeyumAutogenesisBalancedBezoutEuclideanUpdateV1.0.Axeyum.Autogenesis.rotateFourthThenSwapV1",
+      "_private.AxeyumAutogenesisBalancedBezoutEuclideanUpdateV1.0.Axeyum.Autogenesis.rotateLastFiveV1",
+      "congrArg"
+    ],
+    "class": "propext-bearing",
+    "first_audit_sha256": "b2f52dd054994c21e193e4f0611f4f0cdf8d88f1c8757fc1b6764ac6d8c7557c",
+    "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0}
+  },
+  "cleanup": {
+    "exact_temporary_paths_removed": 3,
+    "preexisting_status_entries_before": 3,
+    "preexisting_status_entries_after": 3,
+    "preexisting_baseline_unchanged": true
+  },
+  "next_boundary": {
+    "euclidean_update_accepted": false,
+    "required_next_increment": "preregister one dependency-local footprint audit over the exact nine direct theorem dependencies from the first audit before changing source",
+    "reuse_compilation_as_theorem_credit": false
+  },
+  "authority": {
+    "euclidean_update_credit": 0,
+    "generic_balanced_bezout_credit": 0,
+    "target_specialization_credit": 0,
+    "cancellation_credit": 0,
+    "exact_fibonacci_target_submissions": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "verification": "python3 scripts/check-autogenesis-balanced-bezout-euclidean-update-result.py",
+  "limitations": "V1 proves only that the explicit arithmetic source compiles while its first imported theorem still reaches propext. It establishes no accepted Euclidean update, generic gcd theorem, target specialization, cancellation result, Fibonacci target, receipt, evaluation result, fact transition, or ledger write."
+}
