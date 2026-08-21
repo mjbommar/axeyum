@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-r091-clean-dvd-antisymm-plan-v5",
+  "state": "preregistered-clean-order-after-exact-acc-cancellation-composition",
+  "predecessor": {
+    "path": "artifacts/autogenesis/official-cancellation-acc-package-composition-result-v1.json",
+    "sha256": "fa96ec40997074828d80a0707d590bc5863fce005bf2b4e8e916abf9925e3f3d"
+  },
+  "inputs": {
+    "target_r091_sha256": "fc1117679c743009e8548a25d1f73f71f6cd42555ea77b3efce07844673670b2",
+    "cancellation_capsule_sha256": "6f9a3983ba4b0e7b2c872615d796ceb5414d3bd2cf51843ecb496b3ba83a52b0",
+    "cancellation_root": "Axeyum.Autogenesis.officialCoprimeFactorDivisibilityCancellationV1"
+  },
+  "construction": {
+    "driver": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+    "mode": "--official-clean-order-capsule",
+    "supports": [
+      "Axeyum.Autogenesis.eqZeroOfZeroDvdOfficialV1",
+      "Axeyum.Autogenesis.leOfDvdOfficialV1",
+      "Axeyum.Autogenesis.dvdAntisymmOfficialV1"
+    ],
+    "required_order": [
+      "verify exact r091 Nat.mod_lt target-leaf compatibility",
+      "compose and replay official cancellation through the accepted exact Acc package",
+      "submit the three target-owned support theorems",
+      "require every support footprint empty",
+      "export only the final antisymmetry root with fail-if-present output semantics"
+    ]
+  },
+  "acceptance": {
+    "fresh_complete_invocations": 2,
+    "checked_target_leaf_reuses": 2,
+    "cancellation_compositions": 2,
+    "support_submissions": 6,
+    "exports": 2,
+    "outputs_byte_identical": true,
+    "fresh_imports_per_output": 2,
+    "all_axiom_footprints": [],
+    "exact_target_submissions": 0,
+    "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0}
+  },
+  "budget": {
+    "max_driver_builds": 1,
+    "max_complete_invocations": 2,
+    "max_compatibility_checks": 2,
+    "max_compositions": 2,
+    "max_support_submissions": 6,
+    "max_exports": 2,
+    "max_imports": 4,
+    "max_exact_target_submissions": 0,
+    "max_retries": 0
+  },
+  "authority": {
+    "support_credit_before_acceptance": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_on_accept": "Replace the portable clean-order input in the exact Fibonacci gcd-shift driver with this official-r091 capsule, preregister two fresh exact-target runs, and retain zero target credit until both agree.",
+  "output": "artifacts/autogenesis/official-r091-clean-dvd-antisymm-result-v5.json",
+  "verification": "python3 scripts/check-autogenesis-official-r091-clean-dvd-antisymm-plan-v5.py",
+  "limitations": "This may establish only official-r091 clean divisibility antisymmetry. It grants no Nat.gcd_fib_add_self, fact transition, evaluation credit, or ledger write."
+}

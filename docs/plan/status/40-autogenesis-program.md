@@ -4,7 +4,7 @@
 
 **Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. The exact-target decline remains sealed with zero credit. The exact official `Acc` / `Acc.intro` / `Acc.rec` package is now declaration-authorized, atomically reconstructed, and independently identity-checked. Two fresh cancellation compositions over r091 are byte-identical; the official cancellation root is reproduced with an empty footprint and a replayed receipt. No clean-order or Fibonacci target theorem was submitted.
 
-**Next:** preregister and reconstruct official clean divisibility antisymmetry over the accepted cancellation environment, export it twice, and require four fresh imports. Do not submit `Nat.gcd_fib_add_self` until that support capsule is deterministic and empty-footprint.
+**Next:** execute the preregistered official clean divisibility-antisymmetry reconstruction over the accepted cancellation environment, export it twice, and require four fresh imports. Do not submit `Nat.gcd_fib_add_self` until that support capsule is deterministic and empty-footprint.
 
 <!-- plan-section: landed-changes -->
 
@@ -202,3 +202,4 @@
 | 2026-08-21 | (pending) | Single-read cancellation audit localizes the exact missing `Acc` package and freezes declaration-exact reconstruction |
 | 2026-08-21 | `b26edf6aa` | Exact official `Acc` package authorization retains atomic reconstruction and mutation controls |
 | 2026-08-21 | (pending) | Official cancellation composes twice over r091 with exact `Acc`, byte-identical receipts, and an empty footprint |
+| 2026-08-21 | (pending) | V5 freezes official clean-order reconstruction after exact `Acc` and cancellation acceptance |

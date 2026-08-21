@@ -94,4 +94,5 @@ python3 -m unittest \
   scripts.tests.test_check_autogenesis_nat_gcd_fib_add_self_portable_support_capsules_result \
   scripts.tests.test_check_autogenesis_official_gcd_balanced_bezout_exact_reuse_plan \
   scripts.tests.test_check_autogenesis_official_gcd_balanced_bezout_exact_reuse_result \
-  scripts.tests.test_check_autogenesis_official_cancellation_acc_path_and_package
+  scripts.tests.test_check_autogenesis_official_cancellation_acc_path_and_package \
+  scripts.tests.test_check_autogenesis_official_r091_clean_dvd_antisymm_plan_v5
