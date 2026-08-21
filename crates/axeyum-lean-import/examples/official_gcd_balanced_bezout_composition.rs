@@ -7,7 +7,8 @@ use std::io::Cursor;
 use std::path::{Path, PathBuf};
 
 use axeyum_lean_import::{
-    ImportLimits, canonical_declaration_sha256, compose_checked_theorem_slice, import_ndjson,
+    ImportLimits, ReusedTypeCompatibility, canonical_declaration_sha256,
+    checked_reused_declaration_compatibility, compose_checked_theorem_slice, import_ndjson,
     specialize_checked_theorem, verify_checked_theorem_composition,
     verify_checked_theorem_specialization,
 };
@@ -88,15 +89,24 @@ fn run() -> Result<(), String> {
     require_identity(adapter.kernel(), MOD_LT_ADAPTER, MOD_LT_ADAPTER_SHA256)?;
     require_identity(generic.kernel(), GENERIC, GENERIC_SHA256)?;
 
-    let with_mod_lt = compose_root(
-        target.kernel(),
-        generic.kernel(),
-        "Nat.mod_lt",
-        "Nat.mod_lt",
-    )?;
+    let mod_lt_reuse =
+        checked_reused_declaration_compatibility(target.kernel(), generic.kernel(), "Nat.mod_lt")
+            .map_err(|error| format!("Nat.mod_lt checked reuse declined: {error:?}"))?;
+    if mod_lt_reuse.source_declaration_sha256 != mod_lt_reuse.target_declaration_sha256 {
+        return Err(format!(
+            "Nat.mod_lt declaration identity differs across pinned kernels: source {}, target {}",
+            mod_lt_reuse.source_declaration_sha256, mod_lt_reuse.target_declaration_sha256,
+        ));
+    }
+    if mod_lt_reuse.compatibility != ReusedTypeCompatibility::KernelTypeShape {
+        return Err(format!(
+            "Nat.mod_lt reuse is not exact kernel-type-shape compatibility: {}",
+            mod_lt_reuse.compatibility.as_str(),
+        ));
+    }
     let with_adapter = compose_root(
         adapter.kernel(),
-        with_mod_lt.kernel(),
+        generic.kernel(),
         MOD_LT_ADAPTER,
         "mod-lt-adapter",
     )?;
@@ -226,8 +236,16 @@ fn run() -> Result<(), String> {
             "successor_sha256": SUCCESSOR_STREAM_SHA256,
             "generic_balanced_bezout_sha256": GENERIC_STREAM_SHA256,
         },
+        "reused_declarations": {
+            "Nat.mod_lt": {
+                "source_declaration_sha256": mod_lt_reuse.source_declaration_sha256,
+                "target_declaration_sha256": mod_lt_reuse.target_declaration_sha256,
+                "source_type_shape_sha256": mod_lt_reuse.source_type_shape_sha256,
+                "target_type_shape_sha256": mod_lt_reuse.target_type_shape_sha256,
+                "compatibility": mod_lt_reuse.compatibility.as_str(),
+            },
+        },
         "compositions": {
-            "mod_lt_receipt_sha256": with_mod_lt.receipt().receipt_sha256,
             "mod_lt_adapter_receipt_sha256": with_adapter.receipt().receipt_sha256,
             "zero_left_receipt_sha256": with_zero.receipt().receipt_sha256,
             "successor_receipt_sha256": with_successor.receipt().receipt_sha256,
