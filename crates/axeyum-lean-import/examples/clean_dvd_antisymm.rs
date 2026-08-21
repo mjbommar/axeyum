@@ -10,7 +10,8 @@ use axeyum_lean_import::{
     verify_checked_theorem_composition,
 };
 use axeyum_lean_kernel::{
-    Declaration, ExprId, Kernel, NameId, NatOps, NatPrelude, NatState, build_nat_prelude,
+    Declaration, ExprId, Kernel, Lean4ExportMetadata, NameId, NatOps, NatPrelude, NatState,
+    build_nat_prelude,
 };
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -32,7 +33,7 @@ const CLEAN_ANTISYMM_DEPENDENCIES: [&str; 5] = [
     "Nat.le_succ_succ",
     "Nat.zero_le",
 ];
-const USAGE: &str = "usage: clean_dvd_antisymm <r091.ndjson>";
+const USAGE: &str = "usage: clean_dvd_antisymm <r091.ndjson> [--export-capsule <output.ndjson>]";
 
 fn main() {
     if let Err(error) = run() {
@@ -44,6 +45,16 @@ fn main() {
 fn run() -> Result<(), String> {
     let mut arguments = std::env::args_os().skip(1);
     let target_path = arguments.next().map(PathBuf::from).ok_or(USAGE)?;
+    let capsule_path = match arguments.next() {
+        None => None,
+        Some(flag) if flag == "--export-capsule" => Some(
+            arguments
+                .next()
+                .map(PathBuf::from)
+                .ok_or("--export-capsule requires an output path")?,
+        ),
+        Some(_) => return Err(USAGE.to_owned()),
+    };
     if arguments.next().is_some() {
         return Err(USAGE.to_owned());
     }
@@ -101,6 +112,10 @@ fn run() -> Result<(), String> {
     {
         return Err("source and r091 support theorem evidence differ".to_owned());
     }
+    let capsule = capsule_path
+        .as_deref()
+        .map(|path| export_checked_capsule(transported.kernel(), CLEAN_DVD_ANTISYMM, path))
+        .transpose()?;
 
     let output = json!({
         "schema_version": 1,
@@ -111,6 +126,7 @@ fn run() -> Result<(), String> {
         "source_theorems": [clean_zero_dvd_evidence, clean_le_evidence, clean_antisymm_evidence],
         "target_theorems": [target_clean_zero_dvd_evidence, target_clean_le_evidence, target_clean_antisymm_evidence],
         "clean_dvd_antisymm_type_sha256": hex_sha256_expression(&native, clean_antisymm)?,
+        "portable_capsule": capsule,
         "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0},
         "exact_target_submissions": 0,
         "target_credit": 0,
@@ -123,6 +139,38 @@ fn run() -> Result<(), String> {
         serde_json::to_string_pretty(&output).map_err(|error| error.to_string())?
     );
     Ok(())
+}
+
+fn export_checked_capsule(kernel: &Kernel, root: &str, output: &Path) -> Result<Value, String> {
+    if output.exists() {
+        return Err(format!(
+            "capsule output already exists: {}",
+            output.display()
+        ));
+    }
+    let root_name = find_name(kernel, root)?;
+    let metadata = Lean4ExportMetadata::axeyum("4.30.0");
+    let bytes = kernel
+        .render_lean4export_ndjson_roots(&metadata, &[root_name])
+        .map_err(|error| format!("root-selected capsule export failed: {error}"))?;
+    let expected = theorem_evidence(kernel, root)?;
+    for pass in 1..=2 {
+        let imported = import_ndjson(Cursor::new(bytes.as_bytes()), ImportLimits::default())
+            .map_err(|error| format!("capsule import {pass} failed: {error:?}"))?;
+        let actual = theorem_evidence(imported.kernel(), root)?;
+        if actual != expected {
+            return Err(format!("capsule import {pass} changed theorem evidence"));
+        }
+    }
+    fs::write(output, &bytes).map_err(|error| format!("capsule write failed: {error}"))?;
+    Ok(json!({
+        "root": root,
+        "bytes": bytes.len(),
+        "sha256": hex_sha256(bytes.as_bytes()),
+        "fresh_imports": 2,
+        "theorem": expected,
+        "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0},
+    }))
 }
 
 fn duplicate_native_le_of_dvd(kernel: &mut Kernel, prelude: &NatPrelude) -> Result<(), String> {
