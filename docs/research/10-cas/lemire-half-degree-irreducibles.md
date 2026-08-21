@@ -3831,6 +3831,33 @@ shows that pooling repairs the levelwise three-quarter failures and that the
 new diagnostic is non-vacuous.  It remains finite evidence: no universal
 three-quarter contraction is claimed.
 
+There is an exact spectral form of this aggregate path which prevents the
+finite pattern from being mistaken for a generic martingale inequality.  On
+the coarse quotient `Q=E_c`, let `w(q)` be `R` times the conditional variance
+inside the fibre above `q`.  Then `A_i` is the sum of `w` over the identity
+cylinder of `E_i`.  If `Dhat(psi)` is the unnormalised Fourier transform of the
+centered Mangoldt populations, conditional-variance subtraction removes the
+complete low-conductor block and leaves
+
+```text
+what(eta) = 2^(-c) sum_(cond(psi)>c)
+              Dhat(psi) conjugate(Dhat(psi eta^(-1))).
+```
+
+Consequently
+
+```text
+2^i A_i - 2^(i-1) A_(i-1) = sum_(cond(eta)=i) what(eta).
+```
+
+The CAS now emits this signed layer sum as an exact integer reconstructed from
+the spatial masses; the translation-forced split makes it zero.  Thus the
+missing theorem is a low-twist decorrelation estimate for only the unresolved
+high Hayes trace powers, not the earlier full squared-discrepancy spectrum.
+Generic Cauchy and individual-Weil bounds remain trivial.  ADR-0583 records
+the identity and the fixed-`q` literature boundary without claiming the
+decorrelation.
+
 The most direct zero-`2`-rank shortcut is now priced exactly and gives no
 endpoint information.  Deuring--Shafarevich gives `2`-rank zero at both
 Carlitz levels, hence also on the relative Jacobian quotient.  But the general

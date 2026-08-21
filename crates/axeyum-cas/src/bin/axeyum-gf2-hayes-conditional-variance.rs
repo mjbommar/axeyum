@@ -92,11 +92,12 @@ fn run() -> Result<(), String> {
             );
             for step in &level.identity_energy_path {
                 println!(
-                    "GF2_HAYES_CONDITIONAL_VARIANCE_PATH|status=PASS|ell={ell}|degree={degree}|level={}|coarse_level={}|identity_square_mass={}|parent_identity_square_mass={}|at_most_one_half={}|at_most_three_quarters={}",
+                    "GF2_HAYES_CONDITIONAL_VARIANCE_PATH|status=PASS|ell={ell}|degree={degree}|level={}|coarse_level={}|identity_square_mass={}|parent_identity_square_mass={}|signed_fourier_layer_sum={}|at_most_one_half={}|at_most_three_quarters={}",
                     level.level,
                     step.coarse_level,
                     step.identity_square_mass,
                     step.parent_identity_square_mass,
+                    step.signed_fourier_layer_sum,
                     step.at_most_one_half,
                     step.at_most_three_quarters,
                 );
@@ -136,10 +137,11 @@ fn print_aggregate_path(
     );
     for step in &report.aggregate_identity_energy_path {
         println!(
-            "GF2_HAYES_CONDITIONAL_VARIANCE_AGGREGATE_PATH|status=PASS|ell={ell}|degree={degree}|coarse_level={}|identity_square_mass={}|parent_identity_square_mass={}|at_most_one_half={}|at_most_three_quarters={}",
+            "GF2_HAYES_CONDITIONAL_VARIANCE_AGGREGATE_PATH|status=PASS|ell={ell}|degree={degree}|coarse_level={}|identity_square_mass={}|parent_identity_square_mass={}|signed_fourier_layer_sum={}|at_most_one_half={}|at_most_three_quarters={}",
             step.coarse_level,
             step.identity_square_mass,
             step.parent_identity_square_mass,
+            step.signed_fourier_layer_sum,
             step.at_most_one_half,
             step.at_most_three_quarters,
         );

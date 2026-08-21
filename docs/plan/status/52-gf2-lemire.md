@@ -112,6 +112,15 @@ fleet controls at `e046d1d05` cover both endpoints for `19<=ell<=23`: every
 one of the 140 aggregate steps satisfies the weaker three-quarter contraction,
 while 69 are half-balanced.  This directly tests the selected candidate but
 remains non-credit-bearing finite evidence.
+Finite-group orthogonality now identifies the arithmetic content of every
+aggregate split exactly.  Conditional-variance subtraction cancels the entire
+low-conductor autocorrelation block, and the signed split imbalance is one
+exact low-conductor layer of a shifted second moment over only the unresolved
+high Hayes characters.  The CAS emits this layer sum as an integer and checks
+the translation-forced zero.  This is narrower than the earlier full `(CDL)`
+object, but its required low-twist decorrelation remains unproved; large-field
+variance theorems, central-L-value moments, and random-matrix models do not
+settle the fixed-`q=2` trace-power estimate.
 The companion characteristic-two Newton-over-Hodge result has also been
 priced conditionally: it forces only divisibility of the connected endpoint
 trace by eight.  At `ell=200` the existing envelope is already divisible by

@@ -5378,6 +5378,17 @@ pub struct IdentityCylinderEnergyPathStep {
     pub identity_square_mass: BigUint,
     /// Square mass in the identity parent before this split.
     pub parent_identity_square_mass: BigUint,
+    /// Signed exact-conductor Fourier-layer sum selected by this split.
+    ///
+    /// If `i=coarse_level`, `A_i=identity_square_mass`, and
+    /// `A_(i-1)=parent_identity_square_mass`, subgroup orthogonality gives
+    ///
+    /// ```text
+    /// sum_(cond eta=i) What(eta) = 2^i A_i-2^(i-1) A_(i-1).
+    /// ```
+    ///
+    /// The value is reconstructed spatially, without roots of unity.
+    pub signed_fourier_layer_sum: BigInt,
     /// Whether `2 * child <= parent`.
     pub at_most_one_half: bool,
     /// Whether `4 * child <= 3 * parent`.
@@ -17783,10 +17794,14 @@ fn identity_cylinder_energy_path(
         let at_most_one_half = (&identity_square_mass << 1) <= previous;
         let at_most_three_quarters =
             BigUint::from(4_u8) * &identity_square_mass <= BigUint::from(3_u8) * &previous;
+        let signed_fourier_layer_sum = (BigInt::from(identity_square_mass.clone())
+            << (path_index + 1))
+            - (BigInt::from(previous.clone()) << path_index);
         path.push(IdentityCylinderEnergyPathStep {
             coarse_level: path_index + 1,
             identity_square_mass: identity_square_mass.clone(),
             parent_identity_square_mass: previous,
+            signed_fourier_layer_sum,
             at_most_one_half,
             at_most_three_quarters,
         });
@@ -17981,10 +17996,14 @@ fn identity_cylinder_aggregate_energy_path(
         let at_most_one_half = (&identity_square_mass << 1) <= previous;
         let at_most_three_quarters =
             BigUint::from(4_u8) * &identity_square_mass <= BigUint::from(3_u8) * &previous;
+        let signed_fourier_layer_sum = (BigInt::from(identity_square_mass.clone())
+            << (path_index + 1))
+            - (BigInt::from(previous.clone()) << path_index);
         path.push(IdentityCylinderEnergyPathStep {
             coarse_level: path_index + 1,
             identity_square_mass: identity_square_mass.clone(),
             parent_identity_square_mass: previous,
+            signed_fourier_layer_sum,
             at_most_one_half,
             at_most_three_quarters,
         });
@@ -22425,6 +22444,14 @@ mod tests {
                     assert!(level.identity_energy_path.iter().all(|step| {
                         step.identity_square_mass <= step.parent_identity_square_mass
                     }));
+                    for step in &level.identity_energy_path {
+                        assert_eq!(
+                            step.signed_fourier_layer_sum,
+                            (BigInt::from(step.identity_square_mass.clone()) << step.coarse_level)
+                                - (BigInt::from(step.parent_identity_square_mass.clone())
+                                    << (step.coarse_level - 1))
+                        );
+                    }
                     assert_eq!(
                         level.identity_path_balance.half_balanced_steps,
                         level
@@ -22459,6 +22486,14 @@ mod tests {
                         step.identity_square_mass <= step.parent_identity_square_mass
                     })
                 );
+                for step in &report.aggregate_identity_energy_path {
+                    assert_eq!(
+                        step.signed_fourier_layer_sum,
+                        (BigInt::from(step.identity_square_mass.clone()) << step.coarse_level)
+                            - (BigInt::from(step.parent_identity_square_mass.clone())
+                                << (step.coarse_level - 1))
+                    );
+                }
             }
         }
     }
@@ -22485,6 +22520,7 @@ mod tests {
                     let aggregate_step = &report.aggregate_identity_energy_path
                         [translation.first_odd_binomial_index - 1];
                     assert!(aggregate_step.at_most_one_half);
+                    assert_eq!(aggregate_step.signed_fourier_layer_sum, BigInt::from(0_u8));
                     assert_eq!(
                         &aggregate_step.identity_square_mass << 1,
                         aggregate_step.parent_identity_square_mass

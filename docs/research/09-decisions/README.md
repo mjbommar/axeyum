@@ -655,3 +655,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0580](adr-0580-reduce-identity-variance-to-linear-local-carleson.md) | Reduce the identity-cylinder variance to a polynomial delocalization estimate on each retained Haar layer | accepted |
 | [0581](adr-0581-factor-polynomial-share-along-the-identity-witt-path.md) | Reduce the polynomial identity-cylinder share to logarithmically many non-concentrating binary energy splits | accepted |
 | [0582](adr-0582-combine-haar-levels-before-localizing-the-identity-path.md) | Replace separate levelwise localization by one sharply priced Haar-weighted identity path | accepted |
+| [0583](adr-0583-identify-aggregate-splits-with-high-conductor-shifted-moments.md) | Rewrite each aggregate identity-path split as one low-twist correlation of only the unresolved high Hayes conductors | accepted |
