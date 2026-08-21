@@ -187,6 +187,7 @@ be presented as general solver CLIs.
 | [`theorem_footprint_batch_audit`](../../crates/axeyum-lean-import/examples/theorem_footprint_batch_audit.rs) | `<stream.ndjson> <root>…` | Audits an ordered batch of theorem roots from one Lean export stream. Imports once and emits declaration identities, direct theorem dependencies and axiom footprints. Read-only by construction: no expressions, no theorem values, nothing submitted to the kernel. |
 | [`coprime_target_support_audit`](../../crates/axeyum-lean-import/examples/coprime_target_support_audit.rs) | `<stream.ndjson>` | The same audit narrowed to the three preregistered target-side coprime-cancellation roots. Prints only; writes nothing. |
 | [`euclidean_public_equation_carrier_audit`](../../crates/axeyum-lean-import/examples/euclidean_public_equation_carrier_audit.rs) | `<stream.ndjson>` | Audits one dependency layer beneath the two public Euclidean equations, over the sealed stream. Prints only; writes nothing. |
+| [`declaration_dependency_path_audit`](../../crates/axeyum-lean-import/examples/declaration_dependency_path_audit.rs) | `<stream.ndjson> <from> <to>` | Traces the dependency path between two declarations in one imported proof stream — which theorems actually stand between a root and a leaf. Identities and dependency edges only, no expressions or theorem values; prints only, writes nothing. |
 | [`clean_dvd_antisymm`](../../crates/axeyum-lean-import/examples/clean_dvd_antisymm.rs) | `<stream.ndjson>` | Closes `gcd_fib_add_self` divisibility antisymmetry over a cleaned support set, submitting the composed term to the kernel and reporting what it admitted. Prints only; writes no file. |
 | [`official_gcd_balanced_bezout_composition`](../../crates/axeyum-lean-import/examples/official_gcd_balanced_bezout_composition.rs) | `<stream.ndjson>` | Closes the generic official-gcd balanced-Bézout theorem from independently checked pieces, without crossing the measured native/official `WellFounded` representation boundary. Submits to the kernel and reports what it admitted; writes no file. |
 | [`official_coprime_factor_cancellation_composition`](../../crates/axeyum-lean-import/examples/official_coprime_factor_cancellation_composition.rs) | `<stream.ndjson>` | Closes official coprime-factor cancellation from independently checked pieces. `include!`s the balanced-Bézout example above rather than duplicating it, so both are Cargo targets and that shared body is compiled twice — read the two rows together. |
@@ -212,7 +213,7 @@ before running one, and do not treat any of them as a general search CLI.
 
 ### Shared example-local modules
 
-These four files are tracked under `examples/` but Cargo does not build them as
+These five files are tracked under `examples/` but Cargo does not build them as
 example targets: they are `mod`-included by the examples beside them, so there is
 nothing to run. They are listed here because the catalogue inventories every
 checked-in file under `examples/`, not only the runnable targets.
@@ -223,6 +224,7 @@ checked-in file under `examples/`, not only the runnable targets.
 | [`autogenesis_support/mod.rs`](../../crates/axeyum-lean-kernel/examples/autogenesis_support/mod.rs) | `autogenesis_induction_plan_check`, `autogenesis_apply_plan_check` | Fixture-local parsers and search loops for the Autogenesis proposal TSVs (`parse_induction_plans`, `search_induction`). Deliberately kept below a public proof-plan IR: it exercises one small grammar without adding a crate API or claiming the Phase-3 design decision. |
 | [`support/fib_coprime.rs`](../../crates/axeyum-lean-import/examples/support/fib_coprime.rs) | `nat_gcd_succ_specialization` | The bounded Fibonacci-neighbour coprimality proof-term constructor. It builds a candidate term; the kernel decides it. Untrusted by construction, like the reflexivity proposer above. |
 | [`support/fib_gcd_shift.rs`](../../crates/axeyum-lean-import/examples/support/fib_gcd_shift.rs) | `nat_gcd_succ_specialization` | Fixed support constructors for the Fibonacci gcd-shift operation, plus the canonical declaration/expression SHA-256 pins that bind them to their source. |
+| [`support/official_gcd_balanced_bezout.rs`](../../crates/axeyum-lean-import/examples/support/official_gcd_balanced_bezout.rs) | `official_gcd_balanced_bezout_composition`, `official_coprime_factor_cancellation_composition` | The shared balanced-Bézout composition body. It lived directly in `examples/` until 2026-08-21, which auto-registered it as a Cargo target — and that target could not satisfy `missing_docs` while also being `include!`d, because `//!` lands mid-file in the including example (`E0753`). Two requirements, one file, contradictory; it moved here and each caller carries its own docs. |
 
 ## Inventory and validation
 
