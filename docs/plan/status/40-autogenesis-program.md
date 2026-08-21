@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction has an unconditional official-representation balanced-Bézout theorem. Self-contained generic cancellation now compiles and reconstructs twice deterministically, but reaches exactly `propext`; no cancellation or downstream credit is granted.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction has an unconditional official-representation balanced-Bézout theorem. Self-contained generic cancellation reconstructs deterministically but reaches `propext`; its exact seventeen-root audit splits eleven clean dependencies from six named carriers, with no cancellation credit.
 
-**Next:** run the preregistered exact seventeen-root dependency audit with one sealed-stream read. Use that classification—not source guessing—to select target-owned replacements or a proof rewrite, while preserving zero cancellation/Fibonacci authority.
+**Next:** preregister target-owned replacements for the six measured carriers: direct divisibility witness construction, multiplication rearrangement, right distributivity, and additive divisibility cancellation. Preserve zero cancellation/Fibonacci authority until a revised theorem imports twice empty-footprint.
 
 <!-- plan-section: landed-changes -->
 
@@ -136,4 +136,5 @@
 | 2026-08-21 | (pending) | First generic cancellation source stops before elaboration at an unbound local module and restores the exact baseline |
 | 2026-08-21 | `cce486823` | Self-contained cancellation V2 freezes the same proof with only its four-natural certificate definition inlined |
 | 2026-08-21 | (pending) | Self-contained cancellation reconstructs twice deterministically but localizes its rejected footprint to `propext` |
-| 2026-08-21 | (pending) | All seventeen direct cancellation dependencies are frozen before one non-rendering sealed-stream audit |
+| 2026-08-21 | `efe97708a` | All seventeen direct cancellation dependencies are frozen before one non-rendering sealed-stream audit |
+| 2026-08-21 | (pending) | One exact audit splits eleven clean cancellation dependencies from six `propext` carriers |
