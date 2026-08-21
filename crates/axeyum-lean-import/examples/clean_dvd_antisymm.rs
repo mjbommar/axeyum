@@ -6,8 +6,8 @@ use std::io::Cursor;
 use std::path::{Path, PathBuf};
 
 use axeyum_lean_import::{
-    ImportLimits, canonical_declaration_sha256, checked_reused_declaration_compatibility,
-    compose_checked_theorem_slice, import_ndjson, verify_checked_theorem_composition,
+    ImportLimits, canonical_declaration_sha256, compose_checked_theorem_slice, import_ndjson,
+    verify_checked_theorem_composition,
 };
 use axeyum_lean_kernel::{
     Declaration, ExprId, Kernel, NameId, NatOps, NatPrelude, NatState, build_nat_prelude,
@@ -16,28 +16,20 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
 const TARGET_SHA256: &str = "fc1117679c743009e8548a25d1f73f71f6cd42555ea77b3efce07844673670b2";
-const OFFICIAL_SHA256: &str = "ff9916e0d74f1a69f7fee33c3b973cd771e6786715b8ea86699da0a8124ae65b";
-const OFFICIAL_ROOTS: [&str; 4] = [
-    "Eq.symm",
-    "Nat.eq_zero_of_zero_dvd",
-    "Nat.le_antisymm",
-    "Nat.succ_pos",
-];
 const CLEAN_LE_OF_DVD: &str = "Axeyum.Autogenesis.leOfDvdCleanV1";
-const CLEAN_DVD_ANTISYMM: &str = "Axeyum.Autogenesis.dvdAntisymmCleanV1";
+const CLEAN_DVD_ANTISYMM: &str = "Axeyum.Autogenesis.dvdAntisymmCleanV2";
 const CLEAN_LE_DEPENDENCIES: [&str; 3] = [
     "Nat.mul_le_mul_left",
     "Nat.mul_one",
     "Nat.one_le_right_of_mul",
 ];
-const CLEAN_ANTISYMM_DEPENDENCIES: [&str; 5] = [
+const CLEAN_ANTISYMM_DEPENDENCIES: [&str; 4] = [
     CLEAN_LE_OF_DVD,
-    "Eq.symm",
     "Nat.eq_zero_of_zero_dvd",
     "Nat.le_antisymm",
     "Nat.succ_pos",
 ];
-const USAGE: &str = "usage: clean_dvd_antisymm <r091.ndjson> <gcd-roots.ndjson>";
+const USAGE: &str = "usage: clean_dvd_antisymm <r091.ndjson>";
 
 fn main() {
     if let Err(error) = run() {
@@ -49,25 +41,13 @@ fn main() {
 fn run() -> Result<(), String> {
     let mut arguments = std::env::args_os().skip(1);
     let target_path = arguments.next().map(PathBuf::from).ok_or(USAGE)?;
-    let official_path = arguments.next().map(PathBuf::from).ok_or(USAGE)?;
     if arguments.next().is_some() {
         return Err(USAGE.to_owned());
     }
     let target = import_bound(&target_path, "target", TARGET_SHA256)?;
-    let official = import_bound(&official_path, "official-leaves", OFFICIAL_SHA256)?;
     if !target.report().axioms.is_empty() {
         return Err("the exact r091 target stream reaches assumptions".to_owned());
     }
-    for root in OFFICIAL_ROOTS {
-        let name = find_name(official.kernel(), root)?;
-        if !official.kernel().axiom_footprint(name).is_empty() {
-            return Err(format!(
-                "selected official leaf reaches assumptions: {root}"
-            ));
-        }
-    }
-
-    let (with_official, official_receipt) = compose_or_reuse_official(&official, &target)?;
 
     let mut native = Kernel::new();
     let native_prelude = build_nat_prelude(&mut native)
@@ -75,35 +55,45 @@ fn run() -> Result<(), String> {
     duplicate_native_le_of_dvd(&mut native, &native_prelude)?;
     let clean_le_evidence = theorem_evidence(&native, CLEAN_LE_OF_DVD)?;
     require_evidence(&clean_le_evidence, CLEAN_LE_OF_DVD, &CLEAN_LE_DEPENDENCIES)?;
-
-    let with_clean_le = compose_checked_theorem_slice(&native, &with_official, &[CLEAN_LE_OF_DVD])
-        .map_err(|error| format!("clean le_of_dvd composition declined: {error:?}"))?;
-    verify_checked_theorem_composition(
-        &native,
-        &with_official,
-        with_clean_le.kernel(),
-        with_clean_le.receipt(),
-    )
-    .map_err(|error| format!("clean le_of_dvd composition did not replay: {error:?}"))?;
-
-    let mut completed = with_clean_le.kernel().clone();
-    let clean_antisymm = declare_clean_dvd_antisymm(&mut completed, &native_prelude)?;
-    let clean_antisymm_evidence = theorem_evidence(&completed, CLEAN_DVD_ANTISYMM)?;
+    let clean_antisymm = declare_clean_dvd_antisymm(&mut native, &native_prelude)?;
+    let clean_antisymm_evidence = theorem_evidence(&native, CLEAN_DVD_ANTISYMM)?;
     require_evidence(
         &clean_antisymm_evidence,
         CLEAN_DVD_ANTISYMM,
         &CLEAN_ANTISYMM_DEPENDENCIES,
     )?;
 
+    let transported = compose_checked_theorem_slice(
+        &native,
+        target.kernel(),
+        &[CLEAN_LE_OF_DVD, CLEAN_DVD_ANTISYMM],
+    )
+    .map_err(|error| format!("clean support transport declined: {error:?}"))?;
+    verify_checked_theorem_composition(
+        &native,
+        target.kernel(),
+        transported.kernel(),
+        transported.receipt(),
+    )
+    .map_err(|error| format!("clean support transport did not replay: {error:?}"))?;
+    let target_clean_le_evidence = theorem_evidence(transported.kernel(), CLEAN_LE_OF_DVD)?;
+    let target_clean_antisymm_evidence =
+        theorem_evidence(transported.kernel(), CLEAN_DVD_ANTISYMM)?;
+    if target_clean_le_evidence != clean_le_evidence
+        || target_clean_antisymm_evidence != clean_antisymm_evidence
+    {
+        return Err("source and r091 support theorem evidence differ".to_owned());
+    }
+
     let output = json!({
         "schema_version": 1,
         "kind": "axeyum-clean-dvd-antisymm-r091-support",
-        "state": "clean-le-of-dvd-and-divisibility-antisymmetry-reconstructed-empty-footprint",
-        "input_streams": {"target_sha256": TARGET_SHA256, "official_leaves_sha256": OFFICIAL_SHA256},
-        "official_leaf_transfer": official_receipt,
-        "clean_le_of_dvd_composition_receipt_sha256": with_clean_le.receipt().receipt_sha256,
-        "theorems": [clean_le_evidence, clean_antisymm_evidence],
-        "clean_dvd_antisymm_type_sha256": hex_sha256_expression(&completed, clean_antisymm)?,
+        "state": "single-kernel-clean-supports-transported-to-r091-empty-footprint",
+        "input_streams": {"target_sha256": TARGET_SHA256},
+        "transport_receipt_sha256": transported.receipt().receipt_sha256,
+        "source_theorems": [clean_le_evidence, clean_antisymm_evidence],
+        "target_theorems": [target_clean_le_evidence, target_clean_antisymm_evidence],
+        "clean_dvd_antisymm_type_sha256": hex_sha256_expression(&native, clean_antisymm)?,
         "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0},
         "exact_target_submissions": 0,
         "target_credit": 0,
@@ -116,61 +106,6 @@ fn run() -> Result<(), String> {
         serde_json::to_string_pretty(&output).map_err(|error| error.to_string())?
     );
     Ok(())
-}
-
-fn compose_or_reuse_official(
-    official: &axeyum_lean_import::CompletedImport,
-    target: &axeyum_lean_import::CompletedImport,
-) -> Result<(Kernel, Value), String> {
-    let all_present = OFFICIAL_ROOTS
-        .iter()
-        .all(|root| find_name(target.kernel(), root).is_ok());
-    if all_present {
-        let mut rows = Vec::new();
-        for root in OFFICIAL_ROOTS {
-            let receipt =
-                checked_reused_declaration_compatibility(official.kernel(), target.kernel(), root)
-                    .map_err(|error| {
-                        format!("official leaf checked reuse declined for {root}: {error:?}")
-                    })?;
-            let name = find_name(target.kernel(), root)?;
-            if !target.kernel().axiom_footprint(name).is_empty() {
-                return Err(format!("reused target leaf reaches assumptions: {root}"));
-            }
-            rows.push(json!({
-                "name": root,
-                "source_declaration_sha256": receipt.source_declaration_sha256,
-                "target_declaration_sha256": receipt.target_declaration_sha256,
-                "compatibility": receipt.compatibility.as_str(),
-            }));
-        }
-        return Ok((
-            target.kernel().clone(),
-            json!({"mode": "checked-reuse", "rows": rows}),
-        ));
-    }
-    let completed =
-        compose_checked_theorem_slice(official.kernel(), target.kernel(), &OFFICIAL_ROOTS)
-            .map_err(|error| format!("official clean-leaf composition declined: {error:?}"))?;
-    verify_checked_theorem_composition(
-        official.kernel(),
-        target.kernel(),
-        completed.kernel(),
-        completed.receipt(),
-    )
-    .map_err(|error| format!("official clean-leaf composition did not replay: {error:?}"))?;
-    for theorem in &completed.receipt().added_theorems {
-        if !theorem.axiom_footprint.is_empty() {
-            return Err(format!(
-                "official composition added an assumption-bearing theorem: {}",
-                theorem.name
-            ));
-        }
-    }
-    Ok((
-        completed.kernel().clone(),
-        json!({"mode": "composition", "receipt_sha256": completed.receipt().receipt_sha256}),
-    ))
 }
 
 fn duplicate_native_le_of_dvd(kernel: &mut Kernel, prelude: &NatPrelude) -> Result<(), String> {
@@ -204,19 +139,6 @@ struct Dev<'k> {
 impl Dev<'_> {
     fn exact(&mut self, expected: &str) -> Result<NameId, String> {
         find_name(self.kernel, expected)
-    }
-
-    fn eq_symm_lemma(
-        &mut self,
-        left: ExprId,
-        right: ExprId,
-        proof: ExprId,
-    ) -> Result<ExprId, String> {
-        let name = self.exact("Eq.symm")?;
-        let zero = self.kernel.level_zero();
-        let theorem = self.kernel.const_(name, vec![zero]);
-        let nat = self.nat_ty();
-        Ok(self.apply(theorem, &[nat, left, right, proof]))
     }
 
     fn arrow2_lambdas(
@@ -267,8 +189,7 @@ impl Dev<'_> {
                         &|d, candidate_a| d.eq(candidate_a, b_succ),
                         &|d| {
                             let b_to_zero = d.lemma(eq_zero, &[b_succ, forward]);
-                            d.eq_symm_lemma(b_succ, zero, b_to_zero)
-                                .expect("Eq.symm is present")
+                            d.symm(b_succ, zero, b_to_zero)
                         },
                         &|d, a_pred, _a_ih| {
                             let a_succ = d.succ(a_pred);
@@ -300,7 +221,7 @@ impl NatOps for Dev<'_> {
 }
 
 fn declare_clean_dvd_antisymm(kernel: &mut Kernel, prelude: &NatPrelude) -> Result<ExprId, String> {
-    let target = nested_name(kernel, &["Axeyum", "Autogenesis", "dvdAntisymmCleanV1"]);
+    let target = nested_name(kernel, &["Axeyum", "Autogenesis", "dvdAntisymmCleanV2"]);
     let state = NatState::new(kernel, *prelude);
     let mut d = Dev { kernel, state };
     d.theorem(target, 2, &|d, values| {
