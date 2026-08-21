@@ -35,7 +35,9 @@ const COPRIME_CAPSULE: &str = "9106a3442d75a5fdaf51e35436e6fdbea78714d743e666bec
 const CLEAN_GCD_COMM: &str = "Axeyum.Autogenesis.gcdCommCleanV1";
 const OFFICIAL_EQ_ZERO: &str = "Axeyum.Autogenesis.eqZeroOfZeroDvdOfficialV1";
 const OFFICIAL_ONE_LE_RIGHT_OF_MUL: &str = "Axeyum.Autogenesis.oneLeRightOfMulOfficialV1";
+const OFFICIAL_MUL_LE_MUL_LEFT: &str = "Axeyum.Autogenesis.mulLeMulLeftOfficialV1";
 const OFFICIAL_LE_OF_DVD: &str = "Axeyum.Autogenesis.leOfDvdOfficialV1";
+const OFFICIAL_LE_ANTISYMM: &str = "Axeyum.Autogenesis.leAntisymmOfficialV1";
 const OFFICIAL_ANTISYMM: &str = "Axeyum.Autogenesis.dvdAntisymmOfficialV1";
 const USAGE: &str = "usage: nat_gcd_fib_add_self_exact <r091> <clean-order> <cancellation> <addition> <coprimality>";
 
@@ -214,8 +216,12 @@ fn run_official_clean_order_capsule(
     require_empty(&kernel, eq_zero, OFFICIAL_EQ_ZERO)?;
     let one_le_right = declare_official_one_le_right_of_mul(&mut kernel)?;
     require_empty(&kernel, one_le_right, OFFICIAL_ONE_LE_RIGHT_OF_MUL)?;
+    let mul_le_left = declare_official_mul_le_mul_left(&mut kernel)?;
+    require_empty(&kernel, mul_le_left, OFFICIAL_MUL_LE_MUL_LEFT)?;
     let le_of_dvd = declare_official_le_of_dvd(&mut kernel)?;
     require_empty(&kernel, le_of_dvd, OFFICIAL_LE_OF_DVD)?;
+    let le_antisymm = declare_official_le_antisymm(&mut kernel)?;
+    require_empty(&kernel, le_antisymm, OFFICIAL_LE_ANTISYMM)?;
     let antisymm = declare_official_antisymm(&mut kernel)?;
     require_empty(&kernel, antisymm, OFFICIAL_ANTISYMM)?;
 
@@ -247,7 +253,9 @@ fn run_official_clean_order_capsule(
             "supports": [
                 evidence(&kernel, eq_zero)?,
                 evidence(&kernel, one_le_right)?,
+                evidence(&kernel, mul_le_left)?,
                 evidence(&kernel, le_of_dvd)?,
+                evidence(&kernel, le_antisymm)?,
                 expected
             ],
             "official_cancellation_compatibility": {
@@ -385,6 +393,25 @@ impl<'a> Dev<'a> {
         let head = self.kernel.const_(self.eq_refl, vec![one]);
         let nat = self.nat_ty();
         self.apply(head, &[nat, value])
+    }
+    fn congr_succ(&mut self, left: ExprId, right: ExprId, equality: ExprId) -> ExprId {
+        let congr_arg = find_name(self.kernel, "congrArg").expect("congrArg must exist");
+        let one = self.one_level();
+        let nat = self.nat_ty();
+        let succ = self.kernel.const_(self.succ, vec![]);
+        let congr_arg = self.kernel.const_(congr_arg, vec![one, one]);
+        self.apply(congr_arg, &[nat, nat, succ, left, right, equality])
+    }
+    fn false_elim(&mut self, goal: ExprId, contradiction: ExprId) -> ExprId {
+        let false_name = find_name(self.kernel, "False").expect("False must exist");
+        let false_rec = find_name(self.kernel, "False.rec").expect("False.rec must exist");
+        let zero = self.kernel.level_zero();
+        let rec = self.kernel.const_(false_rec, vec![zero]);
+        let false_ty = self.kernel.const_(false_name, vec![]);
+        let motive = self
+            .kernel
+            .lam(self.anon, false_ty, goal, BinderInfo::Default);
+        self.apply(rec, &[motive, contradiction])
     }
     fn lam(&mut self, fv: u64, ty: ExprId, body: ExprId) -> ExprId {
         let body = self.kernel.abstract_fvars(body, &[fv]);
@@ -644,12 +671,105 @@ fn declare_official_one_le_right_of_mul(kernel: &mut Kernel) -> Result<NameId, S
     Ok(target)
 }
 
+fn mul_le_statement(d: &mut Dev<'_>, scale: ExprId, left: ExprId, right: ExprId) -> ExprId {
+    let premise = d.le(left, right);
+    let scaled_left = d.mul(scale, left);
+    let scaled_right = d.mul(scale, right);
+    let conclusion = d.le(scaled_left, scaled_right);
+    d.arrow(premise, conclusion)
+}
+
+#[allow(clippy::too_many_lines)]
+fn declare_official_mul_le_mul_left(kernel: &mut Kernel) -> Result<NameId, String> {
+    let target = nested_name(kernel, &["Axeyum", "Autogenesis", "mulLeMulLeftOfficialV1"]);
+    let mut d = Dev::new(kernel)?;
+    let le_rec = d.exact("Nat.le.rec")?;
+    let le_refl = d.exact("Nat.le_refl")?;
+    let le_add_right = d.exact("Nat.le_add_right")?;
+    let le_trans = d.exact("Nat.le_trans")?;
+    let nat = d.nat_ty();
+    let scale_fv = d.fresh();
+    let scale = d.kernel.fvar(scale_fv);
+    let left_fv = d.fresh();
+    let left = d.kernel.fvar(left_fv);
+    let right_fv = d.fresh();
+    let right = d.kernel.fvar(right_fv);
+    let premise = d.le(left, right);
+    let premise_fv = d.fresh();
+    let premise_proof = d.kernel.fvar(premise_fv);
+
+    let candidate_fv = d.fresh();
+    let candidate = d.kernel.fvar(candidate_fv);
+    let bound_ty = d.le(left, candidate);
+    let bound_fv = d.fresh();
+    let scaled_left = d.mul(scale, left);
+    let scaled_candidate = d.mul(scale, candidate);
+    let motive_body = d.le(scaled_left, scaled_candidate);
+    let motive_body = d.lam(bound_fv, bound_ty, motive_body);
+    let motive = d.lam(candidate_fv, nat, motive_body);
+
+    let base_product = d.mul(scale, left);
+    let base = d.lemma(le_refl, &[base_product]);
+
+    let step_value_fv = d.fresh();
+    let step_value = d.kernel.fvar(step_value_fv);
+    let step_bound_ty = d.le(left, step_value);
+    let step_bound_fv = d.fresh();
+    let step_ih_ty = {
+        let lhs = d.mul(scale, left);
+        let rhs = d.mul(scale, step_value);
+        d.le(lhs, rhs)
+    };
+    let step_ih_fv = d.fresh();
+    let step_ih = d.kernel.fvar(step_ih_fv);
+    let scaled_step = d.mul(scale, step_value);
+    let scaled_successor = {
+        let successor = d.succ(step_value);
+        d.mul(scale, successor)
+    };
+    let append_scale = d.lemma(le_add_right, &[scaled_step, scale]);
+    let step_body = d.lemma(
+        le_trans,
+        &[
+            scaled_left,
+            scaled_step,
+            scaled_successor,
+            step_ih,
+            append_scale,
+        ],
+    );
+    let step = d.lam(step_ih_fv, step_ih_ty, step_body);
+    let step = d.lam(step_bound_fv, step_bound_ty, step);
+    let step = d.lam(step_value_fv, nat, step);
+
+    let zero = d.kernel.level_zero();
+    let rec = d.kernel.const_(le_rec, vec![zero]);
+    let proof = d.apply(rec, &[left, motive, base, step, right, premise_proof]);
+    let ty = mul_le_statement(&mut d, scale, left, right);
+    let proof = d.lam(premise_fv, premise, proof);
+    let proof = d.lam(right_fv, nat, proof);
+    let proof = d.lam(left_fv, nat, proof);
+    let proof = d.lam(scale_fv, nat, proof);
+    let ty = d.pi(right_fv, nat, ty);
+    let ty = d.pi(left_fv, nat, ty);
+    let ty = d.pi(scale_fv, nat, ty);
+    d.kernel
+        .add_declaration(Declaration::Theorem {
+            name: target,
+            uparams: vec![],
+            ty,
+            value: proof,
+        })
+        .map_err(|error| format!("official multiplicative monotonicity rejected: {error:?}"))?;
+    Ok(target)
+}
+
 #[allow(clippy::too_many_lines)]
 fn declare_official_le_of_dvd(kernel: &mut Kernel) -> Result<NameId, String> {
     let target = nested_name(kernel, &["Axeyum", "Autogenesis", "leOfDvdOfficialV1"]);
     let mut d = Dev::new(kernel)?;
     let one_le_right = d.exact(OFFICIAL_ONE_LE_RIGHT_OF_MUL)?;
-    let mul_le_left = d.exact("Nat.mul_le_mul_left")?;
+    let mul_le_left = d.exact(OFFICIAL_MUL_LE_MUL_LEFT)?;
     let mul_one = d.exact("Nat.mul_one")?;
     let nat = d.nat_ty();
     let a_fv = d.fresh();
@@ -718,6 +838,116 @@ fn declare_official_le_of_dvd(kernel: &mut Kernel) -> Result<NameId, String> {
     Ok(target)
 }
 
+fn le_antisymm_statement(d: &mut Dev<'_>, left: ExprId, right: ExprId) -> ExprId {
+    let forward = d.le(left, right);
+    let reverse = d.le(right, left);
+    let equality = d.eq(left, right);
+    let rest = d.arrow(reverse, equality);
+    d.arrow(forward, rest)
+}
+
+#[allow(clippy::too_many_lines)]
+fn declare_official_le_antisymm(kernel: &mut Kernel) -> Result<NameId, String> {
+    let target = nested_name(kernel, &["Axeyum", "Autogenesis", "leAntisymmOfficialV1"]);
+    let mut d = Dev::new(kernel)?;
+    let not_succ_le_zero = d.exact("Nat.not_succ_le_zero")?;
+    let le_of_succ = d.exact("Nat.le_of_succ_le_succ")?;
+    let nat = d.nat_ty();
+    let left_fv = d.fresh();
+    let left = d.kernel.fvar(left_fv);
+    let right_fv = d.fresh();
+    let right = d.kernel.fvar(right_fv);
+
+    let proof = d.induct(
+        &|d, candidate_left| {
+            let candidate_right_fv = d.fresh();
+            let candidate_right = d.kernel.fvar(candidate_right_fv);
+            let statement = le_antisymm_statement(d, candidate_left, candidate_right);
+            let nat = d.nat_ty();
+            d.pi(candidate_right_fv, nat, statement)
+        },
+        &|d| {
+            let zero = d.zero();
+            let candidate_right_fv = d.fresh();
+            let candidate_right = d.kernel.fvar(candidate_right_fv);
+            let body = d.induct(
+                &|d, value| le_antisymm_statement(d, zero, value),
+                &|d| {
+                    let zero = d.zero();
+                    let forward_ty = d.le(zero, zero);
+                    let reverse_ty = d.le(zero, zero);
+                    d.two_lambdas(forward_ty, reverse_ty, &|d, _forward, _reverse| {
+                        d.refl(zero)
+                    })
+                },
+                &|d, predecessor, _ih| {
+                    let zero = d.zero();
+                    let successor = d.succ(predecessor);
+                    let forward_ty = d.le(zero, successor);
+                    let reverse_ty = d.le(successor, zero);
+                    d.two_lambdas(forward_ty, reverse_ty, &|d, _forward, reverse| {
+                        let contradiction = d.lemma(not_succ_le_zero, &[predecessor, reverse]);
+                        let goal = d.eq(zero, successor);
+                        d.false_elim(goal, contradiction)
+                    })
+                },
+                candidate_right,
+            );
+            let nat = d.nat_ty();
+            d.lam(candidate_right_fv, nat, body)
+        },
+        &|d, left_pred, outer_ih| {
+            let left_succ = d.succ(left_pred);
+            let candidate_right_fv = d.fresh();
+            let candidate_right = d.kernel.fvar(candidate_right_fv);
+            let body = d.induct(
+                &|d, value| le_antisymm_statement(d, left_succ, value),
+                &|d| {
+                    let zero = d.zero();
+                    let forward_ty = d.le(left_succ, zero);
+                    let reverse_ty = d.le(zero, left_succ);
+                    d.two_lambdas(forward_ty, reverse_ty, &|d, forward, _reverse| {
+                        let contradiction = d.lemma(not_succ_le_zero, &[left_pred, forward]);
+                        let goal = d.eq(left_succ, zero);
+                        d.false_elim(goal, contradiction)
+                    })
+                },
+                &|d, right_pred, _inner_ih| {
+                    let right_succ = d.succ(right_pred);
+                    let forward_ty = d.le(left_succ, right_succ);
+                    let reverse_ty = d.le(right_succ, left_succ);
+                    d.two_lambdas(forward_ty, reverse_ty, &|d, forward, reverse| {
+                        let pred_forward = d.lemma(le_of_succ, &[left_pred, right_pred, forward]);
+                        let pred_reverse = d.lemma(le_of_succ, &[right_pred, left_pred, reverse]);
+                        let ih_at_right = d.apply(outer_ih, &[right_pred]);
+                        let pred_equality = d.apply(ih_at_right, &[pred_forward, pred_reverse]);
+                        d.congr_succ(left_pred, right_pred, pred_equality)
+                    })
+                },
+                candidate_right,
+            );
+            let nat = d.nat_ty();
+            d.lam(candidate_right_fv, nat, body)
+        },
+        left,
+    );
+    let ty = le_antisymm_statement(&mut d, left, right);
+    let proof = d.apply(proof, &[right]);
+    let proof = d.lam(right_fv, nat, proof);
+    let proof = d.lam(left_fv, nat, proof);
+    let ty = d.pi(right_fv, nat, ty);
+    let ty = d.pi(left_fv, nat, ty);
+    d.kernel
+        .add_declaration(Declaration::Theorem {
+            name: target,
+            uparams: vec![],
+            ty,
+            value: proof,
+        })
+        .map_err(|error| format!("official order antisymmetry rejected: {error:?}"))?;
+    Ok(target)
+}
+
 fn antisymm_statement(d: &mut Dev<'_>, a: ExprId, b: ExprId) -> ExprId {
     let forward = d.dvd(a, b);
     let reverse = d.dvd(b, a);
@@ -732,7 +962,7 @@ fn declare_official_antisymm(kernel: &mut Kernel) -> Result<NameId, String> {
     let mut d = Dev::new(kernel)?;
     let eq_zero = d.exact(OFFICIAL_EQ_ZERO)?;
     let clean_le = d.exact(OFFICIAL_LE_OF_DVD)?;
-    let le_antisymm = d.exact("Nat.le_antisymm")?;
+    let le_antisymm = d.exact(OFFICIAL_LE_ANTISYMM)?;
     let zero_le = d.exact("Nat.zero_le")?;
     let le_succ = d.exact("Nat.le_succ_succ")?;
     let nat = d.nat_ty();
