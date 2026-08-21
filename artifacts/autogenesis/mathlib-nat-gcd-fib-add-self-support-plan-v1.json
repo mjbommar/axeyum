@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-gcd-fib-add-self-support-plan",
+  "state": "preregistered-support-first-no-execution-or-proof-credit",
+  "policy_version": "nat-gcd-fib-add-self-support-first-v1",
+  "inputs": {
+    "qualification": {
+      "path": "artifacts/autogenesis/mathlib-nat-gcd-fib-add-self-qualification-v1.json",
+      "sha256": "45aefa08e26c560544c5a57b40a1d6fb47815aca0858de10ddae00f18ebf85e7"
+    },
+    "target_fact": {
+      "path": "artifacts/facts/F-ml430-nat-gcd-fib-add-self-5a92d5e3.json",
+      "sha256_at_selection": "f5752e5060191ff58837f9f3a5f589dd0174827ba2a836bfdb2fbb775aaa733a"
+    },
+    "premise_fact": {
+      "path": "artifacts/facts/F-ml430-nat-fib-coprime-fib-succ-162fc738.json",
+      "sha256_at_selection": "146a11e44dc14c0c15e57717a585759ac37dae4f88eab62f2a6b26bccef2364d",
+      "receipt_sha256": "34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e",
+      "dependency_set_sha256": "d407340befc681d6d9abd187bbfead1f6ca1a7395c7dcf908950fd9c4d02e4d5",
+      "execution_sha256": "1dc593170da515d02cc871853f62701a50025e824bd138a8267df10f20758e2b"
+    }
+  },
+  "target": {
+    "fact_id": "F:ml430-nat-gcd-fib-add-self-5a92d5e3",
+    "source_name": "Nat.gcd_fib_add_self",
+    "target_definition": "Axeyum.Autogenesis.Coverage.r091",
+    "stream_sha256": "fc1117679c743009e8548a25d1f73f71f6cd42555ea77b3efce07844673670b2",
+    "statement": "∀ (m n : ℕ), (Nat.fib m).gcd (Nat.fib (n + m)) = (Nat.fib m).gcd (Nat.fib n)",
+    "ledger_premises": [
+      "F:ml430-nat-fib-coprime-fib-succ-162fc738"
+    ]
+  },
+  "fixed_plan": {
+    "templates": 1,
+    "support_order": [
+      {
+        "id": "fibonacci-successor-addition-v1",
+        "role": "reusable-library-support",
+        "statement": "∀ (n k : ℕ), fib (n + (k + 1)) = fib (k + 1) * fib (n + 1) + fib k * fib n",
+        "construction": "induction on n using fibAddTwo and semiring normalization",
+        "fresh_reconstructions": 2
+      },
+      {
+        "id": "coprime-factor-divisibility-cancellation-v1",
+        "role": "reusable-library-support",
+        "statement": "∀ (a c b d : ℕ), gcd a c = 1 → d ∣ a → d ∣ c * b → d ∣ b",
+        "construction": "eliminate the checked balanced Bezout certificate for gcd a c, transport it to coefficient one, multiply the identity by b, and cancel only summands already divisible by d",
+        "fresh_reconstructions": 2
+      }
+    ],
+    "target_construction": {
+      "id": "nat-gcd-fib-add-self-v1",
+      "case_split": "m = 0 or m = k + 1",
+      "successor_steps": [
+        "rewrite fib (n + (k + 1)) with fibonacci-successor-addition-v1",
+        "show every divisor of gcd (fib (k + 1)) (fib (n + (k + 1))) divides fib n by additive cancellation followed by coprime-factor cancellation",
+        "show the reverse common-divisor implication by multiplication and addition closure",
+        "derive mutual gcd divisibility with gcd projections and dvd_gcd",
+        "close equality by antisymmetry of divisibility"
+      ],
+      "fresh_reconstructions": 2
+    }
+  },
+  "budget": {
+    "max_plan_templates": 1,
+    "max_support_theorem_declarations": 2,
+    "max_target_theorem_declarations": 1,
+    "fresh_reconstructions_per_declaration": 2,
+    "max_kernel_theorem_submissions": 6,
+    "max_exact_source_target_submissions": 2,
+    "max_executor_invocations": 1,
+    "max_retries": 0
+  },
+  "gates": {
+    "support_before_target": true,
+    "both_support_receipts_must_replay": true,
+    "exact_target_type_must_match_r091": true,
+    "direct_theorem_dependencies_must_be_enumerated": true,
+    "complete_axiom_footprint_must_be_empty": true,
+    "failed_or_partial_private_kernels_must_not_publish": true
+  },
+  "selection_prestate": {
+    "registered_operation_ids": [],
+    "executor_invocations": 0,
+    "kernel_theorem_submissions": 0,
+    "exact_source_target_submissions": 0,
+    "semantic_theorem_receipts": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "partitions_allowed": [
+      "train"
+    ],
+    "held_out_allowed": false,
+    "proof_bodies_allowed": false,
+    "historical_target_outcomes_are_inputs": false,
+    "unregistered_target_execution_allowed": false,
+    "admission_allowed": false
+  },
+  "verification": "python3 scripts/check-autogenesis-nat-gcd-fib-add-self-support-plan.py",
+  "limitations": "This freezes one independently authored support-first construction and its ceiling before implementation. It grants no proof, receipt, evaluation, registration, execution, retry, or ledger authority; the exact operation must be registered separately only after the fixed plan has produced replayable empty-footprint support and target evidence."
+}
