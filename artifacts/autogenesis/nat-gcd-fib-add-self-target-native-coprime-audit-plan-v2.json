@@ -1,0 +1,11 @@
+{
+  "schema_version":1,"kind":"axeyum-autogenesis-nat-gcd-fib-add-self-target-native-coprime-audit-plan-v2","state":"preregistered-primitive-support-surface-audit-before-code-or-input-read",
+  "predecessor":{"path":"artifacts/autogenesis/nat-gcd-fib-add-self-target-native-coprime-audit-result-v1.json"},
+  "target":"same three-root composed kernel as V1",
+  "candidate_names":["Nat.dvd_add","Axeyum.Autogenesis.dvdAddCancelAllNatClosedV1","Nat.dvd_add_right_cancel_of_pos","Iff","Iff.intro","Nat.not_succ_le_zero","Nat.le_refl","False","False.rec","Nat.mul_zero","Nat.dvd_mod_iff","Nat.mod_lt","Axeyum.Autogenesis.nat_gcd_succ","Axeyum.Autogenesis.officialNatGcdSuccClosedV1","Axeyum.Autogenesis.nat_gcd_zero_left","Nat.lt_wellFounded","WellFounded.fix"],
+  "audit":{"report_presence_kind_hash_and_axiom_footprint":true,"proof_terms_types_or_values_may_be_rendered":false,"kernel_submissions":0,"exports":0},
+  "budget":{"max_driver_builds":1,"max_complete_audits":1,"max_reads_per_input":1,"max_retries":0,"max_exact_target_submissions":0},
+  "authority":{"support_credit":0,"target_credit":0,"fact_status_changes":0,"evaluation_credit":0,"ledger_writes":0},
+  "next_on_accept":"Preregister the smallest closed target-native reconstruction batch, beginning with dvd_add_iff_right and eq_one_of_dvd_one.",
+  "output":"artifacts/autogenesis/nat-gcd-fib-add-self-target-native-coprime-audit-result-v2.json","limitations":"This audit grants no theorem or ledger credit."
+}

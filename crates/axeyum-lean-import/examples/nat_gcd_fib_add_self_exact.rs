@@ -42,6 +42,25 @@ const COPRIME_DIRECT_PREMISES: [&str; 8] = [
     "Nat.gcd_dvd_right",
     "Nat.gcd_zero_left",
 ];
+const COPRIME_SUPPORT_CANDIDATES: [&str; 17] = [
+    "Nat.dvd_add",
+    "Axeyum.Autogenesis.dvdAddCancelAllNatClosedV1",
+    "Nat.dvd_add_right_cancel_of_pos",
+    "Iff",
+    "Iff.intro",
+    "Nat.not_succ_le_zero",
+    "Nat.le_refl",
+    "False",
+    "False.rec",
+    "Nat.mul_zero",
+    "Nat.dvd_mod_iff",
+    "Nat.mod_lt",
+    "Axeyum.Autogenesis.nat_gcd_succ",
+    "Axeyum.Autogenesis.officialNatGcdSuccClosedV1",
+    "Axeyum.Autogenesis.nat_gcd_zero_left",
+    "Nat.lt_wellFounded",
+    "WellFounded.fix",
+];
 const COPRIME_GCD_SUCC_LEAF: &str = "Axeyum.Autogenesis.nat_gcd_succ";
 const COPRIME_GCD_SUCC_LEAF_SHA256: &str =
     "1a9cf6e4ef4dc54a298214571515e7682a6265d9db7008b7cf1f8b3c38d11f16";
@@ -329,6 +348,30 @@ fn run_target_native_coprime_audit(
             }))
         })
         .collect::<Result<Vec<_>, _>>()?;
+    let candidates = COPRIME_SUPPORT_CANDIDATES
+        .iter()
+        .map(|&candidate| {
+            let row = optional_name(&target, candidate)?
+                .map(|name| {
+                    let declaration = target
+                        .environment()
+                        .get(name)
+                        .ok_or_else(|| format!("candidate disappeared: {candidate}"))?;
+                    let footprint = if matches!(declaration, Declaration::Theorem { .. }) {
+                        names(&target, &target.axiom_footprint(name))
+                    } else {
+                        Vec::new()
+                    };
+                    Ok::<_, String>(json!({
+                        "kind": declaration_kind(declaration),
+                        "declaration_sha256": canonical_declaration_sha256(&target, name)?,
+                        "axiom_footprint": footprint,
+                    }))
+                })
+                .transpose()?;
+            Ok::<_, String>(json!({"name": candidate, "target": row}))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
     println!(
         "{}",
         serde_json::to_string_pretty(&json!({
@@ -337,6 +380,7 @@ fn run_target_native_coprime_audit(
             "source_target": COPRIME,
             "setup_compositions": setup,
             "direct_premises": rows,
+            "support_candidates": candidates,
             "execution": {"reads_per_input": 1, "complete_audits": 1, "kernel_submissions": 0, "exports": 0, "retries": 0},
             "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0},
             "exact_target_submissions": 0,

@@ -1,0 +1,10 @@
+{
+  "schema_version":1,"kind":"axeyum-autogenesis-nat-gcd-fib-add-self-target-native-coprime-audit-result-v1","state":"two-premises-reusable-six-target-native-premises-missing",
+  "plan":{"path":"artifacts/autogenesis/nat-gcd-fib-add-self-target-native-coprime-audit-plan-v1.json","sha256":"4dc931c4aeb18f2af470298337e9cbdb640b56904a96e69a61084082126c173f"},"implementation_commit":"e1fadaded",
+  "evidence_pack":{"path":"/nas3/data/axeyum/autogenesis/audits/e1fadaded-target-native-fib-coprime-premises-v1","manifest_sha256":"1758e8902e841546e4e397360df300a1532122a3ec290a029b32155fa7aec38d","directory_mode":"0555","file_mode":"0444"},
+  "reusable":[{"name":"Axeyum.Autogenesis.fibAddTwo","compatibility":"kernel-type-shape","declaration_sha256":"982c676b0656664e807c5e195bbdbd43376d78dec029bb3c409df661de39edb4"},{"name":"Nat.add_comm","compatibility":"translated-definitional-equality","target_declaration_sha256":"4457a492f836549124e6f854cbde6f7687252088e361dfe961023803fc24cb22"}],
+  "missing":["Nat.dvd_add_iff_right","Nat.dvd_gcd","Nat.eq_one_of_dvd_one","Nat.gcd_dvd_left","Nat.gcd_dvd_right","Nat.gcd_zero_left"],
+  "exact_type_shape_aliases_for_missing":0,"execution":{"complete_audits":1,"kernel_submissions":0,"exports":0,"retries":0,"rendered_proof_terms":0,"rendered_theorem_types":0,"rendered_theorem_values":0},
+  "authority":{"support_credit":0,"target_credit":0,"fact_status_changes":0,"evaluation_credit":0,"ledger_writes":0},
+  "next_boundary":"Measure the primitive target-native dependency surface for the two simple divisibility leaves and the GCD divisibility family, then reconstruct in that order.","limitations":"No theorem or ledger credit is granted."
+}
