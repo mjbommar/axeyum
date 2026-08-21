@@ -31,6 +31,9 @@ const CANCELLATION_CAPSULE: &str =
 const ADDITION: &str = "Axeyum.Autogenesis.NatFibSuccessorAddition";
 const ADDITION_CAPSULE: &str = "f46e3dd4053c930984b3232ff98320021daa2fcdb3451e84bfbf011945a18621";
 const COPRIME: &str = "Nat.fib_coprime_fib_succ";
+const COPRIME_GCD_SUCC_LEAF: &str = "Axeyum.Autogenesis.nat_gcd_succ";
+const COPRIME_GCD_SUCC_LEAF_SHA256: &str =
+    "1a9cf6e4ef4dc54a298214571515e7682a6265d9db7008b7cf1f8b3c38d11f16";
 const COPRIME_CAPSULE: &str = "9106a3442d75a5fdaf51e35436e6fdbea78714d743e666bec27ffd9641160b11";
 const CLEAN_GCD_COMM: &str = "Axeyum.Autogenesis.gcdCommCleanV1";
 const OFFICIAL_EQ_ZERO: &str = "Axeyum.Autogenesis.eqZeroOfZeroDvdOfficialV1";
@@ -80,15 +83,43 @@ fn run() -> Result<(), String> {
         if !source.report().axioms.is_empty() {
             return Err(format!("{root} capsule is not proof-isolated"));
         }
-        let completed = compose_checked_theorem_slice(source.kernel(), &kernel, &[root])
-            .map_err(|error| format!("{root} composition declined: {error:?}"))?;
-        verify_checked_theorem_composition(
-            source.kernel(),
-            &kernel,
-            completed.kernel(),
-            completed.receipt(),
-        )
-        .map_err(|error| format!("{root} composition did not replay: {error:?}"))?;
+        let completed = if root == COPRIME {
+            let source_leaf = find_name(source.kernel(), COPRIME_GCD_SUCC_LEAF)?;
+            let target_leaf = find_name(&kernel, COPRIME_GCD_SUCC_LEAF)?;
+            let source_hash = canonical_declaration_sha256(source.kernel(), source_leaf)?;
+            let target_hash = canonical_declaration_sha256(&kernel, target_leaf)?;
+            if source_hash != COPRIME_GCD_SUCC_LEAF_SHA256 || target_hash != source_hash {
+                return Err(format!(
+                    "{COPRIME_GCD_SUCC_LEAF} exact target leaf changed: source={source_hash}, target={target_hash}"
+                ));
+            }
+            let completed = compose_checked_theorem_slice_with_target_leaves(
+                source.kernel(),
+                &kernel,
+                &[root],
+                &[COPRIME_GCD_SUCC_LEAF],
+            )
+            .map_err(|error| format!("{root} target-leaf composition declined: {error:?}"))?;
+            verify_checked_theorem_composition_with_target_leaves(
+                source.kernel(),
+                &kernel,
+                completed.kernel(),
+                completed.receipt(),
+            )
+            .map_err(|error| format!("{root} target-leaf composition did not replay: {error:?}"))?;
+            completed
+        } else {
+            let completed = compose_checked_theorem_slice(source.kernel(), &kernel, &[root])
+                .map_err(|error| format!("{root} composition declined: {error:?}"))?;
+            verify_checked_theorem_composition(
+                source.kernel(),
+                &kernel,
+                completed.kernel(),
+                completed.receipt(),
+            )
+            .map_err(|error| format!("{root} composition did not replay: {error:?}"))?;
+            completed
+        };
         if completed
             .receipt()
             .added_theorems
