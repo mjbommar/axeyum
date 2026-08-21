@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. All four exact supports remain sealed, reproducible, identity-stable, and empty-footprint. The V3 exact-target driver now composes only r091 plus those four capsules, constructs clean gcd commutativity, proves the two GCD divisibility directions, and closes with clean antisymmetry. Its sole authorized line-count allowance passes formatting and Clippy; no proof-bearing stream has yet been read under V3.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. The V3 exact-target driver passed both full publication gates, but its first complete invocation stopped before local or target submission: the native-shaped clean-order capsule introduced `Nat.mul_zero` type shape `239b5f...`, while the official cancellation capsule requires `7e4638...`. The second invocation was skipped and the sealed result grants zero target credit. A new support-only plan now freezes reconstruction of clean zero-divisibility, divisor order, and antisymmetry directly inside r091, with successful official-cancellation composition required before export.
 
-**Next:** pass the full Rust publication gate, then run the exact `Nat.gcd_fib_add_self` driver exactly twice with no retries. Retain zero target credit unless both complete outputs agree and the target footprint is empty.
+**Next:** implement the official-r091 clean-order driver, require three empty-footprint supports plus checked official-cancellation composition, and export twice only after that compatibility gate. Do not resubmit the exact GCD-shift target in this increment.
 
 <!-- plan-section: landed-changes -->
 
@@ -183,3 +183,5 @@
 | 2026-08-21 | (pending) | V2 clears all original diagnostics but stops before execution at one 103-line Clippy threshold with zero stream reads |
 | 2026-08-21 | (pending) | V3 freezes exactly one scoped line-count allowance with the proof body and target authority unchanged |
 | 2026-08-21 | (pending) | V3 exact-target driver compiles Clippy-clean over r091 plus four sealed roots without reading proof-bearing inputs |
+| 2026-08-21 | (pending) | First exact-target run declines before target submission at incompatible native and official `Nat.mul_zero` shapes; second run is skipped |
+| 2026-08-21 | (pending) | Official-r091 clean order freezes three target-owned proofs and requires cancellation compatibility before capsule export |
