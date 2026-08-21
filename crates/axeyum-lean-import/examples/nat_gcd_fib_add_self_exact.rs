@@ -28,6 +28,7 @@ const GOAL_SHA256: &str = "297c9f4af4d63eff354223f9548ab1d4dd3d7e52aa701e88802d5
 const TARGET_NATIVE_GOAL_SHA256: &str =
     "0ac365e0654218862f44cc19391e699b85e495ab1b9608fc3eca79585c0e0475";
 const TARGET: &str = "Nat.gcd_fib_add_self";
+const GCD_GREATEST_TARGET: &str = "Nat.gcd_greatest";
 const CLEAN_ANTISYMM: &str = "Axeyum.Autogenesis.dvdAntisymmOfficialV1";
 const CLEAN_ANTISYMM_CAPSULE: &str =
     "bc147e08e6425ce8c31f3a10ccd5e9a7f7774ef0265b45784700588cb4bbcb25";
@@ -168,6 +169,10 @@ fn run() -> Result<(), String> {
     let mut args = std::env::args_os().skip(1);
     if args.next().as_deref() == Some(std::ffi::OsStr::new("--target-native-exact-capsule")) {
         return run_target_native_exact_capsule(args);
+    }
+    let mut args = std::env::args_os().skip(1);
+    if args.next().as_deref() == Some(std::ffi::OsStr::new("--target-native-gcd-greatest")) {
+        return run_target_native_gcd_greatest(args);
     }
     let mut args = std::env::args_os().skip(1);
     if args.next().as_deref() == Some(std::ffi::OsStr::new("--target-native-goal-audit")) {
@@ -931,6 +936,138 @@ fn run_target_native_exact_capsule(
         .map_err(|error| error.to_string())?
     );
     Ok(())
+}
+
+fn run_target_native_gcd_greatest(
+    mut args: impl Iterator<Item = std::ffi::OsString>,
+) -> Result<(), String> {
+    let input_path = path(&mut args)?;
+    let output_path = path(&mut args)?;
+    if args.next().is_some() || output_path.exists() {
+        return Err(
+            "usage: nat_gcd_fib_add_self_exact --target-native-gcd-greatest \
+             <gcd-divisibility> <output>"
+                .to_owned(),
+        );
+    }
+    let source = import_bound(
+        &input_path,
+        "9ecf0b10d1390f880040790fb1845a11d7987b94c0d3a71acf4ad8dca0c5a304",
+        "target-native GCD divisibility",
+    )?;
+    let mut kernel = source.kernel().clone();
+    let theorem = declare_target_native_gcd_greatest(&mut kernel)?;
+    require_empty(&kernel, theorem, GCD_GREATEST_TARGET)?;
+    let expected = evidence(&kernel, theorem)?;
+    let expected_dependencies = [
+        CLEAN_ANTISYMM,
+        TARGET_DVD_GCD,
+        TARGET_GCD_DVD_LEFT,
+        TARGET_GCD_DVD_RIGHT,
+    ];
+    if expected["direct_theorem_dependencies"] != json!(expected_dependencies) {
+        return Err(format!(
+            "Nat.gcd_greatest direct dependency set changed: {}",
+            expected["direct_theorem_dependencies"]
+        ));
+    }
+    let goal = theorem_type(&kernel, theorem)?;
+    let goal_sha256 = canonical_expression_sha256(&kernel, goal)?;
+    let bytes = kernel
+        .render_lean4export_ndjson_roots(&Lean4ExportMetadata::axeyum("4.30.0"), &[theorem])
+        .map_err(|error| format!("Nat.gcd_greatest capsule export failed: {error}"))?;
+    for pass in 1..=2 {
+        let replay = import_ndjson(Cursor::new(bytes.as_bytes()), ImportLimits::default())
+            .map_err(|error| format!("Nat.gcd_greatest import {pass} failed: {error:?}"))?;
+        let replayed = find_name(replay.kernel(), GCD_GREATEST_TARGET)?;
+        if evidence(replay.kernel(), replayed)? != expected {
+            return Err(format!("Nat.gcd_greatest import {pass} changed theorem"));
+        }
+    }
+    fs::write(&output_path, &bytes)
+        .map_err(|error| format!("Nat.gcd_greatest capsule write failed: {error}"))?;
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "schema_version":1,
+            "kind":"axeyum-autogenesis-target-native-nat-gcd-greatest-capsule",
+            "state":"exact-target-reconstructed-empty-footprint-roundtrip-checked",
+            "target_goal_sha256":goal_sha256,
+            "target":expected,
+            "capsule":{"bytes":bytes.len(),"sha256":hex_sha256(bytes.as_bytes()),"fresh_imports":2},
+            "execution":{"exact_target_submissions":1,"exports":1,"fresh_imports":2,"retries":0},
+            "rendered_material":{"proof_terms":0,"theorem_types":0,"theorem_values":0},
+            "search_invocations":0,
+            "fact_status_changes":0,
+            "evaluation_credit":0,
+            "ledger_writes":0
+        }))
+        .map_err(|error| error.to_string())?
+    );
+    Ok(())
+}
+
+fn declare_target_native_gcd_greatest(kernel: &mut Kernel) -> Result<NameId, String> {
+    let target = nested_name(kernel, &["Nat", "gcd_greatest"]);
+    if optional_name(kernel, GCD_GREATEST_TARGET)?.is_some() {
+        return Err("Nat.gcd_greatest unexpectedly already exists".to_owned());
+    }
+    let mut d = Dev::new(kernel)?;
+    let antisymm = d.exact(CLEAN_ANTISYMM)?;
+    let dvd_gcd = d.exact(TARGET_DVD_GCD)?;
+    let gcd_left = d.exact(TARGET_GCD_DVD_LEFT)?;
+    let gcd_right = d.exact(TARGET_GCD_DVD_RIGHT)?;
+    let nat = d.nat_ty();
+    let a_fv = d.fresh();
+    let a = d.kernel.fvar(a_fv);
+    let b_fv = d.fresh();
+    let b = d.kernel.fvar(b_fv);
+    let divisor_fv = d.fresh();
+    let divisor = d.kernel.fvar(divisor_fv);
+    let divisor_left_ty = d.dvd(divisor, a);
+    let divisor_left_fv = d.fresh();
+    let divisor_left = d.kernel.fvar(divisor_left_fv);
+    let divisor_right_ty = d.dvd(divisor, b);
+    let divisor_right_fv = d.fresh();
+    let divisor_right = d.kernel.fvar(divisor_right_fv);
+    let candidate_fv = d.fresh();
+    let candidate = d.kernel.fvar(candidate_fv);
+    let candidate_left = d.dvd(candidate, a);
+    let candidate_right = d.dvd(candidate, b);
+    let candidate_divisor = d.dvd(candidate, divisor);
+    let greatest_body = d.arrow(candidate_right, candidate_divisor);
+    let greatest_body = d.arrow(candidate_left, greatest_body);
+    let greatest_ty = d.pi(candidate_fv, nat, greatest_body);
+    let greatest_fv = d.fresh();
+    let greatest = d.kernel.fvar(greatest_fv);
+    let gcd = d.gcd(a, b);
+    let divisor_gcd = d.lemma(dvd_gcd, &[divisor, a, b, divisor_left, divisor_right]);
+    let gcd_left_proof = d.lemma(gcd_left, &[a, b]);
+    let gcd_right_proof = d.lemma(gcd_right, &[a, b]);
+    let gcd_divisor = d.apply(greatest, &[gcd, gcd_left_proof, gcd_right_proof]);
+    let conclusion = d.eq(divisor, gcd);
+    let proof = d.lemma(antisymm, &[divisor, gcd, divisor_gcd, gcd_divisor]);
+    let proof = d.lam(greatest_fv, greatest_ty, proof);
+    let proof = d.lam(divisor_right_fv, divisor_right_ty, proof);
+    let proof = d.lam(divisor_left_fv, divisor_left_ty, proof);
+    let proof = d.lam_info(divisor_fv, nat, proof, BinderInfo::Implicit);
+    let proof = d.lam_info(b_fv, nat, proof, BinderInfo::Implicit);
+    let proof = d.lam_info(a_fv, nat, proof, BinderInfo::Implicit);
+    let ty = d.arrow(greatest_ty, conclusion);
+    let ty = d.arrow(divisor_right_ty, ty);
+    let ty = d.arrow(divisor_left_ty, ty);
+    let ty = d.pi_info(divisor_fv, nat, ty, BinderInfo::Implicit);
+    let ty = d.pi_info(b_fv, nat, ty, BinderInfo::Implicit);
+    let ty = d.pi_info(a_fv, nat, ty, BinderInfo::Implicit);
+    d.kernel
+        .add_declaration(Declaration::Theorem {
+            name: target,
+            uparams: vec![],
+            ty,
+            value: proof,
+        })
+        .map_err(|error| format!("target-native Nat.gcd_greatest rejected: {error:?}"))?;
+    Ok(target)
 }
 
 #[allow(clippy::too_many_lines)]
@@ -1718,12 +1855,18 @@ impl<'a> Dev<'a> {
         self.apply(rec, &[motive, contradiction])
     }
     fn lam(&mut self, fv: u64, ty: ExprId, body: ExprId) -> ExprId {
+        self.lam_info(fv, ty, body, BinderInfo::Default)
+    }
+    fn lam_info(&mut self, fv: u64, ty: ExprId, body: ExprId, binder_info: BinderInfo) -> ExprId {
         let body = self.kernel.abstract_fvars(body, &[fv]);
-        self.kernel.lam(self.anon, ty, body, BinderInfo::Default)
+        self.kernel.lam(self.anon, ty, body, binder_info)
     }
     fn pi(&mut self, fv: u64, ty: ExprId, body: ExprId) -> ExprId {
+        self.pi_info(fv, ty, body, BinderInfo::Default)
+    }
+    fn pi_info(&mut self, fv: u64, ty: ExprId, body: ExprId, binder_info: BinderInfo) -> ExprId {
         let body = self.kernel.abstract_fvars(body, &[fv]);
-        self.kernel.pi(self.anon, ty, body, BinderInfo::Default)
+        self.kernel.pi(self.anon, ty, body, binder_info)
     }
     fn arrow(&mut self, domain: ExprId, codomain: ExprId) -> ExprId {
         self.kernel
