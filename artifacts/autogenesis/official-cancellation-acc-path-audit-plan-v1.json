@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-cancellation-acc-path-audit-plan",
+  "state": "preregistered-nonrendering-transitive-declaration-path-audit-before-more-bootstrap-code",
+  "predecessor": {"path": "artifacts/autogenesis/official-r091-clean-dvd-antisymm-result-v4.json", "sha256": "6a709a0560c6eaa57ad7d6cb6ecb9346a5f3d1ee02cdbed42afc1df15fc20ca2"},
+  "inputs": {"source_capsule_sha256": "6f9a3983ba4b0e7b2c872615d796ceb5414d3bd2cf51843ecb496b3ba83a52b0", "target_r091_sha256": "fc1117679c743009e8548a25d1f73f71f6cd42555ea77b3efce07844673670b2", "root": "Axeyum.Autogenesis.officialCoprimeFactorDivisibilityCancellationV1", "blocked_dependency": "Acc"},
+  "measurement": ["import each stream exactly once", "compute the source root's complete declaration dependency closure", "retain every declaration whose own closure contains Acc", "sort by closure size then canonical name to expose the nearest carriers first", "for every carrier report kind, canonical declaration identity, closure size, target presence, and checked compatibility when present", "never render theorem types, theorem values, or proof expressions"],
+  "budget": {"binary_builds": 1, "source_reads": 1, "target_reads": 1, "audit_invocations": 1, "kernel_submissions": 0, "retries": 0},
+  "authority": {"support_credit": 0, "target_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_on_result": "Select the nearest empty-footprint carrier that is absent from r091 as the sole preregistered Acc bootstrap; if none exists, reconstruct canonical Acc through a separately reviewed kernel API.",
+  "limitations": "This is read-only dependency measurement. It authorizes no composition, theorem submission, fact transition, evaluation, or ledger write."
+}

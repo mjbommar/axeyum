@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-r091-clean-dvd-antisymm-result-v4",
+  "state": "checked-mod-lt-leaf-reuse-still-declines-at-transitive-acc-second-skipped",
+  "implementation_commit": "48406aa1cb599c52d68d28c8743a21558b0dfbfb",
+  "evidence_pack": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/48406aa1c-official-r091-clean-dvd-antisymm-v4", "manifest_sha256": "751ac1b9cd87b8809e6a2c6159d2df7390d3e46bc9443a83bb0727c37f5eb3a0", "directory_mode": "0555", "file_mode": "0444"},
+  "decline": {"stage": "official-cancellation-target-leaf-composition-before-support-submission", "class": "UnsupportedMissingDeclaration", "name": "Acc", "kind": "recursive-inductive", "accepted_target_leaf": "Nat.mod_lt", "partial_kernel_published": false},
+  "execution": {"binary_builds": 1, "complete_invocations": 1, "input_stream_reads": 2, "checked_target_leaf_reuses": 1, "successful_compositions": 0, "support_submissions": 0, "exports": 0, "exact_target_submissions": 0, "retries": 0, "second_invocation_skipped": true},
+  "authority": {"support_credit": 0, "target_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_boundary": "Preregister one non-rendering declaration-closure path audit from official cancellation to Acc, including target presence and compatibility for every minimal carrier.",
+  "limitations": "Nat.mod_lt reuse is accepted, but no cancellation composition, clean-order support, exact target, fact, evaluation, or ledger credit is established."
+}
