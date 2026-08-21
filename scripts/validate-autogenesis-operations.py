@@ -63,6 +63,13 @@ SEALED_CAPSULE_CONTRACTS = {
         "target_theorem": "Nat.fib_dvd",
         "receipt_sha256": "cefba64b0f9f892400df93bbbfd7be1ba454cc618384cafad3cc3ca72a5472f1",
     },
+    "F:ml430-int-fib-natcast-d5886be4": {
+        "result_manifest": "artifacts/autogenesis/mathlib-int-fib-natcast-goal-identity-result-v1.json",
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-clean-definition-v1/int-fib-clean.ndjson",
+        "capsule_sha256": "f0e34ecb1dff747938b7f1079c307af5f4e79e7a67e3bc514feee03e4f30656d",
+        "target_theorem": "Int.fib_natCast",
+        "receipt_sha256": "2ff124525a245094f2715ac2cca99915c023210d3eccde9721b71da21d4cfdfa",
+    },
 }
 
 
@@ -317,31 +324,58 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             raise RegistryError(f"{label} exceeds the exact sealed-capsule scope")
         expected_manifest = (root / contract["result_manifest"]).resolve()
         manifest = json.loads(manifest_path.read_text())
+        if value["input_fact_id"] == "F:ml430-int-fib-natcast-d5886be4":
+            theorem = manifest.get("theorem") or {}
+            execution = manifest.get("execution") or {}
+            if (
+                manifest_path != expected_manifest
+                or manifest.get("state") != "single-read-hash-only-identity-qualified"
+                or value["capsule_path"] != contract["capsule_path"]
+                or value["capsule_sha256"] != contract["capsule_sha256"]
+                or value["target_theorem"] != contract["target_theorem"]
+                or theorem.get("name") != value["target_theorem"]
+                or theorem.get("canonical_type_sha256") != value["goal_sha256"]
+                or theorem.get("canonical_declaration_sha256")
+                != value["declaration_sha256"]
+                or theorem.get("axiom_footprint") != []
+                or theorem.get("direct_theorem_dependencies") != []
+                or execution.get("importer_runs") != 1
+                or execution.get("proof_bearing_stream_reads") != 1
+                or execution.get("theorem_submissions") != 0
+                or execution.get("retries") != 0
+                or value["receipt_sha256"] != contract["receipt_sha256"]
+            ):
+                raise RegistryError(
+                    f"{label} integer Fibonacci capsule contract disagrees"
+                )
         theorem = manifest.get("target") or {}
         execution = manifest.get("execution") or {}
         if (
-            manifest_path != expected_manifest
-            or manifest.get("state")
-            != "exact-target-reconstructed-twice-byte-identical-empty-footprint"
-            or value["capsule_path"] != contract["capsule_path"]
-            or value["capsule_sha256"] != contract["capsule_sha256"]
-            or value["target_theorem"] != contract["target_theorem"]
-            or theorem.get("name") != value["target_theorem"]
-            or theorem.get("goal_sha256") != value["goal_sha256"]
-            or theorem.get("declaration_sha256") != value["declaration_sha256"]
-            or theorem.get("axiom_footprint") != []
-            or execution.get("complete_invocations") != 2
-            or (
-                execution.get("exact_target_submissions") != 2
-                and execution.get("target_theorem_submissions") != 2
+            value["input_fact_id"] != "F:ml430-int-fib-natcast-d5886be4"
+            and (
+                manifest_path != expected_manifest
+                or manifest.get("state")
+                != "exact-target-reconstructed-twice-byte-identical-empty-footprint"
+                or value["capsule_path"] != contract["capsule_path"]
+                or value["capsule_sha256"] != contract["capsule_sha256"]
+                or value["target_theorem"] != contract["target_theorem"]
+                or theorem.get("name") != value["target_theorem"]
+                or theorem.get("goal_sha256") != value["goal_sha256"]
+                or theorem.get("declaration_sha256") != value["declaration_sha256"]
+                or theorem.get("axiom_footprint") != []
+                or execution.get("complete_invocations") != 2
+                or (
+                    execution.get("exact_target_submissions") != 2
+                    and execution.get("target_theorem_submissions") != 2
+                )
+                or execution.get("fresh_imports") != 4
+                or execution.get("outputs_byte_identical") is not True
+                or (
+                    execution.get("receipts_byte_identical") is not True
+                    and execution.get("observations_byte_identical") is not True
+                )
+                or value["receipt_sha256"] != contract["receipt_sha256"]
             )
-            or execution.get("fresh_imports") != 4
-            or execution.get("outputs_byte_identical") is not True
-            or (
-                execution.get("receipts_byte_identical") is not True
-                and execution.get("observations_byte_identical") is not True
-            )
-            or value["receipt_sha256"] != contract["receipt_sha256"]
         ):
             raise RegistryError(f"{label} sealed-kernel capsule contract disagrees")
     else:
@@ -559,7 +593,13 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
             }:
                 if (
                     applicability["formal_languages"] != ["lean4-surface"]
-                    or applicability["fragments"] != ["Nat"]
+                    or applicability["fragments"]
+                    not in (
+                        [["Nat"], ["Int"]]
+                        if executor["driver"]
+                        == "axeyum-lean-import/sealed-kernel-capsule-v1"
+                        else [["Nat"]]
+                    )
                     or admission["proof_route"] != "kernel-lean"
                     or admission["evidence_kind"] != "kernel-term"
                     or admission["axiom_footprint"] != []

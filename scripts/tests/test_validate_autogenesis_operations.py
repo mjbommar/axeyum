@@ -24,9 +24,9 @@ class OperationRegistryTests(unittest.TestCase):
             (ROOT / "artifacts/autogenesis/operations.json").read_text()
         )
 
-    def test_committed_registry_has_one_fixture_and_nine_authoritative_operations(self) -> None:
+    def test_committed_registry_has_one_fixture_and_twelve_authoritative_operations(self) -> None:
         registry_module.validate_registry(self.registry, ROOT)
-        self.assertEqual(len(self.registry["operations"]), 10)
+        self.assertEqual(len(self.registry["operations"]), 13)
         self.assertEqual(
             self.registry["operations"][0]["scope"], "counterfactual-fixture-only"
         )
@@ -108,6 +108,34 @@ class OperationRegistryTests(unittest.TestCase):
             gcd_greatest["executor"]["driver"],
             "axeyum-lean-import/sealed-kernel-capsule-v1",
         )
+        fib_gcd = self.registry["operations"][10]
+        self.assertEqual(
+            fib_gcd["applicability"]["fact_ids"],
+            ["F:ml430-nat-fib-gcd-d1d98407"],
+        )
+        fib_dvd = self.registry["operations"][11]
+        self.assertEqual(
+            fib_dvd["applicability"]["fact_ids"],
+            ["F:ml430-nat-fib-dvd-f80f3de1"],
+        )
+        int_fib_natcast = self.registry["operations"][12]
+        self.assertEqual(
+            int_fib_natcast["applicability"]["fact_ids"],
+            ["F:ml430-int-fib-natcast-d5886be4"],
+        )
+        self.assertEqual(int_fib_natcast["applicability"]["fragments"], ["Int"])
+        self.assertEqual(
+            int_fib_natcast["executor"]["driver"],
+            "axeyum-lean-import/sealed-kernel-capsule-v1",
+        )
+
+    def test_integer_fibonacci_capsule_identity_is_exact(self) -> None:
+        mutated = copy.deepcopy(self.registry)
+        mutated["operations"][12]["executor"]["goal_sha256"] = "0" * 64
+        with self.assertRaisesRegex(
+            registry_module.RegistryError, "integer Fibonacci capsule contract"
+        ):
+            registry_module.validate_registry(mutated, ROOT)
 
     def test_duplicate_operation_id_is_rejected(self) -> None:
         mutated = copy.deepcopy(self.registry)

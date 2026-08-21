@@ -538,6 +538,52 @@
         "axiom_footprint_policy": "must-be-empty",
         "axiom_footprint": []
       }
+    },
+    {
+      "id": "authoritative-mathlib-int-fib-natcast-kernel-capsule-v1",
+      "scope": "authoritative",
+      "reviewed_gate_mentions": [
+        "check-autogenesis-int-fib-natcast-capsule.py",
+        "validate-autogenesis-operations.py"
+      ],
+      "applicability": {
+        "fact_ids": ["F:ml430-int-fib-natcast-d5886be4"],
+        "formal_languages": ["lean4-surface"],
+        "fragments": ["Int"]
+      },
+      "producer": {
+        "operation": "target-owned-integer-fibonacci-natcast-v1",
+        "implementation": "artifacts/autogenesis/sources/int-fib-clean-definition-v1.lean",
+        "input_kind": "axeyum-proof-isolated-kernel-goal",
+        "output_kind": "axeyum-sealed-kernel-theorem-capsule"
+      },
+      "checker": {
+        "operation": "axeyum-lean-import/sealed-int-fib-natcast-capsule-receipt-v1",
+        "implementation": "scripts/check-autogenesis-int-fib-natcast-capsule.py",
+        "input_kind": "axeyum-sealed-kernel-theorem-capsule",
+        "output_kind": "axeyum-checked-sealed-kernel-capsule-receipt-v1"
+      },
+      "executor": {
+        "driver": "axeyum-lean-import/sealed-kernel-capsule-v1",
+        "implementation": "scripts/execute-autogenesis-operation.py",
+        "input_fact_id": "F:ml430-int-fib-natcast-d5886be4",
+        "result_manifest": "artifacts/autogenesis/mathlib-int-fib-natcast-goal-identity-result-v1.json",
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-clean-definition-v1/int-fib-clean.ndjson",
+        "capsule_sha256": "f0e34ecb1dff747938b7f1079c307af5f4e79e7a67e3bc514feee03e4f30656d",
+        "target_theorem": "Int.fib_natCast",
+        "goal_sha256": "3a173a7b65ddf0fcf8c30c4ea3511780667bfff311a531ec477515ea731c490b",
+        "declaration_sha256": "73b8742709bbb1b91780f41ff4a475b5b3f0b1c2981999c868b53fc38334bea3",
+        "receipt_sha256": "2ff124525a245094f2715ac2cca99915c023210d3eccde9721b71da21d4cfdfa",
+        "timeout_seconds": 120,
+        "expected_evidence_label": "kernel-term-mathlib-int-fib-natcast-capsule-axiom-free"
+      },
+      "admission": {
+        "epistemic_status": "proved",
+        "proof_route": "kernel-lean",
+        "evidence_kind": "kernel-term",
+        "axiom_footprint_policy": "must-be-empty",
+        "axiom_footprint": []
+      }
     }
   ]
 }

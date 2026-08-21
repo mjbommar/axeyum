@@ -441,6 +441,14 @@ def build_authoritative_transaction(
             if isinstance(observation, dict)
             else None
         )
+        is_int_fib_natcast = (
+            operation["id"]
+            == "authoritative-mathlib-int-fib-natcast-kernel-capsule-v1"
+        )
+        expected_dependencies = [] if is_int_fib_natcast else None
+        expected_fresh_imports = 2 if is_int_fib_natcast else 4
+        expected_reconstructions = 1 if is_int_fib_natcast else 2
+        expected_submissions = 1 if is_int_fib_natcast else 2
         if (
             identity.get("formal_statement_sha256") != expected_statement_sha
             or identity.get("receipt_sha256") != executor["receipt_sha256"]
@@ -454,11 +462,17 @@ def build_authoritative_transaction(
             != executor["declaration_sha256"]
             or observation.get("axiom_footprint") != []
             or not isinstance(dependencies, list)
-            or not dependencies
+            or (
+                dependencies != expected_dependencies
+                if is_int_fib_natcast
+                else not dependencies
+            )
             or len(dependencies) != len(set(dependencies))
-            or observation.get("fresh_imports") != 4
-            or observation.get("fixed_plan_reconstructions") != 2
-            or observation.get("target_theorem_submissions") != 2
+            or observation.get("fresh_imports") != expected_fresh_imports
+            or observation.get("fixed_plan_reconstructions")
+            != expected_reconstructions
+            or observation.get("target_theorem_submissions")
+            != expected_submissions
             or observation.get("search_invocations") != 0
             or observation.get("ledger_writes") != 0
         ):
@@ -477,14 +491,24 @@ def build_authoritative_transaction(
             "declaration_sha256": observation["declaration_sha256"],
             "direct_theorem_dependencies": dependencies,
         }
-        result_description = (
-            "twice-reconstructed axiom-free sealed kernel theorem capsule"
-        )
-        replay_description = (
-            "immutable capsule and committed result manifest and requires their exact "
-            "twice-reconstructed theorem identity, empty axiom footprint, and named "
-            "direct theorem dependencies"
-        )
+        if is_int_fib_natcast:
+            result_description = (
+                "definitionally reconstructed axiom-free sealed kernel theorem capsule"
+            )
+            replay_description = (
+                "immutable capsule and committed identity manifest and requires its "
+                "exact theorem identity, two fresh imports, empty axiom footprint, "
+                "and empty direct theorem dependency set"
+            )
+        else:
+            result_description = (
+                "twice-reconstructed axiom-free sealed kernel theorem capsule"
+            )
+            replay_description = (
+                "immutable capsule and committed result manifest and requires their "
+                "exact twice-reconstructed theorem identity, empty axiom footprint, "
+                "and named direct theorem dependencies"
+            )
     else:
         raise TransactionError("authoritative operation uses an unsupported driver")
     after_fact = json.loads(json.dumps(before_fact))
