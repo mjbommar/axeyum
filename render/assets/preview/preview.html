@@ -1,0 +1,1433 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Nat prelude, and what stands on it</title>
+<meta name="description" content="One connected component of the fact ledger, rendered. Every badge, statement, hash and replay command on this page was read out of `artifacts/facts/` at build time; only the narrative was written by a person.">
+<style>
+/* Axeyum render strand -- HTML emitter stylesheet.
+ *
+ * Inlined verbatim into every emitted document by render/src/emit_html.rs.
+ * ZERO external references are permitted here: no stylesheet imports, no
+ * resource URIs other than data:, no webfonts. The function
+ * render::emit_html::lint_self_contained enforces that on the emitted
+ * document, and a unit test enforces it on this file -- which is why this
+ * comment spells the forbidden constructs out in words instead of writing
+ * them literally. The lint is textual, and a lint that its own documentation
+ * can trip is a lint that is actually looking.
+ *
+ * Design system (see docs/render-2026-08/11-design-diary.md):
+ *   type   serif for prose, sans for apparatus, mono for machine text
+ *   scale  1.125 minor-third-ish, base 17px, measure 68ch
+ *   space  4px grid, --sp-1 .. --sp-9
+ *   colour one hue family per epistemic status; badges carry a SHAPE too,
+ *          so status survives greyscale printing and colour blindness
+ */
+
+/* ---------- tokens ---------- */
+:root {
+  color-scheme: light dark;
+
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua",
+                Georgia, "Times New Roman", Times, serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+               "DejaVu Sans Mono", "Liberation Mono", monospace;
+  /* A MATH-table font is needed only for stretchy delimiters; the P0 corpus
+     avoids them, and the chain degrades to the prose serif. */
+  --font-math: "STIX Two Math", "Cambria Math", "Latin Modern Math",
+               var(--font-serif);
+
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.8125rem;
+  --fs-ui: 0.875rem;
+  --fs-base: 1rem;
+  --fs-md: 1.125rem;
+  --fs-lg: 1.375rem;
+  --fs-xl: 1.75rem;
+  --fs-2xl: 2.25rem;
+
+  --sp-1: 0.25rem; --sp-2: 0.5rem;  --sp-3: 0.75rem; --sp-4: 1rem;
+  --sp-5: 1.5rem;  --sp-6: 2rem;    --sp-7: 3rem;    --sp-8: 4rem;
+  --sp-9: 6rem;
+
+  /* In rem, not ch: `ch` resolves against the element's OWN font, so a
+     `ch`-based column silently narrows on every small-sans block and the page
+     stops lining up. 36rem is ~68 characters at the body serif. */
+  --measure: 36rem;
+  --radius: 3px;
+  --radius-lg: 6px;
+
+  /* light palette: warm paper, near-black ink */
+  --bg:        #fcfcfa;
+  --bg-sunk:   #f3f2ed;
+  --surface:   #ffffff;
+  --rule:      #e0ded5;
+  --rule-firm: #c9c6ba;
+  --ink:       #1a1a17;
+  --ink-2:     #46453f;
+  --ink-3:     #74726a;
+  --link:      #1c5480;
+  --link-visited: #5b3f7a;
+  --accent:    #1c5480;
+  --shadow:    0 1px 2px rgba(26, 26, 23, 0.06), 0 4px 12px rgba(26, 26, 23, 0.05);
+
+  /* status hues: --s-*-fg on --s-*-bg, both AA on their own ground */
+  --s-proved-fg:      #17603c; --s-proved-bg:      #e4f1e8;
+  --s-checked-fg:     #12566e; --s-checked-bg:     #e0eef3;
+  --s-evidence-fg:    #3f3d8e; --s-evidence-bg:    #e8e7f5;
+  --s-computed-fg:    #6a3583; --s-computed-bg:    #f0e7f5;
+  --s-empirical-fg:   #1f5a5f; --s-empirical-bg:   #e0efef;
+  --s-advisory-fg:    #7a5400; --s-advisory-bg:    #f7eed6;
+  --s-conjectured-fg: #6b4a1f; --s-conjectured-bg: #f3ebdd;
+  --s-refuted-fg:     #9a2222; --s-refuted-bg:     #f7e3e1;
+  --s-open-fg:        #4e5560; --s-open-bg:        #eceef1;
+  --s-axiom-fg:       #7c4a12; --s-axiom-bg:       #f6e9d9;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:        #14151a;
+    --bg-sunk:   #101116;
+    --surface:   #1b1d24;
+    --rule:      #2b2e37;
+    --rule-firm: #3d414c;
+    --ink:       #e8e6e0;
+    --ink-2:     #b9b6ad;
+    --ink-3:     #8d8a82;
+    --link:      #8fbde6;
+    --link-visited: #c0a8dd;
+    --accent:    #8fbde6;
+    --shadow:    0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 18px rgba(0, 0, 0, 0.3);
+
+    --s-proved-fg:      #7fd3a4; --s-proved-bg:      #14291e;
+    --s-checked-fg:     #7ec8e3; --s-checked-bg:     #10262f;
+    --s-evidence-fg:    #a9a7ef; --s-evidence-bg:    #1c1b33;
+    --s-computed-fg:    #d3a6e8; --s-computed-bg:    #291a30;
+    --s-empirical-fg:   #7fcbcf; --s-empirical-bg:   #12282a;
+    --s-advisory-fg:    #e0bb63; --s-advisory-bg:    #2c2410;
+    --s-conjectured-fg: #d5b183; --s-conjectured-bg: #2a2115;
+    --s-refuted-fg:     #f09a92; --s-refuted-bg:     #331716;
+    --s-open-fg:        #a5adba; --s-open-bg:        #1d2027;
+    --s-axiom-fg:       #dfab6e; --s-axiom-bg:       #2c2013;
+  }
+}
+
+/* ---------- reset-ish ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 17px;
+  line-height: 1.62;
+  text-rendering: optimizeLegibility;
+}
+img, svg { max-width: 100%; }
+/* Without `height: auto` an SVG with width/height attributes is shrunk in one
+   axis only and the drawing letterboxes inside a tall empty box. */
+svg.ax-graph, svg.ax-plot { height: auto; }
+a { color: var(--link); text-underline-offset: 2px; text-decoration-thickness: 1px; }
+a:visited { color: var(--link-visited); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+
+.ax-skip {
+  position: absolute; left: -9999px; top: 0;
+  background: var(--surface); color: var(--ink);
+  padding: var(--sp-2) var(--sp-3); z-index: 10;
+}
+.ax-skip:focus { left: var(--sp-3); top: var(--sp-3); }
+
+/* ---------- page frame ---------- */
+.ax-doc { max-width: var(--measure); margin: 0 auto; padding: 0 var(--sp-5); }
+
+/* Figures escape the text measure -- without a transform trick, which depends
+   on the containing block's width and breaks quietly when that changes. The
+   BODY column is wide; every direct child of <main> is re-narrowed to the
+   measure, and `.ax-wide` opts back out. Prose reads at ~68ch; a dependency
+   graph is a different kind of object and should not be squeezed to match. */
+main.ax-doc { max-width: 68rem; }
+main.ax-doc > * { max-width: var(--measure); margin-left: auto; margin-right: auto; }
+main.ax-doc > .ax-wide { max-width: 100%; }
+header.ax-head > .ax-doc, footer.ax-foot > .ax-doc { padding: 0; }
+
+header.ax-head {
+  border-bottom: 1px solid var(--rule);
+  padding: var(--sp-7) 0 var(--sp-5);
+  margin-bottom: var(--sp-6);
+}
+header.ax-head .ax-kicker {
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 0 0 var(--sp-2);
+}
+h1.ax-title {
+  font-size: var(--fs-2xl);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin: 0 0 var(--sp-3);
+  font-weight: 600;
+}
+p.ax-subtitle {
+  font-size: var(--fs-md);
+  color: var(--ink-2);
+  margin: 0 0 var(--sp-4);
+  max-width: 58ch;
+}
+
+/* metadata chips */
+.ax-meta { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); margin: 0; padding: 0; list-style: none; }
+.ax-meta li {
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+}
+.ax-meta li b { font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.ax-meta code { font-size: var(--fs-xs); }
+
+h2, h3, h4 { font-family: var(--font-sans); font-weight: 600; letter-spacing: -0.01em; line-height: 1.25; }
+h2 { font-size: var(--fs-xl); margin: var(--sp-7) 0 var(--sp-3); }
+h3 { font-size: var(--fs-lg); margin: var(--sp-6) 0 var(--sp-2); }
+h4 { font-size: var(--fs-md); margin: var(--sp-5) 0 var(--sp-2); }
+
+p { margin: 0 0 var(--sp-4); }
+code, kbd, samp, pre { font-family: var(--font-mono); font-size: 0.86em; }
+code { background: var(--bg-sunk); padding: 0.1em 0.32em; border-radius: var(--radius); }
+pre {
+  background: var(--bg-sunk);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: var(--sp-3);
+  overflow-x: auto;
+  line-height: 1.45;
+}
+pre code { background: none; padding: 0; }
+math { font-family: var(--font-math); }
+
+/* ---------- reading level ---------- */
+.ax-levels {
+  display: inline-flex;
+  border: 1px solid var(--rule-firm);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  background: var(--surface);
+}
+.ax-levels button {
+  appearance: none;
+  border: 0;
+  border-left: 1px solid var(--rule);
+  background: transparent;
+  color: var(--ink-2);
+  padding: var(--sp-2) var(--sp-3);
+  cursor: pointer;
+  font: inherit;
+  letter-spacing: 0.04em;
+}
+.ax-levels button:first-child { border-left: 0; }
+.ax-levels button[aria-pressed="true"] { background: var(--accent); color: var(--bg); }
+.ax-levels button:hover:not([aria-pressed="true"]) { background: var(--bg-sunk); }
+
+/* Level gating. The document is authored at "full"; with JS off nothing is
+   hidden, which is the required degradation. */
+body[data-level="summary"] .t-detail,
+body[data-level="summary"] .t-archive { display: none; }
+body[data-level="full"] .t-archive { display: none; }
+.ax-levelnote { font-family: var(--font-sans); font-size: var(--fs-xs); color: var(--ink-3); }
+
+/* ---------- blocks ---------- */
+.blk { margin: 0 0 var(--sp-5); }
+.blk.t-detail { border-left: 2px solid var(--rule); padding-left: var(--sp-4); }
+details.blk.t-detail { padding-left: 0; border-left: 0; }
+
+details.ax-fold {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 0;
+  margin: 0 0 var(--sp-5);
+}
+details.ax-fold > summary {
+  cursor: pointer;
+  padding: var(--sp-3) var(--sp-4);
+  font-family: var(--font-sans);
+  font-size: var(--fs-ui);
+  color: var(--ink-2);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+details.ax-fold > summary::-webkit-details-marker { display: none; }
+details.ax-fold > summary::before {
+  content: "";
+  width: 0; height: 0;
+  border-left: 5px solid currentColor;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform 120ms ease;
+  flex: none;
+}
+details.ax-fold[open] > summary::before { transform: rotate(90deg); }
+details.ax-fold > summary:hover { background: var(--bg-sunk); }
+details.ax-fold > .ax-foldbody { padding: 0 var(--sp-4) var(--sp-4); border-top: 1px solid var(--rule); padding-top: var(--sp-4); }
+
+/* archive tier: a link to what was left out, never silent omission */
+.blk.t-archive {
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+  border-left: 2px dotted var(--rule-firm);
+  padding-left: var(--sp-3);
+}
+
+/* ---------- badges: colour AND shape ---------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.18em 0.55em 0.18em 0.42em;
+  border-radius: var(--radius);
+  border: 1px solid currentColor;
+  white-space: nowrap;
+  vertical-align: 0.08em;
+}
+.badge svg { width: 0.85em; height: 0.85em; flex: none; fill: currentColor; }
+.badge-proved      { color: var(--s-proved-fg);      background: var(--s-proved-bg); }
+.badge-checked     { color: var(--s-checked-fg);     background: var(--s-checked-bg); }
+.badge-evidence    { color: var(--s-evidence-fg);    background: var(--s-evidence-bg); }
+.badge-computed    { color: var(--s-computed-fg);    background: var(--s-computed-bg); }
+.badge-empirical   { color: var(--s-empirical-fg);   background: var(--s-empirical-bg); }
+.badge-advisory    { color: var(--s-advisory-fg);    background: var(--s-advisory-bg); }
+.badge-conjectured { color: var(--s-conjectured-fg); background: var(--s-conjectured-bg); }
+.badge-refuted     { color: var(--s-refuted-fg);     background: var(--s-refuted-bg); }
+.badge-open        { color: var(--s-open-fg);        background: var(--s-open-bg); }
+.badge-axiom       { color: var(--s-axiom-fg);       background: var(--s-axiom-bg); }
+.badge-unknown     { color: var(--ink-3);            background: var(--bg-sunk); }
+
+.ax-axes { display: inline-flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.ax-axes .ax-axis-label {
+  font-family: var(--font-sans); font-size: var(--fs-xs);
+  color: var(--ink-3); letter-spacing: 0.04em;
+}
+
+/* the interesting combination: ours ahead of the literature */
+.ax-newresult {
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--s-computed-fg);
+  border: 1px dashed currentColor;
+  border-radius: var(--radius);
+  padding: 0.18em 0.5em;
+}
+
+/* ---------- claim / fact card ---------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--rule-firm);
+  border-radius: var(--radius);
+  padding: var(--sp-4) var(--sp-5);
+  margin: 0 0 var(--sp-5);
+  box-shadow: var(--shadow);
+}
+.card.s-proved      { border-left-color: var(--s-proved-fg); }
+.card.s-checked     { border-left-color: var(--s-checked-fg); }
+.card.s-evidence    { border-left-color: var(--s-evidence-fg); }
+.card.s-computed    { border-left-color: var(--s-computed-fg); }
+.card.s-empirical   { border-left-color: var(--s-empirical-fg); }
+.card.s-advisory    { border-left-color: var(--s-advisory-fg); }
+.card.s-conjectured { border-left-color: var(--s-conjectured-fg); }
+.card.s-refuted     { border-left-color: var(--s-refuted-fg); }
+.card.s-open        { border-left-color: var(--s-open-fg); }
+.card.s-axiom       { border-left-color: var(--s-axiom-fg); }
+
+.card > .card-head {
+  display: flex; flex-wrap: wrap; align-items: baseline;
+  gap: var(--sp-2) var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+.card h3, .card h4 { margin: 0; flex: 1 1 20ch; }
+.card .card-id {
+  font-family: var(--font-mono); font-size: var(--fs-xs);
+  color: var(--ink-3);
+}
+.card .card-statement { margin: 0 0 var(--sp-3); }
+.card .card-formal { margin: 0 0 var(--sp-3); }
+.card .card-formal pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
+.ax-tinylabel {
+  font-family: var(--font-sans); font-size: var(--fs-xs);
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink-3); margin: 0 0 var(--sp-1);
+}
+
+/* ---------- evidence rows ---------- */
+.ax-evidence { list-style: none; margin: 0; padding: 0; }
+.ax-evidence > li {
+  border-top: 1px solid var(--rule);
+  padding: var(--sp-3) 0 var(--sp-2);
+  font-size: var(--fs-ui);
+  font-family: var(--font-sans);
+}
+.ax-evidence > li:first-child { border-top: 0; }
+.ax-ev-head { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; }
+.ax-ev-kind {
+  font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--ink-3);
+}
+.ax-ev-supports { color: var(--ink-2); margin: var(--sp-1) 0 var(--sp-2); }
+.ax-noevidence {
+  font-family: var(--font-sans); font-size: var(--fs-ui);
+  color: var(--s-open-fg); background: var(--s-open-bg);
+  border: 1px dashed currentColor; border-radius: var(--radius);
+  padding: var(--sp-2) var(--sp-3);
+}
+
+/* ---------- command + copy ---------- */
+.ax-cmd {
+  display: flex; align-items: stretch; gap: 0;
+  border: 1px solid var(--rule); border-radius: var(--radius);
+  background: var(--bg-sunk);
+  overflow: hidden;
+  margin: 0 0 var(--sp-2);
+}
+.ax-cmd > code {
+  flex: 1 1 auto; background: none; border-radius: 0;
+  padding: var(--sp-2) var(--sp-3);
+  overflow-x: auto; white-space: pre; font-size: var(--fs-xs);
+}
+.ax-cmd > button {
+  flex: none; appearance: none; cursor: pointer;
+  border: 0; border-left: 1px solid var(--rule);
+  background: var(--surface); color: var(--ink-2);
+  font-family: var(--font-sans); font-size: var(--fs-xs); letter-spacing: 0.05em;
+  padding: 0 var(--sp-3);
+}
+.ax-cmd > button:hover { background: var(--bg); color: var(--ink); }
+.ax-cmd > button[data-copied="1"] { color: var(--s-proved-fg); }
+
+/* ---------- tables ---------- */
+.ax-tablewrap { overflow-x: auto; margin: 0 0 var(--sp-2); }
+table.ax-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-family: var(--font-sans);
+  font-size: var(--fs-ui);
+  font-variant-numeric: tabular-nums;
+}
+table.ax-table caption {
+  caption-side: top; text-align: left;
+  font-size: var(--fs-ui); color: var(--ink-2);
+  padding-bottom: var(--sp-2);
+}
+table.ax-table th, table.ax-table td {
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  vertical-align: baseline;
+  /* Machine values (`kernel-lean`, `QF_BV`) must not break at their hyphens;
+     the wrapper scrolls instead. The first column is prose and may wrap. */
+  white-space: nowrap;
+}
+table.ax-table td:first-child, table.ax-table th:first-child { white-space: normal; }
+table.ax-table thead th {
+  border-bottom: 1px solid var(--rule-firm);
+  font-weight: 600; color: var(--ink-2);
+  font-size: var(--fs-xs); letter-spacing: 0.05em; text-transform: uppercase;
+}
+table.ax-table td.num, table.ax-table th.num { text-align: right; }
+table.ax-table tbody tr:hover { background: var(--bg-sunk); }
+.ax-source {
+  font-family: var(--font-sans); font-size: var(--fs-xs);
+  color: var(--ink-3); margin: 0 0 var(--sp-5);
+}
+
+/* ---------- steps player ---------- */
+ol.ax-steps { list-style: none; counter-reset: step; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+ol.ax-steps > li {
+  counter-increment: step;
+  display: grid;
+  grid-template-columns: 2.2rem 1fr;
+  gap: 0 var(--sp-3);
+  padding: var(--sp-3) var(--sp-3) var(--sp-3) var(--sp-2);
+  border-bottom: 1px solid var(--rule);
+  scroll-margin-top: var(--sp-6);
+}
+ol.ax-steps > li::before {
+  content: counter(step);
+  font-family: var(--font-mono); font-size: var(--fs-xs);
+  color: var(--ink-3); text-align: right; padding-top: 0.15em;
+}
+ol.ax-steps > li[aria-current="step"] { background: var(--bg-sunk); }
+ol.ax-steps > li[aria-current="step"]::before { color: var(--accent); font-weight: 700; }
+.ax-step-op { font-family: var(--font-sans); font-size: var(--fs-xs); letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-3); }
+.ax-step-io { font-family: var(--font-mono); font-size: var(--fs-sm); overflow-x: auto; }
+.ax-step-note { color: var(--ink-2); font-size: var(--fs-ui); font-family: var(--font-sans); }
+.ax-stepbar {
+  display: flex; gap: var(--sp-3); align-items: center;
+  font-family: var(--font-sans); font-size: var(--fs-xs); color: var(--ink-3);
+  padding: var(--sp-2) 0;
+}
+kbd {
+  border: 1px solid var(--rule-firm); border-bottom-width: 2px;
+  border-radius: var(--radius); padding: 0.05em 0.35em;
+  font-size: 0.9em; background: var(--surface);
+}
+
+/* ---------- certificate ---------- */
+.ax-cert { border-left-width: 3px; }
+.ax-cert .ax-cert-grid {
+  display: grid; grid-template-columns: max-content 1fr;
+  gap: var(--sp-1) var(--sp-3);
+  font-family: var(--font-sans); font-size: var(--fs-ui);
+  margin: 0 0 var(--sp-3);
+}
+.ax-cert .ax-cert-grid dt { color: var(--ink-3); font-size: var(--fs-xs); letter-spacing: 0.05em; text-transform: uppercase; padding-top: 0.25em; }
+.ax-cert .ax-cert-grid dd { margin: 0; word-break: break-word; }
+.ax-exit-ok { color: var(--s-proved-fg); font-weight: 600; }
+.ax-exit-bad { color: var(--s-refuted-fg); font-weight: 700; }
+/* Neither green nor red: a certificate that deliberately does not re-run. */
+.ax-exit-none { color: var(--s-advisory-fg); font-weight: 600; }
+.ax-hash { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--ink-2); }
+
+/* ---------- figures ---------- */
+figure.ax-fig { margin: var(--sp-6) 0; }
+figure.ax-fig figcaption {
+  font-family: var(--font-sans); font-size: var(--fs-ui);
+  color: var(--ink-2); margin-top: var(--sp-3);
+  /* A caption is prose and reads at the prose measure even when the figure
+     it belongs to is three times as wide. */
+  max-width: var(--measure); margin-left: auto; margin-right: auto;
+}
+figure.ax-fig figcaption b { color: var(--ink); font-weight: 600; }
+.ax-figframe {
+  border: 1px solid var(--rule); border-radius: var(--radius);
+  background: var(--surface); padding: var(--sp-3);
+  overflow-x: auto;
+}
+
+/* dependency graph */
+svg.ax-graph { display: block; margin: 0 auto; }
+svg.ax-graph .gedge { fill: none; stroke: var(--rule-firm); stroke-width: 1.15; opacity: 0.85; }
+svg.ax-graph .gnode rect {
+  fill: var(--surface); stroke: var(--rule-firm); stroke-width: 1;
+  rx: 3;
+}
+svg.ax-graph .gnode text {
+  font-family: var(--font-sans); font-size: 11.5px; fill: var(--ink-2);
+  dominant-baseline: middle;
+}
+svg.ax-graph .gnode .gdot { stroke: none; }
+svg.ax-graph .gnode.s-proved      .gdot { fill: var(--s-proved-fg); }
+svg.ax-graph .gnode.s-checked     .gdot { fill: var(--s-checked-fg); }
+svg.ax-graph .gnode.s-evidence    .gdot { fill: var(--s-evidence-fg); }
+svg.ax-graph .gnode.s-computed    .gdot { fill: var(--s-computed-fg); }
+svg.ax-graph .gnode.s-empirical   .gdot { fill: var(--s-empirical-fg); }
+svg.ax-graph .gnode.s-advisory    .gdot { fill: var(--s-advisory-fg); }
+svg.ax-graph .gnode.s-conjectured .gdot { fill: var(--s-conjectured-fg); }
+svg.ax-graph .gnode.s-refuted     .gdot { fill: var(--s-refuted-fg); }
+svg.ax-graph .gnode.s-open        .gdot { fill: var(--s-open-fg); }
+svg.ax-graph .gnode.s-axiom       .gdot { fill: var(--s-axiom-fg); }
+svg.ax-graph .gnode { cursor: pointer; }
+svg.ax-graph .gnode:hover rect, svg.ax-graph .gnode:focus rect { stroke: var(--accent); stroke-width: 1.8; }
+/* cone highlighting, driven by a class on the <svg> root */
+svg.ax-graph.coning .gnode { opacity: 0.22; }
+svg.ax-graph.coning .gedge { opacity: 0.1; }
+svg.ax-graph.coning .gnode.cone-self rect { stroke: var(--accent); stroke-width: 2; }
+svg.ax-graph.coning .gnode.cone-self,
+svg.ax-graph.coning .gnode.cone-anc,
+svg.ax-graph.coning .gnode.cone-desc { opacity: 1; }
+svg.ax-graph.coning .gedge.cone-edge { opacity: 1; stroke: var(--accent); stroke-width: 1.6; }
+.ax-legend {
+  display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4);
+  font-family: var(--font-sans); font-size: var(--fs-xs); color: var(--ink-3);
+  margin-top: var(--sp-3); padding: 0; list-style: none;
+}
+.ax-legend li { display: inline-flex; align-items: center; gap: 0.4em; }
+.ax-legend .swatch { width: 0.7em; height: 0.7em; border-radius: 50%; display: inline-block; }
+
+/* xy plot */
+svg.ax-plot { display: block; margin: 0 auto; }
+svg.ax-plot .axis { stroke: var(--rule-firm); stroke-width: 1; fill: none; }
+svg.ax-plot .grid { stroke: var(--rule); stroke-width: 1; stroke-dasharray: 2 3; }
+svg.ax-plot .tick { font-family: var(--font-sans); font-size: 10px; fill: var(--ink-3); }
+svg.ax-plot .axlabel { font-family: var(--font-sans); font-size: 11px; fill: var(--ink-2); }
+svg.ax-plot .series { fill: none; stroke: var(--accent); stroke-width: 1.8; stroke-linejoin: round; }
+svg.ax-plot .series-fill { fill: var(--accent); opacity: 0.08; stroke: none; }
+svg.ax-plot .vertex { fill: var(--surface); stroke: var(--accent); stroke-width: 1.6; }
+svg.ax-plot .vertex:hover { fill: var(--accent); }
+svg.ax-plot .vlabel { font-family: var(--font-mono); font-size: 10px; fill: var(--ink-2); }
+
+/* ---------- footer ---------- */
+footer.ax-foot {
+  margin-top: var(--sp-8);
+  border-top: 1px solid var(--rule);
+  padding: var(--sp-5) 0 var(--sp-8);
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+}
+footer.ax-foot p { margin: 0 0 var(--sp-2); }
+footer.ax-foot code { font-size: var(--fs-xs); }
+
+.ax-unrenderable {
+  border: 2px dashed var(--s-refuted-fg);
+  color: var(--s-refuted-fg);
+  background: var(--s-refuted-bg);
+  padding: var(--sp-3);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+
+/* ---------- narrow screens ---------- */
+@media (max-width: 46rem) {
+  body { font-size: 16px; }
+  .ax-doc { padding: 0 var(--sp-4); }
+  h1.ax-title { font-size: var(--fs-xl); }
+  .card { padding: var(--sp-4); }
+  .ax-cert .ax-cert-grid { grid-template-columns: 1fr; }
+  .ax-cert .ax-cert-grid dt { padding-top: var(--sp-2); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+/* ---------- print ---------- */
+@media print {
+  :root {
+    --bg: #fff; --bg-sunk: #f6f6f6; --surface: #fff;
+    --ink: #000; --ink-2: #222; --ink-3: #555;
+    --rule: #ccc; --rule-firm: #999; --shadow: none;
+  }
+  body { font-size: 10.5pt; background: #fff; color: #000; }
+  .ax-levels, .ax-cmd > button, .ax-stepbar, .ax-skip { display: none !important; }
+  /* Print is the forensic level: nothing is hidden on paper. */
+  .t-detail, .t-archive { display: block !important; }
+  details.ax-fold > .ax-foldbody { display: block !important; }
+  .card, figure.ax-fig, .ax-cert, ol.ax-steps > li { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  .ax-cmd > code { white-space: pre-wrap; word-break: break-all; }
+  a[data-external="1"]::after { content: " (" attr(href) ")"; font-size: 0.85em; color: #555; word-break: break-all; }
+  svg.ax-graph .gnode rect { stroke: #666; }
+}
+
+</style>
+</head>
+<body data-level="full">
+<a class="ax-skip" href="#ax-main">Skip to content</a>
+<header class="ax-head"><div class="ax-doc">
+<p class="ax-kicker">axeyum fact atlas / render preview</p>
+<h1 class="ax-title">The Nat prelude, and what stands on it</h1>
+<p class="ax-subtitle">One connected component of the fact ledger, rendered. Every badge, statement, hash and replay command on this page was read out of <code>artifacts/facts/</code> at build time; only the narrative was written by a person.</p>
+<ul class="ax-meta">
+<li><b>document</b> preview-nat-atlas</li>
+<li><b>genre</b> result (R2)</li>
+<li><b>generated by</b> <code>render/assets/preview/build-preview-doc.py</code></li>
+</ul>
+<p style="margin-top:var(--sp-4)"><span class="ax-levelnote">reading level</span> <span class="ax-levels" role="group" aria-label="reading level"><button type="button" data-level="summary" aria-pressed="false">summary</button><button type="button" data-level="full" aria-pressed="true">full</button><button type="button" data-level="forensic" aria-pressed="false">forensic</button></span></p>
+</div></header>
+<main id="ax-main" class="ax-doc">
+<section class="blk prose t-essential" id="intro">
+<p>A rendered document here is a checker output, not prose about one. That distinction is the whole design, and it is visible on this page: nothing below carries a green badge because a person decided it deserved one. Each badge is the <code>epistemic_status</code> field of a file in <code>artifacts/facts/</code>, each replay command is that file's <code>checker_command</code>, and a claim that arrived without evidence renders saying so.</p>
+<p>What follows is one connected component of the ledger's dependency graph &#x2014; the naturals, the integers, the rationals built over them, and Euclid's theorem at the bottom of the chain &#x2014; with two deliberately unrelated facts alongside it for contrast. Read it at <em>summary</em> to see only the argument, at <em>full</em> for the evidence, at <em>forensic</em> for everything the ledger carries.</p>
+</section>
+<figure class="ax-fig blk t-essential ax-wide" id="fig-dag">
+<div class="ax-figframe">
+<svg class="ax-graph" viewBox="0 0 1541 674" width="1541" height="674" role="group" aria-label="**The prelude component.** An edge runs from a prerequisite to the result that uses it, so everything a node rests on is what sits above it. The four nodes with cards below link to them. Layered in Rust -- longest-path ranking, median sweeps, isotonic coordinates -- and drawn as inline SVG; no graph library is involved, and none could be, since the page may not fetch one.">
+<g class="edges">
+<path class="gedge" data-from="0" data-to="2" d="M 899.8 292.0 C 899.8 337.0, 1163.3 337.0, 1163.3 382.0"/>
+<path class="gedge" data-from="0" data-to="2" style="fill:var(--rule-firm);stroke:none" d="M 1163.3 382.0 L 1156.1 382.7 L 1158.1 377.1 Z"/>
+<path class="gedge" data-from="0" data-to="3" d="M 899.8 292.0 C 899.8 344.5, 989.3 344.5, 989.3 397.0 C 989.3 446.5, 1242.1 446.5, 1242.1 496.0"/>
+<path class="gedge" data-from="0" data-to="3" style="fill:var(--rule-firm);stroke:none" d="M 1242.1 496.0 L 1234.9 496.4 L 1237.1 490.8 Z"/>
+<path class="gedge" data-from="0" data-to="5" d="M 899.8 292.0 C 899.8 334.0, 1042.9 334.0, 1042.9 376.0"/>
+<path class="gedge" data-from="0" data-to="5" style="fill:var(--rule-firm);stroke:none" d="M 1042.9 376.0 L 1035.7 375.3 L 1038.8 370.1 Z"/>
+<path class="gedge" data-from="1" data-to="2" d="M 1029.8 292.0 C 1029.8 337.0, 1163.3 337.0, 1163.3 382.0"/>
+<path class="gedge" data-from="1" data-to="2" style="fill:var(--rule-firm);stroke:none" d="M 1163.3 382.0 L 1156.2 380.9 L 1159.6 375.9 Z"/>
+<path class="gedge" data-from="1" data-to="3" d="M 1029.8 292.0 C 1029.8 344.5, 1236.1 344.5, 1236.1 397.0 C 1236.1 446.5, 1242.1 446.5, 1242.1 496.0"/>
+<path class="gedge" data-from="1" data-to="3" style="fill:var(--rule-firm);stroke:none" d="M 1242.1 496.0 L 1238.7 489.7 L 1244.7 489.3 Z"/>
+<path class="gedge" data-from="2" data-to="3" d="M 1163.3 412.0 C 1163.3 454.0, 1242.1 454.0, 1242.1 496.0"/>
+<path class="gedge" data-from="2" data-to="3" style="fill:var(--rule-firm);stroke:none" d="M 1242.1 496.0 L 1235.4 493.3 L 1239.8 489.2 Z"/>
+<path class="gedge" data-from="4" data-to="30" d="M 121.4 298.0 L 121.4 376.0"/>
+<path class="gedge" data-from="4" data-to="30" style="fill:var(--rule-firm);stroke:none" d="M 121.4 376.0 L 118.4 369.5 L 124.4 369.5 Z"/>
+<path class="gedge" data-from="7" data-to="8" d="M 1467.6 172.0 L 1467.6 262.0"/>
+<path class="gedge" data-from="7" data-to="8" style="fill:var(--rule-firm);stroke:none" d="M 1467.6 262.0 L 1464.6 255.5 L 1470.6 255.5 Z"/>
+<path class="gedge" data-from="9" data-to="0" d="M 731.1 52.0 C 731.1 104.5, 762.7 104.5, 762.7 157.0 C 762.7 209.5, 899.8 209.5, 899.8 262.0"/>
+<path class="gedge" data-from="9" data-to="0" style="fill:var(--rule-firm);stroke:none" d="M 899.8 262.0 L 892.8 260.4 L 896.4 255.7 Z"/>
+<path class="gedge" data-from="9" data-to="16" d="M 731.1 52.0 C 731.1 104.5, 492.6 104.5, 492.6 157.0 L 492.6 277.0 C 492.6 337.0, 548.1 337.0, 548.1 397.0 C 548.1 446.5, 723.7 446.5, 723.7 496.0"/>
+<path class="gedge" data-from="9" data-to="16" style="fill:var(--rule-firm);stroke:none" d="M 723.7 496.0 L 716.5 495.4 L 719.5 490.2 Z"/>
+<path class="gedge" data-from="9" data-to="19" d="M 731.1 52.0 C 731.1 104.5, 618.2 104.5, 618.2 157.0 C 618.2 217.0, 619.0 217.0, 619.0 277.0 C 619.0 329.5, 644.9 329.5, 644.9 382.0"/>
+<path class="gedge" data-from="9" data-to="19" style="fill:var(--rule-firm);stroke:none" d="M 644.9 382.0 L 640.4 376.4 L 646.2 375.0 Z"/>
+<path class="gedge" data-from="9" data-to="21" d="M 731.1 52.0 C 731.1 94.0, 671.8 94.0, 671.8 136.0"/>
+<path class="gedge" data-from="9" data-to="21" style="fill:var(--rule-firm);stroke:none" d="M 671.8 136.0 L 673.1 129.0 L 678.0 132.4 Z"/>
+<path class="gedge" data-from="10" data-to="0" d="M 961.5 172.0 C 961.5 217.0, 899.8 217.0, 899.8 262.0"/>
+<path class="gedge" data-from="10" data-to="0" style="fill:var(--rule-firm);stroke:none" d="M 899.8 262.0 L 901.0 254.9 L 905.9 258.3 Z"/>
+<path class="gedge" data-from="10" data-to="1" d="M 961.5 172.0 C 961.5 217.0, 1029.8 217.0, 1029.8 262.0"/>
+<path class="gedge" data-from="10" data-to="1" style="fill:var(--rule-firm);stroke:none" d="M 1029.8 262.0 L 1023.5 258.6 L 1028.2 255.0 Z"/>
+<path class="gedge" data-from="10" data-to="11" d="M 961.5 172.0 C 961.5 214.0, 1153.4 214.0, 1153.4 256.0"/>
+<path class="gedge" data-from="10" data-to="11" style="fill:var(--rule-firm);stroke:none" d="M 1153.4 256.0 L 1146.2 256.1 L 1148.6 250.6 Z"/>
+<path class="gedge" data-from="10" data-to="16" d="M 961.5 172.0 C 961.5 224.5, 830.2 224.5, 830.2 277.0 C 830.2 337.0, 977.3 337.0, 977.3 397.0 C 977.3 446.5, 723.7 446.5, 723.7 496.0"/>
+<path class="gedge" data-from="10" data-to="16" style="fill:var(--rule-firm);stroke:none" d="M 723.7 496.0 L 728.6 490.8 L 730.8 496.4 Z"/>
+<path class="gedge" data-from="10" data-to="19" d="M 961.5 172.0 C 961.5 224.5, 818.2 224.5, 818.2 277.0 C 818.2 329.5, 644.9 329.5, 644.9 382.0"/>
+<path class="gedge" data-from="10" data-to="19" style="fill:var(--rule-firm);stroke:none" d="M 644.9 382.0 L 648.9 376.1 L 652.0 381.2 Z"/>
+<path class="gedge" data-from="12" data-to="4" d="M 77.9 58.0 C 77.9 107.5, 130.4 107.5, 130.4 157.0 C 130.4 206.5, 121.4 206.5, 121.4 256.0"/>
+<path class="gedge" data-from="12" data-to="4" style="fill:var(--rule-firm);stroke:none" d="M 121.4 256.0 L 119.0 249.3 L 124.9 249.8 Z"/>
+<path class="gedge" data-from="12" data-to="13" d="M 77.9 58.0 C 77.9 97.0, 67.2 97.0, 67.2 136.0"/>
+<path class="gedge" data-from="12" data-to="13" style="fill:var(--rule-firm);stroke:none" d="M 67.2 136.0 L 65.1 129.2 L 71.1 130.0 Z"/>
+<path class="gedge" data-from="12" data-to="17" d="M 77.9 58.0 C 77.9 107.5, 456.6 107.5, 456.6 157.0 L 456.6 277.0 C 456.6 326.5, 476.1 326.5, 476.1 376.0"/>
+<path class="gedge" data-from="12" data-to="17" style="fill:var(--rule-firm);stroke:none" d="M 476.1 376.0 L 471.9 370.2 L 477.8 369.0 Z"/>
+<path class="gedge" data-from="13" data-to="4" d="M 67.2 178.0 C 67.2 217.0, 121.4 217.0, 121.4 256.0"/>
+<path class="gedge" data-from="13" data-to="4" style="fill:var(--rule-firm);stroke:none" d="M 121.4 256.0 L 115.2 252.4 L 120.1 248.9 Z"/>
+<path class="gedge" data-from="14" data-to="16" d="M 555.8 292.0 C 555.8 344.5, 572.1 344.5, 572.1 397.0 C 572.1 446.5, 723.7 446.5, 723.7 496.0"/>
+<path class="gedge" data-from="14" data-to="16" style="fill:var(--rule-firm);stroke:none" d="M 723.7 496.0 L 716.6 495.0 L 719.9 489.9 Z"/>
+<path class="gedge" data-from="14" data-to="17" d="M 555.8 292.0 C 555.8 334.0, 476.1 334.0, 476.1 376.0"/>
+<path class="gedge" data-from="14" data-to="17" style="fill:var(--rule-firm);stroke:none" d="M 476.1 376.0 L 478.4 369.2 L 482.7 373.4 Z"/>
+<path class="gedge" data-from="14" data-to="18" d="M 555.8 292.0 C 555.8 344.5, 560.1 344.5, 560.1 397.0 C 560.1 446.5, 515.6 446.5, 515.6 496.0"/>
+<path class="gedge" data-from="14" data-to="18" style="fill:var(--rule-firm);stroke:none" d="M 515.6 496.0 L 515.5 488.8 L 521.0 491.3 Z"/>
+<path class="gedge" data-from="15" data-to="16" d="M 344.3 52.0 C 344.3 104.5, 468.6 104.5, 468.6 157.0 L 468.6 277.0 C 468.6 337.0, 536.1 337.0, 536.1 397.0 C 536.1 446.5, 723.7 446.5, 723.7 496.0"/>
+<path class="gedge" data-from="15" data-to="16" style="fill:var(--rule-firm);stroke:none" d="M 723.7 496.0 L 716.5 495.6 L 719.3 490.3 Z"/>
+<path class="gedge" data-from="17" data-to="18" d="M 476.1 418.0 C 476.1 457.0, 515.6 457.0, 515.6 496.0"/>
+<path class="gedge" data-from="17" data-to="18" style="fill:var(--rule-firm);stroke:none" d="M 515.6 496.0 L 510.0 491.6 L 515.3 488.8 Z"/>
+<path class="gedge" data-from="19" data-to="16" d="M 644.9 412.0 C 644.9 454.0, 723.7 454.0, 723.7 496.0"/>
+<path class="gedge" data-from="19" data-to="16" style="fill:var(--rule-firm);stroke:none" d="M 723.7 496.0 L 717.0 493.3 L 721.4 489.2 Z"/>
+<path class="gedge" data-from="20" data-to="19" d="M 601.1 52.0 C 601.1 104.5, 480.6 104.5, 480.6 157.0 L 480.6 277.0 C 480.6 329.5, 644.9 329.5, 644.9 382.0"/>
+<path class="gedge" data-from="20" data-to="19" style="fill:var(--rule-firm);stroke:none" d="M 644.9 382.0 L 637.8 381.0 L 641.0 376.0 Z"/>
+<path class="gedge" data-from="21" data-to="5" d="M 671.8 178.0 C 671.8 227.5, 770.2 227.5, 770.2 277.0 C 770.2 326.5, 1042.9 326.5, 1042.9 376.0"/>
+<path class="gedge" data-from="21" data-to="5" style="fill:var(--rule-firm);stroke:none" d="M 1042.9 376.0 L 1035.7 376.6 L 1037.8 371.0 Z"/>
+<path class="gedge" data-from="21" data-to="14" d="M 671.8 178.0 C 671.8 220.0, 555.8 220.0, 555.8 262.0"/>
+<path class="gedge" data-from="21" data-to="14" style="fill:var(--rule-firm);stroke:none" d="M 555.8 262.0 L 559.3 255.8 L 562.8 260.6 Z"/>
+<path class="gedge" data-from="21" data-to="19" d="M 671.8 178.0 C 671.8 227.5, 631.0 227.5, 631.0 277.0 C 631.0 329.5, 644.9 329.5, 644.9 382.0"/>
+<path class="gedge" data-from="21" data-to="19" style="fill:var(--rule-firm);stroke:none" d="M 644.9 382.0 L 641.0 375.9 L 647.0 375.2 Z"/>
+<path class="gedge" data-from="21" data-to="22" d="M 671.8 178.0 C 671.8 220.0, 700.6 220.0, 700.6 262.0"/>
+<path class="gedge" data-from="21" data-to="22" style="fill:var(--rule-firm);stroke:none" d="M 700.6 262.0 L 695.6 256.8 L 701.3 254.9 Z"/>
+<path class="gedge" data-from="22" data-to="6" d="M 700.6 292.0 C 700.6 337.0, 787.3 337.0, 787.3 382.0"/>
+<path class="gedge" data-from="22" data-to="6" style="fill:var(--rule-firm);stroke:none" d="M 787.3 382.0 L 780.6 379.4 L 784.9 375.2 Z"/>
+<path class="gedge" data-from="22" data-to="16" d="M 700.6 292.0 C 700.6 344.5, 717.7 344.5, 717.7 397.0 C 717.7 446.5, 723.7 446.5, 723.7 496.0"/>
+<path class="gedge" data-from="22" data-to="16" style="fill:var(--rule-firm);stroke:none" d="M 723.7 496.0 L 720.3 489.7 L 726.3 489.3 Z"/>
+<path class="gedge" data-from="22" data-to="19" d="M 700.6 292.0 C 700.6 337.0, 644.9 337.0, 644.9 382.0"/>
+<path class="gedge" data-from="22" data-to="19" style="fill:var(--rule-firm);stroke:none" d="M 644.9 382.0 L 645.7 374.9 L 650.8 378.1 Z"/>
+<path class="gedge" data-from="22" data-to="25" d="M 700.6 292.0 C 700.6 337.0, 914.1 337.0, 914.1 382.0"/>
+<path class="gedge" data-from="22" data-to="25" style="fill:var(--rule-firm);stroke:none" d="M 914.1 382.0 L 906.9 382.2 L 909.2 376.7 Z"/>
+<path class="gedge" data-from="23" data-to="7" d="M 1240.6 52.0 C 1240.6 97.0, 1467.6 97.0, 1467.6 142.0"/>
+<path class="gedge" data-from="23" data-to="7" style="fill:var(--rule-firm);stroke:none" d="M 1467.6 142.0 L 1460.5 142.4 L 1462.7 136.8 Z"/>
+<path class="gedge" data-from="23" data-to="16" d="M 1240.6 52.0 C 1240.6 104.5, 1228.6 104.5, 1228.6 157.0 L 1228.6 277.0 C 1228.6 337.0, 1248.1 337.0, 1248.1 397.0 C 1248.1 446.5, 723.7 446.5, 723.7 496.0"/>
+<path class="gedge" data-from="23" data-to="16" style="fill:var(--rule-firm);stroke:none" d="M 723.7 496.0 L 729.5 491.8 L 730.6 497.7 Z"/>
+<path class="gedge" data-from="23" data-to="25" d="M 1240.6 52.0 L 1240.6 157.0 L 1240.6 277.0 C 1240.6 329.5, 914.1 329.5, 914.1 382.0"/>
+<path class="gedge" data-from="23" data-to="25" style="fill:var(--rule-firm);stroke:none" d="M 914.1 382.0 L 919.3 377.2 L 921.2 382.9 Z"/>
+<path class="gedge" data-from="24" data-to="19" d="M 837.9 172.0 C 837.9 224.5, 794.2 224.5, 794.2 277.0 C 794.2 329.5, 644.9 329.5, 644.9 382.0"/>
+<path class="gedge" data-from="24" data-to="19" style="fill:var(--rule-firm);stroke:none" d="M 644.9 382.0 L 648.5 375.8 L 651.9 380.7 Z"/>
+<path class="gedge" data-from="24" data-to="25" d="M 837.9 172.0 C 837.9 224.5, 806.2 224.5, 806.2 277.0 C 806.2 329.5, 914.1 329.5, 914.1 382.0"/>
+<path class="gedge" data-from="24" data-to="25" style="fill:var(--rule-firm);stroke:none" d="M 914.1 382.0 L 907.3 379.6 L 911.5 375.3 Z"/>
+<path class="gedge" data-from="26" data-to="0" d="M 1027.9 52.0 L 1027.9 157.0 C 1027.9 209.5, 899.8 209.5, 899.8 262.0"/>
+<path class="gedge" data-from="26" data-to="0" style="fill:var(--rule-firm);stroke:none" d="M 899.8 262.0 L 902.9 255.6 L 906.7 260.2 Z"/>
+<path class="gedge" data-from="26" data-to="5" d="M 1027.9 52.0 C 1027.9 104.5, 1216.6 104.5, 1216.6 157.0 L 1216.6 277.0 C 1216.6 326.5, 1042.9 326.5, 1042.9 376.0"/>
+<path class="gedge" data-from="26" data-to="5" style="fill:var(--rule-firm);stroke:none" d="M 1042.9 376.0 L 1047.0 370.2 L 1050.0 375.4 Z"/>
+<path class="gedge" data-from="26" data-to="10" d="M 1027.9 52.0 C 1027.9 97.0, 961.5 97.0, 961.5 142.0"/>
+<path class="gedge" data-from="26" data-to="10" style="fill:var(--rule-firm);stroke:none" d="M 961.5 142.0 L 962.9 135.0 L 967.7 138.6 Z"/>
+<path class="gedge" data-from="27" data-to="10" d="M 861.1 52.0 C 861.1 97.0, 961.5 97.0, 961.5 142.0"/>
+<path class="gedge" data-from="27" data-to="10" style="fill:var(--rule-firm);stroke:none" d="M 961.5 142.0 L 954.6 139.9 L 958.6 135.4 Z"/>
+<path class="gedge" data-from="27" data-to="19" d="M 861.1 52.0 C 861.1 104.5, 774.7 104.5, 774.7 157.0 C 774.7 217.0, 782.2 217.0, 782.2 277.0 C 782.2 329.5, 644.9 329.5, 644.9 382.0"/>
+<path class="gedge" data-from="27" data-to="19" style="fill:var(--rule-firm);stroke:none" d="M 644.9 382.0 L 648.2 375.7 L 651.8 380.4 Z"/>
+<path class="gedge" data-from="27" data-to="24" d="M 861.1 52.0 C 861.1 97.0, 837.9 97.0, 837.9 142.0"/>
+<path class="gedge" data-from="27" data-to="24" style="fill:var(--rule-firm);stroke:none" d="M 837.9 142.0 L 836.6 135.0 L 842.4 136.5 Z"/>
+<path class="gedge" data-from="29" data-to="28" d="M 121.4 538.0 L 121.4 616.0"/>
+<path class="gedge" data-from="29" data-to="28" style="fill:var(--rule-firm);stroke:none" d="M 121.4 616.0 L 118.4 609.5 L 124.4 609.5 Z"/>
+<path class="gedge" data-from="30" data-to="29" d="M 121.4 418.0 L 121.4 496.0"/>
+<path class="gedge" data-from="30" data-to="29" style="fill:var(--rule-firm);stroke:none" d="M 121.4 496.0 L 118.4 489.5 L 124.4 489.5 Z"/>
+</g>
+<g class="nodes">
+<g class="gnode s-proved" data-n="0" data-anc="9 10 26 27" data-desc="2 3 5" tabindex="0" role="listitem">
+<title>int add assoc &#x2014; proved &#x2014; 4 upstream, 3 downstream</title>
+<rect x="842.2" y="262.0" width="115.2" height="30.0"/>
+<circle class="gdot" cx="851.2" cy="277.0" r="3.2"/>
+<text x="859.2" y="277.0">int add assoc</text>
+</g>
+<g class="gnode s-proved" data-n="1" data-anc="10 26 27" data-desc="2 3" tabindex="0" role="listitem">
+<title>int add comm &#x2014; proved &#x2014; 3 upstream, 2 downstream</title>
+<rect x="975.4" y="262.0" width="108.8" height="30.0"/>
+<circle class="gdot" cx="984.4" cy="277.0" r="3.2"/>
+<text x="992.4" y="277.0">int add comm</text>
+</g>
+<g class="gnode s-proved" data-n="2" data-anc="0 1 9 10 26 27" data-desc="3" tabindex="0" role="listitem">
+<title>int add le add &#x2014; proved &#x2014; 6 upstream, 1 downstream</title>
+<rect x="1102.5" y="382.0" width="121.6" height="30.0"/>
+<circle class="gdot" cx="1111.5" cy="397.0" r="3.2"/>
+<text x="1119.5" y="397.0">int add le add</text>
+</g>
+<g class="gnode s-proved" data-n="3" data-anc="0 1 2 9 10 26 27" data-desc="" tabindex="0" role="listitem">
+<title>int add lt add of le of lt &#x2014; proved &#x2014; 7 upstream, 0 downstream</title>
+<rect x="1181.3" y="496.0" width="121.6" height="42.0"/>
+<circle class="gdot" cx="1190.3" cy="517.0" r="3.2"/>
+<text x="1198.3" y="510.5">int add lt add</text>
+<text x="1198.3" y="523.5">of le of lt</text>
+</g>
+<g class="gnode s-proved" data-n="4" data-anc="12 13" data-desc="28 29 30" tabindex="0" role="listitem">
+<title>int euclidean decomposition &#x2014; proved &#x2014; 2 upstream, 3 downstream</title>
+<rect x="63.8" y="256.0" width="115.2" height="42.0"/>
+<circle class="gdot" cx="72.8" cy="277.0" r="3.2"/>
+<text x="80.8" y="270.5">int euclidean</text>
+<text x="80.8" y="283.5">decomposition</text>
+</g>
+<g class="gnode s-proved" data-n="5" data-anc="0 9 10 21 26 27" data-desc="" tabindex="0" role="listitem">
+<title>int left distrib &#x2014; proved &#x2014; 6 upstream, 0 downstream</title>
+<rect x="1001.3" y="376.0" width="83.2" height="42.0"/>
+<circle class="gdot" cx="1010.3" cy="397.0" r="3.2"/>
+<text x="1018.3" y="390.5">int left</text>
+<text x="1018.3" y="403.5">distrib</text>
+</g>
+<g class="gnode s-proved" data-n="6" data-anc="9 21 22" data-desc="" tabindex="0" role="listitem">
+<title>int mul assoc &#x2014; proved &#x2014; 3 upstream, 0 downstream</title>
+<rect x="729.7" y="382.0" width="115.2" height="30.0"/>
+<circle class="gdot" cx="738.7" cy="397.0" r="3.2"/>
+<text x="746.7" y="397.0">int mul assoc</text>
+</g>
+<g class="gnode s-proved" data-n="7" data-anc="23" data-desc="8" tabindex="0" role="listitem">
+<title>int mul comm &#x2014; proved &#x2014; 1 upstream, 1 downstream</title>
+<rect x="1413.2" y="142.0" width="108.8" height="30.0"/>
+<circle class="gdot" cx="1422.2" cy="157.0" r="3.2"/>
+<text x="1430.2" y="157.0">int mul comm</text>
+</g>
+<g class="gnode s-proved" data-n="8" data-anc="7 23" data-desc="" tabindex="0" role="listitem">
+<title>int sq nonneg &#x2014; proved &#x2014; 2 upstream, 0 downstream</title>
+<rect x="1410.0" y="262.0" width="115.2" height="30.0"/>
+<circle class="gdot" cx="1419.0" cy="277.0" r="3.2"/>
+<text x="1427.0" y="277.0">int sq nonneg</text>
+</g>
+<g class="gnode s-proved" data-n="9" data-anc="" data-desc="0 2 3 5 6 14 16 17 18 19 21 22 25" tabindex="0" role="listitem">
+<title>nat add assoc &#x2014; proved &#x2014; 0 upstream, 13 downstream</title>
+<rect x="673.5" y="22.0" width="115.2" height="30.0"/>
+<circle class="gdot" cx="682.5" cy="37.0" r="3.2"/>
+<text x="690.5" y="37.0">nat add assoc</text>
+</g>
+<g class="gnode s-proved" data-n="10" data-anc="26 27" data-desc="0 1 2 3 5 11 16 19" tabindex="0" role="listitem">
+<title>nat add comm &#x2014; proved &#x2014; 2 upstream, 8 downstream</title>
+<rect x="907.1" y="142.0" width="108.8" height="30.0"/>
+<circle class="gdot" cx="916.1" cy="157.0" r="3.2"/>
+<text x="924.1" y="157.0">nat add comm</text>
+</g>
+<g class="gnode s-proved" data-n="11" data-anc="10 26 27" data-desc="" tabindex="0" role="listitem">
+<title>nat add sub cancel left &#x2014; proved &#x2014; 3 upstream, 0 downstream</title>
+<rect x="1102.2" y="256.0" width="102.4" height="42.0"/>
+<circle class="gdot" cx="1111.2" cy="277.0" r="3.2"/>
+<text x="1119.2" y="270.5">nat add sub</text>
+<text x="1119.2" y="283.5">cancel left</text>
+</g>
+<g class="gnode s-proved" data-n="12" data-anc="" data-desc="4 13 17 18 28 29 30" tabindex="0" role="listitem">
+<title>nat div mod exists &#x2014; proved &#x2014; 0 upstream, 7 downstream</title>
+<rect x="26.7" y="16.0" width="102.4" height="42.0"/>
+<circle class="gdot" cx="35.7" cy="37.0" r="3.2"/>
+<text x="43.7" y="30.5">nat div mod</text>
+<text x="43.7" y="43.5">exists</text>
+</g>
+<g class="gnode s-proved" data-n="13" data-anc="12" data-desc="4 28 29 30" tabindex="0" role="listitem">
+<title>nat div mod unique &#x2014; proved &#x2014; 1 upstream, 4 downstream</title>
+<rect x="16.0" y="136.0" width="102.4" height="42.0"/>
+<circle class="gdot" cx="25.0" cy="157.0" r="3.2"/>
+<text x="33.0" y="150.5">nat div mod</text>
+<text x="33.0" y="163.5">unique</text>
+</g>
+<g class="gnode s-proved" data-n="14" data-anc="9 21" data-desc="16 17 18" tabindex="0" role="listitem">
+<title>nat dvd add &#x2014; proved &#x2014; 2 upstream, 3 downstream</title>
+<rect x="504.6" y="262.0" width="102.4" height="30.0"/>
+<circle class="gdot" cx="513.6" cy="277.0" r="3.2"/>
+<text x="521.6" y="277.0">nat dvd add</text>
+</g>
+<g class="gnode s-proved" data-n="15" data-anc="" data-desc="16" tabindex="0" role="listitem">
+<title>nat dvd gcd iff &#x2014; proved &#x2014; 0 upstream, 1 downstream</title>
+<rect x="280.3" y="22.0" width="128.0" height="30.0"/>
+<circle class="gdot" cx="289.3" cy="37.0" r="3.2"/>
+<text x="297.3" y="37.0">nat dvd gcd iff</text>
+</g>
+<g class="gnode s-proved" data-n="16" data-anc="9 10 14 15 19 20 21 22 23 24 26 27" data-desc="" tabindex="0" role="listitem">
+<title>nat euclid lemma &#x2014; proved &#x2014; 12 upstream, 0 downstream</title>
+<rect x="675.7" y="496.0" width="96.0" height="42.0"/>
+<circle class="gdot" cx="684.7" cy="517.0" r="3.2"/>
+<text x="692.7" y="510.5">nat euclid</text>
+<text x="692.7" y="523.5">lemma</text>
+</g>
+<g class="gnode s-proved" data-n="17" data-anc="9 12 14 21" data-desc="18" tabindex="0" role="listitem">
+<title>nat exists prime dvd &#x2014; proved &#x2014; 4 upstream, 1 downstream</title>
+<rect x="428.1" y="376.0" width="96.0" height="42.0"/>
+<circle class="gdot" cx="437.1" cy="397.0" r="3.2"/>
+<text x="445.1" y="390.5">nat exists</text>
+<text x="445.1" y="403.5">prime dvd</text>
+</g>
+<g class="gnode s-proved" data-n="18" data-anc="9 12 14 17 21" data-desc="" data-href="card-nat-exists-prime-gt" tabindex="0" role="listitem">
+<title>nat exists prime gt &#x2014; proved &#x2014; 5 upstream, 0 downstream</title>
+<rect x="467.6" y="496.0" width="96.0" height="42.0"/>
+<circle class="gdot" cx="476.6" cy="517.0" r="3.2"/>
+<text x="484.6" y="510.5">nat exists</text>
+<text x="484.6" y="523.5">prime gt</text>
+</g>
+<g class="gnode s-proved" data-n="19" data-anc="9 10 20 21 22 24 26 27" data-desc="16" data-href="card-nat-gcd-bezout" tabindex="0" role="listitem">
+<title>nat gcd bezout &#x2014; proved &#x2014; 8 upstream, 1 downstream</title>
+<rect x="584.1" y="382.0" width="121.6" height="30.0"/>
+<circle class="gdot" cx="593.1" cy="397.0" r="3.2"/>
+<text x="601.1" y="397.0">nat gcd bezout</text>
+</g>
+<g class="gnode s-proved" data-n="20" data-anc="" data-desc="16 19" tabindex="0" role="listitem">
+<title>nat gcd succ &#x2014; proved &#x2014; 0 upstream, 2 downstream</title>
+<rect x="546.7" y="22.0" width="108.8" height="30.0"/>
+<circle class="gdot" cx="555.7" cy="37.0" r="3.2"/>
+<text x="563.7" y="37.0">nat gcd succ</text>
+</g>
+<g class="gnode s-proved" data-n="21" data-anc="9" data-desc="5 6 14 16 17 18 19 22 25" tabindex="0" role="listitem">
+<title>nat left distrib &#x2014; proved &#x2014; 1 upstream, 9 downstream</title>
+<rect x="630.2" y="136.0" width="83.2" height="42.0"/>
+<circle class="gdot" cx="639.2" cy="157.0" r="3.2"/>
+<text x="647.2" y="150.5">nat left</text>
+<text x="647.2" y="163.5">distrib</text>
+</g>
+<g class="gnode s-proved" data-n="22" data-anc="9 21" data-desc="6 16 19 25" tabindex="0" role="listitem">
+<title>nat mul assoc &#x2014; proved &#x2014; 2 upstream, 4 downstream</title>
+<rect x="643.0" y="262.0" width="115.2" height="30.0"/>
+<circle class="gdot" cx="652.0" cy="277.0" r="3.2"/>
+<text x="660.0" y="277.0">nat mul assoc</text>
+</g>
+<g class="gnode s-proved" data-n="23" data-anc="" data-desc="7 8 16 25" tabindex="0" role="listitem">
+<title>nat mul comm &#x2014; proved &#x2014; 0 upstream, 4 downstream</title>
+<rect x="1186.2" y="22.0" width="108.8" height="30.0"/>
+<circle class="gdot" cx="1195.2" cy="37.0" r="3.2"/>
+<text x="1203.2" y="37.0">nat mul comm</text>
+</g>
+<g class="gnode s-proved" data-n="24" data-anc="27" data-desc="16 19 25" tabindex="0" role="listitem">
+<title>nat mul one &#x2014; proved &#x2014; 1 upstream, 3 downstream</title>
+<rect x="786.7" y="142.0" width="102.4" height="30.0"/>
+<circle class="gdot" cx="795.7" cy="157.0" r="3.2"/>
+<text x="803.7" y="157.0">nat mul one</text>
+</g>
+<g class="gnode s-proved" data-n="25" data-anc="9 21 22 23 24 27" data-desc="" tabindex="0" role="listitem">
+<title>nat pow add &#x2014; proved &#x2014; 6 upstream, 0 downstream</title>
+<rect x="862.9" y="382.0" width="102.4" height="30.0"/>
+<circle class="gdot" cx="871.9" cy="397.0" r="3.2"/>
+<text x="879.9" y="397.0">nat pow add</text>
+</g>
+<g class="gnode s-proved" data-n="26" data-anc="" data-desc="0 1 2 3 5 10 11 16 19" tabindex="0" role="listitem">
+<title>nat succ add &#x2014; proved &#x2014; 0 upstream, 9 downstream</title>
+<rect x="973.5" y="22.0" width="108.8" height="30.0"/>
+<circle class="gdot" cx="982.5" cy="37.0" r="3.2"/>
+<text x="990.5" y="37.0">nat succ add</text>
+</g>
+<g class="gnode s-proved" data-n="27" data-anc="" data-desc="0 1 2 3 5 10 11 16 19 24 25" tabindex="0" role="listitem">
+<title>nat zero add &#x2014; proved &#x2014; 0 upstream, 11 downstream</title>
+<rect x="806.7" y="22.0" width="108.8" height="30.0"/>
+<circle class="gdot" cx="815.7" cy="37.0" r="3.2"/>
+<text x="823.7" y="37.0">nat zero add</text>
+</g>
+<g class="gnode s-proved" data-n="28" data-anc="4 12 13 29 30" data-desc="" tabindex="0" role="listitem">
+<title>rat add neg inverse &#x2014; proved &#x2014; 5 upstream, 0 downstream</title>
+<rect x="70.2" y="616.0" width="102.4" height="42.0"/>
+<circle class="gdot" cx="79.2" cy="637.0" r="3.2"/>
+<text x="87.2" y="630.5">rat add neg</text>
+<text x="87.2" y="643.5">inverse</text>
+</g>
+<g class="gnode s-proved" data-n="29" data-anc="4 12 13 30" data-desc="28" tabindex="0" role="listitem">
+<title>rat mul renormalises &#x2014; proved &#x2014; 4 upstream, 1 downstream</title>
+<rect x="67.0" y="496.0" width="108.8" height="42.0"/>
+<circle class="gdot" cx="76.0" cy="517.0" r="3.2"/>
+<text x="84.0" y="510.5">rat mul</text>
+<text x="84.0" y="523.5">renormalises</text>
+</g>
+<g class="gnode s-proved" data-n="30" data-anc="4 12 13" data-desc="28 29" tabindex="0" role="listitem">
+<title>rat normalize reduces &#x2014; proved &#x2014; 3 upstream, 2 downstream</title>
+<rect x="63.8" y="376.0" width="115.2" height="42.0"/>
+<circle class="gdot" cx="72.8" cy="397.0" r="3.2"/>
+<text x="80.8" y="390.5">rat normalize</text>
+<text x="80.8" y="403.5">reduces</text>
+</g>
+<g class="gnode s-computed" data-n="31" data-anc="" data-desc="" data-href="card-rado-r4-a5-b3" tabindex="0" role="listitem">
+<title>rado r4 a5 b3 &#x2014; computed &#x2014; 0 upstream, 0 downstream</title>
+<rect x="147.1" y="22.0" width="115.2" height="30.0"/>
+<circle class="gdot" cx="156.1" cy="37.0" r="3.2"/>
+<text x="164.1" y="37.0">rado r4 a5 b3</text>
+</g>
+<g class="gnode s-refuted" data-n="32" data-anc="" data-desc="" data-href="card-fp8-add-not-associative" tabindex="0" role="listitem">
+<title>fp8 add not associative &#x2014; refuted &#x2014; 0 upstream, 0 downstream</title>
+<rect x="426.3" y="16.0" width="102.4" height="42.0"/>
+<circle class="gdot" cx="435.3" cy="37.0" r="3.2"/>
+<text x="443.3" y="30.5">fp8 add not</text>
+<text x="443.3" y="43.5">associative</text>
+</g>
+</g>
+</svg>
+<ul class="ax-legend">
+<li><span class="swatch" style="background:var(--s-computed-fg)"></span>computed</li>
+<li><span class="swatch" style="background:var(--s-proved-fg)"></span>proved</li>
+<li><span class="swatch" style="background:var(--s-refuted-fg)"></span>refuted</li>
+<li>33 nodes, 49 edges, 47 crossings</li>
+</ul>
+<p class="ax-source" id="fig-dag-note">Hover or keyboard-focus a node to isolate its cone; press Enter on one that links to a card.</p>
+</div>
+<figcaption><strong>The prelude component.</strong> An edge runs from a prerequisite to the result that uses it, so everything a node rests on is what sits above it. The four nodes with cards below link to them. Layered in Rust &#x2014; longest-path ranking, median sweeps, isotonic coordinates &#x2014; and drawn as inline SVG; no graph library is involved, and none could be, since the page may not fetch one.</figcaption>
+</figure>
+<section class="blk prose t-essential" id="cards-head">
+<h2 id="four-facts-four-kinds-of-standing">Four facts, four kinds of standing</h2>
+<p>The ledger keeps two status axes on purpose: what <em>this system</em> established, and what mathematics knows. They are different questions, and their disagreement in our favour is a result rather than a bookkeeping error. The four cards below are one of each interesting case.</p>
+</section>
+<article class="card blk t-essential s-proved" id="card-nat-exists-prime-gt" data-claim="There is no largest prime" data-status="PROVED">
+<div class="card-head"><h3>There is no largest prime</h3><span class="ax-axes"><span class="ax-axis-label">here</span><span class="badge badge-proved"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 1l6 2.4v4.2c0 3.6-2.5 6.4-6 7.4-3.5-1-6-3.8-6-7.4V3.4L8 1z"/></svg>PROVED</span><span class="ax-axis-label">literature</span><span class="badge badge-proved"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 1l6 2.4v4.2c0 3.6-2.5 6.4-6 7.4-3.5-1-6-3.8-6-7.4V3.4L8 1z"/></svg>PROVED</span></span></div>
+<p class="card-id">F:nat-exists-prime-gt</p>
+<p class="card-statement">For every natural number n there is a prime p with n &lt; p. Equivalently, there are infinitely many primes.</p>
+<div class="card-formal"><p class="ax-tinylabel">formal statement &middot; lean4 &middot; Nat</p><pre><code>theorem Nat.exists_prime_gt : ((n : AxNat) -&gt; Exists.{1} AxNat (fun (p : AxNat) =&gt; And (AxNat.lt n p) (And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) p) ((d : AxNat) -&gt; ((hd : AxNat.dvd d p) -&gt; Or (Eq.{1} AxNat d (AxNat.succ AxNat.zero)) (Eq.{1} AxNat d p))))))</code></pre></div>
+<p class="ax-source">proof route <code>kernel-lean</code> &middot; axiom footprint <b>empty</b> (axiom-free)</p>
+<p class="ax-tinylabel">evidence</p>
+<ul class="ax-evidence">
+<li>
+<div class="ax-ev-head"><span class="badge badge-checked"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg>CHECKED</span><span class="ax-ev-kind">kernel-term</span><span class="ax-ev-kind">kernel-Nat.exists_prime_gt</span></div>
+<p class="ax-ev-supports">For every natural number n there is a prime p with n &lt; p.</p>
+<div class="ax-cmd"><code id="card-nat-exists-prime-gt-ev0-cmd">cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- exists_prime_gt 2&gt;/dev/null | grep -qxF 'Nat.exists_prime_gt	3	((x0 : AxNat) -&gt; Exists.{1} AxNat (fun (x1 : AxNat) =&gt; And (AxNat.lt x0 x1) (And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x1) (((x2 : AxNat) -&gt; ((x3 : AxNat.dvd x2 x1) -&gt; Or (Eq.{1} AxNat x2 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x2 x1)))))))'</code><button type="button" data-copy-target="card-nat-exists-prime-gt-ev0-cmd">copy</button></div>
+<details class="ax-fold t-detail"><summary>why this counts</summary><div class="ax-foldbody"><p><code>build_nat_prelude</code> admits this through the trusted <code>Kernel::add_declaration</code> gate, which re-checks the proof term against the stated type. Euclid's argument, done over N with no subtraction: take m = n! + 1, which is &gt;= 2 because 1 &lt;= n! (<code>one_le_factorial</code>), and let q be a prime dividing it (<code>exists_prime_dvd</code>). If q &lt;= n then <code>dvd_factorial_of_le</code> gives q | n!, and with q | n!+1 <code>dvd_add_right_cancel_of_pos</code> yields q | 1, refuted by <code>not_dvd_one_of_two_le</code>. So n &lt;= q, and the n = q case falls to the same contradiction after transporting n &lt;= n along the equality, leaving n &lt; q. The command matches the FULL RENDERED TYPE (grep -qxF), not the theorem name: lane <code>nat-prime-divisor</code> measured that a name-only checker survives a weakened statement &#x2014; spelling a primality bound <code>1 &lt;= p</code> instead of <code>2 &lt;= p</code> still type-checks, still admits, and is satisfied by p = 1. The kernel cannot see a weaker statement; only the type can.</p></div></details>
+</li>
+<li>
+<div class="ax-ev-head"><span class="badge badge-checked"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg>CHECKED</span><span class="ax-ev-kind">exhaustive-enumeration</span><span class="ax-ev-kind">footprint-Nat.exists_prime_gt</span></div>
+<p class="ax-ev-supports">axiom_footprint: [] &#x2014; the Nat prelude's trusted surface is empty</p>
+<div class="ax-cmd"><code id="card-nat-exists-prime-gt-ev1-cmd">cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat</code><button type="button" data-copy-target="card-nat-exists-prime-gt-ev1-cmd">copy</button></div>
+<details class="ax-fold t-detail"><summary>why this counts</summary><div class="ax-foldbody"><p><code>theorem_axiom_footprint</code> reports <code>nat Nat.exists_prime_gt 0</code> and <code>integer Nat.exists_prime_gt 0</code>. <code>nat_axiom_inventory</code> bounds it by enumerating the whole trusted surface: a theorem cannot depend on a trusted declaration the environment does not contain. Counting <code>Declaration::Axiom</code> alone would not suffice &#x2014; <code>Opaque</code> has no proof body and <code>Quotient</code> admits <code>Quot.sound</code> &#x2014; so all three kinds are covered.</p></div></details>
+</li>
+</ul>
+<details class="ax-fold t-detail"><summary>note</summary><div class="ax-foldbody"><p><code>open</code> here means NOT ESTABLISHED IN THIS LEDGER; it is not mathematically open, Euclid settled it. It is recorded because it is a live target rather than a curiosity: the prelude already carries <code>Nat.not_dvd_one_add_mul_of_two_le</code>, which is exactly the step <code>no a &gt;= 2 divides 1 + a*t</code> &#x2014; the contradiction at the end of Euclid's argument. 2026-08-17: BOTH missing ingredients have now landed and this fact is one slice from closing. <code>Nat.factorial</code> is declared (computation rules definitional, like <code>Nat.pow</code>) together with <code>Nat.dvd_factorial_of_le : (d n : AxNat) -&gt; AxNat.le 1 d -&gt; AxNat.le d n -&gt; AxNat.dvd d (AxNat.factorial n)</code>, so the number that every positive <code>d &lt;= n</code> divides exists in the kernel and <code>1 + n!</code> is a witness with no divisor in <code>[2, n]</code>. The second ingredient is <code>F:nat-exists-prime-dvd</code>: <code>Nat.exists_prime_dvd : (m : AxNat) -&gt; AxNat.le 2 m -&gt; Exists p, (2 &lt;= p AND forall d, d | p -&gt; d = 1 OR d = p) AND p | m</code>, admitted axiom-free. Note it did NOT go through <code>lt_well_founded</code> as this note previously predicted &#x2014; strong induction on <code>m</code> would have to DECIDE primality of <code>m</code>, a bounded universal quantification whose constructive decision is itself a bounded search, so the search (<code>Nat.least_divisor_search</code>) is done directly by ordinary <code>Nat.rec</code> on the bound and returns the LEAST divisor &gt;= 2, which is prime for free. WHAT REMAINS is exactly two steps, both small: (1) <code>1 &lt;= Nat.factorial n</code> &#x2014; factorial is positive, by induction with <code>one_le_mul</code> at the successor &#x2014; which is what makes <code>2 &lt;= 1 + n!</code> and so lets <code>exists_prime_dvd</code> be applied to it at all; and (2) the assembly. The assembly: take <code>p</code> prime with <code>p | 1 + n!</code>; if <code>p &lt;= n</code> then <code>dvd_factorial_of_le</code> gives <code>p | n!</code>, <code>add_comm</code> reshapes <code>1 + n!</code> to <code>n! + 1</code>, <code>dvd_add_right_cancel_of_pos</code> yields <code>p | 1</code>, and <code>not_dvd_one_of_two_le</code> refutes it; so <code>le_total</code> leaves <code>n &lt;= p</code>, and <code>lt_or_eq_of_le</code> turns that into <code>n &lt; p</code> once <code>n = p</code> is ruled out by the same contradiction. Every lemma named in that paragraph is already admitted axiom-free. formal.statement is written in the SAME core rendering the kernel emits for its own theorems, and uses ONLY symbols <code>build_nat_prelude</code> actually declares (checked against the 119-theorem inventory dumped on 2026-08-14), so it can be dispatched without inventing vocabulary. Primality is spelled out inline because the prelude has no <code>Prime</code> predicate. Binders carry readable names rather than the kernel's <code>x0, x1, ...</code>; that is a pretty-printing difference only, and any admitted proof would render with positional names.</p></div></details>
+</article>
+<p class="ax-source">generated by <code>artifacts/facts/F-nat-exists-prime-gt.json</code></p>
+<section class="blk prose t-detail" id="note-euclid">
+<p>The empty axiom footprint above is the strong claim, not a missing field: <code>Kernel::axiom_footprint</code> walked this declaration's transitive dependencies and found no <code>Axiom</code>, <code>Opaque</code> or <code>Quotient</code> in the closure. The schema requires the field when a fact is <code>proved</code> precisely so that absence and emptiness cannot be confused.</p>
+</section>
+<article class="card blk t-essential s-proved" id="card-nat-gcd-bezout" data-claim="Bezout&#39;s identity holds for the natural gcd" data-status="PROVED">
+<div class="card-head"><h3>Bezout's identity holds for the natural gcd</h3><span class="ax-axes"><span class="ax-axis-label">here</span><span class="badge badge-proved"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 1l6 2.4v4.2c0 3.6-2.5 6.4-6 7.4-3.5-1-6-3.8-6-7.4V3.4L8 1z"/></svg>PROVED</span><span class="ax-axis-label">literature</span><span class="badge badge-proved"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 1l6 2.4v4.2c0 3.6-2.5 6.4-6 7.4-3.5-1-6-3.8-6-7.4V3.4L8 1z"/></svg>PROVED</span></span></div>
+<p class="card-id">F:nat-gcd-bezout</p>
+<p class="card-statement">For all natural numbers m and n there exist natural numbers mp, mn, np, nn with gcd(m, n) + m*mn + n*nn = m*mp + n*np. This is Bezout's identity in balanced form: the usual <code>gcd(m,n) = m*x + n*y</code> with integer x, y, rearranged so both sides are natural numbers.</p>
+<div class="card-formal"><p class="ax-tinylabel">formal statement &middot; lean4 &middot; Nat</p><pre><code>theorem Nat.gcd_bezout : ((x0 : AxNat) -&gt; ((x1 : AxNat) -&gt; AxNat.bezout x0 x1 (AxNat.gcd x0 x1)))</code></pre></div>
+<p class="ax-source">proof route <code>kernel-lean</code> &middot; axiom footprint <b>empty</b> (axiom-free)</p>
+<p class="ax-tinylabel">evidence</p>
+<ul class="ax-evidence">
+<li>
+<div class="ax-ev-head"><span class="badge badge-checked"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg>CHECKED</span><span class="ax-ev-kind">kernel-term</span><span class="ax-ev-kind">kernel-Nat.gcd_bezout</span></div>
+<p class="ax-ev-supports">For all natural numbers m and n there exist natural numbers mp, mn, np, nn with gcd(m, n) + m*mn + n*nn = m*mp + n*np. This is Bezout's identity in balanced form: the usual <code>gcd(m,n) = m*x + n*y</code> with integer x, y, rearranged so both sides are natural numbers.</p>
+<div class="ax-cmd"><code id="card-nat-gcd-bezout-ev0-cmd">cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- gcd_bezout 2&gt;/dev/null | grep -qE '^Nat\.gcd_bezout[[:space:]]'</code><button type="button" data-copy-target="card-nat-gcd-bezout-ev0-cmd">copy</button></div>
+<details class="ax-fold t-detail"><summary>why this counts</summary><div class="ax-foldbody"><p><code>build_nat_prelude</code> admits this theorem through the trusted <code>Kernel::add_declaration</code> gate, which re-checks the proof term against the stated type, so producing the row at all is a machine-checked proof. TIGHTENED 2026-08-16: the command was <code>cargo test -p axeyum-lean-kernel --lib nat_prelude</code>, a whole-suite run that passes or fails identically for every fact citing it and would stay green if THIS theorem were deleted. It now names its own subject twice over &#x2014; <code>nat_theorem_inventory</code> exits non-zero for a name that does not exist, and the <code>grep -q</code> requires the admitted declaration to be printed.</p></div></details>
+</li>
+<li>
+<div class="ax-ev-head"><span class="badge badge-checked"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg>CHECKED</span><span class="ax-ev-kind">exhaustive-enumeration</span><span class="ax-ev-kind">footprint-Nat.gcd_bezout</span></div>
+<p class="ax-ev-supports">axiom_footprint: [] &#x2014; the Nat prelude's trusted surface is empty</p>
+<div class="ax-cmd"><code id="card-nat-gcd-bezout-ev1-cmd">cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat</code><button type="button" data-copy-target="card-nat-gcd-bezout-ev1-cmd">copy</button></div>
+<details class="ax-fold t-detail"><summary>why this counts</summary><div class="ax-foldbody"><p><code>nat_axiom_inventory</code> enumerates the built Nat environment and reports <code>nat: axiom=0 opaque=0 quotient=0 total_trusted=0</code> (re-run 2026-08-14 by this lane). That is the whole environment, not this theorem, and that is what makes it sound as a footprint: a theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual footprint by []. Counting <code>Declaration::Axiom</code> alone would NOT have sufficed &#x2014; <code>Opaque</code> has no proof body and <code>Quotient</code> admits <code>Quot.sound</code>, one of Lean's own axioms &#x2014; so the enumeration covers all three.</p></div></details>
+</li>
+</ul>
+<details class="ax-fold t-detail"><summary>note</summary><div class="ax-foldbody"><p><code>AxNat.bezout m n g</code> abbreviates the balanced form. The balancing is forced: the naturals have no negatives, so a Bezout coefficient that would be negative is moved to the other side of the equation instead. formal.statement is the type the kernel admitted, taken verbatim from Kernel::render_lean over the environment build_nat_prelude produces; it was not transcribed by hand. The sort renders as <code>AxNat</code> (the prelude's own inductive) while declarations are rooted at <code>Nat</code>.</p></div></details>
+</article>
+<p class="ax-source">generated by <code>artifacts/facts/F-nat-gcd-bezout.json</code></p>
+<article class="card blk t-essential s-computed" id="card-rado-r4-a5-b3" data-claim="The four-colour Rado number of 5(x-y) = 3z is 625" data-status="COMPUTED">
+<div class="card-head"><h3>The four-colour Rado number of 5(x-y) = 3z is 625</h3><span class="ax-axes"><span class="ax-axis-label">here</span><span class="badge badge-computed"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 1l7 13H1z"/></svg>COMPUTED</span><span class="ax-axis-label">literature</span><span class="badge badge-open"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2.4A4.6 4.6 0 118 12.6 4.6 4.6 0 018 3.4z"/></svg>OPEN</span><span class="ax-newresult" title="established here, not in the literature">new result</span></span></div>
+<p class="card-id">F:rado-r4-a5-b3</p>
+<p class="card-statement">R_4(5(x-y)=3z) = 625. The lower bound is the a-adic valuation colouring of Chang-De Loera-Wesley's Lemma 4.1 (R_k &gt;= a^k), replayed and verified three ways; the upper bound is a refutation at n = 625 with a self-checked DRAT certificate.</p>
+<div class="card-formal"><p class="ax-tinylabel">formal statement &middot; smtlib2 &middot; QF_BV</p><pre><code>(assert (forall-colourings 625 4 (exists-mono-solution (= (* 5 (- x y)) (* 3 z)))))</code></pre></div>
+<p class="ax-source">proof route <code>search-certificate</code> &middot; rests on <code>rado.encoder-faithfulness</code>, <code>rado.drat-checker-check_drat_backward</code>, <code>rado.certificate-not-re-checked-per-commit</code></p>
+<p class="ax-tinylabel">evidence</p>
+<ul class="ax-evidence">
+<li>
+<div class="ax-ev-head"><span class="badge badge-checked"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg>CHECKED</span><span class="ax-ev-kind">claim-ref</span><span class="ax-ev-kind">claim-rado-r4-a5-b3</span></div>
+<p class="ax-ev-supports">R_4(5(x-y)=3z) = 625, both bounds, with pinned deciding instance and regeneration recipe</p>
+<div class="ax-cmd"><code id="card-rado-r4-a5-b3-ev0-cmd">python3 scripts/validate-claims.py</code><button type="button" data-copy-target="card-rado-r4-a5-b3-ev0-cmd">copy</button></div>
+<p class="ax-source">checked by <code>validate-claims-schema-and-semantics</code></p>
+<p class="ax-source">artifact <code>artifacts/claims/rado/rado-r4-a5-b3/claim.json</code></p>
+<details class="ax-fold t-detail"><summary>why this counts</summary><div class="ax-foldbody"><p>The claim carries the pinned CNF, the replayable lower-bound colouring, and the DRAT regeneration recipe.</p></div></details>
+</li>
+<li>
+<div class="ax-ev-head"><span class="badge badge-checked"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg>CHECKED</span><span class="ax-ev-kind">witness-replay</span><span class="ax-ev-kind">lower-bound-replay</span></div>
+<p class="ax-ev-supports">R_4(5(x-y)=3z) &gt; 624</p>
+<div class="ax-cmd"><code id="card-rado-r4-a5-b3-ev1-cmd">cargo run --release -q -p axeyum-search --example akb2_frontier -- verify 5 3 4 artifacts/claims/rado/rado-r4-a5-b3/witness.txt</code><button type="button" data-copy-target="card-rado-r4-a5-b3-ev1-cmd">copy</button></div>
+<p class="ax-source">checked by <code>akb2_frontier-encoder-view</code>, <code>akb2_frontier-independent-enumerator</code></p>
+<p class="ax-source">artifact <code>artifacts/claims/rado/rado-r4-a5-b3/witness.txt</code></p>
+<details class="ax-fold t-detail"><summary>why this counts</summary><div class="ax-foldbody"><p>Cheap and real: re-verifies the colouring three ways from the stored file in ~0.1s.</p></div></details>
+</li>
+<li>
+<div class="ax-ev-head"><span class="badge badge-checked"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg>CHECKED</span><span class="ax-ev-kind">instance-pin</span><span class="ax-ev-kind">deciding-instance-regeneration</span></div>
+<p class="ax-ev-supports">the refutation's verdict names this exact formula</p>
+<div class="ax-cmd"><code id="card-rado-r4-a5-b3-ev2-cmd">test "$(cargo run --release -q -p axeyum-search --example rado_dump_cnf -- a=5 b=3 k=4 n=625 out=/tmp/rb3.cnf &gt;/dev/null 2&gt;&amp;1; sha256sum /tmp/rb3.cnf | cut -d' ' -f1)" = "$(sha256sum artifacts/claims/rado/rado-r4-a5-b3/F_625.cnf | cut -d' ' -f1)"</code><button type="button" data-copy-target="card-rado-r4-a5-b3-ev2-cmd">copy</button></div>
+<p class="ax-source">checked by <code>rado_dump_cnf-regeneration</code></p>
+<p class="ax-source">artifact <code>artifacts/claims/rado/rado-r4-a5-b3/F_625.cnf</code></p>
+<details class="ax-fold t-detail"><summary>why this counts</summary><div class="ax-foldbody"><p>Regeneration, not storage comparison: the bytes must come back out of the same encoder.</p></div></details>
+</li>
+</ul>
+<details class="ax-fold t-detail"><summary>note</summary><div class="ax-foldbody"><p>The last blank cell of the a &gt;= b+2 row at a=5, k=4, and the interesting one: b=3 is the LAST cell still INSIDE Chang-De Loera-Wesley's hypothesis (gcd(5,3)=1 and 5 &gt;= 3+2 holds exactly), so 625 = a^4 confirms the k&gt;=4 generalisation where it should hold. b=4 sits outside the hypothesis and breaks to 741, which is consistent rather than contradictory.</p><p>The certificate is NOT re-checked per commit &#x2014; a 4-hour re-check cannot be a gate &#x2014; and the axiom_footprint says so rather than implying the proof is re-derived on every run. The three checkers that DO run are cheap and real: the claim's schema and semantics, the lower-bound colouring replayed from its stored file, and the deciding CNF re-derived from the encoder and compared by hash.</p></div></details>
+</article>
+<p class="ax-source">generated by <code>artifacts/facts/F-rado-r4-a5-b3.json</code></p>
+<article class="card blk t-essential s-refuted" id="card-fp8-add-not-associative" data-claim="fp8 E5M2 addition under roundNearestTiesToEven is associative" data-status="REFUTED">
+<div class="card-head"><h3>fp8 E5M2 addition under roundNearestTiesToEven is associative</h3><span class="ax-axes"><span class="ax-axis-label">here</span><span class="badge badge-refuted"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M2.6 1L8 6.4 13.4 1 15 2.6 9.6 8 15 13.4 13.4 15 8 9.6 2.6 15 1 13.4 6.4 8 1 2.6z"/></svg>REFUTED</span><span class="ax-axis-label">literature</span><span class="badge badge-refuted"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M2.6 1L8 6.4 13.4 1 15 2.6 9.6 8 15 13.4 13.4 15 8 9.6 2.6 15 1 13.4 6.4 8 1 2.6z"/></svg>REFUTED</span></span></div>
+<p class="card-id">F:fp8-add-not-associative</p>
+<p class="card-statement">Let F be the IEEE-754-conformant 8-bit format OCP fp8 E5M2, SMT-LIB <code>(_ FloatingPoint 5 3)</code>, and let RNE denote roundNearestTiesToEven. For all values a, b, c of F: fp.add(RNE, fp.add(RNE, a, b), c) equals fp.add(RNE, a, fp.add(RNE, b, c)), where equality is SMT-LIB <code>=</code> on the FloatingPoint sort. THIS PROPOSITION IS FALSE. The fact is recorded with status <code>refuted</code> and carries a concrete counterexample triple, together with the exact number of triples at which it fails.</p>
+<div class="card-formal"><p class="ax-tinylabel">formal statement &middot; smtlib2 &middot; QF_FP</p><pre><code>(assert (= (fp.add RNE (fp.add RNE a b) c) (fp.add RNE a (fp.add RNE b c))))</code></pre></div>
+<p class="ax-source">proof route <code>search-certificate</code> &middot; rests on <code>ieee754-2019-arithmetic-semantics-for-the-OCP-fp8-E5M2-layout</code>, <code>rounding-mode-roundNearestTiesToEven-for-the-headline-witness</code>, <code>smtlib2-floatingpoint-sort-equality-one-nan-value-signed-zeros-distinct</code>, <code>the-witness-replay-semantics-of-axeyum-Evidence::check-and-of-rustc_apfloat</code></p>
+<p class="ax-tinylabel">evidence</p>
+<ul class="ax-evidence">
+<li>
+<div class="ax-ev-head"><span class="badge badge-checked"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg>CHECKED</span><span class="ax-ev-kind">witness-replay</span><span class="ax-ev-kind">fp8-assoc-counterexample-model</span></div>
+<p class="ax-ev-supports">The negation of formal.statement is satisfiable over fp8 E5M2, so the proposition does not hold for all triples.</p>
+<div class="ax-cmd"><code id="card-fp8-add-not-associative-ev0-cmd">test "$(cargo run --release -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/fp8-add-not-associative.smt2 | tail -1)" = sat</code><button type="button" data-copy-target="card-fp8-add-not-associative-ev0-cmd">copy</button></div>
+<p class="ax-source">checked by <code>axeyum-smtcomp-cli-producing-solve</code>, <code>axeyum-Evidence::check-fresh-parse-model-replay</code></p>
+<p class="ax-source">artifact <code>artifacts/facts/smt2/fp8-add-not-associative.smt2</code></p>
+<details class="ax-fold t-detail"><summary>why this counts</summary><div class="ax-foldbody"><p>Ran 2026-08-14: <code>; evidence kind=sat-model certified=1 recheck=na arena=ok ms=27</code>, verdict <code>sat</code>. <code>arena=ok</code> is <code>Evidence::check</code> evaluating the produced model against a FRESH PARSE of the original assertions, so the witness is checked against the source formula, not the lowered form. NOT cross-checked by either external oracle, and that is the finding recorded in this fact's notes: neither z3 4.13.3 nor bitwuzla 0.9.1 can decide any fp8 E5M2 addition query at all.</p></div></details>
+</li>
+<li>
+<div class="ax-ev-head"><span class="badge badge-checked"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg>CHECKED</span><span class="ax-ev-kind">instance-pin</span><span class="ax-ev-kind">fp8-assoc-ground-witness</span></div>
+<p class="ax-ev-supports">The specific triple a = b = 0x01 (the E5M2 subnormal 2^-16), c = 0x08 (the normal 2^-13), pinned as a GROUND formula: (a+b)+c = 0x09 while a+(b+c) = 0x08.</p>
+<div class="ax-cmd"><code id="card-fp8-add-not-associative-ev1-cmd">test "$(cargo run --release -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/fp8-add-not-associative-witness.smt2 | tail -1)" = sat</code><button type="button" data-copy-target="card-fp8-add-not-associative-ev1-cmd">copy</button></div>
+<p class="ax-source">checked by <code>axeyum-smtcomp-cli-ground-evaluation</code>, <code>axeyum-Evidence::check-fresh-parse</code>, <code>z3-4.13.3-ground-instance</code></p>
+<p class="ax-source">artifact <code>artifacts/facts/smt2/fp8-add-not-associative-witness.smt2</code></p>
+<details class="ax-fold t-detail"><summary>why this counts</summary><div class="ax-foldbody"><p>Ran 2026-08-14: <code>sat</code>, 2ms. The file has NO free symbols &#x2014; it asserts the disequality AND both concrete results &#x2014; so a <code>sat</code> verdict is direct evaluation of fp8 E5M2 arithmetic rather than a search, and it pins the witness so the fact cannot drift from the solver. Cross-checked: <code>z3 -smt2</code> also reports <code>sat</code> on this file. That z3 can settle the GROUND instance while returning <code>unknown</code> on the quantifier-free SEARCH is not a contradiction: z3's refusal is in its symbolic fpa2bv tactic, and a closed term is constant-folded before that tactic is reached. bitwuzla 0.9.1 refuses the file outright (unsupported format).</p><p>Arithmetic, for a reader: a+b = 2^-15 exactly; (a+b)+c = 2^-13 * 1.25 = 0x09 exactly; but b+c = 2^-13 * 1.125 is a tie between 0x08 and 0x09 that RNE breaks toward the even significand, giving 0x08, and a + 0x08 ties again to 0x08. Two ties in one direction is what separates the two bracketings.</p></div></details>
+</li>
+<li>
+<div class="ax-ev-head"><span class="badge badge-checked"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg>CHECKED</span><span class="ax-ev-kind">exhaustive-enumeration</span><span class="ax-ev-kind">fp8-assoc-exhaustive-apfloat</span></div>
+<p class="ax-ev-supports">All 2^24 = 16777216 fp8 E5M2 triples enumerated by LLVM's APFloat: the two bracketings disagree at 427036 of them under RNE (2.55%).</p>
+<div class="ax-cmd"><code id="card-fp8-add-not-associative-ev2-cmd">cargo run --release -q -p axeyum-fp --example kernel_equivalence -- assoc</code><button type="button" data-copy-target="card-fp8-add-not-associative-ev2-cmd">copy</button></div>
+<p class="ax-source">checked by <code>rustc_apfloat-0.2.3-llvm-apfloat-exhaustive-enumeration</code></p>
+<p class="ax-source">artifact <code>crates/axeyum-fp/examples/kernel_equivalence.rs</code></p>
+<details class="ax-fold t-detail"><summary>why this counts</summary><div class="ax-foldbody"><p>Ran 2026-08-14, 2.2s. Independent of axeyum's bit-blaster, CNF encoder and SAT core: <code>rustc_apfloat</code> 0.2.3 (LLVM APFloat), comparing SMT-LIB value classes. The failure count is mode-dependent and was measured for all five SMT-LIB rounding modes: RNE 427036, RNA 419652, RTP 4825040, RTN 4825040, RTZ 5375600 &#x2014; of 16777216 triples each. The directed modes fail an order of magnitude more often, and RTP/RTN fail equally often, which is the sign symmetry of the format. The first witness in enumeration order is the same triple under every mode. The binary exits non-zero if the claim ever stops failing.</p></div></details>
+</li>
+</ul>
+<details class="ax-fold t-detail"><summary>note</summary><div class="ax-foldbody"><p>WHY A REFUTATION IS THE VALUABLE RESULT HERE. Every reduction kernel, every tensor-parallel all-reduce and every reordering optimizer relies on being allowed to re-bracket a sum. This fact says precisely how often that is wrong at fp8 E5M2: 427036 of 16777216 triples under RNE, and 5375600 &#x2014; nearly a third &#x2014; under round-toward-zero. That is a measured density with a named witness, not an aphorism.</p><p>THE FINDING ABOUT THE ORACLES. This claim could not be cross-checked against either industrial FP solver, for two DIFFERENT reasons, and both were measured on 2026-08-14 rather than assumed:
+  * z3 4.13.3 returns <code>unknown</code> with <code>(:reason-unknown "addition/subtract with ebits &gt; sbits not supported")</code>. E5M2 has 5 exponent bits and 3 significand bits, so every fp8 addition query is outside its fpa2bv tactic.
+  * bitwuzla 0.9.1 errors out: "Unsupported experimental floating-point format (non-experimental: Float16, Float32, Float64, Float128)". The <code>--fpexp</code> escape named in that message is a BUILD option, not a runtime flag &#x2014; passing it to the binary is rejected as an invalid option, so this build cannot be talked into it.
+So at exactly the width where a claim can be settled by brute force, the two solvers a practitioner would reach for decline. axeyum decides it, and the LLVM-APFloat enumeration is what independently confirms the answer. Note the complementary gap in the other direction: axeyum REFUSES fp8 E4M3, correctly, because E4M3 has no infinities and an all-ones NaN and is therefore not an IEEE format &#x2014; <code>arithmetic_format_supported</code> gates it out, while z3 accepts (_ FloatingPoint 4 4) happily.</p><p>ROUTE. <code>search-certificate</code>: the settlement is a replayable witness, matching the precedent of F:affirming-the-consequent. Refuting a universally quantified claim costs one triple; establishing one costs the whole space &#x2014; and here we paid both, because the enumeration also gives the density.</p></div></details>
+</article>
+<p class="ax-source">generated by <code>artifacts/facts/F-fp8-add-not-associative.json</code></p>
+<section class="blk t-detail" id="argument">
+<h2 id="the-argument-for-the-bottom-node">The argument for the bottom node</h2>
+<p>This block carries <strong>no provenance</strong>, which is the schema's signal that a person wrote it: it is the human argument, not a captured machine trace. The machine's version of it is the proof term the kernel checked, and the card above is where that is recorded.</p>
+<div class="ax-stepbar"><button type="button" data-step="prev">prev</button><button type="button" data-step="next">next</button><span>or press <kbd>j</kbd> / <kbd>k</kbd> with the list focused</span></div>
+<ol class="ax-steps">
+<li><div>
+<div class="ax-step-op">suppose</div>
+<div class="ax-step-io">n : Nat</div>
+<div class="ax-step-io">&rarr; consider N = n! + 1</div>
+<div class="ax-step-note">Any prime dividing N is larger than n, if one exists.</div>
+</div></li>
+<li><div>
+<div class="ax-step-op">apply</div>
+<div class="ax-step-io">N &gt;= 2</div>
+<div class="ax-step-io">&rarr; N has a prime divisor p</div>
+<div class="ax-step-note">This is <code>F:nat-exists-prime-dvd</code>, one layer up in the graph.</div>
+</div></li>
+<li><div>
+<div class="ax-step-op">suppose for contradiction</div>
+<div class="ax-step-io">p &lt;= n</div>
+<div class="ax-step-io">&rarr; p divides n!</div>
+<div class="ax-step-note">p is one of the factors of n!.</div>
+</div></li>
+<li><div>
+<div class="ax-step-op">apply</div>
+<div class="ax-step-io">p | n! and p | n! + 1</div>
+<div class="ax-step-io">&rarr; p | 1</div>
+<div class="ax-step-note">This is <code>F:nat-dvd-add</code>, which is why that node is an ancestor of this one and not merely nearby.</div>
+</div></li>
+<li><div>
+<div class="ax-step-op">conclude</div>
+<div class="ax-step-io">p | 1 and p prime</div>
+<div class="ax-step-io">&rarr; contradiction; so p &gt; n</div>
+<div class="ax-step-note">There is no largest prime.</div>
+</div></li>
+</ol>
+</section>
+<section class="blk t-detail" id="tbl-cone">
+<h2 id="the-trust-base-of-euclid-s-theorem-row-by-row">The trust base of Euclid's theorem, row by row</h2>
+<div class="ax-tablewrap"><table class="ax-table">
+<caption>Every fact in the upward cone of <code>F:nat-exists-prime-gt</code>. Generated from the ledger files; the <code>axioms</code> column counts <code>axiom_footprint</code> entries, so a zero is a measured claim.</caption>
+<thead><tr><th class="">fact</th><th class="">status</th><th class="">route</th><th class="num">depends on</th><th class="num">axioms</th><th class="num">evidence rows</th></tr></thead>
+<tbody>
+<tr><td class="">nat add assoc</td><td class="">proved</td><td class="">kernel-lean</td><td class="num">0</td><td class="num">0</td><td class="num">2</td></tr>
+<tr><td class="">nat div mod exists</td><td class="">proved</td><td class="">kernel-lean</td><td class="num">0</td><td class="num">0</td><td class="num">2</td></tr>
+<tr><td class="">nat dvd add</td><td class="">proved</td><td class="">kernel-lean</td><td class="num">1</td><td class="num">0</td><td class="num">2</td></tr>
+<tr><td class="">nat exists prime dvd</td><td class="">proved</td><td class="">kernel-lean</td><td class="num">2</td><td class="num">0</td><td class="num">2</td></tr>
+<tr><td class="">nat exists prime gt</td><td class="">proved</td><td class="">kernel-lean</td><td class="num">2</td><td class="num">0</td><td class="num">2</td></tr>
+<tr><td class="">nat left distrib</td><td class="">proved</td><td class="">kernel-lean</td><td class="num">1</td><td class="num">0</td><td class="num">2</td></tr>
+</tbody>
+</table></div>
+<p class="ax-source">generated by <code>artifacts/facts/*.json</code></p>
+</section>
+<details class="ax-fold card ax-cert blk t-essential s-checked" id="cert-ledger">
+<summary><span class="badge badge-checked"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg>CHECKED</span><span>The fact-ledger validator, run while this page was built</span><span class="ax-exit-ok">exit 0</span></summary>
+<div class="ax-foldbody">
+<dl class="ax-cert-grid">
+<dt>kind</dt><dd><code>ReportRun</code></dd>
+<dt>generator</dt><dd><code>scripts/validate-facts.py</code></dd>
+</dl>
+<p class="ax-tinylabel">inputs, by content hash</p>
+<div class="ax-tablewrap"><table class="ax-table"><thead><tr><th>path</th><th>sha256</th></tr></thead><tbody>
+<tr><td><code>artifacts/facts/</code></td><td class="ax-hash">077da42c5db7990fed63b48a223096b784349641c55ec7ae1efe1dba3f529154</td></tr>
+<tr><td><code>artifacts/ontology/fact.schema.json</code></td><td class="ax-hash">ca3d41c6386a4d75424052a0f44ea4d794a8d139b8f98bd4d1c14e32913a19aa</td></tr>
+</tbody></table></div>
+<p class="ax-tinylabel">replay this yourself</p>
+<div class="ax-cmd"><code id="cert-ledger-replay">python3 scripts/validate-facts.py</code><button type="button" data-copy-target="cert-ledger-replay">copy</button></div>
+<details class="ax-fold t-archive"><summary>raw run record</summary><div class="ax-foldbody"><pre><code>{
+  "command": "python3 scripts/validate-facts.py",
+  "exit_status": 0,
+  "novel_lines": [
+    "NOVEL -- established here, not settled in the literature: F:rado-r4-a5-b3, F:rado-r4-a5-b4"
+  ],
+  "stdout_tail": [
+    "324 facts checked, 0 errors  (computed=2 conjectured=3 open=217 proved=99 refuted=3)",
+    "  routes: cas-certificate=19 imported-kernel-lean=5 kernel-lean=43 search-certificate=12 smt-clausal=9 smt-term-level=16; 42 axiom-free on kernel-lean (not comparable across routes)",
+    "  5 fact(s) on an IMPORTED route -- proof term checked here, authored elsewhere; not evidence of construction",
+    "  127 evidence row(s) re-derived by 2+ independent checkers",
+    "  external: 205 settled elsewhere but not here (import backlog), 8 unclassified",
+    "  NOVEL -- established here, not settled in the literature: F:rado-r4-a5-b3, F:rado-r4-a5-b4"
+  ]
+}</code></pre></div></details>
+</div>
+</details>
+<details class="ax-fold card ax-cert blk t-detail s-checked" id="cert-rado">
+<summary><span class="badge badge-checked"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg>CHECKED</span><span>The pinned artifacts behind R_4(5(x-y)=3z) = 625</span><span class="ax-exit-none">not re-run: a four-hour re-check cannot be a gate; the three cheap checkers on the card above are the ones that run</span></summary>
+<div class="ax-foldbody">
+<dl class="ax-cert-grid">
+<dt>kind</dt><dd><code>SearchCertificate</code></dd>
+<dt>generator</dt><dd><code>axeyum native proof-producing CDCL (ADR-0002)</code></dd>
+</dl>
+<p class="ax-tinylabel">inputs, by content hash</p>
+<div class="ax-tablewrap"><table class="ax-table"><thead><tr><th>path</th><th>sha256</th></tr></thead><tbody>
+<tr><td><code>artifacts/claims/rado/rado-r4-a5-b3/claim.json</code></td><td class="ax-hash">a3f6de260c858473355b2bf29f458b884174be7188d72d48fd5e572588d60834</td></tr>
+<tr><td><code>artifacts/claims/rado/rado-r4-a5-b3/witness.txt</code></td><td class="ax-hash">eaf9ab5ca456b91ed8304fe241990c01ae34674c709b322290c8458d3f06990f</td></tr>
+<tr><td><code>artifacts/claims/rado/rado-r4-a5-b3/F_625.cnf</code></td><td class="ax-hash">a59d88ed13b8256d1bcfdf247139beede7f93945129c8d607ac3410c391cb623</td></tr>
+</tbody></table></div>
+<p class="ax-tinylabel">replay this yourself</p>
+<div class="ax-cmd"><code id="cert-rado-replay">cargo run --release -q -p axeyum-search --example akb2_frontier -- verify 5 3 4 artifacts/claims/rado/rado-r4-a5-b3/witness.txt</code><button type="button" data-copy-target="cert-rado-replay">copy</button></div>
+<details class="ax-fold t-archive"><summary>raw run record</summary><div class="ax-foldbody"><pre><code>{
+  "axiom_footprint": [
+    "rado.encoder-faithfulness",
+    "rado.drat-checker-check_drat_backward",
+    "rado.certificate-not-re-checked-per-commit"
+  ],
+  "note": "Hashes computed from the checked-in artifacts at build time. There is deliberately no exit status here: this certificate is not re-run per commit, and the fact says so in its axiom_footprint rather than implying it is."
+}</code></pre></div></details>
+</div>
+</details>
+<figure class="ax-fig blk t-detail ax-wide" id="fig-growth">
+<div class="ax-figframe">
+<svg class="ax-plot" viewBox="0 0 620 320" width="620" height="320" role="group" aria-label="**Proved facts in the ledger, cumulative.** One point per day on which at least one fact reached `proved`, taken from each file&#39;s `provenance.date`. The x axis is days since the first such date. Vertices carry their value as a native tooltip, so it works with scripting disabled.">
+<line class="grid" x1="56.0" y1="243.4" x2="602.0" y2="243.4"/>
+<text class="tick" x="49.0" y="246.9" text-anchor="end">70</text>
+<line class="grid" x1="56.0" y1="170.5" x2="602.0" y2="170.5"/>
+<text class="tick" x="49.0" y="174.0" text-anchor="end">80</text>
+<line class="grid" x1="56.0" y1="97.6" x2="602.0" y2="97.6"/>
+<text class="tick" x="49.0" y="101.1" text-anchor="end">90</text>
+<line class="grid" x1="56.0" y1="24.8" x2="602.0" y2="24.8"/>
+<text class="tick" x="49.0" y="28.3" text-anchor="end">100</text>
+<text class="tick" x="56.0" y="294.0" text-anchor="middle">0</text>
+<text class="tick" x="192.5" y="294.0" text-anchor="middle">1</text>
+<text class="tick" x="329.0" y="294.0" text-anchor="middle">2</text>
+<text class="tick" x="465.5" y="294.0" text-anchor="middle">3</text>
+<text class="tick" x="602.0" y="294.0" text-anchor="middle">4</text>
+<path class="axis" d="M 56.0 14.0 L 56.0 276.0 L 602.0 276.0"/>
+<text class="axlabel" x="329.0" y="314.0" text-anchor="middle">days since the first proved fact</text>
+<text class="axlabel" x="13.0" y="145.0" text-anchor="middle" transform="rotate(-90 13.0 145.0)">facts at status proved</text>
+<path class="series" d="M 56.0 257.9 L 192.5 257.9 L 192.5 97.6 L 329.0 97.6 L 329.0 68.5 L 465.5 68.5 L 465.5 53.9 L 602.0 53.9 L 602.0 32.1"/>
+<circle class="vertex" cx="56.0" cy="257.9" r="3.6" tabindex="0" data-x="0" data-y="68"><title>(0, 68)</title></circle>
+<circle class="vertex" cx="192.5" cy="97.6" r="3.6" tabindex="0" data-x="1" data-y="90"><title>(1, 90)</title></circle>
+<circle class="vertex" cx="329.0" cy="68.5" r="3.6" tabindex="0" data-x="2" data-y="94"><title>(2, 94)</title></circle>
+<circle class="vertex" cx="465.5" cy="53.9" r="3.6" tabindex="0" data-x="3" data-y="96"><title>(3, 96)</title></circle>
+<circle class="vertex" cx="602.0" cy="32.1" r="3.6" tabindex="0" data-x="4" data-y="99"><title>(4, 99)</title></circle>
+</svg>
+</div>
+<figcaption><strong>Proved facts in the ledger, cumulative.</strong> One point per day on which at least one fact reached <code>proved</code>, taken from each file's <code>provenance.date</code>. The x axis is days since the first such date. Vertices carry their value as a native tooltip, so it works with scripting disabled.</figcaption>
+</figure>
+<p class="blk t-archive" id="archive-ledger">Left out of this document: <code>artifacts/facts/</code> &mdash; the whole ledger, 324 files, of which this page renders 33</p>
+<section class="blk prose t-essential" id="outro">
+<h2 id="what-this-file-is">What this file is</h2>
+<p>One file. The stylesheet, the script, both figures and every glyph are inside it, and opening it makes no network request &#x2014; a property checked by <code>lint_self_contained</code>, which has a unit test per violation class so that it can actually fail. Print it and the reading-level control disappears, every fold opens, and the badges stay distinguishable because each one carries a shape as well as a colour.</p>
+</section>
+</main>
+<footer class="ax-foot"><div class="ax-doc">
+<p>This file is self-contained: it embeds its own stylesheet, script and figures and makes no network request when opened. Every status badge above is data carried by the document, not a judgement made while rendering it.</p>
+<p>Rendered by <code>render/src/emit_html.rs</code>. Regenerate with the command in the document header, then <code>cargo test --features html -- preview</code>.</p>
+</div></footer>
+<script>
+/* Axeyum render strand -- inlined page script.
+ *
+ * Rules this file lives by:
+ *   - Every feature is optional. The document is fully readable with this
+ *     script removed: detail blocks are <details>, the graph is static SVG,
+ *     plot tooltips are native <title>, and the reading level defaults to
+ *     "full" via a body attribute the emitter writes.
+ *   - Nothing here may reach the network. No fetch, no XHR, no dynamic
+ *     import, no new Image(). lint_self_contained() rejects those tokens.
+ *   - Each feature is installed inside its own try/catch so one failure
+ *     cannot take the others down.
+ */
+(function () {
+  "use strict";
+
+  function guard(name, fn) {
+    try { fn(); } catch (e) {
+      if (window.console && console.warn) { console.warn("axeyum: " + name + " disabled: " + e); }
+    }
+  }
+
+  var $ = function (sel, root) { return (root || document).querySelector(sel); };
+  var $$ = function (sel, root) {
+    return Array.prototype.slice.call((root || document).querySelectorAll(sel));
+  };
+
+  /* -------- 1. reading level: summary / full / forensic -------- */
+  guard("reading-level", function () {
+    var group = $(".ax-levels");
+    if (!group) { return; }
+    var buttons = $$("button[data-level]", group);
+    function apply(level) {
+      document.body.setAttribute("data-level", level);
+      buttons.forEach(function (b) {
+        b.setAttribute("aria-pressed", b.getAttribute("data-level") === level ? "true" : "false");
+      });
+      // Forensic means "show me everything", so folds open; leaving the other
+      // levels alone preserves whatever the reader opened by hand.
+      if (level === "forensic") {
+        $$("details.ax-fold").forEach(function (d) { d.open = true; });
+      }
+    }
+    buttons.forEach(function (b) {
+      b.addEventListener("click", function () { apply(b.getAttribute("data-level")); });
+    });
+    apply(document.body.getAttribute("data-level") || "full");
+  });
+
+  /* -------- 2. copy-to-clipboard for replay commands -------- */
+  guard("copy", function () {
+    $$("button[data-copy-target]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var src = document.getElementById(btn.getAttribute("data-copy-target"));
+        if (!src) { return; }
+        var text = src.textContent;
+        var done = function (ok) {
+          btn.setAttribute("data-copied", ok ? "1" : "0");
+          var was = btn.getAttribute("data-label") || btn.textContent;
+          btn.setAttribute("data-label", was);
+          btn.textContent = ok ? "copied" : "select it";
+          window.setTimeout(function () {
+            btn.textContent = was;
+            btn.removeAttribute("data-copied");
+          }, 1400);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(false); });
+        } else {
+          // Older engines: select the text so the reader can copy it manually.
+          var r = document.createRange();
+          r.selectNodeContents(src);
+          var sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(r);
+          done(false);
+        }
+      });
+    });
+  });
+
+  /* -------- 3. dependency graph: ancestor/descendant cone -------- */
+  guard("graph-cone", function () {
+    $$("svg.ax-graph").forEach(function (svg) {
+      var nodes = $$("g.gnode", svg);
+      var edges = $$("path.gedge", svg);
+      function clear() {
+        svg.classList.remove("coning");
+        nodes.forEach(function (n) { n.classList.remove("cone-self", "cone-anc", "cone-desc"); });
+        edges.forEach(function (e) { e.classList.remove("cone-edge"); });
+      }
+      function ids(el, attr) {
+        var v = el.getAttribute(attr);
+        return v ? v.split(" ") : [];
+      }
+      function light(node) {
+        clear();
+        var self = node.getAttribute("data-n");
+        var anc = ids(node, "data-anc");
+        var desc = ids(node, "data-desc");
+        var inCone = {};
+        inCone[self] = "self";
+        anc.forEach(function (i) { inCone[i] = "anc"; });
+        desc.forEach(function (i) { inCone[i] = "desc"; });
+        nodes.forEach(function (n) {
+          var k = inCone[n.getAttribute("data-n")];
+          if (k) { n.classList.add("cone-" + k); }
+        });
+        edges.forEach(function (e) {
+          var a = e.getAttribute("data-from"), b = e.getAttribute("data-to");
+          if (inCone[a] && inCone[b]) { e.classList.add("cone-edge"); }
+        });
+        svg.classList.add("coning");
+      }
+      nodes.forEach(function (n) {
+        n.addEventListener("mouseenter", function () { light(n); });
+        n.addEventListener("focus", function () { light(n); });
+        n.addEventListener("blur", clear);
+        n.addEventListener("click", function () {
+          var href = n.getAttribute("data-href");
+          if (!href) { return; }
+          var target = document.getElementById(href);
+          if (target) {
+            target.scrollIntoView({ block: "start", behavior: "smooth" });
+            target.setAttribute("tabindex", "-1");
+            target.focus({ preventScroll: true });
+          }
+        });
+        n.addEventListener("keydown", function (ev) {
+          if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); n.dispatchEvent(new Event("click")); }
+        });
+      });
+      svg.addEventListener("mouseleave", clear);
+    });
+  });
+
+  /* -------- 4. steps player: j / k walk the derivation -------- */
+  guard("steps", function () {
+    $$("ol.ax-steps").forEach(function (list) {
+      var items = $$("li", list);
+      if (!items.length) { return; }
+      var cur = -1;
+      function show(i, scroll) {
+        if (i < 0) { i = 0; }
+        if (i >= items.length) { i = items.length - 1; }
+        if (i === cur) { return; }
+        if (cur >= 0) { items[cur].removeAttribute("aria-current"); }
+        cur = i;
+        items[cur].setAttribute("aria-current", "step");
+        items[cur].setAttribute("tabindex", "0");
+        if (scroll) { items[cur].scrollIntoView({ block: "nearest" }); }
+      }
+      items.forEach(function (li, i) {
+        li.addEventListener("click", function () { show(i, false); });
+      });
+      list.setAttribute("tabindex", "0");
+      list.addEventListener("keydown", function (ev) {
+        var k = ev.key;
+        if (k === "j" || k === "ArrowDown") { show(cur + 1, true); ev.preventDefault(); }
+        else if (k === "k" || k === "ArrowUp") { show(cur < 0 ? 0 : cur - 1, true); ev.preventDefault(); }
+        else if (k === "Home") { show(0, true); ev.preventDefault(); }
+        else if (k === "End") { show(items.length - 1, true); ev.preventDefault(); }
+      });
+      var bar = list.previousElementSibling;
+      if (bar && bar.classList.contains("ax-stepbar")) {
+        var prev = $("button[data-step='prev']", bar);
+        var next = $("button[data-step='next']", bar);
+        if (prev) { prev.addEventListener("click", function () { show(cur < 0 ? 0 : cur - 1, true); }); }
+        if (next) { next.addEventListener("click", function () { show(cur + 1, true); }); }
+      }
+    });
+  });
+})();
+
+</script>
+</body>
+</html>
