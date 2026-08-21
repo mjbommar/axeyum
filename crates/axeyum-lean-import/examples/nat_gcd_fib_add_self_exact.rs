@@ -443,7 +443,7 @@ fn run_target_native_gcd_divisibility_capsule(
     let generic = find_name(&kernel, GCD_DIVISIBILITY_GENERIC)?;
     let arguments = [
         find_name(&kernel, GCD_ZERO_LEFT_GENERIC)?,
-        find_name(&kernel, COPRIME_GCD_SUCC_LEAF)?,
+        find_name(&kernel, "Axeyum.Autogenesis.officialNatGcdSuccClosedV1")?,
         find_name(&kernel, "Axeyum.Autogenesis.modQuotientWitnessV4")?,
         find_name(&kernel, TARGET_DVD_REFL)?,
         find_name(&kernel, TARGET_DVD_MUL_RIGHT)?,
