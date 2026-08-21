@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-subtraction-recurrence-root-result",
+  "state": "two-recurrence-roots-empty-footprint",
+  "plan": {"path": "artifacts/autogenesis/mathlib-nat-subtraction-recurrence-root-plan-v1.json", "sha256": "ed1ee44977dac86f89afabdcb7fc29e966f0d040c2e0dd1307fcdfbdac19d047"},
+  "evidence": {"pack": "/nas3/data/axeyum/autogenesis/reference-packs/nat-subtraction-recurrence-roots-v1", "manifest_sha256": "8bfc35ac15a4046f9e1784795fc17051071d834b9fc90b87630aabffcd3c5717", "stream_sha256": "40155e15e454081d1dbbd3ebcf2986134a83b4e09dba2c7e6fd9073ba7c830d6", "stream_bytes": 56779, "audit_sha256": "a49e3bfab463aae064f4445f3c62158397f84bc6f257daecaa613f8a976e8656"},
+  "roots": [
+    {"name": "Nat.succ_sub_succ_eq_sub", "declaration_sha256": "d240eaa3bf589cfae527b485c06355328c0a073ad0c550ee38f414403dbfed87", "axiom_footprint": [], "direct_theorem_dependencies": ["congrArg"]},
+    {"name": "Nat.add_succ", "declaration_sha256": "b66caac8eb1d5a71a991f085b3c99845b6aa88ac7b0729ced44ad6d604e27574", "axiom_footprint": [], "direct_theorem_dependencies": []}
+  ],
+  "execution": {"exporter_invocations": 1, "importer_runs": 1, "proof_bearing_stream_reads": 1, "theorem_submissions": 0, "retries": 0, "ledger_writes": 0},
+  "authority": {"support_qualification": 2, "target_theorem_credit": 0, "ledger_writes": 0}
+}
