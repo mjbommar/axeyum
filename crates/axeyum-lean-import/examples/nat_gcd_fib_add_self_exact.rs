@@ -17,7 +17,7 @@ use axeyum_lean_import::{
     verify_checked_theorem_specialization,
 };
 use axeyum_lean_kernel::{
-    BinderInfo, Declaration, ExprId, Kernel, Lean4ExportMetadata, LevelId, NameId,
+    BinderInfo, Declaration, ExprId, ExprNode, Kernel, Lean4ExportMetadata, LevelId, NameId,
 };
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -231,6 +231,14 @@ fn run() -> Result<(), String> {
         ))
     {
         return run_fib_gcd_exists_rec_prefix_diagnostic(args);
+    }
+    let mut args = std::env::args_os().skip(1);
+    if args.next().as_deref()
+        == Some(std::ffi::OsStr::new(
+            "--target-native-fib-gcd-exists-rec-minor-type-diagnostic",
+        ))
+    {
+        return run_fib_gcd_exists_rec_minor_type_diagnostic(args);
     }
     let mut args = std::env::args_os().skip(1);
     if args.next().as_deref() == Some(std::ffi::OsStr::new("--target-native-goal-audit")) {
@@ -1665,6 +1673,104 @@ fn run_fib_gcd_exists_rec_prefix_diagnostic(
             "state":"all-five-exists-rec-prefixes-inferred",
             "prefixes":prefixes,
             "execution":{"complete_diagnostics":1,"helper_theorem_submissions":1,"prefix_inferences":5,"target_theorem_submissions":0,"proof_values_rendered":0,"capsule_writes":0,"retries":0,"ledger_writes":0}
+        }))
+        .map_err(|error| error.to_string())?
+    );
+    Ok(())
+}
+
+#[allow(clippy::too_many_lines)]
+fn run_fib_gcd_exists_rec_minor_type_diagnostic(
+    mut args: impl Iterator<Item = std::ffi::OsString>,
+) -> Result<(), String> {
+    let greatest_path = path(&mut args)?;
+    let shift_path = path(&mut args)?;
+    if args.next().is_some() {
+        return Err("usage: nat_gcd_fib_add_self_exact \
+             --target-native-fib-gcd-exists-rec-minor-type-diagnostic \
+             <gcd-greatest> <gcd-fib-add-self>"
+            .to_owned());
+    }
+    let greatest = import_bound(&greatest_path, GCD_GREATEST_CAPSULE, "gcd-greatest")?;
+    let shift = import_bound(&shift_path, GCD_FIB_SHIFT_CAPSULE, "gcd-fib-add-self")?;
+    let composed = compose_checked_theorem_slice(shift.kernel(), greatest.kernel(), &[TARGET])
+        .map_err(|error| format!("minor-type diagnostic composition declined: {error:?}"))?;
+    verify_checked_theorem_composition(
+        shift.kernel(),
+        greatest.kernel(),
+        composed.kernel(),
+        composed.receipt(),
+    )
+    .map_err(|error| format!("minor-type diagnostic composition did not replay: {error:?}"))?;
+    let mut kernel = composed.kernel().clone();
+    declare_fib_gcd_quotient_iteration(&mut kernel)?;
+    let mut d = Dev::new(&mut kernel)?;
+    let quotient = d.exact("Axeyum.Autogenesis.modQuotientWitnessV4")?;
+    let helper = d.exact(FIB_GCD_ITERATION)?;
+    let gcd_comm = d.exact(CLEAN_GCD_COMM)?;
+    let nat = d.nat_ty();
+    let n_fv = d.fresh();
+    let n = d.kernel.fvar(n_fv);
+    let predecessor_fv = d.fresh();
+    let predecessor = d.kernel.fvar(predecessor_fv);
+    let m = d.succ(predecessor);
+    let hm_ty = {
+        let zero = d.zero();
+        let one = d.succ(zero);
+        d.le(one, m)
+    };
+    let remainder = d.modulo(n, m)?;
+    let ih_ty = fib_gcd_statement(&mut d, remainder, m);
+    let hm_fv = d.fresh();
+    let hm = d.kernel.fvar(hm_fv);
+    let ih_fv = d.fresh();
+    let ih = d.kernel.fvar(ih_fv);
+    let witness = d.lemma(quotient, &[m, n, hm]);
+    let parts = build_fib_gcd_witness_elim(&mut d, m, n, remainder, ih, witness, helper, gcd_comm);
+    let prefix_nat = d.apply(parts.rec, &[parts.nat]);
+    let prefix_predicate = d.apply(prefix_nat, &[parts.predicate]);
+    let prefix_motive = d.apply(prefix_predicate, &[parts.motive]);
+    let close_with_ih = |d: &mut Dev<'_>, value: ExprId| {
+        let value = d.lam(ih_fv, ih_ty, value);
+        let value = d.lam(predecessor_fv, nat, value);
+        d.lam(n_fv, nat, value)
+    };
+    let closed_prefix = close_with_ih(&mut d, prefix_motive);
+    let closed_minor = close_with_ih(&mut d, parts.minor);
+    let expected_function_type = d
+        .kernel
+        .infer(closed_prefix)
+        .map_err(|error| format!("closed motive-prefix type inference failed: {error:?}"))?;
+    let actual_function_type = d
+        .kernel
+        .infer(closed_minor)
+        .map_err(|error| format!("closed minor type inference failed: {error:?}"))?;
+    let strip_three = |kernel: &Kernel, mut ty: ExprId| -> Result<ExprId, String> {
+        for _ in 0..3 {
+            ty = match kernel.expr_node(ty) {
+                ExprNode::Pi(_, _, body, _) => *body,
+                _ => return Err("closed comparison type lost an outer Pi".to_owned()),
+            };
+        }
+        Ok(ty)
+    };
+    let expected_function = strip_three(d.kernel, expected_function_type)?;
+    let expected_minor = match d.kernel.expr_node(expected_function) {
+        ExprNode::Pi(_, domain, _, _) => *domain,
+        _ => return Err("motive prefix does not expect a minor".to_owned()),
+    };
+    let actual_minor = strip_three(d.kernel, actual_function_type)?;
+    let definitionally_equal = d.kernel.def_eq(expected_minor, actual_minor);
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "schema_version":1,
+            "kind":"axeyum-autogenesis-nat-fib-gcd-exists-rec-minor-type-diagnostic-v1",
+            "state":"expected-and-actual-closed-minor-types-rendered",
+            "expected":{"type":d.kernel.render_lean(expected_minor),"sha256":canonical_expression_sha256(d.kernel,expected_minor)?},
+            "actual":{"type":d.kernel.render_lean(actual_minor),"sha256":canonical_expression_sha256(d.kernel,actual_minor)?},
+            "definitionally_equal":definitionally_equal,
+            "execution":{"complete_diagnostics":1,"helper_theorem_submissions":1,"type_inferences":2,"target_theorem_submissions":0,"proof_values_rendered":0,"capsule_writes":0,"retries":0,"ledger_writes":0}
         }))
         .map_err(|error| error.to_string())?
     );
