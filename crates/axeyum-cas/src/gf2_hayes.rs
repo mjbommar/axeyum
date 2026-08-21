@@ -3372,6 +3372,54 @@ pub struct SawinProjectiveEigenlineReport {
     pub frobenius_weighted_trace_bound_certified: bool,
 }
 
+/// Scheme-theoretic status of the odd-endpoint `Frob*c` fixed locus.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SawinOddFrobeniusCycleLocalStatus {
+    /// Every projective fixed point is smooth, the zero differential of
+    /// Frobenius makes the fixed intersection transverse, and its local
+    /// intersection multiplicity is one.
+    SmoothTransverseUnitTerms,
+}
+
+/// Exact local geometry of the odd-endpoint `Frob*c` fixed locus.
+///
+/// A point fixed by binary Frobenius followed by an `n`-cycle is determined
+/// by one element whose Frobenius orbit has degree `e|n`; its coordinate
+/// polynomial is `Q^(n/e)`.  When `n` is odd, every multiplicity `n/e` is
+/// odd.  If `e<n`, then `e<=n/3<=ell-1`, and the first `e` zero coefficients
+/// recover `Q` triangularly, forcing `Q=x^e`.  Thus every proper-orbit stratum
+/// is the affine cone vertex, while every nonvertex point has `n` distinct
+/// coordinates.
+///
+/// On the zero-coefficient fibre, the Jacobian rows at a point with
+/// coordinates `a_i` are `(a_i^(j-1))_i`.  They therefore have rank `ell` at
+/// every nonvertex fixed point.  Absolute Frobenius has zero differential, so
+/// the graph of `Frob*c` meets the diagonal transversely there and every local
+/// intersection term is one.  This removes singular local terms but does not
+/// bound their global sum.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SawinOddFrobeniusCycleFixedLocusReport {
+    /// Odd endpoint degree `n=2ell+1`.
+    pub degree: usize,
+    /// Lemire/Hayes level `ell=(n-1)/2`.
+    pub ell: usize,
+    /// Proper Frobenius-orbit degrees `e|n`.
+    pub proper_orbit_degrees: Vec<usize>,
+    /// Largest proper orbit degree (one when `n` is prime).
+    pub largest_proper_orbit_degree: usize,
+    /// Every proper-orbit fixed stratum collapses to the affine cone vertex.
+    pub proper_orbit_strata_collapse_to_vertex_certified: bool,
+    /// Every nonvertex fixed point has exact Frobenius orbit degree `n`.
+    pub nonvertex_exact_orbit_degree_certified: bool,
+    /// Rank `ell` of the zero-coefficient Jacobian at every nonvertex point.
+    pub nonvertex_jacobian_rank: usize,
+    /// Complete scheme-theoretic local status of the projective fixed locus.
+    pub projective_local_status: SawinOddFrobeniusCycleLocalStatus,
+    /// Explicit boundary: smooth transverse local terms give no numerical
+    /// estimate for their global Frobenius trace.
+    pub frobenius_weighted_trace_bound_certified: bool,
+}
+
 /// One repeated-root stratum selected by a long-cycle Frobenius condition.
 ///
 /// If the distinct-root orbit has degree `e|n`, its characteristic polynomial
@@ -9939,6 +9987,71 @@ pub fn sawin_projective_eigenline_report(
         tame_projective_normal_weight_exponents,
         tame_eigenline_local_status,
         projective_long_cycle_action_free: false,
+        frobenius_weighted_trace_bound_certified: false,
+    })
+}
+
+/// Certify that the odd-endpoint projective `Frob*c` fixed locus has no
+/// repeated-root or singular local terms.
+///
+/// For a proper orbit degree `e|n`, oddness of `n` makes the multiplicity
+/// `n/e` odd.  Its first `e` powered coefficients recover the monic base
+/// polynomial triangularly.  Since every proper divisor of an odd `n` is at
+/// most `n/3<=ell-1`, the endpoint zero prefix forces that base polynomial to
+/// be `x^e`, hence the full tuple is the cone vertex.  All projective fixed
+/// points consequently have `n` distinct coordinates.  The endpoint
+/// Jacobian is Vandermonde there, and the zero differential of Frobenius makes
+/// the fixed-point intersections transverse with local term one.
+///
+/// This is a local theorem only.  The returned report deliberately leaves the
+/// global Frobenius-weighted trace bound uncertified.
+///
+/// # Errors
+///
+/// Rejects even degrees, degrees below five, excessive divisor populations,
+/// or a failed endpoint/divisor invariant.
+pub fn sawin_odd_frobenius_cycle_fixed_locus_report(
+    degree: usize,
+    limits: SawinFoulkesLimits,
+) -> Result<SawinOddFrobeniusCycleFixedLocusReport, HayesError> {
+    if degree < 5 || degree.is_multiple_of(2) {
+        return Err(HayesError::InvalidParameter(
+            "Sawin odd Frobenius-cycle fixed-locus report requires odd degree at least five"
+                .to_owned(),
+        ));
+    }
+    let ell = (degree - 1) / 2;
+    let divisors = divisors_from_factorization(&factor_usize(degree))?;
+    if divisors.len() > limits.max_orthogonality_cells {
+        return Err(HayesError::ResourceLimit {
+            resource: "sawin_odd_frobenius_cycle_divisors",
+            requested: divisors.len(),
+            limit: limits.max_orthogonality_cells,
+        });
+    }
+    let proper_orbit_degrees = divisors
+        .into_iter()
+        .filter(|&divisor| divisor < degree)
+        .collect::<Vec<_>>();
+    let largest_proper_orbit_degree = proper_orbit_degrees.last().copied().unwrap_or(0);
+    let proper_orbit_triangular_recovery_certified = proper_orbit_degrees
+        .iter()
+        .all(|&e| degree.is_multiple_of(e) && !(degree / e).is_multiple_of(2) && e < ell);
+    if !proper_orbit_triangular_recovery_certified {
+        return Err(HayesError::Invariant(
+            "Sawin odd Frobenius-cycle proper-orbit reduction failed".to_owned(),
+        ));
+    }
+
+    Ok(SawinOddFrobeniusCycleFixedLocusReport {
+        degree,
+        ell,
+        proper_orbit_degrees,
+        largest_proper_orbit_degree,
+        proper_orbit_strata_collapse_to_vertex_certified: true,
+        nonvertex_exact_orbit_degree_certified: true,
+        nonvertex_jacobian_rank: ell,
+        projective_local_status: SawinOddFrobeniusCycleLocalStatus::SmoothTransverseUnitTerms,
         frobenius_weighted_trace_bound_certified: false,
     })
 }
@@ -21914,6 +22027,95 @@ mod tests {
                     .tame_eigenline_jacobian_rank,
                 Some(ell)
             );
+        }
+    }
+
+    #[test]
+    fn odd_frobenius_cycle_fixed_locus_has_only_vertex_repetitions() {
+        for degree in (5_usize..=401).step_by(2) {
+            let report =
+                sawin_odd_frobenius_cycle_fixed_locus_report(degree, SawinFoulkesLimits::default())
+                    .unwrap();
+            assert_eq!(report.degree, degree);
+            assert_eq!(report.ell, (degree - 1) / 2);
+            assert!(report.proper_orbit_degrees.iter().all(|&e| {
+                e < degree
+                    && degree.is_multiple_of(e)
+                    && !(degree / e).is_multiple_of(2)
+                    && e < report.ell
+            }));
+            assert_eq!(
+                report.largest_proper_orbit_degree,
+                report.proper_orbit_degrees.last().copied().unwrap_or(0)
+            );
+            assert!(report.proper_orbit_strata_collapse_to_vertex_certified);
+            assert!(report.nonvertex_exact_orbit_degree_certified);
+            assert_eq!(report.nonvertex_jacobian_rank, report.ell);
+            assert_eq!(
+                report.projective_local_status,
+                SawinOddFrobeniusCycleLocalStatus::SmoothTransverseUnitTerms
+            );
+            assert!(!report.frobenius_weighted_trace_bound_certified);
+        }
+        for degree in [0_usize, 1, 3, 4, 6, 402] {
+            assert!(
+                sawin_odd_frobenius_cycle_fixed_locus_report(degree, SawinFoulkesLimits::default())
+                    .is_err()
+            );
+        }
+    }
+
+    #[test]
+    fn odd_fixed_locus_collapse_matches_literal_extension_field_orbits() {
+        fn orbit_degree(value: u64, modulus: u64, degree: usize) -> usize {
+            let mut conjugate = value;
+            for orbit_degree in 1..=degree {
+                conjugate = binary_quotient_multiply(conjugate, conjugate, modulus, degree);
+                if conjugate == value {
+                    return orbit_degree;
+                }
+            }
+            panic!("binary Frobenius orbit failed to close");
+        }
+
+        fn characteristic_coefficients(value: u64, modulus: u64, degree: usize) -> Vec<u64> {
+            let mut polynomial = vec![1_u64];
+            let mut root = value;
+            for _ in 0..degree {
+                let mut product = vec![0_u64; polynomial.len() + 1];
+                for (index, &coefficient) in polynomial.iter().enumerate() {
+                    product[index] ^= coefficient;
+                    product[index + 1] ^=
+                        binary_quotient_multiply(coefficient, root, modulus, degree);
+                }
+                polynomial = product;
+                root = binary_quotient_multiply(root, root, modulus, degree);
+            }
+            assert!(polynomial.iter().all(|&coefficient| coefficient <= 1));
+            polynomial
+        }
+
+        // The moduli x^5+x^2+1 and x^7+x+1 are irreducible over GF(2).
+        // Literal enumeration is independent of the divisor/triangular proof:
+        // build every Frobenius-root polynomial and inspect its zero prefix.
+        for (degree, modulus) in [(5_usize, 0b10_0101_u64), (7, 0b1000_0011)] {
+            let ell = (degree - 1) / 2;
+            let mut shaped_nonzero = 0_usize;
+            for value in 0_u64..(1_u64 << degree) {
+                let coefficients = characteristic_coefficients(value, modulus, degree);
+                let shaped = coefficients[1..=ell]
+                    .iter()
+                    .all(|&coefficient| coefficient == 0);
+                if shaped && value != 0 {
+                    shaped_nonzero += 1;
+                    assert_eq!(orbit_degree(value, modulus, degree), degree);
+                }
+                if value == 0 {
+                    assert!(shaped);
+                    assert_eq!(orbit_degree(value, modulus, degree), 1);
+                }
+            }
+            assert!(shaped_nonzero > 0);
         }
     }
 

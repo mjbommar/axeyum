@@ -648,3 +648,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0573](adr-0573-reject-scalar-artin-schreier-and-p-rank-bounds-for-rel.md) | Price zero 2-rank on the relative Carlitz quotient and require a genuinely collective Witt zero-fibre estimate | accepted |
 | [0574](adr-0574-add-binary-hankel-rank-without-importing-a-divisor-moment.md) | Add bounded GF(2) Hankel rank characteristics while keeping the prime-weighted higher-moment residue explicit | accepted |
 | [0575](adr-0575-certify-tame-eigenline-local-geometry-without-mislocalizing-frobenius.md) | Prove smooth transverse odd-endpoint cycle eigenlines while retaining the distinct Frobenius-cycle correspondence as REL | accepted |
+| [0576](adr-0576-remove-odd-frobenius-cycle-singular-local-terms.md) | Collapse every proper odd Frobenius-cycle orbit to the cone vertex and certify smooth transverse projective local terms without claiming a trace bound | accepted |
