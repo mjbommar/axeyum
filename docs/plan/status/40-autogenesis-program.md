@@ -33,8 +33,9 @@
 | 2026-08-21 | `4309e904f` | Crash-safe recovery admits exact `Int.fib_natCast` with one authoritative write and makes exact `Int.fib_add_two` newly ready |
 | 2026-08-21 | `c0092fb89` | Immutable primary evidence and isolated clean replay seal the exact `Int.fib_natCast` admission and its one-fact readiness delta |
 | 2026-08-21 | `c99a5c237` | Direct target-owned `Int.fib_add_two` construction is frozen after its premise becomes ready and before source or execution exists |
-| 2026-08-21 | (pending) | First recurrence source closes nonnegative and boundary cases, then stops at two explicit negative-successor normalization goals with zero submission or retry |
-| 2026-08-21 | (pending) | V2 freezes only explicit negative-constructor addition and hypothesis normalization before a new source exists |
+| 2026-08-21 | `e7285abf2` | First recurrence source closes nonnegative and boundary cases, then stops at two explicit negative-successor normalization goals with zero submission or retry |
+| 2026-08-21 | `2a731be9b` | V2 freezes only explicit negative-constructor addition and hypothesis normalization before a new source exists |
+| 2026-08-21 | (pending) | V2 removes constructor-addition opacity but retains two explicit parity-branch sign identities with zero submission or retry |
 
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
