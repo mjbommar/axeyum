@@ -59,6 +59,7 @@
 | 2026-08-21 | (pending) | Parent descent finds clean Nat commutativity, integer zero, and negation transport; exact target-owned constructor proofs replace the contaminated integer algebra layer next |
 | 2026-08-21 | (pending) | Primitive V1 exposes `Int.subNat`'s two-index reduction boundary; V2 freezes clean zero rewrites plus generalized successor case splits |
 | 2026-08-21 | (pending) | Primitive V2 confirms public integer operations stay opaque after constructor splits; eight kernel-level arithmetic carriers are frozen for one composition audit |
+| 2026-08-21 | (pending) | Private integer associativity remains tied to proposition-equality simp; three lower `subNat` computation theorems are frozen as the prospective clean substrate |
 
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |

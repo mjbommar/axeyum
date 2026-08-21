@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-subnat-carrier-audit-plan",
+  "state": "preregistered-before-three-root-single-read",
+  "predecessor": {"path": "artifacts/autogenesis/mathlib-int-kernel-algebra-carrier-audit-result-v1.json", "required_state": "private-int-assoc-carriers-contaminated-by-proposition-equality-layer"},
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-algebra-leaves-v2/leaves.ndjson", "bytes": 1428492, "sha256": "205bb2dcf8ec703d912380bad0f8f2749379d23192d97af5a2422ad6f6ab4a53"},
+  "roots": ["Int.subNatNat_add", "Int.subNatNat_add_negSucc", "Int.subNat_eq_zero_iff"],
+  "budget": {"max_importer_runs": 1, "max_proof_bearing_stream_reads": 1, "max_compiler_invocations": 0, "max_exporter_invocations": 0, "max_theorem_submissions": 0, "max_ledger_writes": 0},
+  "output": "artifacts/autogenesis/mathlib-int-subnat-carrier-audit-result-v1.json",
+  "decision_rule": "Select empty-footprint subNat computation theorems as the target-owned integer cancellation substrate; descend only any remaining assumption-bearing root.",
+  "limitations": "This audit grants no integer cancellation or Fibonacci theorem credit."
+}
