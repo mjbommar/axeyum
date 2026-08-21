@@ -4,7 +4,7 @@
 
 **Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. The exact-target decline remains sealed with zero credit. The V3 `Nat.mod_lt` bootstrap returned `NoAdditions`, proving r091 already carries the theorem; run 2 was skipped before support submission. V4 now freezes exact declaration and kernel-type-shape verification, empty-footprint checking, and use of existing r091 `Nat.mod_lt` as the sole explicit target theorem leaf during official cancellation composition.
 
-**Next:** implement only the V4 checked `Nat.mod_lt` target-leaf reuse, pass the full gate, then execute twice. Stop before support submission on compatibility or composition failure; do not submit the exact GCD-shift target.
+**Next:** pass the full Rust gate for the Clippy-clean V4 checked `Nat.mod_lt` target-leaf reuse, then execute twice. Stop before support submission on compatibility or composition failure; do not submit the exact GCD-shift target.
 
 <!-- plan-section: landed-changes -->
 
@@ -194,3 +194,4 @@
 | 2026-08-21 | (pending) | V3 composes and replays same-capsule `Nat.mod_lt` before cancellation and passes focused Clippy without stream access |
 | 2026-08-21 | (pending) | V3 bootstrap returns `NoAdditions`, confirming r091 already has `Nat.mod_lt`; second run is skipped before support submission |
 | 2026-08-21 | (pending) | V4 freezes exact checked reuse of existing r091 `Nat.mod_lt` as cancellation's sole target theorem leaf |
+| 2026-08-21 | (pending) | V4 verifies `Nat.mod_lt` identity and type shape and composes cancellation through the explicit target-leaf API without stream access |
