@@ -80,6 +80,23 @@ MUTATIONS: list[tuple[str, ...]] = [
         "            if False:\n                return (False, _tail(out))",
     ),
     (
+        # The py_compile CALL, not its result check above. Dropping the call but
+        # keeping an equivalent syntax check leaves the guard it was written for
+        # intact and removes the one nobody wrote it for: it is what REWRITES the
+        # subject's `__pycache__` entry between mutants. Python keys that cache on
+        # (source mtime in whole SECONDS, source size), and mutation testing emits
+        # equal-size mutants by construction, back to back — so without this call
+        # mutant N+1 runs mutant N's bytecode. See `StaleBytecodeTests`.
+        "the recompile that py_compile performs as a side effect",
+        '                code, out = _capture([sys.executable, "-m", "py_compile", str(work / target)], work)',
+        '                code, out = _capture(\n'
+        '                    [sys.executable, "-c",\n'
+        '                     "import ast,sys; ast.parse(open(sys.argv[1]).read(), sys.argv[1])",\n'
+        '                     str(work / target)],\n'
+        '                    work,\n'
+        '                )',
+    ),
+    (
         "the import half of the build probe",
         '        code, out = _capture([sys.executable, "-c", f"import {self.module}"], work)\n        return (code == 0, _tail(out))',
         '        code, out = _capture([sys.executable, "-c", f"import {self.module}"], work)\n        return (True, _tail(out))',

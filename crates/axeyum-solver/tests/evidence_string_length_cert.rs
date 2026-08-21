@@ -79,7 +79,7 @@ fn the_three_corpus_shapes_certify_through_the_shipped_route() {
         let produced = produce_evidence_smtlib_with_script(&text, &cfg())
             .unwrap_or_else(|e| panic!("[{rel}] produce_evidence_smtlib_with_script: {e:?}"));
         assert!(
-            matches!(produced.report.evidence, Evidence::UnsatStringLength(_)),
+            matches!(produced.report.evidence, Evidence::UnsatStringLength { .. }),
             "[{rel}] the length certificate is not reachable through the front door; \
              got kind={}. A producer nothing calls is not a producer",
             produced.report.evidence.kind_label()
@@ -92,6 +92,58 @@ fn the_three_corpus_shapes_certify_through_the_shipped_route() {
             produced.check_outcome().expect("check runs"),
             EvidenceCheck::Verified,
             "[{rel}] claiming certification means surviving the re-check"
+        );
+    }
+}
+
+/// Obligation 3: the LEAN reconstruction is reachable through the same front
+/// door, on exactly the files it covers.
+///
+/// The two conjunctive shapes must come back carrying a kernel-checked module;
+/// the case-split one must come back carrying `None` — and still certified and
+/// still checked, because the Lean backing is additional evidence and not a
+/// precondition. Pinning the decline is the half that stops a future "always
+/// `None`" regression from reading as success.
+#[test]
+fn the_conjunctive_shapes_carry_a_lean_module_and_the_case_split_honestly_does_not() {
+    let expected: &[(&str, bool)] = &[
+        ("QF_S/cvc5-regress-clean/r0_QF_SLIA_str004.smt2", true),
+        ("QF_S/cvc5-regress-clean/r0_QF_S_str005.smt2", true),
+        (
+            "QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-2.smt2",
+            false,
+        ),
+    ];
+    for (rel, wants_module) in expected {
+        let path = corpus_root().join(rel);
+        let text = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {rel}: {e}"));
+        let produced = produce_evidence_smtlib_with_script(&text, &cfg())
+            .unwrap_or_else(|e| panic!("[{rel}] produce_evidence_smtlib_with_script: {e:?}"));
+        let Evidence::UnsatStringLength { lean_module, .. } = &produced.report.evidence else {
+            panic!("[{rel}] expected a string-length certificate");
+        };
+        assert_eq!(
+            lean_module.is_some(),
+            *wants_module,
+            "[{rel}] lean module presence"
+        );
+        if let Some(module) = lean_module {
+            assert!(
+                !module.contains("AxReal."),
+                "[{rel}] the module must not reach the 30-axiom package"
+            );
+            assert!(
+                module.contains("Int."),
+                "[{rel}] the module must be over the constructed integers"
+            );
+        }
+        // Either way the evidence is certified and re-checks: a decline at
+        // reconstruction time is not a weaker certificate.
+        assert!(produced.report.evidence.is_certified(), "[{rel}] certified");
+        assert_eq!(
+            produced.check_outcome().expect("check runs"),
+            EvidenceCheck::Verified,
+            "[{rel}] re-check"
         );
     }
 }

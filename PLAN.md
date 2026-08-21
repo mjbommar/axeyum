@@ -209,6 +209,11 @@ now. Nothing was deleted.
 | 2026-08-20 | (open) | **What the correction found is worse than what I claimed.** An audit row can disagree with the tree at its own commit: `replace-find-base` is recorded `audit_outcome=unsat, baseline_matches_audit=true` in an audit last touched by `8aff8d507`, and that commit's tree answers `sat`. `8aff8d507` is titled "refresh bare-route audits to v2" — a schema migration that can rewrite JSON without re-running anything. So the file's commit date is not the measurement's date, and there is no way to recover the real one from the artifact. **Next: make `audit_dominance` stamp the source sha it ran against**, so the question becomes answerable for future audits; then re-run the 35 and see what the real numbers are. |
 | 2026-08-20 | `e44f9d715` | **QF_NIA `unsat` now carries a refutation, band 2 -> band 1.** The proof-gap matrix loses 60 of 327 instances at "evidence marked certified" — four times what Lean reconstruction costs — and `QF_NIA` ranked *band 2, needs an UNSAT proof format first*. But `nia_square` was already deciding this fragment EXACTLY; the artifact existed and nothing emitted it. Three arguments certified (non-square discriminant, non-integral rational roots, rational-root exhaustion at degree >= 3). **The checker does not call the producer**: the in-tree `fresh == *cert` convention re-runs the matcher, which binds a certificate to its source but cannot discover that the producer's reasoning is wrong — both would be wrong together. Stage 2 re-derives from the coefficients alone, scanning `1..=|a0|` where the producer pairs cofactors to `sqrt|a0|`, so a completeness bug in the step that could turn a `sat` into a wrong `unsat` is not repeated. |
 | 2026-08-20 | `119a91c53` | Mutation testing the above, and the first run is the part worth keeping: nine guards, **five killed one test each and four killed nothing** — another guard rejected the same forgery first, the "six of seven were removable while green" shape. Isolating them needed certificates the producer would never emit: a degree-2 argument over `x^3+x^2+x-3 = 0`, which is SATISFIABLE at x=1 and whose leading three coefficients give a genuine non-square 13 with a valid bracket, so every other guard passes and only the degree check prevents certifying a satisfiable query; a constant term of right magnitude and wrong sign, leaving divisor set and recomputed count identical; and two cubics with IDENTICAL reason data so only the coefficient binding separates them. All nine now die individually. Two of my own harness bugs found on the way, both silent — a positional filter that matched no integration test name, and classifying cargo's `error: test failed` as `DID NOT BUILD`, which reported five real kills as compile failures. |
+| 2026-08-20 | `4e1f9b092` | **The `whnf_core` tripwire was gated on the ENTRY, and the links it guards are not the entry.** The new δ-chain memo routes each link into the split cache by *that link's own* closedness, but the `reduction_ctx_reads` assertion beside it read `!entry_closed || …` — a different set. An OPEN entry δ-unfolds to a CLOSED link, and that link is written to the kernel-global half whose key has **no context component at all**, unchecked. Measured before writing the guard: one `build_creal_prelude` routes **6 links** that way (0 with a tail context read, so the memo was correct — just unchecked). Now per-link, against a `reduction_ctx_reads` snapshot taken when each link is pushed. Reachability is what makes it more than decoration, so it has a test; `chain.into_iter().take(1)` kills exactly that test. **Neutering the assertion itself kills nothing, and the code says so** — no input can make it fire, because "a closed term's reduction cannot reach a context lookup" is a theorem about `has_fvars`. Its `entry_closed` sibling was always in that category too, and did not say so. |
+| 2026-08-20 | `813b80daa` | **13 stale measured markers, and renumbering them would have been wrong.** The prose explained the numbers and the explanations no longer described the artifacts. Fully-dominant fell 23/35 → 20/35, and **only two of the four losses are losses**: `QF_FP/fp_misc` went from fully Lean-reconstructed to a timeout, and `QF_BVFP/Float-no-simp3-main` stopped producing a certificate; against those, `fp_fromsbv` merely began declaring a `bit-blast` trust hole and `seq-ex1` merely met the redefinition of `evidence_checked` as *re-derives* rather than *portable*. A criterion that tightens under a metric moves it in the same direction as a capability regression, so the two are now reported apart. Also corrected: the baseline/audit gap was documented as "QF_NIA proof production rejects `IntPow2`", i.e. a refusal — all four are evidence-audit **timeouts**, which is a different fact. And two of the 20 "fully dominant" rows audited **zero** decisions, since `dominant_pct_audited == 100.0` and `audited_decided == 0` are not distinguished. |
+| 2026-08-20 | (open, dispatched) | **`QF_FP/solver__fp__fp_misc.smt2` no longer reconstructs, and it is not the prelude.** Fully Lean-reconstructed on 2026-07-21; at HEAD it times out in the `lean-reconstruction` phase at **14.7 s of 15 s and 124.7 s of 125 s**. The obvious hypothesis — that the audit ran inside the 11-hour window when `502184d3f` had prelude construction at 33 s — is **wrong**, and I tested it rather than publishing it: warming is now 6.6–11.9 s and the instance still times out at a 125 s budget. First hypothesis for whoever picks it up is the exponential-DAG-walk bug this repository has now shipped five separate times; FP lowers into exactly the large shared BV DAGs that trigger it. |
+| 2026-08-20 | `609417c9e` | `MAX_UNARY_TERMS` 4096 → 128: mutating the size guard away aborted the test binary rather than failing a test (cost 1026 overflows the stack; cost 514 renders a 13.2 MB module), so the budget admitted the crash it existed to prevent. Now pinned from both ends. The inequality sign re-check killed nothing and was deleted — positivity is enforced upstream by `checked_refutation` and downstream by both Farkas engines. The hypothesis-count check and the external `infer == False` re-gate also kill nothing and are kept, with the mutation pair that shows what the first one does (removing the equality registration kills 7 tests *through* it; removing both kills 1 and ships a quietly weaker module). New `lean_crosscheck` family `qf_s_string_length`: real Lean 4 accepts both modules, 173/173 in the full sweep. |
+| 2026-08-20 | `b495a396e` | The string-length certificate reaches the kernel. `reconstruct_string_length` folds the certificate's own facts into a `False` over the constructed integers; `checked_refutation` is now the single derivation both `check_string_length_refutation` and the reconstruction read, so the exported view cannot drift from the validated one. An asserted **equality** enters as an equality — `LraReconstructCtx` grew `hyp_overrides` so the route mints `a = 0` and derives the `≤` half rather than assuming it, which is the one distinction the certificate's fact table turns on. A single-disjunct `(or A)` declines: the query states the disjunction, not the disjunct. Variables are named after their source (`len_xx`, `code_x`). `Evidence::UnsatStringLength` became a struct variant carrying `lean_module: Option<String>`, re-derived on `check` and never read back; a decline is `None`, not a weaker certificate. No `ProofFragment` variant — `scan_proof_fragment` is arena-based and a string script has no faithful arena. |
 | 2026-08-19 | `pending` | `scripts/check-kernel-suites.sh`: the kernel's push-time / real-Lean suite partition, discovered from the source and asserted total; `hooks/pre-push` repointed at the non-Lean half (2,296 s → 80 s warm). Found `real_lean_string_monoid_crosscheck` owned by nothing and mis-formatting its check count; floor 218 → 219. |
 | 2026-08-19 | `e3e105cd6` | The local-ci freshness gate is ENFORCING in both `check.sh` and `justfile`, on a `PASS` record (`57af69142-s4.json`, 6656 s, 7561 tests + 179 doctests, no vacuous/unreadable step). Landed report-only the day before because the only record was FAIL; that was the sole blocker. Flip re-tested through the real call site: NO_RECORD / STALE / STEP VACUOUS all red, unmodified green. |
 | 2026-08-19 | (pending) | `artifacts/local-ci-runs/57af69142-s4.json`: first all-pass authoritative-gate record (5/5 steps, 7561+179 tests, 6656 s); `check-local-ci-freshness` flipped from `--report-only` to ENFORCING in `scripts/check.sh` and `justfile`. |
@@ -1653,18 +1658,15 @@ freshly-proved decomposition.
 Detail moved to [`../notes/98-evidence-certification.md`](docs/plan/notes/98-evidence-certification.md).
 
 **Open queue, in the order I intend to clear it** (`WIP`,
-capability-assurance, 2026-08-19). Two items cleared themselves while it stood,
-by the lanes that owned them — a queue listing resolved work is the same defect
-as stale prose, so they are struck rather than carried.
+capability-assurance, 2026-08-20). Items that clear themselves are struck rather
+than carried — a queue listing resolved work is the same defect as stale prose.
 
-1. **`hooks/pre-push` runs `cargo test -p axeyum-lean-kernel` WHOLESALE**
-   (line 260), and that package gained two real-Lean suites today —
-   `real_lean_creal_carrier_kernel_replay` (~62 s) and
-   `real_lean_wellfounded_elaborator_divergence` (~115 s, four Lean
-   invocations). `scripts/check-lean-gate.sh` already owns both. Every push in
-   the repository pays for them twice, on a step documented at 206-248 s and
-   measured at 2,396 s under contention. First, because it taxes every other
-   lane continuously.
+1. ~~`hooks/pre-push` runs `cargo test -p axeyum-lean-kernel` WHOLESALE~~ —
+   **cleared 2026-08-20.** The Lean-prelude suites moved to `just check`, which
+   already owned them and which gates a different property; the hook went
+   **630 s → 130 s**. It also gained `cargo check --all-targets` (not
+   `--workspace`, which does not compile the bench examples and let me break
+   `main`) and a route-agreement step.
 2. **One guard in `check-lra-hypothesis-binding.py:1244` measurably SURVIVES**
    (`bind_structural`'s opaque-sort check). Needs a control in
    `102-attestation-gap`'s test module; the mutation harness reports it rather
@@ -1775,6 +1777,42 @@ the suite ran **zero** tests and the old classifier read the non-zero exit as a
 death. Removed with the reasoning in place; 10/10.
 
 Detail: [`../notes/agent-mutation-harness.md`](docs/plan/notes/agent-mutation-harness.md).
+
+**Two of the three string-length certificates now carry a Lean term real Lean 4
+accepts; the third declines for two independent reasons, and the guard that was
+supposed to catch the second admitted it** (`WIP`, string-recon, 2026-08-20).
+
+`Evidence::UnsatStringLength` was rung 2 of the ladder — a certificate an
+independent checker re-derives, with nothing kernel-checked behind it.
+`reconstruct_string_length` builds the term for the **conjunctive** case over
+the constructed integers (`try_new_over_integers`; `integer: axiom=0`), not
+`AxReal` and not `CReal`: lengths and code points are integers, and `ℤ` models
+every law a Farkas combination uses.
+
+Measured over the 217 committed `QF_S`/`QF_SLIA`/`QF_SEQ` files: 3 certificates,
+**2 reconstructed** — `r0_QF_SLIA_str004.smt2` and `r0_QF_S_str005.smt2`, taking
+different engines (strict / non-strict), both accepted by real Lean 4 with
+`#print axioms` reporting nothing but the query's own facts and the abstraction
+variables. `r1_QF_SLIA_str-code-unsat-2.smt2` declines twice over: it is a
+two-arm case split (refuting one arm proves nothing, and its first arm closes on
+its own, so the guard is load-bearing), and its second arm needs `10^28 −
+0x2FFFF` unary `one`s.
+
+The finding worth carrying forward is about the size guard, not the route. It
+was written at `4_096` and mutating it away did not fail a test — it **aborted
+the process** with a stack overflow, because the fold builds a left-nested `add`
+chain the kernel walks recursively. Measured: cost 514 renders a 13.2 MB module,
+cost 1026 SIGABRTs. So the guard was calibrated to admit exactly the failure it
+existed to prevent, and no test could have said so, because the test only ever
+exercised the decline side. **A budget needs pinning from both ends: at the
+budget it must still work.**
+
+Next: the case-split arm needs `Or.elim` in the kernel — the machinery exists
+(`reconstruct_disjunctive_lra_proof`) — but it buys nothing measurable while the
+only case-split corpus file also needs a `10^28` numeral. A binary numeral
+development for the ordered-ring engine is the change that would move that file,
+and it would also lift every other route's constant ceiling off `k` copies of
+`one`.
 
 **ADR-0521: ℂ is built, it is free, and its missing order is REFUTED rather than
 omitted (`WIP`, agent-complex-foundation, 2026-08-18).** `Complex` — a
@@ -2101,7 +2139,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | CAS parity | `BLOCKED` by deliberate pause | Wave-24 code `01d47334` and pause commit `245d8f25` are ancestors of current main. Do not start wave 25 until the user resumes it and retained specialized gate evidence is re-audited. |
 | Consumer apps / verified systems | `WIP`, non-critical path | Existing EVM, verifier, property, reflection, and symbolic-execution slices remain useful; do not preempt A2–A7 without measured demand. |
 | Foundational resources | `WIP`, separate content lane | Keep generated-resource gates green; record only project-level priority changes here. |
-| Public documentation and examples | `DONE`, current comprehensive pass | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; all 105 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, optional EVM/verifier certificate fields, and source-comment UNSAT-proof overclaims. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; reopen only for concrete drift. |
+| Public documentation and examples | `DONE`, current comprehensive pass | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; all 108 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, optional EVM/verifier certificate fields, and source-comment UNSAT-proof overclaims. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; reopen only for concrete drift. |
 | Worktree and build-cache hygiene | `WIP`, recovered | A11; only clean `main` is registered and published. A verified 2026-08-12 external Git bundle preserves the retired refs/stashes; all old branches, salvage stashes, inactive checkouts, and their large Cargo targets are removed. Next automate deterministic read-only inventory and exact-target cleanup classification. |
 
 ## Resume protocol

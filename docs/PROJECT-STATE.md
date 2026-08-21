@@ -48,8 +48,13 @@ treated as independent population samples.
 
 The retained audit denominators make that limitation concrete:
 
-- **25 / 35** rows meet the decide-strong threshold and **23 / 35** meet the
-  complete dominance definition.
+- **25 / 35** rows meet the decide-strong threshold and **20 / 35** meet the
+  complete dominance definition. That second figure *fell* from 23 since the
+  2026-07-21 snapshot, and two of the four losses are the audit getting stricter
+  rather than the solver getting worse — see the
+  [gap analysis](plan/gap-analysis-z3-lean-2026-07-21.md) for the instance-level
+  account. Two rows counted in the 20 audited **zero** decisions, so "fully
+  dominant" and "decided nothing" are not distinguished by this ratio.
 - The file-backed rows contain **927 occurrences**, **837 unique normalized paths**,
   and **778 unique byte contents**. **58 exact-alias groups** remove
   **59 additional path** identities.
@@ -123,10 +128,15 @@ treat a rise in `theory_families` unaccompanied by a rise in `bound`/`structural
 as unexplained rather than as progress. Corrected remote attestation
 and exhaustive execution remain open.
 
-Across the retained broad UNSAT denominator, **259 / 327** outcomes satisfy the
+Across the retained broad UNSAT denominator, **262 / 324** outcomes satisfy the
 full certified, independently checked, trust-hole-free, Lean-reconstructed
-conjunction; **8 certified** and independently checked outcomes lack Lean
-reconstruction; and **2 proof-production errors** remain.
+conjunction; **42 uncertified** outcomes carry no certificate at all;
+**15 certified** and independently checked outcomes lack Lean reconstruction;
+and **4 proof-production errors** remain. All four of those errors are evidence-audit
+**timeouts**, not rejections — three quantified-BV instances and
+`QF_FP/solver__fp__fp_misc.smt2` — so they are a budget the audit did not fit
+inside, and the earlier reading of this line as a proof-production *refusal* was
+wrong.
 
 Two small performance controls remain useful but bounded: Axeyum and the Z3
 crate each decide **8 / 113** at 20 seconds on p4dfa, on partially different

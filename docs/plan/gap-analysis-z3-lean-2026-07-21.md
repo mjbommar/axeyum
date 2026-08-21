@@ -48,28 +48,53 @@ The division scoreboard contains 35 rows across 24 logic labels:
   on the bounded encoding, which is why `compared` falls while `decided` rises —
   see [`strings-remeasurement-2026-07-29.md`](strings-remeasurement-2026-07-29.md).)
 - **25 / 35 rows** meet the scoreboard's `>= 80%` decide-strong threshold.
-- All 35 dominance audits are complete. **23 / 35 audited rows** are fully
-  dominant under the registered row definition; **594 / 753 decisions** are
+- All 35 dominance audits are complete. **20 / 35 audited rows** are fully
+  dominant under the registered row definition; **596 / 763 decisions** are
   dominant candidates.
-- The rows contain **327 baseline `unsat` decisions**. The evidence audit
-  reproduces **325 evidence-audit `unsat` outcomes**; **267 certified outcomes**
-  have **267 independently checked outcomes**, and Lean reconstruction checks
-  **260 Lean-checked outcomes**. The affected v1 rows historically contained 28
+  (Two of those 20 audited *zero* decisions — `LIA`/`UF` quantified — so the
+  ratio does not separate "fully dominant" from "decided nothing".)
+- **The fully-dominant count fell from 23, and only two of the four losses are
+  losses.** Named, because a bare `23 → 20` invites the wrong reading:
+  - `QF_FP/solver__fp__fp_misc.smt2` was `unsat`, certified, checked and
+    Lean-reconstructed in July; it now **times out** in the evidence audit. A
+    real regression, and the one worth chasing.
+  - `QF_BVFP/solver__fp__Float-no-simp3-main.smt2` still decides `unsat` but no
+    longer produces a certificate at all. Also a real loss.
+  - `QF_BVFP/solver__fp__fp_fromsbv.smt2` is unchanged in what it computes; it
+    now carries an explicit `bit-blast` **trust hole** where it previously
+    counted as Lean-checked. The audit got stricter.
+  - `QF_UF .../cli__regress0__seq__seq-ex1.smt2` (both bounded rows) is
+    unchanged in what it computes; `evidence_checked` was redefined to mean
+    *re-derives* rather than *is portable*, and this instance does not re-derive.
+    The audit got stricter.
+  - Against those, `BV/bitwuzla quantified` **gained** full dominance (80% → 100%).
+  A criterion that tightens under you moves this number in the same direction as
+  a capability regression, so the two have to be reported apart.
+- The rows contain **324 baseline `unsat` decisions**. The evidence audit
+  reproduces **320 evidence-audit `unsat` outcomes**; **278 certified outcomes**
+  have **278 independently checked outcomes**, and Lean reconstruction checks
+  **262 Lean-checked outcomes**. The affected v1 rows historically contained 28
   structurally accepted but uncertified checks; the v2 refresh now records
   **0 vacuous `bare-unsat` check results** and gates checking on certification.
-  The two-case 327→325 difference is explicit:
-  QF_NIA proof production rejects `IntPow2` before producing evidence. Coverage
-  is substantial but uneven, not 260 fully audited outcomes out of 327:
+  The four-case 324→320 difference is explicit, and it is **not** a proof
+  production *rejection* — all four are evidence-audit **timeouts**:
+  `BV/.../cli__regress0__quantifiers__cond-var-elim-binary.smt2`,
+  `BV/.../cli__regress1__quantifiers__bug802.smt2`,
+  `BV/.../cli__regress1__quantifiers__small-pipeline-fixpoint-3.smt2`, and
+  `QF_FP/.../solver__fp__fp_misc.smt2`. The first three are the known
+  `BvAlternationCounterexample` rows, where the 64 MiB module cap bounds what is
+  *returned* and not what is *constructed*. Coverage
+  is substantial but uneven, not 262 fully audited outcomes out of 324:
   selected QF_ABV/AUFBV/LIA/LRA/UF rows are complete while general nonlinear,
   strings/sequences, AUFLIA, and some UFLIA rows retain large proof gaps.
 - The generated [proof-gap matrix](generated/proof-gap-matrix.md) applies the
   full conjunction rather than treating Lean acceptance as sufficient:
-  **259 / 327 baseline UNSATs** are certified, independently checked,
-  trust-hole-free, and Lean-reconstructed. The residual is 58 uncertified
-  audit-row occurrences, eight trust-free Lean-reconstruction gaps, zero
-  declared trust holes, and two proof-production errors. The 58
-  occurrences reduce to **56 paths / 51 unique exact contents** after
-  provenance deduplication.
+  **262 / 324 baseline UNSATs** are certified, independently checked,
+  trust-hole-free, and Lean-reconstructed. The residual is 42 uncertified
+  audit-row occurrences, 15 trust-free Lean-reconstruction gaps, one
+  trust-hole-and-Lean-gap row, and four proof-production errors (all four
+  timeouts). Categories are exclusive, so those five figures partition the
+  324 exactly.
 - Its 33 file-backed baseline rows contain **927 file-backed occurrences** but
   only **837 unique normalized benchmark paths**: **90 repeated occurrences**
   come from overlapping row variants. The two synthetic rows contribute
@@ -284,11 +309,11 @@ an adversarial differential gate; rejected mechanisms remain documented.
 
 ### G5 — Make proof coverage a first-class denominator
 
-The dominance audits provide five necessary denominators: 327 baseline UNSAT
-decisions, 325 evidence-audit UNSAT outcomes, 267 certified and independently
-checked outcomes, and 260 Lean-checked outcomes. The v1 audit's historical 28
+The dominance audits provide five necessary denominators: 324 baseline UNSAT
+decisions, 320 evidence-audit UNSAT outcomes, 278 certified and independently
+checked outcomes, and 262 Lean-checked outcomes. The v1 audit's historical 28
 vacuous bare-UNSAT check results are now corrected to zero in the refreshed
-artifacts; the two QF_NIA proof-production errors remain visible rather than
+artifacts; the four evidence-audit timeouts remain visible rather than
 being folded into nominal audit denominators. Remaining holes cluster by
 reduction and theory.
 

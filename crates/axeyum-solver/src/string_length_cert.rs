@@ -99,7 +99,7 @@ const LEMMA_BASE: usize = usize::MAX / 2;
 
 /// An abstraction variable, keyed on the **source name** it came from.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-enum AbsVar {
+pub(crate) enum AbsVar {
     /// `(str.len x)` for a declared `String` symbol `x`.
     Len(String),
     /// `(str.to_code x)` for a declared `String` symbol `x`.
@@ -108,11 +108,32 @@ enum AbsVar {
     Int(String),
 }
 
+impl AbsVar {
+    /// A Lean-safe identifier base naming the SOURCE this variable abstracts,
+    /// so a rendered reconstruction reads `len_yy` rather than `x.3`.
+    ///
+    /// Only cosmetic: the kernel name a reconstruction mints appends a unique
+    /// counter, so two source names that sanitize alike still get distinct
+    /// constants.
+    pub(crate) fn lean_base(&self) -> String {
+        let (prefix, name) = match self {
+            AbsVar::Len(name) => ("len", name),
+            AbsVar::Code(name) => ("code", name),
+            AbsVar::Int(name) => ("int", name),
+        };
+        let sanitized: String = name
+            .chars()
+            .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
+            .collect();
+        format!("{prefix}_{sanitized}")
+    }
+}
+
 /// A linear form `Σ cᵥ·v + k` over [`AbsVar`]s, exact over the rationals.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-struct Lin {
-    coeffs: BTreeMap<AbsVar, Rational>,
-    constant: Rational,
+pub(crate) struct Lin {
+    pub(crate) coeffs: BTreeMap<AbsVar, Rational>,
+    pub(crate) constant: Rational,
 }
 
 impl Lin {
@@ -185,7 +206,7 @@ impl Lin {
 
 /// How a linear form is compared against zero.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Rel {
+pub(crate) enum Rel {
     /// `expr >= 0`
     Ge,
     /// `expr > 0`
@@ -299,6 +320,17 @@ impl StringLengthRefutationCertificate {
     #[must_use]
     pub const fn is_case_split(&self) -> bool {
         self.split.is_some()
+    }
+
+    /// Re-point this certificate at a different script. **Testing only.**
+    ///
+    /// The carried commands ARE the premises, so a certificate whose commands
+    /// were replaced is a forgery — which is exactly what a checker or
+    /// reconstruction test needs in order to show the re-derivation is load
+    /// bearing rather than decorative.
+    #[cfg(test)]
+    pub(crate) fn testing_set_commands(&mut self, commands: Vec<SExpr>) {
+        self.commands = commands;
     }
 }
 
@@ -687,31 +719,33 @@ fn lemma_atom(env: &Env, conjuncts: &[SExpr], lemma: &LengthLemma) -> Option<Ato
 /// cancels to the constant `c` therefore contradicts `c < 0` in the first case
 /// and `c <= 0` in the second. Getting that backwards certifies satisfiable
 /// queries.
-fn derive_branch(facts: &BTreeMap<usize, Atom>, combination: &Combination, keys: &[usize]) -> bool {
+fn derive_branch(
+    facts: &BTreeMap<usize, Atom>,
+    combination: &Combination,
+    keys: &[usize],
+    branch: usize,
+) -> Option<Vec<CheckedFact>> {
     let mut sum = Lin::constant(Rational::zero());
     let mut strict = false;
     let mut used: BTreeSet<usize> = BTreeSet::new();
-    for (index, multiplier) in keys.iter().zip(combination.iter().map(|(_, m)| *m)) {
+    let mut derived: Vec<CheckedFact> = Vec::with_capacity(combination.len());
+    for ((reference, multiplier), index) in combination.iter().zip(keys) {
         // `Rational::checked_new` PANICS on a zero denominator (it treats that as
         // a usage error, not an overflow), and a hand-written certificate can
         // contain one. Reject before constructing, never after.
         if multiplier.1 == 0 {
-            return false;
+            return None;
         }
-        let Some(lambda) = Rational::checked_new(multiplier.0, multiplier.1) else {
-            return false;
-        };
-        let Some(atom) = facts.get(index) else {
-            return false;
-        };
+        let lambda = Rational::checked_new(multiplier.0, multiplier.1)?;
+        let atom = facts.get(index)?;
         // A repeated fact would let one entry's sign launder another's.
         if !used.insert(*index) {
-            return false;
+            return None;
         }
         match atom.rel {
             Rel::Ge | Rel::Gt => {
                 if lambda <= Rational::zero() {
-                    return false;
+                    return None;
                 }
                 if atom.rel == Rel::Gt {
                     strict = true;
@@ -719,23 +753,28 @@ fn derive_branch(facts: &BTreeMap<usize, Atom>, combination: &Combination, keys:
             }
             Rel::Eq => {
                 if lambda.is_zero() {
-                    return false;
+                    return None;
                 }
             }
         }
-        let Some(scaled) = atom.expr.scale(lambda) else {
-            return false;
-        };
-        let Some(next) = sum.add(&scaled) else {
-            return false;
-        };
-        sum = next;
+        let scaled = atom.expr.scale(lambda)?;
+        sum = sum.add(&scaled)?;
+        derived.push(CheckedFact {
+            role: match *reference {
+                FactRef::Conjunct(i) => FactRole::Conjunct(i),
+                FactRef::Lemma(i) => FactRole::Lemma(i),
+                FactRef::Arm => FactRole::Arm(branch),
+            },
+            expr: atom.expr.clone(),
+            rel: atom.rel,
+            multiplier: lambda,
+        });
     }
     if !sum.is_constant() {
-        return false;
+        return None;
     }
     let zero = Rational::zero();
-    if strict {
+    let closes = if strict {
         // Σ > 0, so Σ = c is impossible for c <= 0.
         sum.constant <= zero
     } else {
@@ -743,30 +782,70 @@ fn derive_branch(facts: &BTreeMap<usize, Atom>, combination: &Combination, keys:
         // here with `c = 0` and is rejected by this line, so it needs no guard
         // of its own — one was written, mutation-checked, and killed nothing.
         sum.constant < zero
-    }
+    };
+    closes.then_some(derived)
 }
 
-/// Independently re-validate a certificate. Arena-free by construction: the
-/// premises are the carried source commands.
+/// Where a re-derived fact came from. Every fact of a checked refutation is one
+/// of these three, and nothing else can enter the combination.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum FactRole {
+    /// Premise conjunct `i` — an actual `(assert …)` line of the carried script
+    /// (or one conjunct of one, after `and`-flattening).
+    Conjunct(usize),
+    /// Theory lemma instance `i`, whose side condition stage 1 bound to a
+    /// premise conjunct.
+    Lemma(usize),
+    /// The disjunct branch `i` assumes, discharged by the case analysis.
+    Arm(usize),
+}
+
+/// One fact of a re-derived refutation: where it came from, the linear atom
+/// stage 1 bound it to, and the multiplier stage 2 accepted for it.
+#[derive(Clone, Debug)]
+pub(crate) struct CheckedFact {
+    /// The fact's provenance.
+    pub(crate) role: FactRole,
+    /// `Σ cᵥ·v + k`, compared against zero by [`Self::rel`](CheckedFact::rel).
+    pub(crate) expr: Lin,
+    /// How `expr` is compared against zero.
+    pub(crate) rel: Rel,
+    /// The multiplier the combination applies to this fact.
+    pub(crate) multiplier: Rational,
+}
+
+/// A refutation as the checker re-derived it, for consumers that must rebuild
+/// the argument rather than merely accept it (the Lean reconstruction).
+///
+/// Produced by [`checked_refutation`], which is also what
+/// [`check_string_length_refutation`] is: there is exactly one derivation, so an
+/// exported view cannot drift from the one that was validated.
+#[derive(Clone, Debug)]
+pub(crate) struct CheckedRefutation {
+    /// One fact list per case-split branch, in source order.
+    pub(crate) branches: Vec<Vec<CheckedFact>>,
+    /// The abstraction variables any branch mentions, in a deterministic order.
+    pub(crate) variables: Vec<AbsVar>,
+}
+
+/// Independently re-validate a certificate and return the refutation it
+/// re-derived. Arena-free by construction: the premises are the carried source
+/// commands.
 ///
 /// Stage 1 re-derives the sort environment and premise conjuncts from those
 /// commands and binds every lemma instance to the conjunct that licenses it;
 /// stage 2 re-derives each branch's Farkas combination from the bound facts.
-#[must_use]
-pub fn check_string_length_refutation(certificate: &StringLengthRefutationCertificate) -> bool {
-    let Some((env, conjuncts)) = read_source(&certificate.commands) else {
-        return false;
-    };
+pub(crate) fn checked_refutation(
+    certificate: &StringLengthRefutationCertificate,
+) -> Option<CheckedRefutation> {
+    let (env, conjuncts) = read_source(&certificate.commands)?;
 
     // Stage 1: bind. Every lemma must be a legal instance of its schema against
     // the conjuncts just re-derived; a lemma whose premise the query does not
     // assert dies here.
     let mut lemma_atoms = Vec::with_capacity(certificate.lemmas.len());
     for lemma in &certificate.lemmas {
-        let Some(atom) = lemma_atom(&env, &conjuncts, lemma) else {
-            return false;
-        };
-        lemma_atoms.push(atom);
+        lemma_atoms.push(lemma_atom(&env, &conjuncts, lemma)?);
     }
 
     // The conjunctive facts: every premise conjunct that abstracts to a linear
@@ -785,38 +864,32 @@ pub fn check_string_length_refutation(certificate: &StringLengthRefutationCertif
     let arms: Vec<Option<Atom>> = match certificate.split {
         None => {
             if certificate.branches.len() != 1 {
-                return false;
+                return None;
             }
             vec![None]
         }
         Some(index) => {
-            let Some(disjunction) = conjuncts.get(index) else {
-                return false;
-            };
-            let Some(items) = disjunction.list() else {
-                return false;
-            };
+            let disjunction = conjuncts.get(index)?;
+            let items = disjunction.list()?;
             if items.first().and_then(SExpr::atom) != Some("or") || items.len() < 2 {
-                return false;
+                return None;
             }
             // EVERY disjunct must have its own refutation: a model satisfies at
             // least one of them, so leaving one branch out proves nothing.
             if certificate.branches.len() != items.len() - 1 {
-                return false;
+                return None;
             }
             let mut arms = Vec::with_capacity(items.len() - 1);
             for disjunct in &items[1..] {
-                let Some(atom) = atom_of(&env, disjunct) else {
-                    return false;
-                };
-                arms.push(Some(atom));
+                arms.push(Some(atom_of(&env, disjunct)?));
             }
             arms
         }
     };
 
     // Stage 2: re-derive each branch from the bound facts alone.
-    for (branch, arm) in certificate.branches.iter().zip(arms) {
+    let mut derived: Vec<Vec<CheckedFact>> = Vec::with_capacity(certificate.branches.len());
+    for (branch_index, (branch, arm)) in certificate.branches.iter().zip(arms).enumerate() {
         let mut facts = base.clone();
         if let Some(atom) = arm {
             facts.insert(ARM_KEY, atom);
@@ -839,18 +912,34 @@ pub fn check_string_length_refutation(certificate: &StringLengthRefutationCertif
                 // `checked_add` for overflow, not for range: a hand-written
                 // `Lemma(usize::MAX)` would otherwise panic in debug before the
                 // lookup could reject it.
-                FactRef::Lemma(i) => match LEMMA_BASE.checked_add(i) {
-                    Some(key) => key,
-                    None => return false,
-                },
+                FactRef::Lemma(i) => LEMMA_BASE.checked_add(i)?,
                 FactRef::Arm => ARM_KEY,
             });
         }
-        if !derive_branch(&facts, branch, &keys) {
-            return false;
+        derived.push(derive_branch(&facts, branch, &keys, branch_index)?);
+    }
+
+    let mut variables: BTreeSet<AbsVar> = BTreeSet::new();
+    for facts in &derived {
+        for fact in facts {
+            variables.extend(fact.expr.coeffs.keys().cloned());
         }
     }
-    true
+    Some(CheckedRefutation {
+        branches: derived,
+        variables: variables.into_iter().collect(),
+    })
+}
+
+/// Independently re-validate a certificate: [`checked_refutation`] succeeded.
+///
+/// The boolean form is the whole of the check — there is one derivation, and
+/// this is it, so the exported [`CheckedRefutation`] a reconstruction consumes
+/// is by construction the one that was validated rather than a parallel reading
+/// of the same certificate.
+#[must_use]
+pub fn check_string_length_refutation(certificate: &StringLengthRefutationCertificate) -> bool {
+    checked_refutation(certificate).is_some()
 }
 
 // ---------------------------------------------------------------------------

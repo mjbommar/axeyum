@@ -136,6 +136,7 @@ step control-tests-reachable-controls python3 -m unittest scripts.tests.test_che
 # reporting a number nobody measured.
 step mutation-harness-controls python3 -m unittest scripts.tests.test_mutation_controls
 step mutation-harness-four-outcomes python3 scripts/tests/mutation_controls.py self-demo
+step mutation-anchors-are-fresh python3 scripts/tests/mutation_controls.py --check-anchors
 step adopted-controls scripts/check-adopted-controls.sh
 # The trusted base, derived rather than eyeballed: the forward call-graph closure
 # from every non-test caller of `Environment::insert_unchecked`. 5,129 function

@@ -26,7 +26,8 @@ use axeyum_ir::{Rational, Sort, TermArena};
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{
     LeanModuleContent, ProofFragment, prove_unsat_to_lean_module,
-    reconstruct_lex_clash_to_lean_module,
+    reconstruct_lex_clash_to_lean_module, reconstruct_string_length_to_lean_module,
+    string_length_refutation,
 };
 use axeyum_strings::{LexAtom, LexFormula, LexProblem, Seg};
 
@@ -166,6 +167,7 @@ const FAMILY_BUILDERS: &[FamilyBuilder] = &[
     certified_uflia_interpolant_both_integer_certs_checked_by_real_lean,
     qf_s_word_clash_refutations_check_in_real_lean,
     qf_s_lex_clash_refutations_check_in_real_lean,
+    qf_s_string_length_refutations_check_in_real_lean,
 ];
 
 /// Collect the Lean modules a builder produces (running its Rust-side structural
@@ -826,6 +828,59 @@ fn qf_s_lex_clash_refutations_check_in_real_lean() {
         let source = reconstruct_lex_clash_to_lean_module(&problem)
             .expect("lex strict second-char clash reconstructs");
         lean_accepts("qf_s_lex_strict_second_char_clash", &source);
+    }
+}
+
+/// `QF_S` / `QF_SLIA`: the two committed corpus files whose refutation is a
+/// LENGTH / code-point abstraction, reconstructed over the constructed integers.
+///
+/// A separate family from the word clash and the lex clash above, and reached by
+/// a different route: those two are refutations *about strings*, while this one
+/// abstracts every string term to an integer and hands the residue to the
+/// ordered-ring Farkas fold. Two modules, deliberately, because they take
+/// different engines — `str004`'s combination has a strict fact and `str005`'s
+/// does not — and the representative slice only checks the first of a family.
+///
+/// The assertion that matters is the carrier. `try_new_over_integers` builds
+/// `build_int_prelude`, whose 30 ordered-ring declarations are theorems, so what
+/// real Lean reads here is a theorem about `Int` that assumes nothing but the
+/// query's own facts. An `AxReal.` in this source would mean the route reached
+/// the 30-axiom package.
+fn qf_s_string_length_refutations_check_in_real_lean() {
+    // Both files verbatim; the certificate reads SOURCE s-expressions, because a
+    // string script's flat arena view is the bounded packed-BV encoding and not
+    // the query (ADR-0061).
+    let cases: &[(&str, &str)] = &[
+        (
+            "qf_s_string_length_str004",
+            "(set-logic QF_SLIA)\n(set-info :status unsat)\n\
+             (declare-fun xx () String)\n(declare-fun yy () String)\n\
+             (assert (> (str.len yy) (str.len xx)))\n\
+             (assert (= xx (str.++ xx yy)))\n(check-sat)",
+        ),
+        (
+            "qf_s_string_length_str005",
+            "(set-logic QF_S)\n(set-info :status unsat)\n\
+             (declare-fun yy () String)\n\
+             (assert (= (str.len yy) 0))\n(assert (not (= yy \"\")))\n(check-sat)",
+        ),
+    ];
+    for (tag, text) in cases {
+        let commands = axeyum_smtlib::read_all(text).expect("the script reads");
+        let certificate = string_length_refutation(&commands).expect("a length certificate");
+        let source = reconstruct_string_length_to_lean_module(&certificate)
+            .expect("the conjunctive length refutation reconstructs");
+        assert_eq!(
+            LeanModuleContent::of_module_source(&source),
+            LeanModuleContent::TheoryReconstruction,
+            "[{tag}] the length module became a structural attestation"
+        );
+        assert!(
+            !source.contains("AxReal."),
+            "[{tag}] the length route must not reach the 30-axiom AxReal package"
+        );
+        assert!(!source.contains("sorryAx"), "[{tag}] leans on sorryAx");
+        lean_accepts(tag, &source);
     }
 }
 

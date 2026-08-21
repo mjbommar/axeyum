@@ -53,6 +53,7 @@ pub(crate) mod control;
 pub(crate) mod monomial_bound;
 pub(crate) mod product_positivstellensatz;
 pub(crate) mod signature;
+pub(crate) mod string_length;
 pub(crate) mod zero_product;
 
 pub(crate) use signature::{RingEquality, RingSignature};
@@ -166,6 +167,22 @@ pub struct LraReconstructCtx {
     hyps: Vec<NameId>,
     /// Monotone counter for fresh, collision-free declaration names.
     next_id: u64,
+    /// Proofs [`Self::hyp_axiom`] hands back **instead of** minting an axiom,
+    /// keyed on the proposition.
+    ///
+    /// The Farkas engines take a system of `E ≤ 0` / `E < 0` atoms and assume
+    /// each one. That is right when the query states an inequality and wrong
+    /// when it states an EQUALITY: `E = 0` is strictly stronger than `E ≤ 0`, so
+    /// assuming the inequality assumes something the source does not say — and
+    /// the certificate's own fact table makes exactly this distinction, because
+    /// an equality is the only fact a negative multiplier may scale.
+    ///
+    /// A route that knows better registers, ahead of the fold, a proof of the
+    /// inequality *derived from* the equality it actually mints. Registering a
+    /// proposition the engine never asks for is not silent: the engine then
+    /// mints its own axiom too, and the caller's hypothesis count no longer
+    /// matches its fact count.
+    hyp_overrides: BTreeMap<ExprId, ExprId>,
     /// The **equality slot** (ADR-0512 phase R3), once declared.
     ///
     /// `None` — the default — means ring equality is the kernel's own `Eq` at
@@ -371,6 +388,7 @@ impl LraReconstructCtx {
             vars: BTreeMap::new(),
             hyps: Vec::new(),
             next_id: 0,
+            hyp_overrides: BTreeMap::new(),
             setoid: None,
         })
     }
@@ -515,11 +533,23 @@ impl LraReconstructCtx {
     /// Get (declaring lazily) the opaque `R`-typed constant for variable `index`.
     /// Idempotent: the same index always maps to the same constant.
     fn var_const(&mut self, index: usize) -> NameId {
+        self.var_const_named(index, "x")
+    }
+
+    /// [`Self::var_const`] under a caller-chosen base name.
+    ///
+    /// Purely cosmetic, and only meaningful when called BEFORE the index is
+    /// first used: the map is idempotent, so a later `var_const` returns
+    /// whatever name got there first. It exists so a route whose variables
+    /// abstract something nameable — `(str.len yy)`, `(str.to_code x)` — can
+    /// render a module a referee can read against the source, instead of `x.3`.
+    /// `base` must be a valid Lean identifier component; callers sanitize.
+    fn var_const_named(&mut self, index: usize, base: &str) -> NameId {
         if let Some(&id) = self.vars.get(&index) {
             return id;
         }
         let r_ty = self.kernel.const_(self.arith.r, vec![]);
-        let decl_name = self.fresh_name("x");
+        let decl_name = self.fresh_name(base);
         self.kernel
             .add_declaration(Declaration::Axiom {
                 name: decl_name,
@@ -631,8 +661,23 @@ impl LraReconstructCtx {
         Ok(acc)
     }
 
-    /// Declare a fresh hypothesis axiom `h : prop` and return its `Const` proof.
+    /// Register a proof to hand back in place of the hypothesis axiom for
+    /// `prop`. See [`Self::hyp_overrides`].
+    fn register_hyp_override(&mut self, prop: ExprId, proof: ExprId) {
+        self.hyp_overrides.insert(prop, proof);
+    }
+
+    /// How many hypothesis axioms this context has minted.
+    fn minted_hypothesis_count(&self) -> usize {
+        self.hyps.len()
+    }
+
+    /// Declare a fresh hypothesis axiom `h : prop` and return its `Const` proof,
+    /// unless a route registered a derivation of `prop` first.
     fn hyp_axiom(&mut self, prop: ExprId) -> Result<ExprId, ReconstructError> {
+        if let Some(&proof) = self.hyp_overrides.get(&prop) {
+            return Ok(proof);
+        }
         let name = self.fresh_name("hyp");
         self.kernel
             .add_declaration(Declaration::Axiom {
@@ -4096,10 +4141,25 @@ pub(super) fn try_general_farkas(
     ctx: &mut LraReconstructCtx,
     certificate: &crate::FarkasCertificate,
 ) -> Result<Option<ExprId>, ReconstructError> {
+    try_general_farkas_atoms(ctx, &certificate.atoms, &certificate.multipliers)
+}
+
+/// [`try_general_farkas`] over a bare atom/multiplier system.
+///
+/// The engine never reads a [`crate::FarkasCertificate`]'s `origins` or `vars`,
+/// so a route whose atoms come from somewhere other than the LRA collector — the
+/// string length/code-point abstraction, whose variables are source NAMES and
+/// not [`crate::SymbolId`]s — can use it without fabricating those two fields.
+#[allow(clippy::too_many_lines)]
+pub(super) fn try_general_farkas_atoms(
+    ctx: &mut LraReconstructCtx,
+    atoms: &[crate::FarkasAtom],
+    multipliers: &[Rational],
+) -> Result<Option<ExprId>, ReconstructError> {
     // Used atoms (positive multiplier) with their LinR forms; reject strict /
     // non-integer atoms by falling through.
     let mut used: Vec<(LinR, Rational)> = Vec::new();
-    for (atom, m) in certificate.atoms.iter().zip(&certificate.multipliers) {
+    for (atom, m) in atoms.iter().zip(multipliers) {
         if m.is_zero() {
             continue;
         }
@@ -4298,11 +4358,22 @@ pub(super) fn try_mixed_farkas(
     ctx: &mut LraReconstructCtx,
     certificate: &crate::FarkasCertificate,
 ) -> Result<Option<ExprId>, ReconstructError> {
+    try_mixed_farkas_atoms(ctx, &certificate.atoms, &certificate.multipliers)
+}
+
+/// [`try_mixed_farkas`] over a bare atom/multiplier system; see
+/// [`try_general_farkas_atoms`] for why the slice form exists.
+#[allow(clippy::too_many_lines)]
+pub(super) fn try_mixed_farkas_atoms(
+    ctx: &mut LraReconstructCtx,
+    atoms: &[crate::FarkasAtom],
+    multipliers: &[Rational],
+) -> Result<Option<ExprId>, ReconstructError> {
     // Used atoms (positive multiplier) with their LinR + strictness; reject
     // non-integer atoms by falling through.
     let mut used: Vec<(LinR, Rational, bool)> = Vec::new();
     let mut any_strict = false;
-    for (atom, m) in certificate.atoms.iter().zip(&certificate.multipliers) {
+    for (atom, m) in atoms.iter().zip(multipliers) {
         if m.is_zero() {
             continue;
         }

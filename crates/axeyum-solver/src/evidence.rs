@@ -788,7 +788,19 @@ pub enum Evidence {
     /// [`Evidence::check`] re-derives the premises from them before re-deriving
     /// the arithmetic — a lemma the query does not license is rejected before any
     /// multiplier is read.
-    UnsatStringLength(StringLengthRefutationCertificate),
+    ///
+    /// When `lean_module` is present the refutation is ALSO backed by a
+    /// kernel-checked Lean proof over the CONSTRUCTED integers — re-derived, not
+    /// read back, on [`Evidence::check`] (the stored string is never trusted).
+    /// It is `None` for a certificate the reconstruction declines (a case split,
+    /// or a combination too large to build), and that is not a weaker
+    /// certificate: the arithmetic re-derivation is the same either way.
+    UnsatStringLength {
+        /// The re-derivable length/code-point refutation.
+        certificate: StringLengthRefutationCertificate,
+        /// The rendered Lean module, when the reconstruction succeeded.
+        lean_module: Option<String>,
+    },
     /// Undecided, with the classified reason.
     Unknown(UnknownReason),
 }
@@ -885,7 +897,7 @@ impl Evidence {
             Evidence::UnsatFifoBc04(_) => "unsat-fifo-bc04",
             Evidence::UnsatRegexEmptiness { .. } => "unsat-regex-emptiness",
             Evidence::UnsatWordClash(_) => "unsat-word-clash",
-            Evidence::UnsatStringLength(_) => "unsat-string-length",
+            Evidence::UnsatStringLength { .. } => "unsat-string-length",
             Evidence::Unknown(_) => "unknown",
         }
     }
@@ -1229,8 +1241,18 @@ impl Evidence {
             // lemma instance to the conjunct that licenses it; stage 2 re-derives
             // the Farkas combination. Arena-free for the same reason as the two
             // above — the flat view of a string script is not the query.
-            Evidence::UnsatStringLength(certificate) => Ok(
-                crate::string_length_cert::check_string_length_refutation(certificate),
+            //
+            // A carried Lean module is re-derived from the same certificate and
+            // must succeed; the stored string is never read back. A certificate
+            // that carries none is checked by the arithmetic alone, so a decline
+            // at production time cannot turn into a check failure here.
+            Evidence::UnsatStringLength {
+                certificate,
+                lean_module,
+            } => Ok(
+                crate::string_length_cert::check_string_length_refutation(certificate)
+                    && (lean_module.is_none()
+                        || crate::reconstruct_string_length_to_lean_module(certificate).is_ok()),
             ),
             // Nothing to re-validate. `check_outcome` answers these before ever
             // calling here; `false` (never `true`) is the conservative value if
@@ -1308,7 +1330,7 @@ impl Evidence {
                 | Evidence::UnsatFifoBc04(_)
                 | Evidence::UnsatRegexEmptiness { .. }
                 | Evidence::UnsatWordClash(_)
-                | Evidence::UnsatStringLength(_)
+                | Evidence::UnsatStringLength { .. }
         )
     }
 }
@@ -3482,7 +3504,7 @@ fn is_subject_independent_evidence(evidence: &Evidence) -> bool {
         evidence,
         Evidence::UnsatWordClash(_)
             | Evidence::UnsatRegexEmptiness { .. }
-            | Evidence::UnsatStringLength(_)
+            | Evidence::UnsatStringLength { .. }
     )
 }
 
@@ -3585,7 +3607,8 @@ pub fn produce_evidence_smtlib_with_script(
 ///    the script's own top-level commands, the named theory lemmas the argument uses,
 ///    and one Farkas combination per case-split branch (re-derived from the commands
 ///    on re-check — the carried lemma instances are bound to the conjuncts that
-///    license them before any multiplier is read).
+///    license them before any multiplier is read), plus a kernel-checked Lean module
+///    over the constructed integers when the conjunctive reconstruction succeeds.
 /// 4. Otherwise (concat conflict, or a reconstruction/cap decline) a correct
 ///    bare-but-sound [`Evidence::Unsat(None)`](Evidence::Unsat).
 ///
@@ -3630,7 +3653,14 @@ fn string_unsat_evidence(
     if let Ok(commands) = axeyum_smtlib::read_all(input)
         && let Some(certificate) = crate::string_length_cert::string_length_refutation(&commands)
     {
-        return Evidence::UnsatStringLength(certificate);
+        // Best-effort Lean backing: the conjunctive form reconstructs to a
+        // kernel-checked `False` over the constructed integers, a case split does
+        // not (yet). A decline is `None`, never a weaker certificate.
+        let lean_module = crate::reconstruct_string_length_to_lean_module(&certificate).ok();
+        return Evidence::UnsatStringLength {
+            certificate,
+            lean_module,
+        };
     }
     // (4) No transferable certificate yet: the correct, honestly-uncertified verdict.
     Evidence::Unsat(None)
@@ -4284,7 +4314,7 @@ pub fn prove(
         | Evidence::UnsatFifoBc04(_)
         | Evidence::UnsatRegexEmptiness { .. }
         | Evidence::UnsatWordClash(_)
-        | Evidence::UnsatStringLength(_) => {
+        | Evidence::UnsatStringLength { .. } => {
             // Three-valued so the two very different "not verified" cases stay
             // apart (ADR-0384): a certificate that FAILS is a soundness alarm,
             // while a bare `unsat` has nothing to check and keeps the historical
