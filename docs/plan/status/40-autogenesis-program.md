@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction has the accepted generic official-gcd balanced-Bézout theorem plus both official-representation gcd computation leaves. The dedicated five-stream official-only driver is implemented, compiles Clippy-clean, and passes the full `axeyum-lean-import` test suite; it has not read any planned stream or submitted the closed theorem, so closed and downstream authority remain zero.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction has the accepted generic official-gcd balanced-Bézout theorem plus both official-representation gcd computation leaves. The first official-only composition invocation closed the modulo and successor specializations, then declined before a balanced-Bézout submission because importing the generic closure into the r082 base would require unsupported recursive `Acc`; no partial kernel or downstream authority was published.
 
-**Next:** pass the full repository Rust gate for the exact driver commit, retain its exact source in the evidence pack, build the binary once, and execute exactly two complete five-stream invocations. Accept only byte-identical output with replayed receipts, empty footprints, exact argument identities, and no native gcd/fix/extensionality dependencies.
+**Next:** preregister the reverse composition direction: start from the accepted generic balanced-Bézout kernel, compose only `Nat.mod_lt` from r082 plus the accepted modulo adapter and two gcd roots, then perform the same three specializations. This avoids importing the already-present recursive `Acc` package and still requires two fresh byte-identical empty-footprint runs.
 
 <!-- plan-section: landed-changes -->
 
@@ -124,4 +124,5 @@
 | 2026-08-21 | `fb1a3613e` | Official-representation successor gcd root export is frozen without double-counting the native-support theorem |
 | 2026-08-21 | `9ec4bcfa1` | Official-representation successor gcd reconstructs twice empty-footprint, completing the leaf pair for composition |
 | 2026-08-21 | `1d03f09b3` | Five-stream official-kernel balanced-Bézout composition is frozen before implementation |
-| 2026-08-21 | (pending) | Dedicated official-kernel driver compiles Clippy-clean and passes the full importer test suite without stream execution |
+| 2026-08-21 | `f1e0edb57` | Dedicated official-kernel driver compiles Clippy-clean and passes the full importer test suite without stream execution |
+| 2026-08-21 | (pending) | First official-kernel invocation declines at missing recursive `Acc`; reverse composition base is selected with zero theorem credit |

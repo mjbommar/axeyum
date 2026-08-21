@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-gcd-balanced-bezout-official-kernel-result",
+  "state": "first-invocation-declined-at-missing-recursive-Acc-no-retry",
+  "plan": {
+    "path": "artifacts/autogenesis/official-gcd-balanced-bezout-official-kernel-plan-v1.json",
+    "sha256": "e93e4bd2ae2d60cf949a30359ad7d619c574b7e6775ca8a5785efac7c01591c0",
+    "commit": "1d03f09b33dff6dea6f9c2b6c82684e5617b90ea"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/9ec4bcfa1-official-gcd-balanced-bezout-official-kernel-v1/manifest.json",
+    "sha256": "6c415e21f6d0816cf59b4fcd4f576d4259e0be0dae9323849ba187fe3a5f69c6",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/official_gcd_balanced_bezout_composition.rs",
+    "sha256": "f212cf184eaf596b0ff9e25dc73e875e7d3e235d7c86e45539cbd69a5782ee38",
+    "commit": "f1e0edb577d06408faab4019b599b612201f5f92"
+  },
+  "execution": {
+    "binary_builds": 1,
+    "complete_invocations": 1,
+    "input_stream_reads": 5,
+    "successful_composition_operations": 3,
+    "failed_composition_operations": 1,
+    "successful_specialization_operations": 2,
+    "closed_balanced_bezout_submissions": 0,
+    "retries": 0,
+    "second_invocation_skipped_after_first_decline": true
+  },
+  "decline": {
+    "operation": "compose the accepted generic balanced-Bezout theorem into the official r082 base after both gcd leaves and modulo adapter",
+    "class": "unsupported-missing-declaration",
+    "first_rejected": "Acc",
+    "declaration_kind": "recursive-inductive",
+    "proof_material_rendered": false,
+    "partial_kernel_published": false
+  },
+  "next_boundary": {
+    "required_next_increment": "preregister the reverse composition direction: keep the accepted generic theorem kernel as the base and compose only Nat.mod_lt plus the three accepted leaf/adapter roots into it",
+    "generic_kernel_as_base_selected": true,
+    "closed_gcd_balanced_bezout_completed": false
+  },
+  "authority": {
+    "inherited_official_gcd_zero_left_credit": 1,
+    "inherited_official_gcd_succ_credit": 1,
+    "closed_gcd_balanced_bezout_credit": 0,
+    "cancellation_credit": 0,
+    "target_specialization_credit": 0,
+    "exact_fibonacci_target_submissions": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "verification": "python3 scripts/check-autogenesis-official-gcd-balanced-bezout-official-kernel-result.py",
+  "limitations": "The first invocation closed neither balanced-Bezout nor any downstream target. It localizes one unsupported recursive-inductive import and authorizes only a separately preregistered reversal of the composition base."
+}
