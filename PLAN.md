@@ -739,6 +739,10 @@ For every charged order its underlying power subgroup has fewer than
 `8ell^3` classes, because `2^s>ell/(3ceil(log2 ell))`.  This is still an open
 uniform square-root-scale discrepancy theorem, but it identifies the exact
 polynomial-size sparse ray-class system a direct proof must control.
+The highest order in that system has singleton power subgroup `{1}`, so its
+normalized discrepancy still contains the identity-ray Haar increment itself.
+The polynomial-size reduction is therefore a precise direct target, not an
+averaging shortcut or a proof by small subgroup cardinality.
 
 **Next:** prove `(REL)`, encode it as replayable evidence, remove the
 manuscript's fail-visible warning, and perform the final source audit.  The

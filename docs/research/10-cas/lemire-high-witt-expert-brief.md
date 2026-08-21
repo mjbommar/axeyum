@@ -123,6 +123,24 @@ polynomial cardinality alone is not a bound, but it is a meaningful reduction
 from an exponential family and should be the starting point for any direct
 counting or geometric construction.
 
+It is not, however, an averaging shortcut.  At the largest exact order at
+conductor `j`, namely the least power of two `q_j>j`, one has
+`q_j E_j={1}`.  Therefore
+
+```text
+P_(j,log2 q_j)=N_n^[j](1),
+Delta_(j,log2 q_j)=2N_n^[j](1)-N_n^[j-1](1)=H_j(1),
+```
+
+where `N_n^[r](1)` denotes the degree-`n` Mangoldt population of the identity
+class in `E_r`.
+
+The top-order instance of `(NSD)` still contains the identity-ray increment
+itself (paired only with the next nested power subgroup).  Thus the reduction
+isolates the hard sparse system but does not make it a generic small-set
+counting problem; any proof must use its signed nesting or an additional
+arithmetic/geometric structure.
+
 ## What is established, and what must not be silently reused
 
 - Wrapped characteristic-two inverse-additive energy is proved.  It supplies
