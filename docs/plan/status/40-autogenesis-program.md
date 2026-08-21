@@ -8,6 +8,7 @@
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-21 | (pending) | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
 | 2026-08-21 | (pending) | The Lean surface exposes four borrow goals; native `Int.add_neg_cancel_right` is derived instead from Axeyum's axiom-free associativity, inverse, and zero laws |
 | 2026-08-21 | `93a314e15` | A fresh pinned Mathlib 4.30 two-root export is frozen to replace the failed full-closure corollary audit |
