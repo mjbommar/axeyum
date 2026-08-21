@@ -15,14 +15,14 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
 const RESIDUAL_SHA256: &str = "3d20dc04f7598a1625ab87efd2456901fe322ccb0e19cd51f82a04dd37c3bfc9";
-const ADDITION_SHA256: &str = "f46e3dd4053c930984b3232ff98320021daa2fcdb3451e84bfbf011945a18621";
+const ADDITION_SHA256: &str = "5220ace53dcbf0b89121ba72c8e63cc7dcb2a2d7836b313bc597607859d78674";
 const PARITY_SHA256: &str = "0e310823ba37adfbd9087c0da2f85ad57261228d601d9388800cf069b5b2ce82";
 const CAST_SHA256: &str = "0fa66a39f3caec4c4bd00cfefa402b328b37a3fcbd4dd840e17e3f7f292439a5";
 const CANCELLATION_SHA256: &str =
     "40e8ea3b85312f3067808a0772ecedb6689b656999ce86acd2602d9a114d9076";
 
 const RESIDUAL: &str = "Int.fib_add_two_residual";
-const ADDITION: &str = "Axeyum.Autogenesis.NatFibSuccessorAddition";
+const ADDITION: &str = "Axeyum.Autogenesis.fibAddTwo";
 const MOD_CASES: &str = "Axeyum.IntFib.modCases";
 const SUCC_ONE: &str = "Axeyum.IntFib.succOne";
 const SUCC_ZERO: &str = "Axeyum.IntFib.succZero";

@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-exact-composition-result",
+  "state": "exact-target-reconstructed-twice-byte-identical-empty-footprint",
+  "plan_sha256": "258e06b4ff204f63e494c44fd448f1e379a951bcce1d8bb3e448b9dd9c1af5e9",
+  "implementation": {"path": "crates/axeyum-lean-import/examples/int_fib_add_two_composition.rs", "sha256": "e3497c9b4acfd38fd0126710ebd1b59d8a670256f1d6c030e48886bea9166a73"},
+  "evidence": {"pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-exact-composition-v2", "manifest_sha256": "61db55c78dcf18ad9c41d94f7f072e8d2619226b1a3babc21ce6513836b264fe", "capsule_sha256": "0fbbb4d55ed862f7feb1b8efa3bf45eed24269067b3702c727d05e45c8947219", "capsule_bytes": 771121, "sealed": true},
+  "target": {"name": "Int.fib_add_two", "declaration_sha256": "cd1612aa68107d4b35b842f4ad2798f07d15256462d49236b8d34ab852de805f", "axiom_footprint": [], "direct_theorem_dependencies": ["Axeyum.Autogenesis.fibAddTwo", "Axeyum.IntFib.castAdd", "Axeyum.IntFib.evenAdd", "Axeyum.IntFib.modCases", "Axeyum.IntFib.oddAdd", "Axeyum.IntFib.succOne", "Axeyum.IntFib.succZero", "Int.fib_add_two_residual"]},
+  "receipts": {"recurrence_composition": "f81f88d31e8b99e677c3d17b35cb0c30fb375337a9149ccf09b5a13cd5cf20fb", "parity_composition": "7623c45ebbb1e057ebe142af3ee669f8245e7191b2cc863e8f1404977edaea46", "cast_composition": "46be44e0d482447ee034f6a786fe4f430b5b443c9d9e6a4ff208c508b4c730e9", "cancellation_composition": "da10ab852ca652e9cf7e695800c2983bb3562ea5f1a9d013ea46c2a82287b82a", "specialization": "4b9ed016729904d75615955a597406b41b7fd1daf88e976545d47a0ec2dc10e2"},
+  "execution": {"driver_builds": 1, "complete_invocations": 2, "target_submissions": 2, "exports": 2, "fresh_imports": 4, "outputs_byte_identical": true, "receipts_byte_identical": true, "retries": 0, "ledger_writes": 0},
+  "authority": {"target_credit": 1, "fact_status_changes": 0, "ledger_writes": 0},
+  "next_boundary": "register and execute one crash-safe typed admission for F:ml430-int-fib-add-two-739358dd"
+}

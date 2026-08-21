@@ -330,3 +330,4 @@
 | 2026-08-21 | (pending) | Parity V3's explicit cases are accepted; V4 freezes the two required reflexive successful branches |
 | 2026-08-21 | (pending) | Parity V4 closes all four roots empty-footprint; exact eight-root `Int.fib_add_two` kernel composition is frozen before code |
 | 2026-08-21 | (pending) | Exact composition V1 fails before submission on the wrong Fibonacci support shape; V2 freezes the exact one-index recurrence capsule |
+| 2026-08-21 | (pending) | Exact composition V2 reconstructs `Int.fib_add_two` twice byte-identically with an empty footprint; ledger admission remains separate |
