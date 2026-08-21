@@ -4,20 +4,20 @@
 > This is the stable Phase-0 source snapshot; an execution capture binds it
 > to an exact clean Git commit without creating a self-referential artifact.
 
-Source identity: `sha256:aa1536a4ad36a1240f7f9fcfdbfa560ae4d9007c2a953125664210b4e5678f80`
+Source identity: `sha256:c7ed086a393d82c8fef0ed070e6cc5a00af422931bd0a50f5596fe0afe26c453`
 
 ## Ledger and chain substrate
 
 | Population | Facts | Edges | Isolated | Maximum depth |
 |---|---:|---:|---:|---:|
 | All facts | 342 | 155 | 176 | 10 |
-| `kernel-lean` | 60 | 72 | 11 | 10 |
+| `kernel-lean` | 61 | 73 | 10 | 10 |
 
 The kernel row is a candidate substrate, not by itself proof that an edge is an
 operational unlock. The committed Autogenesis-1 result supplies the credited
 pre-B counterfactual and repeated authoritative two-write acquisition.
 The dependency gate can map **35** of
-**60** kernel facts to named theorems;
+**61** kernel facts to named theorems;
 the remaining facts stay explicit rather than being guessed.
 
 ## Backward requirements

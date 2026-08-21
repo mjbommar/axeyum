@@ -118,6 +118,7 @@ now. Nothing was deleted.
 | Date | Commit | Result |
 |---|---|---|
 | 2026-08-21 | (pending) | All 35 dominance audits re-run at `496288979` from a `lane-snapshot` tree; `dominant_unsat` 262 / 324 → **269 / 326**, `lean-reconstruction-gap` 15 → **10**, certified/checked 278 → 280. Four rows moved: QF_NRA cvc5 (+3, `RealProduct`×2 + `MonomialBound`), QF_S (+2, `StringLength`), QF_NRA synthetic (+2, the prelude-warm instrument fix, proved by an A/B with the warm suppressed at two revisions), QF_SEQ (a `parse-error` became `sat`, no dominance change). `gen-proof-gap-matrix`, `gen-proof-gap-shape-census`, `gen-dominance-scoreboard` and `gen-autogenesis-baseline` regenerated; the six moved markers in `PROJECT-STATE.md` and the gap analysis renumbered **with** the account of what moved them, and the ten remaining Lean-reconstruction gaps recorded one line each with the fragment's own decline reason rather than the fallback route's. |
+| 2026-08-21 | `a3799dca2` | **`QF_FP/fp_misc`'s "timeout" was an unmemoized DAG walk in the classifier.** `array_bv_abs::abstract_term` re-explored shared subterms once per path; 8/8 `gdb` samples sat in it. Memo + visit budget, each guard mutation-verified to kill exactly one test: **124.7 s timeout → 314 ms**, 4,194,309 visits → 4,365 over 5,762 nodes. QF_FP `timeouts 1 → 0`, certified/checked 15/16 → **16/16**; `dominant` stays 15/16 and the row now declares `bit-blast` instead of `timeout`, because `887b52e64` withdrew its term-level FP route on purpose. Also measured and pinned: `QF_BVFP/Float-no-simp3-main` is not the "evidence exceeds 120 s" it was recorded as — its reduction certificate is `proved` in **28.3 ms** and is withheld only by `produce_evidence`'s blanket "timeout set → skip", whose deadline covers the SAT search and none of `lower_terms` / `tseitin_encode` / `check_drat` / LRAT. QF_FP and QF_BVFP audits re-run at `a3799dca2`; `proof_errors` 4 → **3**, certified/checked 280 → **281**, and the four moved markers in `PROJECT-STATE.md` and the gap analysis renumbered with the account of what moved them. |
 | 2026-08-21 | `fc191b3e5` | Full stable statement-survival atlas is preregistered before the one authorized comparison pass |
 | 2026-08-21 | `7edebb579` | Full Nat/Int atlas classifies all 9,839 v4.30/v4.32.1 union names and isolates representation-wide drift |
 | 2026-08-21 | `030d82adb` | First proof-isolated joint quotient/remainder reconstruction fails closed with a measured `propext` footprint |
@@ -889,6 +890,63 @@ Next on this axis: the three Handelman reconstructions; the `Or.rec` case
 analysis that would close the two principled declines; and the dir-branch drop,
 which makes a synthetic row's denominator depend on what the audit could decide
 that day.
+
+**`QF_FP/solver__fp__fp_misc.smt2` timed out because `array_bv_abs::abstract_term`
+walks a DAG as a tree; memoized, the row goes from 124.7 s of a 125 s budget to
+314 ms. It is now certified and independently checked and it is still not
+dominant, and that second half is correct rather than unfinished** (`DONE`,
+agent-fp-misc-hang, 2026-08-21).
+
+**The null was the finding.** `audit_dominance` fills `timeout_phase_detail`
+from `scan_proof_fragment` *before* reconstruction starts, so `fp_misc`'s
+`detail: null` meant classification itself never returned — while three sibling
+rows in the same run did name their fragment, which is the positive control that
+the mechanism worked. Eight of eight `gdb` samples, 100% of the axeyum frames,
+were in `abstract_term`, self-recursive dozens of frames deep. `perf` and a bare
+`gdb -p` are both blocked on this host (`perf_event_paranoid=4`,
+`ptrace_scope=1`); an unprivileged sampling loop returns an empty file that reads
+exactly like "nothing to see". `sudo gdb -p` works.
+
+**Every cap in that module was on the walk's RESULT.** `MAX_ABSTRACTED_TERMS`,
+`MAX_ABSTRACTED_NODES` and the 1 s solve timeout all run after
+`build_bv_abstraction` returns, so nothing bounded the walk itself. Memoizing
+took `fp_misc` from 4,194,309 visits to 4,365 over 5,762 reachable nodes; the new
+visit budget is what makes the memo's guard fail in 0.23 s instead of hanging.
+Sixth instance of this bug in this repository, and the second this week — the
+2026-08-20 pair (`contains_quantifier`, `lower_derived_bv`) were latent behind
+routes nothing reached until `887b52e64` made FP rows decline `BvDefinedEnum`,
+which is the same commit that exposed this one.
+
+**Not dominant, and that is the honest answer.** The 2026-07-21 row was dominant
+through `bv_defined_enum`, which `887b52e64` deliberately withdrew for FP
+arithmetic pending a certified `Fpa2Bv` reduction — pinned by that commit's own
+`declines_qf_fp_misc_without_certified_fpa2bv`. `fp_misc` now decides through
+bit-blast with an explicit `bit-blast` trust hole. `trust_holes: ["timeout"]`
+becoming `["bit-blast"]` is the whole improvement, and restoring dominance means
+certifying `Fpa2Bv`, not raising a budget.
+
+**`QF_BVFP/Float-no-simp3-main` is a budget, but not the one that was recorded.**
+The standing note said "decision is 4.6 ms but its evidence still exceeds 120 s".
+Measured at HEAD, `produce_evidence` returns in 19 ms and nothing times out. The
+same `887b52e64` decline removes its certifying route, and what it falls back to
+is a bare `unsat` only because `produce_evidence` skips
+`reduction_unsat_certificate` **outright** whenever `config.timeout` is set —
+which `audit_dominance` and `diagnose_evidence` both always do. Run the same
+export unbudgeted and it is `proved` in **28.3 ms**.
+
+I did not loosen that guard, and the measurement says why not: the `deadline` it
+would rely on reaches only `solve_with_drat_proof_within`. `lower_terms`,
+`tseitin_encode`, `check_drat` and the LRAT elaboration are all unbounded, and
+the guard covers 42 bare-`unsat` rows across the committed audits. Landed
+instead as a two-test pair asserting opposite outcomes on the same instance, so
+neither can pass vacuously and either direction of change breaks one.
+
+Next on this axis, in cost order: thread the deadline through
+`export_qf_bv_unsat_proof_impl`'s unbounded phases and then narrow the blanket
+budget guard to a real remaining-time attempt (this alone would move
+`Float-no-simp3-main` and any other BV-reducible bare `unsat` to certified);
+then `Fpa2Bv` certification, which is what both FP rows actually need for
+dominance.
 
 **Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. The complete v4.30/v4.32.1 Nat/Int statement atlas now classifies all 9,839 union names: 8,957 are structurally identical, while 720 have structural drift, including 414 instances of the isolated power-projection signature. Bottom-up Euclidean reconstruction has advanced from the proof-isolated capsule to a twice-reconstructed, empty-footprint private joint quotient/remainder invariant after replacing the sole `Nat.sub_add_cancel` carrier locally. The exact public `Nat.div_add_mod` statement compiles both through synchronized well-founded recursion and through primitive induction over an inclusive dividend bound, but neither is accepted: the first depends on generated `_unary`, and the second removes generated recursion yet still has footprint `[propext]`. One preregistered importer audit now localizes that complete footprint to exactly `Nat.div_eq` and `Nat.mod_eq`; the other 20 direct dependencies are empty-footprint. No public Euclidean support, balanced-Bézout replay, cancellation replay, Fibonacci target submission, executor invocation, receipt, evaluation credit, fact transition, or ledger write has followed.
 

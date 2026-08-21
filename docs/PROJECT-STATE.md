@@ -134,18 +134,22 @@ Across the retained broad UNSAT denominator, **269 / 326** outcomes satisfy the
 full certified, independently checked, trust-hole-free, Lean-reconstructed
 conjunction; **42 uncertified** outcomes carry no certificate at all;
 **10 certified** and independently checked outcomes lack Lean reconstruction;
-and **4 proof-production errors** remain. All 35 audits were re-run at
+and **3 proof-production errors** remain. All 35 audits were re-run at
 `496288979` on 2026-08-21 and four rows moved: **+5 of the +7 dominant outcomes
 are capability** (two `RealProduct` and one `MonomialBound` reconstruction in
 QF_NRA, two `StringLength` in QF_S) and **+2 are the instrument** — two QF_NRA
 synthetic instances that had been billed for a process-wide 32 s `CReal` prelude
 build inside a 10 s per-instance cap, and which a directory-backed row drops
 without recording a timeout. The A/B that separates the two is in the
-[gap analysis](plan/gap-analysis-z3-lean-2026-07-21.md). All four of those errors are evidence-audit
-**timeouts**, not rejections — three quantified-BV instances and
-`QF_FP/solver__fp__fp_misc.smt2` — so they are a budget the audit did not fit
-inside, and the earlier reading of this line as a proof-production *refusal* was
-wrong.
+[gap analysis](plan/gap-analysis-z3-lean-2026-07-21.md). All three of those errors are evidence-audit
+**timeouts**, not rejections — three quantified-BV instances — so they are a
+budget the audit did not fit inside, and the earlier reading of this line as a
+proof-production *refusal* was wrong. `QF_FP/solver__fp__fp_misc.smt2` was a
+fourth and is not: `4032bd660` found an unmemoized DAG walk in the classifier,
+not a budget, and the QF_FP and QF_BVFP rows were re-run at `a3799dca2`. It is
+now certified and independently checked in 314 ms; it is still not dominant,
+because `887b52e64` deliberately withdrew the term-level FP route pending a
+certified `Fpa2Bv` reduction, so it carries a `bit-blast` trust hole instead.
 
 Two small performance controls remain useful but bounded: Axeyum and the Z3
 crate each decide **8 / 113** at 20 seconds on p4dfa, on partially different

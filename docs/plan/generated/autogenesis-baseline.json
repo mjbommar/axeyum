@@ -59,13 +59,13 @@
   "contract": "internal-autogenesis-phase0",
   "ledger": {
     "assurance": {
-      "axiom_free_kernel_facts": 58,
+      "axiom_free_kernel_facts": 59,
       "check_statuses": {
-        "checked": 273
+        "checked": 274
       },
-      "evidence_rows": 273,
-      "with_checker_command": 271,
-      "with_multiple_named_checkers": 127
+      "evidence_rows": 274,
+      "with_checker_command": 272,
+      "with_multiple_named_checkers": 128
     },
     "dependency_graph": {
       "dangling": [],
@@ -713,7 +713,7 @@
     "facts": 342,
     "kernel_dependency_coverage": {
       "authority_gate": "scripts/check-fact-depends-derived.py",
-      "facts": 60,
+      "facts": 61,
       "named": 35,
       "unnamed_fact_ids": [
         "F:complex-admits-no-compatible-order",
@@ -726,6 +726,7 @@
         "F:ml430-nat-ascfactorial-zero-fd183202",
         "F:ml430-nat-descfactorial-zero-966b01df",
         "F:ml430-nat-fib-add-two-b86e0c82",
+        "F:ml430-nat-fib-coprime-fib-succ-162fc738",
         "F:nat-peano-categoricity",
         "F:nra-refutations-reconstruct-over-constructed-reals",
         "F:ordered-ring-farkas-refutation",
@@ -748,7 +749,7 @@
       "depth_histogram": {
         "1": 22,
         "10": 1,
-        "2": 7,
+        "2": 8,
         "3": 9,
         "4": 8,
         "5": 5,
@@ -757,7 +758,7 @@
         "8": 3,
         "9": 2
       },
-      "edges": 72,
+      "edges": 73,
       "edges_detail": [
         {
           "consequent": "F:complex-admits-no-compatible-order",
@@ -874,6 +875,10 @@
         {
           "consequent": "F:int-sub-nat-nat-shift",
           "premise": "F:nat-add-zero"
+        },
+        {
+          "consequent": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
+          "premise": "F:ml430-nat-fib-add-two-b86e0c82"
         },
         {
           "consequent": "F:nat-add-comm",
@@ -1048,21 +1053,21 @@
           "premise": "F:real-axioms-modelled-by-constructed-setoid"
         }
       ],
-      "isolated": 11,
+      "isolated": 10,
       "max_depth": 10,
-      "nodes": 60,
+      "nodes": 61,
       "statuses": {
-        "proved": 60
+        "proved": 61
       },
       "unsettled": 0,
-      "with_dependencies": 38,
-      "with_dependents": 36
+      "with_dependencies": 39,
+      "with_dependents": 37
     },
     "routes": {
-      "(missing)": 220,
+      "(missing)": 219,
       "cas-certificate": 19,
       "imported-kernel-lean": 5,
-      "kernel-lean": 60,
+      "kernel-lean": 61,
       "search-certificate": 12,
       "smt-clausal": 9,
       "smt-term-level": 17
@@ -1070,8 +1075,8 @@
     "statuses": {
       "computed": 2,
       "conjectured": 3,
-      "open": 217,
-      "proved": 117,
+      "open": 216,
+      "proved": 118,
       "refuted": 3
     }
   },
@@ -1162,21 +1167,21 @@
     }
   ],
   "proof_gap": {
-    "audit_reported_checked": 280,
-    "audit_unsat": 322,
+    "audit_reported_checked": 281,
+    "audit_unsat": 323,
     "baseline_unsat": 326,
     "complete_audits": 35,
     "dominant_unsat": 269,
-    "evidence_certified": 280,
-    "evidence_checked": 280,
+    "evidence_certified": 281,
+    "evidence_checked": 281,
     "lean_checked": 269,
-    "proof_errors": 4,
+    "proof_errors": 3,
     "trust_hole_free": 321,
     "trust_hole_instances": 5
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "aa1536a4ad36a1240f7f9fcfdbfa560ae4d9007c2a953125664210b4e5678f80",
+    "digest": "c7ed086a393d82c8fef0ed070e6cc5a00af422931bd0a50f5596fe0afe26c453",
     "inputs": [
       {
         "bytes": 1939,
@@ -1229,9 +1234,9 @@
         "sha256": "221b5278448e933590c665647b3fcad72fae96cd03b9701eecf50bac65b5d161"
       },
       {
-        "bytes": 12791,
+        "bytes": 15146,
         "path": "artifacts/autogenesis/operations.json",
-        "sha256": "41a4301e4463e1fb3fc7fe55bf67680c3786bd39765ba1a61dba16ed78d6232c"
+        "sha256": "68bfd78b02661b3e06949c9100231b42b3ed686d9c69820f2a7d1d3489e955ea"
       },
       {
         "bytes": 3519,
@@ -2194,9 +2199,9 @@
         "sha256": "1b84cdcf6598c53b8e7236572be634ae431b395f887f761da97c4981cd2a85b8"
       },
       {
-        "bytes": 1635,
+        "bytes": 6589,
         "path": "artifacts/facts/F-ml430-nat-fib-coprime-fib-succ-162fc738.json",
-        "sha256": "3a3949c4521f4e5b932d28175ea2bb29d118bd655da90bee128781a29d1e6555"
+        "sha256": "146a11e44dc14c0c15e57717a585759ac37dae4f88eab62f2a6b26bccef2364d"
       },
       {
         "bytes": 1566,
@@ -2969,9 +2974,9 @@
         "sha256": "05dddd7a636f3baf93aa43e5cd874e9994e7252303507bc11b2b8ea017454e0f"
       },
       {
-        "bytes": 48985,
+        "bytes": 48777,
         "path": "docs/plan/generated/proof-gap-matrix.json",
-        "sha256": "2fa71d5589eba0a176fd1a5c269333134111cb009a3de5c6fd3340ffd159ceb7"
+        "sha256": "0458fd39f0bfc2f170257badab3f1e2f0e2f355889eadb7b3e51a3b0c4351c2a"
       },
       {
         "bytes": 94656,
@@ -3009,9 +3014,9 @@
         "sha256": "98361cbd4b978273d5e49270f2614af91755379c5229fbba00812281797493fa"
       },
       {
-        "bytes": 15943,
+        "bytes": 20429,
         "path": "scripts/check-autogenesis-fact-operation.py",
-        "sha256": "7b210a7e820125811c5675648af78d0d982c465c61c7d37d7c5cc9c8a7bcac30"
+        "sha256": "68c483a9db79f939bf2a4d1ee3105db4309c38b2e0fd14e42500333077a30d9f"
       },
       {
         "bytes": 3677,
@@ -3119,9 +3124,9 @@
         "sha256": "cb7b1b6ed2cb8f268b6adac42cc1bfb4ff3b99ce9e85b438c23790b4ce92c9e1"
       },
       {
-        "bytes": 53253,
+        "bytes": 59637,
         "path": "scripts/execute-autogenesis-operation.py",
-        "sha256": "edf923e80f5935b3288703163322df6cde0b197ed7820490c53d6f7e08629406"
+        "sha256": "f57e6dbb2059859b6eefc789097a13cafcc00585b6275b6f8ac28b8d6491074d"
       },
       {
         "bytes": 27844,
@@ -3149,9 +3154,9 @@
         "sha256": "78cc93de6ab3c1fed5378c757f0ebfcbee47e66ecd72c25022755a4707e2b376"
       },
       {
-        "bytes": 28019,
+        "bytes": 31661,
         "path": "scripts/prepare-autogenesis-fact-transaction.py",
-        "sha256": "20de0cacf5bc86374c274fe3a7f460f6941a955b2159afbe734ff4bb8187dc1c"
+        "sha256": "6177aec35a5976e516cdc395071757763847ee6792c1e7946dcb120334d13cc8"
       },
       {
         "bytes": 14169,
@@ -3199,9 +3204,9 @@
         "sha256": "b8b8cd547a1626597e4c03c5d84bcf2e293703d451fce4a19a172c1218efdf39"
       },
       {
-        "bytes": 21975,
+        "bytes": 25058,
         "path": "scripts/validate-autogenesis-operations.py",
-        "sha256": "455166033e390294ee49b4f1bbe528d83d4aee024026a7449eebfce5d84d2383"
+        "sha256": "d8a9b5ea142d7ef5cbfc9a05ad53d5bd8263e9e75b05ff2c940d6c125f90bd83"
       },
       {
         "bytes": 2711,
