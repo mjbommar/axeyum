@@ -227,6 +227,32 @@ def check_document(doc: dict, where: str, f: Findings, doc_dir=None) -> None:
                 if not kind.get("source"):
                     f.error(where, f"{at}: literal table with no `source` provenance")
 
+        if ktype == "certificate":
+            # The same rule the Rust resolver enforces, stated independently:
+            # a box that says "nothing recorded a run" while naming the run it
+            # recorded makes two contradictory statements, and a reader cannot
+            # tell which one the page means.
+            if kind.get("no_exit_reason") and kind.get("evidence"):
+                f.error(
+                    where,
+                    f"{at}: certificate states `no_exit_reason` "
+                    f"({kind['no_exit_reason']!r}) and yet cites "
+                    f"{len(kind['evidence'])} run record(s). Either an execution was "
+                    "recorded or it was not",
+                )
+            # And the other half, which the Rust side reports as an EMITTER
+            # diagnostic rather than a refusal: silence about whether anything
+            # ran at all. Reported here as a warning, because a certificate is
+            # allowed to be an invitation to the reader -- it just has to say
+            # so.
+            if not kind.get("no_exit_reason") and not kind.get("evidence"):
+                f.warn(
+                    where,
+                    f"{at}: certificate carries neither `evidence` nor "
+                    "`no_exit_reason`; the rendered box will imply a run that "
+                    "nothing records",
+                )
+
         if ktype == "figure" and not kind.get("alt"):
             f.error(where, f"{at}: figure has no `alt` text")
 

@@ -70,6 +70,21 @@
             "markdown": { "type": "object", "additionalProperties": true },
             "html": { "type": "object", "additionalProperties": true }
           }
+        },
+        "nav": {
+          "type": "array",
+          "default": [],
+          "description": "Cross-document navigation, in reading order: where this document sits among its siblings. Empty for a document that stands alone, which is why it defaults rather than being required. A target naming a Doc-IR source file (`*.doc.json`) resolves to that document's RENDERED PAGE; anything else renders as plain text, so a broken reference looks broken instead of looking live. Assembly resolves nothing here -- a link to a sibling document is not evidence and carries no status -- so what keeps these honest is `render/tests/link_integrity.rs`, which renders the whole site and fails if one does not resolve to an emitted file.",
+          "items": {
+            "type": "object",
+            "required": ["label", "href"],
+            "additionalProperties": false,
+            "properties": {
+              "label": { "type": "string", "minLength": 1 },
+              "href": { "type": "string", "minLength": 1, "description": "Relative to THIS document's own output file, not to the repository root." },
+              "rel": { "type": "string", "description": "Optional short relation: `up`, `prev`, `next`, `component`." }
+            }
+          }
         }
       }
     },
@@ -276,6 +291,11 @@
           "type": "array",
           "items": { "$ref": "#/$defs/EvidenceRef" },
           "description": "Optional run records for this certificate. Unlike a claim's evidence this may be empty: a certificate block can present an artifact for the reader to check themselves without asserting that anyone has."
+        },
+        "no_exit_reason": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Why this certificate carries no recorded run. A certificate box with NEITHER an exit status NOR a reason implies a run that nothing records, and the HTML emitter reports exactly that as a diagnostic. Some certificates legitimately have none: a fact-ledger evidence row asserts `check_status: checked` and offers a command a reader may run, but nothing recorded an execution, and a four-hour re-check cannot be a per-commit gate. The honest form of that is a STATED REASON, never a blank. Assembly REFUSES a block that sets this and also cites a run record: those are two contradictory statements about one box."
         }
       }
     },
