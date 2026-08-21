@@ -168,13 +168,6 @@ fn run_official_clean_order_capsule(
         return Err("r091 is not proof-isolated".to_owned());
     }
     let mut kernel = imported.kernel().clone();
-    let eq_zero = declare_official_eq_zero(&mut kernel)?;
-    require_empty(&kernel, eq_zero, OFFICIAL_EQ_ZERO)?;
-    let le_of_dvd = declare_official_le_of_dvd(&mut kernel)?;
-    require_empty(&kernel, le_of_dvd, OFFICIAL_LE_OF_DVD)?;
-    let antisymm = declare_official_antisymm(&mut kernel)?;
-    require_empty(&kernel, antisymm, OFFICIAL_ANTISYMM)?;
-
     let cancellation = import_bound(&cancellation_path, CANCELLATION_CAPSULE, CANCELLATION)?;
     let compatible = compose_checked_theorem_slice(cancellation.kernel(), &kernel, &[CANCELLATION])
         .map_err(|error| format!("official cancellation compatibility declined: {error:?}"))?;
@@ -193,6 +186,14 @@ fn run_official_clean_order_capsule(
     {
         return Err("official cancellation compatibility added assumptions".to_owned());
     }
+    let compatibility_receipt = compatible.receipt().receipt_sha256.clone();
+    kernel = compatible.kernel().clone();
+    let eq_zero = declare_official_eq_zero(&mut kernel)?;
+    require_empty(&kernel, eq_zero, OFFICIAL_EQ_ZERO)?;
+    let le_of_dvd = declare_official_le_of_dvd(&mut kernel)?;
+    require_empty(&kernel, le_of_dvd, OFFICIAL_LE_OF_DVD)?;
+    let antisymm = declare_official_antisymm(&mut kernel)?;
+    require_empty(&kernel, antisymm, OFFICIAL_ANTISYMM)?;
 
     let root = find_name(&kernel, OFFICIAL_ANTISYMM)?;
     let expected = evidence(&kernel, root)?;
@@ -222,7 +223,7 @@ fn run_official_clean_order_capsule(
             "supports": [evidence(&kernel, eq_zero)?, evidence(&kernel, le_of_dvd)?, expected],
             "official_cancellation_compatibility": {
                 "root": CANCELLATION,
-                "receipt_sha256": compatible.receipt().receipt_sha256,
+                "receipt_sha256": compatibility_receipt,
                 "replayed": true,
             },
             "portable_capsule": {
