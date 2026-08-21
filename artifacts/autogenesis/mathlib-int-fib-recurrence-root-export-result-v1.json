@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-recurrence-root-export-result",
+  "state": "both-official-roots-assumption-bearing-dependency-free-natcast-selected",
+  "plan_sha256": "45b0d5f2ac185906496c4ac5afef9035c03b8315bdec6db1c153ed6b6c3a10d5",
+  "pack_manifest_sha256": "26e5fdb0ee0b76e99d82d92fe241d17ff54e7557c3db4112dc4b4d00f662058a",
+  "roots": {
+    "Int.fib_natCast": {"class": "propext-bearing", "declaration_sha256": "79eb0fa1f891519e281ffef6fdb136848470ba31c2770ea3aea9e924bfe757a7", "direct_theorem_dependency_count": 0},
+    "Int.fib_add_two": {"class": "propext-bearing", "declaration_sha256": "181f812edc7ced18df7b45695000e37929f226a03bf18c543a0d6912c9eedcf8", "direct_theorem_dependency_count": 53}
+  },
+  "decision": {"first_bottom_up_target": "Int.fib_natCast", "compose_official_root": false, "next": "attempt one direct definitional reconstruction before any dependency expansion"},
+  "authority": {"proof_terms_rendered": 0, "theorem_credit": 0, "fact_status_changes": 0, "ledger_writes": 0}
+}

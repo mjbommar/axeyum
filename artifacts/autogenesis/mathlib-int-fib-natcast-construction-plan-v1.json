@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-natcast-construction-plan",
+  "state": "preregistered-before-single-direct-definitional-source-execution",
+  "policy_version": "int-fib-natcast-direct-v1",
+  "target_fact": "F:ml430-int-fib-natcast-d5886be4",
+  "target_statement": "∀ (n : ℕ), Int.fib ↑n = ↑(Nat.fib n)",
+  "target_theorem": "Axeyum.Autogenesis.intFibNatCastDirectV1",
+  "source": {"path": "artifacts/autogenesis/sources/int-fib-natcast-direct-v1.lean", "sha256": "81b384360641cb8a19719f48fac798cb2d547c6e3f94df6d50c8d522638fb26c", "remote_path": "/home/mjbommar/lean-import-scale/mathlib4/AxeyumIntFibNatCastDirectV1.lean", "remote_must_not_preexist": true},
+  "inputs": {"qualification_result": {"path": "artifacts/autogenesis/mathlib-int-fib-recurrence-root-export-result-v1.json", "sha256": "cbab7f29bbcaa22842819d4cc93e45b33d8a66b6442c03c919c64535af477a59", "required_state": "both-official-roots-assumption-bearing-dependency-free-natcast-selected"}},
+  "execution": {"max_source_copies": 1, "max_compiler_invocations": 1, "max_exporter_invocations": 1, "max_importer_runs": 2, "max_proof_bearing_stream_reads": 2, "max_retries": 0, "max_new_theorem_submissions": 1, "max_exact_negative_fibonacci_submissions": 0, "max_ledger_writes": 0},
+  "success": {"fresh_reconstructions": 2, "byte_identical_capsules": true, "required_axiom_footprint": [], "required_direct_theorem_dependencies": [], "fact_admission_authorized": false},
+  "failure": {"stop_after_first_compiler_or_kernel_error": true, "no_retry": true, "theorem_credit": 0}
+}

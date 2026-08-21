@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-recurrence-support-audit-result",
+  "state": "sealed-parent-stream-does-not-yield-complete-two-root-audit-fresh-root-export-required",
+  "plan_sha256": "fa4b2548e77317132b4cbbc8da230f314789ed1415c9ac94ef5b16646f142aeb",
+  "failure_pack_manifest_sha256": "0b7e995479dd4df6d0705c451c29e5a07a415816a714ffcbf2b9e5b88a2a14a8",
+  "requested_roots": ["Int.fib_natCast", "Int.fib_add_two"],
+  "execution": {"batch_importer_runs": 1, "proof_bearing_stream_reads": 1, "completed_audit_documents": 0, "stdout_bytes": 0, "retries": 0},
+  "conclusion": {"support_footprints_measured": false, "fresh_root_selected_export_required": true, "first_bottom_up_target": "Int.fib_natCast"},
+  "authority": {"proof_terms_rendered": 0, "theorem_types_rendered": 0, "theorem_values_rendered": 0, "support_theorem_credit": 0, "fact_status_changes": 0, "ledger_writes": 0},
+  "limitations": "The process runner did not retain child stderr after the nonzero exit, so this result records only the authoritative absence of a completed audit and does not claim which requested root was absent."
+}

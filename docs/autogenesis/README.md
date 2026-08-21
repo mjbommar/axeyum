@@ -221,6 +221,19 @@ compounding, not automation theatre.
 | [Exact `Int.fib_neg` dependency audit plan](193-int-fib-neg-dependency-audit-plan.md) | Which of the official proof's exact 26 direct dependencies are clean mathematical supports, and which carry the measured assumptions? |
 | [Exact `Int.fib_neg` dependency audit result](194-int-fib-neg-dependency-audit-result.md) | Does the clean outer case split suffice, or is the negative-natural Fibonacci core itself the next assumption-bearing frontier? |
 | [`Int.fib_neg_natCast` dependency audit plan](195-int-fib-neg-natcast-dependency-audit-plan.md) | Which exact supports beneath the negative-natural core can seed a clean target-owned parity/sign reconstruction? |
+| [`Int.fib_neg_natCast` dependency audit result](196-int-fib-neg-natcast-dependency-audit-result.md) | Does the negative-natural surface retain clean transport, and which parity/Fibonacci core remains to replace? |
+| [Private `Int.fib_of_odd` root audit plan](197-int-fib-of-odd-private-root-audit-plan.md) | What kernel footprint and dependency surface sit beneath the one private theorem supporting the remaining Fibonacci core? |
+| [Private `Int.fib_of_odd` root audit result](198-int-fib-of-odd-private-root-audit-result.md) | Is the private root reusable mathematics, or an automation expansion that should be replaced by direct recurrence? |
+| [Integer Fibonacci recurrence support audit plan](199-int-fib-recurrence-support-audit-plan.md) | Are the two proposed recurrence supports actually admissible, or must the bottom-up chain construct them first? |
+| [Integer Fibonacci support audit failure](200-int-fib-recurrence-support-audit-failure.md) | Did the parent closure contain a complete auditable support pair, and what fail-closed export step follows when it did not? |
+| [Fresh integer Fibonacci recurrence root export plan](201-int-fib-recurrence-root-export-plan.md) | Can a dedicated two-root export qualify the open natural-cast and integer-recurrence premises without laundering them? |
+| [Direct `Int.fib_natCast` construction plan](202-int-fib-natcast-construction-plan.md) | Is the dependency-free natural-cast bridge definitionally reconstructible as the first honest integer Fibonacci leaf? |
+| [Rooted `Int.fib_natCast` construction retry](203-int-fib-natcast-rooted-retry-plan.md) | Can the accepted definitional proof be exported when its olean is placed explicitly in Mathlib's build-library root? |
+| [`Int.fib_natCast` definition contamination](204-int-fib-natcast-definition-contamination.md) | Does a dependency-free `rfl` proof become clean, or does the official integer Fibonacci representation itself carry assumptions? |
+| [`Int.fib` definition blocker-path audit plan](205-int-fib-definition-blocker-path-audit-plan.md) | Which declaration carriers connect official integer Fibonacci to each blocked assumption without exposing its definition body? |
+| [Absent-aware `Int.fib` blocker partition retry](206-int-fib-definition-blocker-partition-retry.md) | Which theorem-footprint blockers are truly inside `Int.fib`, after the strict all-present assumption fails? |
+| [Clean target-owned `Int.fib` construction plan](207-int-fib-clean-definition-construction-plan.md) | Can constructor matching and explicit Nat parity replace the contaminated official decision-instance closure? |
+| [Clean target-owned `Int.fib` construction result](208-int-fib-clean-definition-result.md) | Does the representation repair make exact `Int.fib_natCast` reproducible and axiom-free? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

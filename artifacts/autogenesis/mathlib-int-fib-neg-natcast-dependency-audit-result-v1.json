@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-natcast-dependency-audit-result",
+  "state": "transport-clean-parity-and-fib-odd-core-assumption-bearing",
+  "plan_sha256": "6738be781656bff722710679555a4cd2a4beb8b0fb445ecdba46f6dfd1b02bc3",
+  "pack_manifest_sha256": "1c722edb023be56a2ec4232c42b76a97647ee74589267993180eb3c5e424e3dc",
+  "summary": {"population": 36, "empty_footprint": 18, "propext_bearing": 18, "other_assumption_bearing": 0},
+  "empty_footprint_roots": [
+    "Eq.trans", "Int.natAbs_neg", "Int.toNat_neg_natCast", "Nat.cast_zero",
+    "congr", "congrArg", "congrFun'", "implies_congr", "ite_congr",
+    "mul_neg", "mul_one", "neg_mul", "neg_neg", "of_eq_true", "one_mul",
+    "one_pow", "pow_add", "pow_one"
+  ],
+  "assumption_bearing_roots": [
+    "Even.neg_pow", "Int.even_coe_nat._simp_1", "Int.fib_of_odd",
+    "Int.natCast_eq_zero._simp_1", "Int.natCast_le_zero._simp_1",
+    "Int.odd_coe_nat._simp_1", "Int.zero_le_neg_iff._simp_1",
+    "Nat.even_or_odd", "Nat.fib_eq_zero._simp_1", "Odd.add_one._simp_1",
+    "eq_self", "eq_true", "even_neg._simp_1", "imp_self._simp_1",
+    "ite_cond_eq_true", "ite_eq_right_iff._simp_1", "odd_neg._simp_1",
+    "zero_eq_neg._simp_1"
+  ],
+  "key_frontier": {
+    "fib_odd": {
+      "name": "Int.fib_of_odd",
+      "declaration_sha256": "b808700b074c7bc63c6d63479f217f3c30f7aa45452e8d672efb6a5fa578b234",
+      "direct_theorem_dependencies": ["_private.Mathlib.Data.Int.Fib.Basic.0.Int.fib_of_odd._proof_1_2"]
+    },
+    "clean_transport_roots": ["Int.natAbs_neg", "Int.toNat_neg_natCast", "pow_add", "pow_one", "mul_neg", "neg_neg"]
+  },
+  "decision": {
+    "official_natcast_composition_authorized": false,
+    "next_action": "preregister a proof-free statement and footprint qualification of the private Int.fib_of_odd proof root before choosing direct recurrence reconstruction"
+  },
+  "budget": {"exporter_invocations": 0, "batch_importer_runs": 1, "proof_bearing_stream_reads": 1, "retries": 0, "reconstruction_source_compilations": 0, "new_theorem_submissions": 0, "exact_target_submissions": 0, "executor_invocations": 0},
+  "authority": {"proof_terms_rendered": 0, "theorem_types_rendered": 0, "theorem_values_rendered": 0, "support_theorem_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "limitations": "The exact direct-dependency split is measured, but no negative Fibonacci theorem is reconstructed or credited."
+}

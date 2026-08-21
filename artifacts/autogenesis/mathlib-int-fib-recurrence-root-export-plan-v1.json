@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-recurrence-root-export-plan",
+  "state": "preregistered-before-single-two-root-remote-export-and-nonrendering-audit",
+  "policy_version": "int-fib-recurrence-root-export-v1",
+  "inputs": {"failure_result": {"path": "artifacts/autogenesis/mathlib-int-fib-recurrence-support-audit-result-v1.json", "sha256": "076440aeba0988e7a692c062ff38c8ca2b23975428666b61d3a0589761b6ce8e"}},
+  "fixed_roots": ["Int.fib_natCast", "Int.fib_add_two"],
+  "fixed_environment": {
+    "ssh_alias": "s5", "hostname": "server5",
+    "mathlib_checkout": "/home/mjbommar/lean-import-scale/mathlib4",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "mathlib_untracked_baseline": {
+      "AxeyumFibGeneric.lean": "f9d3ea9024497cf1aed34a071fe541e515fb4169738d3d369dd6bf9a7ad414be",
+      "AxeyumNatFibRecurrencePointwise.lean": "b339a3d8e4ce1700d367fa5fdf0ac0e05d411cc48c49ce6f6e30b702a9b7baf5",
+      "AxeyumNatGcdFixEq.lean": "939d225a168b5a94d042ceab47c4dd265a81bf149ea8cfbe08012ca5089373a7"
+    },
+    "lean_toolchain": "leanprover/lean4:v4.30.0",
+    "lake_path": "/home/mjbommar/.elan/toolchains/leanprover--lean4---v4.30.0/bin/lake",
+    "module": "Mathlib.Data.Int.Fib.Basic",
+    "module_olean_sha256": "d8d7618735c7866c929ff7c7fd9df574f1b696e5c50eff300f6a6daf8cf3e3a1",
+    "lean4export_binary": "/home/mjbommar/lean-import-scale/lean4export/.lake/build/bin/lean4export",
+    "lean4export_binary_sha256": "8e763913b03762488571a93ced6ec1a4e04f7d8eebbe40bd1215ba41a6bd4449"
+  },
+  "fixed_measurement": {
+    "proof_bearing_stream": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-recurrence-root-export-v1/recurrence-supports.ndjson",
+    "output_must_not_preexist": true,
+    "tool_path": "crates/axeyum-lean-import/examples/theorem_footprint_batch_audit.rs",
+    "tool_sha256": "38e40236fec86f1080af52bafb9394f9f1505ad161dae96e9c48979d00b1094a",
+    "proof_terms_types_or_values_may_be_rendered": false
+  },
+  "decision_rule": {"next": "construct and admit Int.fib_natCast first unless it is already empty-footprint, then qualify Int.fib_add_two over that admitted premise", "authorize_successor_in_this_increment": false},
+  "budget": {"max_exporter_invocations": 1, "max_batch_importer_runs": 1, "max_proof_bearing_stream_reads": 1, "max_retries": 0, "max_reconstruction_source_compilations": 0, "max_new_theorem_submissions": 0, "max_exact_target_submissions": 0, "max_executor_invocations": 0},
+  "authority": {"proof_bodies_readable_by_model": false, "theorem_types_readable_by_model": false, "theorem_values_readable_by_model": false, "reconstruction_allowed": false, "support_theorem_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "output": "artifacts/autogenesis/mathlib-int-fib-recurrence-root-export-result-v1.json"
+}

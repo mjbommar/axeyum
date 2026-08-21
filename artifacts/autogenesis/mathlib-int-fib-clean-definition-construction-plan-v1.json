@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-clean-definition-construction-plan",
+  "state": "preregistered-before-constructor-matched-parity-explicit-definition-execution",
+  "policy_version": "int-fib-clean-definition-v1",
+  "parent_result": {"path": "artifacts/autogenesis/mathlib-int-fib-definition-blocker-partition-result-v2.json", "sha256": "383f4c359406ffeda846574fead45f976b9b6fd4eb5f73d98a533bb8143e5f7c"},
+  "source": {"path": "artifacts/autogenesis/sources/int-fib-clean-definition-v1.lean", "sha256": "d21a5989c4940995bd8516b5fd3b98f409fcf71c6999432a84cf01a1a144c7b4"},
+  "definitions": {"target": "Int.fib", "strategy": "match Int.ofNat/Int.negSucc and decide parity through Nat.mod rather than Int.instDecidablePredEven"},
+  "theorem": {"target": "Int.fib_natCast", "statement": "∀ (n : ℕ), Int.fib ↑n = ↑(Nat.fib n)", "proof_strategy": "rfl"},
+  "remote": {"module": "AxeyumIntFibCleanDefinitionV1", "source_path": "/home/mjbommar/lean-import-scale/mathlib4/AxeyumIntFibCleanDefinitionV1.lean", "olean_path": "/home/mjbommar/lean-import-scale/mathlib4/.lake/build/lib/lean/AxeyumIntFibCleanDefinitionV1.olean", "both_must_not_preexist": true, "cleanup_both_paths": true},
+  "execution": {"max_source_copies": 1, "max_compiler_invocations": 1, "max_exporter_invocations": 1, "max_importer_runs": 2, "max_proof_bearing_stream_reads": 2, "max_retries": 0, "max_new_theorem_submissions": 1, "max_ledger_writes": 0},
+  "success": {"required_root": "Int.fib_natCast", "required_added_definition": "Int.fib", "required_axiom_footprint": [], "required_direct_theorem_dependencies": [], "identical_import_observations": true, "fact_admission_authorized": false},
+  "failure": {"stop_after_first_error": true, "theorem_credit": 0}
+}

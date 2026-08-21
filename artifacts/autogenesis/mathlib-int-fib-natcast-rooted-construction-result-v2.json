@@ -1,0 +1,11 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-int-fib-natcast-rooted-construction-result",
+  "state": "rfl-proof-reproduces-but-official-int-fib-definition-carries-assumptions",
+  "plan_sha256": "050a4eda74fadfd0e82f09c2a5c95a646947b427b40f57a75356d7d7ac9a04f8",
+  "pack_manifest_sha256": "3c73f5f54e0934666e261a8894d44a9c70089d5948cd4535fcd38697327eb43a",
+  "theorem": {"name": "Axeyum.Autogenesis.intFibNatCastDirectV1", "declaration_sha256": "61b60b710a67a632fac52bb191680b98fc9e97e094861e682ba24c6e30357a1d", "direct_theorem_dependencies": [], "axiom_footprint": ["Classical.choice", "Lean.opaqueId", "Quot", "Quot.lift", "Quot.mk", "Quot.sound", "String.Internal.append", "propext"]},
+  "execution": {"compiler_invocations": 1, "successful_compilations": 1, "exporter_invocations": 1, "importer_runs": 2, "byte_identical_observations": true, "retries": 0, "theorem_submissions": 1},
+  "conclusion": {"proof_term_source": "rfl", "proof_dependency_contamination": false, "official_definition_or_representation_contamination": true, "fact_admission_authorized": false, "next": "preregister a nonrendering Int.fib declaration/definition closure audit and select a target-owned representation reconstruction"},
+  "authority": {"theorem_credit": 0, "fact_status_changes": 0, "ledger_writes": 0}
+}

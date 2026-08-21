@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-of-odd-private-root-audit-result",
+  "state": "private-root-is-automation-expansion-direct-recurrence-replacement-selected",
+  "plan_sha256": "0bc456f77980f20effd97401f38c4cd7c56b59d79e7e2e297cef8cae4c0e41d9",
+  "pack_manifest_sha256": "f1421560bf189c78db0adde214c732bbd9b82f8f7bd408b1157f87318857bd26",
+  "root": {
+    "name": "_private.Mathlib.Data.Int.Fib.Basic.0.Int.fib_of_odd._proof_1_2",
+    "declaration_sha256": "a9010456c6d7fb68d4af8988d4e905bfabf6e31330d6cf0b5221aa31c6e13900",
+    "class": "propext-bearing",
+    "direct_theorem_dependency_count": 37,
+    "contains_linear_arithmetic_automation": true,
+    "contains_grind_automation": true
+  },
+  "decision": {
+    "compose_private_root": false,
+    "descend_automation_dependencies": false,
+    "next": "preregister a target-owned proof of Int.fib_neg_natCast from Int.fib_add_two, Int.fib_natCast, clean integer transport, and explicit parity/sign induction"
+  },
+  "budget": {"batch_importer_runs": 1, "proof_bearing_stream_reads": 1, "retries": 0, "new_theorem_submissions": 0, "ledger_writes": 0},
+  "authority": {"proof_terms_rendered": 0, "theorem_types_rendered": 0, "theorem_values_rendered": 0, "support_theorem_credit": 0, "fact_status_changes": 0, "ledger_writes": 0},
+  "limitations": "The private implementation theorem is measured only as a dependency/footprint surface and is neither composed nor credited."
+}
