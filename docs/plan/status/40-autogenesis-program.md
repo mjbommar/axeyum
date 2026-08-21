@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` is durably `proved` in the fact ledger through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`. The registered execution retained all eight direct premise identities, the 115-row transitive replay digest, and an empty complete axiom footprint. An after-intent fault left the fact unchanged, recovery made exactly one authoritative write, and a detached clean worktree reproduced the complete episode with semantic replay digest `fd83e8431c506bedea825f7a9a857190b26ad4e54be0faa9066166aa99845983`. The event made exactly `F:ml430-nat-gcd-fib-add-self-5a92d5e3` newly ready; no held-out outcome or evaluation credit was used.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` is now qualified under a preregistered support-first construction. The first reusable support, `Axeyum.Autogenesis.NatFibSuccessorAddition`, reconstructed twice with identical goal `297c9f4af4d63eff354223f9548ab1d4dd3d7e52aa701e88802d58b7929a1451`, declaration `049535cf7f432f14a0c93b4c7e9ecdcbd21feca4274b87be4a93e8838d6426ca`, exact ten-theorem dependency set, and empty footprint. It replayed into the exact r091 target kernel while consuming two of six kernel submissions and zero target submissions, executor invocations, retries, receipts, evaluation credit, or ledger writes. The immutable observation pack and mutation-tested tracked checker are retained at `1f9f01b3a`; the target remains open.
 
-**Next:** qualify the newly ready `Nat.gcd_fib_add_self` row from the post-admission frontier, then preregister its smallest honest bounded proof plan before any target submission. Preserve the measured chain toward `Nat.fib_gcd`; do not inspect held-out outcomes, infer a route from the upstream Mathlib proof body, or treat the coprimality receipt's transitive diagnostics as premise authority.
+**Next:** reconstruct the second preregistered reusable support, coprime-factor divisibility cancellation, twice from the native balanced Bézout certificate. Replay both support declarations into the exact r091 kernel before any target submission. Then spend at most the remaining two support and two exact-target kernel submissions on the fixed `Nat.gcd_fib_add_self` construction. Preserve the measured chain toward `Nat.fib_gcd`; do not inspect held-out outcomes or the upstream Mathlib proof body, widen the one-template/zero-retry budget, or publish a partial private kernel.
 
 <!-- plan-section: landed-changes -->
 
@@ -43,3 +43,9 @@
 | 2026-08-20 | `169aab71b` | Two fresh official reconstructions issue and replay one exact dependency-bound Fibonacci theorem receipt |
 | 2026-08-20 | `d5aed52ff` | Distinct registered admission preserves exact direct and transitive dependency identities without weakening isolated receipts |
 | 2026-08-20 | `3f96b5463` | Crash-safe exact Fibonacci coprimality admission makes one descendant ready and reproduces from a clean worktree |
+| 2026-08-20 | `e06115972` | Sealed admission evidence binds the exact post-recovery fact and frontier state |
+| 2026-08-20 | `6902efad7` | Historical child qualification accepts only the selected axiom-free settled child while retaining its deferred sibling open |
+| 2026-08-20 | `eca29a441` | Proof-free r091 qualification isolates Fibonacci addition, coprime-factor cancellation, and gcd extensionality obligations |
+| 2026-08-20 | `989e6242e` | One support-first construction and six-submission, zero-retry ceiling are frozen before implementation |
+| 2026-08-20 | `f8c7febc6` | Paired native induction reconstructs Fibonacci successor addition twice and composes it into the exact r091 target kernel |
+| 2026-08-20 | `1f9f01b3a` | Immutable first-support observation and mutation-tested checker preserve the empty-footprint, zero-target-credit boundary |
