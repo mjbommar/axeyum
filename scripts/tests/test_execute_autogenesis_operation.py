@@ -21,10 +21,11 @@ SPEC.loader.exec_module(execution)
 
 REFLEXIVITY_FACT = "F:ml430-nat-descfactorial-zero-966b01df"
 FIB_FACT = "F:ml430-nat-fib-add-two-b86e0c82"
+FIB_COPRIME_FACT = "F:ml430-nat-fib-coprime-fib-succ-162fc738"
 
 
 def settle_reflexivity_fact(facts):
-    for fact_id in (REFLEXIVITY_FACT, FIB_FACT):
+    for fact_id in (REFLEXIVITY_FACT, FIB_FACT, FIB_COPRIME_FACT):
         target = copy.deepcopy(facts[fact_id])
         target["epistemic_status"] = "proved"
         facts[fact_id] = target
@@ -466,6 +467,57 @@ class OperationExecutionTests(unittest.TestCase):
                 git_commit="1" * 40,
                 observation=changed,
             )
+
+    def test_dependency_theorem_receipt_binds_exact_premise_sets(self) -> None:
+        frontier_module = execution.load_module(
+            "frontier_for_dependency_theorem_execution_test",
+            execution.FRONTIER_SCRIPT,
+        )
+        facts = frontier_module.load()
+        settle_reflexivity_fact(facts)
+        target = copy.deepcopy(facts[FIB_COPRIME_FACT])
+        target["epistemic_status"] = "open"
+        target["evidence"] = []
+        target.pop("proof_route", None)
+        target.pop("axiom_footprint", None)
+        facts[FIB_COPRIME_FACT] = target
+        frontier = frontier_module.build_machine_frontier(facts)
+        fact, operation, registry = execution.selected_inputs(frontier, facts)
+        self.assertEqual(fact["id"], FIB_COPRIME_FACT)
+        observation = execution.expected_dependency_theorem_receipt_observation(
+            operation, fact
+        )
+        self.assertEqual(len(observation["retained_answer_dependencies"]), 8)
+        self.assertEqual(observation["transitive_theorem_dependencies"], 115)
+        receipt = execution.build_receipt(
+            frontier=frontier,
+            fact=fact,
+            operation=operation,
+            registry=registry,
+            git_commit="3" * 40,
+            observation=observation,
+        )
+        self.assertEqual(
+            receipt["identity"]["dependency_set_sha256"],
+            operation["executor"]["dependency_set_sha256"],
+        )
+        for field, value in (
+            ("retained_answer_dependencies", observation["retained_answer_dependencies"][:-1]),
+            ("dependency_set_sha256", "0" * 64),
+            ("transitive_dependency_set_sha256", "0" * 64),
+        ):
+            with self.subTest(field=field):
+                changed = copy.deepcopy(observation)
+                changed[field] = value
+                with self.assertRaisesRegex(execution.ExecutionError, "required source-bound"):
+                    execution.build_receipt(
+                        frontier=frontier,
+                        fact=fact,
+                        operation=operation,
+                        registry=registry,
+                        git_commit="3" * 40,
+                        observation=changed,
+                    )
 
 
 if __name__ == "__main__":

@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-full-statement-survival-atlas-plan",
+  "state": "post-name-observation-preregistered-before-structural-comparison",
+  "policy_version": "mathlib-full-nat-int-statement-survival-v1",
+  "inputs": {
+    "baseline_inventory": {
+      "path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-nat-int-statement-inventory-v2.ndjson",
+      "sha256": "4285e551680abf3b0cafb11709015f04b3aef3eb05ce23af2392b12cec31aecc",
+      "records": 9729,
+      "mode": "0444"
+    },
+    "current_inventory": {
+      "path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.32.1-nat-int-statement-inventory-v1.ndjson",
+      "sha256": "22246f40ae5a9b7f44a914313a5a212104b541d48974df4bf439da4006e61e5e",
+      "records": 9822,
+      "mode": "0444"
+    },
+    "selected_comparison": {
+      "path": "artifacts/autogenesis/mathlib-v4.30.0-v4.32.1-selected-statement-delta-v1.json",
+      "sha256": "9174c2fa642a60c59bb48df5a4741103d7e98e599c13922756ba077975d0ad28"
+    }
+  },
+  "observed_before_plan": {
+    "shared_names": 9712,
+    "removed_names": 17,
+    "added_names": 110,
+    "structural_class_counts_observed": false
+  },
+  "fixed_comparison": {
+    "population": "all Nat.* and Int.* theorem statement rows in either pinned inventory",
+    "shared_row_classes": [
+      "structurally-identical",
+      "module-only-drift",
+      "pretty-type-only-drift",
+      "structural-type-drift"
+    ],
+    "unshared_row_classes": [
+      "removed-after-v4.30.0",
+      "added-by-v4.32.1"
+    ],
+    "structural_diagnostics": "constant-multiset additions and removals for every structural drift",
+    "aggregates": [
+      "class counts",
+      "Nat versus Int counts",
+      "baseline and current module transitions",
+      "all removed and added names"
+    ]
+  },
+  "outputs": {
+    "external_delta": {
+      "path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-v4.32.1-nat-int-statement-delta-v1.ndjson",
+      "mode_after_generation": "0444"
+    },
+    "tracked_atlas": "artifacts/autogenesis/mathlib-v4.30.0-v4.32.1-full-statement-survival-atlas-v1.json"
+  },
+  "budget": {
+    "max_full_structural_comparisons": 1,
+    "max_inventory_extractions": 0,
+    "max_policy_adaptations": 0,
+    "max_proof_search_invocations": 0,
+    "max_kernel_theorem_submissions": 0,
+    "max_executor_invocations": 0,
+    "max_retries": 0
+  },
+  "gates": {
+    "every_union_name_must_be_classified_once": true,
+    "all_shared_rows_must_bind_both_source_rows": true,
+    "proof_and_value_fields_forbidden": true,
+    "external_delta_must_be_read_only": true,
+    "selected_240_summary_must_equal_the_full_atlas_projection": true
+  },
+  "authority": {
+    "proof_bodies_allowed": false,
+    "theorem_values_allowed": false,
+    "candidate_reselection_allowed": false,
+    "fact_status_changes_allowed": false,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "verification": "python3 scripts/check-autogenesis-mathlib-full-statement-survival-atlas-plan.py",
+  "limitations": "Name counts were observed before this plan; only the structural distribution is preregistered. The atlas measures statement metadata, not proof or kernel portability, and cannot change the frozen 240-candidate population."
+}

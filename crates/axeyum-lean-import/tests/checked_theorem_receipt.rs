@@ -1,9 +1,11 @@
 //! Adversarial controls for source-bound checked theorem receipts.
 
 use axeyum_lean_import::{
-    CheckedSemanticTheoremReceiptError, CheckedTheoremAuthority, canonical_declaration_sha256,
-    canonical_expression_sha256, issue_checked_semantic_theorem_receipt,
-    verify_checked_semantic_theorem_receipt,
+    CheckedDependencyTheoremAuthority, CheckedDependencyTheoremReceiptError,
+    CheckedSemanticTheoremReceiptError, CheckedTheoremAuthority, CheckedTheoremDependency,
+    canonical_declaration_sha256, canonical_expression_sha256,
+    issue_checked_dependency_theorem_receipt, issue_checked_semantic_theorem_receipt,
+    verify_checked_dependency_theorem_receipt, verify_checked_semantic_theorem_receipt,
 };
 use axeyum_lean_kernel::{BinderInfo, Declaration, Kernel, NameId, build_logic_prelude};
 
@@ -161,4 +163,110 @@ fn axioms_and_direct_theorem_dependencies_are_rejected() {
         issue_checked_semantic_theorem_receipt(&mut kernel, dependent, &dependent_authority),
         Err(CheckedSemanticTheoremReceiptError::TheoremDependencies { .. })
     ));
+}
+
+#[test]
+fn exact_preregistered_dependency_issues_and_replays() {
+    let (mut kernel, premise, mut theorem_authority) = reflexive_fixture();
+    let premise_type = kernel
+        .environment()
+        .get(premise)
+        .expect("premise exists")
+        .ty();
+    let proof = kernel.const_(premise, vec![]);
+    let theorem = name(&mut kernel, &["Checked", "dependent"]);
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name: theorem,
+            uparams: vec![],
+            ty: premise_type,
+            value: proof,
+        })
+        .expect("dependent theorem checks");
+    theorem_authority.goal_sha256 =
+        canonical_expression_sha256(&kernel, premise_type).expect("goal identity");
+    theorem_authority.expected_proof_sha256 =
+        canonical_expression_sha256(&kernel, proof).expect("proof identity");
+    theorem_authority.expected_theorem_content_sha256 =
+        canonical_declaration_sha256(&kernel, theorem).expect("theorem identity");
+    theorem_authority.operation = "synthetic-dependent-v1".to_owned();
+    let dependency = CheckedTheoremDependency {
+        name: "Checked.refl".to_owned(),
+        content_sha256: canonical_declaration_sha256(&kernel, premise)
+            .expect("dependency identity"),
+    };
+    let authority = CheckedDependencyTheoremAuthority {
+        theorem: theorem_authority,
+        expected_direct_theorem_dependencies: vec![dependency],
+    };
+    let receipt = issue_checked_dependency_theorem_receipt(&mut kernel, theorem, &authority)
+        .expect("dependency-bound receipt issues");
+    assert!(receipt.has_valid_digest());
+    assert!(receipt.axiom_footprint.is_empty());
+    assert_eq!(
+        receipt.direct_theorem_dependencies,
+        authority.expected_direct_theorem_dependencies
+    );
+    verify_checked_dependency_theorem_receipt(&receipt, &mut kernel, theorem, &authority)
+        .expect("dependency-bound receipt replays");
+}
+
+#[test]
+fn dependency_authority_and_receipt_mutations_fail_closed() {
+    let (mut kernel, premise, mut theorem_authority) = reflexive_fixture();
+    let premise_type = kernel
+        .environment()
+        .get(premise)
+        .expect("premise exists")
+        .ty();
+    let proof = kernel.const_(premise, vec![]);
+    let theorem = name(&mut kernel, &["Checked", "dependent"]);
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name: theorem,
+            uparams: vec![],
+            ty: premise_type,
+            value: proof,
+        })
+        .expect("dependent theorem checks");
+    theorem_authority.goal_sha256 =
+        canonical_expression_sha256(&kernel, premise_type).expect("goal identity");
+    theorem_authority.expected_proof_sha256 =
+        canonical_expression_sha256(&kernel, proof).expect("proof identity");
+    theorem_authority.expected_theorem_content_sha256 =
+        canonical_declaration_sha256(&kernel, theorem).expect("theorem identity");
+    theorem_authority.operation = "synthetic-dependent-v1".to_owned();
+    let authority = CheckedDependencyTheoremAuthority {
+        theorem: theorem_authority,
+        expected_direct_theorem_dependencies: vec![CheckedTheoremDependency {
+            name: "Checked.refl".to_owned(),
+            content_sha256: canonical_declaration_sha256(&kernel, premise)
+                .expect("dependency identity"),
+        }],
+    };
+    let receipt = issue_checked_dependency_theorem_receipt(&mut kernel, theorem, &authority)
+        .expect("dependency-bound receipt issues");
+
+    let mut wrong_dependency = authority.clone();
+    wrong_dependency.expected_direct_theorem_dependencies[0].content_sha256 = "0".repeat(64);
+    assert!(matches!(
+        issue_checked_dependency_theorem_receipt(&mut kernel, theorem, &wrong_dependency),
+        Err(CheckedDependencyTheoremReceiptError::DependencyMismatch { .. })
+    ));
+
+    let mut empty_dependencies = authority.clone();
+    empty_dependencies
+        .expected_direct_theorem_dependencies
+        .clear();
+    assert_eq!(
+        issue_checked_dependency_theorem_receipt(&mut kernel, theorem, &empty_dependencies),
+        Err(CheckedDependencyTheoremReceiptError::InvalidAuthority)
+    );
+
+    let mut mutated = receipt.clone();
+    mutated.direct_theorem_dependencies[0].content_sha256 = "0".repeat(64);
+    assert_eq!(
+        verify_checked_dependency_theorem_receipt(&mutated, &mut kernel, theorem, &authority),
+        Err(CheckedDependencyTheoremReceiptError::ReceiptMismatch)
+    );
 }

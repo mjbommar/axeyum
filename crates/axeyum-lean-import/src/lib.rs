@@ -53,9 +53,12 @@ mod type_slice;
 mod type_slice_receipt;
 
 pub use checked_theorem_receipt::{
-    CHECKED_SEMANTIC_THEOREM_RECEIPT_VERSION, CheckedSemanticTheoremReceipt,
-    CheckedSemanticTheoremReceiptError, CheckedTheoremAuthority,
-    issue_checked_semantic_theorem_receipt, verify_checked_semantic_theorem_receipt,
+    CHECKED_DEPENDENCY_THEOREM_RECEIPT_VERSION, CHECKED_SEMANTIC_THEOREM_RECEIPT_VERSION,
+    CheckedDependencyTheoremAuthority, CheckedDependencyTheoremReceipt,
+    CheckedDependencyTheoremReceiptError, CheckedSemanticTheoremReceipt,
+    CheckedSemanticTheoremReceiptError, CheckedTheoremAuthority, CheckedTheoremDependency,
+    issue_checked_dependency_theorem_receipt, issue_checked_semantic_theorem_receipt,
+    verify_checked_dependency_theorem_receipt, verify_checked_semantic_theorem_receipt,
 };
 pub use contract_residualization::{
     ResidualizedFunctionContract, ResidualizedFunctionContractError,

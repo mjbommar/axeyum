@@ -304,6 +304,7 @@ def validate(manifest_path: pathlib.Path = MANIFEST) -> dict[str, Any]:
         or manifest.get("kind") not in {
             "axeyum-autogenesis-mathlib-statement-reflexivity-admission",
             "axeyum-autogenesis-mathlib-checked-theorem-receipt-admission",
+            "axeyum-autogenesis-mathlib-dependency-theorem-receipt-admission",
         }
         or manifest.get("state")
         != "durably-admitted-archived-and-clean-replayed"
@@ -366,12 +367,17 @@ def main() -> int:
             )
         manifest = validate(manifest_path)
         identities = manifest["identities"]
-        prefix = (
-            "AUTOGENESIS_STATEMENT_REFLEXIVITY_ADMISSION_OK"
-            if manifest["kind"]
-            == "axeyum-autogenesis-mathlib-statement-reflexivity-admission"
-            else "AUTOGENESIS_CHECKED_THEOREM_RECEIPT_ADMISSION_OK"
-        )
+        prefix = {
+            "axeyum-autogenesis-mathlib-statement-reflexivity-admission": (
+                "AUTOGENESIS_STATEMENT_REFLEXIVITY_ADMISSION_OK"
+            ),
+            "axeyum-autogenesis-mathlib-checked-theorem-receipt-admission": (
+                "AUTOGENESIS_CHECKED_THEOREM_RECEIPT_ADMISSION_OK"
+            ),
+            "axeyum-autogenesis-mathlib-dependency-theorem-receipt-admission": (
+                "AUTOGENESIS_DEPENDENCY_THEOREM_RECEIPT_ADMISSION_OK"
+            ),
+        }[manifest["kind"]]
         print(
             f"{prefix}|"
             f"fact={manifest['fact_id']}|execution={identities['execution_sha256']}|"

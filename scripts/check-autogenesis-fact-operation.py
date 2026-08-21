@@ -20,6 +20,9 @@ EXECUTOR_SCRIPT = ROOT / "scripts/execute-autogenesis-operation.py"
 CHECKED_THEOREM_RECEIPT_CHECKER = (
     ROOT / "scripts/check-autogenesis-nat-fib-checked-theorem-receipt.py"
 )
+DEPENDENCY_THEOREM_RECEIPT_CHECKER = (
+    ROOT / "scripts/check-autogenesis-nat-fib-coprime-premise-plan.py"
+)
 
 
 class FactOperationError(RuntimeError):
@@ -57,6 +60,29 @@ def formal_type(fact: dict[str, Any]) -> str:
 def checker_command(fact_id: str) -> str:
     path = f"artifacts/facts/{fact_id.replace('F:', 'F-')}.json"
     return f"python3 scripts/check-autogenesis-fact-operation.py --fact {path}"
+
+
+def dependency_receipt_inputs() -> tuple[
+    dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]
+]:
+    checker = load_module(
+        "dependency_theorem_receipt_for_fact_operation",
+        DEPENDENCY_THEOREM_RECEIPT_CHECKER,
+    )
+    try:
+        manifest = checker.validate()
+    except checker.PlanError as error:
+        raise FactOperationError(
+            f"dependency-theorem receipt failed: {error}"
+        ) from error
+    tracked = manifest["fibonacci_semantic_receipt"]
+    pack_manifest_path = pathlib.Path(tracked["manifest"])
+    pack_manifest = json.loads(pack_manifest_path.read_text())
+    archived = json.loads(
+        (pack_manifest_path.parent / pack_manifest["result"]["path"]).read_text()
+    )
+    exact = archived["dvd_gcd_frontier"]["exact_target"]
+    return manifest, archived, exact, exact["semantic_theorem_receipt"]
 
 
 def check_fact(
@@ -224,6 +250,40 @@ def check_fact(
                 ]["content_sha256"],
             }
         )
+    elif executor["driver"] == "axeyum-lean-import/dependency-theorem-receipt-v1":
+        manifest, _archived, exact, receipt = dependency_receipt_inputs()
+        authority = receipt["authority"]
+        theorem = receipt["theorem"]
+        dependencies = receipt["dependencies"]
+        expected_binding.update(
+            {
+                "receipt_manifest": executor["receipt_manifest"],
+                "receipt_manifest_sha256": digest(manifest),
+                "receipt_observation_sha256": manifest[
+                    "fibonacci_semantic_receipt"
+                ]["result_sha256"],
+                "receipt_sha256": receipt["receipt_sha256"],
+                "source_artifact_sha256": authority["source_artifact_sha256"],
+                "candidate_observation_sha256": authority[
+                    "candidate_observation_sha256"
+                ],
+                "dependency_set_sha256": executor["dependency_set_sha256"],
+                "transitive_dependency_set_sha256": executor[
+                    "transitive_dependency_set_sha256"
+                ],
+                "formal_statement_sha256": byte_digest(
+                    fact["formal"]["statement"].encode()
+                ),
+                "target_definition": executor["target_definition"],
+                "goal_sha256": theorem["type_sha256"],
+                "proof_sha256": theorem["proof_sha256"],
+                "target_content_sha256": theorem["content_sha256"],
+                "direct_theorem_dependencies": dependencies["direct_theorems"],
+                "transitive_theorem_dependencies": len(
+                    dependencies["transitive_theorems"]
+                ),
+            }
+        )
     else:
         raise FactOperationError("fact operation uses an unsupported driver")
     if binding != expected_binding:
@@ -317,6 +377,44 @@ def check_fact(
                 "direct_theorems"
             ],
             "ledger_writes": manifest["result"]["ledger_writes"],
+        }
+    elif executor["driver"] == "axeyum-lean-import/dependency-theorem-receipt-v1":
+        manifest, archived, exact, receipt = dependency_receipt_inputs()
+        authority = receipt["authority"]
+        theorem = receipt["theorem"]
+        dependencies = receipt["dependencies"]
+        assurance = exact["assurance"]
+        expected_observation = {
+            "verdict": "proved",
+            "evidence_label": executor["expected_evidence_label"],
+            "receipt_sha256": receipt["receipt_sha256"],
+            "receipt_observation_sha256": manifest[
+                "fibonacci_semantic_receipt"
+            ]["result_sha256"],
+            "source_artifact_sha256": authority["source_artifact_sha256"],
+            "candidate_observation_sha256": authority[
+                "candidate_observation_sha256"
+            ],
+            "goal_sha256": theorem["type_sha256"],
+            "proof_sha256": theorem["proof_sha256"],
+            "target_content_sha256": theorem["content_sha256"],
+            "fresh_full_reconstructions": assurance[
+                "fresh_full_reconstructions"
+            ],
+            "target_theorem_submissions": assurance[
+                "target_theorem_submissions"
+            ],
+            "search_invocations": assurance["proof_search_invocations"],
+            "axiom_footprint": receipt["axiom_footprint"],
+            "retained_answer_dependencies": dependencies["direct_theorems"],
+            "dependency_set_sha256": executor["dependency_set_sha256"],
+            "transitive_theorem_dependencies": len(
+                dependencies["transitive_theorems"]
+            ),
+            "transitive_dependency_set_sha256": executor[
+                "transitive_dependency_set_sha256"
+            ],
+            "ledger_writes": archived["ledger_writes"],
         }
     else:
         premise_candidate = (

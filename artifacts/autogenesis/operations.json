@@ -256,6 +256,8 @@
       "id": "authoritative-mathlib-nat-fib-add-two-receipt-v1",
       "scope": "authoritative",
       "reviewed_gate_mentions": [
+        "check-autogenesis-nat-fib-child-qualification.py",
+        "check-autogenesis-nat-fib-coprime-premise-plan.py",
         "check-autogenesis-nat-fib-gcd-premise-selection-policy.py",
         "check-autogenesis-nat-fib-iterate-recurrence-result.py",
         "check-autogenesis-nat-fib-recurrence-v3-result.py",
@@ -287,6 +289,51 @@
         "receipt_sha256": "395f6e80e6addbc69cca8ad560b312dadc31d623fe05f6b1603b5fa523622329",
         "timeout_seconds": 120,
         "expected_evidence_label": "kernel-term-mathlib-nat-fib-add-two-receipt-axiom-free"
+      },
+      "admission": {
+        "epistemic_status": "proved",
+        "proof_route": "kernel-lean",
+        "evidence_kind": "kernel-term",
+        "axiom_footprint_policy": "must-be-empty",
+        "axiom_footprint": []
+      }
+    },
+    {
+      "id": "authoritative-mathlib-nat-fib-coprime-dependency-receipt-v1",
+      "scope": "authoritative",
+      "reviewed_gate_mentions": [
+        "check-autogenesis-nat-fib-coprime-premise-plan.py",
+        "check-autogenesis-nat-fib-gcd-premise-selection-policy.py",
+        "validate-autogenesis-operations.py"
+      ],
+      "applicability": {
+        "fact_ids": ["F:ml430-nat-fib-coprime-fib-succ-162fc738"],
+        "formal_languages": ["lean4-surface"],
+        "fragments": ["Nat"]
+      },
+      "producer": {
+        "operation": "official-fibonacci-coprimality-induction-v1",
+        "implementation": "crates/axeyum-lean-import/examples/nat_gcd_succ_specialization.rs",
+        "input_kind": "axeyum-proof-isolated-kernel-goal",
+        "output_kind": "axeyum-exact-fibonacci-theorem-candidate"
+      },
+      "checker": {
+        "operation": "axeyum-lean-import/checked-dependency-theorem-receipt-v1",
+        "implementation": "scripts/check-autogenesis-nat-fib-coprime-premise-plan.py",
+        "input_kind": "axeyum-exact-fibonacci-theorem-candidate",
+        "output_kind": "axeyum-checked-dependency-theorem-receipt-v1"
+      },
+      "executor": {
+        "driver": "axeyum-lean-import/dependency-theorem-receipt-v1",
+        "implementation": "scripts/execute-autogenesis-operation.py",
+        "input_fact_id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
+        "receipt_manifest": "artifacts/autogenesis/mathlib-nat-fib-coprime-premise-plan-v1.json",
+        "target_definition": "Axeyum.Autogenesis.Coverage.r082",
+        "receipt_sha256": "34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e",
+        "dependency_set_sha256": "d407340befc681d6d9abd187bbfead1f6ca1a7395c7dcf908950fd9c4d02e4d5",
+        "transitive_dependency_set_sha256": "fa08448a022db2ba1fdd4226979a86854e561888658801d295f4dba0dc3ef84e",
+        "timeout_seconds": 120,
+        "expected_evidence_label": "kernel-term-mathlib-nat-fib-coprime-dependency-receipt-axiom-free"
       },
       "admission": {
         "epistemic_status": "proved",

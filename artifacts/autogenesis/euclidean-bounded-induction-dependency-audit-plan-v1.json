@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-euclidean-bounded-induction-dependency-audit-plan",
+  "state": "preregistered-before-one-importer-audit-no-proof-authority",
+  "policy_version": "euclidean-bounded-induction-direct-dependency-audit-v1",
+  "inputs": {
+    "decline_result": {
+      "path": "artifacts/autogenesis/euclidean-bounded-induction-decline-v1.json",
+      "sha256": "2c7d1a812042c9df6c14b854647d4ad7586c39f51e91d35d2ea5260dbba91b68"
+    },
+    "evidence_manifest": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/6fe0cd29e-public-euclidean-bounded-induction-decline-v1/manifest.json",
+      "sha256": "e8c273c1550eeffbe1fd775a667a75c18539140880ab8c15f344d3a22df39054",
+      "mode": "0444"
+    },
+    "proof_bearing_stream": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/6fe0cd29e-public-euclidean-bounded-induction-decline-v1/bounded-induction.ndjson",
+      "sha256": "d71692e97b7bae7ab43043ed4490a79b2134650b4bfe4d8e20220693fe033844",
+      "bytes": 715764,
+      "mode": "0444",
+      "textual_read_allowed": false
+    }
+  },
+  "fixed_population": [
+    "And.left",
+    "And.right",
+    "Eq.symm",
+    "Nat.add_assoc",
+    "Nat.add_comm",
+    "Nat.div_eq",
+    "Nat.le_of_lt_succ",
+    "Nat.le_of_succ_le_succ",
+    "Nat.le_or_eq_of_le_succ",
+    "Nat.le_refl",
+    "Nat.lt_of_lt_of_le",
+    "Nat.mod_eq",
+    "Nat.mul_add",
+    "Nat.mul_one",
+    "Nat.not_succ_le_zero",
+    "Nat.sub_lt",
+    "Nat.succ_sub_succ_eq_sub",
+    "congr",
+    "congrArg",
+    "congrFun'",
+    "if_neg",
+    "if_pos"
+  ],
+  "fixed_measurement": {
+    "tool_path": "crates/axeyum-lean-import/examples/euclidean_bounded_dependency_footprint_audit.rs",
+    "per_declaration_fields": [
+      "name",
+      "declaration_sha256",
+      "axiom_footprint",
+      "direct_theorem_dependencies"
+    ],
+    "classes": [
+      "empty-footprint",
+      "propext-bearing",
+      "other-assumption-bearing"
+    ],
+    "proof_terms_or_values_may_be_rendered": false,
+    "all_population_names_must_resolve_as_theorems": true,
+    "aggregate_must_equal_per_declaration_rows": true
+  },
+  "known_before_audit": {
+    "target_footprint": [
+      "propext"
+    ],
+    "generated_recursion_dependencies": [],
+    "exact_carrier_population": "unknown"
+  },
+  "budget": {
+    "max_importer_runs": 1,
+    "max_proof_bearing_stream_reads": 1,
+    "max_retries": 0,
+    "max_revised_proof_compilations": 0,
+    "max_new_authored_theorem_submissions": 0,
+    "max_exact_target_submissions": 0,
+    "max_executor_invocations": 0
+  },
+  "authority": {
+    "proof_bodies_readable_by_model": false,
+    "theorem_values_readable_by_model": false,
+    "revised_euclidean_proof_allowed": false,
+    "support_theorem_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/euclidean-bounded-induction-dependency-audit-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-euclidean-bounded-induction-dependency-audit-plan.py",
+  "limitations": "The audit localizes assumptions in the explicit primitive-induction proof closure. It does not authorize adapting that proof after observing the carrier set."
+}

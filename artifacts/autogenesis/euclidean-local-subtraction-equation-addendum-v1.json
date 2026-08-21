@@ -1,0 +1,49 @@
+{
+  "allowed_statement": {
+    "module": "Init.Prelude",
+    "name": "Nat.succ_sub_succ_eq_sub",
+    "source_row_sha256": "898d1ff7c17c268a9323d0fdd0fc55a753d43f58c0d0c0db6741dceef21b0045",
+    "type": "∀ (n m : ℕ), n.succ - m.succ = n - m",
+    "type_repr_sha256": "5ccab900ba0a1faf682bc498f34ddd1fdf0c20c4fb0f39cd4841522f383696c3",
+    "type_sha256": "8385e10288e30a041b9d2a2e35552dc76171966d22110b03521e313da78bf850"
+  },
+  "authority": {
+    "evaluation_credit": 0,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "kernel_theorem_submissions": 0,
+    "ledger_writes": 0,
+    "proof_bodies_read": 0,
+    "proof_search_invocations": 0,
+    "theorem_values_read": 0
+  },
+  "compiler_observation": {
+    "blocked_local_branch": "successor dividend and successor subtrahend",
+    "kernel_theorem_submissions_before_addendum": 0,
+    "opaque_constant": "Nat.sub"
+  },
+  "kind": "axeyum-autogenesis-proof-free-subtraction-equation-addendum",
+  "limitations": "The addendum exposes one proposition only. It does not establish the official equation proof's footprint or grant theorem credit.",
+  "predecessor_plan": {
+    "path": "artifacts/autogenesis/euclidean-joint-div-mod-local-subtraction-replacement-plan-v1.json",
+    "sha256": "6a54f6d3a3fddc279e3718aeed1293be503f9092e7da84869edbe67f0e329420"
+  },
+  "schema_version": 1,
+  "source_inventory": {
+    "mode": "0444",
+    "path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-nat-int-statement-inventory-v2.ndjson",
+    "sha256": "4285e551680abf3b0cafb11709015f04b3aef3eb05ce23af2392b12cec31aecc"
+  },
+  "state": "one-statement-bound-before-v2-kernel-submission",
+  "use_scope": {
+    "additional_statement_names_allowed": 0,
+    "eventual_target_footprint_must_be_empty": true,
+    "forbidden_theorem_dependencies": [
+      "Nat.sub_add_cancel",
+      "Nat.add_sub_of_le"
+    ],
+    "official_proof_may_be_read": false,
+    "only_allowed_use": "reduce the successor-successor Nat.sub occurrence inside the local hrestore proof",
+    "source_path": "scripts/lean/autogenesis_div_mod_go_reconstruct_v2.lean"
+  }
+}

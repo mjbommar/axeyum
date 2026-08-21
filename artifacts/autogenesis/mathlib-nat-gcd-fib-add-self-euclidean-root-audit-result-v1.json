@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-euclidean-bridge-root-audit-result",
+  "state": "equation-roots-audited-no-support-submissions",
+  "tooling_commit": "62858ff72aee3bb1b99b6679712ed0277efa2b7c",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-nat-gcd-fib-add-self-euclidean-bridge-plan-v1.json",
+    "sha256": "a0e9099ee41c1e54d408e0ea86d13c28518749971e37e726ba9d6fe7ebfd40e5"
+  },
+  "reference_pack": {
+    "root": "/nas3/data/axeyum/autogenesis/reference-packs/62858ff72-lean430-div-mod-equations-v1",
+    "mode": "0555",
+    "manifest": "manifest.json",
+    "manifest_bytes": 2832,
+    "manifest_sha256": "3c53903f86a43e516751d6f440e2472bd987df799db3948ae8cd49754e28a130"
+  },
+  "roots": {
+    "Nat.div.go.eq_1": {
+      "declaration_sha256": "c31f2e764891ad2ce5d2d1e59638636302c236096f8fefd91dfaa9f289155763",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": [
+        "Nat.div_rec_fuel_lemma"
+      ]
+    },
+    "Nat.modCore.go.eq_1": {
+      "declaration_sha256": "aaf85a61edef7f6416bfccd8d817ca53c88cf7fe3d5b34bfbf166287e485448d",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": [
+        "Nat.div_rec_fuel_lemma"
+      ]
+    },
+    "Nat.mod.eq_2": {
+      "declaration_sha256": "47a0f25d2575086bb8d8ad687beca4e69ef71644bb6057f55ec052d5c2084610",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": []
+    }
+  },
+  "counters": {
+    "equation_root_audits": 1,
+    "imported_declarations_admitted_per_root_audit": 186,
+    "authored_support_theorem_submissions": 0,
+    "exact_source_target_submissions": 0,
+    "executor_invocations": 0,
+    "proof_search_invocations": 0,
+    "semantic_theorem_receipts": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_stage": "joint-div-mod-fuel-invariant-v1",
+  "verification": "python3 scripts/check-autogenesis-nat-gcd-fib-add-self-euclidean-root-audit-result.py",
+  "limitations": "All three official computation roots are footprint-empty. No authored bridge theorem, target theorem, receipt, execution, evaluation, or ledger claim exists yet."
+}

@@ -692,7 +692,7 @@ fn acceleration_trusts_the_declared_type_not_the_body() {
 
 // ---------------------------------------------------------------------------
 // Where the rule is called from, and what the `has_fvars` guard gives up
-// (ADR-0533)
+// (ADR-0536)
 // ---------------------------------------------------------------------------
 
 /// `Nat.rec.{1} (motive := fun _ => Nat) 111 (fun _ _ => 222) major`.
@@ -778,7 +778,7 @@ fn a_recursor_major_is_accelerated_by_the_delta_loop() {
 /// major that *mentions* a free variable, and whose argument still reduces to
 /// the literal `7`. Lean's `whnf` would accelerate it; we do not, because the
 /// `has_fvars` guard Lean applies only in `lazy_delta_reduction`
-/// (`type_checker.cpp:978`) is applied here too (ADR-0533).
+/// (`type_checker.cpp:978`) is applied here too (ADR-0536).
 ///
 /// So the *declaration* decides instead, and the answer is the stub's `111`.
 /// That is the whole observable identification cost of the guard, written down

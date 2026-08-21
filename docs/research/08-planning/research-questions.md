@@ -887,6 +887,33 @@ Out of scope:
     zero-dependency `Nat.fib_add_two`. Its missing capability is a bounded
     iterator-recurrence proof plan, not another source-contract control. See
     [ADR-0495](../09-decisions/adr-0495-fibonacci-gcd-progress-starts-at-the-iterator-recurrence-foothold.md).
+- [x] How should Autogenesis replace the quotient-bearing official
+      `Nat.gcd_succ` equation without transporting the native gcd definition?
+  - Answer (2026-08-20): prove fuel independence only at the concrete Euclidean
+    argument and its one recursive modulo successor. Keep the modulo decrease
+    theorem explicit, specialize it over the already checked target
+    `Nat.mod_lt`, and admit the resulting official theorem through the ordinary
+    target kernel. Do not compare complete recursive functions with `funext` or
+    infer semantics from same-name declarations. See
+    [ADR-0536](../09-decisions/adr-0533-official-gcd-unfolding-uses-pointwise-fuel-congruence-not-function-extensionality.md).
+- [x] May a checked semantic theorem receipt authorize intentional direct
+      library premises rather than requiring a zero-dependency proof?
+  - Answer (2026-08-20): yes, but only through a distinct receipt schema whose
+    authority preregisters the complete sorted direct premise set by both name
+    and canonical declaration digest. The ordinary kernel must reproduce the
+    exact candidate and an empty complete axiom footprint; observed direct rows
+    must equal authority exactly, while transitive rows remain replay-bound
+    diagnostics. The zero-dependency V1 schema remains unchanged. See
+    [ADR-0534](../09-decisions/adr-0534-library-theorem-receipts-preregister-direct-premise-identities.md).
+- [x] How may a dependency-bound theorem receipt become durable fact-ledger
+      knowledge without weakening the isolated-theorem admission contract?
+  - Answer (2026-08-20): use a distinct registered operation whose execution,
+    transaction, and settled-fact replay retain the exact direct premise rows
+    and their digest plus the transitive replay count and digest. The operation
+    may produce only the ordinary crash-safe `open` to `proved` transition; it
+    cannot reuse the zero-dependency V1 driver or turn transitive diagnostics
+    into ledger premise authority. See
+    [ADR-0535](../09-decisions/adr-0535-dependency-bound-receipts-enter-the-ledger-through-a-distinct-operation.md).
 - [x] How should the remaining recursive-indexed, reflexive, mutual, nested,
       and well-founded official Lean cases be measured before independent
       admission widens?

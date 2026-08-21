@@ -1,0 +1,176 @@
+{
+  "allowed_statements": [
+    {
+      "module": "Init.Data.Nat.Basic",
+      "name": "Nat.add_assoc",
+      "type": "∀ (n m k : ℕ), n + m + k = n + (m + k)",
+      "type_repr_sha256": "2ea1fc2ec6dc48eb1516f68961c4ba2db1fbc847c80bac2a3c30287efe7281b6",
+      "type_sha256": "16779984a60ab80bf37a3495a2ba7e4e71a033d231e346f6c4d10d47142f5d00"
+    },
+    {
+      "module": "Init.Data.Nat.Basic",
+      "name": "Nat.add_comm",
+      "type": "∀ (n m : ℕ), n + m = m + n",
+      "type_repr_sha256": "532e80544e1deed1aa4c7d65083e02a8bd19f7e65e88c62f9466923d7ad173b0",
+      "type_sha256": "50cf83163399903358d23447f8d7bb955a5c71844f2e1b210dcdc474663648a2"
+    },
+    {
+      "module": "Init.Data.Nat.Div.Basic",
+      "name": "Nat.div.go.eq_1",
+      "type": "∀ (y : ℕ) (hy : 0 < y) (x fuel_2 : ℕ) (hfuel_2 : x < fuel_2.succ),\n  Nat.div.go y hy fuel_2.succ x hfuel_2 = if h : y ≤ x then Nat.div.go y hy fuel_2 (x - y) ⋯ + 1 else 0",
+      "type_repr_sha256": "2d7b525e020c20cad8f9c36e642d1dd712856cde032d4531789cd0c888de762b",
+      "type_sha256": "f330d18664575e9b1cfdce7518b9b830e54bcc133abe677485e1c49628dfd763"
+    },
+    {
+      "module": "Init.Data.Nat.Div.Basic",
+      "name": "Nat.div_add_mod",
+      "type": "∀ (m n : ℕ), n * (m / n) + m % n = m",
+      "type_repr_sha256": "0a0c92fdac6e526a524d7883d9676e19dc679fca46ebb25ea049df56f0d4ccbb",
+      "type_sha256": "400e186d45e22fc5e595301292fec6ca7191ad435e6efa107af59334e6d942c6"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Nat.div_rec_fuel_lemma",
+      "type": "∀ {x y fuel : ℕ}, 0 < y → y ≤ x → x < fuel + 1 → x - y < fuel",
+      "type_repr_sha256": "e34cd24e356675f7fae9e961dad19607e46a1c7d94dbdae09c366b38f5c5cc21",
+      "type_sha256": "5fcf21e12ab774efe459cbb08b6f6732ac66862c462c4378a0b86def5436f592"
+    },
+    {
+      "module": "Init.Data.Nat.Div.Basic",
+      "name": "Nat.mod.eq_2",
+      "type": "∀ (x n : ℕ), n.succ.mod x = if x ≤ n.succ then n.succ.modCore x else n.succ",
+      "type_repr_sha256": "bd2f0e97ca23a64a6eb10393dd7973f7b79afa7851aa0c741043f6dfc792fe54",
+      "type_sha256": "7ccf9120f75d8b2afcf05c4cb27234b75ff98820e73ddf43a7064a5ef2e418db"
+    },
+    {
+      "module": "Init.Data.Nat.Div.Basic",
+      "name": "Nat.modCore.go.eq_1",
+      "type": "∀ (y : ℕ) (hy : 0 < y) (x fuel_2 : ℕ) (hfuel_2 : x < fuel_2.succ),\n  Nat.modCore.go y hy fuel_2.succ x hfuel_2 = if h : y ≤ x then Nat.modCore.go y hy fuel_2 (x - y) ⋯ else x",
+      "type_repr_sha256": "db7b6c810a00231c53c732608ae6adb1bec6b1395f2d655117cd00db455c0d1c",
+      "type_sha256": "5b6d621f52a9870d2c66647c04dc811c585edd507dea3f7154567e821e314668"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Nat.mod_lt",
+      "type": "∀ (x : ℕ) {y : ℕ}, 0 < y → x % y < y",
+      "type_repr_sha256": "ab11dd59f1979a3b7b22a707afc95133eddc744664ac9ac51c6eaf9262731e66",
+      "type_sha256": "34e763b96a383301f2e4b12d0ebfe670e09fc6f6f3d25bc666f6a151779a3ba1"
+    },
+    {
+      "module": "Init.Data.Nat.Basic",
+      "name": "Nat.mul_add",
+      "type": "∀ (n m k : ℕ), n * (m + k) = n * m + n * k",
+      "type_repr_sha256": "e34ec9c4fc067b6bbf546b5026f9dd1211d17f8e1c60c298a11c80ab12bf4aa2",
+      "type_sha256": "260cba0d91b06bb037eec4afda7d792e2db72cff4a737f786070daeb109d4b15"
+    },
+    {
+      "module": "Init.Data.Nat.Basic",
+      "name": "Nat.mul_one",
+      "type": "∀ (n : ℕ), n * 1 = n",
+      "type_repr_sha256": "cff1dac15ed6e0cab0a894d3dc8d3b165ff2f4ee34a35728f14c350e8b4005ff",
+      "type_sha256": "61b6b7947eaf1d8aab1ee1bab031997ba577f31151e510e6cf63075fe8a54be7"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Nat.not_lt_zero",
+      "type": "∀ (n : ℕ), ¬n < 0",
+      "type_repr_sha256": "d5aebfa9e1cc4cc283581760d36d0c9a96c7c6259eb975c83a43199d72193c46",
+      "type_sha256": "699225a6707c27f89de6835ad1d57ac7ecd6ae8ab16cfdab04168a898b49de27"
+    },
+    {
+      "module": "Init.Data.Nat.Basic",
+      "name": "Nat.sub_add_cancel",
+      "type": "∀ {n m : ℕ}, m ≤ n → n - m + m = n",
+      "type_repr_sha256": "8f491ef79c425acec6067a9c1a28854637748659597a6de531e3dad62082914c",
+      "type_sha256": "cb5241125d311e5db55e1b37b7a27be7e9d7d0c1955fbf2334a24d3c75a1a0c0"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Nat.zero_lt_succ",
+      "type": "∀ (n : ℕ), 0 < n.succ",
+      "type_repr_sha256": "25b3e5448c7c62bfe1659d40ded0e26df3b40e7ecf4a33a059ff73730acaa285",
+      "type_sha256": "4b217ba070786aa84800fce5f66004874b42de674acdb69823447eba53df801c"
+    }
+  ],
+  "audited_computation_roots": [
+    {
+      "axiom_footprint": [],
+      "declaration_sha256": "c31f2e764891ad2ce5d2d1e59638636302c236096f8fefd91dfaa9f289155763",
+      "name": "Nat.div.go.eq_1"
+    },
+    {
+      "axiom_footprint": [],
+      "declaration_sha256": "aaf85a61edef7f6416bfccd8d817ca53c88cf7fe3d5b34bfbf166287e485448d",
+      "name": "Nat.modCore.go.eq_1"
+    },
+    {
+      "axiom_footprint": [],
+      "declaration_sha256": "47a0f25d2575086bb8d8ad687beca4e69ef71644bb6057f55ec052d5c2084610",
+      "name": "Nat.mod.eq_2"
+    }
+  ],
+  "authority": {
+    "evaluation_credit": 0,
+    "exact_source_target_submissions": 0,
+    "executor_invocations": 0,
+    "kernel_theorem_submissions": 0,
+    "ledger_writes": 0,
+    "proof_search_invocations": 0,
+    "semantic_theorem_receipts": 0
+  },
+  "capsule_id": "euclidean-joint-div-mod-fuel-invariant-v1",
+  "construction_contract": {
+    "exact_target_submissions": 0,
+    "fresh_reconstructions": 2,
+    "method": "induction on shared fuel using the audited quotient and remainder equations plus explicit subtraction restoration",
+    "required_axiom_footprint": [],
+    "statement": "forall y (hy : 0 < y) fuel x (hfuel : x < fuel), y * Nat.div.go y hy fuel x hfuel + Nat.modCore.go y hy fuel x hfuel = x",
+    "theorem_name": "Axeyum.Autogenesis.divModGoReconstruct"
+  },
+  "isolation_policy": {
+    "allowed_inputs": [
+      "this capsule",
+      "independently authored Lean source",
+      "compiler diagnostics from that source",
+      "kernel audit summaries without proof terms"
+    ],
+    "forbidden_inputs": [
+      "Mathlib or Lean theorem source bodies",
+      "olean theorem values",
+      "textual reads of full or root-selected lean4export streams",
+      "upstream proof terms or tactic scripts",
+      "the contaminated predecessor conversation or source-viewing transcript"
+    ],
+    "on_violation": "discard authored proof work, issue zero proof credit, and restart in a fresh context from this capsule"
+  },
+  "kind": "axeyum-autogenesis-proof-isolated-statement-capsule",
+  "limitations": "This generated capsule contains theorem statements and identities only. It proves nothing and grants no permission to read proof-bearing artifacts.",
+  "proof_bearing_kernel_input": {
+    "allowed_consumer": "axeyum-lean-import kernel admission only",
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/62858ff72-lean430-div-mod-equations-v1/div-mod-equations.ndjson",
+    "sha256": "c55559a0d5fa00d1bffe779bf7b13a4dc0b2cac0eb714b8e149dde61fa711358",
+    "textual_read_allowed": false
+  },
+  "schema_version": 1,
+  "sources": {
+    "bridge_plan": {
+      "path": "artifacts/autogenesis/mathlib-nat-gcd-fib-add-self-euclidean-bridge-plan-v1.json",
+      "sha256": "a0e9099ee41c1e54d408e0ea86d13c28518749971e37e726ba9d6fe7ebfd40e5"
+    },
+    "equation_root_manifest": {
+      "mode": "0444",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/62858ff72-lean430-div-mod-equations-v1/manifest.json",
+      "sha256": "3c53903f86a43e516751d6f440e2472bd987df799db3948ae8cd49754e28a130"
+    },
+    "root_audit_result": {
+      "path": "artifacts/autogenesis/mathlib-nat-gcd-fib-add-self-euclidean-root-audit-result-v1.json",
+      "sha256": "acb9f497b28b837a8dd1eb87295658f31485f297d0c160cf8db264847cdc7567"
+    },
+    "statement_inventory": {
+      "mode": "0444",
+      "path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-nat-int-statement-inventory-v2.ndjson",
+      "sha256": "4285e551680abf3b0cafb11709015f04b3aef3eb05ce23af2392b12cec31aecc"
+    }
+  },
+  "state": "generated-proof-free-construction-input-no-proof-credit"
+}

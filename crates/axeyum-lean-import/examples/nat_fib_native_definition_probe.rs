@@ -55,6 +55,76 @@ fn run() -> Result<(), String> {
     };
     let target_goal_sha256 =
         canonical_expression_sha256(&source, target_goal).map_err(|error| error.clone())?;
+    let gcd_support = [
+        "WellFounded.fix",
+        "WellFounded.fix_eq",
+        "Nat.gcd",
+        "Nat.gcd_succ",
+        "_private.Init.Data.Nat.Gcd.0.Nat.gcd.eq_1",
+    ]
+    .into_iter()
+    .map(|name| {
+        let declaration = source.environment().iter().find_map(|(&candidate, declaration)| {
+            (source.display_name(candidate).to_string() == name).then_some((candidate, declaration))
+        });
+        match declaration {
+            Some((candidate, declaration)) => json!({
+                "name": name,
+                "present": true,
+                "kind": match declaration {
+                    Declaration::Definition { .. } => "definition",
+                    Declaration::Theorem { .. } => "theorem",
+                    Declaration::Axiom { .. } => "axiom",
+                    Declaration::Opaque { .. } => "opaque",
+                    Declaration::Inductive { .. } => "inductive",
+                    Declaration::Constructor { .. } => "constructor",
+                    Declaration::Recursor { .. } => "recursor",
+                    Declaration::Quotient { .. } => "quotient",
+                },
+                "axiom_footprint": source.axiom_footprint(candidate).iter().map(|name| source.display_name(*name).to_string()).collect::<Vec<_>>(),
+            }),
+            None => json!({"name": name, "present": false}),
+        }
+    })
+    .collect::<Vec<_>>();
+    let gcd_name = find_name(&source, "Nat.gcd")?;
+    let gcd_definition = match source.environment().get(gcd_name) {
+        Some(Declaration::Definition { ty, value, .. }) => json!({
+            "type": source.render_lean(*ty),
+            "value": source.render_lean(*value),
+            "declaration_sha256": canonical_declaration_sha256(&source, gcd_name).map_err(|error| error.clone())?,
+        }),
+        _ => return Err("Nat.gcd is not a definition".to_owned()),
+    };
+    let mut gcd_declarations = source
+        .environment()
+        .iter()
+        .filter_map(|(&candidate, declaration)| {
+            let name = source.display_name(candidate).to_string();
+            (name.starts_with("Nat.gcd") || name.starts_with("WellFounded.Nat")).then(|| {
+                json!({
+                    "name": name,
+                    "kind": match declaration {
+                        Declaration::Definition { .. } => "definition",
+                        Declaration::Theorem { .. } => "theorem",
+                        Declaration::Axiom { .. } => "axiom",
+                        Declaration::Opaque { .. } => "opaque",
+                        Declaration::Inductive { .. } => "inductive",
+                        Declaration::Constructor { .. } => "constructor",
+                        Declaration::Recursor { .. } => "recursor",
+                        Declaration::Quotient { .. } => "quotient",
+                    },
+                    "axiom_footprint": source.axiom_footprint(candidate).iter().map(|name| source.display_name(*name).to_string()).collect::<Vec<_>>(),
+                    "type": source.render_lean(declaration.ty()),
+                    "value": match declaration {
+                        Declaration::Definition { value, .. } => Some(source.render_lean(*value)),
+                        _ => None,
+                    },
+                })
+            })
+        })
+        .collect::<Vec<_>>();
+    gcd_declarations.sort_by(|left, right| left["name"].as_str().cmp(&right["name"].as_str()));
     add_fib_reflexivity_control(&mut source)?;
 
     let mut native = Kernel::new();
@@ -113,6 +183,9 @@ fn run() -> Result<(), String> {
             "nat_fib_declaration_sha256": fib_declaration_sha256,
             "target_goal_sha256": target_goal_sha256,
             "target_goal": source.render_lean(target_goal),
+            "gcd_support": gcd_support,
+            "nat_gcd_definition": gcd_definition,
+            "nat_gcd_declarations": gcd_declarations,
             "root": CONTROL,
             "source_closure": completed.receipt().source_closure.len(),
             "source_only_declarations": source_only_declarations,

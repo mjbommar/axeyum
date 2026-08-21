@@ -108,3 +108,11 @@ python3 -m unittest \
 No fact status changes and no ledger credit is due: the downstream
 `Nat.dvd_gcd` theorem still declines, now at a narrower and independently
 measured foundation.
+
+## Subsequent resolution
+
+The named frontier is closed by the target-specific pointwise fuel proof in
+[Axiom-free official `Nat.gcd_succ`](71-axiom-free-official-nat-gcd-succ.md).
+That theorem has an empty footprint, and the same three-leaf `Nat.dvd_gcd`
+composition now succeeds and replays. This note remains the immutable negative
+measurement that selected the repair.

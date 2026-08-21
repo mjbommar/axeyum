@@ -52,6 +52,50 @@ class FibChildQualificationTests(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.QualificationError, "direct unlock"):
             MODULE.validate(changed)
 
+    def test_selected_live_progress_requires_checked_axiom_free_kernel_evidence(self) -> None:
+        fact_id = self.manifest["selection"]["fact_id"]
+        fact_path = MODULE.FACTS / (fact_id.replace("F:", "F-") + ".json")
+        original = MODULE.load(fact_path)
+        self.assertEqual(original["epistemic_status"], "proved")
+
+        changed = copy.deepcopy(original)
+        changed["axiom_footprint"] = ["propext"]
+        old_load = MODULE.load
+
+        def load_with_changed_fact(path: pathlib.Path):
+            if path == fact_path:
+                return changed
+            return old_load(path)
+
+        MODULE.load = load_with_changed_fact
+        try:
+            with self.assertRaisesRegex(MODULE.QualificationError, "axiom-free"):
+                MODULE.validate(self.manifest)
+        finally:
+            MODULE.load = old_load
+
+    def test_deferred_candidate_cannot_advance_under_selected_qualification(self) -> None:
+        fact_id = self.manifest["candidates"][1]["fact_id"]
+        fact_path = MODULE.FACTS / (fact_id.replace("F:", "F-") + ".json")
+        changed = MODULE.load(fact_path)
+        changed["epistemic_status"] = "proved"
+        changed["proof_route"] = "kernel-lean"
+        changed["axiom_footprint"] = []
+        changed["evidence"] = [{"check_status": "checked"}]
+        old_load = MODULE.load
+
+        def load_with_changed_fact(path: pathlib.Path):
+            if path == fact_path:
+                return changed
+            return old_load(path)
+
+        MODULE.load = load_with_changed_fact
+        try:
+            with self.assertRaisesRegex(MODULE.QualificationError, "deferred"):
+                MODULE.validate(self.manifest)
+        finally:
+            MODULE.load = old_load
+
 
 if __name__ == "__main__":
     unittest.main()

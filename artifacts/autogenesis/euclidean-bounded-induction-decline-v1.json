@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-euclidean-bounded-induction-decline",
+  "state": "generated-recursion-removed-first-import-still-propext",
+  "plan": {
+    "path": "artifacts/autogenesis/euclidean-bounded-induction-plan-v1.json",
+    "sha256": "d36261b9212678fd704f7efd03b4f84c012c9fd0b7e3ea09eeffc2355968379b"
+  },
+  "authored_source": {
+    "path": "scripts/lean/autogenesis_div_add_mod_bounded_induction.lean",
+    "sha256": "6fe0cd29e1548d0dfc1b40447263b148285067b97f76533b8357860905020cf1",
+    "compiled": true,
+    "proof_search_invocations": 0,
+    "upstream_proof_bodies_read": 0
+  },
+  "type_inventory_source": {
+    "path": "scripts/lean/autogenesis_div_add_mod_bounded_type_inventory.lean",
+    "sha256": "4a3ac8fe4a12a5174d4f7c702b0e028e815dad23c90209fcfc6f962f909f5c02"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/6fe0cd29e-public-euclidean-bounded-induction-decline-v1/manifest.json",
+    "sha256": "e8c273c1550eeffbe1fd775a667a75c18539140880ab8c15f344d3a22df39054",
+    "mode": "0444"
+  },
+  "observation": {
+    "authored_type_repr_sha256": "0a0c92fdac6e526a524d7883d9676e19dc679fca46ebb25ea049df56f0d4ccbb",
+    "official_type_repr_sha256": "0a0c92fdac6e526a524d7883d9676e19dc679fca46ebb25ea049df56f0d4ccbb",
+    "exact_type_match": true,
+    "first_import_exit_status": 0,
+    "declaration_sha256": "4a19626c02c927336e2c88f024d30582127b5f0d98998bf712d013fe3162ebfa",
+    "axiom_footprint": [
+      "propext"
+    ],
+    "direct_theorem_dependencies": [
+      "And.left",
+      "And.right",
+      "Eq.symm",
+      "Nat.add_assoc",
+      "Nat.add_comm",
+      "Nat.div_eq",
+      "Nat.le_of_lt_succ",
+      "Nat.le_of_succ_le_succ",
+      "Nat.le_or_eq_of_le_succ",
+      "Nat.le_refl",
+      "Nat.lt_of_lt_of_le",
+      "Nat.mod_eq",
+      "Nat.mul_add",
+      "Nat.mul_one",
+      "Nat.not_succ_le_zero",
+      "Nat.sub_lt",
+      "Nat.succ_sub_succ_eq_sub",
+      "congr",
+      "congrArg",
+      "congrFun'",
+      "if_neg",
+      "if_pos"
+    ],
+    "generated_recursion_dependencies": [],
+    "generated_recursion_removed": true,
+    "accepted_public_support": false,
+    "second_submission_skipped": true
+  },
+  "budget": {
+    "revised_source_paths": 1,
+    "public_support_theorem_declarations": 1,
+    "kernel_theorem_submissions": 1,
+    "exact_fibonacci_target_submissions": 0,
+    "executor_invocations": 0,
+    "retries_after_kernel_decline": 0
+  },
+  "authority": {
+    "proof_bodies_read": 0,
+    "theorem_values_read": 0,
+    "balanced_bezout_reconstructions": 0,
+    "coprime_cancellation_reconstructions": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Preregister one importer-only footprint audit over the exact 22 direct dependencies. Replace only the carriers measured to contain propext before revising the public theorem.",
+  "limitations": "Primitive bounded induction removes the generated recursion theorem but does not yet make the exact public theorem axiom-free. No second import, downstream reconstruction, evaluation credit, or ledger write is authorized."
+}

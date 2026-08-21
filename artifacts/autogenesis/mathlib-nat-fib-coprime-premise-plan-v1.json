@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "kind": "axeyum-autogenesis-mathlib-nat-fib-coprime-premise-plan",
-  "state": "native-coprimality-proved-semantic-transport-to-r082-unresolved",
+  "state": "exact-official-semantic-receipt-issued-fact-transition-pending",
   "target": {
     "fact_id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
     "source_name": "Nat.fib_coprime_fib_succ",
@@ -236,6 +236,155 @@
         "axiom_footprint": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound"]
       }
     }
+  },
+  "nat_gcd_succ_bridge": {
+    "manifest": "/nas3/data/axeyum/autogenesis/reference-packs/f94489c74-lean430-nat-gcd-succ-bridge-v1/manifest.json",
+    "manifest_sha256": "7190676a198599fd7d4f14bb5cb0a83f2a8d9806be7d5803e3de920cf8e77637",
+    "implementation_commit": "f94489c747ef82175088f56001aee22c8fd0ebfe",
+    "authored_source_sha256": "939d225a168b5a94d042ceab47c4dd265a81bf149ea8cfbe08012ca5089373a7",
+    "source_stream_sha256": "6e99d4ae83b3916f8ee36c541bac18fc91b9f922252ca0af1cf658578b4e20db",
+    "result_sha256": "493de225e5317e4e51cca82b54e7a25c16b20910d96fcd898afae6c89280c1d2",
+    "bridge_composition_receipt_sha256": "704063a92d1f452fdbd87fb9ccd235f66a99bbb34cb23a0af01be16bb90bfc95",
+    "mod_lt_succ_specialization_receipt_sha256": "a605a5db994eecefef2c5061126c7e472072dcf37b481d4590b23f991ece63f2",
+    "gcd_succ_specialization_receipt_sha256": "993468eba57cf6f789f11019d9a2b83194822d5e98f71cceb371d22a7d663a93",
+    "gcd_succ_declaration_sha256": "e41996f98e01e15b88e11773bb42db825bf271888ece2d002c193627a8392727",
+    "gcd_succ_axiom_footprint": [],
+    "native_type_compatibility": "translated-definitional-equality",
+    "dvd_gcd": {
+      "outcome": "composed",
+      "target_theorem_leaves": ["Nat.dvd_mod_iff", "Nat.mod_lt", "Nat.gcd_succ"],
+      "source_closure": 57,
+      "added_theorems": 5,
+      "added_definitions": 4,
+      "receipt_sha256": "5be80180f535cce7a42d9ac9b87f2e7fe716479a3aaf3f2108fdc00fe40a3261"
+    },
+    "fresh_full_runs": 2,
+    "proof_search_invocations": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "fibonacci_support_surface": {
+    "manifest": "/nas3/data/axeyum/autogenesis/reference-packs/9e83ab67a-lean430-fibonacci-support-surface-v1/manifest.json",
+    "manifest_sha256": "ed9f461b8f36018b91fa865e7b552bd06e3fcc438f08655ec2c3cbc2a793b16c",
+    "implementation_commit": "9e83ab67a659ad0de760678c752ac238b3a5247e",
+    "result_sha256": "a015fcfa54805ce5e989447cab240e33b36cbb98103f073e61f476a6fe763ff0",
+    "roots": [
+      "Nat.add_comm",
+      "Nat.dvd_add_iff_right",
+      "Nat.dvd_gcd",
+      "Nat.eq_one_of_dvd_one",
+      "Nat.gcd_dvd_left",
+      "Nat.gcd_dvd_right",
+      "Nat.gcd_zero_left"
+    ],
+    "target_theorem_leaves": ["Nat.dvd_mod_iff", "Nat.mod_lt", "Nat.gcd_succ"],
+    "source_closure": 92,
+    "added_theorems": 14,
+    "added_definitions": 4,
+    "receipt_sha256": "c4cedfbc21119852cd885829601434015971582165103f2580f29ea4e677ec67",
+    "axiom_footprints": [],
+    "fresh_full_runs": 2,
+    "exact_target_theorem_admitted": false,
+    "proof_search_invocations": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "exact_fibonacci_coprimality": {
+    "manifest": "/nas3/data/axeyum/autogenesis/reference-packs/d12736b63-lean430-exact-fibonacci-coprimality-v1/manifest.json",
+    "manifest_sha256": "69a99345f384dc906b34196958fe5a1863665da7fc27eb1c62054f57fffff109",
+    "implementation_commit": "d12736b63d97327aac5a84776b86ac521bd3ff7d",
+    "recurrence_source_sha256": "b339a3d8e4ce1700d367fa5fdf0ac0e05d411cc48c49ce6f6e30b702a9b7baf5",
+    "recurrence_export_sha256": "5220ace53dcbf0b89121ba72c8e63cc7dcb2a2d7836b313bc597607859d78674",
+    "recurrence_declaration_sha256": "982c676b0656664e807c5e195bbdbd43376d78dec029bb3c409df661de39edb4",
+    "recurrence_composition_receipt_sha256": "1c073ec45fa0af03f8d2318afea9d8b106f8b65c86b69d7d3677587c5a36775b",
+    "result_sha256": "a1d92b2090392ac90e22419e6e4f6572beff1cbbd27f83d72c7dfcd566ca860a",
+    "name": "Nat.fib_coprime_fib_succ",
+    "target_definition": "Axeyum.Autogenesis.Coverage.r082",
+    "target_goal_sha256": "a053d8f483f2cc1e79c53924baf5f79e4897ce992ca77722168cee20a6f5150f",
+    "proof_sha256": "baa3313f7b40ad1c73ae29de08deb9f0368e9fcf06fd318fea9c73822c7d6827",
+    "declaration_sha256": "7fd9a1e811b93f8021ded1e34de5a816a0e9b23940e15cfcd5cbe81309daede9",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [
+      "Axeyum.Autogenesis.fibAddTwo",
+      "Nat.add_comm",
+      "Nat.dvd_add_iff_right",
+      "Nat.dvd_gcd",
+      "Nat.eq_one_of_dvd_one",
+      "Nat.gcd_dvd_left",
+      "Nat.gcd_dvd_right",
+      "Nat.gcd_zero_left"
+    ],
+    "fresh_full_runs": 2,
+    "kernel_submissions": 4,
+    "semantic_theorem_receipts_issued": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "fibonacci_receipt_authority": {
+    "manifest": "/nas3/data/axeyum/autogenesis/reference-packs/b55bc977e-fibonacci-receipt-authority-v1/manifest.json",
+    "manifest_sha256": "b9eb358d0928be257084150998f4f57c87cbbe01040f2c43ac1a306810093b6b",
+    "implementation_commit": "b55bc977e6c2a3e395db302639dde4d304dbde36",
+    "result_sha256": "739d9a4c6ce38576d6573547f1c98e052d6df80dca5334be36154026ebd01954",
+    "dependency_set_sha256": "d407340befc681d6d9abd187bbfead1f6ca1a7395c7dcf908950fd9c4d02e4d5",
+    "direct_theorem_dependencies": [
+      {
+        "name": "Axeyum.Autogenesis.fibAddTwo",
+        "content_sha256": "982c676b0656664e807c5e195bbdbd43376d78dec029bb3c409df661de39edb4"
+      },
+      {
+        "name": "Nat.add_comm",
+        "content_sha256": "c05e6d0986251392c9b1bc9fcc2bd5d66de22c856b9669cdd993e9993d94f4f9"
+      },
+      {
+        "name": "Nat.dvd_add_iff_right",
+        "content_sha256": "4bc8146aabb20e59aa1b0a19f80588ac80656320031f12b61f96da3f94802cf0"
+      },
+      {
+        "name": "Nat.dvd_gcd",
+        "content_sha256": "325197e87bf46cc929ad03177c49e73de7054b446ec22f132c605af4d3c35e94"
+      },
+      {
+        "name": "Nat.eq_one_of_dvd_one",
+        "content_sha256": "bc5301b4f9dbd08785db127ca6512283d2125321be596b362129d339c80ffa37"
+      },
+      {
+        "name": "Nat.gcd_dvd_left",
+        "content_sha256": "7fa32fac2240feebdb94d6259f2bbab2dbb83059227286303efd7c306e5ad399"
+      },
+      {
+        "name": "Nat.gcd_dvd_right",
+        "content_sha256": "d3214bf5b657f399baa82c9e2817996b64ae26d688308dfa0641a6ed376fdef4"
+      },
+      {
+        "name": "Nat.gcd_zero_left",
+        "content_sha256": "f81aee8a1d8528ddf8b7be6007efbee190f2208cdef3dcfda9fa03a1f200175d"
+      }
+    ],
+    "fresh_full_runs": 2,
+    "kernel_submissions": 4,
+    "semantic_theorem_receipts_issued": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "fibonacci_semantic_receipt": {
+    "manifest": "/nas3/data/axeyum/autogenesis/reference-packs/169aab71b-exact-fibonacci-semantic-receipt-v1/manifest.json",
+    "manifest_sha256": "eb965a345686d349c9615199a7009730152edefdbf9c49d454bdb95e0c3b427e",
+    "implementation_commit": "169aab71b1f03a6b5af97d769f475e729dd81c0e",
+    "result_sha256": "70862ddfb6ce5e66e0320cb4f4e2bf54e4d33da31ece5b7cbe8484fc0e8a80cf",
+    "schema": "axeyum-checked-dependency-theorem-receipt-v1",
+    "receipt_sha256": "34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e",
+    "transitive_theorem_dependencies": 115,
+    "transitive_dependency_set_sha256": "fa08448a022db2ba1fdd4226979a86854e561888658801d295f4dba0dc3ef84e",
+    "fresh_full_reconstructions": 2,
+    "kernel_submissions": 2,
+    "receipt_reissued_exactly": true,
+    "axiom_footprint": [],
+    "semantic_theorem_receipts_issued": 1,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
   },
   "native_fib_composition": {
     "manifest": "/nas3/data/axeyum/autogenesis/reference-packs/91d7df736-lean430-native-fib-composition-v1/manifest.json",
@@ -473,7 +622,7 @@
     ],
     "required_present_in_import": [],
     "already_present_in_import": ["Nat.rec"],
-    "next_action": "construct an explicit checked semantic bridge from the r082 Nat.Coprime statement over official Nat.gcd to the independently proved native-gcd theorem; same-name definitions alone are not transport authority"
+    "next_action": "register an exact receipt-consuming admission operation and execute the ordinary crash-safe prepare, apply, event-replay, fact-replay, and child-readiness transaction"
   },
   "next_capability_sequence": [
     "bind existing imported logic and Nat declarations to reusable prelude handles",
@@ -483,19 +632,27 @@
     "compose the authored fuel invariant over official Nat.mod and independently specialize its explicit arithmetic parameters",
     "retain the resulting successor-divisor Nat.dvd_mod_iff as an axiom-free target theorem with the native type shape",
     "retain explicit target-owned theorem leaves only after type compatibility, empty target footprint, exact reachability, and receipt replay",
+    "replace the quotient-bearing official Nat.gcd successor equation with a target-specific pointwise fuel proof and independently specialize it over the axiom-free Nat.mod_lt target theorem",
+    "compose Nat.dvd_gcd over the new Nat.gcd_succ target leaf and retain its replayable empty-footprint receipt",
+    "compose all seven planned gcd/divisibility support roots together over the checked target leaves and replay the resulting 92-declaration closure",
     "compose the exact imported Nat.fib definition and the admitted Nat.fib_add_two theorem into the axiom-free native Nat kernel in source dependency order",
     "retain the twice-reconstructed native Fibonacci coprimality theorem with its exact eight-theorem dependency set and empty footprint",
-    "bridge the official r082 Nat.Coprime definition closure to the native gcd theorem through independently checked semantics before any receipt or ledger transition"
+    "reconstruct the exact official r082 Nat.Coprime theorem over the completed support surface before any receipt or ledger transition",
+    "preregister the exact target, proof, declaration, dependency, and evidence identities before issuing and replaying the semantic theorem receipt"
   ],
   "authority": {
     "partitions_inspected": ["train"],
     "held_out_inspected": false,
     "proof_bodies_displayed": false,
     "proof_search_invocations": 0,
-    "kernel_submissions": 24,
+    "kernel_submissions": 52,
+    "exact_target_kernel_submissions": 4,
+    "authority_audit_kernel_submissions": 4,
+    "receipt_kernel_submissions": 2,
+    "semantic_theorem_receipts_issued": 1,
     "evaluation_credit": 0,
     "ledger_writes": 0
   },
   "verification": "python3 scripts/check-autogenesis-nat-fib-coprime-premise-plan.py",
-  "limitations": "The bounded native Fibonacci-coprimality induction is independently kernel-accepted twice with an empty footprint and exactly the admitted recurrence plus seven planned native theorem dependencies. The imported-to-official direction still reaches assumption-bearing Nat.gcd_succ. The r082 target statement is headed by official Nat.Coprime and therefore closes over the official Nat.gcd definition, while the accepted native theorem closes over Axeyum's independently constructed Nat.gcd. Same spelling and compatible types do not prove those definition closures semantically interchangeable. This does not authorize importing quotient assumptions, unchecked same-name definition transport, arbitrary recursive or mutual inductives, conflicting definitions, axioms, opaque declarations, recursor permutation, or weakening definitional equality; construct a checked official/native gcd semantic bridge; issue a theorem receipt; submit the Fibonacci target; inspect held-out data; write the ledger; or establish the fact."
+  "limitations": "The exact official r082 Fibonacci-coprimality theorem has one dependency-bound semantic receipt reissued identically from two fresh full reconstructions. It binds the exact target, candidate, operation, budget, eight direct premise identities, 115 transitive diagnostic theorem identities, and an empty complete axiom footprint. This is checked candidate evidence, not ledger admission: no fact status, evaluation credit, or durable ledger state has changed. It does not authorize importing quotient assumptions, unchecked same-name definition transport, arbitrary recursive or mutual inductives, conflicting definitions, axioms, opaque declarations, recursor permutation, weakening definitional equality, inspecting held-out data, or establishing the fact outside the exact registered receipt-consuming crash-safe transaction."
 }

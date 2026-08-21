@@ -257,6 +257,21 @@ class StatementReflexivityAdmissionResultTests(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.AdmissionResultError, "incomplete"):
             MODULE.validate_replay_objects(manifest, report, fresh, retained)
 
+    def test_dependency_theorem_admission_archive_is_accepted(self):
+        manifest = MODULE.validate(
+            MODULE.ROOT
+            / "artifacts/autogenesis/mathlib-nat-fib-coprime-admission-v1.json"
+        )
+        self.assertEqual(
+            manifest["kind"],
+            "axeyum-autogenesis-mathlib-dependency-theorem-receipt-admission",
+        )
+        self.assertEqual(len(manifest["result"]["theorem_dependencies"]), 8)
+        self.assertEqual(
+            manifest["result"]["newly_ready"],
+            ["F:ml430-nat-gcd-fib-add-self-5a92d5e3"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

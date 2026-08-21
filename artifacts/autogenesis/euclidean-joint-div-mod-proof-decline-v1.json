@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-proof-isolated-euclidean-construction-decline",
+  "state": "first-reconstruction-declined-no-second-run-or-credit",
+  "capsule": {
+    "path": "artifacts/autogenesis/euclidean-joint-div-mod-proof-capsule-v1.json",
+    "sha256": "17ef795517c8373a52889597f859cc1d5a75fa74b3a0c38bf334c4f523eb14f1"
+  },
+  "authored_source": {
+    "path": "scripts/lean/autogenesis_div_mod_go_reconstruct.lean",
+    "sha256": "2387f116f1eb94cb0d46027f100f5912d186094d229af2f16f421398be118a80",
+    "lean_version": "4.30.0",
+    "compiled": true,
+    "proof_search_invocations": 0,
+    "upstream_proof_bodies_read": 0
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/2387f116f-proof-isolated-div-mod-go-decline-v1/manifest.json",
+    "sha256": "f4dfdeec6ec422bf63748e4a6629d128d3b8487d82da9fb2df92d8db96312601",
+    "mode": "0444"
+  },
+  "observation": {
+    "theorem_name": "Axeyum.Autogenesis.divModGoReconstruct",
+    "declaration_sha256": "8c496681b3d26c68e0d915791fd5163eaa429dbf4259f722854286fe8fcd1271",
+    "axiom_footprint": ["propext"],
+    "direct_theorem_dependencies": [
+      "Eq.symm",
+      "Nat.add_assoc",
+      "Nat.add_comm",
+      "Nat.div.go.eq_1",
+      "Nat.div_rec_fuel_lemma",
+      "Nat.modCore.go.eq_1",
+      "Nat.mul_add",
+      "Nat.mul_one",
+      "Nat.not_lt_zero",
+      "Nat.sub_add_cancel",
+      "congr",
+      "congrArg",
+      "congrFun'",
+      "dif_neg",
+      "dif_pos"
+    ],
+    "required_axiom_footprint": [],
+    "accepted": false,
+    "decline_reason": "nonempty-kernel-derived-axiom-footprint"
+  },
+  "budget": {
+    "fresh_reconstructions_attempted": 1,
+    "fresh_reconstructions_planned": 2,
+    "second_reconstruction_run": false,
+    "support_theorems_accepted": 0,
+    "kernel_theorem_submissions": 1,
+    "exact_target_submissions": 0,
+    "retries": 0
+  },
+  "authority": {
+    "proof_bodies_read": 0,
+    "theorem_values_read": 0,
+    "executor_invocations": 0,
+    "semantic_theorem_receipts": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Preregister a dependency-footprint audit over the first failed stream. No revised proof is authorized until that audit identifies the exact propext-bearing dependency set without reading proof terms.",
+  "limitations": "The decline proves only that this independently authored proof closure is not axiom-free. It does not show that the joint invariant is unprovable constructively or that any audited computation root is assumption-bearing."
+}

@@ -360,6 +360,77 @@ def build_authoritative_transaction(
             "immutable source-bound semantic theorem receipt and requires its exact "
             "two-fresh-kernel proof, zero assumptions, and zero direct theorem dependencies"
         )
+    elif executor["driver"] == "axeyum-lean-import/dependency-theorem-receipt-v1":
+        expected_statement_sha = hashlib.sha256(
+            before_fact["formal"]["statement"].encode()
+        ).hexdigest()
+        observation = result.get("observation")
+        direct_dependencies = (
+            observation.get("retained_answer_dependencies")
+            if isinstance(observation, dict)
+            else None
+        )
+        if (
+            identity.get("formal_statement_sha256") != expected_statement_sha
+            or identity.get("receipt_sha256") != executor["receipt_sha256"]
+            or identity.get("dependency_set_sha256")
+            != executor["dependency_set_sha256"]
+            or identity.get("transitive_dependency_set_sha256")
+            != executor["transitive_dependency_set_sha256"]
+            or not isinstance(observation, dict)
+            or observation.get("verdict") != "proved"
+            or observation.get("receipt_sha256") != executor["receipt_sha256"]
+            or observation.get("axiom_footprint") != []
+            or not isinstance(direct_dependencies, list)
+            or len(direct_dependencies) != 8
+            or [row.get("name") for row in direct_dependencies]
+            != sorted(row.get("name") for row in direct_dependencies)
+            or observation.get("dependency_set_sha256")
+            != executor["dependency_set_sha256"]
+            or observation.get("transitive_theorem_dependencies") != 115
+            or observation.get("transitive_dependency_set_sha256")
+            != executor["transitive_dependency_set_sha256"]
+            or observation.get("fresh_full_reconstructions") != 2
+            or observation.get("target_theorem_submissions") != 2
+            or observation.get("search_invocations") != 0
+            or observation.get("ledger_writes") != 0
+        ):
+            raise TransactionError(
+                "dependency-theorem receipt execution assurance is inconsistent"
+            )
+        execution_input_binding = {
+            "receipt_manifest": executor["receipt_manifest"],
+            "receipt_manifest_sha256": identity["receipt_manifest_sha256"],
+            "receipt_observation_sha256": identity[
+                "receipt_observation_sha256"
+            ],
+            "receipt_sha256": identity["receipt_sha256"],
+            "source_artifact_sha256": identity["source_artifact_sha256"],
+            "candidate_observation_sha256": identity[
+                "candidate_observation_sha256"
+            ],
+            "dependency_set_sha256": identity["dependency_set_sha256"],
+            "transitive_dependency_set_sha256": identity[
+                "transitive_dependency_set_sha256"
+            ],
+            "formal_statement_sha256": expected_statement_sha,
+            "target_definition": executor["target_definition"],
+            "goal_sha256": observation["goal_sha256"],
+            "proof_sha256": observation["proof_sha256"],
+            "target_content_sha256": observation["target_content_sha256"],
+            "direct_theorem_dependencies": direct_dependencies,
+            "transitive_theorem_dependencies": observation[
+                "transitive_theorem_dependencies"
+            ],
+        }
+        result_description = (
+            "two-fresh-kernel axiom-free dependency-bound semantic theorem receipt"
+        )
+        replay_description = (
+            "immutable source-bound dependency theorem receipt and requires its "
+            "exact two-fresh-kernel proof, empty axiom footprint, eight named direct "
+            "premise identities, and replay-bound transitive dependency digest"
+        )
     else:
         raise TransactionError("authoritative operation uses an unsupported driver")
     after_fact = json.loads(json.dumps(before_fact))

@@ -852,7 +852,7 @@ impl Kernel {
                         // `whnf_core` — and this function *is* Lean's
                         // `whnf_core`. See `Kernel::whnf_core` and
                         // `Kernel::lazy_delta_step` for the two sites, and
-                        // ADR-0533 for why the placement is a decision rather
+                        // ADR-0536 for why the placement is a decision rather
                         // than a refactor.
                         //
                         // `reduce_nat_succ` stays because it is guarded by an
@@ -1057,7 +1057,7 @@ impl Kernel {
             // definition. The `has_fvars` guard is Lean's own
             // (`type_checker.cpp:978`) but Lean applies it only at the
             // lazy-delta site; carrying it here too is strictly more
-            // conservative than Lean and is the decision recorded in ADR-0533.
+            // conservative than Lean and is the decision recorded in ADR-0536.
             //
             // The head of a two-argument `Nat` application is a closed `Const`,
             // so `!has_fvars(whnfd)` is exactly "neither argument mentions a

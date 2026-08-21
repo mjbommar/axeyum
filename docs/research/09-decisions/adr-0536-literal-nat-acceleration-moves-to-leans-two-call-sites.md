@@ -1,4 +1,4 @@
-# ADR-0533: The literal-`Nat` acceleration moves to Lean's two call sites, under Lean's `has_fvar` guard
+# ADR-0536: The literal-`Nat` acceleration moves to Lean's two call sites, under Lean's `has_fvar` guard
 
 Index-summary: Literal `Nat` arithmetic is called from the δ loop and from lazy-delta, never from the δ-free step, and only when neither operand mentions a free variable
 Status: accepted

@@ -111,12 +111,15 @@ python3 -m unittest \
 
 ## Next
 
-Construct an explicit checked semantic bridge from the official r082
-`Nat.Coprime`/`Nat.gcd` closure to the native gcd theorem. The bridge may prove
-pointwise gcd equivalence, or residualize the gcd operation together with a
-complete uniqueness contract and specialize that contract independently on
-both sides. It may not rely on same-name reuse, import `Quot.sound`, or declare
-an unproved computation equation.
+The first explicit bridge is now complete: a target-specific pointwise fuel
+proof reconstructs official `Nat.gcd_succ` without `Quot.sound`, and
+`Nat.dvd_gcd` composes over that checked target leaf. See
+[Axiom-free official `Nat.gcd_succ`](71-axiom-free-official-nat-gcd-succ.md).
+
+All seven planned support roots now compose together; see
+[Official Fibonacci coprimality support surface](72-official-fibonacci-support-surface.md).
+Reconstruct this exact official target statement next. Same-name reuse,
+quotient assumptions, and unproved computation equations remain forbidden.
 
 Only after that bridge lets the target statement pass an ordinary kernel gate
 may Autogenesis issue a semantic theorem receipt and attempt the crash-safe fact
