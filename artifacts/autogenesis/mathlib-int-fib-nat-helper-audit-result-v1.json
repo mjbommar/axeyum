@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-nat-helper-audit-result",
+  "state": "four-clean-nat-helpers-two-propext-helpers-localized",
+  "plan": {"path": "artifacts/autogenesis/mathlib-int-fib-nat-helper-audit-plan-v1.json", "sha256": "54b3fafcdbe0e448b8818201e56bbd25e07fe42c3a410219777d74375b210fc1"},
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-raw-cancellation-v6/leaves.ndjson", "bytes": 376902, "sha256": "0872a3986843b085def91644b0b33a06785cf3584358606c8598304a842ecf82"},
+  "observation_sha256": "12d0824022814ee541522bcc1ea4d42dc1269e51621eecbdb770973fa06852a1",
+  "empty_footprint": ["Nat.sub_self", "Nat.sub_zero", "Nat.zero_add", "Nat.le_add_left"],
+  "propext_bearing": {
+    "Nat.add_sub_cancel_left": ["Nat.add_sub_add_left", "Nat.sub_zero", "congrArg"],
+    "Nat.sub_eq_zero_of_le": ["Eq.symm", "Nat.le.dest", "Nat.sub_self_add", "congrArg"]
+  },
+  "selected_replacements": ["prove (x + z) - z = x by direct induction on z", "prove z - (x + z) = 0 by direct induction on z"],
+  "execution": {"importer_runs": 1, "proof_bearing_stream_reads": 1, "theorem_submissions": 0, "ledger_writes": 0},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}
