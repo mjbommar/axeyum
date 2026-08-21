@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-dvd-construction-plan-v1",
+  "state": "preregistered-exact-target-construction-before-code-or-capsule-read",
+  "target": {
+    "fact_id": "F:ml430-nat-fib-dvd-f80f3de1",
+    "fact_sha256": "523804a5730bc72f1865e1415126e4d1825df8285fef01ae99ca9f57ae6230ff",
+    "name": "Nat.fib_dvd",
+    "formal_statement_sha256": "78d60c44848c79a77f40f51156f1073ab122ae709715414053a203eecf3f6bf6"
+  },
+  "input": {
+    "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/749f30f65-nat-fib-gcd-v3/target-1.ndjson",
+    "capsule_sha256": "8ac3c35874540a10e5fa393c65f3ad313a6cf6a06303cec68fec3ec45d0f04cd",
+    "required_roots": [
+      "Nat.fib_gcd",
+      "Axeyum.Autogenesis.dvdReflOfficialV1",
+      "Axeyum.Autogenesis.dvdAntisymmOfficialV1",
+      "Axeyum.Autogenesis.dvdGcdOfficialV1",
+      "Axeyum.Autogenesis.gcdDvdLeftOfficialV1",
+      "Axeyum.Autogenesis.gcdDvdRightOfficialV1"
+    ]
+  },
+  "construction": {
+    "method": "from m divides n, use reflexivity plus dvdGcd and gcdDvdLeft with divisibility antisymmetry to prove gcd m n = m; transport that equality through fib and exact Nat.fib_gcd to identify fib m with gcd (fib m) (fib n); transport gcdDvdRight across that equality",
+    "forbidden_dependencies": [
+      "Iff",
+      "Iff.rec",
+      "Nat.gcd_eq_left_iff_dvd",
+      "propext",
+      "Quot.sound"
+    ],
+    "proof_bodies_consulted": 0,
+    "search_invocations": 0
+  },
+  "acceptance": {
+    "complete_invocations": 2,
+    "target_theorem_submissions": 2,
+    "exports": 2,
+    "fresh_imports": 4,
+    "outputs_byte_identical": true,
+    "observations_byte_identical": true,
+    "axiom_footprint": []
+  },
+  "budget": {
+    "max_driver_builds": 1,
+    "max_complete_invocations": 2,
+    "max_target_theorem_submissions": 2,
+    "max_exports": 2,
+    "max_fresh_imports": 4,
+    "max_retries": 0,
+    "max_search_invocations": 0,
+    "max_ledger_writes": 0
+  },
+  "next_on_accept": "seal the exact capsule, register its fact operation, and perform a separately authorized crash-safe admission",
+  "limitations": "This authorizes only the named theorem construction. It grants no fact transition, descendant credit, evaluation credit, or ledger write."
+}
