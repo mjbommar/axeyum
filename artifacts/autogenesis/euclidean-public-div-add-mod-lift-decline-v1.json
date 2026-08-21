@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-euclidean-public-wrapper-lift-decline",
+  "state": "opaque-public-division-seam-declined-before-kernel-submission",
+  "plan": {
+    "path": "artifacts/autogenesis/euclidean-public-div-add-mod-lift-plan-v1.json",
+    "sha256": "39978cbf2d05290ed4cfe459070ee1438bc7aaf1eb7ace25ab1ece76afcd04f5"
+  },
+  "authored_source": {
+    "path": "scripts/lean/autogenesis_div_add_mod_reconstruct.lean",
+    "sha256": "e4650d1d4ff92f40e9c1f66462be263469adb35b63fda93a9fb31ba4f5145d08",
+    "compiled": false,
+    "proof_search_invocations": 0,
+    "upstream_proof_bodies_read": 0
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/e4650d1d4-public-euclidean-lift-decline-v1/manifest.json",
+    "sha256": "75485603293e18ee466d7420545a890807865eb8cd045143e458d84ea64d9f9b",
+    "mode": "0444"
+  },
+  "observation": {
+    "zero_divisor_branch_completed": true,
+    "public_mod_to_modCore_rewrite_completed": true,
+    "first_blocked_operation": "unfold Nat.div",
+    "blocked_goal": "(n + 1) * (m / (n + 1)) + m.modCore (n + 1) = m",
+    "nat_div_is_transparent_to_elaborator": false,
+    "proof_free_div_go_to_public_div_bridge_statements": [],
+    "accepted_public_support": false
+  },
+  "budget": {
+    "public_support_theorem_declarations": 0,
+    "kernel_theorem_submissions": 0,
+    "exact_fibonacci_target_submissions": 0,
+    "executor_invocations": 0,
+    "retries_after_kernel_decline": 0
+  },
+  "authority": {
+    "proof_bodies_read": 0,
+    "theorem_values_read": 0,
+    "balanced_bezout_reconstructions": 0,
+    "coprime_cancellation_reconstructions": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Preregister an independent well-founded public recursion proof using the proof-free Nat.div_eq and Nat.mod_eq statements. Do not claim the private go invariant reaches opaque public division.",
+  "limitations": "The decline disproves only the planned transparent-wrapper lift. It does not refute a constructive public equation proof through the public recursion equations."
+}
