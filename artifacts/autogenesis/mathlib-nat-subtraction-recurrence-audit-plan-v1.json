@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-subtraction-recurrence-audit-plan",
+  "state": "preregistered-before-two-root-single-read",
+  "predecessor": {"path": "artifacts/autogenesis/mathlib-nat-subtraction-translation-audit-result-v1.json", "required_state": "zero-sub-clean-translation-layer-simp-contaminated"},
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-raw-cancellation-v10/leaves.ndjson", "bytes": 258097, "sha256": "0b01976d35be7f7c161ca7635e2569f753be3b0d4e4541dd00a147ad5eb5965b"},
+  "roots": ["Nat.succ_sub_succ_eq_sub", "Nat.add_succ"],
+  "budget": {"max_importer_runs": 1, "max_proof_bearing_stream_reads": 1, "max_compiler_invocations": 0, "max_exporter_invocations": 0, "max_theorem_submissions": 0, "max_ledger_writes": 0},
+  "output": "artifacts/autogenesis/mathlib-nat-subtraction-recurrence-audit-result-v1.json",
+  "decision_rule": "If both recurrence equations are empty-footprint, preregister target-specific induction and stop descending the Nat layer.",
+  "limitations": "This audit grants no cancellation or Fibonacci theorem credit."
+}
