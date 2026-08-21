@@ -976,7 +976,20 @@ pub(crate) fn certificate_is_axiom_instance(
     arena: &TermArena,
     cert: &ArrayAxiomRefutationCertificate,
 ) -> bool {
+    // BOTH orientations, because the producer tries both
+    // (`array_axiom_refutation_candidate`) and stores `lhs`/`rhs` in the
+    // ORIGINAL order either way — the certificate does not record which
+    // orientation matched. A one-orientation check here rejected a genuine
+    // `SelectIte` certificate, and the `evidence` integration suite caught it
+    // where every targeted unit test I had run did not.
+    //
+    // This is the "a certificate must carry every distinction its producer
+    // makes" hazard in the one variant where the answer is NOT to add a field:
+    // equality is symmetric, so `lhs = rhs` is an axiom instance exactly when
+    // `rhs = lhs` is. Recording the orientation would pin an arbitrary choice
+    // and make honest certificates fail.
     valid_array_axiom(arena, cert.lhs, cert.rhs) == Some(cert.kind)
+        || valid_array_axiom(arena, cert.rhs, cert.lhs) == Some(cert.kind)
 }
 
 /// The query really does state `¬(lhs = rhs)` at the certificate's own assertion.
