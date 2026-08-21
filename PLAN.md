@@ -286,6 +286,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | V6 advances to missing positive-product factor support; V7 freezes a primitive-induction replacement |
 | 2026-08-21 | `29c126c0e` | Target-owned positive-product right-factor proof is added without importing broader order theory |
 | 2026-08-21 | (pending) | V7 advances to multiplicative monotonicity; V8 freezes two target-owned order leaves |
+| 2026-08-21 | `40a1ab969` | `crates/axeyum-solver/src/dpll_lia.rs` + ADR-0538 + `bench-results/lia-core-minimisation-20260821/`: theory-core minimisation rationed by an oracle-call work budget instead of a core-width gate. QF_UFLIA 92 → 114 (+22, −0) at 0 disagreements against z3 and 0 against the declared `:status`. |
 | 2026-08-21 | (pending) | `docs/research/05-algorithms/linear-arithmetic-deficit-diagnosis-2026-08-21.md` + `bench-results/linear-arithmetic-diagnosis-20260821/`: gap #1 diagnosed — three causes not one, 800-file per-file classification, two A/Bs (one refuted, one +17 QF_UFLIA files at 0 disagreements). |
 | 2026-08-21 | `9333f779d` | **`bv_nego` returned a wrong `sat` above 128 bits.** `1u128 << (w - 1)` with legal widths to 65536: Rust masks the shift mod 128, so at `w = 129` the term became `x == 1` instead of `x == 2^128` and the shipped `SatBvBackend` answered **`sat`** to an unsatisfiable query (measured with overflow checks off; debug panicked instead). Fixed by following `bv_umulo`'s existing wide branch. Corpus reachability, which the gap analysis marked UNVERIFIED: **0 of 1430** tracked `.smt2` files use `bvnego` (control: `bvadd` in 106), so it is reachable only from the parser on user input. Three tests close the width asymmetry that hid it — widths 129/130/191/192/193/256/4096 by value *and* by the constant's structure, the 128-bit boundary staying narrow, and the end-to-end backend verdict. Two guards, each mutation-verified to kill exactly one test, registered as `ir-bv-nego-width`. |
 | 2026-08-21 | `d4ffe2a54` | **`SolverConfig::memory_limit_mb` was set but never read on the shipped build** — its only read was under `#[cfg(feature = "z3")]`, and `axeyum-verify`'s `tock_log2_external` had been setting a 2 GB cap on a non-z3 build where it bounded nothing. Now two mechanisms: a portable pre-allocation clause ceiling at a **measured** 384 B/clause (peak-RSS, fresh process per width; a plain `VmRSS` delta under-reports 3–7x and `VmHWM` is monotone, so both obvious methods fail toward *under*-charging), and a `/proc/self/status` probe (**9.4 µs**, 276x an `Instant::now()`, which is why it may only sit at a phase boundary) at three BV boundaries and both front doors. Measured against a tree without it: default path indistinguishable (182.8–183.4 vs 184.0–185.3 µs/check), a configured limit **+32 µs/check fixed**. All five guards **SURVIVED** the first mutation run because they shadowed each other; a scripted-RSS test seam plus direct reach to the post-encoding gate now has each killing exactly one test. A *faithful* bound still needs a `#[global_allocator]` hook — process-global, `unsafe impl`, needs per-query attribution — recorded as an open research question rather than an unspoken gap. |
@@ -2095,6 +2096,57 @@ Membership measured, not guessed: **five** suites, the four that failed plus
 false positives (`specs.len() == 720`, `== 640`, corpus population `226`,
 `outer_bindings.len() == 318`) — element counts, not module bytes. Detail and
 the full measurement table: [`../notes/agent-golden-pins.md`](docs/plan/notes/agent-golden-pins.md).
+
+**Gap #1's one confirmed fix is landed, in the form its diagnosis said to ship
+it in: minimisation is budget-driven, not width-gated** (`WIP`,
+agent-lia-core-minimisation, 2026-08-21). `dpll_lia.rs` had one constant doing
+two jobs — deciding whether a theory conflict core was minimised at all, and
+deciding which cores are charged against the wide-clause retention budget. The
+[diagnosis](docs/research/05-algorithms/linear-arithmetic-deficit-diagnosis-2026-08-21.md)
+§5.2 measured what that costs: the cores too wide to minimise are exactly the
+cores whose width then exhausts the retention budget, so a solve declines for
+want of the narrow clauses it refused to narrow. The jobs are now separate —
+`MINIMIZATION_ORACLE_CALL_BUDGET` (a deterministic **oracle-call** ration, chosen
+over wall clock because determinism is a public API promise) admits the pass;
+`WIDE_THEORY_CORE_ATOMS` (still 128) only decides retention accounting, by
+**retained width** rather than by provenance, which keeps the memory protection
+the naive constant bump gives up.
+
+Measured on the pinned 200-file competition lists, three binaries plus z3 4.13.3
+run **adjacent in time per file** so contention is shared across the arms:
+
+| division | base | A/B (128→4 096) | **shipped** | vs z3 | vs declared `:status` |
+|---|---:|---:|---:|---|---|
+| **QF_UFLIA** | 92 | 112 | **114 (+22, −0)** | **0** disagreements / 114 | **0** / 114 |
+| QF_IDL (control) | 66 | 66 | **65 (+0, −1)** | **0** / 63 | **0** / 65 |
+
+- **The diagnosis's A/B reproduces**: identical baseline (92), +20 here against
+  its +17 on a more loaded sweep.
+- **The shipped version strictly dominates the constant bump** — every file the
+  bump decides, plus two more, losing none, while keeping the memory protection.
+- The decline it targets (`retained N literals in unminimized theory cores`)
+  occurs 31 times in the baseline arm and **0 times in 400 patched runs**. The
+  QF_UFLIA files that still decline now fail on the *pre-SAT skeleton envelope* —
+  a different constant, the diagnosis's separate `S2` class, and the next
+  increment on this route.
+- 7 of 8 guard mutations kill **exactly one** test; the survivor is a pre-existing
+  arm whose unreachability is documented in the test rather than papered over.
+- The control's single loss re-decides `unsat` on **all three** arms in isolation
+  — but the shipped arm is ~**11 %** slower on that file, which on a loaded box
+  pushed a 15-second file past the external kill. The change costs measurable
+  time on QF_IDL and buys nothing there; that is what the control shows.
+
+Capability ratchet (`progress_frontier`, `--features full`, 10 tests, 0 failed):
+no REGRESSION on any family, and the reference frame reports **scale 1.09x–1.14x**
+at load 3.1–4.2, so nothing is NOT COMPARABLE or ADVISORY. `lia_cuts` — the family
+whose engine this touches — sits at 35 against a floor of 26. No baseline raised.
+
+Not a parity result: the reference here is z3 4.13.3, cvc5 is absent on this
+host, and only `scripts/parity-run.sh` may move a `PARITY.md` number.
+
+Full method, controls and per-file data:
+[the budget-driven theory-core minimisation note](docs/research/05-algorithms/budget-driven-theory-core-minimisation-2026-08-21.md),
+[ADR-0538](docs/research/09-decisions/adr-0538-theory-core-minimisation-is-rationed-by-oracle-calls-not-by-core-width.md).
 
 **Ranked gap #1 is diagnosed: three causes, not one, and the largest single
 block of losses is a route that quits at 5 % budget use** (`WIP`,
