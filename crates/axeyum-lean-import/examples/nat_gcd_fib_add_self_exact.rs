@@ -573,7 +573,7 @@ fn run_target_native_gcd_parameter_audit(
     let generic = find_name(&kernel, GCD_DIVISIBILITY_GENERIC)?;
     let argument_names = [
         GCD_ZERO_LEFT_GENERIC,
-        COPRIME_GCD_SUCC_LEAF,
+        "Axeyum.Autogenesis.officialNatGcdSuccClosedV1",
         "Axeyum.Autogenesis.modQuotientWitnessV4",
         TARGET_DVD_REFL,
         TARGET_DVD_MUL_RIGHT,
