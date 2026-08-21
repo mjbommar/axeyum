@@ -749,12 +749,23 @@ in gf2_hayes.rs: the dyadic product-discriminant phase vanishes on squareful
 inputs, so the all-fibre-point square-mass surplus is not the literal
 within-fibre off-diagonal correlation. The report now exposes the nonzero
 phase diagonal and the literal off-diagonal separately. Independent
-factorisation/inverse censuses at level 13 agree with the primary
-calculation and give positive literal off-diagonal values (30,144 odd and
-234,528 even), while the old all-points comparison remains negative only
-because of squareful-input slack. Thus this row is a finite slack-bound
+factorisation/inverse censuses agree on the phase support. Their diagnostic
+labelled `true_off_diagonal` subtracts that support twice and is not the
+literal expansion; the primary report uses the one-copy diagonal. At level 13
+its literal off-diagonal is positive (14,992,012 odd and 30,154,508 even),
+while the old all-points comparison remains negative only because of
+squareful-input slack. Thus this row is a finite slack-bound
 diagnostic, not a nonpositive four-point-counting theorem, and provides no
 endpoint credit.
+
+A structured translation graph now separates the exact fixed-`F_2`
+identity-ray target from adjacent large-field, fixed-conductor, and sparse
+construction results. It identifies Cheng's 2026 fixed-field quadratic-digit
+Vaughan argument as a candidate *method* bridge: its averaged
+reciprocal-symbol rank-defect mechanism is potentially relevant, but the
+published theorem is odd-characteristic and fixed-band. A binary proof would
+need a growing-depth Galois-ring replacement and an endpoint ledger for
+`(HWO)`; no credit is claimed.
 
 **Next:** prove `(REL)`, encode it as replayable evidence, remove the
 manuscript's fail-visible warning, and perform the final source audit.  The
