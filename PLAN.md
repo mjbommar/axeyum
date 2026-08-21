@@ -123,6 +123,7 @@ now. Nothing was deleted.
 | 2026-08-20 | `0797719a7` | Rational operands no longer defeat algebraic field arithmetic; the NRA `sat` witness replays and the evidence route matches the decision route |
 | 2026-08-20 | (pending) | `Evidence::UnsatRealHandelman`: multi-term Handelman/Positivstellensatz refutations for `QF_NRA`, with case splitting over a top-level disjunction and polynomial multipliers on asserted equalities. Certifies the three corpus rows `nra_product_cert` declined by design. 15 guards mutation-checked; 14 kill at least one test, and the fifteenth (the producer's own self-check) kills nothing and is documented as such at the function rather than pretended to be a guard. Three checks that provably could not fail were deleted instead of kept. `NamedPoly` is now shared with `nra_product_cert` rather than reimplemented — two name-keyed polynomial types would be two chances to disagree about what `a*b` means. |
 | 2026-08-20 | (pending) | `Kernel::whnf_core` is memoised — the second of Lean's two reduction caches (`m_whnf` beside `m_whnf_core`), which this kernel never had. `build_creal_prelude` 33.0 s → 13.0 s, template reuse 0.41 s → 0.15 s. Pure memoisation: same key discipline as the δ-free memo, split on `has_fvars`, cleared by `push`/`pop` and by environment revision, closed half covered by the `reduction_ctx_reads` tripwire. Six guards mutation-checked, each killing at least one test and four killing exactly one; a seventh looked unreachable and a `debug_assert_eq!` proved it is not, which is what the comment on it now records instead of the argument that was wrong. Root cause recorded: `502184d3f` did not slow the kernel down, it switched the literal-`Nat` acceleration ON for the first time, because `build_nat_binop_table` gates on `Bool`'s constructor order. |
+| 2026-08-20 | (pending) | `Kernel::reduce_nat_binop` moves out of the δ-free normaliser to Lean's two call sites — `whnf_core`'s δ loop (Lean `whnf`, `type_checker.cpp:670`) and `lazy_delta_step` (Lean `lazy_delta_reduction`, `:978`) — both under Lean's `!has_fvar` guard. `build_creal_prelude` 12.99 s → 6.79 s (median of three interleaved rounds), against 8.71 s before the acceleration was ever switched on. Measured separately: Lean's placement *without* the guard is 12.12 s, so the guard is the entire win and the placement is faithfulness, not speed. Identification unmoved — kernel lib 399/0; full kernel crate 609 passed / 1 failed, the one (`real_lean_wellfounded_elaborator_divergence`) failing byte-identically on an unmodified `HEAD` and being a real-Lean *elaborator* rejection rather than ours; solver `reconstruct::` 312/0; clippy 618/618 targets 0 diagnostics; prelude-reuse differential `compared=8 failures=0`; axiom ledger `axreal=30` and all others 0. Three new tests in `tests/nat_literal_arithmetic.rs` pin both call sites and both guards on an environment where the accelerated answer and the declared body disagree; each guard mutation kills exactly one. ADR-0533. |
 | 2026-08-20 | `b5c4bb48b` | Binder-info-insensitive kernel type-shape identity with adversarial controls |
 | 2026-08-20 | `24b16642e` | r082 overlap probe classifies kernel-compatible and structurally different types |
 | 2026-08-20 | `8dbd18c82` | Required Nat theorem closure census isolates a structurally unblocked first replay slice |
@@ -745,6 +746,60 @@ from inside `whnf_no_unfolding_uncached`, which *is* Lean's `whnf_core`, with no
 Moving it changes what the kernel identifies, so it needs an ADR and differential
 evidence, not a perf commit — but the prize is measured: with the rule off and
 this memo on, the same build is **6.56 s**, better than the pre-regression 8.7 s.
+
+**`Kernel::reduce_nat_binop` now sits where Lean calls `reduce_nat` — in the δ
+loop and in lazy-delta, never in the δ-free step — under Lean's `has_fvar`
+guard. `build_creal_prelude` 12.99 s → 6.79 s, and nothing stopped admitting**
+(`DONE`, agent-nat-rule-placement, 2026-08-20).
+
+ADR-0459 described the placement as "tried after `whnf_core` and before δ". The
+code called it from inside `whnf_no_unfolding_uncached`, and that function *is*
+Lean's `whnf_core` — one layer too deep, with no `has_fvar` guard anywhere. In
+the pinned reference (`v4.30.0`, `d024af09`) `reduce_nat` is called from
+`type_checker::whnf` at `:670` and from `lazy_delta_reduction` at `:978`, the
+second under `!has_fvar(t_n) && !has_fvar(s_n)`. Both are now ported; the
+`whnf_core` site also carries the guard, which is stricter than Lean and is the
+decision ADR-0533 records.
+
+**The placement alone buys nothing — the guard is the whole prize, and that
+distinction is the finding.** Three interleaved rounds, release,
+`AXEYUM_PRELUDE_CACHE=0`, `taskset -c 0-7`, median `creal` seconds: before
+**12.99**, Lean's placement unguarded **12.12**, Lean's placement + guard
+**6.79**. 12.99 → 12.12 is inside this workload's run-to-run spread on a shared
+box. The rule fires 1.19 M times per `build_creal_prelude` and produces a literal
+575 times, and 99.98% of the probes are on a term that mentions a free variable —
+so the O(1) structural guard removes essentially all of the cost, and moving the
+call site removes essentially none of it. For scale, 8.71 s was the time *before*
+the acceleration was ever switched on.
+
+**Identification is unmoved, measured rather than argued.** `axeyum-lean-kernel`
+lib **399 passed / 0 failed**; the full kernel crate (lib + all 46 integration
+suites) **609 passed / 1 failed**, the one being
+`real_lean_wellfounded_elaborator_divergence`, which fails **byte-identically on
+an unmodified `HEAD`** in a snapshot tree and is a *Lean elaborator* rejection,
+not ours — a live separate finding, flagged for whoever owns ADR-0517;
+`axeyum-solver --features full --lib reconstruct::` **312 passed / 0 failed**;
+clippy 618/618 targets, 0 diagnostics; `check-prelude-reuse-equivalence.sh`
+`compared=8 failures=0` with live counters;
+`gen-lean-axiom-ledger.py --check` exit 0 with
+`total=30 axreal=30` and every other prelude 0. No declaration stopped admitting.
+That is a measurement over this repository's corpora, not a proof: the class the
+guard gives up is nonempty and a fixture constructs one — `Nat.mod ((fun _ => 7)
+x) 0`, whose operands reduce to literals while `has_fvars` is structurally true.
+Our corpus simply does not reach it.
+
+Four mutations, each alone: dropping either `has_fvars` guard kills exactly one
+test, dropping the `whnf_core` call site kills exactly one, and dropping the
+lazy-delta call site kills five — one of them by **overflowing the stack** on
+`2^64`-scale literals, which is ADR-0459's unbounded-successor-chain hazard
+reproducing on demand. That is which of the two sites carries the rule's reason
+for existing.
+
+Next on this axis: `reduce_nat_succ` is still in the δ-free step, a residual
+divergence from Lean's `reduce_nat`. It is one interned-name comparison per
+constant-headed reduction step, so it is not a cost today — revisit only if a
+profile says otherwise, since moving it would change identification for no
+measured gain.
 
 **Status:** The exact Lean 4.30 `Nat.fib` definition and admitted `Nat.fib_add_two` theorem compose into Axeyum's native Nat kernel. The bounded Fibonacci-neighbor coprimality induction now reconstructs twice with identical goal, proof, and declaration identities; its kernel-derived footprint is empty and its direct dependencies are exactly the recurrence plus the seven planned native gcd/divisibility lemmas. The r082 target remains open: official `Nat.Coprime` closes over the official `Nat.gcd`, while the accepted theorem closes over the independently constructed native `Nat.gcd`. Same-name/type compatibility is not semantic transport authority. No receipt, evaluation, or ledger credit is due.
 
