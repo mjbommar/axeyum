@@ -586,6 +586,9 @@ fn run_target_native_gcd_parameter_audit(
     for (position, expected_name) in argument_names.iter().enumerate() {
         let argument = find_name(&kernel, expected_name)?;
         let argument_constant = kernel.const_(argument, vec![]);
+        let argument_type = kernel
+            .infer(argument_constant)
+            .map_err(|error| format!("cannot infer {expected_name} type: {error:?}"))?;
         let candidate = kernel.app(proof, argument_constant);
         let inferred = kernel.infer(candidate);
         let compatible = inferred.is_ok();
@@ -594,7 +597,7 @@ fn run_target_native_gcd_parameter_audit(
             "position":position,
             "name":expected_name,
             "declaration_sha256":canonical_declaration_sha256(&kernel,argument)?,
-            "kernel_type_shape_sha256":canonical_kernel_type_shape_sha256(&kernel,argument)?,
+            "kernel_type_shape_sha256":canonical_kernel_type_shape_sha256(&kernel,argument_type)?,
             "application_typechecks":compatible,
             "error":error,
         }));
