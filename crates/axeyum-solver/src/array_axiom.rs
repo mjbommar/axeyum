@@ -952,6 +952,50 @@ fn match_disequality(arena: &TermArena, term: TermId) -> Option<(TermId, TermId)
         .map(|literal| (literal.lhs, literal.rhs))
 }
 
+/// **Stage 2 of the independent check**: is `lhs = rhs` genuinely an instance of
+/// `kind`, decided from the two terms alone?
+///
+/// This exists because `check_array_axiom_evidence` used to be *only* a re-run
+/// of the search — `array_axiom_refutation(..).is_some_and(|fresh| fresh == cert)`
+/// — which is a determinism check, not a soundness check: a recognizer that
+/// matches a satisfiable query produces the same wrong answer twice and the
+/// comparison succeeds. That shape covered 85 of 281 certified `unsat`
+/// instances (30.2%, measured 2026-08-21), the largest family by three times.
+///
+/// [`valid_array_axiom`] does not search the assertions and does not know which
+/// conjunct was chosen; it decides the axiom-instance claim structurally. So a
+/// checker that calls BOTH is no longer circular on that claim.
+///
+/// `ReadCongruence` is **not** decidable this way and returns `false` here: it is
+/// built by [`read_congruence_refutation`] out of equality facts accumulated
+/// across assertions, not by matching a schema against two terms. Its
+/// independence is still owed — see the caller, which says so rather than
+/// implying otherwise.
+#[must_use]
+pub(crate) fn certificate_is_axiom_instance(
+    arena: &TermArena,
+    cert: &ArrayAxiomRefutationCertificate,
+) -> bool {
+    valid_array_axiom(arena, cert.lhs, cert.rhs) == Some(cert.kind)
+}
+
+/// The query really does state `¬(lhs = rhs)` at the certificate's own assertion.
+///
+/// Structural, and deliberately partial: it decides the `match_disequality`
+/// path, where the named assertion IS the negated equality (modulo the BTOR
+/// `bit = #b1` wrapper). On the read-congruence path the assertion only
+/// *entails* the disequality, so this returns `false` and the caller falls back.
+#[must_use]
+pub(crate) fn assertion_states_disequality(
+    arena: &TermArena,
+    assertion: TermId,
+    lhs: TermId,
+    rhs: TermId,
+) -> bool {
+    match_disequality(arena, assertion)
+        .is_some_and(|(l, r)| (l == lhs && r == rhs) || (l == rhs && r == lhs))
+}
+
 fn valid_array_axiom(arena: &TermArena, lhs: TermId, rhs: TermId) -> Option<ArrayAxiomKind> {
     if is_read_over_write_reduction(arena, lhs, rhs)
         || is_read_over_write_same_index(arena, lhs, rhs)
@@ -4319,5 +4363,75 @@ mod tests {
         };
         assert!(!honest.is_degenerate());
         let _ = &arena;
+    }
+
+    /// Every corpus array-axiom certificate is measured against BOTH independent
+    /// stages, and the residual is counted rather than asserted away.
+    ///
+    /// This family is 30.2% of all certified `unsat` (85 of 281, 2026-08-21), and
+    /// its checker was for a long time only a re-run of the producer compared for
+    /// equality — which agrees with a wrong recognizer. Two stages are now decided
+    /// without asking the recognizer anything: the schema-instance check, and
+    /// whether the named assertion *states* the disequality rather than merely
+    /// entailing it.
+    ///
+    /// The point of counting is that "we added an independent check" is not the
+    /// same claim as "the family is independently checked", and only the second
+    /// one matters. Anything this test reports as resting on the re-run alone is
+    /// work still owed.
+    #[test]
+    fn corpus_array_axiom_certificates_are_measured_against_both_stages() {
+        let cases: &[(&str, &str)] = &[
+            (
+                "read-over-write, distinct indices",
+                "(declare-const a (Array (_ BitVec 4) (_ BitVec 8)))\
+                 (declare-const i (_ BitVec 4))\
+                 (declare-const j (_ BitVec 4))\
+                 (declare-const v (_ BitVec 8))\
+                 (assert (not (= (select (store a i v) j)\
+                                 (ite (= i j) v (select a j)))))",
+            ),
+            (
+                "select over ite",
+                "(declare-const a (Array (_ BitVec 4) (_ BitVec 8)))\
+                 (declare-const b (Array (_ BitVec 4) (_ BitVec 8)))\
+                 (declare-const c Bool)\
+                 (declare-const i (_ BitVec 4))\
+                 (assert (not (= (select (ite c a b) i)\
+                                 (ite c (select a i) (select b i)))))",
+            ),
+        ];
+
+        let mut schema_checked = 0_usize;
+        let mut states_disequality = 0_usize;
+        for (label, source) in cases {
+            let script = axeyum_smtlib::parse_script(source).expect("the fixture parses");
+            let arena = &script.arena;
+            let cert = array_axiom_refutation(arena, &script.assertions)
+                .unwrap_or_else(|| panic!("{label}: the recognizer must produce a certificate"));
+
+            assert!(!cert.is_degenerate(), "{label}: degenerate certificate");
+            if certificate_is_axiom_instance(arena, &cert) {
+                schema_checked += 1;
+            }
+            if assertion_states_disequality(arena, cert.assertion, cert.lhs, cert.rhs) {
+                states_disequality += 1;
+            }
+        }
+
+        // Both fixtures are schema matches whose assertion states the
+        // disequality outright, so both stages must decide both of them
+        // WITHOUT the producer re-run. If either number falls, an independence
+        // claim in `check_array_axiom_evidence` stopped being true.
+        assert_eq!(
+            schema_checked,
+            cases.len(),
+            "stage 2 (schema instance) must decide every schema-kind certificate"
+        );
+        assert_eq!(
+            states_disequality,
+            cases.len(),
+            "stage 1 (assertion states the disequality) must decide the stating path"
+        );
     }
 }
