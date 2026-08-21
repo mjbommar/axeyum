@@ -169,6 +169,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Both direct algebra leaves compile but retain propext; one sealed-stream read is frozen to classify their seven distinct dependencies |
 | 2026-08-21 | (pending) | Four transports are clean while integer commutativity and cancellation retain propext; their eight nearest parents are frozen for one final descent |
 | 2026-08-21 | (pending) | Parent descent finds clean Nat commutativity, integer zero, and negation transport; exact target-owned constructor proofs replace the contaminated integer algebra layer next |
+| 2026-08-21 | (pending) | Primitive V1 exposes `Int.subNat`'s two-index reduction boundary; V2 freezes clean zero rewrites plus generalized successor case splits |
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
 | 2026-08-21 | `a9610560c` | The durable construction checker binds the separately stored target goal identity without weakening capsule checks |
