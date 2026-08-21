@@ -205,6 +205,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Residual replay accepts the additive witness but retains one unexpected multiplicative-witness `propext` edge |
 | 2026-08-21 | `352a9c12a` | The multiplicative witness's exact three theorem dependencies are frozen before one same-stream audit |
 | 2026-08-21 | (pending) | Same-stream audit identifies `Nat.mul_assoc` as the witness's sole direct assumption carrier |
+| 2026-08-21 | (pending) | Residual V2 freezes exact multiplication-associativity parameterization before source construction |
 | 2026-08-20 | `9eb81822f` | Isolate persistent pre-push worktree metadata from the caller lane and register the two-sided control |
 | 2026-08-20 | `24b16642e` | Confirm the repaired hook against a live Rust push with unchanged caller state and a clean exact-SHA gate checkout |
 | 2026-08-20 | (pending) | The string family's first re-derivable UNSAT artifact beyond word-clash/regex-emptiness: `Evidence::UnsatStringLength` abstracts every string term to an integer length keyed on its SOURCE NAME, names the five theory lemmas the argument uses, and closes with one nonnegative combination per case-split branch. The checker is two stages — bind each lemma to the conjunct that licenses it, then re-derive the arithmetic — and is arena-free, because a string script's flat view is the bounded packed-BV encoding rather than the query. 23 guards mutation-checked; two killed nothing and were fixed rather than kept (one was dead code the command allow-list already covered, one had no multi-`check-sat` fixture). Also: `diagnose_evidence` reported the ARENA front door for string files, i.e. a query nobody solves — it now reports the text front door too, and agreed with the dominance audit for the first time. |
@@ -1020,7 +1021,7 @@ dominance.
 
 **Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction has unconditional official balanced Bézout. Residual cancellation removes five measured carriers and accepts a clean additive divisibility-witness leaf; the remaining multiplicative witness footprint is now localized exactly to this stream's direct-`propext` `Nat.mul_assoc`, for which an accepted clean target-owned leaf already exists.
 
-**Next:** preregister residual V2 with multiplication associativity added to the explicit parameter list, then reconstruct the multiplicative witness and residual theorem twice. Preserve zero official cancellation/Fibonacci authority until all residual roots are empty-footprint.
+**Next:** execute preregistered residual V2 with multiplication associativity added to the explicit parameter list, then reconstruct the multiplicative witness and residual theorem twice. Preserve zero official cancellation/Fibonacci authority until all residual roots are empty-footprint.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement

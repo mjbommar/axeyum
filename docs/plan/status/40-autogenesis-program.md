@@ -4,7 +4,7 @@
 
 **Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction has unconditional official balanced Bézout. Residual cancellation removes five measured carriers and accepts a clean additive divisibility-witness leaf; the remaining multiplicative witness footprint is now localized exactly to this stream's direct-`propext` `Nat.mul_assoc`, for which an accepted clean target-owned leaf already exists.
 
-**Next:** preregister residual V2 with multiplication associativity added to the explicit parameter list, then reconstruct the multiplicative witness and residual theorem twice. Preserve zero official cancellation/Fibonacci authority until all residual roots are empty-footprint.
+**Next:** execute preregistered residual V2 with multiplication associativity added to the explicit parameter list, then reconstruct the multiplicative witness and residual theorem twice. Preserve zero official cancellation/Fibonacci authority until all residual roots are empty-footprint.
 
 <!-- plan-section: landed-changes -->
 
@@ -142,3 +142,4 @@
 | 2026-08-21 | (pending) | Residual replay accepts the additive witness but retains one unexpected multiplicative-witness `propext` edge |
 | 2026-08-21 | `352a9c12a` | The multiplicative witness's exact three theorem dependencies are frozen before one same-stream audit |
 | 2026-08-21 | (pending) | Same-stream audit identifies `Nat.mul_assoc` as the witness's sole direct assumption carrier |
+| 2026-08-21 | (pending) | Residual V2 freezes exact multiplication-associativity parameterization before source construction |
