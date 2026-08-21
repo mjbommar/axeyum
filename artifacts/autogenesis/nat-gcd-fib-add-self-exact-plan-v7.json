@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-exact-plan-v7",
+  "state": "preregistered-target-native-gcd-zero-left-and-two-leaf-coprimality-pruning",
+  "predecessor": {"path": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-result-v6.json"},
+  "audit": {"path": "artifacts/autogenesis/nat-gcd-fib-add-self-coprime-carrier-audit-result-v2.json"},
+  "new_input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/0a73f8458-official-gcd-zero-left-root-v1/official-gcd-zero-left-root.ndjson", "sha256": "824399899916c72329f201c0ea8c1b0fe25315ea013c4f392586668f67f606a0", "root": "Axeyum.Autogenesis.nat_gcd_zero_left", "declaration_sha256": "e4f6c7e3971f5751bd1e889e9bfc28b7035d9f47204f7aafa5efc06b97cf3555", "axiom_footprint": []},
+  "construction": {"compose_new_root_after_first_three_roots": true, "target_owned_alias": "Nat.gcd_zero_left", "alias_contract": "forall n : Nat, Nat.gcd 0 n = n", "alias_proof": "Axeyum.Autogenesis.nat_gcd_zero_left", "require_source_public_name_checked_type_shape": true, "coprimality_target_leaves": ["Axeyum.Autogenesis.nat_gcd_succ", "Nat.gcd_zero_left"], "other_source_changes_authorized": false},
+  "acceptance": {"one_driver_build": true, "fresh_complete_invocations": 2, "capsule_compositions": 10, "target_leaf_reuses": 4, "zero_left_alias_submissions": 2, "local_gcd_comm_submissions": 2, "exact_target_submissions": 2, "outputs_byte_identical": true, "target_goal_sha256": "297c9f4af4d63eff354223f9548ab1d4dd3d7e52aa701e88802d58b7929a1451", "target_axiom_footprint": [], "proof_terms_types_or_values_may_be_rendered": false},
+  "budget": {"max_driver_builds": 1, "max_complete_invocations": 2, "max_capsule_compositions": 10, "max_target_leaf_reuses": 4, "max_zero_left_alias_submissions": 2, "max_local_gcd_comm_submissions": 2, "max_exact_target_submissions": 2, "max_retries": 0},
+  "authority": {"support_credit_before_acceptance": 0, "target_credit_before_acceptance": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_on_accept": "Issue a dependency-bound theorem receipt, admit the exact fact through the crash-safe ledger transaction, and verify the newly unlocked frontier.",
+  "output": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-result-v7.json",
+  "verification": "python3 scripts/check-autogenesis-nat-gcd-fib-add-self-coprime-carrier-audit-result-v2.py",
+  "limitations": "This authorizes one target-native zero-left alias and the second target leaf only; no credit exists before two complete deterministic runs."
+}
