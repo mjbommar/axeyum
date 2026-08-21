@@ -3299,6 +3299,32 @@ pub struct SawinLongCycleEulerReport {
 /// when `b=1`).  It is certified reduced only when `n` is odd; at even degree
 /// the cycle is wild and the fixed scheme may carry nilpotents.  In particular
 /// the projective action is never free.
+///
+/// At odd degree, put `a_i=A*lambda^i` on a surviving primitive eigenline.
+/// Since
+///
+/// ```text
+/// product_i (1-u*a_i) = 1-u^n*A^n,
+/// ```
+///
+/// the `j`th Jacobian row of the equations `e_1=...=e_ell=0` is
+/// `((a_i)^(j-1))_i`.  These are `ell` distinct Vandermonde rows, so the
+/// endpoint fibre is smooth there.  Fourier modes show that, after removing
+/// the radial direction, the relative cycle weights on its projective tangent
+/// space are `lambda^1,...,lambda^(n-ell-1)`.  None is one, so the fixed points
+/// are transverse.  This local calculation still does not bound the different
+/// correspondence `Frob*c`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SawinTameEigenlineLocalStatus {
+    /// The cycle has nontrivial characteristic-two order, so the report makes
+    /// no reducedness, smoothness, or transversality claim.
+    NotCertifiedWild,
+    /// The odd-order cycle eigenlines are smooth and their fixed points are
+    /// transverse, by the Vandermonde Jacobian and tangent-weight calculation.
+    SmoothTransverse,
+}
+
+/// Exact projective long-cycle eigenline and tame local-geometry report.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SawinProjectiveEigenlineReport {
     /// Polynomial degree `n`.
@@ -3318,6 +3344,27 @@ pub struct SawinProjectiveEigenlineReport {
     pub projective_fixed_scheme_reduced_certified: bool,
     /// Ordinary long-cycle trace on projective cohomology in the tame case.
     pub tame_projective_euler_trace: Option<usize>,
+    /// Rank `ell` of the endpoint Jacobian at every surviving eigenline.
+    ///
+    /// This is certified only in the tame odd-degree case, where the
+    /// eigenvalue orbit is separable.  The Jacobian rows are the first `ell`
+    /// Vandermonde rows `((lambda^i)^(j-1))_i`.
+    pub tame_eigenline_jacobian_rank: Option<usize>,
+    /// Dimension `n-ell` of the affine tangent space at a tame eigenline.
+    pub tame_affine_tangent_dimension: Option<usize>,
+    /// Dimension `n-ell-1` of the projective tangent space at a tame
+    /// eigenline.
+    pub tame_projective_tangent_dimension: Option<usize>,
+    /// Exponents of the nontrivial long-cycle eigenvalues on the projective
+    /// tangent space, relative to the eigenvalue of the fixed line.
+    ///
+    /// For odd endpoint degree these are exactly `1..n-ell`.
+    pub tame_projective_tangent_weight_exponents: Vec<usize>,
+    /// Complementary relative weights on the normal space in projective
+    /// space.  For odd endpoint degree these are exactly `n-ell..n`.
+    pub tame_projective_normal_weight_exponents: Vec<usize>,
+    /// Scheme-theoretic local status at the surviving cycle eigenlines.
+    pub tame_eigenline_local_status: SawinTameEigenlineLocalStatus,
     /// Explicit rejection of a free projective cyclic-torsor reduction.
     pub projective_long_cycle_action_free: bool,
     /// Explicit boundary: this fixed-locus calculation proves no weighted
@@ -9828,6 +9875,53 @@ pub fn sawin_projective_eigenline_report(
     let projective_fixed_scheme_reduced_certified = euler.wild_cycle_order == 1;
     let tame_projective_euler_trace =
         projective_fixed_scheme_reduced_certified.then_some(reduced_projective_fixed_point_count);
+    let (
+        tame_eigenline_jacobian_rank,
+        tame_affine_tangent_dimension,
+        tame_projective_tangent_dimension,
+        tame_projective_tangent_weight_exponents,
+        tame_projective_normal_weight_exponents,
+        tame_eigenline_local_status,
+    ) = if projective_fixed_scheme_reduced_certified {
+        let affine_tangent_dimension = degree.checked_sub(euler.ell).ok_or_else(|| {
+            HayesError::Invariant("Sawin tame tangent dimension underflow".to_owned())
+        })?;
+        let projective_tangent_dimension =
+            affine_tangent_dimension.checked_sub(1).ok_or_else(|| {
+                HayesError::Invariant("Sawin tame projective tangent underflow".to_owned())
+            })?;
+        let tangent_weights = (1..affine_tangent_dimension).collect::<Vec<_>>();
+        let normal_weights = (affine_tangent_dimension..degree).collect::<Vec<_>>();
+        if tangent_weights.len() != projective_tangent_dimension
+            || normal_weights.len() != euler.ell
+            || tangent_weights
+                .iter()
+                .chain(normal_weights.iter())
+                .copied()
+                .ne(1..degree)
+        {
+            return Err(HayesError::Invariant(
+                "Sawin tame tangent-weight partition failed".to_owned(),
+            ));
+        }
+        (
+            Some(euler.ell),
+            Some(affine_tangent_dimension),
+            Some(projective_tangent_dimension),
+            tangent_weights,
+            normal_weights,
+            SawinTameEigenlineLocalStatus::SmoothTransverse,
+        )
+    } else {
+        (
+            None,
+            None,
+            None,
+            Vec::new(),
+            Vec::new(),
+            SawinTameEigenlineLocalStatus::NotCertifiedWild,
+        )
+    };
 
     Ok(SawinProjectiveEigenlineReport {
         degree,
@@ -9838,6 +9932,12 @@ pub fn sawin_projective_eigenline_report(
         reduced_projective_fixed_point_count,
         projective_fixed_scheme_reduced_certified,
         tame_projective_euler_trace,
+        tame_eigenline_jacobian_rank,
+        tame_affine_tangent_dimension,
+        tame_projective_tangent_dimension,
+        tame_projective_tangent_weight_exponents,
+        tame_projective_normal_weight_exponents,
+        tame_eigenline_local_status,
         projective_long_cycle_action_free: false,
         frobenius_weighted_trace_bound_certified: false,
     })
@@ -21685,8 +21785,135 @@ mod tests {
             assert_eq!(report.reduced_projective_fixed_point_count, fixed_points);
             assert_eq!(report.projective_fixed_scheme_reduced_certified, reduced);
             assert_eq!(report.tame_projective_euler_trace, tame_trace);
+            if reduced {
+                let affine_dimension = degree - report.ell;
+                assert_eq!(report.tame_eigenline_jacobian_rank, Some(report.ell));
+                assert_eq!(report.tame_affine_tangent_dimension, Some(affine_dimension));
+                assert_eq!(
+                    report.tame_projective_tangent_dimension,
+                    Some(affine_dimension - 1)
+                );
+                assert_eq!(
+                    report.tame_projective_tangent_weight_exponents,
+                    (1..affine_dimension).collect::<Vec<_>>()
+                );
+                assert_eq!(
+                    report.tame_projective_normal_weight_exponents,
+                    (affine_dimension..degree).collect::<Vec<_>>()
+                );
+                assert_eq!(
+                    report.tame_eigenline_local_status,
+                    SawinTameEigenlineLocalStatus::SmoothTransverse
+                );
+            } else {
+                assert_eq!(report.tame_eigenline_jacobian_rank, None);
+                assert_eq!(report.tame_affine_tangent_dimension, None);
+                assert_eq!(report.tame_projective_tangent_dimension, None);
+                assert!(report.tame_projective_tangent_weight_exponents.is_empty());
+                assert!(report.tame_projective_normal_weight_exponents.is_empty());
+                assert_eq!(
+                    report.tame_eigenline_local_status,
+                    SawinTameEigenlineLocalStatus::NotCertifiedWild
+                );
+            }
             assert!(!report.projective_long_cycle_action_free);
             assert!(!report.frobenius_weighted_trace_bound_certified);
+        }
+    }
+
+    #[test]
+    fn tame_eigenline_jacobian_rank_matches_extension_field_elimination() {
+        fn field_inverse(mut value: u64, modulus: u64, field_degree: usize) -> u64 {
+            assert_ne!(value, 0);
+            let mut result = 1_u64;
+            let mut exponent = (1_u64 << field_degree) - 2;
+            while exponent != 0 {
+                if exponent & 1 != 0 {
+                    result = binary_quotient_multiply(result, value, modulus, field_degree);
+                }
+                exponent >>= 1;
+                if exponent != 0 {
+                    value = binary_quotient_multiply(value, value, modulus, field_degree);
+                }
+            }
+            result
+        }
+
+        fn extension_rank(mut matrix: Vec<Vec<u64>>, modulus: u64, field_degree: usize) -> usize {
+            let row_count = matrix.len();
+            let column_count = matrix.first().map_or(0, Vec::len);
+            let mut pivot_row = 0_usize;
+            for column in 0..column_count {
+                let Some(pivot) = (pivot_row..row_count).find(|&row| matrix[row][column] != 0)
+                else {
+                    continue;
+                };
+                matrix.swap(pivot_row, pivot);
+                let inverse = field_inverse(matrix[pivot_row][column], modulus, field_degree);
+                for entry in &mut matrix[pivot_row][column..] {
+                    *entry = binary_quotient_multiply(*entry, inverse, modulus, field_degree);
+                }
+                let pivot_tail = matrix[pivot_row][column..].to_vec();
+                for (row, entries) in matrix.iter_mut().enumerate() {
+                    if row == pivot_row || entries[column] == 0 {
+                        continue;
+                    }
+                    let scale = entries[column];
+                    for (entry, &pivot_entry) in entries[column..].iter_mut().zip(&pivot_tail) {
+                        *entry ^=
+                            binary_quotient_multiply(scale, pivot_entry, modulus, field_degree);
+                    }
+                }
+                pivot_row += 1;
+                if pivot_row == row_count {
+                    break;
+                }
+            }
+            pivot_row
+        }
+
+        // Each listed modulus is primitive.  Raising its root `x` to
+        // `(2^m-1)/n` produces a primitive nth root `lambda`.  The matrix is
+        // built from the literal partial derivatives
+        // `d e_j / d a_i = a_i^(j-1)` at `(1,lambda,...,lambda^(n-1))`.
+        for (degree, field_degree, modulus) in [
+            (5_usize, 4_usize, 0b1_0011_u64),
+            (7, 3, 0b1_011),
+            (9, 6, 0b100_0011),
+        ] {
+            let ell = degree.div_ceil(2) - 1;
+            let root_exponent = ((1_usize << field_degree) - 1) / degree;
+            let mut lambda = 1_u64;
+            for _ in 0..root_exponent {
+                lambda = binary_quotient_multiply(lambda, 2, modulus, field_degree);
+            }
+            let mut coordinates = Vec::with_capacity(degree);
+            let mut coordinate = 1_u64;
+            for _ in 0..degree {
+                coordinates.push(coordinate);
+                coordinate = binary_quotient_multiply(coordinate, lambda, modulus, field_degree);
+            }
+            assert_eq!(coordinate, 1);
+            assert_eq!(
+                coordinates.iter().copied().collect::<BTreeSet<_>>().len(),
+                degree
+            );
+
+            let mut jacobian = Vec::with_capacity(ell);
+            let mut row = vec![1_u64; degree];
+            for _ in 0..ell {
+                jacobian.push(row.clone());
+                for (entry, &coordinate) in row.iter_mut().zip(&coordinates) {
+                    *entry = binary_quotient_multiply(*entry, coordinate, modulus, field_degree);
+                }
+            }
+            assert_eq!(extension_rank(jacobian, modulus, field_degree), ell);
+            assert_eq!(
+                sawin_projective_eigenline_report(degree, SawinFoulkesLimits::default())
+                    .unwrap()
+                    .tame_eigenline_jacobian_rank,
+                Some(ell)
+            );
         }
     }
 

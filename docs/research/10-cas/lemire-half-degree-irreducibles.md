@@ -4104,6 +4104,41 @@ The native `sawin_projective_eigenline_report` enumerates every divisor of
 plausible finite-etale torsor shortcut but supplies no bound on `Frob*c`; the
 report keeps that obligation false (ADR-0553).
 
+The odd-endpoint local scheme is now explicit.  For `n=2ell+1`, write a
+surviving primitive eigenline as `a_i=A lambda^i`.  The generating identity
+
+```text
+product_i (1-u a_i)=1-u^n A^n
+```
+
+makes the `j`th endpoint Jacobian row
+`(a_i^(j-1))_i`.  These are distinct Vandermonde rows for `1<=j<=ell`, so the
+Jacobian has rank `ell`.  Fourier diagonalization of the cycle leaves affine
+tangent modes `1,...,n-ell`; the first is radial, and the relative projective
+tangent weights are exactly
+
+```text
+lambda, lambda^2, ..., lambda^(n-ell-1).
+```
+
+Thus every surviving odd-degree eigenline is a smooth isolated transverse
+fixed point.  The report exposes the complementary normal weights and checks
+the full nontrivial-character partition; an independent extension-field test
+constructs and eliminates the literal Jacobians at degrees five, seven, and
+nine.
+
+This removes a local singularity question but not the endpoint trace.  The
+ordinary trace formula for `Frob*c` is supported on `Fix(Frob*c)`, which is the
+original short-interval point-count problem, rather than on `Fix(c)`.  The
+relative Lefschetz--Verdier theorem of Lu--Zheng proves functoriality of trace
+classes, not a numerical replacement of one fixed locus by the other.  A
+previous research pointer also had the wrong identifier: arXiv `2309.02587` is
+Barrett's singular-support paper; the Lu--Zheng paper is arXiv `2005.08522`,
+and its Remark 2.24 explicitly says that its theorem does not cover a separate
+twisted formula.  Consequently a localization on `Fix(c)` would still require
+new Frobenius-dependent local terms and a uniform bound for their sum.  The
+native report deliberately retains no Frobenius-weighted credit (ADR-0575).
+
 Hast--Matei's explicit two-polynomial top-weight representation gives a
 useful but insufficient positive comparison.  With short-interval tail
 degree `h=floor(n/2)`, their partition cutoff is
