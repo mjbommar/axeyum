@@ -221,6 +221,7 @@ compounding, not automation theatre.
 | [Exact `Int.fib_neg` dependency audit plan](193-int-fib-neg-dependency-audit-plan.md) | Which of the official proof's exact 26 direct dependencies are clean mathematical supports, and which carry the measured assumptions? |
 | [Exact `Int.fib_neg` dependency audit result](194-int-fib-neg-dependency-audit-result.md) | Does the clean outer case split suffice, or is the negative-natural Fibonacci core itself the next assumption-bearing frontier? |
 | [`Int.fib_neg_natCast` dependency audit plan](195-int-fib-neg-natcast-dependency-audit-plan.md) | Which exact supports beneath the negative-natural core can seed a clean target-owned parity/sign reconstruction? |
+| [`Int.fib_neg_natCast` dependency audit result](196-int-fib-neg-natcast-dependency-audit-result.md) | Does the negative-natural surface retain clean transport, and which parity/Fibonacci core remains to replace? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

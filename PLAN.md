@@ -124,6 +124,8 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | One root export and non-rendering importer pass find 26 direct dependencies and an assumption-bearing official `Int.fib_neg` proof |
 | 2026-08-21 | `1c728c757` | Exact 26-root dependency descent is frozen against the immutable `Int.fib_neg` stream with zero theorem authority |
 | 2026-08-21 | (pending) | Dependency classification splits 14 clean outer supports from 12 contaminated roots and localizes the next frontier to `Int.fib_neg_natCast` |
+| 2026-08-21 | `8dab71109` | Exact 36-root negative-natural Fibonacci descent is frozen before its one non-rendering stream reread |
+| 2026-08-21 | (pending) | Negative-natural classification preserves 18 clean transport supports and localizes the Fibonacci core to `Int.fib_of_odd` |
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
 | 2026-08-21 | `a9610560c` | The durable construction checker binds the separately stored target goal identity without weakening capsule checks |
@@ -1146,9 +1148,9 @@ declines any trigger outside an application tree over declared uninterpreted
 functions, which rules out arithmetic subterms — the first real workload with
 `(f (+ x 1))` as a pattern will want that.
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd` and `Nat.fib_dvd` remain durably proved. The `Int.fib_neg` descent now classifies all 26 direct dependencies: 14 are axiom-free, including `Int.eq_nat_or_neg`, while 12 are `propext`-bearing. The obstruction is localized to the negative-natural core `Int.fib_neg_natCast`, whose exact surface contains 36 direct theorem dependencies.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd` and `Nat.fib_dvd` remain durably proved. The `Int.fib_neg` descent retains a clean outer integer split and now classifies the 36-root `Int.fib_neg_natCast` surface evenly: 18 clean transport/sign supports and 18 `propext`-bearing parity/Fibonacci roots. `Int.fib_of_odd` is the smallest remaining Fibonacci core and depends on one private theorem root.
 
-**Next:** preregister one non-rendering classification pass over the exact 36 dependencies of `Int.fib_neg_natCast` in the same sealed stream, isolate the smallest clean parity/sign recurrence core, then preregister its target-owned reconstruction before any theorem submission.
+**Next:** qualify the one private direct dependency of `Int.fib_of_odd` without proof rendering, then preregister the smallest direct parity/sign recurrence reconstruction using the already clean transport layer.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
