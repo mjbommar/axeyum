@@ -5845,10 +5845,11 @@ pub struct ExactOrderLinearSavingEndpointImplication {
 /// Endpoint ledger that pays low exact character orders by the proved Weil
 /// bound and asks for a linear saving only at high exact orders.
 ///
-/// Let `Q` be the largest power of two with `2Q^2<=ell`.  Exact-order layers
-/// with order at most `Q` contain exponentially fewer characters than a full
-/// conductor layer, so their ordinary summed Weil envelopes fit in the
-/// endpoint budget.  The only unproved input charged by this report is
+/// Let `c=ceil(log2(ell))` and let `Q` be the largest power of two with
+/// `3cQ<=ell`.  Exact-order layers with order at most `Q` contain
+/// exponentially fewer characters than a full conductor layer, so their
+/// ordinary summed Weil envelopes fit in the endpoint budget.  The only
+/// unproved input charged by this report is
 ///
 /// ```text
 /// 4 ell |T_(j,s)(n)|
@@ -7042,29 +7043,39 @@ pub fn exact_order_linear_saving_endpoint_implication(
     })
 }
 
-fn largest_power_of_two_with_twice_square_at_most(value: usize) -> usize {
+fn low_exact_order_cutoff(ell: usize) -> Result<usize, HayesError> {
+    let ceil_log = ell.ilog2() as usize + usize::from(!ell.is_power_of_two());
     let mut result = 1_usize;
     while let Some(next) = result.checked_mul(2) {
-        let Some(twice_square) = next
-            .checked_mul(next)
-            .and_then(|square| square.checked_mul(2))
+        let Some(price) = next
+            .checked_mul(ceil_log)
+            .and_then(|value| value.checked_mul(3))
         else {
             break;
         };
-        if twice_square > value {
+        if price > ell {
             break;
         }
         result = next;
     }
-    result
+    if result
+        .checked_mul(ceil_log)
+        .and_then(|value| value.checked_mul(3))
+        .is_none_or(|price| price > ell)
+    {
+        return Err(HayesError::Invariant(
+            "low exact-order cutoff does not satisfy its price".to_owned(),
+        ));
+    }
+    Ok(result)
 }
 
 /// Price a factor-`4ell` saving only on high exact character orders.
 ///
-/// Let `Q` be the largest power of two satisfying `2Q^2<=ell`.  Orders at
-/// most `Q` are paid at their ordinary
-/// summed individual-Weil envelope.  Their cumulative character population
-/// is exponentially sparse inside `E_j^dual`; no cancellation theorem is
+/// Let `c=ceil(log2(ell))` and let `Q` be the largest power of two satisfying
+/// `3cQ<=ell`.  Orders at most `Q` are paid at their ordinary summed
+/// individual-Weil envelope.  Their cumulative character population is
+/// exponentially sparse inside `E_j^dual`; no cancellation theorem is
 /// assumed for them.  Orders above `Q` are divided by `4ell`, exactly as in
 /// [`exact_order_linear_saving_endpoint_implication`].
 ///
@@ -7082,7 +7093,7 @@ pub fn exact_order_high_order_saving_endpoint_implication(
     let saving_denominator = BigUint::from(4_usize.checked_mul(ell).ok_or_else(|| {
         HayesError::InvalidParameter("high-order saving denominator overflow".to_owned())
     })?);
-    let low_order_cutoff = largest_power_of_two_with_twice_square_at_most(ell);
+    let low_order_cutoff = low_exact_order_cutoff(ell)?;
     let mut low_order_weil_numerator = BigUint::from(0_u8);
     let mut assumed_high_order_numerator = BigUint::from(0_u8);
     let mut proved_low_order_layer_count = 0_usize;
@@ -23131,8 +23142,14 @@ mod tests {
                 let report =
                     exact_order_high_order_saving_endpoint_implication(ell, degree).unwrap();
                 assert!(report.proves_endpoint, "{report:?}");
+                let ceil_log = ell.ilog2() as usize + usize::from(!ell.is_power_of_two());
+                assert!(3 * ceil_log * report.low_order_cutoff <= ell);
+                assert!(6 * ceil_log * report.low_order_cutoff > ell);
             }
         }
+        assert_eq!(low_exact_order_cutoff(1_024).unwrap(), 32);
+        assert_eq!(low_exact_order_cutoff(4_096).unwrap(), 64);
+        assert_eq!(low_exact_order_cutoff(16_384).unwrap(), 256);
     }
 
     #[test]

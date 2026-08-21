@@ -2,7 +2,7 @@
 
 Status: accepted
 Date: 2026-08-21
-Index-summary: Prove that exact character orders at most sqrt(ell/2) need no family cancellation and restrict the factor-4ell endpoint hypothesis to high Witt orders
+Index-summary: Pay exact character orders through ell over three log ell by Weil and restrict the factor-4ell endpoint hypothesis to the top Witt-order bands
 
 ## Context
 
@@ -17,7 +17,7 @@ must spend this exponential sparsity.
 ## Decision
 
 Let `c=ceil(log2 ell)`, `a=ell-c-1`, and let `Q` be the largest power of two
-with `2Q^2<=ell`.  In the connected top window `a<=j<=ell`, pay every
+with `3cQ<=ell`.  In the connected top window `a<=j<=ell`, pay every
 exact-order layer of order at most `Q` by the proved summed individual-Weil
 bound.  Require the ADR-0591 factor-`4ell` saving only when the exact character
 order is greater than `Q`:
@@ -71,12 +71,16 @@ L/2^(2ell)
  < 7/ell.                                               (2)
 ```
 
-For the last strict inequality, `Q<=sqrt(ell/2)`.  On each dyadic interval
-the logarithm of the left denominator minus the logarithm of the right
-numerator is increasing; its minimum for `ell>=200` is already positive at
-`ell=200`, and its values immediately after subsequent dyadic endpoints
-increase.  Equations (1)--(2) leave a strict endpoint margin.  Integer floors
-only decrease the conditional high-order envelope.
+For the last strict inequality, `Q<=ell/(3c)`.  Since
+`3c(c+1)<2ell` for `ell>=200`, this gives
+
+```text
+floor(a/Q) >= 3c-2,
+L/2^(2ell) <= 8(c+2)/ell^2 < 7/ell.
+```
+
+Equations (1)--(2) leave a strict endpoint margin.  Integer floors only
+decrease the conditional high-order envelope.
 
 Add `exact_order_high_order_saving_endpoint_implication` to replay the exact
 integer ledger.  The focused test checks every integer endpoint from 200
@@ -96,7 +100,8 @@ the fact-ledger validator fail closed on any lost strict inequality.
   the endpoint bottleneck.  Their individual-Weil bounds are sufficient.
 - A proof effort should not spend time proving family cancellation for fixed
   exact order merely to satisfy the obsolete uniform premise.
-- The remaining analytic obligation begins at an order growing at least like
-  `sqrt(ell/2)`.  It is a genuinely high-Witt-order statement.
+- The remaining analytic obligation begins above `ell/(3ceil(log2 ell))` and
+  has only `O(log log ell)` possible exact-order bands per conductor level.
+  It is a genuinely high-Witt-order statement.
 - This is a strict reduction of the open premise, not a proof of its
   high-order part.  The manuscript's fail-visible warning remains.

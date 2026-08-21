@@ -2,10 +2,10 @@
   "schema_version": 1,
   "id": "F:gf2-hayes-low-exact-orders-weil-suffice",
   "title": "Low exact character orders need no endpoint cancellation",
-  "statement": "Let ell>=200, n in {2ell+1,2ell+2}, a=ell-ceil(log2 ell)-1, and Q be the largest power of two with 2Q^2<=ell. The proved individual-Weil envelopes for all conductor levels below a and all exact-order layers of order at most Q in a<=j<=ell, together with a factor-4ell saving only for exact orders greater than Q, are strictly below the Lemire endpoint discrepancy budget 2^(2ell).",
+  "statement": "Let ell>=200, n in {2ell+1,2ell+2}, c=ceil(log2 ell), a=ell-c-1, and Q be the largest power of two with 3cQ<=ell. The proved individual-Weil envelopes for all conductor levels below a and all exact-order layers of order at most Q in a<=j<=ell, together with a factor-4ell saving only for exact orders greater than Q, are strictly below the Lemire endpoint discrepancy budget 2^(2ell).",
   "formal": {
     "language": "certificate-spec",
-    "statement": "{\"conclusion\":\"low_conductor_weil+low_order_weil+high_order_weil/(4*ell)<2^(2*ell)\",\"degrees\":[\"2*ell+1\",\"2*ell+2\"],\"field_order\":2,\"format\":\"axeyum-gf2-hayes-high-order-saving-implication\",\"level_min\":200,\"low_order_cutoff\":\"max {2^k: 2*(2^k)^2<=ell}\",\"version\":1}",
+    "statement": "{\"conclusion\":\"low_conductor_weil+low_order_weil+high_order_weil/(4*ell)<2^(2*ell)\",\"degrees\":[\"2*ell+1\",\"2*ell+2\"],\"field_order\":2,\"format\":\"axeyum-gf2-hayes-high-order-saving-implication\",\"level_min\":200,\"low_order_cutoff\":\"max {2^k: 3*ceil(log2(ell))*2^k<=ell}\",\"version\":1}",
     "fragment": "integer-exponent-inequality",
     "free_symbols": ["ell", "n"]
   },

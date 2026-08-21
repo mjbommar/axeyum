@@ -300,15 +300,17 @@ lemma.
   endpoint (required coefficient 710, allowance 529), confirming that it
   cannot be the theorem statement.  Proving the displayed linear saving,
   or an aggregate substitute no stronger than it, would close `(REL)`.
-- Even that premise need not include low exact orders.  Let `Q` be the largest
-  power of two with `2Q^2<=ell`.  The closed character count
+- Even that premise need not include low exact orders.  Put
+  `c=ceil(log2 ell)` and let `Q` be the largest power of two with `3cQ<=ell`.
+  The closed character count
   `h_(j,Q)=2^(j-floor(j/Q))`, the individual Weil bound, and the exact endpoint
   ledger prove that every top-window layer of order at most `Q` fits without
   any family cancellation.  It is enough to impose the factor-`4ell` saving
   only for exact orders greater than `Q`.  At `ell=200`, this unconditionally
-  removes 20 of the 67 nonempty layers (orders 2, 4, and 8).  Thus the ordinary
-  Artin--Schreier layer is not the analytic bottleneck; the remaining theorem
-  is genuinely a high-Witt-order estimate (ADR-0592).
+  removes 20 of the 67 nonempty layers (orders 2, 4, and 8); asymptotically it
+  leaves only `O(log log ell)` possible order bands per conductor.  Thus the
+  ordinary Artin--Schreier layer is not the analytic bottleneck; the remaining
+  theorem is genuinely a high-Witt-order estimate (ADR-0592).
 - Ma and Xing improve the Hasse--Weil estimate for an ordinary
   Artin--Schreier curve by relating it to the minimum distance of a code:
   [The Hasse--Weil bound for Artin--Schreier curves](https://arxiv.org/abs/2105.04370).

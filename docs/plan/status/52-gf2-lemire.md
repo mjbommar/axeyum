@@ -214,14 +214,16 @@ credit.  The much stronger `j^2` coefficient diagnostic survives through
 level 22 but is refuted at the level-23 even endpoint, which requires 710
 against its allowance 529.  This does not touch the weaker
 character-count-weighted factor-`4ell` premise.
-Low exact orders are now removed from that conjectural price.  If `Q` is the
-largest power of two with `2Q^2<=ell`, their complete summed individual-Weil
-envelope is exponentially small enough to fit beside the low-conductor
-envelope.  The factor-`4ell` premise is needed only for orders greater than
-`Q`; at `ell=200`, orders 2, 4, and 8 account for 20 of 67 layers and are
-therefore discharged unconditionally.  Closed geometric sums prove the split
-for every `ell>=200`, and the native integer ledger checks both parities
-through 1024 plus dyadic boundary controls through 16384 (ADR-0592).
+Low exact orders are now removed from that conjectural price.  If
+`c=ceil(log2 ell)` and `Q` is the largest power of two with `3cQ<=ell`, their
+complete summed individual-Weil envelope is exponentially small enough to fit
+beside the low-conductor envelope.  The factor-`4ell` premise is needed only
+for orders greater than `Q`; at `ell=200`, orders 2, 4, and 8 account for 20
+of 67 layers and are therefore discharged unconditionally.  Asymptotically
+only `O(log log ell)` order bands per conductor remain.  Closed geometric
+sums prove the split for every `ell>=200`, and the native integer ledger checks
+both parities through 1024 plus dyadic boundary controls through 16384
+(ADR-0592).
 The companion characteristic-two Newton-over-Hodge result has also been
 priced conditionally: it forces only divisibility of the connected endpoint
 trace by eight.  At `ell=200` the existing envelope is already divisible by
@@ -235,7 +237,8 @@ with its exact contraction price supplied by the aggregate identity path.
 ADR-0591 supplies a second exact form: it is enough to prove a factor-`4ell`
 average saving in each high exact-order family, equivalently a bound on the
 associated nested power-subgroup coefficient imbalances above order
-`sqrt(ell/2)`.  This is now the preferred order-resolved target because its
+`ell/(3ceil(log2 ell))`.  Only `O(log log ell)` order bands per conductor
+remain.  This is now the preferred order-resolved target because its
 endpoint implication is complete;
 the stronger finite `j^2` envelope must not be substituted for the weaker
 load-bearing statement.
@@ -937,6 +940,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-21 | pending | Strengthened the unconditional low-order cutoff from square-root scale to the largest power `Q` with `3 ceil(log2 ell) Q<=ell`, leaving only `O(log log ell)` high-Witt order bands per conductor. |
 | 2026-08-21 | `013b2eb18` | Proved that exact character orders at most the largest `Q` with `2Q^2<=ell` fit by individual Weil alone, removing the Artin--Schreier and first low-Witt layers from the factor-`4ell` endpoint hypothesis. |
 | 2026-08-21 | `1810a8ea4` | Reconstructed every exact-order conductor trace from four power-subgroup populations and proved that a factor-`4ell` saving per order layer closes both endpoints after the degree-400 handoff. |
 | 2026-08-21 | `d7f05ba53` | Classified all six binary projective transformations and proved translation is the only nonidentity element acting on the monic fixed-degree Hayes quotient. |

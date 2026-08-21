@@ -2,10 +2,10 @@
   "schema_version": 1,
   "id": "F:gf2-hayes-high-order-linear-saving",
   "title": "Linear saving in high exact-order binary Hayes trace layers",
-  "statement": "Let ell>=200, n in {2ell+1,2ell+2}, a=ell-ceil(log2 ell)-1, and Q be the largest power of two with 2Q^2<=ell. For every a<=j<=ell and every nonempty Hayes character family X_(j,s) of exact conductor j and exact order 2^s>Q, 4ell times the absolute signed trace sum over X_(j,s) is at most |X_(j,s)|(j-1)2^ceil(n/2).",
+  "statement": "Let ell>=200, n in {2ell+1,2ell+2}, c=ceil(log2 ell), a=ell-c-1, and Q be the largest power of two with 3cQ<=ell. For every a<=j<=ell and every nonempty Hayes character family X_(j,s) of exact conductor j and exact order 2^s>Q, 4ell times the absolute signed trace sum over X_(j,s) is at most |X_(j,s)|(j-1)2^ceil(n/2).",
   "formal": {
     "language": "certificate-spec",
-    "statement": "{\"bound\":\"4*ell*|T_(j,s)(n)| <= |X_(j,s)|*(j-1)*2^ceil(n/2)\",\"degrees\":[\"2*ell+1\",\"2*ell+2\"],\"field_order\":2,\"format\":\"axeyum-gf2-hayes-high-order-linear-saving\",\"level_min\":200,\"order_condition\":\"2^s>max {2^k: 2*(2^k)^2<=ell}\",\"version\":1}",
+    "statement": "{\"bound\":\"4*ell*|T_(j,s)(n)| <= |X_(j,s)|*(j-1)*2^ceil(n/2)\",\"degrees\":[\"2*ell+1\",\"2*ell+2\"],\"field_order\":2,\"format\":\"axeyum-gf2-hayes-high-order-linear-saving\",\"level_min\":200,\"order_condition\":\"2^s>max {2^k: 3*ceil(log2(ell))*2^k<=ell}\",\"version\":1}",
     "fragment": "none",
     "free_symbols": ["ell", "n", "j", "s"]
   },
