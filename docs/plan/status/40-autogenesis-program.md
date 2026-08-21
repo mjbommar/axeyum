@@ -74,6 +74,7 @@
 | 2026-08-21 | (pending) | V7's local recursions stop at overloaded Nat operations; V8 freezes explicit `Nat.add`/`Nat.sub` propositions with all integer branches unchanged |
 | 2026-08-21 | (pending) | V8 finds named Nat functions still opaque; V9 freezes explicit recursion unfolding only inside the two local helper inductions |
 | 2026-08-21 | (pending) | V9 exposes predecessor-oriented `Nat.sub`; exact `add_sub_cancel` and `sub_self_add` candidates are frozen for a two-name type probe |
+| 2026-08-21 | (pending) | Two exact-oriented Nat subtraction equations are bound; V10 freezes direct use plus clean commutativity transport in the unchanged integer proof |
 
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |

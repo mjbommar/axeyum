@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-subtraction-type-probe-result",
+  "state": "two-exact-oriented-nat-subtraction-equations-bound",
+  "plan": {"path": "artifacts/autogenesis/mathlib-nat-subtraction-type-probe-plan-v1.json", "sha256": "46641cfbf239d73a99f1386dd079f24d4a77d4e9c7e1e76d7d622bd44ae95735"},
+  "source": {"path": "artifacts/autogenesis/sources/nat-subtraction-type-probe-v1.lean", "sha256": "a80f57cb5343eede8abb768b0089dd69cfdbb950f9356dc9007964fea95f4298"},
+  "types": {
+    "Nat.add_sub_cancel": "forall n m : Nat, n + m - m = n",
+    "Nat.sub_self_add": "forall n m : Nat, n - (n + m) = 0"
+  },
+  "execution": {"compiler_invocations": 1, "compiler_exit_status": 0, "theorem_submissions": 0, "exporter_invocations": 0, "importer_runs": 0, "retries": 0, "ledger_writes": 0},
+  "authority": {"theorem_credit": 0, "ledger_writes": 0}
+}
