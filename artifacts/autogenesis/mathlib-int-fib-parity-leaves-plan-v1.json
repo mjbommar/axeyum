@@ -1,0 +1,14 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-int-fib-parity-leaves-plan",
+  "state": "preregistered-after-clean-algebra-before-parity-source",
+  "predecessors": [
+    {"path": "artifacts/autogenesis/mathlib-int-fib-add-two-residualization-result-v5.json", "required_state": "seven-contract-integer-fib-recurrence-reconstructs-empty-footprint"},
+    {"path": "artifacts/autogenesis/mathlib-int-fib-raw-cancellation-result-v11.json", "required_state": "two-integer-cancellation-leaves-empty-footprint"}
+  ],
+  "remaining_contracts": ["modCases : n % 2 = 0 or n % 2 = 1", "succOne : n % 2 = 0 -> (n + 1) % 2 = 1", "succZero : n % 2 = 1 -> (n + 1) % 2 = 0"],
+  "strategy": "construct the three exact propositions by structural parity recursion and explicit modulo-two equations; reject any path through official parity convenience or broad automation",
+  "execution": {"source": "artifacts/autogenesis/sources/int-fib-parity-leaves-v1.lean", "source_present_at_plan_commit": false, "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-parity-leaves-v1", "pack_present_at_plan_commit": false, "max_compiler_invocations": 1, "max_exporter_invocations": 1, "max_importer_runs": 1, "max_retries": 0, "max_theorem_submissions": 3, "max_closed_target_submissions": 0, "max_ledger_writes": 0},
+  "output": "artifacts/autogenesis/mathlib-int-fib-parity-leaves-result-v1",
+  "limitations": "Parity support alone cannot admit Int.fib_add_two until all seven contracts are composed into the closed target."
+}
