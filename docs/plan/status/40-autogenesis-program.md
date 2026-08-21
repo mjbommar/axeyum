@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains proved; its ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Official clean divisibility antisymmetry reconstructs twice over r091 with six empty-footprint supports and byte-identical capsules. A single-read target-native premise map proves `fibAddTwo` exact and `Nat.add_comm` definitionally compatible, while six direct coprimality premises are absent. The primitive map confirms the composed target already has all-natural divisibility cancellation plus official GCD zero/successor equations. The first reconstruction batch freezes target-owned `dvd_add` and `eq_one_of_dvd_one` without importing `Iff`.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains proved; its ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Official clean divisibility antisymmetry reconstructs twice over r091 with six empty-footprint supports and byte-identical capsules. Target-owned `dvd_add` and `eq_one_of_dvd_one` now reconstruct twice, export byte-identically, and import four times with empty footprints, without importing `Iff`. Four GCD divisibility premises remain; their construction is reduced to `Nat.gcd.induction`, the accepted quotient witness, all-natural cancellation, and the official zero/successor GCD equations.
 
-**Next:** implement and reproduce the two simple divisibility supports, then reconstruct the target-native GCD divisibility family over the accepted computation equations. Adapt the unchanged `fib_coprime` argument to direct all-natural cancellation, admit coprimality, and resume the exact GCD-shift target.
+**Next:** audit the exact GCD-induction construction surface, then reconstruct the target-native GCD divisibility pair and greatest-common-divisor theorem. Adapt the unchanged `fib_coprime` argument to those supports and direct all-natural cancellation, admit coprimality, and resume the exact GCD-shift target.
 
 <!-- plan-section: landed-changes -->
 
