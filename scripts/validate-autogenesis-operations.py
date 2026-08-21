@@ -22,6 +22,7 @@ EXECUTION_DRIVERS = {
     "axeyum-lean-kernel/nat-mul-one-episode-apply-v1",
     "axeyum-lean-import/statement-reflexivity-v1",
     "axeyum-lean-import/checked-theorem-receipt-v1",
+    "axeyum-lean-import/dependency-theorem-receipt-v1",
 }
 ADMISSION_CONTRACTS = {
     ("proved", "kernel-lean", "kernel-term", "must-be-empty"),
@@ -143,6 +144,14 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             "target_definition",
             "receipt_sha256",
         }
+    elif driver == "axeyum-lean-import/dependency-theorem-receipt-v1":
+        expected = common | {
+            "receipt_manifest",
+            "target_definition",
+            "receipt_sha256",
+            "dependency_set_sha256",
+            "transitive_dependency_set_sha256",
+        }
     else:
         expected = common
     exact_keys(value, expected, label)
@@ -226,7 +235,7 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             != adapter.get("source_statement_sha256")
         ):
             raise RegistryError(f"{label} statement identity disagrees with its fact")
-    else:
+    elif driver == "axeyum-lean-import/checked-theorem-receipt-v1":
         manifest_path = repository_file(
             value["receipt_manifest"], f"{label}.receipt_manifest", root
         )
@@ -258,6 +267,53 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             != "395f6e80e6addbc69cca8ad560b312dadc31d623fe05f6b1603b5fa523622329"
         ):
             raise RegistryError(f"{label} exceeds the exact checked-theorem receipt scope")
+    else:
+        manifest_path = repository_file(
+            value["receipt_manifest"], f"{label}.receipt_manifest", root
+        )
+        if manifest_path != (
+            root
+            / "artifacts/autogenesis/mathlib-nat-fib-coprime-premise-plan-v1.json"
+        ).resolve():
+            raise RegistryError(f"{label}.receipt_manifest exceeds the exact dependency receipt scope")
+        manifest = json.loads(manifest_path.read_text())
+        tracked = manifest.get("fibonacci_semantic_receipt") or {}
+        exact = manifest.get("exact_fibonacci_coprimality") or {}
+        authority = manifest.get("fibonacci_receipt_authority") or {}
+        if (
+            manifest.get("state")
+            != "exact-official-semantic-receipt-issued-fact-transition-pending"
+            or manifest.get("target", {}).get("fact_id") != value["input_fact_id"]
+            or tracked.get("schema")
+            != "axeyum-checked-dependency-theorem-receipt-v1"
+            or tracked.get("receipt_sha256") != value["receipt_sha256"]
+            or tracked.get("transitive_dependency_set_sha256")
+            != value["transitive_dependency_set_sha256"]
+            or authority.get("dependency_set_sha256")
+            != value["dependency_set_sha256"]
+            or exact.get("target_definition") != value["target_definition"]
+            or tracked.get("axiom_footprint") != []
+            or tracked.get("fresh_full_reconstructions") != 2
+            or tracked.get("kernel_submissions") != 2
+            or tracked.get("semantic_theorem_receipts_issued") != 1
+            or tracked.get("fact_status_changes") != 0
+            or tracked.get("evaluation_credit") != 0
+            or tracked.get("ledger_writes") != 0
+            or len(authority.get("direct_theorem_dependencies") or []) != 8
+        ):
+            raise RegistryError(f"{label} dependency-theorem receipt contract disagrees")
+        if (
+            value["input_fact_id"]
+            != "F:ml430-nat-fib-coprime-fib-succ-162fc738"
+            or value["target_definition"] != "Axeyum.Autogenesis.Coverage.r082"
+            or value["receipt_sha256"]
+            != "34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e"
+            or value["dependency_set_sha256"]
+            != "d407340befc681d6d9abd187bbfead1f6ca1a7395c7dcf908950fd9c4d02e4d5"
+            or value["transitive_dependency_set_sha256"]
+            != "fa08448a022db2ba1fdd4226979a86854e561888658801d295f4dba0dc3ef84e"
+        ):
+            raise RegistryError(f"{label} exceeds the exact dependency-theorem receipt scope")
     timeout = value["timeout_seconds"]
     if type(timeout) is not int or not 1 <= timeout <= 900:
         raise RegistryError(f"{label}.timeout_seconds must be an integer in 1..900")
@@ -419,7 +475,10 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
                     raise RegistryError(
                         f"{label}.executor driver is inconsistent with applicability/admission"
                     )
-            elif executor["driver"] == "axeyum-lean-import/checked-theorem-receipt-v1":
+            elif executor["driver"] in {
+                "axeyum-lean-import/checked-theorem-receipt-v1",
+                "axeyum-lean-import/dependency-theorem-receipt-v1",
+            }:
                 if (
                     applicability["formal_languages"] != ["lean4-surface"]
                     or applicability["fragments"] != ["Nat"]

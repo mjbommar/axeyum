@@ -905,6 +905,15 @@ Out of scope:
     must equal authority exactly, while transitive rows remain replay-bound
     diagnostics. The zero-dependency V1 schema remains unchanged. See
     [ADR-0534](../09-decisions/adr-0534-library-theorem-receipts-preregister-direct-premise-identities.md).
+- [x] How may a dependency-bound theorem receipt become durable fact-ledger
+      knowledge without weakening the isolated-theorem admission contract?
+  - Answer (2026-08-20): use a distinct registered operation whose execution,
+    transaction, and settled-fact replay retain the exact direct premise rows
+    and their digest plus the transitive replay count and digest. The operation
+    may produce only the ordinary crash-safe `open` to `proved` transition; it
+    cannot reuse the zero-dependency V1 driver or turn transitive diagnostics
+    into ledger premise authority. See
+    [ADR-0535](../09-decisions/adr-0535-dependency-bound-receipts-enter-the-ledger-through-a-distinct-operation.md).
 - [x] How should the remaining recursive-indexed, reflexive, mutual, nested,
       and well-founded official Lean cases be measured before independent
       admission widens?

@@ -37,6 +37,9 @@ STATEMENT_REFLEXIVITY_CHECKER = (
 CHECKED_THEOREM_RECEIPT_CHECKER = (
     ROOT / "scripts/check-autogenesis-nat-fib-checked-theorem-receipt.py"
 )
+DEPENDENCY_THEOREM_RECEIPT_CHECKER = (
+    ROOT / "scripts/check-autogenesis-nat-fib-coprime-premise-plan.py"
+)
 COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 EVIDENCE_RE = re.compile(
     r"^;\s*evidence\s+kind=(\S+)\s+certified=(\S+)\s+"
@@ -187,6 +190,102 @@ def run_checked_theorem_receipt_registered(
     if not isinstance(fact, dict):
         raise ExecutionError("checked-theorem receipt input fact is absent")
     return expected_checked_theorem_receipt_observation(operation, fact)
+
+
+def dependency_theorem_receipt_contract(
+    operation: dict[str, Any], fact: dict[str, Any]
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Replay the exact dependency-bound receipt and return its sealed observation."""
+    executor = operation["executor"]
+    checker = load_module(
+        "dependency_theorem_receipt_checker_for_execution",
+        DEPENDENCY_THEOREM_RECEIPT_CHECKER,
+    )
+    try:
+        manifest = checker.validate()
+    except checker.PlanError as error:
+        raise ExecutionError(f"dependency-theorem receipt failed: {error}") from error
+    if ROOT / executor["receipt_manifest"] != checker.MANIFEST:
+        raise ExecutionError("dependency-theorem receipt manifest path changed")
+    tracked = manifest["fibonacci_semantic_receipt"]
+    pack_manifest_path = pathlib.Path(tracked["manifest"])
+    pack_manifest = json.loads(pack_manifest_path.read_text())
+    archived_path = pack_manifest_path.parent / pack_manifest["result"]["path"]
+    archived = json.loads(archived_path.read_text())
+    exact = archived["dvd_gcd_frontier"]["exact_target"]
+    receipt = exact["semantic_theorem_receipt"]
+    authority = receipt["authority"]
+    dependencies = receipt["dependencies"]
+    if (
+        manifest["target"]["fact_id"] != fact.get("id")
+        or authority["fact_id"] != fact.get("id")
+        or authority["target_definition"] != executor["target_definition"]
+        or receipt["receipt_sha256"] != executor["receipt_sha256"]
+        or manifest["fibonacci_receipt_authority"]["dependency_set_sha256"]
+        != executor["dependency_set_sha256"]
+        or tracked["transitive_dependency_set_sha256"]
+        != executor["transitive_dependency_set_sha256"]
+        or dependencies["direct_theorems"]
+        != authority["expected_direct_theorem_dependencies"]
+        or not dependencies["direct_theorems"]
+    ):
+        raise ExecutionError(
+            "dependency-theorem receipt source contract is inconsistent"
+        )
+    return manifest, archived
+
+
+def expected_dependency_theorem_receipt_observation(
+    operation: dict[str, Any], fact: dict[str, Any]
+) -> dict[str, Any]:
+    manifest, archived = dependency_theorem_receipt_contract(operation, fact)
+    exact = archived["dvd_gcd_frontier"]["exact_target"]
+    receipt = exact["semantic_theorem_receipt"]
+    authority = receipt["authority"]
+    theorem = receipt["theorem"]
+    dependencies = receipt["dependencies"]
+    assurance = exact["assurance"]
+    tracked = manifest["fibonacci_semantic_receipt"]
+    return {
+        "verdict": "proved",
+        "evidence_label": operation["executor"]["expected_evidence_label"],
+        "receipt_sha256": receipt["receipt_sha256"],
+        "receipt_observation_sha256": tracked["result_sha256"],
+        "source_artifact_sha256": authority["source_artifact_sha256"],
+        "candidate_observation_sha256": authority[
+            "candidate_observation_sha256"
+        ],
+        "goal_sha256": theorem["type_sha256"],
+        "proof_sha256": theorem["proof_sha256"],
+        "target_content_sha256": theorem["content_sha256"],
+        "fresh_full_reconstructions": assurance["fresh_full_reconstructions"],
+        "target_theorem_submissions": assurance["target_theorem_submissions"],
+        "search_invocations": assurance["proof_search_invocations"],
+        "axiom_footprint": receipt["axiom_footprint"],
+        "retained_answer_dependencies": dependencies["direct_theorems"],
+        "dependency_set_sha256": operation["executor"][
+            "dependency_set_sha256"
+        ],
+        "transitive_theorem_dependencies": len(
+            dependencies["transitive_theorems"]
+        ),
+        "transitive_dependency_set_sha256": operation["executor"][
+            "transitive_dependency_set_sha256"
+        ],
+        "ledger_writes": archived["ledger_writes"],
+    }
+
+
+def run_dependency_theorem_receipt_registered(
+    operation: dict[str, Any],
+) -> dict[str, Any]:
+    frontier_module = load_module(
+        "frontier_for_dependency_theorem_receipt_execution", FRONTIER_SCRIPT
+    )
+    fact = frontier_module.load().get(operation["executor"]["input_fact_id"])
+    if not isinstance(fact, dict):
+        raise ExecutionError("dependency-theorem receipt input fact is absent")
+    return expected_dependency_theorem_receipt_observation(operation, fact)
 
 
 def run_statement_reflexivity_registered(
@@ -1058,6 +1157,10 @@ def run_registered(
         if trigger is not None:
             raise ExecutionError("checked-theorem receipt operation rejects a trigger")
         return run_checked_theorem_receipt_registered(operation)
+    if driver == "axeyum-lean-import/dependency-theorem-receipt-v1":
+        if trigger is not None:
+            raise ExecutionError("dependency-theorem receipt operation rejects a trigger")
+        return run_dependency_theorem_receipt_registered(operation)
     raise ExecutionError(f"unsupported execution driver {driver!r}")
 
 
@@ -1180,6 +1283,42 @@ def build_receipt(
             "receipt_manifest": executor["receipt_manifest"],
             "target_definition": executor["target_definition"],
             "receipt_sha256": executor["receipt_sha256"],
+        }
+    elif executor["driver"] == "axeyum-lean-import/dependency-theorem-receipt-v1":
+        manifest, archived = dependency_theorem_receipt_contract(operation, fact)
+        expected_observation = expected_dependency_theorem_receipt_observation(
+            operation, fact
+        )
+        exact = archived["dvd_gcd_frontier"]["exact_target"]
+        dependency_receipt = exact["semantic_theorem_receipt"]
+        input_identity = {
+            "formal_statement_sha256": byte_digest(
+                fact["formal"]["statement"].encode()
+            ),
+            "receipt_manifest_sha256": digest(manifest),
+            "receipt_observation_sha256": manifest["fibonacci_semantic_receipt"][
+                "result_sha256"
+            ],
+            "receipt_sha256": dependency_receipt["receipt_sha256"],
+            "source_artifact_sha256": dependency_receipt["authority"][
+                "source_artifact_sha256"
+            ],
+            "candidate_observation_sha256": dependency_receipt["authority"][
+                "candidate_observation_sha256"
+            ],
+            "dependency_set_sha256": executor["dependency_set_sha256"],
+            "transitive_dependency_set_sha256": executor[
+                "transitive_dependency_set_sha256"
+            ],
+        }
+        request_input = {
+            "receipt_manifest": executor["receipt_manifest"],
+            "target_definition": executor["target_definition"],
+            "receipt_sha256": executor["receipt_sha256"],
+            "dependency_set_sha256": executor["dependency_set_sha256"],
+            "transitive_dependency_set_sha256": executor[
+                "transitive_dependency_set_sha256"
+            ],
         }
     else:
         raise ExecutionError(f"unsupported execution driver {executor['driver']!r}")

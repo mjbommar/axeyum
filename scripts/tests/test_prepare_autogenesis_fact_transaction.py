@@ -14,10 +14,11 @@ SPEC.loader.exec_module(MODULE)
 
 REFLEXIVITY_FACT = "F:ml430-nat-descfactorial-zero-966b01df"
 FIB_FACT = "F:ml430-nat-fib-add-two-b86e0c82"
+FIB_COPRIME_FACT = "F:ml430-nat-fib-coprime-fib-succ-162fc738"
 
 
 def settle_reflexivity_fact(facts):
-    for fact_id in (REFLEXIVITY_FACT, FIB_FACT):
+    for fact_id in (REFLEXIVITY_FACT, FIB_FACT, FIB_COPRIME_FACT):
         target = copy.deepcopy(facts[fact_id])
         target["epistemic_status"] = "proved"
         facts[fact_id] = target
@@ -450,6 +451,64 @@ class AuthoritativeFactTransactionTests(unittest.TestCase):
         )
         checked = checker.check_fact(after, lambda _operation: observation)
         self.assertEqual(checked["operation_id"], operation["id"])
+
+    def test_dependency_receipt_delta_retains_exact_premise_identities(self):
+        executor = MODULE.load_module(
+            "executor_for_dependency_receipt_transaction_test",
+            MODULE.EXECUTOR_SCRIPT,
+        )
+        frontier_module = executor.load_module(
+            "frontier_for_dependency_receipt_transaction_test",
+            executor.FRONTIER_SCRIPT,
+        )
+        facts = frontier_module.load()
+        settle_reflexivity_fact(facts)
+        target = copy.deepcopy(facts[FIB_COPRIME_FACT])
+        target["epistemic_status"] = "open"
+        target["evidence"] = []
+        target.pop("proof_route", None)
+        target.pop("axiom_footprint", None)
+        facts[FIB_COPRIME_FACT] = target
+        frontier = frontier_module.build_machine_frontier(facts)
+        before, operation, registry = executor.selected_inputs(frontier, facts)
+        self.assertEqual(before["id"], FIB_COPRIME_FACT)
+        observation = executor.expected_dependency_theorem_receipt_observation(
+            operation, before
+        )
+        execution_receipt = executor.build_receipt(
+            frontier=frontier,
+            fact=before,
+            operation=operation,
+            registry=registry,
+            git_commit="4" * 40,
+            observation=observation,
+        )
+        transaction = MODULE.build_authoritative_transaction(
+            before_fact=before,
+            execution=execution_receipt,
+            operation=operation,
+            registry=registry,
+        )
+        after = transaction["authoritative_write"]["after_fact"]
+        binding = after["evidence"][0]["checker_operation"]
+        self.assertEqual(len(binding["direct_theorem_dependencies"]), 8)
+        self.assertEqual(binding["transitive_theorem_dependencies"], 115)
+        checker = MODULE.load_module(
+            "fact_checker_for_dependency_receipt_transaction_test",
+            MODULE.FACT_OPERATION_SCRIPT,
+        )
+        checked = checker.check_fact(after, lambda _operation: observation)
+        self.assertEqual(checked["operation_id"], operation["id"])
+
+        changed = copy.deepcopy(execution_receipt)
+        changed["result"]["observation"]["retained_answer_dependencies"] = []
+        with self.assertRaisesRegex(MODULE.TransactionError, "assurance"):
+            MODULE.build_authoritative_transaction(
+                before_fact=before,
+                execution=changed,
+                operation=operation,
+                registry=registry,
+            )
 
 
 if __name__ == "__main__":

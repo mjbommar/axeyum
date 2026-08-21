@@ -72,10 +72,27 @@ def validate_policy(policy: dict[str, Any], reviewed: dict[str, Any], facts: dic
     ]
     if [row["fact_id"] for row in chain] != expected_ids:
         raise PremiseSelectionError("bottom-up sequence changed")
+    live_statuses = []
     for row in chain:
         fact = facts[row["fact_id"]]
-        if row["status"] != "open" or fact["epistemic_status"] != "open" or row["depends_on"] != fact["depends_on"]:
-            raise PremiseSelectionError("fact status or dependency changed")
+        if row["status"] != "open" or row["depends_on"] != fact["depends_on"]:
+            raise PremiseSelectionError("frozen fact prestate or dependency changed")
+        live_status = fact["epistemic_status"]
+        if live_status not in {"open", "proved"}:
+            raise PremiseSelectionError("live fact status is outside monotonic chain progress")
+        if live_status == "proved" and (
+            fact.get("proof_route") != "kernel-lean"
+            or fact.get("axiom_footprint") != []
+            or not fact.get("evidence")
+        ):
+            raise PremiseSelectionError("settled chain fact lacks axiom-free kernel evidence")
+        live_statuses.append(live_status)
+    first_open = next(
+        (index for index, status in enumerate(live_statuses) if status == "open"),
+        len(live_statuses),
+    )
+    if any(status != "open" for status in live_statuses[first_open:]):
+        raise PremiseSelectionError("live fact statuses do not form a proved prefix")
     target = policy["immediate_target"]
     candidate = candidates["Nat.fib_add_two"]
     if (
