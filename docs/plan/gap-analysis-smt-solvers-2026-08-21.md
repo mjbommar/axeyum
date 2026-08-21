@@ -403,6 +403,47 @@ built.
 
 ---
 
+## 9.1 What the queue has already changed about this document
+
+This file is a specification for the work below it, so where that work refutes
+or discharges a row, it is recorded here and not only in the note that found it.
+
+**Refuted.** Row 1's "four divisions share one cause" was a hypothesis and it is
+false — see the row itself for the three-cause split. The part that most changes
+the framing: the largest single block of losses in the *worst* division is not a
+search problem. 48 QF_UFLIA files return `unknown` after a median **1.3 s of a
+24 s budget** with `core_src_minimized=0`, because the cores too wide to
+minimise are exactly the cores whose width then exhausts retention. A deficit
+that read as "we are slower" is substantially "we stop early". And 26 files —
+13% of that division — never reach the solver at all, rejected at the parser for
+`Int` literals beyond `i128`. No row in §9 named that.
+
+**Discharged.**
+
+- **§8, the audit that could not fail.** `audit_dominance` audited only
+  baseline-*decided* instances, so a zero baseline propagated forward forever.
+  It now re-probes the undecided set and reports `newly_decided`. On the row that
+  motivated this: `NEWLY DECIDED 11/12 the baseline recorded as undecided`, where
+  the artifact previously held `"instances": []`.
+- **Gap #6.** The array-axiom family — 30.2% of all certified `unsat` — no longer
+  rests on re-running its producer and comparing for equality. Two stages decide
+  the certificate's own claim, each killed by exactly one adversarial fixture
+  over a **satisfiable** query. Two residual shapes (`ReadCongruence`, and the
+  BTOR path where the assertion only *entails* the disequality) are named in the
+  code rather than implied away.
+- **Gap #3.** `examples/axeyum_cli.rs` answers one verdict per `check-sat`,
+  matching z3 on `push`/`pop` and on `check-sat-assuming` non-retention. The
+  engine could always do this; nothing user-facing reached it.
+- **Gap #2's gate**, ahead of its measurement:
+  `scripts/check-parity-freshness.py` fails when a division's ledger entry ages
+  past 14 days, wired into both gate sets. It reads `FAIL` today, which is the
+  honest state.
+
+**Found while discharging, and not in the original document.** The parity ledger
+holds **nine** divisions, not the eleven `PROJECT-STATE.md` claimed, and has
+never held a QF_ABV entry despite a committed `parity-lists/QF_ABV.txt` — a list
+that was never run.
+
 ## 10. What this document does not establish
 
 - **The competition figures are 15 days old** (QF_BV 4 days). Nothing since
