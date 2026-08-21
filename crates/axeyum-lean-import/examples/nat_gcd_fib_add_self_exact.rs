@@ -7,8 +7,9 @@ use std::path::{Path, PathBuf};
 
 use axeyum_lean_import::{
     ImportLimits, ReusedTypeCompatibility, canonical_declaration_sha256,
-    canonical_expression_sha256, checked_reused_declaration_compatibility,
-    compose_checked_theorem_slice, compose_checked_theorem_slice_with_target_leaves, import_ndjson,
+    canonical_expression_sha256, canonical_kernel_type_shape_sha256,
+    checked_reused_declaration_compatibility, compose_checked_theorem_slice,
+    compose_checked_theorem_slice_with_target_leaves, import_ndjson,
     verify_checked_theorem_composition, verify_checked_theorem_composition_with_target_leaves,
 };
 use axeyum_lean_kernel::{
@@ -31,6 +32,16 @@ const CANCELLATION_CAPSULE: &str =
 const ADDITION: &str = "Axeyum.Autogenesis.NatFibSuccessorAddition";
 const ADDITION_CAPSULE: &str = "f46e3dd4053c930984b3232ff98320021daa2fcdb3451e84bfbf011945a18621";
 const COPRIME: &str = "Nat.fib_coprime_fib_succ";
+const COPRIME_DIRECT_PREMISES: [&str; 8] = [
+    "Axeyum.Autogenesis.fibAddTwo",
+    "Nat.add_comm",
+    "Nat.dvd_add_iff_right",
+    "Nat.dvd_gcd",
+    "Nat.eq_one_of_dvd_one",
+    "Nat.gcd_dvd_left",
+    "Nat.gcd_dvd_right",
+    "Nat.gcd_zero_left",
+];
 const COPRIME_GCD_SUCC_LEAF: &str = "Axeyum.Autogenesis.nat_gcd_succ";
 const COPRIME_GCD_SUCC_LEAF_SHA256: &str =
     "1a9cf6e4ef4dc54a298214571515e7682a6265d9db7008b7cf1f8b3c38d11f16";
@@ -64,6 +75,10 @@ fn run() -> Result<(), String> {
     let mut args = std::env::args_os().skip(1);
     if args.next().as_deref() == Some(std::ffi::OsStr::new("--coprime-carrier-audit")) {
         return run_coprime_carrier_audit(args);
+    }
+    let mut args = std::env::args_os().skip(1);
+    if args.next().as_deref() == Some(std::ffi::OsStr::new("--target-native-coprime-audit")) {
+        return run_target_native_coprime_audit(args);
     }
     let mut args = std::env::args_os().skip(1);
     let r091_path = path(&mut args)?;
@@ -215,6 +230,116 @@ fn run() -> Result<(), String> {
             },
             "execution": {"capsule_compositions": 4, "local_gcd_comm_submissions": 1, "exact_target_submissions": 1, "retries": 0},
             "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0},
+            "fact_status_changes": 0,
+            "evaluation_credit": 0,
+            "ledger_writes": 0,
+        }))
+        .map_err(|error| error.to_string())?
+    );
+    Ok(())
+}
+
+#[allow(clippy::too_many_lines)]
+fn run_target_native_coprime_audit(
+    mut args: impl Iterator<Item = std::ffi::OsString>,
+) -> Result<(), String> {
+    let r091_path = path(&mut args)?;
+    let clean_path = path(&mut args)?;
+    let cancellation_path = path(&mut args)?;
+    let addition_path = path(&mut args)?;
+    let coprime_path = path(&mut args)?;
+    if args.next().is_some() {
+        return Err("usage: nat_gcd_fib_add_self_exact --target-native-coprime-audit <r091> <official-clean-order> <cancellation> <addition> <coprimality>".to_owned());
+    }
+    let r091 = import_bound(&r091_path, R091_SHA256, "r091")?;
+    let clean = import_bound(&clean_path, CLEAN_ANTISYMM_CAPSULE, CLEAN_ANTISYMM)?;
+    let cancellation = import_bound(&cancellation_path, CANCELLATION_CAPSULE, CANCELLATION)?;
+    let addition = import_bound(&addition_path, ADDITION_CAPSULE, ADDITION)?;
+    let coprime = import_bound(&coprime_path, COPRIME_CAPSULE, COPRIME)?;
+    let mut target = r091.kernel().clone();
+    let mut setup = Vec::new();
+    for (root, source) in [
+        (CLEAN_ANTISYMM, clean.kernel()),
+        (CANCELLATION, cancellation.kernel()),
+        (ADDITION, addition.kernel()),
+    ] {
+        let completed = compose_checked_theorem_slice(source, &target, &[root])
+            .map_err(|error| format!("{root} audit setup composition declined: {error:?}"))?;
+        verify_checked_theorem_composition(
+            source,
+            &target,
+            completed.kernel(),
+            completed.receipt(),
+        )
+        .map_err(|error| format!("{root} audit setup composition did not replay: {error:?}"))?;
+        setup.push(json!({"root": root, "receipt_sha256": completed.receipt().receipt_sha256}));
+        target = completed.kernel().clone();
+    }
+    let source = coprime.kernel();
+    let rows = COPRIME_DIRECT_PREMISES
+        .iter()
+        .map(|&premise| {
+            let source_name = find_name(source, premise)?;
+            if !matches!(source.environment().get(source_name), Some(Declaration::Theorem { .. })) {
+                return Err(format!("source direct premise is not a theorem: {premise}"));
+            }
+            let source_shape =
+                canonical_kernel_type_shape_sha256(source, theorem_type(source, source_name)?)?;
+            let source_hash = canonical_declaration_sha256(source, source_name)?;
+            let target_same_name = optional_name(&target, premise)?
+                .map(|target_name| {
+                    let compatibility = checked_reused_declaration_compatibility(source, &target, premise)
+                        .map(|receipt| receipt.compatibility.as_str().to_owned())
+                        .map_err(|error| format!("declined:{error:?}"));
+                    Ok::<_, String>(json!({
+                        "declaration_sha256": canonical_declaration_sha256(&target, target_name)?,
+                        "type_shape_sha256": canonical_kernel_type_shape_sha256(&target, theorem_type(&target, target_name)?)?,
+                        "axiom_footprint": names(&target, &target.axiom_footprint(target_name)),
+                        "compatibility": compatibility.unwrap_or_else(|error| error),
+                    }))
+                })
+                .transpose()?;
+            let mut equivalents = target
+                .environment()
+                .iter()
+                .filter_map(|(&candidate, declaration)| {
+                    matches!(declaration, Declaration::Theorem { .. }).then_some(candidate)
+                })
+                .filter_map(|candidate| {
+                    let ty = theorem_type(&target, candidate).ok()?;
+                    let shape = canonical_kernel_type_shape_sha256(&target, ty).ok()?;
+                    (shape == source_shape && target.axiom_footprint(candidate).is_empty())
+                        .then_some(candidate)
+                })
+                .map(|candidate| {
+                    Ok::<_, String>(json!({
+                        "name": target.display_name(candidate).to_string(),
+                        "declaration_sha256": canonical_declaration_sha256(&target, candidate)?,
+                    }))
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            equivalents.sort_by_key(|row| row["name"].as_str().unwrap_or_default().to_owned());
+            Ok::<_, String>(json!({
+                "source_name": premise,
+                "source_declaration_sha256": source_hash,
+                "source_type_shape_sha256": source_shape,
+                "source_axiom_footprint": names(source, &source.axiom_footprint(source_name)),
+                "target_same_name": target_same_name,
+                "target_native_exact_type_shape_equivalents": equivalents,
+            }))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "schema_version": 1,
+            "kind": "axeyum-autogenesis-target-native-fibonacci-coprime-premise-audit",
+            "source_target": COPRIME,
+            "setup_compositions": setup,
+            "direct_premises": rows,
+            "execution": {"reads_per_input": 1, "complete_audits": 1, "kernel_submissions": 0, "exports": 0, "retries": 0},
+            "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0},
+            "exact_target_submissions": 0,
             "fact_status_changes": 0,
             "evaluation_credit": 0,
             "ledger_writes": 0,
@@ -1516,6 +1641,15 @@ fn declaration_kind(declaration: &Declaration) -> &'static str {
         Declaration::Inductive { .. } => "inductive",
         Declaration::Constructor { .. } => "constructor",
         Declaration::Recursor { .. } => "recursor",
+    }
+}
+fn theorem_type(kernel: &Kernel, name: NameId) -> Result<ExprId, String> {
+    match kernel.environment().get(name) {
+        Some(Declaration::Theorem { ty, .. }) => Ok(*ty),
+        _ => Err(format!(
+            "declaration is not a theorem: {}",
+            kernel.display_name(name)
+        )),
     }
 }
 fn nested_name(kernel: &mut Kernel, parts: &[&str]) -> NameId {
