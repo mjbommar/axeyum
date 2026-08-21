@@ -155,6 +155,29 @@ rows (§8).
 
 ## 4. Theory and operator coverage
 
+### 4.0 Measured, now that the binaries were found
+
+§10 originally recorded every cvc5 and Bitwuzla claim as source-derived because
+a `command -v` said the binaries were absent. They are not (see §10). The
+load-bearing cells were re-checked **by running them**, 2026-08-21, at the
+versions the parity ledger names:
+
+| claim | was | measured |
+|---|---|---|
+| Bitwuzla rejects `Int` | source | `[error] unsupported logic 'QF_LIA'` — a parser error, not a weakness |
+| Bitwuzla rejects strings | source | `[error] unsupported logic 'QF_S'` |
+| Bitwuzla decides BV | source | `sat` |
+| cvc5 FP is Float32/64 only without `--fp-exp` | source | `(_ FloatingPoint 5 3)` → `error "…is not supported, only Flo…"`; `Float32` → `sat` |
+| cvc5 has no optimization | source | `(maximize x)` → `Parse Error` |
+| **cvc5 emits a checkable Alethe proof** | source | **`unsat` followed by real Alethe steps** — `(assume a0 (! (> x 5) :named @p_1))` |
+| **Bitwuzla emits no proof** | source | **`unsupported command 'get-proof'`** |
+| Bitwuzla gained interpolation in 0.9.0 | source | `--produce-interpolants`, `--interpolants-algo mcmillan` present |
+
+The two in bold are the ones that decide §6.2's framing, and they now rest on
+output I read rather than on source I inferred from: **our checkable-evidence
+moat is real against Bitwuzla, which cannot emit a proof at all, and is not a
+moat against cvc5, which emits Alethe that Carcara reads.**
+
 ### 4.1 The matrix
 
 `✓` present, `~` present but bounded or partial, `✗` absent. For the reference
