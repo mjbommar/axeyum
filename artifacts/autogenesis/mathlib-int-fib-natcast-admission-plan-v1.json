@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-natcast-admission-plan-v1",
+  "state": "preregistered-sealed-capsule-admission-before-operation-code-or-ledger-write",
+  "target": {
+    "fact_id": "F:ml430-int-fib-natcast-d5886be4",
+    "fact_sha256": "45bec051f4f54a14956697f68f193f4f9f0c6e14d6536886a60bfc01aab59d42",
+    "name": "Int.fib_natCast"
+  },
+  "evidence": {
+    "construction_result": "artifacts/autogenesis/mathlib-int-fib-clean-definition-construction-result-v1.json",
+    "construction_result_sha256": "b7f30b94203c1027c8addd2699bddf394c69b8e9c36b3cc311cb1bf1860d8804",
+    "identity_result": "artifacts/autogenesis/mathlib-int-fib-natcast-goal-identity-result-v1.json",
+    "identity_result_sha256": "5450bffc0bdabdc76c224570c6f52b02c1d53954d375294e85a60648063ef667",
+    "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-clean-definition-v1/int-fib-clean.ndjson",
+    "capsule_sha256": "f0e34ecb1dff747938b7f1079c307af5f4e79e7a67e3bc514feee03e4f30656d",
+    "goal_sha256": "3a173a7b65ddf0fcf8c30c4ea3511780667bfff311a531ec477515ea731c490b",
+    "declaration_sha256": "73b8742709bbb1b91780f41ff4a475b5b3f0b1c2981999c868b53fc38334bea3",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": []
+  },
+  "protocol": {
+    "register_exact_operation": true,
+    "derive_transaction_from_clean_commit": true,
+    "fault_injection_after_intent_exit": 75,
+    "require_fact_unchanged_before_recovery": true,
+    "authoritative_ledger_writes": 1,
+    "fixture_writes": 0,
+    "archive_primary_run": true,
+    "isolated_clean_replay": true
+  },
+  "budget": {
+    "max_operation_registrations": 1,
+    "max_fault_injection_executions": 1,
+    "max_authoritative_ledger_writes": 1,
+    "max_recovery_executions": 1,
+    "max_clean_replays": 1,
+    "max_search_invocations": 0,
+    "max_evaluations": 0
+  },
+  "expected_newly_ready": [
+    "F:ml430-int-fib-add-two-739358dd"
+  ],
+  "next_on_accept": "rebuild exact Int.fib_add_two over the admitted target-owned representation",
+  "limitations": "This authorizes only one exact fact transition from the named immutable capsule and grants no authority to close another proposition."
+}
