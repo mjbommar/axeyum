@@ -428,10 +428,10 @@ enum LiteralChars {
 }
 
 /// Decodes a string-literal atom (`"..."`) into its SMT-LIB code points and maps
-/// each to a byte when `≤ 255`. Handles the `UnicodeStrings` escapes `\u{X…}`
-/// (1–5 hex digits in braces) and `\uXXXX` (exactly four hex digits); a doubled
-/// `""` is one literal quote; every other byte is taken verbatim (the corpus
-/// literals are ASCII/Latin-1 outside the escapes). Any code point above `255`
+/// each to a byte when `≤ 255`. Escape handling is DELEGATED to
+/// [`crate::parse::decode_string_code_points`], the one decoder of this
+/// grammar, so `\u{X…}` is an escape only for 1–5 hex digits exactly as the
+/// string route sees it; a doubled `""` is one literal quote. Any code point above `255`
 /// or a malformed escape yields [`LiteralChars::OutOfByteRange`] so the caller
 /// declines rather than guesses.
 fn literal_chars(atom: &str) -> LiteralChars {
@@ -439,44 +439,25 @@ fn literal_chars(atom: &str) -> LiteralChars {
         return LiteralChars::NotLiteral;
     }
     let inner = atom[1..atom.len() - 1].replace("\"\"", "\"");
-    let bytes = inner.as_bytes();
-    let mut out: Vec<u8> = Vec::new();
-    let mut i = 0;
-    while i < bytes.len() {
-        // An SMT-LIB Unicode escape begins `\u`. Everything else is one verbatim
-        // byte (the literal's own UTF-8 byte, which for ASCII is the character).
-        if bytes[i] == b'\\' && i + 1 < bytes.len() && bytes[i + 1] == b'u' {
-            let after = i + 2;
-            let code = if bytes.get(after) == Some(&b'{') {
-                // \u{H…}: hex digits until the closing brace.
-                let Some(close) = bytes[after + 1..].iter().position(|&c| c == b'}') else {
-                    return LiteralChars::OutOfByteRange; // malformed
-                };
-                let hex = &inner[after + 1..after + 1 + close];
-                let Ok(v) = u32::from_str_radix(hex, 16) else {
-                    return LiteralChars::OutOfByteRange;
-                };
-                i = after + 1 + close + 1;
-                v
-            } else if after + 4 <= bytes.len() {
-                // \uXXXX: exactly four hex digits.
-                let hex = &inner[after..after + 4];
-                let Ok(v) = u32::from_str_radix(hex, 16) else {
-                    return LiteralChars::OutOfByteRange;
-                };
-                i = after + 4;
-                v
-            } else {
-                return LiteralChars::OutOfByteRange; // malformed `\u`
-            };
-            if code > 0xff {
-                return LiteralChars::OutOfByteRange;
-            }
-            out.push(u8::try_from(code).expect("code ≤ 0xff"));
-        } else {
-            out.push(bytes[i]);
-            i += 1;
+    // DELEGATE. This function used to decode the escapes itself, and its own
+    // doc comment said "1-5 hex digits in braces" while the code accepted ANY
+    // length -- so `"\u{000062}"` was ten characters to the string route and one
+    // character `b` here, in the same solver. Measured 2026-08-21 against z3
+    // 4.13.3: a wrong `sat` AND a wrong `unsat`, five-digit control agreeing.
+    //
+    // `decode_string_code_points` is the one decoder, and this is the SECOND P0
+    // on that boundary -- its own doc records the first, where neither string
+    // route expanded escapes and the regex side did. Two copies of one grammar
+    // agree until they do not; there is now one.
+    let Some(code_points) = crate::parse::decode_string_code_points(&inner) else {
+        return LiteralChars::OutOfByteRange;
+    };
+    let mut out: Vec<u8> = Vec::with_capacity(code_points.len());
+    for code in code_points {
+        if code > 0xff {
+            return LiteralChars::OutOfByteRange;
         }
+        out.push(u8::try_from(code).expect("code <= 0xff"));
     }
     LiteralChars::Bytes(out)
 }

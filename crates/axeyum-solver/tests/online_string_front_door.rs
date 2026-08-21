@@ -885,3 +885,87 @@ fn front_door_constant_replace_sat_replays() {
         other => panic!("expected SAT pinning x = \"z\", got {other:?}"),
     }
 }
+
+/// One grammar, one decoder: a `\u{…}` escape is 1–5 hex digits everywhere.
+///
+/// This is a **wrong-verdict regression**, reproduced 2026-08-21 against z3
+/// 4.13.3 in BOTH directions. `parse.rs::decode_string_code_points` enforced
+/// SMT-LIB's 1–5 digit rule; `regex.rs::literal_chars` and the `regex_membership`
+/// decoder did not. So `"\u{000062}"` was **ten characters** to the string route
+/// and **one character `b`** to the regex route — inside one solver, on one
+/// literal. The membership constraint and the length constraint then contradicted
+/// each other, and the contradiction went whichever way the query asked:
+///
+/// ```text
+/// (str.in_re x (str.to_re "\u{000062}")) ∧ (= x "b")          axeyum sat,   z3 unsat
+/// (str.in_re x (str.to_re "\u{000062}")) ∧ (= (str.len x) 10) axeyum unsat, z3 sat
+/// ```
+///
+/// A wrong `unsat` is the worse half: that is the direction this project
+/// certifies and reconstructs into Lean.
+///
+/// This is the **second** P0 on this exact boundary. `decode_string_code_points`'
+/// own doc records the first, where neither string route expanded escapes and the
+/// regex side did — the same divergence from the other direction. Two copies of
+/// one grammar agree until they do not, so the fix is delegation, not a third
+/// copy of the digit rule. The two decoders now call that function.
+///
+/// The five-digit case is the control: it is a legal escape and must still mean
+/// `b`. Without it, "reject every brace escape" would pass this test while
+/// silently dropping a feature the corpus uses.
+#[test]
+fn a_six_digit_brace_escape_is_not_an_escape_on_any_route() {
+    let unsat_cases = [
+        // Six digits: NOT an escape, so the literal is the ten characters
+        // `\u{000062}` and cannot equal the one-character "b".
+        r#"(set-logic QF_SLIA)
+           (declare-fun x () String)
+           (assert (str.in_re x (str.to_re "\u{000062}")))
+           (assert (= x "b"))
+           (check-sat)"#,
+        // Five digits IS an escape, so the literal is "b" and has length 1.
+        r#"(set-logic QF_SLIA)
+           (declare-fun x () String)
+           (assert (str.in_re x (str.to_re "\u{00062}")))
+           (assert (= (str.len x) 10))
+           (check-sat)"#,
+    ];
+    for source in unsat_cases {
+        assert!(
+            matches!(
+                solve_smtlib(source, &cfg())
+                    .expect("the front door answers")
+                    .result,
+                CheckResult::Unsat
+            ),
+            "a six-digit brace escape must be literal text on EVERY route:\n{source}"
+        );
+    }
+
+    let sat_cases = [
+        // The ten-character reading has length 10.
+        r#"(set-logic QF_SLIA)
+           (declare-fun x () String)
+           (assert (str.in_re x (str.to_re "\u{000062}")))
+           (assert (= (str.len x) 10))
+           (check-sat)"#,
+        // CONTROL: five digits is a real escape and still means "b". A fix that
+        // rejected all brace escapes would pass the unsat cases and fail here.
+        r#"(set-logic QF_SLIA)
+           (declare-fun x () String)
+           (assert (str.in_re x (str.to_re "\u{00062}")))
+           (assert (= x "b"))
+           (check-sat)"#,
+    ];
+    for source in sat_cases {
+        assert!(
+            matches!(
+                solve_smtlib(source, &cfg())
+                    .expect("the front door answers")
+                    .result,
+                CheckResult::Sat(_)
+            ),
+            "the five-digit control must keep working:\n{source}"
+        );
+    }
+}
