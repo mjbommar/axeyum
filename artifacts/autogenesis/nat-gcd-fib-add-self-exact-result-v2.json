@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-exact-result-v2",
+  "state": "corrected-driver-build-declined-at-single-line-count-lint-before-execution",
+  "plan_sha256": "5a4628f7c2c52721fbffe76017ca2bf724fd170a21858ee7a580d3ca8dffe074",
+  "source_sha256": "f32d5b2ad583d59ec83883de37e7200823f31c66564a8aa28f654256e871dc5c",
+  "decline": {
+    "stage": "rust-clippy-before-executable",
+    "diagnostic": "run has 103 lines and exceeds clippy too_many_lines threshold 100",
+    "prior_naming_diagnostics_remaining": 0,
+    "prior_borrow_diagnostics_remaining": 0,
+    "executable_produced": false
+  },
+  "execution": {"driver_builds": 1, "input_stream_reads": 0, "capsule_compositions": 0, "local_gcd_comm_submissions": 0, "exact_target_submissions": 0, "complete_invocations": 0, "retries": 0},
+  "authority": {"target_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_boundary": "Preregister exactly one scoped too_many_lines allowance on run before rebuilding unchanged proof construction.",
+  "limitations": "No proof-bearing input was opened and no kernel theorem was attempted or credited."
+}

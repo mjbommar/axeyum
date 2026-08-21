@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-exact-plan-v3",
+  "state": "preregistered-single-scoped-line-count-allowance-after-zero-read-v2-decline",
+  "predecessor": {"path": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-result-v2.json", "sha256": "2237a91185a228922c1cf21402d3e6b66c90408a27785dcee89de2daf0fde142"},
+  "authorized_change": "add #[allow(clippy::too_many_lines)] to run; the source body, proof route, inputs, identities, and authority must remain byte-for-byte otherwise unchanged",
+  "acceptance": {"one_clippy_clean_driver_build": true, "fresh_complete_invocations": 2, "outputs_byte_identical": true, "target_axiom_footprint": [], "all_four_capsule_roots_required_transitively": true},
+  "budget": {"max_driver_builds": 1, "max_complete_invocations": 2, "max_exact_target_submissions": 2, "max_retries": 0},
+  "authority": {"target_credit_before_acceptance": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "limitations": "Any source edit beyond the one scoped lint allowance or any trusted-gate rejection ends V3 without retry or theorem credit."
+}

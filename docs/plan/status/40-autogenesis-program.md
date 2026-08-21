@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. All four exact supports—clean antisymmetry, official cancellation, Fibonacci addition, and official Fibonacci coprimality—remain sealed, byte-reproducible, independently reimported, identity-stable, and empty-footprint. The first exact-target driver build stopped before executable creation at four Clippy naming diagnostics and three Rust borrow conflicts; it read zero streams and submitted zero theorems. V2 now freezes only those source-level corrections with the mathematical route and authority unchanged.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. All four exact supports remain sealed, reproducible, identity-stable, and empty-footprint. V2 removed all seven original compiler diagnostics, but its one build stopped before executable creation because `run` is 103 lines against Clippy's 100-line threshold. Cumulatively both builds read zero streams and submitted zero theorems. V3 authorizes only a scoped `too_many_lines` allowance with the proof body and authority unchanged.
 
-**Next:** implement the V2 source-level corrections, require one Clippy-clean build, then run the exact `Nat.gcd_fib_add_self` driver exactly twice with no retries. Retain zero target credit unless both complete outputs agree and the target footprint is empty.
+**Next:** add only the V3 scoped line-count allowance, require one Clippy-clean build, then run the exact `Nat.gcd_fib_add_self` driver exactly twice with no retries. Retain zero target credit unless both complete outputs agree and the target footprint is empty.
 
 <!-- plan-section: landed-changes -->
 
@@ -180,3 +180,5 @@
 | 2026-08-21 | (pending) | Exact Fibonacci GCD-shift construction freezes induction, clean commutativity, mutual divisibility, and two zero-retry submissions before code |
 | 2026-08-21 | (pending) | First exact-target source build stops before execution at bounded naming and borrow diagnostics with zero stream reads or submissions |
 | 2026-08-21 | (pending) | V2 freezes only compiler-level corrections while preserving the exact proof route and zero-retry trusted-gate budget |
+| 2026-08-21 | (pending) | V2 clears all original diagnostics but stops before execution at one 103-line Clippy threshold with zero stream reads |
+| 2026-08-21 | (pending) | V3 freezes exactly one scoped line-count allowance with the proof body and target authority unchanged |
