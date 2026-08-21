@@ -374,7 +374,7 @@ Ordered by *measured* cost, not by how large the hole feels.
 
 | # | Gap | Evidence | Nature |
 |---|---|---|---|
-| 1 | **Linear arithmetic depth** — LRA 58.9%, IDL 54.8%, RDL 67.7%, UFLIA 52.2% | §2 | The largest aggregate deficit, and four divisions share one cause worth diagnosing before building |
+| 1 | **Linear arithmetic depth** — LRA 58.9%, IDL 54.8%, RDL 67.7%, UFLIA 52.2% | §2; **diagnosed 2026-08-21**: [linear-arithmetic-deficit-diagnosis](../research/05-algorithms/linear-arithmetic-deficit-diagnosis-2026-08-21.md) | The largest aggregate deficit. The "one shared cause" clause is **refuted**: the 278 misses split into **three** causes — `dl-online` search timeout (QF_IDL + QF_RDL, the one genuinely shared pair), the LRA route's 1,024-atom refusal plus its slow CDCL(T) (QF_LRA + QF_RDL's tail), and the lazy UF/arith CEGAR (QF_UFLIA, 82/82) — plus 26 QF_UFLIA files lost at the **parser** to `Int` literals beyond `i128`. Highest-leverage fix named and A/B-measured: minimise wide LIA theory cores instead of declining at 5% budget use — **+17 QF_UFLIA files, 0 regressions, 0 disagreements**. The obvious fix (drop the LRA atom cap's terminality) was built and **refuted**: 0 new decides, 54 of 71 turn into memory aborts |
 | 2 | **Re-measure, then gate the measurement** | §2.1, §8 | 15 days dark on the headline; cheap, and everything else is priced off it |
 | 3 | **Consumer interface** — single-query CLI, inert `set-option`, no-op `get-*` | §6.3 | Nothing here is research; it is the difference between a library and a solver a stranger can run |
 | 4 | **QF_NIA at 38.2%** | §2 | The genuine multi-year catch-up; still correctly last among decision work |

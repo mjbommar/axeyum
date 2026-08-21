@@ -1,0 +1,401 @@
+file	verdict	ms	detail
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/17512_5c1021b0faa6b6e1791b_20_QF_UFLIA.smt2	error: parse error: unsupported: integer literal `115792089237316195423570985008687907853269984665640564039457584007913129639936` exceeds the modeled `Int` range	116	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/25959_5dee2e2f6ef44465a2bea4b085818948_66_QF_UFLIA.smt2	error: parse error: unsupported: integer literal `340282366920938463463374607431768211455` exceeds the modeled `Int` range	120	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/25959_5dee2e2f6ef44465a2bea4b085818948_69_QF_UFLIA.smt2	error: parse error: unsupported: integer literal `115792089237316195423570985008687907853269984665640564039457584007913129639935` exceeds the modeled `Int` range	119	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/3106_1c933134166dbad31f79_41_QF_UFLIA.smt2	error: parse error: unsupported: integer literal `1461501637330902918203684832716283019655932542975` exceeds the modeled `Int` range	119	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/11775_ad46e5b8db4748c51973_42_QF_UFLIA.smt2	error: parse error: unsupported: integer literal `115792089237316195423570985008687907853269984665640564039457584007913129639935` exceeds the modeled `Int` range	129	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/39657_1c7158801cd59dc13f05_46_QF_UFLIA.smt2	error: parse error: unsupported: integer literal `115792089237316195423570985008687907853269984665640564039457584007913129639936` exceeds the modeled `Int` range	113	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/38347_092cc73601c78e45f4f9_56_QF_UFLIA.smt2	error: parse error: unsupported: integer literal `115792089237316195423570985008687907853269984665640564039457584007913129639936` exceeds the modeled `Int` range	126	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/41958_32933c5a1384696720a2_61_QF_UFLIA.smt2	error: parse error: unsupported: integer literal `115792089237316195423570985008687907853269984665640564039457584007913129639936` exceeds the modeled `Int` range	116	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/41958_45c688a4814eb926c254_59_QF_UFLIA.smt2	error: parse error: unsupported: integer literal `115792089237316195423570985008687907853269984665640564039457584007913129639936` exceeds the modeled `Int` range	120	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/38347_525a1ca0331f2bcbf520_54_QF_UFLIA.smt2	error: parse error: unsupported: integer literal `115792089237316195423570985008687907853269984665640564039457584007913129639936` exceeds the modeled `Int` range	219	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/44289_e5a2e5c780236919ee6a_18_QF_UFLIA.smt2	error: parse error: unsupported: integer literal `48119142951092613731468242753959111846395615040638799039548226541748339343360` exceeds the modeled `Int` range	122	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/44788_1965f0d6d94d5d8054ba_36_QF_UFLIA.smt2	error: parse error: unsupported: integer literal `115792089237316195423570985008687907853269984665640564039457584007913129639936` exceeds the modeled `Int` range	114	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/52759_bec3a2272267494faeecb6bfaf253e3b_10_QF_UFLIA.smt2	error: parse error: unsupported: integer literal `1461501637330902918203684832716283019655932542976` exceeds the modeled `Int` range	219	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/63058_aa742630eef64f949de269382c1f9035_25_UFLIA.smt2	error: parse error: unsupported: integer literal `115792089237316195423570985008687907853269984665640564039457584007913129639936` exceeds the modeled `Int` range	118	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/65782_cd31513fdcd15701933b_7_QF_UFLIA.smt2	error: parse error: unsupported: integer literal `115792089237316195423570985008687907853269984665640564039457584007913129639936` exceeds the modeled `Int` range	112	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/63058_64ab9a7ef7b6c3492507_22_QF_UFLIA.smt2	error: parse error: unsupported: integer literal `115792089237316195423570985008687907853269984665640564039457584007913129639936` exceeds the modeled `Int` range	220	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/72771_f9d228efc97cf1458e38_64_QF_UFLIA.smt2	error: parse error: unsupported: integer literal `115792089237316195423570985008687907853269984665640564039457584007913129639936` exceeds the modeled `Int` range	123	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/83314_a702bf8b823398c9e37a_2_UFLIA.smt2	error: parse error: unsupported: integer literal `115792089237316195423570985008687907853269984665640564039457584007913129639936` exceeds the modeled `Int` range	128	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/44289_4066055e0f64d96da11a_15_QF_UFLIA.smt2	error: parse error: unsupported: integer literal `16156842317565293874272834530371880720966471053262404558597773956279093428224` exceeds the modeled `Int` range	516	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/3106_1c933134166dbad31f79_38_QF_UFLIA.smt2	error: parse error: unsupported: integer literal `97199519776808029778168953285215024309695167179541945341261303444449322336256` exceeds the modeled `Int` range	822	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/940_590f27b1c3c800d3243e_30_QF_UFLIA.smt2	error: parse error: unsupported: integer literal `115792089237316195423570985008687907853269984665640564039457584007913129639936` exceeds the modeled `Int` range	124	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/940_590f27b1c3c800d3243e_33_QF_UFLIA.smt2	error: parse error: unsupported: integer literal `89953063794570797914675343120038501642627609741519254829220540789936042803200` exceeds the modeled `Int` range	121	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/66603_accdadf23a1cf70ae043_73_QF_UFLIA.smt2	error: parse error: unsupported: integer literal `64481368622683354557555711714629296119639875834729404553039716062438103187456` exceeds the modeled `Int` range	420	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/93493_1fdb6cc8eb9c4363b5838af9eb8c7f1f_53_QF_UFLIA.smt2	error: parse error: unsupported: integer literal `115792089237316195423570985008687907853269984665640564039457584007913129639936` exceeds the modeled `Int` range	220	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/TwoSquares/smtlib.602046.smt2	unsat	118	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/TwoSquares/smtlib.606691.smt2	unsat	123	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/TwoSquares/smtlib.621344.smt2	sat	119	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/TwoSquares/smtlib.666105.smt2	unsat	120	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/TwoSquares/smtlib.675482.smt2	unsat	119	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/TwoSquares/smtlib.769286.smt2	unsat	124	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/TwoSquares/smtlib.686091.smt2	unsat	134	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/93493_5990a6bf5f2740164f77_50_QF_UFLIA.smt2	error: parse error: unsupported: integer literal `115792089237316195423570985008687907853269984665640564039457584007913129639936` exceeds the modeled `Int` range	934	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/66603_accdadf23a1cf70ae043_76_QF_UFLIA.smt2	error: parse error: unsupported: integer literal `4238056678808933066457772256406219440718756300954938350892797929791311314944` exceeds the modeled `Int` range	1923	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/hard/hard4.smt2	unsat	3034	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/hard/hard7.smt2	unsat	17940	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/hard/hard12.smt2	unknown kind=Timeout	24347	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/hard/hard15.smt2	unknown kind=Timeout	24355	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/hard/hard18.smt2	unknown kind=Timeout	24358	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/medium/medium10.smt2	unknown kind=Timeout	24354	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_03_05.smt2	sat	925	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/medium/medium13.smt2	unknown kind=Timeout	24362	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_03_08.smt2	sat	1338	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_03_11.smt2	sat	3534	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_03_14.smt2	sat	10750	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_03_17.smt2	sat	10433	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/medium/medium16.smt2	unknown kind=Timeout	24349	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_04_05.smt2	sat	2235	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/medium/medium6.smt2	unknown kind=Timeout	24363	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/medium/medium19.smt2	unknown kind=Timeout	24464	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/medium/medium9.smt2	unknown kind=Timeout	24366	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_04_08.smt2	sat	15043	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_03_20.smt2	unknown kind=Timeout	24369	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_04_11.smt2	unknown kind=Timeout	24363	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_04_14.smt2	unknown kind=Timeout	24354	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_04_17.smt2	unknown kind=Timeout	24400	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_04_20.smt2	unknown kind=Timeout	24363	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_05_05.smt2	unknown kind=Timeout	24343	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_05_08.smt2	unknown kind=Timeout	24350	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_05_11.smt2	unknown kind=Timeout	24352	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_05_14.smt2	unknown kind=Timeout	24358	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_05_17.smt2	unknown kind=Timeout	24338	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_05_20.smt2	unknown kind=Timeout	24361	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_06_20.smt2	unknown kind=ResourceLimit	110	lazy function-consistency CEGAR inconclusive (applications=126, function_groups=20, potential_pairs=343, solve_rounds=1, elapsed_ms=12, sat_candidates=0, first_candidate_ms=none, last_candidate_ms=non
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_06_05.smt2	unknown kind=Timeout	24347	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_06_08.smt2	unknown kind=Timeout	24341	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_06_11.smt2	unknown kind=Timeout	24361	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_06_14.smt2	unknown kind=Timeout	24334	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_06_17.smt2	unknown kind=Timeout	24354	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_07_17.smt2	unknown kind=ResourceLimit	110	lazy function-consistency CEGAR inconclusive (applications=125, function_groups=17, potential_pairs=406, solve_rounds=1, elapsed_ms=14, sat_candidates=0, first_candidate_ms=none, last_candidate_ms=non
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_07_20.smt2	unknown kind=ResourceLimit	110	lazy function-consistency CEGAR inconclusive (applications=146, function_groups=20, potential_pairs=469, solve_rounds=1, elapsed_ms=16, sat_candidates=0, first_candidate_ms=none, last_candidate_ms=non
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_07_05.smt2	unknown kind=Timeout	24358	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_08_11.smt2	unknown kind=ResourceLimit	111	lazy function-consistency CEGAR inconclusive (applications=94, function_groups=11, potential_pairs=363, solve_rounds=1, elapsed_ms=14, sat_candidates=0, first_candidate_ms=none, last_candidate_ms=none
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_08_14.smt2	unknown kind=ResourceLimit	111	lazy function-consistency CEGAR inconclusive (applications=118, function_groups=14, potential_pairs=447, solve_rounds=1, elapsed_ms=16, sat_candidates=0, first_candidate_ms=none, last_candidate_ms=non
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_08_17.smt2	unknown kind=ResourceLimit	110	lazy function-consistency CEGAR inconclusive (applications=142, function_groups=17, potential_pairs=531, solve_rounds=1, elapsed_ms=17, sat_candidates=0, first_candidate_ms=none, last_candidate_ms=non
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_08_20.smt2	unknown kind=ResourceLimit	110	lazy function-consistency CEGAR inconclusive (applications=166, function_groups=20, potential_pairs=615, solve_rounds=1, elapsed_ms=21, sat_candidates=0, first_candidate_ms=none, last_candidate_ms=non
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_07_08.smt2	unknown kind=Timeout	24346	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_07_11.smt2	unknown kind=Timeout	24353	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_09_11.smt2	unknown kind=ResourceLimit	219	lazy function-consistency CEGAR inconclusive (applications=105, function_groups=11, potential_pairs=457, solve_rounds=1, elapsed_ms=20, sat_candidates=0, first_candidate_ms=none, last_candidate_ms=non
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_09_14.smt2	unknown kind=ResourceLimit	111	lazy function-consistency CEGAR inconclusive (applications=132, function_groups=14, potential_pairs=565, solve_rounds=1, elapsed_ms=18, sat_candidates=0, first_candidate_ms=none, last_candidate_ms=non
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_09_17.smt2	unknown kind=ResourceLimit	210	lazy function-consistency CEGAR inconclusive (applications=159, function_groups=17, potential_pairs=673, solve_rounds=1, elapsed_ms=31, sat_candidates=0, first_candidate_ms=none, last_candidate_ms=non
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_09_20.smt2	unknown kind=ResourceLimit	313	lazy function-consistency CEGAR inconclusive (applications=186, function_groups=20, potential_pairs=781, solve_rounds=1, elapsed_ms=69, sat_candidates=0, first_candidate_ms=none, last_candidate_ms=non
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_07_14.smt2	unknown kind=Timeout	24367	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_10_08.smt2	unknown kind=ResourceLimit	219	lazy function-consistency CEGAR inconclusive (applications=86, function_groups=8, potential_pairs=427, solve_rounds=1, elapsed_ms=37, sat_candidates=0, first_candidate_ms=none, last_candidate_ms=none,
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_10_11.smt2	unknown kind=ResourceLimit	111	lazy function-consistency CEGAR inconclusive (applications=116, function_groups=11, potential_pairs=562, solve_rounds=1, elapsed_ms=19, sat_candidates=0, first_candidate_ms=none, last_candidate_ms=non
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_10_14.smt2	unknown kind=ResourceLimit	212	lazy function-consistency CEGAR inconclusive (applications=146, function_groups=14, potential_pairs=697, solve_rounds=1, elapsed_ms=27, sat_candidates=0, first_candidate_ms=none, last_candidate_ms=non
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_10_17.smt2	unknown kind=ResourceLimit	212	lazy function-consistency CEGAR inconclusive (applications=176, function_groups=17, potential_pairs=832, solve_rounds=1, elapsed_ms=31, sat_candidates=0, first_candidate_ms=none, last_candidate_ms=non
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_10_20.smt2	unknown kind=ResourceLimit	212	lazy function-consistency CEGAR inconclusive (applications=206, function_groups=20, potential_pairs=967, solve_rounds=1, elapsed_ms=37, sat_candidates=0, first_candidate_ms=none, last_candidate_ms=non
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_uns_03_05.smt2	unsat	212	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_uns_03_08.smt2	unsat	715	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_uns_03_11.smt2	unsat	1628	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_08_08.smt2	unknown kind=Timeout	24331	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_08_05.smt2	unknown kind=Timeout	24355	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_09_05.smt2	unknown kind=Timeout	24361	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_uns_03_14.smt2	unsat	2113	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_uns_04_05.smt2	unsat	1010	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_uns_03_17.smt2	unsat	4815	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_uns_04_08.smt2	unsat	6122	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_uns_03_20.smt2	unsat	7737	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_09_08.smt2	unknown kind=Timeout	24393	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_10_05.smt2	unknown kind=Timeout	24367	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_uns_04_20.smt2	unsat	9861	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_uns_04_17.smt2	unsat	11049	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_uns_05_05.smt2	unsat	12187	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_uns_04_11.smt2	unknown kind=Timeout	24353	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_uns_04_14.smt2	unknown kind=Timeout	24364	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-05-08-4-2-5-4.smt2	unsat	214	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-05-12-1-4-2-1.smt2	unsat	237	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-05-16-1-5-4-3.smt2	unsat	213	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-05-19-1-4-2-1.smt2	unsat	218	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-06-07-4-5-4-2.smt2	sat	617	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-06-10-1-4-2-5.smt2	unsat	110	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-06-14-3-1-5-2.smt2	unsat	112	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-06-18-1-2-1-5.smt2	unsat	114	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-07-05-5-2-3-5.smt2	unsat	112	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-07-09-3-4-4-3.smt2	unsat	113	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-07-13-5-3-2-1.smt2	unsat	230	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-07-16-2-4-3-5.smt2	unsat	880	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-07-20-2-5-1-4.smt2	unsat	1214	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-08-07-3-2-3-1.smt2	sat	716	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-08-11-4-3-2-2.smt2	sat	1213	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-08-15-4-2-1-4.smt2	unsat	1511	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-08-19-2-2-3-1.smt2	unsat	1512	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_uns_05_08.smt2	unknown kind=Timeout	24364	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-09-06-1-5-3-2.smt2	sat	1210	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-09-10-5-1-5-2.smt2	sat	1212	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_uns_05_11.smt2	unknown kind=Timeout	24349	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_uns_05_14.smt2	unknown kind=Timeout	24353	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-09-13-2-3-1-3.smt2	unsat	2812	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-10-05-5-2-1-5.smt2	sat	1417	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-09-17-2-1-4-1.smt2	unsat	2715	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-10-08-2-2-4-5.smt2	sat	1312	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-11-07-3-4-2-3.smt2	sat	1113	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-10-12-4-1-1-4.smt2	sat	1813	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_uns_05_17.smt2	unknown kind=Timeout	24345	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-10-16-3-5-2-4.smt2	sat	2416	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-10-19-3-4-2-4.smt2	unsat	3418	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-12-05-3-3-5-4.smt2	sat	1613	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-11-10-2-5-3-2.smt2	sat	2916	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-12-11-1-4-4-3.smt2	sat	615	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-11-14-5-3-1-2.smt2	sat	3217	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-12-15-3-2-1-5.smt2	sat	812	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-13-06-1-1-2-4.smt2	sat	1013	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-12-08-5-2-5-3.smt2	sat	2418	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-13-12-5-3-4-4.smt2	sat	714	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-13-16-3-1-4-1.smt2	sat	814	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_uns_05_20.smt2	unknown kind=Timeout	24386	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-13-09-3-2-3-2.smt2	sat	1814	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-14-07-1-4-1-3.smt2	sat	712	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-14-10-3-4-2-2.smt2	sat	2322	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-14-13-4-2-1-3.smt2	sat	2217	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-11-18-3-3-4-1.smt2	unsat	7231	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-15-11-5-2-2-2.smt2	sat	1412	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-12-19-1-4-1-2.smt2	sat	6319	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-13-20-2-2-4-4.smt2	sat	4528	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-15-08-4-5-4-1.smt2	sat	2718	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-15-05-2-1-2-3.smt2	sat	2818	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-16-06-4-1-3-5.smt2	sat	2014	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-14-17-5-4-3-1.smt2	sat	6225	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-16-12-2-5-3-4.smt2	sat	1814	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-15-14-5-5-5-1.smt2	sat	3618	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-17-09-4-3-5-5.smt2	sat	1717	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-15-18-4-1-3-5.smt2	sat	5419	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-17-12-3-4-4-1.smt2	sat	1013	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-17-06-5-5-4-1.smt2	sat	3318	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-17-15-2-2-2-4.smt2	sat	2710	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-16-09-4-2-1-5.smt2	sat	7336	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-18-06-4-2-1-1.smt2	sat	3115	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-18-12-3-4-4-3.smt2	sat	1716	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-17-19-3-3-3-4.smt2	sat	4219	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-16-19-3-4-4-1.smt2	sat	8324	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-16-15-2-3-4-4.smt2	sat	9028	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-19-06-4-3-2-1.smt2	sat	1211	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-18-09-1-5-4-4.smt2	sat	3616	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-19-12-4-2-4-5.smt2	sat	1222	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-19-18-2-2-2-5.smt2	sat	3443	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-19-15-3-1-3-4.smt2	sat	3881	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-19-09-4-2-3-5.smt2	sat	6600	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-20-12-3-1-5-2.smt2	sat	2258	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-20-09-1-5-4-2.smt2	sat	2544	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-18-15-4-1-3-1.smt2	sat	9888	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/wisas/xs_10_15.smt2	sat	2843	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-20-15-2-2-4-2.smt2	sat	4594	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/wisas/xs_11_16.smt2	sat	4076	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-20-06-2-3-1-3.smt2	sat	11241	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-20-18-3-4-5-4.smt2	sat	6865	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Wisa/xs-18-19-4-1-1-5.smt2	sat	18868	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/wisas/xs_15_20.smt2	sat	5957	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/wisas/xs_12_17.smt2	sat	9948	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/wisas/xs_13_18.smt2	sat	12590	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/wisas/xs_14_19.smt2	sat	16489	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/wisas/xs_16_26.smt2	unknown kind=Timeout	24401	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/wisas/xs_17_27.smt2	unknown kind=Timeout	24340	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/wisas/xs_18_28.smt2	unknown kind=Timeout	24326	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/wisas/xs_19_29.smt2	unknown kind=Timeout	24341	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/wisas/xs_20_30.smt2	unknown kind=Timeout	24301	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/wisas/xs_25_35.smt2	sat	7751	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/wisas/xs_21_31.smt2	unknown kind=Timeout	24373	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/wisas/xs_22_32.smt2	sat	16963	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/wisas/xs_23_33.smt2	unknown kind=Timeout	24376	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/wisas/xs_24_34.smt2	unknown kind=Timeout	24427	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20210312-Bouvier/vlsat3_c00.smt2	unknown kind=Timeout	29166	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20210312-Bouvier/vlsat3_c12.smt2	unknown kind=Timeout	29244	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20210312-Bouvier/vlsat3_c24.smt2	unknown kind=Timeout	29199	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20210312-Bouvier/vlsat3_c36.smt2	unknown kind=Timeout	29515	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20210312-Bouvier/vlsat3_c48.smt2	unknown kind=Timeout	29315	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20210312-Bouvier/vlsat3_c60.smt2	unknown kind=Timeout	29145	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20210312-Bouvier/vlsat3_c72.smt2	unknown kind=Timeout	30434	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20210312-Bouvier/vlsat3_c84.smt2	unknown kind=Timeout	30345	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20210312-Bouvier/vlsat3_c96.smt2	unknown kind=Timeout	29180	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20210312-Bouvier/vlsat3_i08.smt2	unknown kind=Timeout	30931	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20210312-Bouvier/vlsat3_i20.smt2	HARDKILL	32272	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20210312-Bouvier/vlsat3_i32.smt2	HARDKILL	32299	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20210312-Bouvier/vlsat3_i44.smt2	HARDKILL	32269	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20220214-jobshop-BohanLi/jobshop10-2-5-5-4-4-16.smt2	sat	3431	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20210312-Bouvier/vlsat3_i56.smt2	HARDKILL	32321	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20210312-Bouvier/vlsat3_i68.smt2	HARDKILL	32310	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20210312-Bouvier/vlsat3_i80.smt2	HARDKILL	32282	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20220214-RVpredict-BohanLi/RVpredict_13.smt2	unknown kind=Timeout	26341	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20210312-Bouvier/vlsat3_i92.smt2	HARDKILL	32225	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20220214-jobshop-BohanLi/jobshop20-2-10-10-4-4-16.smt2	unknown kind=Timeout	29150	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20220214-jobshop-BohanLi/jobshop26-2-13-13-4-4-16.smt2	unknown kind=Timeout	29239	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20220214-jobshop-BohanLi/jobshop16-2-8-8-4-4-16.smt2	HARDKILL	32160	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20220214-jobshop-BohanLi/jobshop6-2-3-3-4-4-16.smt2	sat	215	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/Averest/binary_search/BinarySearch_live_bgmc002.smt2	sat	116	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/Averest/buble_sort/BubbleSort_live_bgmc002.smt2	sat	216	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20220214-jobshop-BohanLi/jobshop32-2-16-16-4-4-16.smt2	unknown kind=Timeout	29409	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/Averest/buble_sort/BubbleSort_live_blmc003.smt2	sat	1017	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/Averest/buble_sort/BubbleSort_safe_bgmc004.smt2	unsat	221	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/Averest/buble_sort/BubbleSort_safe_blmc004.smt2	unsat	1220	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/Averest/insertion_sort/InsertionSort_live_bgmc003.smt2	sat	332	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/Averest/insertion_sort/InsertionSort_live_blmc004.smt2	sat	3121	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/Averest/insertion_sort/InsertionSort_safe_bgmc005.smt2	sat	519	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/Averest/linear_search/LinearSearch_live_bgmc005.smt2	unsat	117	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/Averest/min_max/MinMax_safe_bgmc000.smt2	unsat	117	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/Averest/parallel_search/ParallelSearch_safe_bgmc000.smt2	unsat	115	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/Averest/partition/Partition_live_blmc004.smt2	unsat	519	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/Averest/selection_sort/SelectionSort_live_bgmc002.smt2	sat	219	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20220214-jobshop-BohanLi/jobshop38-2-19-19-4-4-16.smt2	unknown kind=Timeout	29379	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/Averest/selection_sort/SelectionSort_safe_bgmc006.smt2	unsat	316	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/Averest/selection_sort/SelectionSort_live_blmc004.smt2	sat	2130	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/Averest/sorting_network/SortingNetwork4_live_bgmc003.smt2	sat	114	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/Averest/sorting_network/SortingNetwork4_safe_blmc002.smt2	unsat	117	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/Averest/sorting_network/SortingNetwork8_live_blmc003.smt2	sat	2520	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/Averest/sorting_network/SortingNetwork8_safe_blmc000.smt2	unsat	115	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/DTP/DTP_k2_n35_c175_s10.smt2	sat	421	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20220214-jobshop-BohanLi/jobshop42-2-21-21-4-4-16.smt2	unknown kind=Timeout	29405	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/DTP/DTP_k2_n35_c175_s3.smt2	sat	2824	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/Averest/selection_sort/SelectionSort_safe_blmc007.smt2	sat	7739	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/DTP/DTP_k2_n35_c210_s14.smt2	unsat	6333	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/RTCL/b01_tf_20/ckt_PROP0_tf_20.smt2	unsat	124	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/RTCL/b13_tf_15/ckt_PROP3_tf_15.smt2	unsat	116	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/RTCL/b13_tf_25/ckt_PROP8_tf_25.smt2	unsat	215	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20220214-jobshop-BohanLi/jobshop48-2-24-24-4-4-16.smt2	unknown kind=Timeout	30002	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/DTP/DTP_k2_n35_c210_s7.smt2	sat	11509	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20220214-jobshop-BohanLi/jobshop54-2-27-27-4-4-16.smt2	unknown kind=Timeout	30906	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/Averest/buble_sort/BubbleSort_safe_blmc016.smt2	HARDKILL	32184	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/15Puzzle/15-puzzle.init14.smt2	unknown kind=ResourceLimit	24355	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=6517, cnf_vars=137087, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/BlockedNQueens/156.48.1960.36.1721259656.dat.smt2	unknown kind=ResourceLimit	21740	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=8413, cnf_vars=37522, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=0)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/DTP/DTP_k2_n35_c245_s18.smt2	HARDKILL	32172	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/BlockedNQueens/156.48.1960.36.1721347806.dat.smt2	unknown kind=ResourceLimit	21641	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=8448, cnf_vars=37627, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=0)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/BlockedNQueens/156.48.1960.36.1721325133.dat.smt2	unknown kind=ResourceLimit	21871	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=7477, cnf_vars=34942, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=0)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/ChannelRouting/channelRoute.in9.smt2	unknown kind=ResourceLimit	25764	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=11664, cnf_vars=242902, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/Fastfood/a7.3.0.tweaked.3.asp.smt2	unknown kind=ResourceLimit	24940	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=6511, cnf_vars=330420, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/EdgeMatching/edge-matching-width=7-height=7-colours=11.smt2	unknown kind=Timeout	26150	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/ConnectedDominatingSet/rand_55_250_1235855873_0_k=8_sat.gph.smt2	HARDKILL	32166	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/DisjunctiveScheduling/disjunctiveScheduling.in7.smt2	HARDKILL	32397	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/EdgeMatching/edge-matching-width=9-height=9-colours=12.smt2	HARDKILL	32256	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/Fastfood/a9.8.11.asp.smt2	HARDKILL	32178	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/GeneralizedSlitherlink/penrose.34.asp.smt2	unknown kind=ResourceLimit	21545	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=7751, cnf_vars=44355, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=0)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/GeneralizedSlitherlink/trisquares.41.asp.smt2	unknown kind=ResourceLimit	21746	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=11859, cnf_vars=69133, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/GraphColouring/graph-colouring-nodes=130-density=0.1-instance=10.smt2	unknown kind=ResourceLimit	21350	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=5460, cnf_vars=42078, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=0)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/GraphColouring/graph-colouring-nodes=140-density=0.1-instance=9.smt2	unknown kind=ResourceLimit	21542	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=5880, cnf_vars=49936, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=0)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/GraphPartitioning/rand_15_75_1235849326_0_k=3_v=7_e=30_sat.gph.smt2	unknown kind=ResourceLimit	21149	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=2199, cnf_vars=14670, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=0)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/HamiltonianPath/gryzzles.12.lp.smt2	unknown kind=ResourceLimit	21449	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=5359, cnf_vars=21540, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=0)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/HamiltonianPath/gryzzles.31.lp.smt2	unknown kind=ResourceLimit	21348	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=7663, cnf_vars=29312, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=0)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/HamiltonianPath/gryzzles.7.lp.smt2	unknown kind=ResourceLimit	21346	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=7053, cnf_vars=26910, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=0)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/MazeGeneration/maze-generation-width=10-height=10-density=0.01-run=2.smt2	unsat	1319	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/Hanoi/mgs_towers-hanoi.73_7.smt2	unknown kind=ResourceLimit	23045	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=24896, cnf_vars=252085, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/HierarchicalClustering/xy.12.x.12.r.3.274440616.806497.data_k=3_l=4_sat.gph.smt2	unknown kind=ResourceLimit	21640	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=17416, cnf_vars=87748, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/KnightTour/knightTour.in05.smt2	unknown kind=ResourceLimit	22646	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=29136, cnf_vars=122353, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/MazeGeneration/maze-generation-width=19-height=19-density=0.01-run=5.smt2	unknown kind=ResourceLimit	18338	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=1084, cnf_vars=31944, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=0)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/MazeGeneration/maze-generation-width=16-height=16-density=0.01-run=1.smt2	unsat	22244	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/Labyrinth/laby_18_18_14.lp.smt2	HARDKILL	32258	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/SchurNumbers/15.3.schur.lp.smt2	unknown kind=ResourceLimit	21644	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=4710, cnf_vars=89059, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=0)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/SchurNumbers/20.18.schur.lp.smt2	unknown kind=ResourceLimit	21442	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=4412, cnf_vars=72055, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=0)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/Labyrinth/laby_21_21_12.lp.smt2	HARDKILL	32355	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/Sokoban/dimitri_yorick.59.steps.8.asp.smt2	unknown kind=ResourceLimit	21233	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=2112, cnf_vars=23422, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=0)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/Sokoban/duthen-990602.51.steps.12.asp.smt2	unknown kind=ResourceLimit	21340	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=2648, cnf_vars=29422, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=0)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/Sokoban/duthen-990602.77.steps.9.asp.smt2	unknown kind=ResourceLimit	21339	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=2930, cnf_vars=32425, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=0)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/Solitaire/solitaire-center-time=26.smt2	unknown kind=ResourceLimit	21937	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=14740, cnf_vars=106276, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/Solitaire/solitaire-edge-time=29.smt2	unknown kind=ResourceLimit	21935	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=15956, cnf_vars=115094, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/Sudoku/sudoku.in8.smt2	unknown kind=ResourceLimit	23438	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=55379, cnf_vars=160320, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/TravellingSalesperson/rand_80_340_1159656267_0.lp.smt2	unknown kind=ResourceLimit	21937	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=14601, cnf_vars=58484, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/TravellingSalesperson/tsp_rand_70_300_1155482584_12.lp.smt2	unknown kind=ResourceLimit	21737	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=12881, cnf_vars=51563, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/cellar/CELAR6_SUB0.smt2	unsat	837	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/WeightBoundedDominatingSet/rand_100_400_1159666138_5.lp.smt2	unknown kind=ResourceLimit	21150	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=3508, cnf_vars=13470, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=0)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/WeightBoundedDominatingSet/rand_150_600_1159731678_6.lp.smt2	unknown kind=ResourceLimit	21239	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=5381, cnf_vars=20559, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=0)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/WireRouting/wire.10.x.10.b.5.a.20_unsat.data.smt2	unknown kind=ResourceLimit	22061	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=15176, cnf_vars=116777, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/WireRouting/wire.14.x.14.b.8.a.40_unsat.data.smt2	unknown kind=ResourceLimit	25160	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=44535, cnf_vars=354972, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/bcnscheduling/bcnscheduling105.smt2	unknown kind=Timeout	26180	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/job_shop/jobshop12-2-6-6-4-4-11.smt2	unsat	1714	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/cellar/scen09.smt2	HARDKILL	32170	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/diamonds/diamonds.12.2.i.a.u.smt2	HARDKILL	32190	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/diamonds/diamonds.15.2.i.a.u.smt2	HARDKILL	32168	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/diamonds/diamonds.18.2.i.a.u.smt2	HARDKILL	32165	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/job_shop/jobshop4-2-2-2-4-4-11.smt2	unsat	112	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/fuzzy-matrix/Zantema_z053.srs_slice-8_constraint-227740.smt2	unknown kind=Timeout	29159	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/job_shop/jobshop18-2-9-9-4-4-11.smt2	HARDKILL	32149	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/job_shop/jobshop28-2-14-14-4-4-11.smt2	unknown kind=Timeout	29146	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/job_shop/jobshop22-2-11-11-4-4-11.smt2	HARDKILL	32139	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/job_shop/jobshop34-2-17-17-4-4-11.smt2	unknown kind=Timeout	29140	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/mathsat/fischer/FISCHER10-3-ninc.smt2	unsat	514	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/mathsat/fischer/FISCHER12-2-ninc.smt2	unsat	312	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/mathsat/fischer/FISCHER11-3-ninc.smt2	unsat	612	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/job_shop/jobshop44-2-22-22-4-4-11.smt2	unknown kind=Timeout	29259	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/job_shop/jobshop50-2-25-25-4-4-11.smt2	unknown kind=Timeout	29259	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/mathsat/fischer/FISCHER4-5-ninc.smt2	sat	417	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/mathsat/fischer/FISCHER6-6-ninc.smt2	unsat	4621	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/mathsat/fischer/FISCHER8-3-ninc.smt2	unsat	314	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/mathsat/fischer/FISCHER9-5-ninc.smt2	unsat	1718	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/mathsat/post_office/PO3-10-PO3.smt2	sat	4819	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/mathsat/post_office/PO4-3-PO4.smt2	unsat	3218	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/job_shop/jobshop56-2-28-28-4-4-11.smt2	unknown kind=Timeout	29449	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/03.100.graph.smt2	unsat	419	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/job_shop/jobshop60-2-30-30-4-4-11.smt2	unknown kind=Timeout	29746	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/06.100.graph.smt2	sat	916	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/mathsat/fischer/FISCHER13-13-ninc.smt2	HARDKILL	32148	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/mathsat/fischer/FISCHER14-11-ninc.smt2	HARDKILL	32147	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/09.100.graph.smt2	sat	915	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/mathsat/fischer/FISCHER14-9-ninc.smt2	HARDKILL	32147	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/12.100.graph.smt2	sat	4520	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/15.100.graph.smt2	unsat	1218	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/01.500.graph.smt2	unknown kind=Timeout	28050	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/18.100.graph.smt2	unsat	618	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/04.500.graph.smt2	unknown kind=Timeout	28048	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/21.100.graph.smt2	sat	1618	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/07.500.graph.smt2	unknown kind=Timeout	27547	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/24.100.graph.smt2	unsat	418	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/10.500.graph.smt2	unknown kind=Timeout	27144	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/27.100.graph.smt2	unsat	315	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/13.500.graph.smt2	unknown kind=Timeout	28542	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/30.100.graph.smt2	unsat	217	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/16.500.graph.smt2	unknown kind=Timeout	27550	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/planning/plan-18.cvc.smt2	unsat	3624	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/19.500.graph.smt2	unknown kind=Timeout	28050	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/22.500.graph.smt2	unknown kind=Timeout	27145	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/planning/plan-9.cvc.smt2	unsat	212	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/25.500.graph.smt2	unknown kind=Timeout	27750	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/28.500.graph.smt2	unknown kind=Timeout	27945	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/31.500.graph.smt2	unknown kind=Timeout	27347	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/planning/plan-30.cvc.smt2	unknown kind=ResourceLimit	21238	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=2214, cnf_vars=13864, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=1162, blocking_lemmas
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/planning/plan-42.cvc.smt2	unknown kind=ResourceLimit	21337	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=3126, cnf_vars=19588, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=1642, blocking_lemmas
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/qlock/qlock-4-10-9.induction.cvc.smt2	sat	1014	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/qlock/qlock-4-10-15.induction.cvc.smt2	unknown kind=ResourceLimit	21334	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=4050, cnf_vars=22333, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=3569, blocking_lemmas
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/queens_bench/n_queen/queen20-1.smt2	sat	3317	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/qlock/qlock-4-10-21.induction.cvc.smt2	unknown kind=ResourceLimit	21540	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=5658, cnf_vars=31231, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=4997, blocking_lemmas
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/qlock/qlock-4-10-27.induction.cvc.smt2	unknown kind=ResourceLimit	21731	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=7266, cnf_vars=40129, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=6425, blocking_lemmas
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/qlock/qlock-4-10-33.induction.cvc.smt2	unknown kind=ResourceLimit	21832	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=8874, cnf_vars=49027, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=7853, blocking_lemmas
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/qlock/qlock-4-10-39.induction.cvc.smt2	unknown kind=ResourceLimit	22132	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=10482, cnf_vars=56836, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=8192, blocking_lemma
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/queens_bench/n_queen/queen31-1.smt2	unknown kind=ResourceLimit	21233	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=2852, cnf_vars=6168, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=465, blocking_lemmas=0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/queens_bench/n_queen/queen42-1.smt2	unknown kind=ResourceLimit	21634	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=5250, cnf_vars=11360, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=861, blocking_lemmas=
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/queens_bench/n_queen/queen53-1.smt2	unknown kind=ResourceLimit	21734	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=8374, cnf_vars=18125, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=1378, blocking_lemmas
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/queens_bench/super_queen/super_queen18-1.smt2	sat	6518	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/queens_bench/n_queen/queen64-1.smt2	unknown kind=ResourceLimit	22630	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=12224, cnf_vars=26463, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=2016, blocking_lemma
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/queens_bench/super_queen/super_queen4-1.smt2	unsat	110	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/queens_bench/n_queen/queen75-1.smt2	unknown kind=ResourceLimit	23029	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=16800, cnf_vars=36374, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=2775, blocking_lemma
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/queens_bench/n_queen/queen86-1.smt2	unknown kind=Timeout	28337	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/queens_bench/n_queen/queen97-1.smt2	unknown kind=Timeout	25934	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/queens_bench/super_queen/super_queen29-1.smt2	unknown kind=ResourceLimit	21230	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=2714, cnf_vars=6108, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=681, blocking_lemmas=0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/queens_bench/super_queen/super_queen50-1.smt2	unknown kind=ResourceLimit	21825	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=7838, cnf_vars=17385, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=1710, blocking_lemmas
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/queens_bench/super_queen/super_queen61-1.smt2	unknown kind=ResourceLimit	22027	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=11578, cnf_vars=25580, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=2425, blocking_lemma
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/queens_bench/super_queen/super_queen72-1.smt2	unknown kind=ResourceLimit	22626	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=16044, cnf_vars=35348, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=3261, blocking_lemma
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/queens_bench/super_queen/super_queen83-1.smt2	unknown kind=ResourceLimit	23926	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=21236, cnf_vars=46689, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=4218, blocking_lemma
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/queens_bench/super_queen/super_queen94-1.smt2	unknown kind=Timeout	25730	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/queens_bench/toroidal_bench/toroidal_queen7-1.smt2	sat	108	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/queens_bench/toroidal_bench/toroidal_queen26-1.smt2	unknown kind=ResourceLimit	21127	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=3250, cnf_vars=8384, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=1885, blocking_lemmas=
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/queens_bench/toroidal_bench/toroidal_queen37-1.smt2	unknown kind=ResourceLimit	21827	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=6734, cnf_vars=17463, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=3996, blocking_lemmas
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/sal/bakery/inf-bakery-invalid-3.smt2	sat	111	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/sal/bakery/inf-bakery-mutex-14.smt2	unsat	411	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/sal/bakery/inf-bakery-mutex-7.smt2	unsat	112	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/queens_bench/toroidal_bench/toroidal_queen48-1.smt2	unknown kind=ResourceLimit	23132	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=11280, cnf_vars=29207, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=6648, blocking_lemma
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/queens_bench/toroidal_bench/toroidal_queen15-1.smt2	HARDKILL	32144	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/queens_bench/toroidal_bench/toroidal_queen59-1.smt2	unknown kind=ResourceLimit	22930	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=17228, cnf_vars=42647, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=8192, blocking_lemma
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/queens_bench/toroidal_bench/toroidal_queen80-1.smt2	unknown kind=Timeout	26833	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/sal/lpsat/lpsat-goal-18.smt2	unsat	24831	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/queens_bench/toroidal_bench/toroidal_queen91-1.smt2	unknown kind=Timeout	30733	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/schedulingIDL/gp10_03_mkspan1079.smt2	unknown kind=Timeout	26137	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/schedulingIDL/j6_per0_0_mkspan1057.smt2	HARDKILL	32140	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/schedulingIDL/j7_per0_1_mkspan1055.smt2	HARDKILL	32152	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/schedulingIDL/j7_per10_0_mkspan1013.smt2	HARDKILL	32138	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/schedulingIDL/j7_per10_2_mkspan1013.smt2	HARDKILL	32133	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/schedulingIDL/j8_per0_1_mkspan1053.smt2	HARDKILL	32132	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/schedulingIDL/j8_per0_2_mkspan1054.smt2	HARDKILL	32130	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/schedulingIDL/j8_per10_1_mkspan1036.smt2	HARDKILL	32141	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/schedulingIDL/j8_per20_0_mkspan1008.smt2	HARDKILL	32136	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/schedulingIDL/tai_10x10_1_mkspan639.smt2	unknown kind=Timeout	26132	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/schedulingIDL/tai_10x10_7_mkspan617.smt2	unknown kind=Timeout	26129	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/schedulingIDL/tai_15x15_1_mkspan1140.smt2	unknown kind=Timeout	26130	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/schedulingIDL/tai_15x15_2_mkspan933.smt2	unknown kind=Timeout	26132	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/schedulingIDL/tai_15x15_5_mkspan1174.smt2	unknown kind=Timeout	26235	preprocessed dispatch timeout after reduced solve

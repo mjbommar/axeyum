@@ -1,0 +1,201 @@
+file	declared	bytes	axeyum	unknown_kind	axeyum_ms	z3	z3_ms	detail
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/cooking01.smt2	sat	27720	sat	na	135	sat	125	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/cooking02.smt2	sat	42911	sat	na	225	sat	126	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/cooking03.smt2	sat	58210	sat	na	233	sat	117	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/cooking04.smt2	sat	73408	sat	na	218	sat	122	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/cooking05.smt2	sat	88618	sat	na	320	sat	125	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/cooking06.smt2	sat	103855	sat	na	528	sat	128	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/cooking07.smt2	sat	119092	sat	na	530	sat	118	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/cooking08.smt2	sat	134327	sat	na	528	sat	120	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/cooking09.smt2	sat	149530	sat	na	625	sat	125	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/cooking10.smt2	sat	165189	sat	na	730	sat	123	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/cooking11.smt2	sat	180848	sat	na	633	sat	124	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/cooking12.smt2	sat	196507	sat	na	1427	sat	121	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/cooking13.smt2	sat	212237	sat	na	826	sat	118	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/cooking14.smt2	sat	228120	sat	na	925	sat	179	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/cooking15.smt2	sat	244017	sat	na	1028	sat	234	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/cooking16.smt2	sat	259922	sat	na	1323	sat	224	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/cooking17.smt2	sat	275833	sat	na	1621	sat	229	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/cooking18.smt2	sat	291744	sat	na	1428	sat	224	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-depth-2.smt2	sat	41292	sat	na	325	sat	124	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/cooking20.smt2	sat	323568	sat	na	1529	sat	224	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/cooking21.smt2	sat	339531	sat	na	1928	sat	227	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/cooking19.smt2	sat	307657	sat	na	2927	sat	111	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-depth-3.smt2	sat	147585	sat	na	1427	sat	227	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-matrix1x1.pddl.smt2	sat	7714	sat	na	123	sat	121	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/cooking22.smt2	sat	355518	sat	na	2936	sat	229	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-width-1.smt2	sat	6544	sat	na	125	sat	134	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-width-2.smt2	sat	52848	sat	na	230	sat	129	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-width-3.smt2	sat	236083	sat	na	4953	sat	830	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-depth-4.smt2	sat	380214	sat	na	14384	sat	4047	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-03.smt2	sat	60863	sat	na	330	sat	126	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-04.smt2	sat	65632	sat	na	332	sat	129	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-05.smt2	sat	92594	sat	na	333	sat	129	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-06.smt2	sat	97139	sat	na	631	sat	270	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-07.smt2	sat	123945	sat	na	534	sat	240	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-08.smt2	sat	128566	sat	na	1728	sat	227	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-09.smt2	sat	156177	sat	na	732	sat	230	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-10.smt2	sat	156044	sat	na	1024	sat	235	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-20.smt2	sat	320794	sat	na	3540	sat	429	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-30.smt2	sat	479713	sat	na	6841	sat	525	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-depth-5.smt2	sat	807596	unknown	ResourceLimit	20062	timeout	24078	online CDCL(T) LRA atom cap exceeded (6176 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-depth-6.smt2	sat	1501130	unknown	ResourceLimit	28575	timeout	24078	online CDCL(T) LRA atom cap exceeded (10471 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-width-4.smt2	sat	761726	unknown	ResourceLimit	22492	timeout	24088	online CDCL(T) LRA atom cap exceeded (6213 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-depth-7.smt2	sat	2581273	HARDKILL	na	32166	timeout	24171	killed by external timeout at 32s
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-matrix2x2.pddl.smt2	sat	3928160	HARDKILL	na	32203	timeout	24108	killed by external timeout at 32s
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-40.smt2	sat	647290	unknown	ResourceLimit	18756	sat	935	online CDCL(T) LRA atom cap exceeded (4081 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/check/bignum_rdl1.smt2	sat	602	unknown	ResourceLimit	226	sat	122	lra: Fourier–Motzkin elimination exceeded the wall-clock / size budget
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/check/bignum_rdl2.smt2	unsat	600	unknown	ResourceLimit	236	unsat	123	lra: Fourier–Motzkin elimination exceeded the wall-clock / size budget
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-1.smt2	unsat	5198	unsat	na	131	unsat	151	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-10.smt2	unsat	43958	unsat	na	9971	unsat	236	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-width-5.smt2	sat	1971635	HARDKILL	na	32187	timeout	24134	killed by external timeout at 32s
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-60.smt2	sat	976831	unknown	ResourceLimit	19164	sat	7457	online CDCL(T) LRA atom cap exceeded (6085 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-width-6.smt2	sat	4536824	HARDKILL	na	32196	timeout	24103	killed by external timeout at 32s
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-80.smt2	sat	1297608	unknown	ResourceLimit	20244	sat	7038	online CDCL(T) LRA atom cap exceeded (8053 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-70.smt2	sat	1137323	unknown	ResourceLimit	19981	sat	9753	online CDCL(T) LRA atom cap exceeded (7069 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-11.smt2	unsat	48356	unknown	Timeout	24779	unsat	334	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-12.smt2	unsat	52753	unknown	Timeout	25515	unsat	439	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-13.smt2	unsat	57151	unknown	Timeout	25307	unsat	423	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-2.smt2	unsat	9308	unsat	na	130	unsat	125	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-14.smt2	unsat	61549	unknown	Timeout	24195	unsat	463	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-3.smt2	unsat	13586	unsat	na	130	unsat	132	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-4.smt2	unsat	17877	unsat	na	130	unsat	132	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-5.smt2	unsat	22176	unsat	na	331	unsat	131	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-6.smt2	unsat	26464	unsat	na	325	unsat	130	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-7.smt2	unsat	30785	unsat	na	628	unsat	129	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-90.smt2	sat	1464649	unknown	ResourceLimit	20759	sat	21669	online CDCL(T) LRA atom cap exceeded (9073 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-8.smt2	unsat	35165	unsat	na	1435	unsat	125	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-1.smt2	unsat	10304	unsat	na	128	unsat	123	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-15.smt2	unsat	65949	unknown	Timeout	25575	unsat	724	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-9.smt2	unsat	39560	unsat	na	4234	unsat	124	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-17.smt2	unsat	74748	unknown	Timeout	24971	unsat	729	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-16.smt2	unsat	70347	unknown	Timeout	26068	unsat	531	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-18.smt2	unsat	79147	unknown	Timeout	25774	unsat	1227	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-19.smt2	unsat	83545	unknown	Timeout	24968	unsat	1536	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-20.smt2	unsat	88053	unknown	Timeout	25666	unsat	2140	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-10.smt2	unsat	90949	unknown	Timeout	24366	unsat	1233	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-11.smt2	unsat	100052	unknown	Timeout	25956	unsat	1543	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-12.smt2	unsat	109390	unknown	Timeout	25063	unsat	1329	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-2.smt2	unsat	19066	unsat	na	142	unsat	131	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-13.smt2	unsat	118881	unknown	ResourceLimit	21470	unsat	1737	online CDCL(T) LRA atom cap exceeded (1075 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-3.smt2	unsat	27912	unsat	na	237	unsat	124	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-4.smt2	unsat	36773	unsat	na	442	unsat	132	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-5.smt2	unsat	45773	unsat	na	934	unsat	127	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-6.smt2	unsat	54807	unsat	na	1134	unsat	131	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-14.smt2	unsat	128395	unknown	ResourceLimit	21588	unsat	5847	online CDCL(T) LRA atom cap exceeded (1157 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-7.smt2	unsat	63843	unsat	na	4939	unsat	120	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-15.smt2	unsat	137909	unknown	ResourceLimit	21275	unsat	11247	online CDCL(T) LRA atom cap exceeded (1239 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer9-mutex-1.smt2	unsat	16252	unsat	na	142	unsat	138	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-16.smt2	unsat	147423	unknown	ResourceLimit	21427	unsat	6454	online CDCL(T) LRA atom cap exceeded (1321 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-17.smt2	unsat	156940	unknown	ResourceLimit	21485	unsat	12054	online CDCL(T) LRA atom cap exceeded (1403 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-18.smt2	unsat	166460	unknown	ResourceLimit	21268	unsat	11659	online CDCL(T) LRA atom cap exceeded (1485 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-8.smt2	unsat	72878	unknown	Timeout	26399	unsat	232	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-9.smt2	unsat	81912	unknown	Timeout	25156	unsat	428	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer9-mutex-10.smt2	unsat	147216	unknown	ResourceLimit	21577	unsat	4244	online CDCL(T) LRA atom cap exceeded (1312 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-19.smt2	unsat	175979	unknown	ResourceLimit	21289	unsat	20374	online CDCL(T) LRA atom cap exceeded (1567 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer9-mutex-11.smt2	unsat	162424	unknown	ResourceLimit	21672	unsat	4646	online CDCL(T) LRA atom cap exceeded (1442 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-20.smt2	unsat	185494	unknown	ResourceLimit	21462	timeout	24076	online CDCL(T) LRA atom cap exceeded (1649 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer9-mutex-12.smt2	unsat	177630	unknown	ResourceLimit	21269	unsat	12356	online CDCL(T) LRA atom cap exceeded (1572 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer9-mutex-2.smt2	unsat	30297	unsat	na	159	unsat	135	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer9-mutex-13.smt2	unsat	192837	unknown	ResourceLimit	21471	timeout	24074	online CDCL(T) LRA atom cap exceeded (1702 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer9-mutex-3.smt2	unsat	44501	unsat	na	449	unsat	132	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer9-mutex-4.smt2	unsat	58911	unsat	na	841	unsat	239	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer9-mutex-14.smt2	unsat	208045	unknown	ResourceLimit	21574	timeout	24097	online CDCL(T) LRA atom cap exceeded (1832 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer9-mutex-15.smt2	unsat	223254	unknown	ResourceLimit	21355	timeout	24074	online CDCL(T) LRA atom cap exceeded (1962 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer9-mutex-16.smt2	unsat	238465	unknown	ResourceLimit	21761	timeout	24118	online CDCL(T) LRA atom cap exceeded (2092 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer9-mutex-17.smt2	unsat	253676	unknown	ResourceLimit	21675	timeout	24074	online CDCL(T) LRA atom cap exceeded (2222 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer9-mutex-5.smt2	unsat	73340	unsat	na	8955	unsat	235	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/abz5_1000.smt2	unsat	33306	unsat	na	247	unsat	134	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer9-mutex-6.smt2	unsat	87771	unsat	na	8455	unsat	256	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer9-mutex-18.smt2	unsat	268889	unknown	ResourceLimit	21573	timeout	24123	online CDCL(T) LRA atom cap exceeded (2352 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer9-mutex-19.smt2	unsat	284102	unknown	ResourceLimit	21687	timeout	24103	online CDCL(T) LRA atom cap exceeded (2482 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/abz5_1400.smt2	sat	33304	sat	na	945	sat	250	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer9-mutex-7.smt2	unsat	102202	unsat	na	12244	unsat	435	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/abz6_1000.smt2	sat	33304	sat	na	647	sat	934	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/abz6_1100.smt2	sat	33304	sat	na	442	sat	250	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/abz6_800.smt2	unsat	33305	unsat	na	141	unsat	228	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/abz5_1300.smt2	sat	33304	sat	na	4354	sat	830	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/abz6_900.smt2	unsat	33305	unsat	na	1426	unsat	530	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer9-mutex-20.smt2	unsat	299310	unknown	ResourceLimit	21475	timeout	24075	online CDCL(T) LRA atom cap exceeded (2612 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer9-mutex-8.smt2	unsat	116872	unknown	ResourceLimit	21574	unsat	531	online CDCL(T) LRA atom cap exceeded (1052 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer9-mutex-9.smt2	unsat	132006	unknown	ResourceLimit	21571	unsat	1231	online CDCL(T) LRA atom cap exceeded (1182 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/abz6_943.smt2	sat	33303	sat	na	12758	sat	1534	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/abz5_1200.smt2	unsat	33306	unknown	Timeout	24170	unsat	4024	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/abz7_500.smt2	unsat	197090	unknown	ResourceLimit	18273	unsat	3922	online CDCL(T) LRA atom cap exceeded (6021 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/abz5_1234.smt2	sat	33304	unknown	Timeout	24064	sat	12432	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/abz7_600.smt2	unknown	197092	unknown	ResourceLimit	18250	timeout	24067	online CDCL(T) LRA atom cap exceeded (6021 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/abz7_667.smt2	unknown	197092	unknown	ResourceLimit	18252	timeout	24043	online CDCL(T) LRA atom cap exceeded (6021 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/abz7_670.smt2	unknown	197092	unknown	ResourceLimit	18258	timeout	24062	online CDCL(T) LRA atom cap exceeded (6021 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/abz7_691.smt2	sat	197088	unknown	ResourceLimit	18252	timeout	24053	online CDCL(T) LRA atom cap exceeded (6021 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb02_1000.smt2	sat	33274	sat	na	1416	sat	214	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/abz7_700.smt2	sat	197088	unknown	ResourceLimit	18250	timeout	24049	online CDCL(T) LRA atom cap exceeded (6021 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb02_700.smt2	unsat	33275	unsat	na	113	unsat	115	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb01_1200.smt2	sat	33224	sat	na	3325	sat	1014	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb02_800.smt2	unsat	33275	unsat	na	1315	unsat	214	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/abz7_800.smt2	sat	197088	unknown	ResourceLimit	18233	timeout	24051	online CDCL(T) LRA atom cap exceeded (6021 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb02_900.smt2	sat	33273	sat	na	6625	sat	610	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb03_1200.smt2	sat	33284	sat	na	1011	sat	611	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb01_1000.smt2	unsat	33226	unknown	Timeout	24094	timeout	24041	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb03_850.smt2	unsat	33285	unsat	na	5715	unsat	307	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb01_1100.smt2	sat	33224	unknown	Timeout	24064	sat	6113	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb03_1100.smt2	sat	33284	sat	na	12720	sat	2015	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb04_1200.smt2	sat	33264	sat	na	209	sat	309	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb01_1059.smt2	sat	33224	unknown	Timeout	24153	timeout	24040	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb04_850.smt2	unsat	33265	unsat	na	508	unsat	111	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb04_1100.smt2	sat	33264	sat	na	3119	sat	709	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb05_700.smt2	unsat	33275	unsat	na	108	unsat	109	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb01_900.smt2	unsat	33225	unknown	Timeout	24051	unsat	611	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb05_1000.smt2	sat	33274	sat	na	2212	sat	208	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb02_888.smt2	sat	33273	unknown	Timeout	24075	sat	2514	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb05_800.smt2	unsat	33275	unsat	na	6223	unsat	308	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb05_900.smt2	sat	33273	sat	na	9625	sat	3612	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb03_950.smt2	unsat	33285	unknown	Timeout	24042	unsat	5214	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb04_1005.smt2	sat	33264	unknown	Timeout	24134	sat	4717	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb04_950.smt2	unsat	33265	unknown	Timeout	24039	unsat	409	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb07_250.smt2	unsat	33255	unsat	na	110	unsat	113	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb07_330.smt2	unsat	33255	unsat	na	112	unsat	116	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb03_1005.smt2	sat	33284	unknown	Timeout	24041	timeout	24072	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb06_1200.smt2	sat	33254	sat	na	5032	sat	1321	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb07_550.smt2	sat	33253	sat	na	418	sat	213	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb08_1000.smt2	sat	33194	sat	na	4533	sat	1121	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb05_887.smt2	sat	33273	unknown	Timeout	24061	sat	10737	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb08_700.smt2	unsat	33195	unsat	na	526	unsat	228	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb07_430.smt2	sat	33253	sat	na	10156	sat	1325	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb06_1100.smt2	sat	33254	unknown	Timeout	24172	sat	5239	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb08_830.smt2	unsat	33195	unsat	na	8658	unsat	624	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb09_1100.smt2	sat	33224	sat	na	1634	sat	325	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb09_1000.smt2	sat	33224	sat	na	1672	sat	1319	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb09_800.smt2	unsat	33225	unsat	na	119	unsat	222	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb06_900.smt2	unsat	33255	unknown	Timeout	24041	unsat	421	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb06_1000.smt2	unsat	33256	unknown	Timeout	24069	timeout	24063	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb07_397.smt2	sat	33253	unknown	Timeout	24219	sat	5671	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb10_1100.smt2	sat	33254	sat	na	630	sat	821	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb10_800.smt2	unsat	33255	unsat	na	726	unsat	216	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb06_1010.smt2	sat	33254	unknown	Timeout	24163	timeout	24051	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb08_888.smt2	unsat	33195	unknown	Timeout	24063	unsat	11654	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb08_930.smt2	sat	33193	unknown	Timeout	24098	sat	8684	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb09_900.smt2	unsat	33225	unknown	Timeout	24095	unsat	3444	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb09_934.smt2	sat	33223	unknown	Timeout	24093	sat	3951	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb10_1000.smt2	sat	33254	unknown	Timeout	24077	sat	6529	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb10_900.smt2	unsat	33255	unknown	Timeout	24085	unsat	1839	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb10_944.smt2	sat	33253	unknown	Timeout	24092	sat	8241	preprocessed dispatch timeout after reduced solve
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/swv11_2900.smt2	unknown	792528	unknown	ResourceLimit	19065	timeout	24163	online CDCL(T) LRA atom cap exceeded (25051 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/swv11_2983.smt2	unknown	792528	unknown	ResourceLimit	19044	timeout	24161	online CDCL(T) LRA atom cap exceeded (25051 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/swv11_2988.smt2	unknown	792528	unknown	ResourceLimit	19162	timeout	24094	online CDCL(T) LRA atom cap exceeded (25051 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/swv11_2992.smt2	unknown	792528	unknown	ResourceLimit	18806	timeout	24077	online CDCL(T) LRA atom cap exceeded (25051 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/swv11_3050.smt2	unknown	792528	unknown	ResourceLimit	19292	timeout	24117	online CDCL(T) LRA atom cap exceeded (25051 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/swv12_2900.smt2	unknown	792178	unknown	ResourceLimit	18856	timeout	24085	online CDCL(T) LRA atom cap exceeded (25051 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/swv12_2972.smt2	unknown	792178	unknown	ResourceLimit	19049	timeout	24076	online CDCL(T) LRA atom cap exceeded (25051 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/swv12_2990.smt2	unknown	792178	unknown	ResourceLimit	19071	timeout	24076	online CDCL(T) LRA atom cap exceeded (25051 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/swv12_3004.smt2	unknown	792178	unknown	ResourceLimit	18964	timeout	24071	online CDCL(T) LRA atom cap exceeded (25051 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/swv12_3050.smt2	unknown	792178	unknown	ResourceLimit	19158	timeout	24156	online CDCL(T) LRA atom cap exceeded (25051 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/swv13_3000.smt2	unknown	791878	unknown	ResourceLimit	18977	timeout	24162	online CDCL(T) LRA atom cap exceeded (25051 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/swv13_3104.smt2	unknown	791878	unknown	ResourceLimit	19166	timeout	24099	online CDCL(T) LRA atom cap exceeded (25051 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/swv13_3150.smt2	unknown	791878	unknown	ResourceLimit	18888	timeout	24163	online CDCL(T) LRA atom cap exceeded (25051 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/swv13_3200.smt2	unknown	791878	unknown	ResourceLimit	18967	timeout	24161	online CDCL(T) LRA atom cap exceeded (25051 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/swv14_2800.smt2	unknown	792178	unknown	ResourceLimit	19183	timeout	24152	online CDCL(T) LRA atom cap exceeded (25051 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/swv14_2885.smt2	unknown	792178	unknown	ResourceLimit	19199	timeout	24154	online CDCL(T) LRA atom cap exceeded (25051 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/yn1_750.smt2	unsat	265145	unknown	ResourceLimit	18232	unsat	1816	online CDCL(T) LRA atom cap exceeded (8021 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/swv14_2895.smt2	unknown	792178	unknown	ResourceLimit	19054	timeout	24053	online CDCL(T) LRA atom cap exceeded (25051 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/swv14_2905.smt2	unknown	792178	unknown	ResourceLimit	18746	timeout	24054	online CDCL(T) LRA atom cap exceeded (25051 > 1024)
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/swv14_3000.smt2	unknown	792178	unknown	ResourceLimit	18841	timeout	24142	online CDCL(T) LRA atom cap exceeded (25051 > 1024)
