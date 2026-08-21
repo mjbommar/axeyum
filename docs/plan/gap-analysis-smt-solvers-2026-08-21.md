@@ -451,6 +451,28 @@ that read as "we are slower" is substantially "we stop early". And 26 files —
   past 14 days, wired into both gate sets. It reads `FAIL` today, which is the
   honest state.
 
+- **Gap #7, for `:pattern`.** A hand-written trigger is threaded parse → IR →
+  the E-matching loop and now *replaces* auto-selection; alternatives are
+  unioned and multi-patterns joined, and anything the matcher cannot fire is
+  declined whole rather than silently ignored (ADR-0537). `:weight` is
+  explicitly refused, not forgotten: it would change the flood-control cost
+  function, the one lever measured to decide files in both directions.
+
+  **The measured delta on our own corpora is zero, and that is a fact about the
+  corpora.** 0 of 1430 tracked `.smt2` files contain `:pattern`; 0 contain
+  `:weight` (positive control, same command: `assert` in 1419, `forall` in 82).
+  92 quantified files, before and after: **0 verdict differences**. §5's claim
+  that such a workload "has no path here at all" was right, and closing it
+  cannot be priced from anything we currently measure.
+
+  One thing worth not assuming, because the obvious check says the opposite of
+  the truth: obeying a *useless* trigger did not cost the refutation through the
+  front door. z3 4.13.3 with `smt.mbqi=false` goes `unsat` → `unknown` on the
+  file that motivated this; we stay `unsat`, because term invention seeds ground
+  instances of the trigger itself and reaches the excluded witness anyway. So a
+  verdict is a blunt instrument for "was the annotation obeyed" — the direct
+  observable is the proposed instance set, and that is what changed.
+
 **Found while discharging, and not in the original document.** The parity ledger
 holds **nine** divisions, not the eleven `PROJECT-STATE.md` claimed, and has
 never held a QF_ABV entry despite a committed `parity-lists/QF_ABV.txt` — a list
