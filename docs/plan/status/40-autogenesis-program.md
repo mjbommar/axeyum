@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd` and `Nat.fib_dvd` remain durably proved. The integer Fibonacci representation blocker is now repaired: replacing the official `Int.instDecidablePredEven` closure with constructor matching and explicit Nat parity shrinks the root stream from 9.8 MB to 374 KB, and exact `Int.fib_natCast` reconstructs twice byte-identically with zero dependencies and an empty footprint.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, and now `Int.fib_natCast` are durably proved. The target-owned integer Fibonacci definition replaces the official `Int.instDecidablePredEven` closure with constructor matching and explicit Nat parity; crash-safe recovery admitted its exact natural-cast theorem with an empty footprint and made `Int.fib_add_two` newly ready.
 
-**Next:** register the clean `Int.fib_natCast` capsule as a typed fact operation, admit it crash-safely, and then rebuild `Int.fib_add_two` and `Int.fib_neg_natCast` over the target-owned integer Fibonacci definition.
+**Next:** archive and clean-replay the exact `Int.fib_natCast` admission, then rebuild `Int.fib_add_two` and `Int.fib_neg_natCast` over the admitted target-owned integer Fibonacci definition.
 
 <!-- plan-section: landed-changes -->
 
@@ -28,8 +28,9 @@
 | 2026-08-21 | `b689c548d` | Hash-only goal-identity audit is frozen before its tool exists or the sealed clean integer Fibonacci stream is reread |
 | 2026-08-21 | `09ddeb5b8` | One non-rendering sealed-stream read binds the exact canonical theorem type hash with unchanged empty footprint and zero ledger authority |
 | 2026-08-21 | `1ebf8e8e0` | Exact crash-safe `Int.fib_natCast` admission is frozen against its sealed capsule before operation code or ledger mutation |
-| 2026-08-21 | (pending) | An exact authoritative operation binds the clean integer Fibonacci capsule, theorem identity, and empty-footprint admission contract |
-| 2026-08-21 | (pending) | First transaction preparation fails closed because the generic capsule path required nonempty dependencies and two submissions; exact zero-dependency definitional assurance is added with mutation coverage |
+| 2026-08-21 | `e4d92ddb0` | An exact authoritative operation binds the clean integer Fibonacci capsule, theorem identity, and empty-footprint admission contract |
+| 2026-08-21 | `bd55299d4` | First transaction preparation fails closed because the generic capsule path required nonempty dependencies and two submissions; exact zero-dependency definitional assurance is added with mutation coverage |
+| 2026-08-21 | (pending) | Crash-safe recovery admits exact `Int.fib_natCast` with one authoritative write and makes exact `Int.fib_add_two` newly ready |
 
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
