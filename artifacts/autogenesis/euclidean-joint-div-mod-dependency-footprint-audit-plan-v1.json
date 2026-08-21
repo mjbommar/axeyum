@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-euclidean-dependency-footprint-audit-plan",
+  "state": "preregistered-before-importer-audit-no-proof-authority",
+  "policy_version": "euclidean-first-decline-direct-dependency-audit-v1",
+  "inputs": {
+    "decline_result": {
+      "path": "artifacts/autogenesis/euclidean-joint-div-mod-proof-decline-v1.json",
+      "sha256": "70bcd809a42774c75956c7f9cf0a89db0f847a2d03be3fb309fcd8084e8798ce"
+    },
+    "evidence_manifest": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/2387f116f-proof-isolated-div-mod-go-decline-v1/manifest.json",
+      "sha256": "f4dfdeec6ec422bf63748e4a6629d128d3b8487d82da9fb2df92d8db96312601",
+      "mode": "0444"
+    },
+    "proof_bearing_stream": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/2387f116f-proof-isolated-div-mod-go-decline-v1/div-mod-go-reconstruct.ndjson",
+      "sha256": "b4793d50d2ef0d69786d28d044012f74d5f5f2279bf5d5a55e39acf0ffb1af7a",
+      "bytes": 460363,
+      "mode": "0444",
+      "textual_read_allowed": false
+    }
+  },
+  "fixed_population": [
+    "Eq.symm",
+    "Nat.add_assoc",
+    "Nat.add_comm",
+    "Nat.div.go.eq_1",
+    "Nat.div_rec_fuel_lemma",
+    "Nat.modCore.go.eq_1",
+    "Nat.mul_add",
+    "Nat.mul_one",
+    "Nat.not_lt_zero",
+    "Nat.sub_add_cancel",
+    "congr",
+    "congrArg",
+    "congrFun'",
+    "dif_neg",
+    "dif_pos"
+  ],
+  "fixed_measurement": {
+    "per_declaration_fields": [
+      "name",
+      "declaration_sha256",
+      "axiom_footprint",
+      "direct_theorem_dependencies"
+    ],
+    "classes": [
+      "empty-footprint",
+      "propext-bearing",
+      "other-assumption-bearing"
+    ],
+    "proof_terms_or_values_may_be_rendered": false,
+    "all_population_names_must_resolve_as_theorems": true,
+    "aggregate_must_equal_per_declaration_rows": true
+  },
+  "known_before_audit": {
+    "target_footprint": ["propext"],
+    "exact_carrier_population": "unknown",
+    "root_equations_previously_audited_empty": [
+      "Nat.div.go.eq_1",
+      "Nat.modCore.go.eq_1"
+    ]
+  },
+  "budget": {
+    "max_importer_runs": 1,
+    "max_proof_bearing_stream_reads": 1,
+    "max_retries": 0,
+    "max_revised_proof_compilations": 0,
+    "max_new_authored_theorem_submissions": 0,
+    "max_exact_target_submissions": 0,
+    "max_executor_invocations": 0
+  },
+  "authority": {
+    "proof_bodies_readable_by_model": false,
+    "theorem_values_readable_by_model": false,
+    "revised_euclidean_proof_allowed": false,
+    "support_theorem_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/euclidean-joint-div-mod-dependency-footprint-audit-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-euclidean-dependency-footprint-audit-plan.py",
+  "limitations": "The audit localizes assumptions in one failed proof closure. It neither proves an alternative route axiom-free nor authorizes source adaptation after observing the result."
+}
