@@ -680,6 +680,41 @@ trace by eight.  At `ell=200` the existing envelope is already divisible by
 eight, so it saves zero; divisibility-only rounding would need exponent 409,
 leaving 406 bits missing.  It receives no `(REL)` proof credit.
 
+### Worktree and proof snapshot (2026-08-21)
+
+The tracked `agent/gf2/lemire-proof` worktree was clean and reattached to its
+branch after the exact-commit pre-push gate.  Local, tracking, and remote refs
+then agreed at `6f4e5608ccbb2d26fb511a063916559b5269a9be`.  That gate ran for
+588 seconds and passed Cargo check, formatting, corpus checks, the workspace
+and full-solver unit sweeps, kernel suites, the capability-frontier ratchet,
+and the selected integration suites.  This is exact-commit local gate
+evidence; it is not a claim about remote CI.
+
+The worktree also contains untracked AC-bridge, Newton-over-Hodge,
+blocker-sweep, and reviewer research notes.  They belong to concurrent
+research lanes, remain intentionally untracked on this branch, and were
+neither edited nor staged by `gf2-lemire`.  In particular this applies to
+`lemire-proof-unblocking-bridges.md`, `lemire-review-2026-08-20-reaim.md`, the
+three associated research directories, and the `acb_*` / `noh_*` examples.
+The concurrent lane also published those examples on its separate branch
+during this checkpoint; they remain untracked here and are not part of this
+branch or its tracked diff.
+
+The theorem state is unchanged by the operational checkpoint: Lemire's
+conjecture is not proved.  The two-page manuscript still has one fail-visible
+open lemma, `(REL)`.  Exact-order orthogonality and the individual-Weil
+argument now discharge every order at most the largest power of two `Q` with
+`3 ceil(log2 ell) Q<=ell`; only the top `O(log log ell)` Witt order bands per
+conductor remain conditional.  The stronger `j^2` diagnostic is definitively
+false at the level-23 even endpoint (`710>529`), while the load-bearing
+factor-`4ell` high-order statement is not refuted.  Level-24 odd and even
+falsification-only fleet controls were launched on `s6` and `s4`.  The odd
+row completed in 3,572.87 seconds and retained the stronger diagnostic
+(`required_coefficient=260`, `candidate_coefficient=576`); the even row was
+still running at the time of this snapshot.  Neither result is proof evidence,
+and the surviving odd row cannot revive a diagnostic already refuted by the
+level-23 even row.
+
 **Next:** prove `(REL)`, encode it as replayable evidence, remove the
 manuscript's fail-visible warning, and perform the final source audit.  The
 active geometric form is the complete signed lower Witt trace `(WITT-LOW)`,
