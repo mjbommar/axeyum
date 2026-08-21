@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd` and `Nat.fib_dvd` remain durably proved. The `Int.fib_neg` descent retains a clean outer integer split and now classifies the 36-root `Int.fib_neg_natCast` surface evenly: 18 clean transport/sign supports and 18 `propext`-bearing parity/Fibonacci roots. `Int.fib_of_odd` is the smallest remaining Fibonacci core and depends on one private theorem root.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd` and `Nat.fib_dvd` remain durably proved. The `Int.fib_neg` descent retains a clean outer integer split and 18 clean negative-natural transport supports. The sole private dependency beneath `Int.fib_of_odd` is now measured as a 37-root `Int.Linear`/`Lean.Grind` automation expansion, so it is rejected as a mathematical boundary.
 
-**Next:** qualify the one private direct dependency of `Int.fib_of_odd` without proof rendering, then preregister the smallest direct parity/sign recurrence reconstruction using the already clean transport layer.
+**Next:** preregister a target-owned `Int.fib_neg_natCast` proof from `Int.fib_add_two`, `Int.fib_natCast`, clean integer transport, and explicit parity/sign induction; do not descend into the rejected automation internals.
 
 <!-- plan-section: landed-changes -->
 
@@ -14,6 +14,8 @@
 | 2026-08-21 | (pending) | Dependency classification splits 14 clean outer supports from 12 contaminated roots and localizes the next frontier to `Int.fib_neg_natCast` |
 | 2026-08-21 | `8dab71109` | Exact 36-root negative-natural Fibonacci descent is frozen before its one non-rendering stream reread |
 | 2026-08-21 | (pending) | Negative-natural classification preserves 18 clean transport supports and localizes the Fibonacci core to `Int.fib_of_odd` |
+| 2026-08-21 | `e9817256a` | The sole private `Int.fib_of_odd` dependency is frozen for one final non-rendering qualification |
+| 2026-08-21 | (pending) | Private-root audit exposes 37 automation dependencies and selects direct target-owned recurrence instead of solver-internal descent |
 
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
