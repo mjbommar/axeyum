@@ -43,6 +43,11 @@ assert EXACT_V4_SPEC and EXACT_V4_SPEC.loader
 EXACT_V4 = importlib.util.module_from_spec(EXACT_V4_SPEC)
 EXACT_V4_SPEC.loader.exec_module(EXACT_V4)
 
+EXACT_V5_SPEC = importlib.util.spec_from_file_location("exact_v4_v5", ROOT / "scripts/check-autogenesis-nat-gcd-fib-add-self-exact-v4-v5.py")
+assert EXACT_V5_SPEC and EXACT_V5_SPEC.loader
+EXACT_V5 = importlib.util.module_from_spec(EXACT_V5_SPEC)
+EXACT_V5_SPEC.loader.exec_module(EXACT_V5)
+
 
 class PlanControls(unittest.TestCase):
     def test_live_plan_passes(self) -> None:
@@ -131,6 +136,18 @@ class OfficialExactV4Controls(unittest.TestCase):
         plan["authorized_source_change"]["other_proof_route_changes_authorized"] = True
         with self.assertRaises(EXACT_V4.BoundaryError):
             EXACT_V4.validate(result, plan)
+
+
+class ExactV4V5Controls(unittest.TestCase):
+    def test_live_boundary_passes(self) -> None:
+        self.assertEqual(EXACT_V5.validate()[0]["execution"]["complete_invocations"], 0)
+
+    def test_source_change_authority_fails(self) -> None:
+        result, plan = EXACT_V5.validate()
+        plan = copy.deepcopy(plan)
+        plan["execution_correction"]["source_changes_authorized"] = True
+        with self.assertRaises(EXACT_V5.BoundaryError):
+            EXACT_V5.validate(result, plan)
 
 
 if __name__ == "__main__":

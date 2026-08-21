@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-exact-result-v4",
+  "state": "stale-executable-declined-before-import-second-run-skipped",
+  "plan": {"path": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-plan-v4.json", "sha256": "0869536718979a706087f7112a2144a67307ce7f2d01823d0b68b7035112162e"},
+  "implementation_commit": "5c1680853",
+  "evidence_pack": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/5c1680853-nat-gcd-fib-add-self-exact-v4", "manifest_sha256": "acead5d0bd3f74a627af0965916217abcbe563f3a986ae7b43a3acb9b8ea632d", "directory_mode": "0555", "file_mode": "0444"},
+  "decline": {"stage": "driver-input-identity-check-before-import", "class": "StaleExecutable", "binary_expected_root": "Axeyum.Autogenesis.dvdAntisymmCleanV5", "source_expected_root": "Axeyum.Autogenesis.dvdAntisymmOfficialV1", "partial_kernel_published": false},
+  "execution": {"clippy_source_checks": 1, "explicit_binary_builds": 0, "complete_invocations": 0, "capsule_compositions": 0, "local_gcd_comm_submissions": 0, "exact_target_submissions": 0, "retries": 0, "second_invocation_skipped": true},
+  "authority": {"target_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_boundary": "With the source and remote commit unchanged, explicitly build the example binary once and execute the same frozen V4 inputs under a fresh zero-retry plan.",
+  "limitations": "No proof input was imported and no theorem was submitted; this is an execution-artifact decline only."
+}
