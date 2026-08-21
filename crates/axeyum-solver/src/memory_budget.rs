@@ -430,7 +430,11 @@ mod tests {
 
         assert_eq!(
             probes, PROBES_PER_SAT_BV_CHECK,
-            "SatBvBackend::check probed {probes} times; the module documents              {PROBES_PER_SAT_BV_CHECK} phase boundaries. Fewer means a boundary              lost its probe (the field goes back to being inert there); more              means a probe reached a loop, and at 9.4 us each that is a              performance defect, not a rounding error."
+            "SatBvBackend::check probed {probes} times; the module documents \
+             {PROBES_PER_SAT_BV_CHECK} phase boundaries. Fewer means a boundary \
+             lost its probe (the field goes back to being inert there); more \
+             means a probe reached a loop, and at 9.4 us each that is a \
+             performance defect, not a rounding error."
         );
     }
 
@@ -486,11 +490,17 @@ mod tests {
         for (width, bytes_per_clause) in measured {
             assert!(
                 bytes_per_clause > 0.0,
-                "width {width} measured nothing: a zero here is a broken                  measurement, not a free encoding"
+                "width {width} measured nothing: a zero here is a broken \
+                 measurement, not a free encoding"
             );
             assert!(
                 bytes_per_clause <= ENCODING_BYTES_PER_CLAUSE as f64,
-                "width {width} costs {bytes_per_clause:.1} B/clause, over the                  {ENCODING_BYTES_PER_CLAUSE} the memory budget charges. The                  clause ceiling divides by that constant, so an under-charge                  admits encodings the budget cannot hold. Raise the constant                  (and re-check what it does to callers' ceilings), or find what                  made the encoding fatter."
+                "width {width} costs {bytes_per_clause:.1} B/clause, over the \
+                 {ENCODING_BYTES_PER_CLAUSE} the memory budget charges. The \
+                 clause ceiling divides by that constant, so an under-charge \
+                 admits encodings the budget cannot hold. Raise the constant \
+                 (and re-check what it does to callers' ceilings), or find what \
+                 made the encoding fatter."
             );
         }
     }

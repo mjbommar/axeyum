@@ -805,9 +805,78 @@ pub enum Evidence {
     Unknown(UnknownReason),
 }
 
+/// An artifact a checker outside this process can read.
+///
+/// The distinction that matters for this project's identity claim: evidence can
+/// be fully re-validated and still only by calling back into axeyum's own Rust,
+/// which is a much weaker statement than "an independent checker read it". Only
+/// these two forms leave the process.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PortableArtifact {
+    /// DRAT, checkable by `check_drat` here and by external `drat-trim`.
+    Drat,
+    /// Alethe, checkable by Carcara.
+    Alethe,
+}
+
+impl PortableArtifact {
+    /// The stable label for artifacts and summaries.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            PortableArtifact::Drat => "drat",
+            PortableArtifact::Alethe => "alethe",
+        }
+    }
+}
+
 impl Evidence {
     /// Stable short label for this evidence variant.
     ///
+    /// Does this evidence carry an artifact a checker **outside this process**
+    /// can read?
+    ///
+    /// This exists because the number everyone quoted was counted from
+    /// [`Evidence::kind_label`], and labels are not artifacts. The 2026-08-21
+    /// gap analysis reported "only 11 of 129 unsat (8.5%) produce an artifact an
+    /// external checker can read", derived by matching kind strings against
+    /// `unsat-drat` and the Alethe kinds. But `BoundedIntBlastCertificate`
+    /// carries a full DRAT refutation of its bit-blasted CNF in `bv_proof`,
+    /// re-checkable by `check_drat`, and its label reads
+    /// `unsat-bounded-int-blast`. So do `ArithDpllRefutation` and three
+    /// quantified-BV certificates. The metric undercounted the thing it existed
+    /// to measure, and did so in the direction that made the project look worse.
+    ///
+    /// The wildcard below **undercounts by construction**: a new proof-carrying
+    /// variant returns `None` until an arm is added. That is the same defect one
+    /// level down, so it is not left to vigilance — see the test named in this
+    /// module that fails when a certificate gains an `UnsatProof` field without
+    /// an arm here.
+    #[must_use]
+    pub const fn portable_artifact(&self) -> Option<PortableArtifact> {
+        match self {
+            // DRAT: checkable by `check_drat` in-tree and by external
+            // `drat-trim` out of tree (verified with a negative control — a
+            // tampered proof is rejected).
+            Evidence::Unsat(Some(_))
+            | Evidence::UnsatBoundedIntBlast(_)
+            | Evidence::UnsatArithDpll(_)
+            | Evidence::UnsatBvAlternationCounterexample(_)
+            | Evidence::UnsatBvConjunctiveUniversalInstance(_)
+            | Evidence::UnsatBvPositiveUniversalInstanceSet(_) => Some(PortableArtifact::Drat),
+            // Alethe: checkable by Carcara, a Rust Alethe checker.
+            //
+            // `UnsatArithAletheProof` is deliberately EXCLUDED. Its QF_LIA route
+            // emits `lia_generic`, a rule Carcara has no case for and treats as
+            // a hole — so it is checkable only internally, and claiming it here
+            // would re-commit the exact error this function was written to fix.
+            Evidence::UnsatAletheProof(_) | Evidence::UnsatGuardedQuantAletheProof { .. } => {
+                Some(PortableArtifact::Alethe)
+            }
+            _ => None,
+        }
+    }
+
     /// These labels are intended for SDK/UI summaries and artifact metadata.
     /// They are deliberately independent of Rust `Debug` formatting.
     #[must_use]
@@ -4939,5 +5008,101 @@ mod tests {
             !check_array_axiom_evidence(&arena, &unrelated_assertions, &forged_instance),
             "a valid axiom instance the query never asserts refutes nothing"
         );
+    }
+
+    /// Every certificate that CARRIES a DRAT proof must be reported as portable.
+    ///
+    /// `portable_artifact`'s wildcard undercounts by construction, and
+    /// undercounting is precisely the bug it was written to fix: the published
+    /// "8.5% of unsat are externally checkable" was counted from kind LABELS,
+    /// while `BoundedIntBlastCertificate` had been carrying a full DRAT
+    /// refutation in `bv_proof` the whole time.
+    ///
+    /// So the source of truth is the source: this reads `evidence.rs` and the
+    /// certificate modules, finds every `Evidence` variant whose certificate
+    /// type has an `UnsatProof` field, and requires an arm for it. A new
+    /// proof-carrying certificate that nobody lists fails here rather than
+    /// quietly deflating the metric again.
+    ///
+    /// It reads files rather than using a trait because a trait would have to be
+    /// implemented by hand for each certificate — which is the same act of
+    /// remembering, with the same failure mode.
+    #[test]
+    fn every_proof_carrying_variant_is_listed_as_portable() {
+        use std::collections::BTreeSet;
+        use std::path::Path;
+
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let mut sources = String::new();
+        let mut stack = vec![root.clone()];
+        while let Some(dir) = stack.pop() {
+            for entry in std::fs::read_dir(&dir).expect("the source tree is readable") {
+                let path = entry.expect("a readable entry").path();
+                if path.is_dir() {
+                    stack.push(path);
+                } else if path.extension().is_some_and(|e| e == "rs") {
+                    sources.push_str(&std::fs::read_to_string(&path).expect("readable"));
+                }
+            }
+        }
+        let evidence = std::fs::read_to_string(root.join("evidence.rs")).expect("readable");
+
+        // Certificate structs with an `UnsatProof`-typed field.
+        let mut proof_carrying: BTreeSet<String> = BTreeSet::new();
+        for (index, _) in sources.match_indices("pub struct ") {
+            let tail = &sources[index..];
+            let Some(open) = tail.find('{') else { continue };
+            let Some(close) = tail.find("\n}") else {
+                continue;
+            };
+            if close < open {
+                continue;
+            }
+            let name: String = tail["pub struct ".len()..open]
+                .split(['<', ' '])
+                .next()
+                .unwrap_or_default()
+                .trim()
+                .to_owned();
+            if tail[open..close].contains("UnsatProof") && !name.is_empty() {
+                proof_carrying.insert(name);
+            }
+        }
+        assert!(
+            proof_carrying.len() >= 5,
+            "the scan found {} proof-carrying certificates, which is too few to \
+             be believable — the parser has drifted, not the code",
+            proof_carrying.len()
+        );
+
+        // The arms actually listed in `portable_artifact`.
+        let listed = evidence
+            .split("pub const fn portable_artifact")
+            .nth(1)
+            .and_then(|tail| tail.split("\n    }").next())
+            .expect("portable_artifact is present")
+            .to_owned();
+
+        for certificate in &proof_carrying {
+            // Find the variant that wraps this certificate type, if any.
+            let needle = format!("({certificate})");
+            let Some(index) = evidence.find(&needle) else {
+                continue;
+            };
+            let head = &evidence[..index];
+            let variant = head
+                .rsplit(|c: char| c == '\n' || c == ' ')
+                .find(|token| token.starts_with("Unsat"))
+                .unwrap_or_default();
+            if variant.is_empty() {
+                continue;
+            }
+            assert!(
+                listed.contains(variant),
+                "`{variant}` wraps `{certificate}`, which carries an `UnsatProof`, \
+                 but `portable_artifact` does not list it — the externally-checkable \
+                 count is understated by every instance of this family"
+            );
+        }
     }
 }
