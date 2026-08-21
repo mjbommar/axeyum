@@ -328,3 +328,4 @@
 | 2026-08-21 | (pending) | Parity V1 finds its specialized recurrence already normalized; V2 removes only the redundant `dsimp` before qualification |
 | 2026-08-21 | (pending) | Parity V2 qualifies step and both successor roots cleanly; V3 replaces only `modCases`'s dependent match carrier |
 | 2026-08-21 | (pending) | Parity V3's explicit cases are accepted; V4 freezes the two required reflexive successful branches |
+| 2026-08-21 | (pending) | Parity V4 closes all four roots empty-footprint; exact eight-root `Int.fib_add_two` kernel composition is frozen before code |
