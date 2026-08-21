@@ -544,8 +544,6 @@
       "scope": "authoritative",
       "reviewed_gate_mentions": [
         "check-autogenesis-int-fib-natcast-capsule.py",
-        "check-autogenesis-int-fib-natcast-admission-plan.py",
-        "check-autogenesis-int-fib-natcast-goal-identity-result.py",
         "validate-autogenesis-operations.py"
       ],
       "applicability": {
