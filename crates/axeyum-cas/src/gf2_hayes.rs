@@ -5606,6 +5606,40 @@ pub struct HayesTranslationSpectralInvolutionReport {
     pub conductor_levels: Vec<HayesTranslationConductorVanishing>,
 }
 
+/// One element of `PGL_2(GF(2))` in its unique binary matrix representative.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BinaryHayesProjectiveTransformation {
+    /// Upper-left matrix entry.
+    pub a: u8,
+    /// Upper-right matrix entry.
+    pub b: u8,
+    /// Lower-left matrix entry.
+    pub c: u8,
+    /// Lower-right matrix entry.
+    pub d: u8,
+    /// Whether the transformation fixes the point at infinity.
+    pub fixes_infinity: bool,
+    /// Whether it preserves every monic polynomial of the reported degree.
+    pub preserves_monic_degree_family: bool,
+    /// Whether it induces an action on the reciprocal Hayes quotient.
+    pub acts_on_hayes_quotient: bool,
+    /// Finite root used in a monic degree-drop witness when infinity moves.
+    pub degree_drop_witness_root: Option<u8>,
+}
+
+/// Complete projective-symmetry classification of the binary Hayes family.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BinaryHayesProjectiveSymmetryReport {
+    /// Positive monic polynomial degree used by the family.
+    pub degree: usize,
+    /// All six elements of `PGL_2(GF(2))`.
+    pub transformations: Vec<BinaryHayesProjectiveTransformation>,
+    /// Number of elements acting on the fixed-degree Hayes quotient.
+    pub hayes_quotient_symmetry_count: usize,
+    /// Number of nonidentity elements acting on that quotient.
+    pub nonidentity_hayes_quotient_symmetry_count: usize,
+}
+
 /// Balanced-step summary for the Haar-weighted aggregate identity path.
 ///
 /// Unlike [`IdentityCylinderPathBalanceReport`], this report combines every
@@ -7184,6 +7218,89 @@ pub fn hayes_translation_spectral_involution(
         forced_vanishing_character_count,
         translation_class_in_commutator_image,
         conductor_levels,
+    })
+}
+
+/// Classify every binary projective transformation of the Hayes family.
+///
+/// A matrix `(a,b;c,d)` acts by
+///
+/// ```text
+/// F(x) -> (c*x+d)^degree F((a*x+b)/(c*x+d)).
+/// ```
+///
+/// It preserves the complete monic fixed-degree family only if it fixes
+/// infinity, namely `c=0`.  Over `GF(2)`, determinant one then forces
+/// `a=d=1`, leaving only identity and `x -> x+1`.  If `c=1`, the leading
+/// coefficient is `F(a)`; the monic polynomial `(x+a)^degree` is an explicit
+/// degree-drop witness.  Such a transformation can preserve selected
+/// constant-one polynomials, but its reciprocal class depends on low
+/// coefficients and it does not act on the Hayes quotient.
+///
+/// # Errors
+///
+/// Rejects degree zero and fails closed unless the six projective elements,
+/// the two affine stabilizers of infinity, and the unique nonidentity Hayes
+/// symmetry are recovered exactly.
+pub fn binary_hayes_projective_symmetry_classification(
+    degree: usize,
+) -> Result<BinaryHayesProjectiveSymmetryReport, HayesError> {
+    if degree == 0 {
+        return Err(HayesError::InvalidParameter(
+            "projective Hayes symmetry requires positive degree".to_owned(),
+        ));
+    }
+    let mut transformations = Vec::with_capacity(6);
+    for a in 0_u8..=1 {
+        for b in 0_u8..=1 {
+            for c in 0_u8..=1 {
+                for d in 0_u8..=1 {
+                    if (a * d) ^ (b * c) != 1 {
+                        continue;
+                    }
+                    let fixes_infinity = c == 0;
+                    let preserves_monic_degree_family = fixes_infinity;
+                    transformations.push(BinaryHayesProjectiveTransformation {
+                        a,
+                        b,
+                        c,
+                        d,
+                        fixes_infinity,
+                        preserves_monic_degree_family,
+                        acts_on_hayes_quotient: preserves_monic_degree_family,
+                        degree_drop_witness_root: (!fixes_infinity).then_some(a),
+                    });
+                }
+            }
+        }
+    }
+    let hayes_quotient_symmetry_count = transformations
+        .iter()
+        .filter(|row| row.acts_on_hayes_quotient)
+        .count();
+    let nonidentity_hayes_quotient_symmetry_count = transformations
+        .iter()
+        .filter(|row| row.acts_on_hayes_quotient && row.b != 0)
+        .count();
+    if transformations.len() != 6
+        || hayes_quotient_symmetry_count != 2
+        || nonidentity_hayes_quotient_symmetry_count != 1
+        || transformations.iter().any(|row| {
+            row.fixes_infinity != (row.c == 0)
+                || row.preserves_monic_degree_family != row.fixes_infinity
+                || row.acts_on_hayes_quotient != row.fixes_infinity
+                || row.degree_drop_witness_root.is_some() == row.fixes_infinity
+        })
+    {
+        return Err(HayesError::Invariant(
+            "binary projective Hayes symmetry classification failed".to_owned(),
+        ));
+    }
+    Ok(BinaryHayesProjectiveSymmetryReport {
+        degree,
+        transformations,
+        hayes_quotient_symmetry_count,
+        nonidentity_hayes_quotient_symmetry_count,
     })
 }
 
@@ -20792,6 +20909,33 @@ mod tests {
             ..limits
         };
         assert!(hayes_translation_spectral_involution(4, 9, limited).is_err());
+    }
+
+    #[test]
+    fn translation_is_the_only_nontrivial_binary_projective_hayes_symmetry() {
+        for degree in 1_usize..=64 {
+            let report = binary_hayes_projective_symmetry_classification(degree).unwrap();
+            assert_eq!(report.degree, degree);
+            assert_eq!(report.transformations.len(), 6);
+            assert_eq!(report.hayes_quotient_symmetry_count, 2);
+            assert_eq!(report.nonidentity_hayes_quotient_symmetry_count, 1);
+            let quotient_rows = report
+                .transformations
+                .iter()
+                .filter(|row| row.acts_on_hayes_quotient)
+                .map(|row| (row.a, row.b, row.c, row.d))
+                .collect::<Vec<_>>();
+            assert_eq!(quotient_rows, vec![(1, 0, 0, 1), (1, 1, 0, 1)]);
+            for row in report
+                .transformations
+                .iter()
+                .filter(|row| !row.fixes_infinity)
+            {
+                assert_eq!(row.c, 1);
+                assert_eq!(row.degree_drop_witness_root, Some(row.a));
+            }
+        }
+        assert!(binary_hayes_projective_symmetry_classification(0).is_err());
     }
 
     #[test]
