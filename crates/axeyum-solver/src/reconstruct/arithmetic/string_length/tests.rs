@@ -158,30 +158,37 @@ fn a_single_disjunct_or_is_declined_because_the_query_does_not_assert_the_disjun
     );
 }
 
-/// The resource guard. The ordered-ring engine counts a constant `k` as `k`
-/// copies of `one`, so a query that names a large constant chooses the fold's
-/// size. `r1_QF_SLIA_str-code-unsat-2` chooses `10^28` on one arm; this fixture
-/// chooses `8192`, just over the budget, so that DELETING the guard makes this
-/// test fail in a second rather than hang.
+/// The resource guard, and the calibration that makes it one.
+///
+/// The ordered-ring engine counts a constant `k` as `k` copies of `one`, and the
+/// kernel walks the resulting left-nested `add` chain recursively — so an
+/// oversized combination does not run slowly, it aborts the process. The budget
+/// therefore has to be pinned from BOTH sides: a fixture at the budget must
+/// still reconstruct (or the guard is hiding a route that never worked), and one
+/// just over it must decline.
+///
+/// The over-budget fixture is deliberately only just over. At `10^28` — what
+/// `r1_QF_SLIA_str-code-unsat-2` actually names — deleting the guard would kill
+/// the whole test binary with a stack overflow instead of failing this one test,
+/// which is a mutation result nobody can read.
 #[test]
-fn a_combination_over_the_unary_budget_is_declined() {
+fn the_unary_budget_is_pinned_from_both_sides() {
+    // cost = 2k + 2 for this shape, so k = 63 is exactly the budget.
+    let at_budget = "(set-logic QF_S)\n(declare-fun x () String)\n\
+        (assert (<= (str.len x) (- 63)))\n(check-sat)";
+    let module = reconstruct_string_length_to_lean_module(&certificate(at_budget))
+        .expect("a combination AT the budget must still reconstruct");
+    assert!(!module.is_empty());
+
     let over = "(set-logic QF_S)\n(declare-fun x () String)\n\
-        (assert (<= (str.len x) (- 8192)))\n(check-sat)";
+        (assert (<= (str.len x) (- 64)))\n(check-sat)";
     let cert = certificate(over);
     assert!(!cert.is_case_split());
     let reason = declines(&cert);
     assert!(
-        reason.contains("unary terms") && reason.contains("4096"),
-        "the decline must report the size it refused: {reason}"
+        reason.contains("unary terms") && reason.contains("128"),
+        "the decline must report the size it refused and the budget: {reason}"
     );
-
-    // Positive control: the SAME shape under the budget reconstructs, so the
-    // test above is not passing because the shape is unsupported.
-    let under = "(set-logic QF_S)\n(declare-fun x () String)\n\
-        (assert (<= (str.len x) (- 3)))\n(check-sat)";
-    let module = reconstruct_string_length_to_lean_module(&certificate(under))
-        .expect("the same shape under the budget reconstructs");
-    assert!(!module.is_empty());
 }
 
 /// The gate: the facts come only from a re-check against the certificate's own

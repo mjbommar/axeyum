@@ -50,9 +50,9 @@
 //!   state, only entails.
 //! - **A combination too large to build.** The ordered-ring engine represents a
 //!   constant `k` as `k` copies of `one`, so the cost of the fold is linear in
-//!   the combined constant and in every multiplier. `r1_QF_SLIA_str-code-unsat-2`
-//!   needs `10^28 − 0x2FFFF` of them on one arm. Over [`MAX_UNARY_TERMS`] the
-//!   reconstruction declines rather than starting a fold that would not finish.
+//!   the combined constant and in every multiplier — and the QUERY chooses that
+//!   number. `r1_QF_SLIA_str-code-unsat-2` chooses `10^28 − 0x2FFFF` on one arm.
+//!   Over [`MAX_UNARY_TERMS`] the reconstruction declines.
 
 use std::collections::BTreeMap;
 
@@ -73,9 +73,27 @@ const LEAN_THEOREM: &str = "axeyum_refutation";
 /// `one`/variable generators the scaled-and-summed combination expands to, plus
 /// the combined constant the closing `lt zero K` chain counts up to.
 ///
-/// This is a resource guard, not a soundness guard, and it is the only thing
-/// standing between this route and a fold with `10^28` steps in it.
-const MAX_UNARY_TERMS: i128 = 4_096;
+/// Not merely a resource guard. The fold builds a left-nested `add` chain and
+/// the kernel walks it recursively, so an oversized combination does not run
+/// slowly — it **overflows the stack and aborts the process**. Measured
+/// 2026-08-20 on the `|x| <= -k` shape (cost `2k + 2`):
+///
+/// | cost | outcome |
+/// |---:|---|
+/// | 130 | 1.1 MB module |
+/// | 258 | 3.6 MB module |
+/// | 514 | 13.2 MB module |
+/// | 1026 | **stack overflow, `SIGABRT`** |
+///
+/// The first version of this constant was `4_096`, which admits every row above
+/// including the last: a guard calibrated to let through the failure it exists
+/// to prevent. Only mutating it away and watching the test *abort* rather than
+/// fail showed it. `128` is an 8× margin under the measured crash, and the two
+/// committed corpus files need a cost of **4**.
+///
+/// Raising it needs the table re-measured, and on the smallest thread stack the
+/// route can run on — the crash point is a stack depth, not a constant.
+const MAX_UNARY_TERMS: i128 = 128;
 
 /// Reconstruct a conjunctive string length/code-point refutation to `False`.
 ///
@@ -178,6 +196,14 @@ pub(crate) fn reconstruct_string_length(
     // arithmetic — the engine minted one axiom per non-equality fact and no
     // more — so check it rather than trust that the two sides built the same
     // proposition.
+    //
+    // Mutation-checked 2026-08-20, and the result is the interesting part.
+    // Deleting THIS check alone kills nothing, because while both sides agree
+    // the counts match. Deleting the REGISTRATION above kills seven tests —
+    // through this check — and deleting both kills exactly one, the equality
+    // test, with a quietly weaker module shipping past the other six. So the
+    // check's value is measured, not asserted: it is what turns a silent
+    // semantic weakening into a loud decline.
     let minted_by_engine = ctx.minted_hypothesis_count() - minted_before;
     let expected = facts.len() - equalities;
     if minted_by_engine != expected {
@@ -190,9 +216,11 @@ pub(crate) fn reconstruct_string_length(
     }
 
     // Soundness gate, again, from outside the engine: the assembled term must
-    // kernel-infer to `False`. The engine gates internally too; asserting it here
-    // as well is what keeps a future engine change from silently handing back an
-    // `ExprId` nobody type-checked.
+    // kernel-infer to `False`. The engine gates internally too, so
+    // mutation-checking this kills no test — and that is the CORRECT result
+    // rather than a missing fixture. It is a cross-check between two
+    // implementations of the same obligation; a test can only kill it once one
+    // of them is already wrong, which is exactly the state it exists to catch.
     let inferred = ctx
         .kernel_mut()
         .infer(proof)
@@ -232,19 +260,13 @@ fn to_farkas_system(
     let zero = Rational::zero();
     for fact in facts {
         let (negate, mu) = match fact.rel {
-            // `checked_refutation` refuses a non-positive multiplier on an
-            // inequality; re-establish it rather than assume it, because reading
-            // the sign wrong here is how a satisfiable query gets refuted.
-            Rel::Ge | Rel::Gt => {
-                if fact.multiplier <= zero {
-                    return Err(ReconstructError::UnsupportedTerm {
-                        term: "an inequality fact carries a non-positive multiplier; the \
-                               certificate should not have been issued"
-                            .to_owned(),
-                    });
-                }
-                (true, fact.multiplier)
-            }
+            // An inequality's multiplier is positive. That is enforced TWICE
+            // around this line and neither copy is here: `checked_refutation`
+            // refuses a non-positive multiplier on an inequality upstream, and
+            // both Farkas engines refuse `mu.numerator() <= 0` downstream. A
+            // third statement of it was written, mutated away, and killed no
+            // test — so it is not here, rather than here and decorative.
+            Rel::Ge | Rel::Gt => (true, fact.multiplier),
             Rel::Eq => {
                 if fact.multiplier > zero {
                     (true, fact.multiplier)
