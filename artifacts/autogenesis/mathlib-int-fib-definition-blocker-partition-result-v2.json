@@ -1,0 +1,12 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-int-fib-definition-blocker-partition-result",
+  "state": "eight-definition-local-blockers-share-contaminated-even-decision-carrier",
+  "plan_sha256": "7fd60dd5f1b0c856ff0c9f7148826b6c404b4d701dd0aa2bf3f649ac708336e8",
+  "pack_manifest_sha256": "ea69601dd076bc343bbd27c4078c12dacb0ed5dd4e3e34e479cc30be4d3ad80e",
+  "root": {"name": "Int.fib", "kind": "definition", "declaration_sha256": "8f0b6b257623d1257c8137da80d11104781e854045b1ac2f4e92b41e89bf5a46", "closure_size": 2537},
+  "partition": {"present": ["Classical.choice", "Lean.opaqueId", "Quot", "Quot.lift", "Quot.mk", "Quot.sound", "String.Internal.append", "propext"], "absent": ["Quot.ind"]},
+  "shared_rootward_carrier": {"name": "Int.instDecidablePredEven", "kind": "definition", "declaration_sha256": "c01ed8edfc717e6cc0119a5c824cf94ad6fd1fb0b322487a28036b41b0713c61", "closure_size": 2530, "present_blocker_coverage": 8},
+  "decision": {"clone_official_definition_closure": false, "next": "preregister a target-owned Int.fib definition using constructor matching and explicit Nat parity, avoiding Int.instDecidablePredEven"},
+  "authority": {"definition_bodies_rendered": 0, "proof_terms_rendered": 0, "theorem_credit": 0, "ledger_writes": 0}
+}

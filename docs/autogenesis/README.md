@@ -232,6 +232,7 @@ compounding, not automation theatre.
 | [`Int.fib_natCast` definition contamination](204-int-fib-natcast-definition-contamination.md) | Does a dependency-free `rfl` proof become clean, or does the official integer Fibonacci representation itself carry assumptions? |
 | [`Int.fib` definition blocker-path audit plan](205-int-fib-definition-blocker-path-audit-plan.md) | Which declaration carriers connect official integer Fibonacci to each blocked assumption without exposing its definition body? |
 | [Absent-aware `Int.fib` blocker partition retry](206-int-fib-definition-blocker-partition-retry.md) | Which theorem-footprint blockers are truly inside `Int.fib`, after the strict all-present assumption fails? |
+| [Clean target-owned `Int.fib` construction plan](207-int-fib-clean-definition-construction-plan.md) | Can constructor matching and explicit Nat parity replace the contaminated official decision-instance closure? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
