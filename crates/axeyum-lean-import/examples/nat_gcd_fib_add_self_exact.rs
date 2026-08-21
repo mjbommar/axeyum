@@ -225,6 +225,14 @@ fn run() -> Result<(), String> {
         return run_fib_gcd_witness_elim_diagnostic(args);
     }
     let mut args = std::env::args_os().skip(1);
+    if args.next().as_deref()
+        == Some(std::ffi::OsStr::new(
+            "--target-native-fib-gcd-exists-rec-prefix-diagnostic",
+        ))
+    {
+        return run_fib_gcd_exists_rec_prefix_diagnostic(args);
+    }
+    let mut args = std::env::args_os().skip(1);
     if args.next().as_deref() == Some(std::ffi::OsStr::new("--target-native-goal-audit")) {
         return run_target_native_goal_audit(args);
     }
@@ -1546,6 +1554,123 @@ fn run_fib_gcd_witness_elim_diagnostic(
     Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
+fn run_fib_gcd_exists_rec_prefix_diagnostic(
+    mut args: impl Iterator<Item = std::ffi::OsString>,
+) -> Result<(), String> {
+    let greatest_path = path(&mut args)?;
+    let shift_path = path(&mut args)?;
+    if args.next().is_some() {
+        return Err("usage: nat_gcd_fib_add_self_exact \
+             --target-native-fib-gcd-exists-rec-prefix-diagnostic \
+             <gcd-greatest> <gcd-fib-add-self>"
+            .to_owned());
+    }
+    let greatest = import_bound(&greatest_path, GCD_GREATEST_CAPSULE, "gcd-greatest")?;
+    let shift = import_bound(&shift_path, GCD_FIB_SHIFT_CAPSULE, "gcd-fib-add-self")?;
+    let composed = compose_checked_theorem_slice(shift.kernel(), greatest.kernel(), &[TARGET])
+        .map_err(|error| format!("Exists.rec diagnostic composition declined: {error:?}"))?;
+    verify_checked_theorem_composition(
+        shift.kernel(),
+        greatest.kernel(),
+        composed.kernel(),
+        composed.receipt(),
+    )
+    .map_err(|error| format!("Exists.rec diagnostic composition did not replay: {error:?}"))?;
+    let mut kernel = composed.kernel().clone();
+    declare_fib_gcd_quotient_iteration(&mut kernel)?;
+    let mut d = Dev::new(&mut kernel)?;
+    let quotient = d.exact("Axeyum.Autogenesis.modQuotientWitnessV4")?;
+    let helper = d.exact(FIB_GCD_ITERATION)?;
+    let gcd_comm = d.exact(CLEAN_GCD_COMM)?;
+    let nat = d.nat_ty();
+    let n_fv = d.fresh();
+    let n = d.kernel.fvar(n_fv);
+    let predecessor_fv = d.fresh();
+    let predecessor = d.kernel.fvar(predecessor_fv);
+    let m = d.succ(predecessor);
+    let hm_ty = {
+        let zero = d.zero();
+        let one = d.succ(zero);
+        d.le(one, m)
+    };
+    let remainder = d.modulo(n, m)?;
+    let ih_ty = fib_gcd_statement(&mut d, remainder, m);
+    let hm_fv = d.fresh();
+    let hm = d.kernel.fvar(hm_fv);
+    let ih_fv = d.fresh();
+    let ih = d.kernel.fvar(ih_fv);
+    let witness = d.lemma(quotient, &[m, n, hm]);
+    let parts = build_fib_gcd_witness_elim(&mut d, m, n, remainder, ih, witness, helper, gcd_comm);
+    let close = |d: &mut Dev<'_>, value: ExprId, with_hm: bool, with_ih: bool| {
+        let value = if with_ih {
+            d.lam(ih_fv, ih_ty, value)
+        } else {
+            value
+        };
+        let value = if with_hm {
+            d.lam(hm_fv, hm_ty, value)
+        } else {
+            value
+        };
+        let value = d.lam(predecessor_fv, nat, value);
+        d.lam(n_fv, nat, value)
+    };
+    let prefix_nat = d.apply(parts.rec, &[parts.nat]);
+    let nat_type = d
+        .kernel
+        .infer(prefix_nat)
+        .map_err(|error| format!("Exists.rec Nat prefix inference failed: {error:?}"))?;
+    let prefix_predicate = d.apply(prefix_nat, &[parts.predicate]);
+    let closed_predicate = close(&mut d, prefix_predicate, false, false);
+    let predicate_type = d
+        .kernel
+        .infer(closed_predicate)
+        .map_err(|error| format!("Exists.rec predicate prefix inference failed: {error:?}"))?;
+    let prefix_motive = d.apply(prefix_predicate, &[parts.motive]);
+    let closed_motive = close(&mut d, prefix_motive, false, false);
+    let motive_type = d
+        .kernel
+        .infer(closed_motive)
+        .map_err(|error| format!("Exists.rec motive prefix inference failed: {error:?}"))?;
+    let prefix_minor = d.apply(prefix_motive, &[parts.minor]);
+    let closed_minor = close(&mut d, prefix_minor, false, true);
+    let minor_type = d
+        .kernel
+        .infer(closed_minor)
+        .map_err(|error| format!("Exists.rec minor prefix inference failed: {error:?}"))?;
+    let prefix_witness = d.apply(prefix_minor, &[parts.witness]);
+    let closed_witness = close(&mut d, prefix_witness, true, true);
+    let witness_type = d
+        .kernel
+        .infer(closed_witness)
+        .map_err(|error| format!("Exists.rec witness prefix inference failed: {error:?}"))?;
+    let prefixes = [
+        ("Nat", nat_type),
+        ("predicate", predicate_type),
+        ("motive", motive_type),
+        ("minor", minor_type),
+        ("witness", witness_type),
+    ]
+    .into_iter()
+    .map(|(name, ty)| {
+        Ok(json!({"name":name,"type":d.kernel.render_lean(ty),"sha256":canonical_expression_sha256(d.kernel,ty)?}))
+    })
+    .collect::<Result<Vec<_>, String>>()?;
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "schema_version":1,
+            "kind":"axeyum-autogenesis-nat-fib-gcd-exists-rec-prefix-diagnostic-v1",
+            "state":"all-five-exists-rec-prefixes-inferred",
+            "prefixes":prefixes,
+            "execution":{"complete_diagnostics":1,"helper_theorem_submissions":1,"prefix_inferences":5,"target_theorem_submissions":0,"proof_values_rendered":0,"capsule_writes":0,"retries":0,"ledger_writes":0}
+        }))
+        .map_err(|error| error.to_string())?
+    );
+    Ok(())
+}
+
 fn fib_gcd_iteration_statement(d: &mut Dev<'_>, m: ExprId, r: ExprId, q: ExprId) -> ExprId {
     let fib_m = d.fib(m);
     let product = d.mul(m, q);
@@ -1851,6 +1976,11 @@ fn fib_gcd_witness_elim(
 }
 
 struct FibGcdWitnessElimParts {
+    nat: ExprId,
+    rec: ExprId,
+    predicate: ExprId,
+    motive: ExprId,
+    witness: ExprId,
     q_fv: u64,
     equation_fv: u64,
     equation_ty: ExprId,
@@ -1922,6 +2052,11 @@ fn build_fib_gcd_witness_elim(
     let rec = d.kernel.const_(d.exists_rec, vec![one]);
     let result = d.apply(rec, &[nat, predicate, motive, minor, witness]);
     FibGcdWitnessElimParts {
+        nat,
+        rec,
+        predicate,
+        motive,
+        witness,
         q_fv,
         equation_fv,
         equation_ty,
