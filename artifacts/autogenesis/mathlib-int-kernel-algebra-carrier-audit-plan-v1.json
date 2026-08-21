@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-kernel-algebra-carrier-audit-plan",
+  "state": "preregistered-before-private-carrier-single-read",
+  "predecessor": {"path": "artifacts/autogenesis/mathlib-int-fib-primitive-algebra-result-v2.json", "required_state": "surface-constructor-induction-stops-at-opaque-int-operations"},
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-algebra-leaves-v2/leaves.ndjson", "bytes": 1428492, "sha256": "205bb2dcf8ec703d912380bad0f8f2749379d23192d97af5a2422ad6f6ab4a53"},
+  "roots": ["eq_true", "Nat.add_assoc", "Nat.add_left_comm", "_private.Init.Data.Int.Lemmas.0.Int.add_assoc.aux1", "_private.Init.Data.Int.Lemmas.0.Int.add_assoc.aux2", "congr", "congrFun'", "Int.subNat_eq_zero_iff._simp_1"],
+  "budget": {"max_importer_runs": 1, "max_proof_bearing_stream_reads": 1, "max_compiler_invocations": 0, "max_exporter_invocations": 0, "max_theorem_submissions": 0, "max_ledger_writes": 0},
+  "output": "artifacts/autogenesis/mathlib-int-kernel-algebra-carrier-audit-result-v1.json",
+  "decision_rule": "If the private arithmetic auxiliaries are empty-footprint, build a receipt-bound composition replacing contaminated equality conveniences; otherwise descend only the newly identified assumption-bearing carrier.",
+  "limitations": "Private-carrier classification is diagnostic and grants no public Int algebra or Fibonacci theorem credit."
+}

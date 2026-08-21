@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-subnat-type-probe-plan",
+  "state": "preregistered-before-three-name-type-probe",
+  "predecessor": {"path": "artifacts/autogenesis/mathlib-int-subnat-raw-core-audit-result-v1.json", "required_state": "five-raw-integer-computation-roots-empty-footprint"},
+  "candidates": ["Int.subNatNat_of_sub_eq_zero", "Int.subNatNat_of_sub_eq_succ", "Nat.add_sub_cancel_left"],
+  "execution": {"source": "artifacts/autogenesis/sources/int-subnat-type-probe-v1.lean", "source_present_at_plan_commit": false, "max_compiler_invocations": 1, "max_retries": 0, "max_theorem_submissions": 0, "max_exporter_invocations": 0, "max_importer_runs": 0, "max_ledger_writes": 0},
+  "output": "artifacts/autogenesis/mathlib-int-subnat-type-probe-result-v1.json",
+  "limitations": "Type discovery grants no theorem credit."
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-subnat-branch-audit-result",
+  "state": "branch-conveniences-propext-raw-computation-roots-exposed",
+  "plan": {"path": "artifacts/autogenesis/mathlib-int-subnat-branch-audit-plan-v1.json", "sha256": "dca3a5242896d0eb9beeda196325c5df608857b7452216e229df6ef6f3ef324d"},
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-algebra-leaves-v2/leaves.ndjson", "bytes": 1428492, "sha256": "205bb2dcf8ec703d912380bad0f8f2749379d23192d97af5a2422ad6f6ab4a53"},
+  "observation_sha256": "02ce69d10248b2d7c695c93ca2c2d2309ea934a448fc4537a06fdf5024f422c6",
+  "summary": {"population": 9, "empty_footprint": 0, "propext_bearing": 9},
+  "raw_candidates": ["Int.subNatNat_of_sub_eq_zero", "Int.subNatNat_of_sub_eq_succ", "Int.subNatNat_add_left", "Int.subNatNat_add_right", "Int.subNatNat_elim", "Int.negSucc.inj", "Int.negSucc_ne_zero", "Int.ofNat_inj"],
+  "rejected_wrapper_classes": ["injEq", "_simp", "false_iff", "iff_self"],
+  "execution": {"importer_runs": 1, "proof_bearing_stream_reads": 1, "theorem_submissions": 0, "ledger_writes": 0},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}

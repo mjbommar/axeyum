@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-add-two-contract-leaves-result",
+  "state": "proposal-stops-at-missing-omega-object-before-elaboration",
+  "plan_sha256": "d2b1f0af31f573de230f35564b5b5eee81c850007693f548c9f685bc7bc3a975",
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-add-two-contract-leaves-v1.lean",
+    "sha256": "c787ba77aa6f07a1bcc1dd2d524b3c519ba4b1816c3790b5654446d844aa4683"
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit_status": 1,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "theorem_submissions": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "diagnostic": {
+    "missing_object": ".lake/build/lib/lean/Mathlib/Tactic/Omega.olean",
+    "umbrella_object_present": ".lake/build/lib/lean/Mathlib.olean",
+    "proof_elaboration_started": false,
+    "repair": "change only the import to the already-built Mathlib umbrella module"
+  },
+  "failed_episode": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-contract-leaves-v1",
+    "proof_streams_written": 0
+  },
+  "cleanup": {
+    "temporary_source_removed": true,
+    "temporary_olean_removed": true,
+    "checkout_baseline_restored": true
+  },
+  "authority": {
+    "support_credit": 0,
+    "closed_target_authorized": false,
+    "ledger_writes": 0
+  }
+}

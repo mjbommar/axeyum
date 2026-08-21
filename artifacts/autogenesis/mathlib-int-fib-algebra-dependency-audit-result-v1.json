@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-algebra-dependency-audit-result",
+  "state": "four-clean-transports-three-propext-integer-algebra-roots",
+  "plan": {"path": "artifacts/autogenesis/mathlib-int-fib-algebra-dependency-audit-plan-v1.json", "sha256": "f387f1b2ba2ca824d8b68dffc63ad36deadf5f77f42828ce3b26e740e8e799f3"},
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-algebra-leaves-v2/leaves.ndjson", "bytes": 1428492, "sha256": "205bb2dcf8ec703d912380bad0f8f2749379d23192d97af5a2422ad6f6ab4a53"},
+  "observation_sha256": "79cb6900ce1829a87f9b5b333dc3aecd04add33e9821746bef52ce27bdd3b1a4",
+  "empty_footprint": ["Eq.symm", "Eq.trans", "congrArg", "neg_add_rev"],
+  "propext_bearing": {
+    "Int.add_comm": ["Eq.trans", "Nat.add_comm", "congrArg", "eq_self", "of_eq_true"],
+    "Int.neg_add_cancel_right": ["Int.add_assoc", "Int.add_left_neg", "Int.add_zero", "congrArg"],
+    "Int.add_neg_cancel_right": ["Int.add_assoc", "Int.add_right_neg", "Int.add_zero", "congrArg"]
+  },
+  "execution": {"importer_runs": 1, "proof_bearing_stream_reads": 1, "theorem_submissions": 0, "ledger_writes": 0},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}

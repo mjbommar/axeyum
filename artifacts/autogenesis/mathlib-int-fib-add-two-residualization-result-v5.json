@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-add-two-residualization-result",
+  "state": "seven-contract-integer-fib-recurrence-reconstructs-empty-footprint",
+  "plan_sha256": "25164de49ace82e45349deac1b732c7094a26e41a554f04907d4ffed2cb7de98",
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-add-two-residual-v3.lean",
+    "sha256": "d1f615db6821c187ddc47e4524eee1555caf4d89fa24ae3595a428c46a2ef6ea"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-residual-v5",
+    "manifest_sha256": "e38f99b5ca79bf5292bbbe396d20d3e778d39befe3577fd14fca8d254bc366a9",
+    "stream_sha256": "3d20dc04f7598a1625ab87efd2456901fe322ccb0e19cd51f82a04dd37c3bfc9",
+    "stream_bytes": 447839,
+    "observation_sha256": "624ba99755cf74a4bb4373cb6786436ddeae80c50d6b44d057a80f71e0f81b27"
+  },
+  "theorem": {
+    "name": "Int.fib_add_two_residual",
+    "declaration_sha256": "fb697129833a587e1b6d42c31c45e537673362a15dadb95b834c8f681f6b2816",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": ["Eq.symm", "Eq.trans", "congrArg", "if_neg", "if_pos", "noConfusion_of_Nat"]
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit_status": 0,
+    "exporter_invocations": 1,
+    "exporter_exit_status": 0,
+    "importer_runs": 2,
+    "byte_identical_observations": true,
+    "parameterized_theorem_submissions": 1,
+    "closed_target_submissions": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "residual_contracts": ["natRec", "modCases", "succOne", "succZero", "castAdd", "evenAdd", "oddAdd"],
+  "authority": {
+    "parameterized_support_credit": 1,
+    "closed_target_authorized": false,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  }
+}

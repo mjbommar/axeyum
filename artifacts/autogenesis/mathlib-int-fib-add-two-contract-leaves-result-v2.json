@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-add-two-contract-leaves-result",
+  "state": "parity-elaborates-cast-add-stops-proposal-before-export",
+  "plan_sha256": "66dd56182444b620d9d7442c60060badef0706c523a9617492c153f391433860",
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-add-two-contract-leaves-v2.lean",
+    "sha256": "485dca033be2a2301c6d61a08810db9366864b49b4661d7dc9ab7821a4eb5313"
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit_status": 1,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "theorem_submissions": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "diagnostic": {
+    "accepted_before_failure": ["modCases", "succOne", "succZero"],
+    "failed_leaf": "castAdd",
+    "failure": "Omega does not infer the definitional relationship between Int.ofNat (a + b) and the two separately cast operands",
+    "unreached": ["evenAdd", "oddAdd"],
+    "repair": "replace only castAdd's Omega proof with rfl"
+  },
+  "cleanup": {
+    "temporary_source_removed": true,
+    "temporary_olean_removed": true,
+    "checkout_baseline_restored": true
+  },
+  "authority": {
+    "support_credit": 0,
+    "closed_target_authorized": false,
+    "ledger_writes": 0
+  }
+}
