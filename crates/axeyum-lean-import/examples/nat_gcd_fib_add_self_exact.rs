@@ -201,6 +201,14 @@ fn run() -> Result<(), String> {
         return run_fib_gcd_target_type_diagnostic(args);
     }
     let mut args = std::env::args_os().skip(1);
+    if args.next().as_deref()
+        == Some(std::ffi::OsStr::new(
+            "--target-native-fib-gcd-induction-argument-diagnostic",
+        ))
+    {
+        return run_fib_gcd_induction_argument_diagnostic(args);
+    }
+    let mut args = std::env::args_os().skip(1);
     if args.next().as_deref() == Some(std::ffi::OsStr::new("--target-native-goal-audit")) {
         return run_target_native_goal_audit(args);
     }
@@ -1268,6 +1276,64 @@ fn run_fib_gcd_target_type_diagnostic(
             "inferred":{"type":kernel.render_lean(inferred),"sha256":canonical_expression_sha256(&kernel,inferred)?},
             "definitionally_equal":definitionally_equal,
             "execution":{"complete_diagnostics":1,"helper_theorem_submissions":1,"target_proof_inferences":1,"target_theorem_submissions":0,"proof_values_rendered":0,"capsule_writes":0,"retries":0,"ledger_writes":0}
+        }))
+        .map_err(|error| error.to_string())?
+    );
+    Ok(())
+}
+
+fn run_fib_gcd_induction_argument_diagnostic(
+    mut args: impl Iterator<Item = std::ffi::OsString>,
+) -> Result<(), String> {
+    let greatest_path = path(&mut args)?;
+    let shift_path = path(&mut args)?;
+    if args.next().is_some() {
+        return Err("usage: nat_gcd_fib_add_self_exact \
+             --target-native-fib-gcd-induction-argument-diagnostic \
+             <gcd-greatest> <gcd-fib-add-self>"
+            .to_owned());
+    }
+    let greatest = import_bound(&greatest_path, GCD_GREATEST_CAPSULE, "gcd-greatest")?;
+    let shift = import_bound(&shift_path, GCD_FIB_SHIFT_CAPSULE, "gcd-fib-add-self")?;
+    let composed = compose_checked_theorem_slice(shift.kernel(), greatest.kernel(), &[TARGET])
+        .map_err(|error| format!("induction diagnostic composition declined: {error:?}"))?;
+    verify_checked_theorem_composition(
+        shift.kernel(),
+        greatest.kernel(),
+        composed.kernel(),
+        composed.receipt(),
+    )
+    .map_err(|error| format!("induction diagnostic composition did not replay: {error:?}"))?;
+    let mut kernel = composed.kernel().clone();
+    declare_fib_gcd_quotient_iteration(&mut kernel)?;
+    let mut d = Dev::new(&mut kernel)?;
+    let quotient = d.exact("Axeyum.Autogenesis.modQuotientWitnessV4")?;
+    let helper = d.exact(FIB_GCD_ITERATION)?;
+    let gcd_comm = d.exact(CLEAN_GCD_COMM)?;
+    let nat = d.nat_ty();
+    let base_n_fv = d.fresh();
+    let base_n = d.kernel.fvar(base_n_fv);
+    let fib_base_n = d.fib(base_n);
+    let base = d.refl(fib_base_n);
+    let base = d.lam(base_n_fv, nat, base);
+    let base_type = d
+        .kernel
+        .infer(base)
+        .map_err(|error| format!("base proof inference failed: {error:?}"))?;
+    let step = fib_gcd_step(&mut d, quotient, helper, gcd_comm)?;
+    let step_type = d
+        .kernel
+        .infer(step)
+        .map_err(|error| format!("step proof inference failed: {error:?}"))?;
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "schema_version":1,
+            "kind":"axeyum-autogenesis-nat-fib-gcd-induction-argument-diagnostic-v1",
+            "state":"base-and-step-types-inferred-without-target-construction",
+            "base":{"type":d.kernel.render_lean(base_type),"sha256":canonical_expression_sha256(d.kernel,base_type)?},
+            "step":{"type":d.kernel.render_lean(step_type),"sha256":canonical_expression_sha256(d.kernel,step_type)?},
+            "execution":{"complete_diagnostics":1,"helper_theorem_submissions":1,"base_proof_inferences":1,"step_proof_inferences":1,"target_proof_inferences":0,"target_theorem_submissions":0,"proof_values_rendered":0,"capsule_writes":0,"retries":0,"ledger_writes":0}
         }))
         .map_err(|error| error.to_string())?
     );
