@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-add-two-clean-construction-result",
+  "state": "first-source-stops-at-negative-successor-normalization-no-export",
+  "plan_sha256": "b3d3c73a28288b861ff5f66fdc7032efd4f5d87aec9f566044ae76ecd3bbc8e8",
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-add-two-clean-v1.lean",
+    "sha256": "458b6875120647c1ac2cd6f7e888839015eda265eeade748d4f3d060475d4788"
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit_status": 1,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "target_theorem_submissions": 0,
+    "retries": 0,
+    "search_invocations": 0,
+    "ledger_writes": 0
+  },
+  "diagnostic": {
+    "completed_cases": [
+      "nonnegative",
+      "negative-one",
+      "negative-two"
+    ],
+    "open_cases": [
+      "negative-successor-even",
+      "negative-successor-odd"
+    ],
+    "cause": "simp leaves Int constructor addition for n+1 and n+2 opaque and does not normalize the alternating-sign additive identity",
+    "next": "freeze explicit negative-successor addition equations and sign-normalized Fibonacci recurrence before a new source"
+  },
+  "cleanup": {
+    "temporary_source_removed": true,
+    "temporary_olean_removed": true,
+    "checkout_baseline_restored": true,
+    "baseline_untracked_files": {
+      "AxeyumFibGeneric.lean": "f9d3ea9024497cf1aed34a071fe541e515fb4169738d3d369dd6bf9a7ad414be",
+      "AxeyumNatFibRecurrencePointwise.lean": "b339a3d8e4ce1700d367fa5fdf0ac0e05d411cc48c49ce6f6e30b702a9b7baf5",
+      "AxeyumNatGcdFixEq.lean": "939d225a168b5a94d042ceab47c4dd265a81bf149ea8cfbe08012ca5089373a7"
+    }
+  },
+  "conclusion": {
+    "construction_succeeded": false,
+    "fact_admission_authorized": false,
+    "theorem_credit": 0
+  }
+}
