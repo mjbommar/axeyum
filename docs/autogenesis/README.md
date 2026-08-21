@@ -177,6 +177,7 @@ compounding, not automation theatre.
 | [`Nat.gcd_fib_add_self` support-first plan](78-nat-gcd-fib-add-self-support-plan.md) | Which fixed reusable support sequence and bounded authority may attempt the newly ready Fibonacci gcd-shift theorem? |
 | [Native Fibonacci successor addition](79-nat-fib-successor-addition.md) | Did the first preregistered support reconstruct twice, remain axiom-free, compose into r091, and preserve the zero-target-credit boundary? |
 | [Coprime-factor cancellation and the Euclidean seam](80-coprime-factor-cancellation-and-euclidean-seam.md) | Did the second support reconstruct independently, and what exact official/native boundary prevents target composition? |
+| [Constructive official Euclidean bridge plan](81-constructive-euclidean-bridge-plan.md) | Which bounded bottom-up route repairs the official division/Bézout foundation without importing an assumption-bearing proof or spending target credit? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
