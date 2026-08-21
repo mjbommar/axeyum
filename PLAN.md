@@ -260,6 +260,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | V4 verifies `Nat.mod_lt` identity and type shape and composes cancellation through the explicit target-leaf API without stream access |
 | 2026-08-21 | (pending) | V4 accepts `Nat.mod_lt` reuse but still finds another transitive path to missing `Acc`; run 2 is skipped before support submission |
 | 2026-08-21 | (pending) | One nonrendering closure audit freezes the official cancellation-to-`Acc` path and nearest compatible carriers before more bootstrap code |
+| 2026-08-21 | (pending) | `docs/research/05-algorithms/linear-arithmetic-deficit-diagnosis-2026-08-21.md` + `bench-results/linear-arithmetic-diagnosis-20260821/`: gap #1 diagnosed — three causes not one, 800-file per-file classification, two A/Bs (one refuted, one +17 QF_UFLIA files at 0 disagreements). |
 | 2026-08-20 | `9eb81822f` | Isolate persistent pre-push worktree metadata from the caller lane and register the two-sided control |
 | 2026-08-20 | `24b16642e` | Confirm the repaired hook against a live Rust push with unchanged caller state and a clean exact-SHA gate checkout |
 | 2026-08-20 | (pending) | The string family's first re-derivable UNSAT artifact beyond word-clash/regex-emptiness: `Evidence::UnsatStringLength` abstracts every string term to an integer length keyed on its SOURCE NAME, names the five theory lemmas the argument uses, and closes with one nonnegative combination per case-split branch. The checker is two stages — bind each lemma to the conjunct that licenses it, then re-derive the arithmetic — and is arena-free, because a string script's flat view is the bounded packed-BV encoding rather than the query. 23 guards mutation-checked; two killed nothing and were fixed rather than kept (one was dead code the command allow-list already covered, one had no multi-`check-sat` fixture). Also: `diagnose_evidence` reported the ARENA front door for string files, i.e. a query nobody solves — it now reports the text front door too, and agreed with the dominance audit for the first time. |
@@ -2036,6 +2037,52 @@ Membership measured, not guessed: **five** suites, the four that failed plus
 false positives (`specs.len() == 720`, `== 640`, corpus population `226`,
 `outer_bindings.len() == 318`) — element counts, not module bytes. Detail and
 the full measurement table: [`../notes/agent-golden-pins.md`](docs/plan/notes/agent-golden-pins.md).
+
+**Ranked gap #1 is diagnosed: three causes, not one, and the largest single
+block of losses is a route that quits at 5 % budget use** (`WIP`,
+agent-lra-diagnosis, 2026-08-21). Measured at `8426fbd2d` over the four pinned
+200-file competition lists (sha256 unchanged from their `PARITY.md` entries),
+axeyum + z3 4.13.3 at 24 s each, then a second pass for route ladders. cvc5 is
+not installed on this host; z3 lands within 5 files of cvc5's recorded count in
+every division, which is why it is used to decide which failures count.
+Instrument validated by reproducing QF_LRA's recorded 86/200 exactly.
+
+278 misses classify as: **T** budget exhausted 146, **S** admission decline on a
+size constant 73, **I** incompleteness 48, **P** front-door reject 11. The
+route ladders say these are **three** causes, and they do not line up with the
+divisions:
+
+- **`dl-online` runs out of clock** — 64/65 QF_IDL and 51/55 QF_RDL misses. The
+  one genuinely shared cause, and it is shared by two divisions, not four.
+- **the LRA route** — QF_LRA (and QF_RDL's tail): half refuse on
+  `MAX_ONLINE_LRA_ATOMS = 1_024`, half time out.
+- **the lazy UF/arith CEGAR** — QF_UFLIA, **82 of 82** traced misses, one route.
+- plus **26 QF_UFLIA files rejected at the parser** for `Int` literals beyond
+  `i128` (the Certora/EVM family, 2^256 constants). A capability zero, 13 % of
+  the division, untouched by any solver work.
+
+Two one-constant A/Bs, built in a private snapshot, positive-controlled, never
+in the shared tree:
+
+- **REFUTED** — making the LRA atom cap fall through instead of terminal
+  (`lra_theory.rs:203`): **0** new decides over 71 files and **54** memory
+  aborts past 12 GiB. The cap is load-bearing protection; both routes are
+  inadequate above ~1,000 atoms.
+- **CONFIRMED** — `MAX_MINIMIZED_THEORY_CORE_ATOMS` 128 → 4 096
+  (`dpll_lia.rs:48`). QF_UFLIA **92 → 109 (+17)**, QF_IDL 65 → 64 (the one loss
+  re-decides on a quieter box on **both** binaries), **0 disagreements** against
+  z3 and **0** against the declared `:status`. The 48 QF_UFLIA `I1` files return
+  `unknown` after a median **1.3 s of 24 s** with `core_src_minimized=0` — the
+  cores too wide to minimise are exactly the cores whose width then exhausts
+  `MAX_DYNAMIC_LARGE_CORE_LITERALS`.
+
+Next: the shipped form of that fix is **not** the constant this A/B moved —
+minimisation should be budget-driven rather than width-gated, keeping the memory
+protection the `Large` bucket exists for. Nothing here has been through
+`scripts/parity-run.sh`, which is still gated by nothing (gap #2).
+
+Full finding, all counts and controls:
+[`../../research/05-algorithms/linear-arithmetic-deficit-diagnosis-2026-08-21.md`](docs/research/05-algorithms/linear-arithmetic-deficit-diagnosis-2026-08-21.md).
 
 **A mutant that did not compile was scored as coverage** (`WIP`,
 agent-mutation-harness, 2026-08-18). Measured against `mutation_controls.py` as
