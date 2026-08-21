@@ -206,6 +206,7 @@ compounding, not automation theatre.
 | [Subtractive gcd root audit result](107-subtractive-gcd-root-audit-result.md) | Why do all seven official convenience proofs decline, and what exact dependency frontier comes next? |
 | [Subtractive gcd dependency audit plan](108-subtractive-gcd-dependency-audit-plan.md) | Which exact carriers contaminate the seven declined subtraction/base proofs? |
 | [Subtractive gcd dependency audit result](109-subtractive-gcd-dependency-audit-result.md) | Which dependency half is clean, and how does the viable subtraction route narrow? |
+| [Subtractive gcd route-frontier audit plan](110-subtractive-gcd-route-frontier-audit-plan.md) | Is the private gcd equation clean, and where do the remaining divisibility assumptions live? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

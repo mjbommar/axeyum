@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-subtractive-gcd-route-frontier-audit-plan",
+  "state": "preregistered-before-six-root-sealed-stream-reread-no-replacement-authority",
+  "policy_version": "subtractive-gcd-route-frontier-audit-v1",
+  "inputs": {
+    "dependency_result": {
+      "path": "artifacts/autogenesis/subtractive-gcd-dependency-audit-result-v1.json",
+      "sha256": "384066c42b6fc1599c869a15ca5da21716cdb508113bc8855763072b95e33092"
+    },
+    "subtraction_measurement": {
+      "path": "artifacts/autogenesis/euclidean-joint-div-mod-dependency-footprint-audit-result-v1.json",
+      "sha256": "9a27f06239e54fdd4979901c377f8f4675f6ff580d043244360d144aee7b29de",
+      "name": "Nat.sub_add_cancel",
+      "declaration_sha256": "756d178b67958fe684cb9e64c8d0b40ff557a375ed14ba122c070bfa7b3616a5",
+      "axiom_footprint": ["propext"]
+    },
+    "subtraction_replacement": {
+      "path": "artifacts/autogenesis/euclidean-joint-div-mod-local-subtraction-replacement-result-v1.json",
+      "sha256": "3c181eb4c14a37cdb0046c915e3bf04e96f7c6f48f2688448a7a61a871c2dfb1",
+      "replacement": "local primitive-recursive subtraction restoration",
+      "accepted_private_support": true,
+      "axiom_footprint": []
+    },
+    "sealed_stream": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/38e40236f-subtractive-gcd-root-audit-v1/gcd-roots.ndjson",
+      "sha256": "ff9916e0d74f1a69f7fee33c3b973cd771e6786715b8ea86699da0a8124ae65b",
+      "bytes": 1152342,
+      "mode": "0444"
+    }
+  },
+  "derivation": {
+    "source": "dependency_result.route_relevant_novel_dependency_frontier minus already measured Nat.sub_add_cancel",
+    "source_population": 7,
+    "historically_bound_population": 1,
+    "fixed_population": 6
+  },
+  "fixed_roots": [
+    "Nat.dvd_antisymm",
+    "Nat.dvd_gcd",
+    "Nat.gcd_add_mul_right_right",
+    "Nat.gcd_dvd_left",
+    "Nat.gcd_dvd_right",
+    "_private.Init.Data.Nat.Gcd.0.Nat.gcd.eq_def"
+  ],
+  "fixed_measurement": {
+    "tool_path": "crates/axeyum-lean-import/examples/theorem_footprint_batch_audit.rs",
+    "tool_sha256": "38e40236fec86f1080af52bafb9394f9f1505ad161dae96e9c48979d00b1094a",
+    "root_order_must_match_plan": true,
+    "proof_terms_types_or_values_may_be_rendered": false,
+    "all_roots_must_resolve_as_theorems": true
+  },
+  "decision_rule": {
+    "authorize_reconstruction_in_this_increment": false,
+    "private_gcd_equation_empty_advances_computational_base": true,
+    "assumption_bearing_divisibility_roots_require_further_measurement_or_local_replacement": true
+  },
+  "budget": {
+    "max_exporter_invocations": 0,
+    "max_batch_importer_runs": 1,
+    "max_proof_bearing_stream_reads": 1,
+    "max_retries": 0,
+    "max_replacement_source_compilations": 0,
+    "max_new_theorem_submissions": 0,
+    "max_exact_target_submissions": 0,
+    "max_executor_invocations": 0
+  },
+  "authority": {
+    "proof_bodies_readable_by_model": false,
+    "theorem_types_readable_by_model": false,
+    "theorem_values_readable_by_model": false,
+    "replacement_proof_allowed": false,
+    "support_theorem_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/subtractive-gcd-route-frontier-audit-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-subtractive-gcd-route-frontier-audit-plan.py",
+  "limitations": "This pass classifies six new route carriers and reuses an already measured subtraction replacement. It proves no gcd equation, Bezout theorem, cancellation theorem, or Fibonacci target."
+}
