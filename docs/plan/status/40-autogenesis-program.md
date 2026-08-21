@@ -50,6 +50,8 @@
 | 2026-08-21 | (pending) | Six elementary residual leaves are frozen for an Omega/rfl proposal whose root-selected kernel audit, not tactic success, decides reuse |
 | 2026-08-21 | (pending) | V1 stops before elaboration because the narrow Omega object is absent; V2 freezes only the already-built umbrella `Mathlib` import |
 | 2026-08-21 | (pending) | V2 proves the three parity leaves but stops where Omega cannot see cast addition; V3 freezes only a definitional `rfl` cast proof |
+| 2026-08-21 | (pending) | V3 admits only definitional cast addition as clean and rejects five Omega proposals carrying propext plus Quot/String assumptions |
+| 2026-08-21 | (pending) | Two rejected sign identities are frozen for direct additive-cancellation proofs with all broad automation forbidden |
 
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |

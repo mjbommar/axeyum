@@ -1,0 +1,32 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-int-fib-add-two-algebra-leaves-plan",
+  "state": "preregistered-after-omega-rejection-before-direct-algebra-source",
+  "predecessor": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-add-two-contract-leaves-result-v3.json",
+    "required_state": "one-definitional-leaf-clean-five-omega-leaves-rejected"
+  },
+  "repair": {
+    "scope": ["evenAdd", "oddAdd"],
+    "method": "apply only the generic additive-group cancellation theorems neg_add_cancel_right and add_neg_cancel_right at the exact parenthesization",
+    "forbidden": ["omega", "abel", "simp", "ring", "linarith", "native_decide"]
+  },
+  "execution": {
+    "source": "artifacts/autogenesis/sources/int-fib-add-two-algebra-leaves-v1.lean",
+    "source_present_at_plan_commit": false,
+    "roots": ["Axeyum.IntFib.evenAdd", "Axeyum.IntFib.oddAdd"],
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-algebra-leaves-v1",
+    "pack_present_at_plan_commit": false
+  },
+  "budget": {
+    "max_compiler_invocations": 1,
+    "max_exporter_invocations": 1,
+    "max_importer_runs": 1,
+    "max_retries": 0,
+    "max_theorem_submissions": 2,
+    "max_closed_target_submissions": 0,
+    "max_ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-add-two-algebra-leaves-result-v1.json",
+  "limitations": "Even successful clean algebra leaves do not establish the three parity contracts or close Int.fib_add_two."
+}
