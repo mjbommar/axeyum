@@ -34,6 +34,22 @@ ADMISSION_CONTRACTS = {
         "must-be-nonempty",
     ),
 }
+SEALED_CAPSULE_CONTRACTS = {
+    "F:ml430-nat-gcd-fib-add-self-5a92d5e3": {
+        "result_manifest": "artifacts/autogenesis/nat-gcd-fib-add-self-target-native-exact-result-v3.json",
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/dfa79618c-target-native-exact-v3/target-1.ndjson",
+        "capsule_sha256": "279dc4db5daa6dc2f532f9876052500a7e278c54264b32ccbc9d4256907dfc24",
+        "target_theorem": "Nat.gcd_fib_add_self",
+        "receipt_sha256": "f7f568faf86f908de721b33de3fcbe766e12fae8fab4e1d738eb592eddf9306e",
+    },
+    "F:ml430-nat-gcd-greatest-0a04214a": {
+        "result_manifest": "artifacts/autogenesis/mathlib-nat-gcd-greatest-result-v3.json",
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/85b9d4243-target-native-gcd-greatest-v4/target-1.ndjson",
+        "capsule_sha256": "c233478948b4d4aedc01c839ef9013c3feb2ddb0009d8b57699d7efb755375e6",
+        "target_theorem": "Nat.gcd_greatest",
+        "receipt_sha256": "7441a7b211212e04f232918abc5026365761e89a922dba763fb90f8a0ad8b8c3",
+    },
+}
 
 
 class RegistryError(RuntimeError):
@@ -282,10 +298,10 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
         manifest_path = repository_file(
             value["result_manifest"], f"{label}.result_manifest", root
         )
-        expected_manifest = (
-            root
-            / "artifacts/autogenesis/nat-gcd-fib-add-self-target-native-exact-result-v3.json"
-        ).resolve()
+        contract = SEALED_CAPSULE_CONTRACTS.get(value["input_fact_id"])
+        if contract is None:
+            raise RegistryError(f"{label} exceeds the exact sealed-capsule scope")
+        expected_manifest = (root / contract["result_manifest"]).resolve()
         manifest = json.loads(manifest_path.read_text())
         theorem = manifest.get("target") or {}
         execution = manifest.get("execution") or {}
@@ -293,13 +309,9 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             manifest_path != expected_manifest
             or manifest.get("state")
             != "exact-target-reconstructed-twice-byte-identical-empty-footprint"
-            or value["input_fact_id"]
-            != "F:ml430-nat-gcd-fib-add-self-5a92d5e3"
-            or value["capsule_path"]
-            != "/nas3/data/axeyum/autogenesis/reference-packs/dfa79618c-target-native-exact-v3/target-1.ndjson"
-            or value["capsule_sha256"]
-            != "279dc4db5daa6dc2f532f9876052500a7e278c54264b32ccbc9d4256907dfc24"
-            or value["target_theorem"] != "Nat.gcd_fib_add_self"
+            or value["capsule_path"] != contract["capsule_path"]
+            or value["capsule_sha256"] != contract["capsule_sha256"]
+            or value["target_theorem"] != contract["target_theorem"]
             or theorem.get("name") != value["target_theorem"]
             or theorem.get("goal_sha256") != value["goal_sha256"]
             or theorem.get("declaration_sha256") != value["declaration_sha256"]
@@ -309,8 +321,7 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             or execution.get("fresh_imports") != 4
             or execution.get("outputs_byte_identical") is not True
             or execution.get("receipts_byte_identical") is not True
-            or value["receipt_sha256"]
-            != "f7f568faf86f908de721b33de3fcbe766e12fae8fab4e1d738eb592eddf9306e"
+            or value["receipt_sha256"] != contract["receipt_sha256"]
         ):
             raise RegistryError(f"{label} sealed-kernel capsule contract disagrees")
     else:

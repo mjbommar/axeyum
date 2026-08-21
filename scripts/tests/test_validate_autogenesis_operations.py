@@ -24,9 +24,9 @@ class OperationRegistryTests(unittest.TestCase):
             (ROOT / "artifacts/autogenesis/operations.json").read_text()
         )
 
-    def test_committed_registry_has_one_fixture_and_eight_authoritative_operations(self) -> None:
+    def test_committed_registry_has_one_fixture_and_nine_authoritative_operations(self) -> None:
         registry_module.validate_registry(self.registry, ROOT)
-        self.assertEqual(len(self.registry["operations"]), 9)
+        self.assertEqual(len(self.registry["operations"]), 10)
         self.assertEqual(
             self.registry["operations"][0]["scope"], "counterfactual-fixture-only"
         )
@@ -97,6 +97,15 @@ class OperationRegistryTests(unittest.TestCase):
         )
         self.assertEqual(
             gcd_fib["executor"]["driver"],
+            "axeyum-lean-import/sealed-kernel-capsule-v1",
+        )
+        gcd_greatest = self.registry["operations"][9]
+        self.assertEqual(
+            gcd_greatest["applicability"]["fact_ids"],
+            ["F:ml430-nat-gcd-greatest-0a04214a"],
+        )
+        self.assertEqual(
+            gcd_greatest["executor"]["driver"],
             "axeyum-lean-import/sealed-kernel-capsule-v1",
         )
 
@@ -228,20 +237,21 @@ class OperationRegistryTests(unittest.TestCase):
                     registry_module.validate_registry(mutated, ROOT)
 
     def test_sealed_kernel_capsule_driver_is_exactly_manifest_bound(self) -> None:
-        for field, value in (
-            ("capsule_sha256", "0" * 64),
-            ("target_theorem", "Nat.wrong"),
-            ("goal_sha256", "1" * 64),
-            ("declaration_sha256", "2" * 64),
-            ("receipt_sha256", "3" * 64),
-        ):
-            with self.subTest(field=field):
-                mutated = copy.deepcopy(self.registry)
-                mutated["operations"][8]["executor"][field] = value
-                with self.assertRaisesRegex(
-                    registry_module.RegistryError, "contract disagrees"
-                ):
-                    registry_module.validate_registry(mutated, ROOT)
+        for operation_index in (8, 9):
+            for field, value in (
+                ("capsule_sha256", "0" * 64),
+                ("target_theorem", "Nat.wrong"),
+                ("goal_sha256", "1" * 64),
+                ("declaration_sha256", "2" * 64),
+                ("receipt_sha256", "3" * 64),
+            ):
+                with self.subTest(operation_index=operation_index, field=field):
+                    mutated = copy.deepcopy(self.registry)
+                    mutated["operations"][operation_index]["executor"][field] = value
+                    with self.assertRaisesRegex(
+                        registry_module.RegistryError, "contract disagrees"
+                    ):
+                        registry_module.validate_registry(mutated, ROOT)
 
 
 if __name__ == "__main__":

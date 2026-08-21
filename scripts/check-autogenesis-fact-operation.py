@@ -23,9 +23,6 @@ CHECKED_THEOREM_RECEIPT_CHECKER = (
 DEPENDENCY_THEOREM_RECEIPT_CHECKER = (
     ROOT / "scripts/check-autogenesis-nat-fib-coprime-premise-plan.py"
 )
-SEALED_KERNEL_CAPSULE_CHECKER = (
-    ROOT / "scripts/check-autogenesis-sealed-kernel-capsule.py"
-)
 
 
 class FactOperationError(RuntimeError):
@@ -288,8 +285,9 @@ def check_fact(
             }
         )
     elif executor["driver"] == "axeyum-lean-import/sealed-kernel-capsule-v1":
+        checker_path = ROOT / operation["checker"]["implementation"]
         capsule_checker = load_module(
-            "sealed_kernel_capsule_for_fact_operation", SEALED_KERNEL_CAPSULE_CHECKER
+            "sealed_kernel_capsule_for_fact_operation", checker_path
         )
         try:
             checked = capsule_checker.validate()
@@ -447,9 +445,10 @@ def check_fact(
             "ledger_writes": archived["ledger_writes"],
         }
     elif executor["driver"] == "axeyum-lean-import/sealed-kernel-capsule-v1":
+        checker_path = ROOT / operation["checker"]["implementation"]
         capsule_checker = load_module(
             "sealed_kernel_capsule_observation_for_fact_operation",
-            SEALED_KERNEL_CAPSULE_CHECKER,
+            checker_path,
         )
         try:
             checked = capsule_checker.validate()

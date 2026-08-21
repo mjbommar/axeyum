@@ -393,6 +393,52 @@
         "axiom_footprint_policy": "must-be-empty",
         "axiom_footprint": []
       }
+    },
+    {
+      "id": "authoritative-mathlib-nat-gcd-greatest-kernel-capsule-v1",
+      "scope": "authoritative",
+      "reviewed_gate_mentions": [
+        "check-autogenesis-nat-gcd-greatest-capsule.py",
+        "validate-autogenesis-operations.py"
+      ],
+      "applicability": {
+        "fact_ids": ["F:ml430-nat-gcd-greatest-0a04214a"],
+        "formal_languages": ["lean4-surface"],
+        "fragments": ["Nat"]
+      },
+      "producer": {
+        "operation": "target-native-gcd-greatest-v1",
+        "implementation": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+        "input_kind": "axeyum-proof-isolated-kernel-goal",
+        "output_kind": "axeyum-sealed-kernel-theorem-capsule"
+      },
+      "checker": {
+        "operation": "axeyum-lean-import/sealed-gcd-greatest-capsule-receipt-v1",
+        "implementation": "scripts/check-autogenesis-nat-gcd-greatest-capsule.py",
+        "input_kind": "axeyum-sealed-kernel-theorem-capsule",
+        "output_kind": "axeyum-checked-sealed-kernel-capsule-receipt-v1"
+      },
+      "executor": {
+        "driver": "axeyum-lean-import/sealed-kernel-capsule-v1",
+        "implementation": "scripts/execute-autogenesis-operation.py",
+        "input_fact_id": "F:ml430-nat-gcd-greatest-0a04214a",
+        "result_manifest": "artifacts/autogenesis/mathlib-nat-gcd-greatest-result-v3.json",
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/85b9d4243-target-native-gcd-greatest-v4/target-1.ndjson",
+        "capsule_sha256": "c233478948b4d4aedc01c839ef9013c3feb2ddb0009d8b57699d7efb755375e6",
+        "target_theorem": "Nat.gcd_greatest",
+        "goal_sha256": "0977f9584b62cf5c5140f32ea2d4bf726c9c42aa3cef9f98afdea5d13810af90",
+        "declaration_sha256": "b54b6ab061abba5ea42ca3b0451cd240071b4d535e77bed003d54c78115b03bc",
+        "receipt_sha256": "7441a7b211212e04f232918abc5026365761e89a922dba763fb90f8a0ad8b8c3",
+        "timeout_seconds": 120,
+        "expected_evidence_label": "kernel-term-mathlib-nat-gcd-greatest-capsule-axiom-free"
+      },
+      "admission": {
+        "epistemic_status": "proved",
+        "proof_route": "kernel-lean",
+        "evidence_kind": "kernel-term",
+        "axiom_footprint_policy": "must-be-empty",
+        "axiom_footprint": []
+      }
     }
   ]
 }

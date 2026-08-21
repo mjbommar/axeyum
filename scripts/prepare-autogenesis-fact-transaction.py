@@ -454,7 +454,8 @@ def build_authoritative_transaction(
             != executor["declaration_sha256"]
             or observation.get("axiom_footprint") != []
             or not isinstance(dependencies, list)
-            or len(dependencies) != 12
+            or not dependencies
+            or len(dependencies) != len(set(dependencies))
             or observation.get("fresh_imports") != 4
             or observation.get("fixed_plan_reconstructions") != 2
             or observation.get("target_theorem_submissions") != 2
