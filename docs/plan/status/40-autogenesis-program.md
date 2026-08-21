@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction retains the accepted pointwise quotient witness and parameterized balanced-Bézout update. Both missing target-owned multiplication leaves are now accepted: primitive-induction associativity and right-distributivity replacements compiled once, exported once, and reconstructed twice each with byte-identical empty-footprint audits. Neither reaches the contaminated official theorem. Applying the leaves to V2, gcd induction, targets, and ledger writes remain uncredited.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction retains the accepted pointwise quotient witness, parameterized balanced-Bézout update, and both accepted target-owned multiplication leaves. A transparent closed wrapper is now preregistered: rebuild the three exact modules, apply the two leaves to V2, and require the wrapper's direct theorem dependencies to equal those three accepted names. The three-compile/one-export/two-import ceiling, nine-path cleanup, and zero gcd/target/ledger authority are frozen before execution.
 
-**Next:** preregister a transparent closed wrapper applying the accepted V2 update to the exact two accepted leaf declarations. Compile/export once and require two matching empty-footprint audits whose direct dependencies bind all three accepted theorem identities. Preserve every prior source and sealed pack, the exact three-file baseline, and zero Fibonacci/ledger authority until each independent gate passes.
+**Next:** execute the closed wrapper once on pinned `s5`. Accept only two byte-identical empty-footprint audits with exactly the parameterized update and two leaf dependencies. On acceptance, separately preregister generic official-gcd balanced-Bézout induction using the quotient witness, closed update, and clean gcd leaves. Preserve every prior source and sealed pack, the exact three-file baseline, and zero Fibonacci/ledger authority until each independent gate passes.
 
 <!-- plan-section: landed-changes -->
 
@@ -109,3 +109,4 @@
 | 2026-08-21 | (pending) | Parameterized V2 Euclidean update reconstructs twice with byte-identical empty footprints and no contaminated leaves |
 | 2026-08-21 | (pending) | Primitive-induction target-owned replacements for the two contaminated multiplication leaves are frozen before execution |
 | 2026-08-21 | (pending) | Both target-owned multiplication leaves reconstruct twice with empty footprints, closing the V2 parameter gap |
+| 2026-08-21 | (pending) | Exact three-theorem wrapper is frozen to close the balanced-Bézout Euclidean update before gcd induction |
