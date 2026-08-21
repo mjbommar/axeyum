@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-add-mod-audit-result",
+  "state": "add-mod-propext-two-directional-normalizers-exposed",
+  "plan": {"path": "artifacts/autogenesis/mathlib-nat-add-mod-audit-plan-v1.json", "sha256": "8eb72924d9c50cb9353d0c63bb34370f471a9bcadb78485acfb91f0eb2a149e5"},
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-parity-leaves-v1/leaves.ndjson", "bytes": 685665, "sha256": "cda662ec943e7c8b5bd8131efdcb2a8e5b3e2c8c995e303e762bc04c750a9da5"},
+  "observation_sha256": "008b194e5379e59a2327e48b5a90c6816c833359dae6be891baaa309aa72e092",
+  "root": {"name": "Nat.add_mod", "declaration_sha256": "ce060478eb26db768435ad7f88b79489f2bf2d59fe3821eabd649a7caa3f1ee4", "axiom_footprint": ["propext"], "direct_theorem_dependencies": ["Nat.add_mod_mod", "Nat.mod_add_mod", "congrArg"]},
+  "execution": {"importer_runs": 1, "proof_bearing_stream_reads": 1, "theorem_submissions": 0, "ledger_writes": 0},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}
