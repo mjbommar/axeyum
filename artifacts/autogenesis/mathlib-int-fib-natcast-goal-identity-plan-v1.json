@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-natcast-goal-identity-plan",
+  "state": "preregistered-before-hash-only-tool-and-single-sealed-stream-read",
+  "target": {
+    "fact_id": "F:ml430-int-fib-natcast-d5886be4",
+    "theorem": "Int.fib_natCast",
+    "expected_declaration_sha256": "73b8742709bbb1b91780f41ff4a475b5b3f0b1c2981999c868b53fc38334bea3"
+  },
+  "input": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-clean-definition-v1/int-fib-clean.ndjson",
+    "bytes": 374550,
+    "sha256": "f0e34ecb1dff747938b7f1079c307af5f4e79e7a67e3bc514feee03e4f30656d",
+    "mode": "0444"
+  },
+  "measurement": {
+    "tool_path": "crates/axeyum-lean-import/examples/theorem_goal_identity_audit.rs",
+    "tool_present_at_plan_commit": false,
+    "required_output": [
+      "name",
+      "canonical_type_sha256",
+      "canonical_declaration_sha256",
+      "axiom_footprint",
+      "direct_theorem_dependencies"
+    ],
+    "proof_terms_types_or_values_may_be_rendered": false
+  },
+  "budget": {
+    "max_importer_runs": 1,
+    "max_proof_bearing_stream_reads": 1,
+    "max_retries": 0,
+    "max_theorem_submissions": 0,
+    "max_ledger_writes": 0
+  },
+  "acceptance": {
+    "name": "Int.fib_natCast",
+    "declaration_sha256_must_match": true,
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [],
+    "canonical_type_sha256_must_be_64_hex": true
+  },
+  "authority": {
+    "reconstruction_allowed": false,
+    "theorem_credit": 0,
+    "fact_admission_authorized": false,
+    "ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-natcast-goal-identity-result-v1.json",
+  "next_on_accept": "bind the exact type hash into a sealed-capsule checker and registered fact operation"
+}

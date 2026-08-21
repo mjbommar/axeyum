@@ -137,6 +137,7 @@ now. Nothing was deleted.
 | 2026-08-21 | `f50e55508` | Absent-aware retry is frozen after theorem footprint and definition closure diverge at `Quot.ind` |
 | 2026-08-21 | `d1a17a762` | Target-owned constructor/parity replacement for official `Int.fib` is frozen before its single construction attempt |
 | 2026-08-21 | (pending) | Exact `Int.fib_natCast` reconstructs twice axiom-free over the 374 KB clean target-owned representation closure |
+| 2026-08-21 | (pending) | Hash-only goal-identity audit is frozen before its tool exists or the sealed clean integer Fibonacci stream is reread |
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
 | 2026-08-21 | `a9610560c` | The durable construction checker binds the separately stored target goal identity without weakening capsule checks |
