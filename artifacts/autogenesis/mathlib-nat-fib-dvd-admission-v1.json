@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-sealed-kernel-capsule-admission",
+  "state": "durably-admitted-archived-and-clean-replayed",
+  "fact_id": "F:ml430-nat-fib-dvd-f80f3de1",
+  "operation_id": "authoritative-mathlib-nat-fib-dvd-kernel-capsule-v1",
+  "registration_commit": "e8861458ebf0438518018f2a8bf5186bd92d21fd",
+  "external_root": "/nas3/data/axeyum/autogenesis/admissions/e8861458e-mathlib-nat-fib-dvd-v1",
+  "external_index_sha256": "f0931c27376195619bbae762b7badd16d3187fae6b74da3cb1db4aa83a7a4f7b",
+  "source_bundle_sha256": "9e637415119b80e293d75ac1aff293f38ae46bbc404c8dd42ecb059fb4fcfcc5",
+  "identities": {
+    "frontier_before_sha256": "1d624633a0110d0ba1e8469bf2cbf784ee1d45655a4b9d61c1c513aa107a30c4",
+    "execution_sha256": "44e0b4912e5905da546a32291d0e1b1dea704a39389b77cae969a5e0c965695a",
+    "transaction_sha256": "22e429daaa4306022326a89a01c813fe8a3969a6996b6474fa11ed3e80725515",
+    "admission_event_sha256": "23d0be9a5e0ffcbaa488b76dd6f29dcf31c82342f1b1e044e2483d40d041e359",
+    "frontier_after_sha256": "a57abf5e75d56f2997ec2bc10e54c65af9c343ed017c6a4576823a8397016e1a",
+    "readiness_delta_sha256": "a1981b10eba5698bacb71180fc1d6c3820905f03e1a59abb2b12f9710f363241",
+    "before_fact_sha256": "6a2ce3355eb624d4762675d47286110ddfe0b088684c2f95e9d62f25bc4dc40a",
+    "after_fact_sha256": "2308bdd75dec5d9d0e04beab34e222ffba85a78e9a132d68e71b2a25191dd443"
+  },
+  "external_files": {
+    "frontier-before.json": "29a194252246f43668123bbaca014f0a07976b20ac336f6afd6ec75dc894e76a",
+    "execution.json": "14241ac62cd66ee49af5557219b3b7262a9084e8300c8faea566cc7453d8cf4b",
+    "transaction.json": "d8f23ad09eec6c2dafac9b0bd6d9a7e7091568aad207cd4005be6e921ace81ac",
+    "admission-event.json": "0f487c491fbd10752dd74a3dd40eaf24f22a99b9e4daf3ef4ae839a2d3c2179f",
+    "frontier-after.json": "bf2029f7fd680dffacc369e9b46fefff729650798920176a71fc8b62bc3bf972",
+    "readiness.json": "13441be2e49da7ae7293b15eefa8452a3c7665edc85e7e3c8320282d9ef5bb30",
+    "before-fact.json": "523804a5730bc72f1865e1415126e4d1825df8285fef01ae99ca9f57ae6230ff",
+    "after-fact.json": "3bac3095580546e680e5b24923f6f7e54b01d0dfd116d7e28d381a89180d4002"
+  },
+  "fault_injection": {
+    "boundary": "after-intent",
+    "exit_status": 75,
+    "fact_unchanged_before_recovery": true
+  },
+  "result": {
+    "authoritative_ledger_writes": 1,
+    "fixture_writes": 0,
+    "newly_ready": [],
+    "axiom_footprint": [],
+    "theorem_dependencies": [
+      "Axeyum.Autogenesis.dvdAntisymmOfficialV1",
+      "Axeyum.Autogenesis.dvdGcdOfficialV1",
+      "Axeyum.Autogenesis.dvdReflOfficialV1",
+      "Axeyum.Autogenesis.gcdDvdLeftOfficialV1",
+      "Axeyum.Autogenesis.gcdDvdRightOfficialV1",
+      "Nat.fib_gcd"
+    ],
+    "target_dependency": null
+  },
+  "clean_replay": {
+    "source_commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+    "external_root": "/nas3/data/axeyum/autogenesis/replays/733126c0f-nat-fib-dvd-v1",
+    "external_index_sha256": "8c72ed8ea0b80298859086aef31f1fd07b786420954c013620af0245c8429f68",
+    "replay_file_sha256": "09ce581c530caf82182ccf353bc7c307ea91bc604febe3fa52f768f10a030f3c",
+    "replay_sha256": "37f2b39e4a00aab587ecd161f5d81da9eb7f323ea35c5a284c7de593d8728daf",
+    "fresh_execution_sha256": "1ec4f3d06db8bb3f3304015657dd37fce1b883b371b188998511e56e8c112c5b",
+    "fresh_transaction_sha256": "83f9a50bc0e5162e387f9d2d6136fa9c8cf9f8d6602b5170c4cb6475d5376995",
+    "fresh_event_sha256": "931445df64e9cf4bd0034140424963fcdb0c4b08f7dd0430cb2edca115af7d74",
+    "fresh_readiness_delta_sha256": "c01e7a798e5ab8624bcad36e540fa7634f350a135271e13e6aadb01c4d2f05ca"
+  },
+  "reproduction": "python3 scripts/check-autogenesis-statement-reflexivity-admission.py --manifest artifacts/autogenesis/mathlib-nat-fib-dvd-admission-v1.json",
+  "limitations": "This admits one exact Mathlib v4.30 theorem from a fixed target-native capsule. It grants no held-out evaluation credit, no authority to transport same-name declarations, and no credit beyond the named theorem and its empty kernel axiom footprint. The fact is a DAG leaf and therefore produces no readiness unlock."
+}

@@ -126,6 +126,10 @@ now. Nothing was deleted.
 | 2026-08-21 | `d357b3307` | A registered sealed-capsule operation makes the frontier select exactly `Nat.fib_gcd` |
 | 2026-08-21 | `e242b72b3` | Crash-safe recovery admits exact `Nat.fib_gcd` with one authoritative write and unlocks `Nat.fib_dvd` |
 | 2026-08-21 | (pending) | Immutable primary evidence and isolated clean replay seal the exact `Nat.fib_gcd` admission |
+| 2026-08-21 | `fa143f3ec` | Exact `Nat.fib_dvd` reconstructs twice byte-identically from `Nat.fib_gcd` and five target-owned divisibility laws |
+| 2026-08-21 | `e8861458e` | A sealed-capsule operation makes the frontier select exactly the newly ready Fibonacci divisibility fact |
+| 2026-08-21 | `733126c0f` | Crash-safe recovery admits exact `Nat.fib_dvd` with one authoritative write and an honest empty unlock set |
+| 2026-08-21 | (pending) | Immutable primary evidence and isolated clean replay seal the exact `Nat.fib_dvd` leaf admission |
 | 2026-08-21 | `9ff54f11c` | Six clean order/divisibility supports reconstruct twice over r091 with empty footprints and byte-identical capsules |
 | 2026-08-21 | `dfc8874ca` | Target-owned divisibility addition and divisor-of-one supports reconstruct reproducibly without importing `Iff` |
 | 2026-08-21 | `5cdd964ba` | Divisibility reflexivity and multiplication utilities reconstruct twice and bind sealed evidence |
@@ -1138,9 +1142,9 @@ declines any trigger outside an application tree over declared uninterpreted
 functions, which rules out arithmetic subterms — the first real workload with
 `(f (+ x 1))` as a pattern will want that.
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd` is durably proved on the authoritative ledger. The repaired target reconstructed twice to the same 1,053,571-byte capsule, survived four fresh imports with an empty axiom footprint, and then passed one crash-injected authoritative admission plus an isolated clean-worktree replay. The measured DAG delta made `Nat.fib_dvd` ready; `Int.gcd_fib` remains blocked by its separate open `Int.fib_neg` premise.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd` and its newly ready child `Nat.fib_dvd` are both durably proved on the authoritative ledger. `Nat.fib_dvd` was constructed directly from the admitted GCD identity and five target-owned divisibility laws, reconstructed twice byte-identically, imported four fresh times, admitted through one crash-safe write, and reproduced in an isolated clean worktree. Its empty readiness delta is expected because it is a DAG leaf.
 
-**Next:** qualify the newly ready exact `Nat.fib_dvd` proposition, measure its smallest proof-isolated dependency boundary, and preregister one bounded construction before any target submission. Keep `Int.fib_neg` as the parallel horizon prerequisite for `Int.gcd_fib`.
+**Next:** qualify exact `Int.fib_neg`, the remaining open premise of `Int.gcd_fib`; measure whether its parity/sign branch can compose over the existing axiom-free Int and Fibonacci carriers, then preregister the smallest bounded proof before any target submission.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
