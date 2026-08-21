@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-add-two-residualization-result",
+  "state": "parameterized-source-compiles-exporter-environment-fails-before-stream",
+  "plan_sha256": "17fce76e4cdcf0a889b8652725eab9b90f2125c3223475ebbd4109babd24e7d4",
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-add-two-residual-v3.lean",
+    "sha256": "d1f615db6821c187ddc47e4524eee1555caf4d89fa24ae3595a428c46a2ef6ea"
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit_status": 0,
+    "exporter_invocations": 1,
+    "exporter_exit_status": 255,
+    "importer_runs": 0,
+    "target_theorem_submissions": 1,
+    "retries": 0,
+    "search_invocations": 0,
+    "ledger_writes": 0
+  },
+  "diagnostic": {
+    "proof": "all seven parameterized contracts elaborate and the complete theorem compiles",
+    "export_failure": "lean4export could not execute its lean subprocess because the exporter was invoked outside lake env",
+    "stream_bytes": 0,
+    "repair": "repeat the unchanged compiled source in a fresh episode and invoke the exporter through the pinned lake env"
+  },
+  "failed_episode": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-residual-v3",
+    "retained_zero_byte_stream": true
+  },
+  "cleanup": {
+    "temporary_source_removed": true,
+    "temporary_olean_removed": true,
+    "checkout_baseline_restored": true
+  },
+  "authority": {
+    "parameterized_support_credit": 0,
+    "closed_target_authorized": false,
+    "ledger_writes": 0
+  }
+}

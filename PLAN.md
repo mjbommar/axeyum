@@ -156,6 +156,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | One read splits nine clean dependencies from fourteen assumption carriers and freezes a seven-contract residualization route with zero closed-target authority |
 | 2026-08-21 | (pending) | First seven-contract source closes the natural and parity interfaces, then stops at retained negative-constructor matches; V2 freezes explicit conditional presentation only |
 | 2026-08-21 | (pending) | V2 exposes both negative conditionals and stops only at the two mis-parenthesized algebra contracts; V3 freezes their exact post-rewrite shapes |
+| 2026-08-21 | (pending) | V3 compiles the complete seven-contract theorem, then its sole exporter call fails before writing because `lean` is absent from PATH; V4 freezes the unchanged source under pinned `lake env` |
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
 | 2026-08-21 | `a9610560c` | The durable construction checker binds the separately stored target goal identity without weakening capsule checks |
