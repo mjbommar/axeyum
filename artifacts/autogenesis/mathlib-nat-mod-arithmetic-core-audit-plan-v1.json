@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-mod-arithmetic-core-audit-plan",
+  "state": "preregistered-before-two-root-single-read",
+  "predecessor": {"path": "artifacts/autogenesis/mathlib-nat-add-mod-normalizer-audit-result-v1.json", "required_state": "both-directional-normalizers-propext-arithmetic-core-exposed"},
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-parity-leaves-v1/leaves.ndjson", "bytes": 685665, "sha256": "cda662ec943e7c8b5bd8131efdcb2a8e5b3e2c8c995e303e762bc04c750a9da5"},
+  "roots": ["Nat.add_mul_mod_self_left", "Nat.mod_add_div"],
+  "budget": {"max_importer_runs": 1, "max_proof_bearing_stream_reads": 1, "max_compiler_invocations": 0, "max_exporter_invocations": 0, "max_theorem_submissions": 0, "max_ledger_writes": 0},
+  "output": "artifacts/autogenesis/mathlib-nat-mod-arithmetic-core-audit-result-v1.json",
+  "decision_rule": "Specialize empty-footprint arithmetic core equations to increment modulo two; otherwise descend only the assumption-bearing core root.",
+  "limitations": "This audit grants no parity or Fibonacci theorem credit."
+}
