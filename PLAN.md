@@ -215,6 +215,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Exact identity and kernel-type-shape reuse for both multiplication leaves is frozen before code or stream access |
 | 2026-08-21 | (pending) | Revised cancellation driver reuses both exact leaves without composition and passes the focused importer gate without stream execution |
 | 2026-08-21 | (pending) | Official coprime-factor divisibility cancellation reconstructs twice byte-identically with an empty footprint and exact five-theorem dependency set |
+| 2026-08-21 | (pending) | Five direct dependencies beneath assumption-bearing `Nat.dvd_antisymm` are frozen for one nonrendering audit before the gcd-shift target |
 | 2026-08-20 | `9eb81822f` | Isolate persistent pre-push worktree metadata from the caller lane and register the two-sided control |
 | 2026-08-20 | `24b16642e` | Confirm the repaired hook against a live Rust push with unchanged caller state and a clean exact-SHA gate checkout |
 | 2026-08-20 | (pending) | The string family's first re-derivable UNSAT artifact beyond word-clash/regex-emptiness: `Evidence::UnsatStringLength` abstracts every string term to an integer length keyed on its SOURCE NAME, names the five theory lemmas the argument uses, and closes with one nonnegative combination per case-split branch. The checker is two stages — bind each lemma to the conjunct that licenses it, then re-derive the arithmetic — and is arena-free, because a string script's flat view is the bounded packed-BV encoding rather than the query. 23 guards mutation-checked; two killed nothing and were fixed rather than kept (one was dead code the command allow-list already covered, one had no multi-`check-sat` fixture). Also: `diagnose_evidence` reported the ARENA front door for string files, i.e. a query nobody solves — it now reports the text front door too, and agreed with the dominance audit for the first time. |
@@ -1030,7 +1031,7 @@ dominance.
 
 **Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction now includes unconditional official balanced Bézout and official coprime-factor divisibility cancellation. The latter reconstructed twice byte-identically with an empty footprint after exact checked reuse of both already-present multiplication leaves. No Fibonacci target or ledger state changed.
 
-**Next:** preregister reconstruction of `Nat.gcd_fib_add_self` using the accepted official cancellation theorem and existing Fibonacci support. Preserve zero target credit until two independently replayed empty-footprint results establish the exact child.
+**Next:** execute the preregistered five-root, nonrendering dependency audit beneath official `Nat.dvd_antisymm`, the remaining gcd-extensionality obligation for `Nat.gcd_fib_add_self`. Use the result to freeze the smallest target-owned empty-footprint replacement before source construction.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement

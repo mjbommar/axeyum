@@ -4,7 +4,7 @@
 
 **Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction now includes unconditional official balanced Bézout and official coprime-factor divisibility cancellation. The latter reconstructed twice byte-identically with an empty footprint after exact checked reuse of both already-present multiplication leaves. No Fibonacci target or ledger state changed.
 
-**Next:** preregister reconstruction of `Nat.gcd_fib_add_self` using the accepted official cancellation theorem and existing Fibonacci support. Preserve zero target credit until two independently replayed empty-footprint results establish the exact child.
+**Next:** execute the preregistered five-root, nonrendering dependency audit beneath official `Nat.dvd_antisymm`, the remaining gcd-extensionality obligation for `Nat.gcd_fib_add_self`. Use the result to freeze the smallest target-owned empty-footprint replacement before source construction.
 
 <!-- plan-section: landed-changes -->
 
@@ -152,3 +152,4 @@
 | 2026-08-21 | (pending) | Exact identity and kernel-type-shape reuse for both multiplication leaves is frozen before code or stream access |
 | 2026-08-21 | (pending) | Revised cancellation driver reuses both exact leaves without composition and passes the focused importer gate without stream execution |
 | 2026-08-21 | (pending) | Official coprime-factor divisibility cancellation reconstructs twice byte-identically with an empty footprint and exact five-theorem dependency set |
+| 2026-08-21 | (pending) | Five direct dependencies beneath assumption-bearing `Nat.dvd_antisymm` are frozen for one nonrendering audit before the gcd-shift target |

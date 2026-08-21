@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-dvd-antisymm-dependency-audit-plan",
+  "state": "preregistered-five-root-nonrendering-audit-before-stream-reread",
+  "predecessors": {
+    "official_cancellation": {"path": "artifacts/autogenesis/official-coprime-factor-cancellation-exact-reuse-result-v1.json", "sha256": "84d66b3365a82db334e388d508b26ca1ccd7cbcbbb293305e82158a3f5c3a26f", "finding": "official coprime-factor cancellation is now available twice with an empty footprint"},
+    "gcd_route_frontier": {"path": "artifacts/autogenesis/subtractive-gcd-route-frontier-audit-result-v1.json", "sha256": "bb53a104cfe76b46d3fed31b521682c6721389fd98c8812d3f1855cb71dabe3b", "finding": "official Nat.dvd_antisymm reaches propext through five direct theorem dependencies"}
+  },
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/38e40236f-subtractive-gcd-root-audit-v1/gcd-roots.ndjson", "sha256": "ff9916e0d74f1a69f7fee33c3b973cd771e6786715b8ea86699da0a8124ae65b", "textual_read_allowed": false, "allowed_consumer": "axeyum-lean-import only"},
+  "tool": {"path": "crates/axeyum-lean-import/examples/theorem_footprint_batch_audit.rs", "sha256": "38e40236fec86f1080af52bafb9394f9f1505ad161dae96e9c48979d00b1094a", "proof_terms_types_or_values_may_be_rendered": false},
+  "ordered_roots": ["Eq.symm", "Nat.eq_zero_of_zero_dvd", "Nat.le_antisymm", "Nat.le_of_dvd", "Nat.succ_pos"],
+  "question": "Which exact direct dependency or dependencies carry propext into official Nat.dvd_antisymm, and which empty-footprint leaves can be reused in a target-owned replacement?",
+  "budget": {"max_binary_builds": 1, "max_importer_runs": 1, "max_proof_bearing_stream_reads": 1, "max_new_theorem_submissions": 0, "max_exact_target_submissions": 0, "max_retries": 0},
+  "authority": {"replacement_source_compilations": 0, "new_theorem_submissions": 0, "exact_target_submissions": 0, "proof_terms_rendered": 0, "theorem_types_rendered": 0, "theorem_values_rendered": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_on_result": "Preregister the smallest target-owned empty-footprint divisibility-antisymmetry replacement, parameterizing only the measured assumption carriers, before source construction.",
+  "output": "artifacts/autogenesis/nat-gcd-fib-add-self-dvd-antisymm-dependency-audit-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-nat-gcd-fib-add-self-dvd-antisymm-dependency-audit-plan.py",
+  "limitations": "This is one nonrendering dependency audit. It grants no replacement theorem, Fibonacci target, fact, evaluation, or ledger credit."
+}
