@@ -7,6 +7,7 @@ import hashlib
 import json
 import pathlib
 import stat
+import subprocess
 import sys
 
 
@@ -22,6 +23,11 @@ def sha(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def historical_sha(commit: str, path: str) -> str:
+    value = subprocess.check_output(["git", "show", f"{commit}:{path}"], cwd=ROOT)
+    return hashlib.sha256(value).hexdigest()
+
+
 def validate() -> dict:
     result = json.loads(RESULT.read_text())
     plan = result.get("plan") or {}
@@ -32,7 +38,8 @@ def validate() -> dict:
     if (
         result.get("state") != "helper-accepted-target-type-mismatch-second-run-skipped-zero-credit"
         or sha(ROOT / plan["path"]) != plan.get("sha256")
-        or sha(ROOT / implementation["path"]) != implementation.get("sha256")
+        or historical_sha("bc38f830d", implementation["path"])
+        != implementation.get("sha256")
         or sha(pack_path / "SHA256SUMS") != pack.get("index_sha256")
         or sha(pack_path / "observation-1.json") != pack.get("observation_sha256")
         or sha(pack_path / "stderr-1.txt") != pack.get("stderr_sha256")

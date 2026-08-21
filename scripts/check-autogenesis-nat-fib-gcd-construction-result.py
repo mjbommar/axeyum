@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import json
 import pathlib
+import subprocess
 import sys
 
 
@@ -19,6 +20,11 @@ class ResultError(RuntimeError):
 
 def sha(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def historical_sha(commit: str, path: str) -> str:
+    value = subprocess.check_output(["git", "show", f"{commit}:{path}"], cwd=ROOT)
+    return hashlib.sha256(value).hexdigest()
 
 
 def validate() -> dict:
@@ -35,7 +41,8 @@ def validate() -> dict:
         or result.get("state")
         != "first-helper-submission-type-mismatch-second-run-skipped-zero-target-credit"
         or sha(ROOT / plan["path"]) != plan.get("sha256")
-        or sha(ROOT / implementation["path"]) != implementation.get("sha256")
+        or historical_sha("b2341d1f6", implementation["path"])
+        != implementation.get("sha256")
         or observation
         != {
             "invocation": 1,

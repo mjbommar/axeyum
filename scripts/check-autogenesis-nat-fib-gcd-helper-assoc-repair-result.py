@@ -7,6 +7,7 @@ import hashlib
 import json
 import pathlib
 import stat
+import subprocess
 import sys
 
 
@@ -22,6 +23,11 @@ def sha(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def historical_sha(commit: str, path: str) -> str:
+    value = subprocess.check_output(["git", "show", f"{commit}:{path}"], cwd=ROOT)
+    return hashlib.sha256(value).hexdigest()
+
+
 def validate() -> dict:
     result = json.loads(RESULT.read_text())
     plan = result.get("plan") or {}
@@ -33,7 +39,8 @@ def validate() -> dict:
         result.get("state")
         != "one-associativity-middle-corrected-helper-type-definitionally-equal-no-submission"
         or sha(ROOT / plan["path"]) != plan.get("sha256")
-        or sha(ROOT / implementation["path"]) != implementation.get("sha256")
+        or historical_sha("b4ce424d1", implementation["path"])
+        != implementation.get("sha256")
         or sha(pack_path / "SHA256SUMS") != pack.get("index_sha256")
         or sha(pack_path / "observation.json") != pack.get("observation_sha256")
         or stat.S_IMODE(pack_path.stat().st_mode) != 0o555

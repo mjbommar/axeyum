@@ -8,6 +8,7 @@ import importlib.util
 import json
 import pathlib
 import stat
+import subprocess
 import sys
 
 
@@ -22,6 +23,11 @@ class ResultError(RuntimeError):
 
 def byte_digest(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def historical_digest(commit: str, path: str) -> str:
+    value = subprocess.check_output(["git", "show", f"{commit}:{path}"], cwd=ROOT)
+    return hashlib.sha256(value).hexdigest()
 
 
 def load_module(name: str, path: pathlib.Path):
@@ -59,7 +65,8 @@ def validate() -> dict:
         or result.get("state")
         != "two-admitted-roots-composed-euclidean-surface-ready-two-convenience-names-absent"
         or byte_digest(ROOT / plan["path"]) != plan.get("sha256")
-        or byte_digest(ROOT / implementation["path"]) != implementation.get("sha256")
+        or historical_digest("6db583249", implementation["path"])
+        != implementation.get("sha256")
         or byte_digest(index_path) != pack.get("index_sha256")
         or byte_digest(observation_path) != pack.get("observation_sha256")
         or stat.S_IMODE(pack_path.stat().st_mode) != 0o555
