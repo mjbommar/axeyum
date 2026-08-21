@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-nat-helper-audit-plan",
+  "state": "preregistered-before-six-helper-single-read",
+  "predecessor": {"path": "artifacts/autogenesis/mathlib-int-fib-raw-cancellation-result-v6.json", "required_state": "raw-cancellation-compiles-but-nat-helper-propext-remains"},
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-raw-cancellation-v6/leaves.ndjson", "bytes": 376902, "sha256": "0872a3986843b085def91644b0b33a06785cf3584358606c8598304a842ecf82"},
+  "roots": ["Nat.add_sub_cancel_left", "Nat.sub_self", "Nat.sub_zero", "Nat.zero_add", "Nat.le_add_left", "Nat.sub_eq_zero_of_le"],
+  "budget": {"max_importer_runs": 1, "max_proof_bearing_stream_reads": 1, "max_compiler_invocations": 0, "max_exporter_invocations": 0, "max_theorem_submissions": 0, "max_ledger_writes": 0},
+  "output": "artifacts/autogenesis/mathlib-int-fib-nat-helper-audit-result-v1.json",
+  "decision_rule": "Replace only assumption-bearing Nat helpers with direct recursion; preserve every already-clean raw integer and equality dependency.",
+  "limitations": "Helper classification grants no cancellation or Fibonacci theorem credit."
+}
