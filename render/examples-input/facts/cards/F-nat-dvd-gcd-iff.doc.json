@@ -469,15 +469,17 @@
               "group": "focus",
               "href": "cards/F-nat-dvd-gcd-iff.doc.json",
               "id": "F:nat-dvd-gcd-iff",
-              "label": "The gcd is exactly the common divisors' upper bound",
-              "status": "proved"
+              "label": "nat-dvd-gcd-iff",
+              "status": "proved",
+              "tooltip": "The gcd is exactly the common divisors' upper bound"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-euclid-lemma.doc.json",
               "id": "F:nat-euclid-lemma",
-              "label": "Euclid's lemma: a prime dividing a product divides a factor",
-              "status": "proved"
+              "label": "nat-euclid-lemma",
+              "status": "proved",
+              "tooltip": "Euclid's lemma: a prime dividing a product divides a factor"
             }
           ],
           "rankdir": "TB"

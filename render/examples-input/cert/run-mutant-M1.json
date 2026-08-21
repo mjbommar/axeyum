@@ -3,9 +3,9 @@
   "id": "R:noh-wt-certificate-mutant-m1",
   "provenance": {
     "generator": "noh_wt_certificate.rs with --emit-run (render strand P0-A); base pin axeyum 75663ef8, built with rustc --edition 2024",
-    "command": "noh_wt_certificate --emit-run render/examples-input/cert/run-mutant-M1.json --source render/producers/mutants/noh_wt_certificate_emitrun_m1.rs --record-id R:noh-wt-certificate-mutant-m1 --replay-seconds 1 --notes 'DELIBERATE MUTANT, not a defect report. This record was produced by applying newton-over-hodge-char2/replication/certificate/mutants/M1-weight-loses-the-parity-term.patch (the weight a(k) loses its parity indicator) to the producer and running it, so that the render strand has a REAL exit_status=1 record to test the fail-closed law against instead of a hand-written one. The catcher is the one the mutant's .expect file records: (A3) d(5) = 0 < 1. Claims c1-c4 and c6 still pass; c5 (the admissibility sweep) is refuted, the d-table row for k = 5 now reads d = 0, and c7 is refuted too because one of the census guards it lists (min d over 4..24 == 1) is the second assertion the mutant trips.'",
+    "command": "noh_wt_certificate --emit-run render/examples-input/cert/run-mutant-M1.json --source render/producers/mutants/noh_wt_certificate_emitrun_m1.rs --record-id R:noh-wt-certificate-mutant-m1 --replay-seconds 1 --role negative-control --notes 'DELIBERATE MUTANT, not a defect report. This record was produced by applying newton-over-hodge-char2/replication/certificate/mutants/M1-weight-loses-the-parity-term.patch (the weight a(k) loses its parity indicator) to the producer and running it, so that the render strand has a REAL exit_status=1 record to test the fail-closed law against instead of a hand-written one. The catcher is the one the mutant's .expect file records: (A3) d(5) = 0 < 1. Claims c1-c4 and c6 still pass; c5 (the admissibility sweep) is refuted, the d-table row for k = 5 now reads d = 0, and c7 is refuted too because one of the census guards it lists (min d over 4..24 == 1) is the second assertion the mutant trips.'",
     "inputs": [
-      {"path": "render/producers/mutants/noh_wt_certificate_emitrun_m1.rs", "sha256": "8a73324487257ed7a67651c29277f269d20648c4ff83b0b250e0a7f1f2a0685a", "role": "source"}
+      {"path": "render/producers/mutants/noh_wt_certificate_emitrun_m1.rs", "sha256": "505d433e5ea7f15c0fbd0c1837353f94b554e7664d12995e8c35d3d33070467f", "role": "source"}
     ],
     "exit_status": 1,
     "epoch": {
@@ -15,6 +15,7 @@
     }
   },
   "summary": "2 of 7 checks of the p = 2 tame-point weight certificate FAILED (2 assertion failures); the run exited 1.",
+  "role": "negative-control",
   "outcome": "refuted",
   "claims": [
     {
@@ -766,7 +767,7 @@
       }
   },
   "replay": {
-    "line": "rustc --edition 2024 -O -o /tmp/noh_wt_cert render/producers/mutants/noh_wt_certificate_emitrun_m1.rs && /tmp/noh_wt_cert --emit-run render/examples-input/cert/run-mutant-M1.json --source render/producers/mutants/noh_wt_certificate_emitrun_m1.rs --record-id R:noh-wt-certificate-mutant-m1 --replay-seconds 1 --notes 'DELIBERATE MUTANT, not a defect report. This record was produced by applying newton-over-hodge-char2/replication/certificate/mutants/M1-weight-loses-the-parity-term.patch (the weight a(k) loses its parity indicator) to the producer and running it, so that the render strand has a REAL exit_status=1 record to test the fail-closed law against instead of a hand-written one. The catcher is the one the mutant's .expect file records: (A3) d(5) = 0 < 1. Claims c1-c4 and c6 still pass; c5 (the admissibility sweep) is refuted, the d-table row for k = 5 now reads d = 0, and c7 is refuted too because one of the census guards it lists (min d over 4..24 == 1) is the second assertion the mutant trips.'",
+    "line": "rustc --edition 2024 -O -o /tmp/noh_wt_cert render/producers/mutants/noh_wt_certificate_emitrun_m1.rs && /tmp/noh_wt_cert --emit-run render/examples-input/cert/run-mutant-M1.json --source render/producers/mutants/noh_wt_certificate_emitrun_m1.rs --record-id R:noh-wt-certificate-mutant-m1 --replay-seconds 1 --role negative-control --notes 'DELIBERATE MUTANT, not a defect report. This record was produced by applying newton-over-hodge-char2/replication/certificate/mutants/M1-weight-loses-the-parity-term.patch (the weight a(k) loses its parity indicator) to the producer and running it, so that the render strand has a REAL exit_status=1 record to test the fail-closed law against instead of a hand-written one. The catcher is the one the mutant's .expect file records: (A3) d(5) = 0 < 1. Claims c1-c4 and c6 still pass; c5 (the admissibility sweep) is refuted, the d-table row for k = 5 now reads d = 0, and c7 is refuted too because one of the census guards it lists (min d over 4..24 == 1) is the second assertion the mutant trips.'",
     "cwd": ".",
     "expected_exit_status": 1,
     "expected_seconds": 1

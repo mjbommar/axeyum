@@ -723,22 +723,25 @@
               "group": "search-certificate",
               "href": "cards/F-bcnf-decomposition-lossless-not-dependency-preserving.doc.json",
               "id": "F:bcnf-decomposition-lossless-not-dependency-preserving",
-              "label": "The BCNF repair of the street/city/zip schema rejoins exactly and cannot enforce its own dependency; two other splits lose information",
-              "status": "proved"
+              "label": "bcnf-decomposition-lossless-not-dependency-preserving",
+              "status": "proved",
+              "tooltip": "The BCNF repair of the street/city/zip schema rejoins exactly and cannot enforce its own dependency; two other splits lose information"
             },
             {
               "group": "search-certificate",
               "href": "cards/F-orders-candidate-keys-and-normal-forms.doc.json",
               "id": "F:orders-candidate-keys-and-normal-forms",
-              "label": "An order-line schema has exactly two candidate keys, is not in BCNF, and is not in 3NF -- with every subset of the attributes examined",
-              "status": "proved"
+              "label": "orders-candidate-keys-and-normal-forms",
+              "status": "proved",
+              "tooltip": "An order-line schema has exactly two candidate keys, is not in BCNF, and is not in 3NF -- with every subset of the attributes examined"
             },
             {
               "group": "focus",
               "href": "cards/F-orders-fd-implication-certified.doc.json",
               "id": "F:orders-fd-implication-certified",
-              "label": "Two implied and two unimplied functional dependencies on a committed order-line schema, each with a replayable certificate",
-              "status": "proved"
+              "label": "orders-fd-implication-certified",
+              "status": "proved",
+              "tooltip": "Two implied and two unimplied functional dependencies on a committed order-line schema, each with a replayable certificate"
             }
           ],
           "rankdir": "TB"

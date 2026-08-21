@@ -159,15 +159,17 @@
               "group": "unproved",
               "href": "cards/F-ml430-nat-sqrt-lt-4909537f.doc.json",
               "id": "F:ml430-nat-sqrt-lt-4909537f",
-              "label": "Mathlib v4.30 source proposition Nat.sqrt_lt",
-              "status": "open"
+              "label": "ml430-nat-sqrt-lt",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.sqrt_lt"
             },
             {
               "group": "focus",
               "href": "cards/F-ml430-nat-sqrt-succ-le-succ-sqrt-6b041183.doc.json",
               "id": "F:ml430-nat-sqrt-succ-le-succ-sqrt-6b041183",
-              "label": "Mathlib v4.30 source proposition Nat.sqrt_succ_le_succ_sqrt",
-              "status": "open"
+              "label": "ml430-nat-sqrt-succ-le-succ-sqrt",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.sqrt_succ_le_succ_sqrt"
             }
           ],
           "rankdir": "TB"

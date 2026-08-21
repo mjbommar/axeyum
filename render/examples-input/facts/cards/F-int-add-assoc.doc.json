@@ -509,50 +509,57 @@
               "group": "focus",
               "href": "cards/F-int-add-assoc.doc.json",
               "id": "F:int-add-assoc",
-              "label": "Addition on the integers is associative",
-              "status": "proved"
+              "label": "int-add-assoc",
+              "status": "proved",
+              "tooltip": "Addition on the integers is associative"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-int-add-le-add.doc.json",
               "id": "F:int-add-le-add",
-              "label": "The order on the integers is compatible with addition",
-              "status": "proved"
+              "label": "int-add-le-add",
+              "status": "proved",
+              "tooltip": "The order on the integers is compatible with addition"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-int-add-lt-add-of-le-of-lt.doc.json",
               "id": "F:int-add-lt-add-of-le-of-lt",
-              "label": "A strict integer inequality survives addition of a non-strict one",
-              "status": "proved"
+              "label": "int-add-lt-add-of-le-of-lt",
+              "status": "proved",
+              "tooltip": "A strict integer inequality survives addition of a non-strict one"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-int-left-distrib.doc.json",
               "id": "F:int-left-distrib",
-              "label": "Multiplication distributes over addition on the integers",
-              "status": "proved"
+              "label": "int-left-distrib",
+              "status": "proved",
+              "tooltip": "Multiplication distributes over addition on the integers"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-add-assoc.doc.json",
               "id": "F:nat-add-assoc",
-              "label": "Addition on the naturals is associative",
-              "status": "proved"
+              "label": "nat-add-assoc",
+              "status": "proved",
+              "tooltip": "Addition on the naturals is associative"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-add-comm.doc.json",
               "id": "F:nat-add-comm",
-              "label": "Addition on the naturals is commutative",
-              "status": "proved"
+              "label": "nat-add-comm",
+              "status": "proved",
+              "tooltip": "Addition on the naturals is commutative"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-succ-add.doc.json",
               "id": "F:nat-succ-add",
-              "label": "Nat succ_add",
-              "status": "proved"
+              "label": "nat-succ-add",
+              "status": "proved",
+              "tooltip": "Nat succ_add"
             }
           ],
           "rankdir": "TB"

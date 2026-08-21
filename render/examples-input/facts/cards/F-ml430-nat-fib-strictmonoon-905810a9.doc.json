@@ -164,22 +164,25 @@
               "group": "unproved",
               "href": "cards/F-ml430-nat-fib-add-two-strictmono-c1e86d4d.doc.json",
               "id": "F:ml430-nat-fib-add-two-strictmono-c1e86d4d",
-              "label": "Mathlib v4.30 source proposition Nat.fib_add_two_strictMono",
-              "status": "open"
+              "label": "ml430-nat-fib-add-two-strictmono",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.fib_add_two_strictMono"
             },
             {
               "group": "unproved",
               "href": "cards/F-ml430-nat-fib-lt-fib-3582b881.doc.json",
               "id": "F:ml430-nat-fib-lt-fib-3582b881",
-              "label": "Mathlib v4.30 source proposition Nat.fib_lt_fib",
-              "status": "open"
+              "label": "ml430-nat-fib-lt-fib",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.fib_lt_fib"
             },
             {
               "group": "focus",
               "href": "cards/F-ml430-nat-fib-strictmonoon-905810a9.doc.json",
               "id": "F:ml430-nat-fib-strictmonoon-905810a9",
-              "label": "Mathlib v4.30 source proposition Nat.fib_strictMonoOn",
-              "status": "open"
+              "label": "ml430-nat-fib-strictmonoon",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.fib_strictMonoOn"
             }
           ],
           "rankdir": "TB"

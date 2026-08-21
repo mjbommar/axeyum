@@ -164,22 +164,25 @@
               "group": "unproved",
               "href": "cards/F-ml430-nat-bitwise-bit-4c4b28a8.doc.json",
               "id": "F:ml430-nat-bitwise-bit-4c4b28a8",
-              "label": "Mathlib v4.30 source proposition Nat.bitwise_bit'",
-              "status": "open"
+              "label": "ml430-nat-bitwise-bit",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.bitwise_bit'"
             },
             {
               "group": "unproved",
               "href": "cards/F-ml430-nat-bitwise-comm-1a273bae.doc.json",
               "id": "F:ml430-nat-bitwise-comm-1a273bae",
-              "label": "Mathlib v4.30 source proposition Nat.bitwise_comm",
-              "status": "open"
+              "label": "ml430-nat-bitwise-comm",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.bitwise_comm"
             },
             {
               "group": "focus",
               "href": "cards/F-ml430-nat-bitwise-swap-7175e90e.doc.json",
               "id": "F:ml430-nat-bitwise-swap-7175e90e",
-              "label": "Mathlib v4.30 source proposition Nat.bitwise_swap",
-              "status": "open"
+              "label": "ml430-nat-bitwise-swap",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.bitwise_swap"
             }
           ],
           "rankdir": "TB"

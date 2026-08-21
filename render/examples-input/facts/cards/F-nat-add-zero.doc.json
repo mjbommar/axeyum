@@ -479,22 +479,25 @@
               "group": "kernel-lean",
               "href": "cards/F-int-sub-nat-nat-elim.doc.json",
               "id": "F:int-sub-nat-nat-elim",
-              "label": "The integer borrow has exactly two outcomes, and each is witnessed by a natural",
-              "status": "proved"
+              "label": "int-sub-nat-nat-elim",
+              "status": "proved",
+              "tooltip": "The integer borrow has exactly two outcomes, and each is witnessed by a natural"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-int-sub-nat-nat-shift.doc.json",
               "id": "F:int-sub-nat-nat-shift",
-              "label": "The normalized integer difference is invariant under a common shift",
-              "status": "proved"
+              "label": "int-sub-nat-nat-shift",
+              "status": "proved",
+              "tooltip": "The normalized integer difference is invariant under a common shift"
             },
             {
               "group": "focus",
               "href": "cards/F-nat-add-zero.doc.json",
               "id": "F:nat-add-zero",
-              "label": "Zero is a right identity for addition on the naturals",
-              "status": "proved"
+              "label": "nat-add-zero",
+              "status": "proved",
+              "tooltip": "Zero is a right identity for addition on the naturals"
             }
           ],
           "rankdir": "TB"

@@ -159,15 +159,17 @@
               "group": "focus",
               "href": "cards/F-ml430-nat-coprime-odd-of-right-8dc1decc.doc.json",
               "id": "F:ml430-nat-coprime-odd-of-right-8dc1decc",
-              "label": "Mathlib v4.30 source proposition Nat.Coprime.odd_of_right",
-              "status": "open"
+              "label": "ml430-nat-coprime-odd-of-right",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.Coprime.odd_of_right"
             },
             {
               "group": "unproved",
               "href": "cards/F-ml430-nat-coprime-two-right-7c5a1850.doc.json",
               "id": "F:ml430-nat-coprime-two-right-7c5a1850",
-              "label": "Mathlib v4.30 source proposition Nat.coprime_two_right",
-              "status": "open"
+              "label": "ml430-nat-coprime-two-right",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.coprime_two_right"
             }
           ],
           "rankdir": "TB"

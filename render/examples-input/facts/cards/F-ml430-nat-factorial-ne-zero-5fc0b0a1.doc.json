@@ -159,15 +159,17 @@
               "group": "focus",
               "href": "cards/F-ml430-nat-factorial-ne-zero-5fc0b0a1.doc.json",
               "id": "F:ml430-nat-factorial-ne-zero-5fc0b0a1",
-              "label": "Mathlib v4.30 source proposition Nat.factorial_ne_zero",
-              "status": "open"
+              "label": "ml430-nat-factorial-ne-zero",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.factorial_ne_zero"
             },
             {
               "group": "unproved",
               "href": "cards/F-ml430-nat-factorial-pos-f1dd2405.doc.json",
               "id": "F:ml430-nat-factorial-pos-f1dd2405",
-              "label": "Mathlib v4.30 source proposition Nat.factorial_pos",
-              "status": "open"
+              "label": "ml430-nat-factorial-pos",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.factorial_pos"
             }
           ],
           "rankdir": "TB"

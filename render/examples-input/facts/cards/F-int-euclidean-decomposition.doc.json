@@ -484,29 +484,33 @@
               "group": "focus",
               "href": "cards/F-int-euclidean-decomposition.doc.json",
               "id": "F:int-euclidean-decomposition",
-              "label": "Euclidean decomposition over the integers is derived, not assumed",
-              "status": "proved"
+              "label": "int-euclidean-decomposition",
+              "status": "proved",
+              "tooltip": "Euclidean decomposition over the integers is derived, not assumed"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-div-mod-exists.doc.json",
               "id": "F:nat-div-mod-exists",
-              "label": "Division with remainder always exists for a positive divisor",
-              "status": "proved"
+              "label": "nat-div-mod-exists",
+              "status": "proved",
+              "tooltip": "Division with remainder always exists for a positive divisor"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-div-mod-unique.doc.json",
               "id": "F:nat-div-mod-unique",
-              "label": "The quotient and remainder of a division are unique",
-              "status": "proved"
+              "label": "nat-div-mod-unique",
+              "status": "proved",
+              "tooltip": "The quotient and remainder of a division are unique"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-rat-normalize-reduces.doc.json",
               "id": "F:rat-normalize-reduces",
-              "label": "The rational smart constructor normalises",
-              "status": "proved"
+              "label": "rat-normalize-reduces",
+              "status": "proved",
+              "tooltip": "The rational smart constructor normalises"
             }
           ],
           "rankdir": "TB"

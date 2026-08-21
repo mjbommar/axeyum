@@ -514,57 +514,65 @@
               "group": "kernel-lean",
               "href": "cards/F-int-add-assoc.doc.json",
               "id": "F:int-add-assoc",
-              "label": "Addition on the integers is associative",
-              "status": "proved"
+              "label": "int-add-assoc",
+              "status": "proved",
+              "tooltip": "Addition on the integers is associative"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-int-add-comm.doc.json",
               "id": "F:int-add-comm",
-              "label": "Addition on the integers is commutative",
-              "status": "proved"
+              "label": "int-add-comm",
+              "status": "proved",
+              "tooltip": "Addition on the integers is commutative"
             },
             {
               "group": "focus",
               "href": "cards/F-nat-add-comm.doc.json",
               "id": "F:nat-add-comm",
-              "label": "Addition on the naturals is commutative",
-              "status": "proved"
+              "label": "nat-add-comm",
+              "status": "proved",
+              "tooltip": "Addition on the naturals is commutative"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-add-sub-cancel-left.doc.json",
               "id": "F:nat-add-sub-cancel-left",
-              "label": "Subtraction undoes addition on the naturals",
-              "status": "proved"
+              "label": "nat-add-sub-cancel-left",
+              "status": "proved",
+              "tooltip": "Subtraction undoes addition on the naturals"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-euclid-lemma.doc.json",
               "id": "F:nat-euclid-lemma",
-              "label": "Euclid's lemma: a prime dividing a product divides a factor",
-              "status": "proved"
+              "label": "nat-euclid-lemma",
+              "status": "proved",
+              "tooltip": "Euclid's lemma: a prime dividing a product divides a factor"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-gcd-bezout.doc.json",
               "id": "F:nat-gcd-bezout",
-              "label": "Bezout's identity holds for the natural gcd",
-              "status": "proved"
+              "label": "nat-gcd-bezout",
+              "status": "proved",
+              "tooltip": "Bezout's identity holds for the natural gcd"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-succ-add.doc.json",
               "id": "F:nat-succ-add",
-              "label": "Nat succ_add",
-              "status": "proved"
+              "label": "nat-succ-add",
+              "status": "proved",
+              "tooltip": "Nat succ_add"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-zero-add.doc.json",
               "id": "F:nat-zero-add",
-              "label": "Nat zero_add",
-              "status": "proved"
+              "label": "nat-zero-add",
+              "status": "proved",
+              "tooltip": "Nat zero_add"
             }
           ],
           "rankdir": "TB"

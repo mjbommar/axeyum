@@ -38,6 +38,19 @@ first producer.
 
 ## P0 exit criteria (all measurable; strand not "done" until all pass)
 
+> **2026-08-21, round 2 (agent INTEGRATE).** All eight machine-checkable
+> criteria below were run one by one; the commands and results are in
+> [`14-p0-exit-report.md`](14-p0-exit-report.md). Seven PASS as written. The
+> negative-control criterion ("mutate one d(k) value in the run record") is
+> **ADJUSTED**: with the table now built by reference (`BlockTable.from_run`)
+> and the record's digest declared by the document, editing a value inside the
+> record is REFUSED before anything renders, so the criterion's "the rendered
+> table changes" cannot happen and should not. It is tested as the two
+> behaviours the system actually has -- tamper is refused; a record from a
+> re-run of a MUTATED producer changes the table and flips the claim -- in
+> `render/tests/pipeline_negative_control.rs`, against the real M1 record. The
+> reader test remains outstanding: it is the owner's to run, not an agent's.
+
 - [ ] The three P0-A outputs render from one IR; the (claim,status) set
       is byte-identically equal across formats (property test).
 - [ ] LaTeX output compiles standalone; HTML passes the self-containment

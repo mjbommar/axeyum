@@ -123,6 +123,26 @@ pub fn emit_with_diagnostics(doc: &Value, opts: &HtmlOptions) -> (String, Vec<St
         );
     }
 
+    // MATH THE TRANSLATOR COULD NOT READ. `latex_to_mathml` already renders an
+    // untranslatable token as a visible `<merror>` and returns `false` -- but
+    // the call site in `inline` discarded that flag, so the page showed a red
+    // box and no caller could find out. That is precisely the half of contract
+    // point 2 the loud box exists to close, left half-open.
+    //
+    // Scanning the finished bytes catches every call site at once and cannot be
+    // bypassed by adding another one, which is the same reason the
+    // self-containment lint works on output rather than on inputs. It found the
+    // certificate page's `j'(6)` -- a prime, in the statement of Theorem 4.
+    let mut rest = body.as_str();
+    while let Some(at) = rest.find("<merror><mtext>") {
+        rest = &rest[at + "<merror><mtext>".len()..];
+        let token = rest.split("</mtext>").next().unwrap_or("?");
+        d.push(format!(
+            "math: `{token}` is outside the LaTeX subset this emitter translates; it renders \
+             as a visible error box rather than as mathematics"
+        ));
+    }
+
     let mut out = String::with_capacity(STYLE_CSS.len() + APP_JS.len() + body.len() + 4096);
     out.push_str("<!doctype html>\n<html lang=\"en\">\n<head>\n");
     out.push_str("<meta charset=\"utf-8\">\n");
@@ -361,6 +381,25 @@ impl Tex<'_> {
         }
         self.i += 1;
         match c {
+            // A PRIME IS AN OPERATOR, not an unknown token. Round 1 had no
+            // arm for it, so `j'(6)` -- the statement of Theorem 4 on the
+            // certificate page -- rendered `<merror>'</merror>`: an honest red
+            // box, on the flagship document, for a character every derivative
+            // and every auxiliary index in this corpus uses.
+            b'\'' => {
+                let mut n = 1;
+                while self.peek() == Some(b'\'') {
+                    self.i += 1;
+                    n += 1;
+                }
+                let g: String = match n {
+                    1 => "\u{2032}".to_string(),
+                    2 => "\u{2033}".to_string(),
+                    3 => "\u{2034}".to_string(),
+                    _ => "\u{2032}".repeat(n),
+                };
+                format!("<mo>{}</mo>", esc(&g))
+            }
             b'+' | b'-' | b'*' | b'/' | b'=' | b'<' | b'>' | b'|' | b',' | b';' | b'.' | b':'
             | b'!' | b'(' | b')' | b'[' | b']' => {
                 let g = match c {
@@ -865,6 +904,24 @@ fn is_established(status: &str) -> bool {
     matches!(status, "proved" | "computed" | "refuted" | "checked")
 }
 
+/// Statuses under which a claim ASSERTS SUPPORT, i.e. under which red evidence
+/// is a contradiction rather than the mechanism working.
+///
+/// `refuted` is deliberately not one of them. Round 1's audit used
+/// [`is_established`] for both of its rules, so a claim correctly demoted to
+/// `refuted` by a run that exited 1 raised a loud alarm -- on the certificate
+/// page's own negative control, where it fired on the single block that was
+/// behaving exactly as designed. An alarm that fires on correct behaviour
+/// teaches a reader to ignore the loudest box on the page, which is worse than
+/// no alarm. The other rule (settled status with NO evidence) still uses
+/// [`is_established`], because a refuted claim does need a run behind it.
+fn asserts_support(status: &str) -> bool {
+    matches!(
+        status,
+        "proved" | "computed" | "checked" | "evidence" | "empirical" | "advisory"
+    )
+}
+
 // ---------------------------------------------------------------------------
 // page furniture
 // ---------------------------------------------------------------------------
@@ -978,7 +1035,7 @@ fn block(out: &mut String, b: &Value, idx: usize, diags: &mut Vec<String>) {
         return;
     };
     match kind.as_str() {
-        "prose" => prose(out, &body, &id, tag),
+        "prose" => prose(out, &body, &id, tag, diags),
         "claim" => claim(out, &body, &id, tag, diags),
         "statement" => statement(out, &body, &id, tag),
         "steps" => steps(out, &body, &id, tag),
@@ -997,7 +1054,15 @@ Nothing was rendered for it; the document is incomplete.</div>",
             );
         }
     }
-    if let Some(p) = b.get("provenance").filter(|p| p.is_object()) {
+    // A table renders the provenance of the run its rows came from. When the
+    // block's own provenance IS that same run -- which it is for every table a
+    // single producer emits -- printing it again put the identical line on the
+    // page twice, immediately below itself. Found by looking at the atlas, not
+    // by a test.
+    let duplicated = kind == "table" && body.get("source") == b.get("provenance");
+    if let Some(p) = b.get("provenance").filter(|p| p.is_object())
+        && !duplicated
+    {
         provenance_line(out, p);
     }
 }
@@ -1044,11 +1109,25 @@ fn heading_of(v: &Value, out: &mut String) {
     }
 }
 
-fn prose(out: &mut String, v: &Value, id: &str, tag: &str) {
+fn prose(out: &mut String, v: &Value, id: &str, tag: &str, diags: &mut Vec<String>) {
     let text = match v {
         Value::String(t) => t.clone(),
         _ => s(v, "text").unwrap_or_default().to_string(),
     };
+    // A verbatim HTML override replaces the WHOLE prose block, not one
+    // paragraph of it: the override is typographic, and splitting it on blank
+    // lines would put `<p>` tags inside whatever structure the producer wrote.
+    if let Some(h) = s(v, "text_html") {
+        let _ = writeln!(
+            out,
+            "<section class=\"blk prose {tag}\" id=\"{}\">",
+            esc_attr(id)
+        );
+        heading_of(v, out);
+        let _ = writeln!(out, "{}", inline_or_html(&text, Some(h), id, diags));
+        out.push_str("</section>\n");
+        return;
+    }
     let _ = writeln!(
         out,
         "<section class=\"blk prose {tag}\" id=\"{}\">",
@@ -1066,11 +1145,20 @@ fn prose(out: &mut String, v: &Value, id: &str, tag: &str) {
 }
 
 fn statement(out: &mut String, v: &Value, id: &str, tag: &str) {
-    let status = s(v, "status").unwrap_or("open");
+    // A statement block carries a PROJECTION (`BlockStatement.show`): which
+    // resolved fields the document asked for. `normalize_resolved` now emits a
+    // key only for a requested field, so absence here means "not asked for" and
+    // the renderer simply omits it -- an editorial decision that belongs to the
+    // manifest, not to this function (contract point 4, in spirit).
+    //
+    // `status` absent is NOT rendered as `open`. A card coloured green-or-grey
+    // for a status nobody asked to show would be the emitter inventing one, and
+    // this module's rule is that an unrecognised status renders neutral.
+    let status = s(v, "status");
     let _ = write!(
         out,
         "<article class=\"card blk {tag} s-{}\" id=\"{}\">\n<div class=\"card-head\">",
-        esc_attr(badge_shape(status).0),
+        esc_attr(badge_shape(status.unwrap_or("unknown")).0),
         esc_attr(id)
     );
     let _ = write!(
@@ -1078,7 +1166,9 @@ fn statement(out: &mut String, v: &Value, id: &str, tag: &str) {
         "<h3>{}</h3>",
         inline(s(v, "title").unwrap_or("Statement"))
     );
-    out.push_str(&status_axes(status, s(v, "external_status")));
+    if let Some(st) = status {
+        out.push_str(&status_axes(st, s(v, "external_status")));
+    }
     out.push_str("</div>\n");
     if let Some(r) = s(v, "ref") {
         let _ = writeln!(out, "<p class=\"card-id\">{}</p>", esc(r));
@@ -1087,7 +1177,58 @@ fn statement(out: &mut String, v: &Value, id: &str, tag: &str) {
         let _ = writeln!(out, "<p class=\"card-statement\">{}</p>", inline(st));
     }
     formal_block(out, v);
+    trust_base(out, v);
     out.push_str("</article>\n");
+}
+
+/// The three fields that say what a statement RESTS ON, which round 1 dropped
+/// on the floor: the proof route, the axiom footprint, and the statements it
+/// depends on (plus the evidence count). Every one of the 324 fact cards in the
+/// ledger asks for all of them, so dropping them silently made a card claim
+/// less than the ledger knows -- and the axiom footprint in particular is this
+/// project's headline metric.
+fn trust_base(out: &mut String, v: &Value) {
+    let mut bits: Vec<String> = Vec::new();
+    if let Some(r) = s(v, "proof_route") {
+        bits.push(format!("proof route <code>{}</code>", esc(r)));
+    }
+    if let Some(fp) = v.get("axiom_footprint").and_then(Value::as_array) {
+        if fp.is_empty() {
+            bits.push("axiom footprint: <b>none</b> (axiom-free)".to_string());
+        } else {
+            let names: Vec<String> = fp
+                .iter()
+                .map(|a| format!("<code>{}</code>", esc(&text_of(a))))
+                .collect();
+            bits.push(format!(
+                "axiom footprint ({}): {}",
+                fp.len(),
+                names.join(", ")
+            ));
+        }
+    }
+    if let Some(n) = v.get("evidence_count").and_then(Value::as_u64) {
+        bits.push(format!("{n} evidence row{}", if n == 1 { "" } else { "s" }));
+    }
+    if !bits.is_empty() {
+        let _ = writeln!(
+            out,
+            "<p class=\"ax-tinylabel\">{}</p>",
+            bits.join(" &middot; ")
+        );
+    }
+    let deps = v.get("depends_on").and_then(Value::as_array);
+    if let Some(d) = deps.filter(|d| !d.is_empty()) {
+        let names: Vec<String> = d
+            .iter()
+            .map(|x| format!("<code>{}</code>", esc(&text_of(x))))
+            .collect();
+        let _ = writeln!(
+            out,
+            "<p class=\"ax-tinylabel\">rests on {}</p>",
+            names.join(", ")
+        );
+    }
 }
 
 /// The machine-readable statement. Rendered as `<pre>`, never as math: a Lean
@@ -1114,6 +1255,46 @@ fn formal_block(out: &mut String, v: &Value) {
     );
 }
 
+/// Render inline content, honouring a producer-supplied verbatim HTML override
+/// (`ir::RichText.html`).
+///
+/// This field is the ONE door through which a producer can put markup on the
+/// page -- everywhere else all text is escaped, which is why "prose cannot
+/// smuggle a tag" holds. So it is closed the same way `Figure::Svg` is: the
+/// fragment goes through the self-containment lint and must be ASCII, and ANY
+/// finding means the markup is NOT inlined. The reader gets a loud box beside
+/// the escaped fallback text and the emitter records a diagnostic.
+///
+/// Round 1 ignored the field entirely. That was safe but silent: an override a
+/// producer wrote vanished with no trace on the page and no diagnostic, which
+/// is the "shorter document" failure this module's diagnostics exist to stop.
+fn inline_or_html(text: &str, over: Option<&str>, id: &str, diags: &mut Vec<String>) -> String {
+    let Some(h) = over.filter(|h| !h.is_empty()) else {
+        return inline(text);
+    };
+    let findings = lint_self_contained(h);
+    let lower = h.to_ascii_lowercase();
+    if findings.is_empty()
+        && h.is_ascii()
+        && !lower.contains("<script")
+        && !lower.contains("javascript:")
+        && !lower.contains("onerror=")
+        && !lower.contains("onload=")
+    {
+        return h.to_string();
+    }
+    diags.push(format!(
+        "{id}: verbatim HTML override rejected ({} self-containment finding(s)); it was NOT inlined",
+        findings.len().max(1)
+    ));
+    format!(
+        "<span class=\"ax-unrenderable\">verbatim HTML rejected: {} self-containment \
+finding(s). It was NOT inlined; the escaped text follows.</span> {}",
+        findings.len().max(1),
+        inline(text)
+    )
+}
+
 fn claim(out: &mut String, v: &Value, id: &str, tag: &str, diags: &mut Vec<String>) {
     let status = s(v, "status")
         .or_else(|| s(v, "epistemic_status"))
@@ -1132,7 +1313,7 @@ fn claim(out: &mut String, v: &Value, id: &str, tag: &str, diags: &mut Vec<Strin
     for e in evidence {
         if let Some(x) = e.get("exit_status").and_then(serde_json::Value::as_i64)
             && x != 0
-            && is_established(status)
+            && asserts_support(status)
         {
             alarms.push(format!(
                 "evidence `{}` exited {x} but the claim renders as `{status}`",
@@ -1164,7 +1345,11 @@ fn claim(out: &mut String, v: &Value, id: &str, tag: &str, diags: &mut Vec<Strin
         let _ = writeln!(out, "<p class=\"card-id\">{}</p>", esc(r));
     }
     if let Some(st) = s(v, "statement") {
-        let _ = writeln!(out, "<p class=\"card-statement\">{}</p>", inline(st));
+        let _ = writeln!(
+            out,
+            "<p class=\"card-statement\">{}</p>",
+            inline_or_html(st, s(v, "statement_html"), id, diags)
+        );
     }
     formal_block(out, v);
     for a in &alarms {
@@ -1622,9 +1807,19 @@ fn dep_graph(out: &mut String, spec: &Value, id: &str) {
     let l = layout::layered_layout(&specs, &edges, &cfg);
     let (anc, desc) = layout::reachability(specs.len(), &edges);
 
+    // A GRAPH WIDER THAN THE COLUMN IS SCROLLED, NOT SHRUNK. `max-width: 100%`
+    // scales the whole drawing, text included: the ledger's largest component
+    // is 1749px wide and in a 68rem column its labels came out at about four
+    // pixels -- present, and legible to nobody. Past the threshold the figure
+    // renders at its natural size inside the frame's existing horizontal
+    // scroll, so a node label is the same size in every figure on the page.
+    // Below it, scaling is right: a small graph centred in the column reads
+    // better than a small graph pinned left.
+    let wide = l.width > 900.0;
     let _ = writeln!(
         out,
-        "<svg class=\"ax-graph\" viewBox=\"0 0 {:.0} {:.0}\" width=\"{:.0}\" height=\"{:.0}\" role=\"group\" aria-label=\"{}\">",
+        "<svg class=\"ax-graph{}\" viewBox=\"0 0 {:.0} {:.0}\" width=\"{:.0}\" height=\"{:.0}\" role=\"group\" aria-label=\"{}\">",
+        if wide { " ax-graph-natural" } else { "" },
         l.width,
         l.height,
         l.width,
@@ -1692,7 +1887,9 @@ fn dep_graph(out: &mut String, spec: &Value, id: &str) {
         let _ = writeln!(
             out,
             "<title>{} &#x2014; {} &#x2014; {} upstream, {} downstream</title>",
-            esc(s(n, "label").unwrap_or(&keys[p.index])),
+            esc(s(n, "tooltip")
+                .or_else(|| s(n, "label"))
+                .unwrap_or(&keys[p.index])),
             esc(status),
             anc[p.index].len(),
             desc[p.index].len()
@@ -1917,6 +2114,46 @@ fn xy_plot(out: &mut String, spec: &Value, _id: &str) {
             .filter_map(|a| Some((a.first()?.as_f64()?, a.get(1)?.as_f64()?)))
             .collect();
         if raw.is_empty() {
+            continue;
+        }
+        if kind == "bar" {
+            // Bars, drawn as bars. `PlotType::Bar` used to fall through to the
+            // polyline branch, which draws a DIFFERENT picture from the one the
+            // producer asked for -- a renderer quietly substituting one chart
+            // type for another is the same class of defect as a renderer
+            // quietly dropping a multiplication sign.
+            let step = if raw.len() > 1 {
+                pw / raw.len() as f64
+            } else {
+                pw * 0.5
+            };
+            let bw = (step * 0.68).max(1.5);
+            let base = sy(0.0f64.clamp(y0, y1));
+            let labels = arr(se, "labels");
+            for (i, &(x, y)) in raw.iter().enumerate() {
+                let top = sy(y);
+                let (yy, hh) = if top <= base {
+                    (top, base - top)
+                } else {
+                    (base, top - base)
+                };
+                let lbl = labels.get(i).map(text_of).unwrap_or_default();
+                let _ = writeln!(
+                    out,
+                    "<rect class=\"series-bar\" x=\"{:.1}\" y=\"{yy:.1}\" width=\"{bw:.1}\" height=\"{:.1}\" tabindex=\"0\" data-x=\"{}\" data-y=\"{}\"><title>{}({}, {})</title></rect>",
+                    sx(x) - bw / 2.0,
+                    hh.max(0.8),
+                    esc_attr(&fmt_num(x)),
+                    esc_attr(&fmt_num(y)),
+                    if lbl.is_empty() {
+                        String::new()
+                    } else {
+                        format!("{}: ", esc(&lbl))
+                    },
+                    esc(&fmt_num(x)),
+                    esc(&fmt_num(y))
+                );
+            }
             continue;
         }
         let mut d = String::new();
@@ -2530,6 +2767,29 @@ mod tests {
     }
 
     #[test]
+    fn a_prime_is_an_operator_not_an_unknown_token() {
+        let (m, ok) = latex_to_mathml("j'(6)");
+        assert!(ok, "a prime must translate: {m}");
+        assert!(m.contains("&#x2032;"), "{m}");
+        assert!(!m.contains("merror"), "{m}");
+        let (m2, ok2) = latex_to_mathml("f''(x)");
+        assert!(ok2 && m2.contains("&#x2033;"), "{m2}");
+    }
+
+    /// Every untranslatable formula must reach the CALLER, not only the reader.
+    /// `latex_to_mathml` always returned an `ok` flag; the call site in
+    /// `inline` discarded it, so a red box on the page produced no diagnostic
+    /// and no gate could see one.
+    #[test]
+    fn untranslatable_math_produces_a_diagnostic_as_well_as_a_box() {
+        let (h, d) =
+            render(json!([{ "kind": { "Prose": { "text": "value $x \\notacommand y$" } } }]));
+        assert!(h.contains("<merror>"), "the page must say so: {h}");
+        assert_eq!(d.len(), 1, "and the caller must be told: {d:?}");
+        assert!(d[0].contains("math:"), "{d:?}");
+    }
+
+    #[test]
     fn unknown_command_is_visible_never_guessed() {
         let (m, ok) = latex_to_mathml("\\notacommand{x}");
         assert!(!ok, "an unknown command must report failure");
@@ -2961,8 +3221,20 @@ fn rich(v: Option<&Value>) -> Option<String> {
     }
 }
 
+/// The verbatim HTML override on a `RichText`, if the producer set one.
+///
+/// It travels beside the text under a `_html`-suffixed key rather than
+/// replacing it, so the escaped text is always available as the fallback when
+/// the override fails the lint. See [`inline_or_html`].
+fn rich_html(v: Option<&Value>) -> Option<String> {
+    match v? {
+        Value::Object(_) => s(v?, "html").map(str::to_string),
+        _ => None,
+    }
+}
+
 fn normalize_block(b: &Value) -> Value {
-    use serde_json::json;
+    use serde_json::{Map, json};
     let id = s(b, "anchor").or_else(|| s(b, "id")).unwrap_or("b");
     let tag = b.get("tag").map_or_else(|| "essential".into(), text_of);
     let title = s(b, "title");
@@ -2972,6 +3244,9 @@ fn normalize_block(b: &Value) -> Value {
     let inner: Value = match name.as_str() {
         "prose" => {
             let mut m = json!({ "text": rich(body.get("text")).unwrap_or_default() });
+            if let Some(h) = rich_html(body.get("text")) {
+                m["text_html"] = json!(h);
+            }
             if let Some(t) = title {
                 m["heading"] = json!(t);
                 if let Some(l) = body.get("heading_level").and_then(Value::as_u64) {
@@ -2983,23 +3258,70 @@ fn normalize_block(b: &Value) -> Value {
         "claim" => json!({ "Claim": {
             "label": s(&body, "label").unwrap_or("Claim"),
             "statement": rich(body.get("statement")).unwrap_or_default(),
+            "statement_html": rich_html(body.get("statement")),
             "status": body.get("status").map_or_else(|| "open".into(), text_of),
             "notes": rich(body.get("note")),
             "evidence": arr(&body, "evidence").iter().map(normalize_evidence).collect::<Vec<_>>(),
         }}),
         "statement" => {
             let f = body.get("formal").cloned().unwrap_or(Value::Null);
-            json!({ "Statement": {
-                "title": s(&f, "title").or(title).unwrap_or("Statement"),
-                "ref": s(&f, "key"),
-                "statement": s(&f, "prose"),
-                "status": s(&f, "epistemic_status").unwrap_or("open"),
-                "external_status": s(&f, "external_status"),
-                "proof_route": s(&f, "proof_route"),
-                "axiom_footprint": f.get("axiom_footprint").cloned().unwrap_or(Value::Null),
-                "formal": { "language": s(&f, "language").unwrap_or("formal"),
-                            "statement": s(&f, "formal"), "fragment": s(&f, "fragment") },
-            }})
+            // `show` is the document's projection over the resolved statement
+            // (`ir::StatementField`). Round 1 ignored it and rendered whatever
+            // it had; honouring it is what makes one ledger entry able to
+            // render as a one-line index row on one page and a full card on
+            // another. An absent `show` means the whole default set, which is
+            // what `assemble::default_statement_fields` supplies -- so absence
+            // here only happens for hand-written sample IR.
+            let want: Vec<String> = arr(&body, "show").iter().map(text_of).collect();
+            let all = want.is_empty();
+            let asked = |k: &str| all || want.iter().any(|w| w == k);
+            let mut m = Map::new();
+            m.insert("ref".into(), json!(s(&f, "key")));
+            if asked("title") {
+                m.insert(
+                    "title".into(),
+                    json!(s(&f, "title").or(title).unwrap_or("Statement")),
+                );
+            }
+            if asked("prose") {
+                m.insert("statement".into(), json!(s(&f, "prose")));
+            }
+            if asked("status") {
+                m.insert(
+                    "status".into(),
+                    json!(s(&f, "epistemic_status").unwrap_or("open")),
+                );
+                m.insert("external_status".into(), json!(s(&f, "external_status")));
+            }
+            if asked("proof_route") {
+                m.insert("proof_route".into(), json!(s(&f, "proof_route")));
+            }
+            if asked("axiom_footprint") {
+                m.insert(
+                    "axiom_footprint".into(),
+                    f.get("axiom_footprint").cloned().unwrap_or(Value::Null),
+                );
+            }
+            if asked("depends_on") {
+                m.insert(
+                    "depends_on".into(),
+                    f.get("depends_on").cloned().unwrap_or(Value::Null),
+                );
+            }
+            if asked("evidence_count") {
+                m.insert(
+                    "evidence_count".into(),
+                    f.get("evidence_count").cloned().unwrap_or(Value::Null),
+                );
+            }
+            if asked("formal") {
+                m.insert(
+                    "formal".into(),
+                    json!({ "language": s(&f, "language").unwrap_or("formal"),
+                            "statement": s(&f, "formal"), "fragment": s(&f, "fragment") }),
+                );
+            }
+            json!({ "Statement": Value::Object(m) })
         }
         "steps" => json!({ "Steps": {
             "heading": title,
@@ -3076,8 +3398,25 @@ fn normalize_evidence(e: &Value) -> Value {
 
 fn normalize_figure(spec: &Value, caption: Option<&str>) -> Value {
     use serde_json::json;
-    let Some((name, b)) = kind_of(&json!({ "kind": spec.clone() })) else {
-        return json!({ "Unknown": { "caption": caption } });
+    // TWO SHAPES ARRIVE HERE and round 1 only handled the second one, which is
+    // why every figure in every assembled document rendered as a loud
+    // "unknown figure kind" box until 2026-08-21.
+    //
+    // * `ir::FigureSpec` is an internally tagged enum on `figure_type`, in
+    //   kebab-case (`dep-graph`, `plot`, `polygon`, `svg`), and its variant
+    //   fields sit BESIDE the tag. That is what assembly produces, i.e. every
+    //   real document.
+    // * The single-key form (`{"DepGraph": {...}}`) is what the hand-written
+    //   sample IR in this module's own tests uses, and is still accepted.
+    //
+    // The tag is checked first because the externally tagged form is only ever
+    // a one-key object, so a `figure_type` present is unambiguous.
+    let (name, b) = match spec.get("figure_type").and_then(Value::as_str) {
+        Some(t) => (t.to_ascii_lowercase().replace('-', ""), spec.clone()),
+        None => match kind_of(&json!({ "kind": spec.clone() })) {
+            Some((k, v)) => (k, v),
+            None => return json!({ "Unknown": { "caption": caption } }),
+        },
     };
     match name.as_str() {
         "depgraph" => json!({ "DepGraph": {
@@ -3085,6 +3424,7 @@ fn normalize_figure(spec: &Value, caption: Option<&str>) -> Value {
             "nodes": arr(&b, "nodes").iter().map(|n| json!({
                 "key": s(n, "id").unwrap_or("?"),
                 "label": s(n, "label").or_else(|| s(n, "id")).unwrap_or("?"),
+                "tooltip": s(n, "tooltip"),
                 "status": n.get("status").filter(|x| !x.is_null()).map_or_else(|| "open".into(), text_of),
                 "href": s(n, "href"),
             })).collect::<Vec<_>>(),
@@ -3099,9 +3439,22 @@ fn normalize_figure(spec: &Value, caption: Option<&str>) -> Value {
             "y_max": b.get("y_range").and_then(|r| r.get(1)).and_then(Value::as_f64),
             "series": arr(&b, "series").iter().map(|se| json!({
                 "name": s(se, "label"),
-                "kind": match b.get("plot_type").map(text_of).unwrap_or_default().as_str() {
-                    "steps" => "step",
-                    "scatter" => "scatter",
+                // `ir::PlotType` is `steps | line | scatter | bar`. Round 1
+                // let `bar` fall through to a line, which draws a DIFFERENT
+                // picture from the one the producer asked for -- the quiet
+                // kind of wrong this strand exists to stop. A series-level
+                // `style` hint overrides the plot-wide type.
+                "kind": match s(se, "style")
+                    .map_or_else(
+                        || b.get("plot_type").map(text_of).unwrap_or_default(),
+                        str::to_string,
+                    )
+                    .as_str()
+                {
+                    "steps" | "step" => "step",
+                    "scatter" | "points" => "scatter",
+                    "bar" | "bars" => "bar",
+                    "polygon" => "polygon",
                     _ => "line",
                 },
                 "points": se.get("points").cloned().unwrap_or(Value::Null),
@@ -3131,6 +3484,19 @@ impl crate::Emitter for HtmlEmitter {
 
     fn primary_extension(&self) -> &'static str {
         "html"
+    }
+
+    fn diagnostics(&self, doc: &crate::assemble::ResolvedDocument) -> Vec<String> {
+        let v = serde_json::to_value(doc).unwrap_or(Value::Null);
+        let normalized = normalize_resolved(&v);
+        emit_with_diagnostics(
+            &normalized,
+            &HtmlOptions {
+                level: ReadingLevel::Full,
+                epoch: Some(format!("{} ({})", doc.epoch_unix, doc.epoch_source)),
+            },
+        )
+        .1
     }
 
     fn emit(&self, doc: &crate::assemble::ResolvedDocument) -> crate::EmitOutput {

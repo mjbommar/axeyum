@@ -381,15 +381,17 @@
               "group": "focus",
               "href": "cards/F-contraposition.doc.json",
               "id": "F:contraposition",
-              "label": "A conditional is equivalent to its contrapositive",
-              "status": "proved"
+              "label": "contraposition",
+              "status": "proved",
+              "tooltip": "A conditional is equivalent to its contrapositive"
             },
             {
               "group": "smt-term-level",
               "href": "cards/F-modus-tollens-valid.doc.json",
               "id": "F:modus-tollens-valid",
-              "label": "Modus tollens is a valid inference",
-              "status": "proved"
+              "label": "modus-tollens-valid",
+              "status": "proved",
+              "tooltip": "Modus tollens is a valid inference"
             }
           ],
           "rankdir": "TB"

@@ -159,15 +159,17 @@
               "group": "unproved",
               "href": "cards/F-ml430-nat-land-assoc-ad4775b8.doc.json",
               "id": "F:ml430-nat-land-assoc-ad4775b8",
-              "label": "Mathlib v4.30 source proposition Nat.land_assoc",
-              "status": "open"
+              "label": "ml430-nat-land-assoc",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.land_assoc"
             },
             {
               "group": "focus",
               "href": "cards/F-ml430-nat-land-bit-b9ab7475.doc.json",
               "id": "F:ml430-nat-land-bit-b9ab7475",
-              "label": "Mathlib v4.30 source proposition Nat.land_bit",
-              "status": "open"
+              "label": "ml430-nat-land-bit",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.land_bit"
             }
           ],
           "rankdir": "TB"

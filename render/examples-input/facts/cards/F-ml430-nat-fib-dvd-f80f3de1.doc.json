@@ -159,15 +159,17 @@
               "group": "focus",
               "href": "cards/F-ml430-nat-fib-dvd-f80f3de1.doc.json",
               "id": "F:ml430-nat-fib-dvd-f80f3de1",
-              "label": "Mathlib v4.30 source proposition Nat.fib_dvd",
-              "status": "open"
+              "label": "ml430-nat-fib-dvd",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.fib_dvd"
             },
             {
               "group": "unproved",
               "href": "cards/F-ml430-nat-fib-gcd-d1d98407.doc.json",
               "id": "F:ml430-nat-fib-gcd-d1d98407",
-              "label": "Mathlib v4.30 source proposition Nat.fib_gcd",
-              "status": "open"
+              "label": "ml430-nat-fib-gcd",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.fib_gcd"
             }
           ],
           "rankdir": "TB"

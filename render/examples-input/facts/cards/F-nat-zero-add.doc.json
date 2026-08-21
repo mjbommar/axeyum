@@ -489,29 +489,33 @@
               "group": "kernel-lean",
               "href": "cards/F-nat-add-comm.doc.json",
               "id": "F:nat-add-comm",
-              "label": "Addition on the naturals is commutative",
-              "status": "proved"
+              "label": "nat-add-comm",
+              "status": "proved",
+              "tooltip": "Addition on the naturals is commutative"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-gcd-bezout.doc.json",
               "id": "F:nat-gcd-bezout",
-              "label": "Bezout's identity holds for the natural gcd",
-              "status": "proved"
+              "label": "nat-gcd-bezout",
+              "status": "proved",
+              "tooltip": "Bezout's identity holds for the natural gcd"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-mul-one.doc.json",
               "id": "F:nat-mul-one",
-              "label": "One is a right identity for multiplication on the naturals",
-              "status": "proved"
+              "label": "nat-mul-one",
+              "status": "proved",
+              "tooltip": "One is a right identity for multiplication on the naturals"
             },
             {
               "group": "focus",
               "href": "cards/F-nat-zero-add.doc.json",
               "id": "F:nat-zero-add",
-              "label": "Nat zero_add",
-              "status": "proved"
+              "label": "nat-zero-add",
+              "status": "proved",
+              "tooltip": "Nat zero_add"
             }
           ],
           "rankdir": "TB"

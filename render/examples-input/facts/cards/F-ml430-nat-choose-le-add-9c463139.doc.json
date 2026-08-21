@@ -164,22 +164,25 @@
               "group": "focus",
               "href": "cards/F-ml430-nat-choose-le-add-9c463139.doc.json",
               "id": "F:ml430-nat-choose-le-add-9c463139",
-              "label": "Mathlib v4.30 source proposition Nat.choose_le_add",
-              "status": "open"
+              "label": "ml430-nat-choose-le-add",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.choose_le_add"
             },
             {
               "group": "unproved",
               "href": "cards/F-ml430-nat-choose-le-choose-907b5042.doc.json",
               "id": "F:ml430-nat-choose-le-choose-907b5042",
-              "label": "Mathlib v4.30 source proposition Nat.choose_le_choose",
-              "status": "open"
+              "label": "ml430-nat-choose-le-choose",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.choose_le_choose"
             },
             {
               "group": "unproved",
               "href": "cards/F-ml430-nat-choose-le-succ-62ae968b.doc.json",
               "id": "F:ml430-nat-choose-le-succ-62ae968b",
-              "label": "Mathlib v4.30 source proposition Nat.choose_le_succ",
-              "status": "open"
+              "label": "ml430-nat-choose-le-succ",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.choose_le_succ"
             }
           ],
           "rankdir": "TB"

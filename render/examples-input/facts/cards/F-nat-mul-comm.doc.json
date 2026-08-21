@@ -479,29 +479,33 @@
               "group": "kernel-lean",
               "href": "cards/F-int-mul-comm.doc.json",
               "id": "F:int-mul-comm",
-              "label": "Multiplication on the integers is commutative",
-              "status": "proved"
+              "label": "int-mul-comm",
+              "status": "proved",
+              "tooltip": "Multiplication on the integers is commutative"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-euclid-lemma.doc.json",
               "id": "F:nat-euclid-lemma",
-              "label": "Euclid's lemma: a prime dividing a product divides a factor",
-              "status": "proved"
+              "label": "nat-euclid-lemma",
+              "status": "proved",
+              "tooltip": "Euclid's lemma: a prime dividing a product divides a factor"
             },
             {
               "group": "focus",
               "href": "cards/F-nat-mul-comm.doc.json",
               "id": "F:nat-mul-comm",
-              "label": "Multiplication on the naturals is commutative",
-              "status": "proved"
+              "label": "nat-mul-comm",
+              "status": "proved",
+              "tooltip": "Multiplication on the naturals is commutative"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-pow-add.doc.json",
               "id": "F:nat-pow-add",
-              "label": "The first index law: powers add over a product",
-              "status": "proved"
+              "label": "nat-pow-add",
+              "status": "proved",
+              "tooltip": "The first index law: powers add over a product"
             }
           ],
           "rankdir": "TB"

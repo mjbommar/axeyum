@@ -164,22 +164,25 @@
               "group": "focus",
               "href": "cards/F-ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b.doc.json",
               "id": "F:ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b",
-              "label": "Mathlib v4.30 source proposition Int.dvd_of_dvd_mul_left_of_gcd_one",
-              "status": "open"
+              "label": "ml430-int-dvd-of-dvd-mul-left-of-gcd-one",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Int.dvd_of_dvd_mul_left_of_gcd_one"
             },
             {
               "group": "unproved",
               "href": "cards/F-ml430-int-dvd-of-dvd-mul-right-of-gcd-one-77817ff0.doc.json",
               "id": "F:ml430-int-dvd-of-dvd-mul-right-of-gcd-one-77817ff0",
-              "label": "Mathlib v4.30 source proposition Int.dvd_of_dvd_mul_right_of_gcd_one",
-              "status": "open"
+              "label": "ml430-int-dvd-of-dvd-mul-right-of-gcd-one",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Int.dvd_of_dvd_mul_right_of_gcd_one"
             },
             {
               "group": "unproved",
               "href": "cards/F-ml430-int-gcd-eq-gcd-ab-63005aef.doc.json",
               "id": "F:ml430-int-gcd-eq-gcd-ab-63005aef",
-              "label": "Mathlib v4.30 source proposition Int.gcd_eq_gcd_ab",
-              "status": "open"
+              "label": "ml430-int-gcd-eq-gcd-ab",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Int.gcd_eq_gcd_ab"
             }
           ],
           "rankdir": "TB"

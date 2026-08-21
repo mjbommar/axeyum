@@ -729,6 +729,14 @@ struct Args {
     replay_line: Option<String>,
     replay_seconds: Option<i64>,
     notes: Option<String>,
+    /// What the record IS: `production` or `negative-control`.
+    ///
+    /// A record of a deliberately broken variant is evidence about the
+    /// checker's sensitivity, never evidence for the mathematics. Round 1 could
+    /// only say that in `notes` and in the record id, which is prose; the
+    /// Doc-IR schema grew `RunRecord.role` so a checker can read it, and
+    /// assembly now refuses a claim that cites a control as support.
+    role: String,
     rest: Vec<String>,
 }
 
@@ -737,7 +745,7 @@ fn usage_and_die(msg: &str) -> ! {
     eprintln!(
         "usage: noh_wt_certificate [--emit-run <path> --source <path> \
          [--record-id R:<slug>] [--replay-line <cmd>] [--replay-seconds <n>] \
-         [--notes <text>]]"
+         [--notes <text>] [--role production|negative-control]]"
     );
     exit(2);
 }
@@ -751,6 +759,7 @@ fn parse_args() -> Args {
         replay_line: None,
         replay_seconds: None,
         notes: None,
+        role: "production".to_string(),
         rest: argv.clone(),
     };
     let need = |i: usize, flag: &str| -> String {
@@ -774,6 +783,12 @@ fn parse_args() -> Args {
                 );
             }
             "--notes" => a.notes = Some(need(i, "--notes")),
+            "--role" => {
+                a.role = need(i, "--role");
+                if a.role != "production" && a.role != "negative-control" {
+                    usage_and_die("--role must be `production` or `negative-control`");
+                }
+            }
             other => usage_and_die(&format!("unknown argument {other:?}")),
         }
         i += 2;
@@ -1125,6 +1140,7 @@ impl RunRecord {
                     ("id", jstr(&args.record_id)),
                     ("provenance", provenance),
                     ("summary", jstr(&summary)),
+                    ("role", jstr(&args.role)),
                     ("outcome", jstr(outcome)),
                     (
                         "claims",

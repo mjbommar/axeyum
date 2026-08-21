@@ -28,12 +28,33 @@
 //!    return equal outputs, in the same process or a different one. The epoch
 //!    is [`assemble::ResolvedDocument::epoch_unix`]; there is no other source of
 //!    time and asking the OS for one breaks every golden test in the package.
-//! 2. **Is total.** [`Emitter::emit`] returns [`EmitOutput`], not a `Result`.
-//!    Every [`assemble::ResolvedKind`] must render to something; there is no
-//!    "unsupported block" escape hatch, because an emitter that could refuse
-//!    would be a second failure surface and the one in [`assemble`] is the one
-//!    that is tested. A kind an emitter cannot draw renders as its data (a
-//!    listing, a link) -- never as nothing, and never as an apology.
+//! 2. **Is total, and is not silent.** [`Emitter::emit`] returns
+//!    [`EmitOutput`], not a `Result`. Every [`assemble::ResolvedKind`] must
+//!    render to something; there is no "unsupported block" escape hatch,
+//!    because an emitter that could refuse would be a second failure surface
+//!    and the one in [`assemble`] is the one that is tested. A kind an emitter
+//!    cannot draw renders as its data (a listing, a link) -- never as nothing,
+//!    and never as an apology.
+//!
+//!    Totality has a hole in it that round 1 found by looking at a page: an
+//!    emitter handed something it does not understand can satisfy every rule
+//!    above by DROPPING it, and the document is then simply shorter. Nothing
+//!    fails, nothing says anything, and a reader cannot tell a document that
+//!    omits a figure from one that never had one. So totality is paired with a
+//!    second requirement, and the two together are the contract:
+//!
+//!    * **the page says so** -- an unrenderable block renders as a loud,
+//!      visible box stating that the document is incomplete (the HTML
+//!      emitter's `ax-unrenderable`), never as absence; and
+//!    * **the caller can find out** -- [`Emitter::diagnostics`] returns one
+//!      line per such block, so a gate can refuse a build that produced any.
+//!      `render/check.sh` runs exactly that check over every committed
+//!      manifest, in every format, and a non-empty list fails it.
+//!
+//!    This is not a second judgment about evidence and it cannot upgrade
+//!    anything: assembly remains the sole authority on status. It reports only
+//!    that the emitter did not draw something it was handed. The distinction
+//!    that makes it safe: assembly REFUSES, an emitter REPORTS.
 //! 3. **Never inspects evidence to decide anything.** In particular it never
 //!    reads [`assemble::ResolvedEvidence::exit_status`] or `outcome` to choose
 //!    a badge. The badge is
@@ -123,6 +144,18 @@ pub trait Emitter {
 
     /// Render a resolved document. Cannot fail; see contract point 2.
     fn emit(&self, doc: &ResolvedDocument) -> EmitOutput;
+
+    /// One line per block this emitter could not draw, in document order.
+    ///
+    /// Empty for an emitter that renders everything it is handed, which is why
+    /// the default is empty rather than `unimplemented`. A non-empty list means
+    /// the emitted bytes contain a visible "this document is incomplete" box
+    /// -- see contract point 2. It is a REPORT, never a refusal: the bytes are
+    /// still returned, and the decision to fail a build on them belongs to the
+    /// caller (`render/check.sh` makes it).
+    fn diagnostics(&self, _doc: &ResolvedDocument) -> Vec<String> {
+        Vec::new()
+    }
 }
 
 /// The emitter for a format name, or `None` if this build has none.

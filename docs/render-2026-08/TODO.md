@@ -24,11 +24,20 @@ the coordinator commits via the private-index procedure.
         figure spec. Owns: render/producers-py/, render/examples-input/facts/.
 
 ## Round 2 (after round 1 lands)
-- [ ] INTEGRATE — wire HTML emitter + producers through assembly; run
-        the eight P0 exit criteria from 04-prototype-plan.md; mutation
-        pass; produce certificate.{md,tex,html} + facts.{md,html}.
-- [ ] REVIEW — coordinator: exit-criteria audit, reader test with owner,
-        commit, status note.
+- [x] INTEGRATE -- HTML emitter wired through assembly (every figure in every
+        assembled document was an "unknown figure kind" box until it was);
+        the eight P0 exit criteria run one by one, 7 PASS + 1 ADJUSTED, in
+        docs/render-2026-08/14-p0-exit-report.md; mutation pass re-measured
+        (CORE's kill table holds; two previously-untested rule-4 carriers and
+        one inert gate step found and fixed); RunRecord.role landed across
+        schema + IR + assembly + the Python validator; the d(k) table is now
+        from_run, not transcribed; the atlas ships per-component graphs;
+        deliverables in render/out/ (10 files, 1.1 MB, byte-reproducible).
+        Diary: docs/render-2026-08/15-integrate-diary.md.
+- [ ] REVIEW -- coordinator: read 14-p0-exit-report.md, run the READER TEST
+        with the owner on render/out/certificate.html (the one criterion no
+        agent can close), commit, status note. P1 queue is the last section
+        of 15-integrate-diary.md.
 
 ## Standing constraints (all agents)
 Rust+Python only; outputs md/LaTeX/self-contained HTML (+optional wasm);

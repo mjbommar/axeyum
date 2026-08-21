@@ -24,17 +24,17 @@
     "inputs": [
       {
         "path": "render/producers/build-certificate-manifest.py",
-        "sha256": "3cf1777911339c4575f9c2d21b3b07a09eac7bb0bf614217d8cd0417eb97e8f5",
+        "sha256": "39039b7c5dac5bf96166d31858aa05122555d35d04c79fec2e5c1ab24f7035a5",
         "role": "generator"
       },
       {
         "path": "render/examples-input/cert/run-certificate.json",
-        "sha256": "6079f71a01225a88c302837e67c78e495df56f441754fc1682735e08ca0c344d",
+        "sha256": "40987dbfe49e77738b8b7072d0dddcca3975b71df8dde4c4ead62c38c965977f",
         "role": "run-record"
       },
       {
         "path": "render/examples-input/cert/run-mutant-M1.json",
-        "sha256": "70209534ad58e6fa2f41b17316d5c69a77582c91d0bf96bdddec5e755b8cf194",
+        "sha256": "6e31ab8b9d5bbdcba40fa6948c25527f8e27b5f0778d727b2d67747974192f2d",
         "role": "run-record"
       }
     ],
@@ -70,12 +70,12 @@
             "run_record": "run-mutant-M1.json",
             "record_id": "R:noh-wt-certificate-mutant-m1",
             "claim_key": "c5-theorem-3-admissibility",
-            "role": "primary",
+            "role": "negative-control",
             "note": "A deliberately mutated producer. The run exits 1 and its record's outcome is 'refuted'; the failing column is $k = 5$, where the mutated weight gives $d(5) = 0$."
           }
         ],
         "note": {
-          "text": "This is the statement KMU's Remark 6.5 stops short of, and it is false: the parity indicator is not decoration. Its badge must render red. If it ever renders green, the renderer is broken, not the mathematics -- which is why this block is in the P0 manifest at all."
+          "text": "This is the statement KMU's Remark 6.5 stops short of, and it is false: the parity indicator is not decoration. Its badge must render red. If it ever renders green, the renderer is broken, not the mathematics -- which is why this block is in the P0 corpus at all."
         }
       }
     }

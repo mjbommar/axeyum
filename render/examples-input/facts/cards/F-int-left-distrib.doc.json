@@ -484,29 +484,33 @@
               "group": "kernel-lean",
               "href": "cards/F-int-add-assoc.doc.json",
               "id": "F:int-add-assoc",
-              "label": "Addition on the integers is associative",
-              "status": "proved"
+              "label": "int-add-assoc",
+              "status": "proved",
+              "tooltip": "Addition on the integers is associative"
             },
             {
               "group": "focus",
               "href": "cards/F-int-left-distrib.doc.json",
               "id": "F:int-left-distrib",
-              "label": "Multiplication distributes over addition on the integers",
-              "status": "proved"
+              "label": "int-left-distrib",
+              "status": "proved",
+              "tooltip": "Multiplication distributes over addition on the integers"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-left-distrib.doc.json",
               "id": "F:nat-left-distrib",
-              "label": "Multiplication distributes over addition on the left",
-              "status": "proved"
+              "label": "nat-left-distrib",
+              "status": "proved",
+              "tooltip": "Multiplication distributes over addition on the left"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-succ-add.doc.json",
               "id": "F:nat-succ-add",
-              "label": "Nat succ_add",
-              "status": "proved"
+              "label": "nat-succ-add",
+              "status": "proved",
+              "tooltip": "Nat succ_add"
             }
           ],
           "rankdir": "TB"

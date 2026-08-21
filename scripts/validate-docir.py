@@ -150,7 +150,48 @@ def hand_rolled(obj, kind: str, where: str, f: Findings) -> None:
     f.checks += 1
 
 
-def check_document(doc: dict, where: str, f: Findings) -> None:
+def check_evidence_roles(kind: dict, at: str, doc_dir, where: str, f: Findings) -> None:
+    """The negative-control pairing, checked independently of the Rust resolver.
+
+    A record whose `role` is `negative-control` records a deliberately broken
+    run. Citing it as support would put a mutant's red run behind a claim, so
+    the reference must declare `role: negative-control` -- and, in the other
+    direction, that role must not be pointed at a production run, or the page
+    tells its reader that a green run was expected to fail.
+
+    Unresolvable paths are NOT an error here: the Rust assembler owns the
+    dangling-reference rule and reports it with the manifest's search paths.
+    This check only speaks about records it can actually read.
+    """
+    for j, ev in enumerate(kind.get("evidence") or []):
+        rel = ev.get("run_record")
+        if not isinstance(rel, str) or doc_dir is None:
+            continue
+        rec_path = (doc_dir / rel)
+        if not rec_path.is_file():
+            continue
+        try:
+            rec = json.loads(rec_path.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        declared = ev.get("role", "primary")
+        actual = rec.get("role", "production")
+        if actual == "negative-control" and declared != "negative-control":
+            f.error(
+                where,
+                f"{at}: evidence[{j}] cites `{rec.get('id')}`, a NEGATIVE CONTROL, "
+                f"as `{declared}` -- i.e. as support. A deliberately broken run never "
+                "supports a claim (fail-closed law rule 2)",
+            )
+        if actual != "negative-control" and declared == "negative-control":
+            f.error(
+                where,
+                f"{at}: evidence[{j}] declares `role: negative-control` over "
+                f"`{rec.get('id')}`, which is a production run",
+            )
+
+
+def check_document(doc: dict, where: str, f: Findings, doc_dir=None) -> None:
     seen: dict[str, int] = {}
     for i, block in enumerate(doc.get("blocks", [])):
         at = f"blocks[{i}] `{block.get('id')}`"
@@ -172,6 +213,7 @@ def check_document(doc: dict, where: str, f: Findings) -> None:
                 )
             if kind.get("status") not in STATUSES:
                 f.error(where, f"{at}: status {kind.get('status')!r} is not a badge vocabulary term")
+            check_evidence_roles(kind, at, doc_dir, where, f)
 
         if ktype == "table":
             if "from_run" not in kind:
@@ -219,6 +261,15 @@ def check_run_record(rec: dict, where: str, f: Findings) -> None:
             keys[key] = i
         if claim.get("status") not in STATUSES:
             f.error(where, f"claims[{i}]: status {claim.get('status')!r} is not a badge term")
+
+    if rec.get("role") == "negative-control" and exit_status == 0 and outcome == "established":
+        f.error(
+            where,
+            "this record declares `role: negative-control` -- a run of a deliberately "
+            "broken variant -- but it exited 0 and reports `established`. A negative "
+            "control that did not fail is not a control: either the mutation is inert "
+            "or the checker cannot see it",
+        )
 
     for name, table in (rec.get("tables") or {}).items():
         ncols = len(table.get("columns", []))
@@ -290,7 +341,7 @@ def main() -> int:
 
         schema_validate(obj, kind, schema, where, f, args.require_jsonschema)
         if kind == "document":
-            check_document(obj, where, f)
+            check_document(obj, where, f, path.resolve().parent)
         else:
             check_run_record(obj, where, f)
         files += 1

@@ -484,29 +484,33 @@
               "group": "kernel-lean",
               "href": "cards/F-nat-gcd-bezout.doc.json",
               "id": "F:nat-gcd-bezout",
-              "label": "Bezout's identity holds for the natural gcd",
-              "status": "proved"
+              "label": "nat-gcd-bezout",
+              "status": "proved",
+              "tooltip": "Bezout's identity holds for the natural gcd"
             },
             {
               "group": "focus",
               "href": "cards/F-nat-mul-one.doc.json",
               "id": "F:nat-mul-one",
-              "label": "One is a right identity for multiplication on the naturals",
-              "status": "proved"
+              "label": "nat-mul-one",
+              "status": "proved",
+              "tooltip": "One is a right identity for multiplication on the naturals"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-pow-add.doc.json",
               "id": "F:nat-pow-add",
-              "label": "The first index law: powers add over a product",
-              "status": "proved"
+              "label": "nat-pow-add",
+              "status": "proved",
+              "tooltip": "The first index law: powers add over a product"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-zero-add.doc.json",
               "id": "F:nat-zero-add",
-              "label": "Nat zero_add",
-              "status": "proved"
+              "label": "nat-zero-add",
+              "status": "proved",
+              "tooltip": "Nat zero_add"
             }
           ],
           "rankdir": "TB"

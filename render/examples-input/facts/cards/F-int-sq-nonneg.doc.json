@@ -469,15 +469,17 @@
               "group": "kernel-lean",
               "href": "cards/F-int-mul-comm.doc.json",
               "id": "F:int-mul-comm",
-              "label": "Multiplication on the integers is commutative",
-              "status": "proved"
+              "label": "int-mul-comm",
+              "status": "proved",
+              "tooltip": "Multiplication on the integers is commutative"
             },
             {
               "group": "focus",
               "href": "cards/F-int-sq-nonneg.doc.json",
               "id": "F:int-sq-nonneg",
-              "label": "Every integer square is nonnegative",
-              "status": "proved"
+              "label": "int-sq-nonneg",
+              "status": "proved",
+              "tooltip": "Every integer square is nonnegative"
             }
           ],
           "rankdir": "TB"

@@ -565,15 +565,17 @@
               "group": "cas-certificate",
               "href": "cards/F-chu-vandermonde-convolution.doc.json",
               "id": "F:chu-vandermonde-convolution",
-              "label": "Chu-Vandermonde convolution, closed form at symbolic parameters",
-              "status": "proved"
+              "label": "chu-vandermonde-convolution",
+              "status": "proved",
+              "tooltip": "Chu-Vandermonde convolution, closed form at symbolic parameters"
             },
             {
               "group": "focus",
               "href": "cards/F-chu-vandermonde-convolution-recurrence.doc.json",
               "id": "F:chu-vandermonde-convolution-recurrence",
-              "label": "The Chu-Vandermonde convolution satisfies a first-order recurrence in p",
-              "status": "proved"
+              "label": "chu-vandermonde-convolution-recurrence",
+              "status": "proved",
+              "tooltip": "The Chu-Vandermonde convolution satisfies a first-order recurrence in p"
             }
           ],
           "rankdir": "TB"

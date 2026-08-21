@@ -469,15 +469,17 @@
               "group": "focus",
               "href": "cards/F-int-mul-assoc.doc.json",
               "id": "F:int-mul-assoc",
-              "label": "Multiplication on the integers is associative",
-              "status": "proved"
+              "label": "int-mul-assoc",
+              "status": "proved",
+              "tooltip": "Multiplication on the integers is associative"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-mul-assoc.doc.json",
               "id": "F:nat-mul-assoc",
-              "label": "Multiplication on the naturals is associative",
-              "status": "proved"
+              "label": "nat-mul-assoc",
+              "status": "proved",
+              "tooltip": "Multiplication on the naturals is associative"
             }
           ],
           "rankdir": "TB"

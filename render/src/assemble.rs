@@ -37,8 +37,9 @@ use sha2::{Digest, Sha256};
 
 use crate::ir::{
     ArtifactRef, Block, BlockKind, CertKind, Column, Command, Document, EvidenceRef, EvidenceRole,
-    EvidenceStatus, FigureSpec, FormalRef, Genre, Outcome, Provenance, RenderHint, RichText,
-    RunRecord, SCHEMA_VERSION, StatementField, StatementSource, Step, TableFromRun, Verbosity,
+    EvidenceStatus, FigureSpec, FormalRef, Genre, Outcome, Provenance, RecordRole, RenderHint,
+    RichText, RunRecord, SCHEMA_VERSION, StatementField, StatementSource, Step, TableFromRun,
+    Verbosity,
 };
 
 /// Everything assembly needs to resolve a manifest.
@@ -111,6 +112,33 @@ pub enum AssembleError {
         path: String,
         /// The underlying reason.
         reason: String,
+    },
+    /// A claim cites a NEGATIVE-CONTROL record as ordinary support.
+    ///
+    /// The record is a recording of a deliberately broken run. Citing it under
+    /// `primary` / `replication` / `replay` / `cross-oracle` asserts it
+    /// supports the claim, which it never does -- so the build refuses instead
+    /// of rendering a claim propped up by a mutant.
+    NegativeControlCitedAsSupport {
+        /// Path to the record.
+        path: String,
+        /// The record's id.
+        record: String,
+        /// The role the reference declared.
+        declared_role: String,
+    },
+    /// A reference declares the `negative-control` role over a record that is
+    /// not one.
+    ///
+    /// The mirror of the rule above, and it exists for the same reason: the
+    /// role must mean something. A page that labels a real production run as a
+    /// negative control is telling the reader that a green run was expected to
+    /// fail.
+    NotANegativeControl {
+        /// Path to the record.
+        path: String,
+        /// The record's id.
+        record: String,
     },
     /// A run record's id is not the one the reference expected.
     RecordIdMismatch {
@@ -245,6 +273,25 @@ impl fmt::Display for AssembleError {
             Self::MissingRunRecord { path, reason } => {
                 write!(f, "run record `{path}` could not be read: {reason}")
             }
+            Self::NegativeControlCitedAsSupport {
+                path,
+                record,
+                declared_role,
+            } => write!(
+                f,
+                "run record `{path}` (`{record}`) declares `role: negative-control` -- it is a \
+                 recording of a deliberately broken run -- but it is cited as `{declared_role}`, \
+                 i.e. as support. A negative control never supports a claim. Cite it with \
+                 `\"role\": \"negative-control\"` if the document is reporting the control, or \
+                 point the claim at a production record"
+            ),
+            Self::NotANegativeControl { path, record } => write!(
+                f,
+                "the reference to run record `{path}` (`{record}`) declares \
+                 `role: negative-control`, but the record does not: it is a production run. \
+                 Labelling a real run as a control tells the reader a green run was expected \
+                 to fail"
+            ),
             Self::RecordIdMismatch {
                 path,
                 expected,
@@ -1080,6 +1127,24 @@ impl Assembler {
 
     fn resolve_evidence(&mut self, ev: &EvidenceRef) -> Result<ResolvedEvidence, AssembleError> {
         let record = self.load_record(&ev.run_record, ev.record_id.as_deref())?;
+        // A negative control is evidence about the CHECKER, never about the
+        // mathematics, and the pairing is enforced in both directions so that
+        // the role means something in each.
+        let declared = ev.role.unwrap_or(EvidenceRole::Primary);
+        let is_control = record.role.unwrap_or_default() == RecordRole::NegativeControl;
+        if is_control && declared != EvidenceRole::NegativeControl {
+            return Err(AssembleError::NegativeControlCitedAsSupport {
+                path: ev.run_record.clone(),
+                record: record.id.clone(),
+                declared_role: declared.label().to_string(),
+            });
+        }
+        if !is_control && declared == EvidenceRole::NegativeControl {
+            return Err(AssembleError::NotANegativeControl {
+                path: ev.run_record.clone(),
+                record: record.id.clone(),
+            });
+        }
         let inputs_verified =
             self.verify_inputs(&record.provenance, &format!("run record `{}`", record.id))?;
         for a in &record.artifacts {
@@ -1114,7 +1179,7 @@ impl Assembler {
             claim_key: ev.claim_key.clone(),
             claim_status,
             claim_statement,
-            role: ev.role.unwrap_or(EvidenceRole::Primary),
+            role: declared,
             replay: record.replay.clone(),
             inputs_verified,
         })

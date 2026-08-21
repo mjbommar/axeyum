@@ -159,15 +159,17 @@
               "group": "unproved",
               "href": "cards/F-ml430-nat-factorial-pos-f1dd2405.doc.json",
               "id": "F:ml430-nat-factorial-pos-f1dd2405",
-              "label": "Mathlib v4.30 source proposition Nat.factorial_pos",
-              "status": "open"
+              "label": "ml430-nat-factorial-pos",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.factorial_pos"
             },
             {
               "group": "focus",
               "href": "cards/F-ml430-nat-self-le-factorial-cfdffc69.doc.json",
               "id": "F:ml430-nat-self-le-factorial-cfdffc69",
-              "label": "Mathlib v4.30 source proposition Nat.self_le_factorial",
-              "status": "open"
+              "label": "ml430-nat-self-le-factorial",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.self_le_factorial"
             }
           ],
           "rankdir": "TB"

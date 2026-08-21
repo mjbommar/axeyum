@@ -159,15 +159,17 @@
               "group": "focus",
               "href": "cards/F-ml430-nat-sqrt-eq-zero-53666a3b.doc.json",
               "id": "F:ml430-nat-sqrt-eq-zero-53666a3b",
-              "label": "Mathlib v4.30 source proposition Nat.sqrt_eq_zero",
-              "status": "open"
+              "label": "ml430-nat-sqrt-eq-zero",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.sqrt_eq_zero"
             },
             {
               "group": "unproved",
               "href": "cards/F-ml430-nat-sqrt-lt-4909537f.doc.json",
               "id": "F:ml430-nat-sqrt-lt-4909537f",
-              "label": "Mathlib v4.30 source proposition Nat.sqrt_lt",
-              "status": "open"
+              "label": "ml430-nat-sqrt-lt",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.sqrt_lt"
             }
           ],
           "rankdir": "TB"

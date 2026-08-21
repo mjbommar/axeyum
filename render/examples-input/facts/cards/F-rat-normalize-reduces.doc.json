@@ -474,22 +474,25 @@
               "group": "kernel-lean",
               "href": "cards/F-int-euclidean-decomposition.doc.json",
               "id": "F:int-euclidean-decomposition",
-              "label": "Euclidean decomposition over the integers is derived, not assumed",
-              "status": "proved"
+              "label": "int-euclidean-decomposition",
+              "status": "proved",
+              "tooltip": "Euclidean decomposition over the integers is derived, not assumed"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-rat-mul-renormalises.doc.json",
               "id": "F:rat-mul-renormalises",
-              "label": "Rational multiplication renormalises",
-              "status": "proved"
+              "label": "rat-mul-renormalises",
+              "status": "proved",
+              "tooltip": "Rational multiplication renormalises"
             },
             {
               "group": "focus",
               "href": "cards/F-rat-normalize-reduces.doc.json",
               "id": "F:rat-normalize-reduces",
-              "label": "The rational smart constructor normalises",
-              "status": "proved"
+              "label": "rat-normalize-reduces",
+              "status": "proved",
+              "tooltip": "The rational smart constructor normalises"
             }
           ],
           "rankdir": "TB"

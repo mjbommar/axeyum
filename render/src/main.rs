@@ -35,6 +35,7 @@ OPTIONS:
   --repo-root <dir>    root that input paths resolve against (default: .)
   --facts-dir <dir>    the fact ledger (default: <repo-root>/artifacts/facts)
   --strict             red evidence is a build error, not a demoted claim
+  --fail-on-diagnostics  refuse the build if the emitter could not draw a block
 
 EXIT STATUS:
   0  rendered; every reference resolved and every input hash matched
@@ -69,6 +70,7 @@ struct Args {
     repo_root: PathBuf,
     facts_dir: Option<PathBuf>,
     strict: bool,
+    fail_on_diagnostics: bool,
     rest: Vec<String>,
 }
 
@@ -80,6 +82,7 @@ fn parse(args: &[String]) -> Result<Args, Fail> {
         repo_root: PathBuf::from("."),
         facts_dir: None,
         strict: false,
+        fail_on_diagnostics: false,
         rest: Vec::new(),
     };
     let mut i = 0;
@@ -92,6 +95,7 @@ fn parse(args: &[String]) -> Result<Args, Fail> {
             "--repo-root" => a.repo_root = PathBuf::from(value(args, &mut i, arg)?),
             "--facts-dir" => a.facts_dir = Some(PathBuf::from(value(args, &mut i, arg)?)),
             "--strict" => a.strict = true,
+            "--fail-on-diagnostics" => a.fail_on_diagnostics = true,
             "-h" | "--help" => return Err(Fail::Usage("help".to_string())),
             other if other.starts_with("--") => {
                 return Err(Fail::Usage(format!("unknown option {other}")));
@@ -167,6 +171,25 @@ fn cmd_render(a: &Args) -> Result<(), Fail> {
         .assemble_path(manifest)
         .map_err(|e| Fail::Build(e.to_string()))?;
     let out = emitter.emit(&doc);
+
+    // Contract point 2: an emitter reports what it could not draw. The bytes
+    // exist either way and the page says so in a loud box; this turns that
+    // report into an exit status for a gate that asked for one. Printed
+    // ALWAYS, so a human running the command sees it even without the flag --
+    // a diagnostic nobody is shown is the silent-drop failure wearing a
+    // different hat.
+    let diagnostics = emitter.diagnostics(&doc);
+    for d in &diagnostics {
+        eprintln!("axeyum-render: DIAGNOSTIC: {d}");
+    }
+    if a.fail_on_diagnostics && !diagnostics.is_empty() {
+        return Err(Fail::Build(format!(
+            "the {} emitter could not draw {} block(s); the rendered document says so in \
+             an `unrenderable` box. Refusing because --fail-on-diagnostics was given.",
+            emitter.format_name(),
+            diagnostics.len()
+        )));
+    }
 
     match &a.out {
         None => print!("{}", out.primary),

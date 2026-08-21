@@ -469,15 +469,17 @@
               "group": "kernel-lean",
               "href": "cards/F-nat-gcd-bezout.doc.json",
               "id": "F:nat-gcd-bezout",
-              "label": "Bezout's identity holds for the natural gcd",
-              "status": "proved"
+              "label": "nat-gcd-bezout",
+              "status": "proved",
+              "tooltip": "Bezout's identity holds for the natural gcd"
             },
             {
               "group": "focus",
               "href": "cards/F-nat-gcd-succ.doc.json",
               "id": "F:nat-gcd-succ",
-              "label": "The Euclidean algorithm's descent step is correct",
-              "status": "proved"
+              "label": "nat-gcd-succ",
+              "status": "proved",
+              "tooltip": "The Euclidean algorithm's descent step is correct"
             }
           ],
           "rankdir": "TB"

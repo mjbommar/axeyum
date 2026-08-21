@@ -657,6 +657,20 @@ def build_card(fact: dict, path: Path, digest: str, dependents: list[str],
 
 # --- graph, atlas and pilot documents ---------------------------------------
 
+def short_label(fact_id: str) -> str:
+    """The fact id without its `F:` prefix and without a trailing content hash.
+
+    `F:ml430-nat-fib-add-two-b86e0c82` -> `ml430-nat-fib-add-two`. The hash is
+    dropped only when it is exactly eight hex digits, so an id that genuinely
+    ends in a short hex-looking word keeps it.
+    """
+    body = fact_id[2:] if fact_id.startswith("F:") else fact_id
+    head, _, tail = body.rpartition("-")
+    if head and len(tail) == 8 and all(c in "0123456789abcdef" for c in tail):
+        return head
+    return body
+
+
 def dep_graph_spec(ids: list[str], facts: dict[str, dict],
                    focus: str | None = None) -> dict:
     """FigureDepGraph over `depends_on`.
@@ -670,7 +684,15 @@ def dep_graph_spec(ids: list[str], facts: dict[str, dict],
     for i in sorted(ids):
         f = facts[i]
         checked = sum(1 for e in f["evidence"] if e.get("check_status") == "checked")
-        node = {"id": i, "label": f["title"],
+        # THE BOX LABEL IS THE SHORT ID, NOT THE TITLE, and the title is the
+        # tooltip. Measured 2026-08-21 on the rendered atlas: a node box holds
+        # about fifteen characters on each of two lines, and nine facts of the
+        # Fibonacci component are titled `Mathlib v4.30 source proposition
+        # Nat.fib_...`, so every one of them drew as `Mathlib v4.30 source~`.
+        # Nine identical boxes is a picture of nothing. The short id
+        # (`ml430-nat-fib-add-two`) is distinguishing by construction, fits a
+        # box, and the full title is one hover away.
+        node = {"id": i, "label": short_label(i), "tooltip": f["title"],
                 "status": badge_for_epistemic(f["epistemic_status"], checked),
                 "href": f"cards/{slug(i)}.doc.json",
                 "group": f.get("proof_route") or "unproved"}
@@ -730,6 +752,79 @@ def spread_table(ids: list[str], facts: dict[str, dict], prov: dict) -> dict:
                       rows, prov)
 
 
+# One picture of the WHOLE ledger is not a picture. Measured 2026-08-21: the
+# layered layout over all 324 facts is 32,936 x 674 px, because 173 of them have
+# no `depends_on` edge in either direction and land in a single row. Scaled into
+# a 68rem column that row is about two pixels tall -- present, legible to
+# nobody. So above this many nodes the atlas ships ONE GRAPH PER CONNECTED
+# COMPONENT plus the full index table, and says in prose why. The threshold is
+# where a layer stops fitting a printed page at a readable node size, not a
+# round number: 40 nodes * ~110 px is already 4,400 px, i.e. a 4x downscale.
+GRAPH_ONE_PICTURE_MAX = 40
+# A component this size or larger is shown open; the rest fold. Both are
+# rendered -- `detail` folds, it does not drop (that is `archive`).
+GRAPH_ESSENTIAL_MIN = 5
+
+
+def graph_blocks(ids: list[str], facts: dict[str, dict], edges: int,
+                 prov: dict) -> list[dict]:
+    """The dependency figure(s) for an atlas-style document.
+
+    Small documents get the one graph they deserve. Large ones get one graph per
+    connected component, in descending size order, and a note stating the
+    measurement that forced the split -- a reader who cannot see why a picture
+    is missing has to take the renderer's word for it.
+    """
+    if len(ids) <= GRAPH_ONE_PICTURE_MAX:
+        return [block(
+            "dep-graph", "essential",
+            {"type": "figure",
+             "caption": {"text": f"`depends_on` over {len(ids)} facts, {edges} edges. "
+                                 f"An edge runs from the dependent fact to the fact it "
+                                 f"rests on. Node status is the conservative mapping of "
+                                 f"the ledger's epistemic_status."},
+             "alt": f"Dependency graph of {len(ids)} facts with {edges} edges",
+             "spec": dep_graph_spec(ids, facts)},
+            prov, title="Dependency graph",
+        )]
+
+    comps = components(ids, facts)
+    nontrivial = sorted((c for c in comps if len(c) > 1),
+                        key=lambda c: (-len(c), c[0]))
+    isolated = sorted(c[0] for c in comps if len(c) == 1)
+    out = [block(
+        "dep-graph-note", "essential",
+        prose_kind(
+            f"The `depends_on` relation over these {len(ids)} facts has {edges} "
+            f"edges and falls into {len(comps)} connected components: "
+            f"{len(nontrivial)} with more than one fact ({sum(len(c) for c in nontrivial)} "
+            f"facts between them, the largest holding {len(nontrivial[0])}), and "
+            f"{len(isolated)} single facts that nothing in the ledger depends on "
+            f"and that depend on nothing in it.\n\n"
+            f"One drawing of all {len(ids)} would be {len(ids)} nodes wide and four "
+            f"layers deep -- a strip some thirty thousand pixels across, which at "
+            f"page width is a smear. So each component is drawn on its own below, "
+            f"largest first, and the {len(isolated)} unconnected facts appear in the "
+            f"index table rather than as a row of dots. The index is the complete "
+            f"list either way: every fact is in it."),
+        prov, title="Dependency structure",
+    )]
+    for n, comp in enumerate(nontrivial, start=1):
+        ce = count_edges(comp, facts)
+        tag = "essential" if len(comp) >= GRAPH_ESSENTIAL_MIN else "detail"
+        out.append(block(
+            f"dep-graph-c{n:02d}", tag,
+            {"type": "figure",
+             "caption": {"text": f"Component {n} of {len(nontrivial)}: {len(comp)} facts, "
+                                 f"{ce} edges. An edge runs from the dependent fact to "
+                                 f"the fact it rests on."},
+             "alt": f"Dependency graph of {len(comp)} facts with {ce} edges",
+             "spec": dep_graph_spec(comp, facts)},
+            prov, title=f"Component {n} ({len(comp)} facts)",
+        ))
+    return out
+
+
 def build_atlas(ids: list[str], facts: dict[str, dict], digests: dict[str, str],
                 epoch: dict, doc_id: str, title: str, subtitle: str,
                 intro: str) -> dict:
@@ -758,17 +853,7 @@ def build_atlas(ids: list[str], facts: dict[str, dict], digests: dict[str, str],
                        prov),
             prov, title="Disagreements in our favour",
         ))
-    blocks.append(block(
-        "dep-graph", "essential",
-        {"type": "figure",
-         "caption": {"text": f"`depends_on` over {len(ids)} facts, {edges} edges. "
-                             f"An edge runs from the dependent fact to the fact it "
-                             f"rests on. Node status is the conservative mapping of "
-                             f"the ledger's epistemic_status."},
-         "alt": f"Dependency graph of {len(ids)} facts with {edges} edges",
-         "spec": dep_graph_spec(ids, facts)},
-        prov, title="Dependency graph",
-    ))
+    blocks.extend(graph_blocks(ids, facts, edges, prov))
     blocks.append(block("spread", "essential", spread_table(ids, facts, prov), prov,
                         title="Spread"))
     blocks.append(block("index", "essential", index_table(ids, facts, prov), prov,

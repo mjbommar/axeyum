@@ -469,15 +469,17 @@
               "group": "focus",
               "href": "cards/F-rat-add-neg-inverse.doc.json",
               "id": "F:rat-add-neg-inverse",
-              "label": "Rational addition renormalises and negation is an additive inverse",
-              "status": "proved"
+              "label": "rat-add-neg-inverse",
+              "status": "proved",
+              "tooltip": "Rational addition renormalises and negation is an additive inverse"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-rat-mul-renormalises.doc.json",
               "id": "F:rat-mul-renormalises",
-              "label": "Rational multiplication renormalises",
-              "status": "proved"
+              "label": "rat-mul-renormalises",
+              "status": "proved",
+              "tooltip": "Rational multiplication renormalises"
             }
           ],
           "rankdir": "TB"

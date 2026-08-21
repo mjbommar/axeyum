@@ -469,15 +469,17 @@
               "group": "kernel-lean",
               "href": "cards/F-nat-add-comm.doc.json",
               "id": "F:nat-add-comm",
-              "label": "Addition on the naturals is commutative",
-              "status": "proved"
+              "label": "nat-add-comm",
+              "status": "proved",
+              "tooltip": "Addition on the naturals is commutative"
             },
             {
               "group": "focus",
               "href": "cards/F-nat-add-sub-cancel-left.doc.json",
               "id": "F:nat-add-sub-cancel-left",
-              "label": "Subtraction undoes addition on the naturals",
-              "status": "proved"
+              "label": "nat-add-sub-cancel-left",
+              "status": "proved",
+              "tooltip": "Subtraction undoes addition on the naturals"
             }
           ],
           "rankdir": "TB"

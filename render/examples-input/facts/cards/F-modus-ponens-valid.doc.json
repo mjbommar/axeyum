@@ -381,15 +381,17 @@
               "group": "focus",
               "href": "cards/F-modus-ponens-valid.doc.json",
               "id": "F:modus-ponens-valid",
-              "label": "Modus ponens is a valid inference",
-              "status": "proved"
+              "label": "modus-ponens-valid",
+              "status": "proved",
+              "tooltip": "Modus ponens is a valid inference"
             },
             {
               "group": "smt-term-level",
               "href": "cards/F-modus-tollens-valid.doc.json",
               "id": "F:modus-tollens-valid",
-              "label": "Modus tollens is a valid inference",
-              "status": "proved"
+              "label": "modus-tollens-valid",
+              "status": "proved",
+              "tooltip": "Modus tollens is a valid inference"
             }
           ],
           "rankdir": "TB"

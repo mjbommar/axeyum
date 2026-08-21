@@ -113,64 +113,73 @@
               "group": "unproved",
               "href": "cards/F-ml430-int-fib-add-one-33f1b748.doc.json",
               "id": "F:ml430-int-fib-add-one-33f1b748",
-              "label": "Mathlib v4.30 source proposition Int.fib_add_one",
-              "status": "open"
+              "label": "ml430-int-fib-add-one",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Int.fib_add_one"
             },
             {
               "group": "unproved",
               "href": "cards/F-ml430-int-fib-add-two-739358dd.doc.json",
               "id": "F:ml430-int-fib-add-two-739358dd",
-              "label": "Mathlib v4.30 source proposition Int.fib_add_two",
-              "status": "open"
+              "label": "ml430-int-fib-add-two",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Int.fib_add_two"
             },
             {
               "group": "unproved",
               "href": "cards/F-ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d.doc.json",
               "id": "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
-              "label": "Mathlib v4.30 source proposition Int.fib_eq_fib_add_two_sub_fib_add_one",
-              "status": "open"
+              "label": "ml430-int-fib-eq-fib-add-two-sub-fib-add-one",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Int.fib_eq_fib_add_two_sub_fib_add_one"
             },
             {
               "group": "unproved",
               "href": "cards/F-ml430-int-fib-natcast-d5886be4.doc.json",
               "id": "F:ml430-int-fib-natcast-d5886be4",
-              "label": "Mathlib v4.30 source proposition Int.fib_natCast",
-              "status": "open"
+              "label": "ml430-int-fib-natcast",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Int.fib_natCast"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-ml430-nat-fib-add-two-b86e0c82.doc.json",
               "id": "F:ml430-nat-fib-add-two-b86e0c82",
-              "label": "Mathlib v4.30 source proposition Nat.fib_add_two",
-              "status": "proved"
+              "label": "ml430-nat-fib-add-two",
+              "status": "proved",
+              "tooltip": "Mathlib v4.30 source proposition Nat.fib_add_two"
             },
             {
               "group": "unproved",
               "href": "cards/F-ml430-nat-fib-coprime-fib-succ-162fc738.doc.json",
               "id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
-              "label": "Mathlib v4.30 source proposition Nat.fib_coprime_fib_succ",
-              "status": "open"
+              "label": "ml430-nat-fib-coprime-fib-succ",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.fib_coprime_fib_succ"
             },
             {
               "group": "unproved",
               "href": "cards/F-ml430-nat-fib-le-fib-succ-d1ef4a3d.doc.json",
               "id": "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
-              "label": "Mathlib v4.30 source proposition Nat.fib_le_fib_succ",
-              "status": "open"
+              "label": "ml430-nat-fib-le-fib-succ",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.fib_le_fib_succ"
             },
             {
               "group": "unproved",
               "href": "cards/F-ml430-nat-fib-mono-cc6afe09.doc.json",
               "id": "F:ml430-nat-fib-mono-cc6afe09",
-              "label": "Mathlib v4.30 source proposition Nat.fib_mono",
-              "status": "open"
+              "label": "ml430-nat-fib-mono",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.fib_mono"
             },
             {
               "group": "unproved",
               "href": "cards/F-ml430-nat-gcd-fib-add-self-5a92d5e3.doc.json",
               "id": "F:ml430-nat-gcd-fib-add-self-5a92d5e3",
-              "label": "Mathlib v4.30 source proposition Nat.gcd_fib_add_self",
-              "status": "open"
+              "label": "ml430-nat-gcd-fib-add-self",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.gcd_fib_add_self"
             }
           ],
           "rankdir": "TB"

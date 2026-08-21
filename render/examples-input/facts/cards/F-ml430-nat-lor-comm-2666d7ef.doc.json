@@ -159,15 +159,17 @@
               "group": "unproved",
               "href": "cards/F-ml430-nat-bitwise-comm-1a273bae.doc.json",
               "id": "F:ml430-nat-bitwise-comm-1a273bae",
-              "label": "Mathlib v4.30 source proposition Nat.bitwise_comm",
-              "status": "open"
+              "label": "ml430-nat-bitwise-comm",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.bitwise_comm"
             },
             {
               "group": "focus",
               "href": "cards/F-ml430-nat-lor-comm-2666d7ef.doc.json",
               "id": "F:ml430-nat-lor-comm-2666d7ef",
-              "label": "Mathlib v4.30 source proposition Nat.lor_comm",
-              "status": "open"
+              "label": "ml430-nat-lor-comm",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.lor_comm"
             }
           ],
           "rankdir": "TB"

@@ -381,15 +381,17 @@
               "group": "focus",
               "href": "cards/F-double-negation-elimination.doc.json",
               "id": "F:double-negation-elimination",
-              "label": "Double negation elimination",
-              "status": "proved"
+              "label": "double-negation-elimination",
+              "status": "proved",
+              "tooltip": "Double negation elimination"
             },
             {
               "group": "smt-term-level",
               "href": "cards/F-excluded-middle.doc.json",
               "id": "F:excluded-middle",
-              "label": "Law of excluded middle",
-              "status": "proved"
+              "label": "excluded-middle",
+              "status": "proved",
+              "tooltip": "Law of excluded middle"
             }
           ],
           "rankdir": "TB"

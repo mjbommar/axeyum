@@ -37,17 +37,17 @@
     "inputs": [
       {
         "path": "render/producers/build-certificate-manifest.py",
-        "sha256": "3cf1777911339c4575f9c2d21b3b07a09eac7bb0bf614217d8cd0417eb97e8f5",
+        "sha256": "39039b7c5dac5bf96166d31858aa05122555d35d04c79fec2e5c1ab24f7035a5",
         "role": "generator"
       },
       {
         "path": "render/examples-input/cert/run-certificate.json",
-        "sha256": "6079f71a01225a88c302837e67c78e495df56f441754fc1682735e08ca0c344d",
+        "sha256": "40987dbfe49e77738b8b7072d0dddcca3975b71df8dde4c4ead62c38c965977f",
         "role": "run-record"
       },
       {
         "path": "render/examples-input/cert/run-mutant-M1.json",
-        "sha256": "70209534ad58e6fa2f41b17316d5c69a77582c91d0bf96bdddec5e755b8cf194",
+        "sha256": "6e31ab8b9d5bbdcba40fa6948c25527f8e27b5f0778d727b2d67747974192f2d",
         "role": "run-record"
       }
     ],
@@ -199,254 +199,16 @@
     },
     {
       "id": "table-d-k",
-      "tag": "essential",
+      "tag": "detail",
       "kind": {
         "type": "table",
         "caption": {
-          "text": "$d(k)$ for the weight of Theorem 3. The certificate swept $4 \\le k \\le 400$ (397 columns); rows $4 \\ldots 24$ are contiguous, then the three milestones the run records. The full table is the `d-table` of the run record. `argmin m` is the term of the support at which the minimum is attained -- it is the leading term $m = 0$ in every column."
+          "text": "$d(k)$ for the weight of Theorem 3, taken from the `d-table` of run record `R:noh-wt-certificate` -- every row of it: the certificate swept $4 \\le k \\le 400$ (397 columns). No row is copied into this document, so a changed measurement changes this table. `argmin m` is the term of the support at which the minimum is attained -- it is the leading term $m = 0$ in every column."
         },
-        "columns": [
-          {
-            "key": "k",
-            "header": "k",
-            "align": "right"
-          },
-          {
-            "key": "jprime",
-            "header": "j'(k)",
-            "align": "right"
-          },
-          {
-            "key": "a_k",
-            "header": "a(k)",
-            "align": "right"
-          },
-          {
-            "key": "a_jprime",
-            "header": "a(j'(k))",
-            "align": "right"
-          },
-          {
-            "key": "d",
-            "header": "d(k)",
-            "align": "right"
-          },
-          {
-            "key": "argmin_m",
-            "header": "argmin m",
-            "align": "right"
-          }
-        ],
-        "rows": [
-          [
-            4,
-            2,
-            1,
-            0,
-            1,
-            0
-          ],
-          [
-            5,
-            4,
-            2,
-            1,
-            1,
-            0
-          ],
-          [
-            6,
-            3,
-            1,
-            0,
-            1,
-            0
-          ],
-          [
-            7,
-            5,
-            3,
-            2,
-            1,
-            0
-          ],
-          [
-            8,
-            4,
-            2,
-            1,
-            1,
-            0
-          ],
-          [
-            9,
-            6,
-            3,
-            1,
-            2,
-            0
-          ],
-          [
-            10,
-            5,
-            3,
-            2,
-            1,
-            0
-          ],
-          [
-            11,
-            7,
-            4,
-            3,
-            1,
-            0
-          ],
-          [
-            12,
-            6,
-            3,
-            1,
-            2,
-            0
-          ],
-          [
-            13,
-            8,
-            5,
-            2,
-            3,
-            0
-          ],
-          [
-            14,
-            7,
-            4,
-            3,
-            1,
-            0
-          ],
-          [
-            15,
-            9,
-            5,
-            3,
-            2,
-            0
-          ],
-          [
-            16,
-            8,
-            5,
-            2,
-            3,
-            0
-          ],
-          [
-            17,
-            10,
-            6,
-            3,
-            3,
-            0
-          ],
-          [
-            18,
-            9,
-            5,
-            3,
-            2,
-            0
-          ],
-          [
-            19,
-            11,
-            7,
-            4,
-            3,
-            0
-          ],
-          [
-            20,
-            10,
-            6,
-            3,
-            3,
-            0
-          ],
-          [
-            21,
-            12,
-            7,
-            3,
-            4,
-            0
-          ],
-          [
-            22,
-            11,
-            7,
-            4,
-            3,
-            0
-          ],
-          [
-            23,
-            13,
-            8,
-            5,
-            3,
-            0
-          ],
-          [
-            24,
-            12,
-            7,
-            3,
-            4,
-            0
-          ],
-          [
-            100,
-            50,
-            33,
-            16,
-            17,
-            0
-          ],
-          [
-            200,
-            100,
-            66,
-            33,
-            33,
-            0
-          ],
-          [
-            400,
-            200,
-            133,
-            66,
-            67,
-            0
-          ]
-        ],
-        "source": {
-          "generator": "noh_wt_certificate.rs with --emit-run (render strand P0-A); base pin axeyum 75663ef8, built with rustc --edition 2024",
-          "command": "noh_wt_certificate --emit-run render/examples-input/cert/run-certificate.json --source render/producers/noh_wt_certificate_emitrun.rs --record-id R:noh-wt-certificate --replay-seconds 1",
-          "inputs": [
-            {
-              "path": "render/producers/noh_wt_certificate_emitrun.rs",
-              "sha256": "1a11efcbaa49bb4626ade0dc00734ae6ecf9007df8e34a663c7e2946fc1f20e4",
-              "role": "source"
-            }
-          ],
-          "exit_status": 0,
-          "epoch": {
-            "unix": 1787307950,
-            "source": "commit",
-            "commit": "75663ef85c2dad4390a3b6d77361919a914642a9"
-          }
+        "from_run": {
+          "run_record": "run-certificate.json",
+          "table": "d-table",
+          "record_id": "R:noh-wt-certificate"
         }
       }
     },
@@ -865,21 +627,21 @@
         "artifact_refs": [
           {
             "path": "render/examples-input/cert/run-certificate.json",
-            "sha256": "6079f71a01225a88c302837e67c78e495df56f441754fc1682735e08ca0c344d",
+            "sha256": "40987dbfe49e77738b8b7072d0dddcca3975b71df8dde4c4ead62c38c965977f",
             "label": "run record",
-            "bytes": 27862,
+            "bytes": 27922,
             "media_type": "application/json"
           },
           {
             "path": "render/producers/noh_wt_certificate_emitrun.rs",
-            "sha256": "1a11efcbaa49bb4626ade0dc00734ae6ecf9007df8e34a663c7e2946fc1f20e4",
+            "sha256": "3910f5f7519599f4a1beaff2f3d562757c0185bca72d308f943eb8ca6590a4bc",
             "label": "producer source",
-            "bytes": 45137,
+            "bytes": 45990,
             "media_type": "text/rust"
           }
         ],
         "replay": {
-          "line": "rustc --edition 2024 -O -o /tmp/noh_wt_cert render/producers/noh_wt_certificate_emitrun.rs && /tmp/noh_wt_cert --emit-run render/examples-input/cert/run-certificate.json --source render/producers/noh_wt_certificate_emitrun.rs --record-id R:noh-wt-certificate --replay-seconds 1",
+          "line": "rustc --edition 2024 -O -o /tmp/noh_wt_cert render/producers/noh_wt_certificate_emitrun.rs && /tmp/noh_wt_cert --emit-run render/examples-input/cert/run-certificate.json --source render/producers/noh_wt_certificate_emitrun.rs --record-id R:noh-wt-certificate --replay-seconds 1 --role production",
           "cwd": ".",
           "expected_exit_status": 0,
           "expected_seconds": 1
@@ -902,47 +664,13 @@
       "title": "What the certificate binds, and what it does not"
     },
     {
-      "id": "detail-negative-control-intro",
-      "tag": "detail",
-      "kind": {
-        "type": "prose",
-        "text": "**Negative control.** The claim below is the same admissibility statement, for KMU's own weight $\\lfloor (k-1)/3 \\rfloor$ without the parity indicator, evidenced by a run of a deliberately mutated copy of the producer. That run exits 1 and its record says so, which is the whole point: the badge on this claim is not chosen by the manifest, it is forced by the exit status of the run it references. The mutation is not invented for this page -- it is `M1-weight-loses-the-parity-term.patch` from the paper repository's own mutation suite, applied verbatim."
-      },
-      "title": "Negative control"
-    },
-    {
-      "id": "claim-negative-control-m1",
-      "tag": "detail",
-      "kind": {
-        "type": "claim",
-        "label": "Control: KMU's own weight, without the parity indicator, is admissible",
-        "statement": {
-          "source": "text",
-          "text": "For $a(k) = \\lfloor (k-1)/3 \\rfloor$ -- the weight of KMU Remark 6.5, with the parity indicator removed -- condition (A3) holds: $d(k) \\ge 1$ for every $k > 3$."
-        },
-        "status": "refuted",
-        "evidence": [
-          {
-            "run_record": "run-mutant-M1.json",
-            "record_id": "R:noh-wt-certificate-mutant-m1",
-            "claim_key": "c5-theorem-3-admissibility",
-            "role": "primary",
-            "note": "A deliberately mutated producer. The run exits 1 and its record's outcome is 'refuted'; the failing column is $k = 5$, where the mutated weight gives $d(5) = 0$."
-          }
-        ],
-        "note": {
-          "text": "This is the statement KMU's Remark 6.5 stops short of, and it is false: the parity indicator is not decoration. Its badge must render red. If it ever renders green, the renderer is broken, not the mathematics -- which is why this block is in the P0 manifest at all."
-        }
-      }
-    },
-    {
       "id": "archive-run-record",
       "tag": "archive",
       "kind": {
         "type": "include",
         "path": "render/examples-input/cert/run-certificate.json",
         "render_hint": "json",
-        "sha256": "6079f71a01225a88c302837e67c78e495df56f441754fc1682735e08ca0c344d",
+        "sha256": "40987dbfe49e77738b8b7072d0dddcca3975b71df8dde4c4ead62c38c965977f",
         "max_bytes": 65536,
         "caption": {
           "text": "The full run record: seven claims with their statuses, sixty measured statistics, and four tables -- the 397-row $d(k)$ sweep, the weight series, the 150 tight Lemma-A pairs, and the ground-truth coefficient rows."
@@ -957,7 +685,7 @@
         "path": "render/producers/noh_wt_certificate_emitrun.rs",
         "render_hint": "code",
         "language": "rust",
-        "sha256": "1a11efcbaa49bb4626ade0dc00734ae6ecf9007df8e34a663c7e2946fc1f20e4",
+        "sha256": "3910f5f7519599f4a1beaff2f3d562757c0185bca72d308f943eb8ca6590a4bc",
         "max_bytes": 65536,
         "caption": {
           "text": "The producer, pinned at axeyum `75663ef8` plus the run-record emission described in its header."

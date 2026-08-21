@@ -479,22 +479,25 @@
               "group": "kernel-lean",
               "href": "cards/F-int-euclidean-decomposition.doc.json",
               "id": "F:int-euclidean-decomposition",
-              "label": "Euclidean decomposition over the integers is derived, not assumed",
-              "status": "proved"
+              "label": "int-euclidean-decomposition",
+              "status": "proved",
+              "tooltip": "Euclidean decomposition over the integers is derived, not assumed"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-div-mod-exists.doc.json",
               "id": "F:nat-div-mod-exists",
-              "label": "Division with remainder always exists for a positive divisor",
-              "status": "proved"
+              "label": "nat-div-mod-exists",
+              "status": "proved",
+              "tooltip": "Division with remainder always exists for a positive divisor"
             },
             {
               "group": "focus",
               "href": "cards/F-nat-div-mod-unique.doc.json",
               "id": "F:nat-div-mod-unique",
-              "label": "The quotient and remainder of a division are unique",
-              "status": "proved"
+              "label": "nat-div-mod-unique",
+              "status": "proved",
+              "tooltip": "The quotient and remainder of a division are unique"
             }
           ],
           "rankdir": "TB"

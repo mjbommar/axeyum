@@ -159,15 +159,17 @@
               "group": "unproved",
               "href": "cards/F-ml430-nat-choose-symm-add-e4b68161.doc.json",
               "id": "F:ml430-nat-choose-symm-add-e4b68161",
-              "label": "Mathlib v4.30 source proposition Nat.choose_symm_add",
-              "status": "open"
+              "label": "ml430-nat-choose-symm-add",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.choose_symm_add"
             },
             {
               "group": "focus",
               "href": "cards/F-ml430-nat-choose-symm-of-eq-add-9b5f9a20.doc.json",
               "id": "F:ml430-nat-choose-symm-of-eq-add-9b5f9a20",
-              "label": "Mathlib v4.30 source proposition Nat.choose_symm_of_eq_add",
-              "status": "open"
+              "label": "ml430-nat-choose-symm-of-eq-add",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.choose_symm_of_eq_add"
             }
           ],
           "rankdir": "TB"

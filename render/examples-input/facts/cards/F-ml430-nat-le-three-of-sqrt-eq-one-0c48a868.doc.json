@@ -159,15 +159,17 @@
               "group": "focus",
               "href": "cards/F-ml430-nat-le-three-of-sqrt-eq-one-0c48a868.doc.json",
               "id": "F:ml430-nat-le-three-of-sqrt-eq-one-0c48a868",
-              "label": "Mathlib v4.30 source proposition Nat.le_three_of_sqrt_eq_one",
-              "status": "open"
+              "label": "ml430-nat-le-three-of-sqrt-eq-one",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.le_three_of_sqrt_eq_one"
             },
             {
               "group": "unproved",
               "href": "cards/F-ml430-nat-sqrt-lt-4909537f.doc.json",
               "id": "F:ml430-nat-sqrt-lt-4909537f",
-              "label": "Mathlib v4.30 source proposition Nat.sqrt_lt",
-              "status": "open"
+              "label": "ml430-nat-sqrt-lt",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.sqrt_lt"
             }
           ],
           "rankdir": "TB"

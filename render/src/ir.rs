@@ -576,6 +576,15 @@ pub enum EvidenceRole {
     Replay,
     /// Agreement from a different implementation.
     CrossOracle,
+    /// A DELIBERATE citation of a negative-control run: a run that is supposed
+    /// to fail, cited to show that it does.
+    ///
+    /// It is a separate role rather than a note because assembly enforces the
+    /// pairing in both directions: a negative-control record may only be cited
+    /// under this role, and this role may only cite a negative-control record.
+    /// Without that, a page could quote a mutant's red run as if it were
+    /// support -- and a page could not legitimately quote one at all.
+    NegativeControl,
 }
 
 impl EvidenceRole {
@@ -586,6 +595,35 @@ impl EvidenceRole {
             Self::Replication => "replication",
             Self::Replay => "replay",
             Self::CrossOracle => "cross-oracle",
+            Self::NegativeControl => "negative-control",
+        }
+    }
+}
+
+/// What a run record IS, as opposed to what it found.
+///
+/// A record produced by deliberately breaking the thing under test is evidence
+/// of the checker's sensitivity, not evidence for the mathematics. Round 1 had
+/// to say so in `notes` and in the record id -- prose a checker cannot read --
+/// so a document could cite `R:noh-wt-certificate-mutant-m1` as if it were
+/// support and nothing would object. This field is what a checker reads.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum RecordRole {
+    /// A real run of the real thing. The default; absence means this.
+    #[default]
+    Production,
+    /// A run of a deliberately broken variant, recorded to show that the
+    /// checker catches it. Never support for a claim.
+    NegativeControl,
+}
+
+impl RecordRole {
+    /// Stable display name.
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Production => "production",
+            Self::NegativeControl => "negative-control",
         }
     }
 }
@@ -838,8 +876,12 @@ pub struct Series {
 pub struct GraphNode {
     /// Node id.
     pub id: String,
-    /// Display label.
+    /// Display label: a short handle, because a drawn box holds about fifteen
+    /// characters on two lines.
     pub label: String,
+    /// Full text for the hover / focus tooltip. Absent repeats the label.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tooltip: Option<String>,
     /// Status badge; must come from resolved data, never from the author.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub status: Option<EvidenceStatus>,
@@ -881,6 +923,10 @@ pub struct RunRecord {
     pub provenance: Provenance,
     /// One line a human can read: what this run did and what it found.
     pub summary: String,
+    /// What this record IS: a production run or a negative control. Absent
+    /// means [`RecordRole::Production`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub role: Option<RecordRole>,
     /// What the run FOUND, as distinct from whether it completed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub outcome: Option<Outcome>,

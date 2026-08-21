@@ -159,15 +159,17 @@
               "group": "focus",
               "href": "cards/F-ml430-nat-factorial-dvd-factorial-e9d14845.doc.json",
               "id": "F:ml430-nat-factorial-dvd-factorial-e9d14845",
-              "label": "Mathlib v4.30 source proposition Nat.factorial_dvd_factorial",
-              "status": "open"
+              "label": "ml430-nat-factorial-dvd-factorial",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.factorial_dvd_factorial"
             },
             {
               "group": "unproved",
               "href": "cards/F-ml430-nat-factorial-le-d0f4a912.doc.json",
               "id": "F:ml430-nat-factorial-le-d0f4a912",
-              "label": "Mathlib v4.30 source proposition Nat.factorial_le",
-              "status": "open"
+              "label": "ml430-nat-factorial-le",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.factorial_le"
             }
           ],
           "rankdir": "TB"

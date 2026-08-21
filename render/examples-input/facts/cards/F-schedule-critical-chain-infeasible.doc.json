@@ -517,15 +517,17 @@
               "group": "focus",
               "href": "cards/F-schedule-critical-chain-infeasible.doc.json",
               "id": "F:schedule-critical-chain-infeasible",
-              "label": "A five-constraint critical chain against a delivery deadline, refuted in the Lean kernel",
-              "status": "proved"
+              "label": "schedule-critical-chain-infeasible",
+              "status": "proved",
+              "tooltip": "A five-constraint critical chain against a delivery deadline, refuted in the Lean kernel"
             },
             {
               "group": "search-certificate",
               "href": "cards/F-schedule-deadline-iis.doc.json",
               "id": "F:schedule-deadline-iis",
-              "label": "Five rows of a 60-row project schedule are an irreducible infeasible subsystem",
-              "status": "proved"
+              "label": "schedule-deadline-iis",
+              "status": "proved",
+              "tooltip": "Five rows of a 60-row project schedule are an irreducible infeasible subsystem"
             }
           ],
           "rankdir": "TB"

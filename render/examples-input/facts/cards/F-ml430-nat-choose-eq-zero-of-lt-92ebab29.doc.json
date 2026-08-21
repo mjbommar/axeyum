@@ -159,15 +159,17 @@
               "group": "focus",
               "href": "cards/F-ml430-nat-choose-eq-zero-of-lt-92ebab29.doc.json",
               "id": "F:ml430-nat-choose-eq-zero-of-lt-92ebab29",
-              "label": "Mathlib v4.30 source proposition Nat.choose_eq_zero_of_lt",
-              "status": "open"
+              "label": "ml430-nat-choose-eq-zero-of-lt",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.choose_eq_zero_of_lt"
             },
             {
               "group": "unproved",
               "href": "cards/F-ml430-nat-choose-succ-self-e396f6c2.doc.json",
               "id": "F:ml430-nat-choose-succ-self-e396f6c2",
-              "label": "Mathlib v4.30 source proposition Nat.choose_succ_self",
-              "status": "open"
+              "label": "ml430-nat-choose-succ-self",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.choose_succ_self"
             }
           ],
           "rankdir": "TB"

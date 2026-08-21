@@ -159,15 +159,17 @@
               "group": "smt-term-level",
               "href": "cards/F-excluded-middle.doc.json",
               "id": "F:excluded-middle",
-              "label": "Law of excluded middle",
-              "status": "proved"
+              "label": "excluded-middle",
+              "status": "proved",
+              "tooltip": "Law of excluded middle"
             },
             {
               "group": "focus",
               "href": "cards/F-excluded-middle-not-intuitionistic.doc.json",
               "id": "F:excluded-middle-not-intuitionistic",
-              "label": "Excluded middle is not derivable in intuitionistic propositional logic",
-              "status": "open"
+              "label": "excluded-middle-not-intuitionistic",
+              "status": "open",
+              "tooltip": "Excluded middle is not derivable in intuitionistic propositional logic"
             }
           ],
           "rankdir": "TB"

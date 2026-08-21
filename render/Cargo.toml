@@ -50,7 +50,11 @@ sha2 = { version = "0.10" }
 # a small auditable escaper, not a parser.
 
 [features]
-default = []
+# Round 2: ON BY DEFAULT. The reason it was off in round 1 -- that the two
+# modules did not exist yet -- is gone, and an off-by-default flagship format is
+# how a suite quietly stops testing the emitter that has the most machinery in
+# it. `--no-default-features` still builds the md/tex-only tool.
+default = ["html"]
 # Enables DESIGN's HTML emitter and SVG layout modules (render/src/emit_html.rs,
 # render/src/layout.rs). Off by default in round 1 so this package builds before
 # those files exist; round 2 integration turns it on.

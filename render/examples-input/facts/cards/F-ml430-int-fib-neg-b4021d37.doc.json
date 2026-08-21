@@ -159,15 +159,17 @@
               "group": "focus",
               "href": "cards/F-ml430-int-fib-neg-b4021d37.doc.json",
               "id": "F:ml430-int-fib-neg-b4021d37",
-              "label": "Mathlib v4.30 source proposition Int.fib_neg",
-              "status": "open"
+              "label": "ml430-int-fib-neg",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Int.fib_neg"
             },
             {
               "group": "unproved",
               "href": "cards/F-ml430-int-gcd-fib-73bdafc2.doc.json",
               "id": "F:ml430-int-gcd-fib-73bdafc2",
-              "label": "Mathlib v4.30 source proposition Int.gcd_fib",
-              "status": "open"
+              "label": "ml430-int-gcd-fib",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Int.gcd_fib"
             }
           ],
           "rankdir": "TB"

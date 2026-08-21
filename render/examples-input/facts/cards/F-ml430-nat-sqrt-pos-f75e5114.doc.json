@@ -159,15 +159,17 @@
               "group": "unproved",
               "href": "cards/F-ml430-nat-le-sqrt-e6996680.doc.json",
               "id": "F:ml430-nat-le-sqrt-e6996680",
-              "label": "Mathlib v4.30 source proposition Nat.le_sqrt",
-              "status": "open"
+              "label": "ml430-nat-le-sqrt",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.le_sqrt"
             },
             {
               "group": "focus",
               "href": "cards/F-ml430-nat-sqrt-pos-f75e5114.doc.json",
               "id": "F:ml430-nat-sqrt-pos-f75e5114",
-              "label": "Mathlib v4.30 source proposition Nat.sqrt_pos",
-              "status": "open"
+              "label": "ml430-nat-sqrt-pos",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.sqrt_pos"
             }
           ],
           "rankdir": "TB"

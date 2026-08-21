@@ -412,9 +412,9 @@
         "record_id": { "type": "string", "description": "Expected `id` of the record. When present, assembly checks it and a mismatch is a build error -- this catches a manifest pointed at a rebuilt-but-different record." },
         "claim_key": { "type": "string", "description": "Key of the entry in the record's `claims` list this reference means. Absent means the record as a whole establishes the claim." },
         "role": {
-          "enum": ["primary", "replication", "replay", "cross-oracle"],
+          "enum": ["primary", "replication", "replay", "cross-oracle", "negative-control"],
           "default": "primary",
-          "description": "What this reference contributes. Independence is the value here, not count: two references to runs sharing an implementation are one check wearing two names, the same discipline `fact.schema.json` applies to `checkers`."
+          "description": "What this reference contributes. Independence is the value here, not count: two references to runs sharing an implementation are one check wearing two names, the same discipline `fact.schema.json` applies to `checkers`.\n\n`negative-control` is different in kind from the other four: it does not say what the reference contributes, it says that citing a deliberately-failing run here is DELIBERATE. Assembly enforces the pairing in both directions -- a record with `role: negative-control` may be cited ONLY under this role, and this role may cite ONLY such a record -- so a mutant's red run can neither be quoted as support nor be impossible to quote at all."
         },
         "note": { "type": "string" }
       }
@@ -561,7 +561,8 @@
             "additionalProperties": false,
             "properties": {
               "id": { "type": "string", "minLength": 1 },
-              "label": { "type": "string" },
+              "label": { "type": "string", "description": "What the node BOX says. A drawn box holds about fifteen characters on each of two lines, so this is a short handle -- the fact's own short id reads well -- and not a sentence. A label that does not fit is truncated with a visible marker, never silently." },
+              "tooltip": { "type": "string", "description": "The full text a reader gets on hover and on keyboard focus. Optional, and it exists because `label` cannot be long: nine of the ledger's Fibonacci facts are titled `Mathlib v4.30 source proposition Nat.fib_...`, which truncates to nine identical boxes. Absent means the tooltip repeats the label." },
               "status": { "$ref": "#/$defs/EvidenceStatus" },
               "href": { "type": "string" },
               "group": { "type": "string" }
@@ -622,6 +623,11 @@
         },
         "provenance": { "$ref": "#/$defs/Provenance" },
         "summary": { "type": "string", "minLength": 1, "description": "One line a human can read: what this run did and what it found." },
+        "role": {
+          "enum": ["production", "negative-control"],
+          "default": "production",
+          "description": "WHAT THIS RECORD IS, as distinct from what its run found (`outcome`) and from whether the run completed (`provenance.exit_status`).\n\nA `negative-control` record is a recording of a DELIBERATELY BROKEN variant -- a mutant, a tampered input -- kept to show that the checker catches it. It is evidence about the checker's sensitivity, never evidence for the mathematics, so assembly refuses a claim that cites one as support (see `EvidenceRef.role`).\n\nThe field exists because round 1 could only say this in `notes` and in the record `id`, which is prose, and a checker cannot read prose. Absent means `production`: every record written before this field existed keeps its meaning."
+        },
         "outcome": {
           "enum": ["established", "refuted", "inconclusive"],
           "default": "established",

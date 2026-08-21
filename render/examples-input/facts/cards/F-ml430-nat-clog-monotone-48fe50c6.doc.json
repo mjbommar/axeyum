@@ -159,15 +159,17 @@
               "group": "unproved",
               "href": "cards/F-ml430-nat-clog-mono-right-8d87a410.doc.json",
               "id": "F:ml430-nat-clog-mono-right-8d87a410",
-              "label": "Mathlib v4.30 source proposition Nat.clog_mono_right",
-              "status": "open"
+              "label": "ml430-nat-clog-mono-right",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.clog_mono_right"
             },
             {
               "group": "focus",
               "href": "cards/F-ml430-nat-clog-monotone-48fe50c6.doc.json",
               "id": "F:ml430-nat-clog-monotone-48fe50c6",
-              "label": "Mathlib v4.30 source proposition Nat.clog_monotone",
-              "status": "open"
+              "label": "ml430-nat-clog-monotone",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.clog_monotone"
             }
           ],
           "rankdir": "TB"

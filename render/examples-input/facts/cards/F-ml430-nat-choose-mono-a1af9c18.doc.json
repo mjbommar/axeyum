@@ -159,15 +159,17 @@
               "group": "unproved",
               "href": "cards/F-ml430-nat-choose-le-choose-907b5042.doc.json",
               "id": "F:ml430-nat-choose-le-choose-907b5042",
-              "label": "Mathlib v4.30 source proposition Nat.choose_le_choose",
-              "status": "open"
+              "label": "ml430-nat-choose-le-choose",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.choose_le_choose"
             },
             {
               "group": "focus",
               "href": "cards/F-ml430-nat-choose-mono-a1af9c18.doc.json",
               "id": "F:ml430-nat-choose-mono-a1af9c18",
-              "label": "Mathlib v4.30 source proposition Nat.choose_mono",
-              "status": "open"
+              "label": "ml430-nat-choose-mono",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.choose_mono"
             }
           ],
           "rankdir": "TB"

@@ -300,34 +300,45 @@ block(
     },
 )
 
-# -- Table: d(k). Contiguous over the range the research log quotes, then the
-#    three milestones the certificate records, then a pointer to the full 397.
-table_ks = list(range(4, 25)) + [100, 200, 400]
+# -- Table: d(k). BY REFERENCE, not by transcription.
+#
+# Round 1 selected 24 of the record's 397 rows and copied them into this
+# manifest. CERT's own guard probe found the hole that leaves: editing a d(k)
+# value inside the RECORD is refused (the document declares the record's
+# digest), but editing the copy in the MANIFEST rendered happily with the wrong
+# number -- the drift class this strand exists to kill, reproduced in the
+# strand's own flagship page.
+#
+# `BlockTable.from_run` names the record and one of its tables and assembly
+# copies the columns, rows and provenance out of it, so the numbers exist in
+# exactly one place and a changed measurement changes the rendered table. The
+# cost is that the whole 397-row sweep renders rather than a reader-sized
+# selection, which is why the block is `detail`: folded in Markdown and HTML,
+# and in the appendix in LaTeX (the document's `latex.detail` option). A
+# row-selection facet on `from_run` -- show these k, from that record -- is the
+# right P1 answer and is recorded in the round-2 diary; a selection performed
+# HERE would be a transcription again.
 block(
     "table-d-k",
-    "essential",
+    "detail",
     {
         "type": "table",
         "caption": {
             "text": (
-                f"$d(k)$ for the weight of Theorem 3. The certificate swept "
+                f"$d(k)$ for the weight of Theorem 3, taken from the `d-table` of run "
+                f"record `{run['id']}` -- every row of it: the certificate swept "
                 f"$4 \\le k \\le {stats['c5-k-max']}$ ({stats['c5-columns-swept']} "
-                "columns); rows $4 \\ldots 24$ are contiguous, then the three "
-                "milestones the run records. The full table is the `d-table` of the "
-                "run record. `argmin m` is the term of the support at which the "
-                "minimum is attained -- it is the leading term $m = 0$ in every column."
+                "columns). No row is copied into this document, so a changed "
+                "measurement changes this table. `argmin m` is the term of the support "
+                "at which the minimum is attained -- it is the leading term $m = 0$ in "
+                "every column."
             )
         },
-        "columns": [
-            {"key": "k", "header": "k", "align": "right"},
-            {"key": "jprime", "header": "j'(k)", "align": "right"},
-            {"key": "a_k", "header": "a(k)", "align": "right"},
-            {"key": "a_jprime", "header": "a(j'(k))", "align": "right"},
-            {"key": "d", "header": "d(k)", "align": "right"},
-            {"key": "argmin_m", "header": "argmin m", "align": "right"},
-        ],
-        "rows": [by_k[k] for k in table_ks],
-        "source": prov,
+        "from_run": {
+            "run_record": "run-certificate.json",
+            "table": "d-table",
+            "record_id": run["id"],
+        },
     },
 )
 
@@ -418,13 +429,24 @@ prose(
     title="What the certificate binds, and what it does not",
 )
 
-# -- Detail: the negative control, evidenced by a REAL failing run
+# -- The negative control, evidenced by a REAL failing run.
+#
+# IT IS NOT A BLOCK OF THE PRODUCTION PAGE. Round 1 put it here, which made the
+# certificate page unable to render under `--strict` -- correct behaviour for a
+# page carrying a refutation, but it means the flagship document could never be
+# strict-clean, and "strict-clean" is the property a publication wants to be
+# able to assert. The control now ships only as its own document
+# (`certificate-negative-control.doc.json`), which is the strict-mode fixture.
+#
+# The evidence reference declares `role: negative-control`, matching the
+# record's own `role`. Assembly enforces that pairing in both directions, so a
+# page cannot quote this mutant as support and cannot quote a production run as
+# a control.
 m1 = json.loads(RUN_M1.read_text())
-prose("detail-negative-control-intro", PROSE_NEGATIVE, tag="detail", title="Negative control")
-block(
-    "claim-negative-control-m1",
-    "detail",
-    {
+NEG_CLAIM_BLOCK = {
+    "id": "claim-negative-control-m1",
+    "tag": "essential",
+    "kind": {
         "type": "claim",
         "label": "Control: KMU's own weight, without the parity indicator, is admissible",
         "statement": {
@@ -441,7 +463,7 @@ block(
                 "run_record": "run-mutant-M1.json",
                 "record_id": m1["id"],
                 "claim_key": "c5-theorem-3-admissibility",
-                "role": "primary",
+                "role": "negative-control",
                 "note": (
                     "A deliberately mutated producer. The run exits "
                     f"{m1['provenance']['exit_status']} and its record's outcome is "
@@ -455,11 +477,11 @@ block(
                 "This is the statement KMU's Remark 6.5 stops short of, and it is "
                 "false: the parity indicator is not decoration. Its badge must render "
                 "red. If it ever renders green, the renderer is broken, not the "
-                "mathematics -- which is why this block is in the P0 manifest at all."
+                "mathematics -- which is why this block is in the P0 corpus at all."
             )
         },
     },
-)
+}
 
 # -- Archive tier
 block(
@@ -551,12 +573,14 @@ OUT.write_text(json.dumps(doc, indent=2, ensure_ascii=True, sort_keys=False) + "
 print(f"wrote {OUT.relative_to(ROOT)}: {len(blocks)} blocks")
 
 # ------------------------------------------------- the standalone negative fixture
-# The certificate page above CARRIES its negative control, which is why
-# `axeyum-render ... --strict` refuses it: strict mode treats red evidence as a
-# build error, and that block's evidence is red on purpose. That is correct
-# behaviour for a page that reports a refutation, but it means the page cannot
-# double as the strict-mode fixture. So the same claim also ships alone, as the
-# smallest document that exercises fail-closed rule 2.
+# The control ships as its own document, and ONLY as its own document. Strict
+# mode treats red evidence as a build error, so any page carrying a refutation
+# refuses to build under `--strict`. That is correct -- but a production page
+# that can never be strict-rendered cannot assert strict-cleanliness, and the
+# certificate page is the one this strand shows people. So the split is:
+# `certificate.doc.json` is strict-clean and says nothing red, and this
+# document is the smallest thing that exercises fail-closed rule 2 and the
+# negative-control role. Both are in the corpus; only one is a publication.
 neg = {
     "schema_version": 1,
     "meta": {
@@ -574,10 +598,9 @@ neg = {
             "tag": "essential",
             "kind": {"type": "prose", "text": PROSE_NEGATIVE},
         },
-        next(b for b in blocks if b["id"] == "claim-negative-control-m1"),
+        NEG_CLAIM_BLOCK,
     ],
 }
-neg["blocks"][1] = dict(neg["blocks"][1], tag="essential")
 OUT_NEG = ROOT / "render/examples-input/cert/certificate-negative-control.doc.json"
 OUT_NEG.write_text(json.dumps(neg, indent=2, ensure_ascii=True, sort_keys=False) + "\n")
 print(f"wrote {OUT_NEG.relative_to(ROOT)}: {len(neg['blocks'])} blocks")

@@ -159,15 +159,17 @@
               "group": "focus",
               "href": "cards/F-ml430-int-modeq-sub-3148f130.doc.json",
               "id": "F:ml430-int-modeq-sub-3148f130",
-              "label": "Mathlib v4.30 source proposition Int.modEq_sub",
-              "status": "open"
+              "label": "ml430-int-modeq-sub",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Int.modEq_sub"
             },
             {
               "group": "unproved",
               "href": "cards/F-ml430-int-modeq-symm-984a6e67.doc.json",
               "id": "F:ml430-int-modeq-symm-984a6e67",
-              "label": "Mathlib v4.30 source proposition Int.ModEq.symm",
-              "status": "open"
+              "label": "ml430-int-modeq-symm",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Int.ModEq.symm"
             }
           ],
           "rankdir": "TB"

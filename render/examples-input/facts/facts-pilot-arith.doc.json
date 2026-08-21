@@ -240,120 +240,137 @@
               "group": "kernel-lean",
               "href": "cards/F-nat-add-assoc.doc.json",
               "id": "F:nat-add-assoc",
-              "label": "Addition on the naturals is associative",
-              "status": "proved"
+              "label": "nat-add-assoc",
+              "status": "proved",
+              "tooltip": "Addition on the naturals is associative"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-add-comm.doc.json",
               "id": "F:nat-add-comm",
-              "label": "Addition on the naturals is commutative",
-              "status": "proved"
+              "label": "nat-add-comm",
+              "status": "proved",
+              "tooltip": "Addition on the naturals is commutative"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-div-mod-exists.doc.json",
               "id": "F:nat-div-mod-exists",
-              "label": "Division with remainder always exists for a positive divisor",
-              "status": "proved"
+              "label": "nat-div-mod-exists",
+              "status": "proved",
+              "tooltip": "Division with remainder always exists for a positive divisor"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-dvd-add.doc.json",
               "id": "F:nat-dvd-add",
-              "label": "A common divisor of two numbers divides their sum",
-              "status": "proved"
+              "label": "nat-dvd-add",
+              "status": "proved",
+              "tooltip": "A common divisor of two numbers divides their sum"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-dvd-gcd-iff.doc.json",
               "id": "F:nat-dvd-gcd-iff",
-              "label": "The gcd is exactly the common divisors' upper bound",
-              "status": "proved"
+              "label": "nat-dvd-gcd-iff",
+              "status": "proved",
+              "tooltip": "The gcd is exactly the common divisors' upper bound"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-euclid-lemma.doc.json",
               "id": "F:nat-euclid-lemma",
-              "label": "Euclid's lemma: a prime dividing a product divides a factor",
-              "status": "proved"
+              "label": "nat-euclid-lemma",
+              "status": "proved",
+              "tooltip": "Euclid's lemma: a prime dividing a product divides a factor"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-exists-prime-dvd.doc.json",
               "id": "F:nat-exists-prime-dvd",
-              "label": "Every natural number at least 2 has a prime divisor",
-              "status": "proved"
+              "label": "nat-exists-prime-dvd",
+              "status": "proved",
+              "tooltip": "Every natural number at least 2 has a prime divisor"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-exists-prime-gt.doc.json",
               "id": "F:nat-exists-prime-gt",
-              "label": "There is no largest prime",
-              "status": "proved"
+              "label": "nat-exists-prime-gt",
+              "status": "proved",
+              "tooltip": "There is no largest prime"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-gcd-bezout.doc.json",
               "id": "F:nat-gcd-bezout",
-              "label": "Bezout's identity holds for the natural gcd",
-              "status": "proved"
+              "label": "nat-gcd-bezout",
+              "status": "proved",
+              "tooltip": "Bezout's identity holds for the natural gcd"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-gcd-succ.doc.json",
               "id": "F:nat-gcd-succ",
-              "label": "The Euclidean algorithm's descent step is correct",
-              "status": "proved"
+              "label": "nat-gcd-succ",
+              "status": "proved",
+              "tooltip": "The Euclidean algorithm's descent step is correct"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-left-distrib.doc.json",
               "id": "F:nat-left-distrib",
-              "label": "Multiplication distributes over addition on the left",
-              "status": "proved"
+              "label": "nat-left-distrib",
+              "status": "proved",
+              "tooltip": "Multiplication distributes over addition on the left"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-mul-assoc.doc.json",
               "id": "F:nat-mul-assoc",
-              "label": "Multiplication on the naturals is associative",
-              "status": "proved"
+              "label": "nat-mul-assoc",
+              "status": "proved",
+              "tooltip": "Multiplication on the naturals is associative"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-mul-comm.doc.json",
               "id": "F:nat-mul-comm",
-              "label": "Multiplication on the naturals is commutative",
-              "status": "proved"
+              "label": "nat-mul-comm",
+              "status": "proved",
+              "tooltip": "Multiplication on the naturals is commutative"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-mul-one.doc.json",
               "id": "F:nat-mul-one",
-              "label": "One is a right identity for multiplication on the naturals",
-              "status": "proved"
+              "label": "nat-mul-one",
+              "status": "proved",
+              "tooltip": "One is a right identity for multiplication on the naturals"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-pow-add.doc.json",
               "id": "F:nat-pow-add",
-              "label": "The first index law: powers add over a product",
-              "status": "proved"
+              "label": "nat-pow-add",
+              "status": "proved",
+              "tooltip": "The first index law: powers add over a product"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-succ-add.doc.json",
               "id": "F:nat-succ-add",
-              "label": "Nat succ_add",
-              "status": "proved"
+              "label": "nat-succ-add",
+              "status": "proved",
+              "tooltip": "Nat succ_add"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-zero-add.doc.json",
               "id": "F:nat-zero-add",
-              "label": "Nat zero_add",
-              "status": "proved"
+              "label": "nat-zero-add",
+              "status": "proved",
+              "tooltip": "Nat zero_add"
             }
           ],
           "rankdir": "TB"

@@ -479,22 +479,25 @@
               "group": "kernel-lean",
               "href": "cards/F-nat-dvd-add.doc.json",
               "id": "F:nat-dvd-add",
-              "label": "A common divisor of two numbers divides their sum",
-              "status": "proved"
+              "label": "nat-dvd-add",
+              "status": "proved",
+              "tooltip": "A common divisor of two numbers divides their sum"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-exists-prime-dvd.doc.json",
               "id": "F:nat-exists-prime-dvd",
-              "label": "Every natural number at least 2 has a prime divisor",
-              "status": "proved"
+              "label": "nat-exists-prime-dvd",
+              "status": "proved",
+              "tooltip": "Every natural number at least 2 has a prime divisor"
             },
             {
               "group": "focus",
               "href": "cards/F-nat-exists-prime-gt.doc.json",
               "id": "F:nat-exists-prime-gt",
-              "label": "There is no largest prime",
-              "status": "proved"
+              "label": "nat-exists-prime-gt",
+              "status": "proved",
+              "tooltip": "There is no largest prime"
             }
           ],
           "rankdir": "TB"

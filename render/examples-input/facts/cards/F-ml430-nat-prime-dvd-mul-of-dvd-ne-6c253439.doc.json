@@ -159,15 +159,17 @@
               "group": "unproved",
               "href": "cards/F-ml430-nat-coprime-primes-5769049f.doc.json",
               "id": "F:ml430-nat-coprime-primes-5769049f",
-              "label": "Mathlib v4.30 source proposition Nat.coprime_primes",
-              "status": "open"
+              "label": "ml430-nat-coprime-primes",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.coprime_primes"
             },
             {
               "group": "focus",
               "href": "cards/F-ml430-nat-prime-dvd-mul-of-dvd-ne-6c253439.doc.json",
               "id": "F:ml430-nat-prime-dvd-mul-of-dvd-ne-6c253439",
-              "label": "Mathlib v4.30 source proposition Nat.Prime.dvd_mul_of_dvd_ne",
-              "status": "open"
+              "label": "ml430-nat-prime-dvd-mul-of-dvd-ne",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.Prime.dvd_mul_of_dvd_ne"
             }
           ],
           "rankdir": "TB"

@@ -159,15 +159,17 @@
               "group": "unproved",
               "href": "cards/F-ml430-nat-modeq-of-mul-left-88d20bca.doc.json",
               "id": "F:ml430-nat-modeq-of-mul-left-88d20bca",
-              "label": "Mathlib v4.30 source proposition Nat.ModEq.of_mul_left",
-              "status": "open"
+              "label": "ml430-nat-modeq-of-mul-left",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.ModEq.of_mul_left"
             },
             {
               "group": "focus",
               "href": "cards/F-ml430-nat-modeq-of-mul-right-43078e1c.doc.json",
               "id": "F:ml430-nat-modeq-of-mul-right-43078e1c",
-              "label": "Mathlib v4.30 source proposition Nat.ModEq.of_mul_right",
-              "status": "open"
+              "label": "ml430-nat-modeq-of-mul-right",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.ModEq.of_mul_right"
             }
           ],
           "rankdir": "TB"

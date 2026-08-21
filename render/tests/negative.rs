@@ -14,8 +14,13 @@
 //! | `fact.id != *id` in `resolve_formal_ref` | 1 -- `a_fact_file_whose_id_disagrees_with_the_reference_is_a_build_error` |
 //! | BOTH dangling-ref guards together | 2 -- and that is the property test |
 //! | `actual != input.sha256` in `verify_inputs` | 2 -- `input_hash_mismatch_is_a_build_error`, `stale_mtimes_cannot_produce_a_stale_render` |
+//! | `&actual != want` in `verify_artifact` (round 2) | 1 -- `a_certificate_artifact_whose_declared_digest_is_stale_is_a_build_error` (**0** before that test existed) |
+//! | the `sha256` comparison in the `Include` arm (round 2) | 1 -- `an_include_block_whose_declared_digest_is_stale_is_a_build_error` (**0** before) |
+//! | all THREE rule-4 comparisons together | 3 -- the two above plus `editing_a_measurement_inside_the_run_record_is_refused` |
 //! | `e.exit_status != 0` in `rendered_status` | 2 -- the unit test and `nonzero_exit_status_demotes_the_claim` |
 //! | the `strict` block in `resolve_claim` | 1 -- `nonzero_exit_status_is_an_error_in_strict_mode` |
+//! | `is_control && declared != NegativeControl` in `resolve_evidence` (round 2) | 1 -- `a_negative_control_record_cannot_be_cited_as_support` |
+//! | `!is_control && declared == NegativeControl` in `resolve_evidence` (round 2) | 1 -- `the_negative_control_role_cannot_be_declared_over_a_production_run` |
 //!
 //! THE ZERO IS THE INTERESTING ROW and it is left in rather than tidied away.
 //! Deleting the missing-file arm alone kills nothing, because removing that
@@ -52,6 +57,124 @@ fn the_committed_fixture_assembles_and_every_claim_is_checked() {
             "claim `{label}` should render CHECKED"
         );
     }
+}
+
+/// A claim may not cite a NEGATIVE-CONTROL record as support.
+///
+/// The record `run-mutant-M1.json` is a real recording of a deliberately broken
+/// producer, and it declares `role: negative-control`. Round 1 could only say
+/// that in prose (`notes`, and the record id), so nothing stopped a document
+/// quoting a mutant's red run as if it backed a claim.
+#[test]
+fn a_negative_control_record_cannot_be_cited_as_support() {
+    let dir = scratch("negative-control-as-support");
+    let mut record = fixture_record_json();
+    record["role"] = serde_json::json!("negative-control");
+    let doc = fixture_doc_json();
+
+    let err = assemble_mutated(&dir, &doc, &record, false)
+        .expect_err("citing a negative control as support must refuse");
+    assert!(
+        matches!(err, AssembleError::NegativeControlCitedAsSupport { .. }),
+        "wrong refusal: {err}"
+    );
+    assert!(err.to_string().contains("negative control"), "{err}");
+}
+
+/// And the mirror: the `negative-control` role may not be declared over a
+/// production run. Without this arm the role would be a label a document could
+/// apply to anything, which would tell a reader that a green run was expected
+/// to fail.
+#[test]
+fn the_negative_control_role_cannot_be_declared_over_a_production_run() {
+    let dir = scratch("negative-control-role-misused");
+    let mut doc = fixture_doc_json();
+    first_claim_mut(&mut doc)["kind"]["evidence"][0]["role"] =
+        serde_json::json!("negative-control");
+
+    let err = assemble_mutated(&dir, &doc, &fixture_record_json(), false)
+        .expect_err("declaring a production run a control must refuse");
+    assert!(
+        matches!(err, AssembleError::NotANegativeControl { .. }),
+        "wrong refusal: {err}"
+    );
+}
+
+/// The control for both: the pairing HELD is not an error. A guard that refused
+/// every citation of a control would make the property vacuous -- and would
+/// make `certificate-negative-control.doc.json` unrenderable, which is the
+/// document the strict-mode test needs.
+#[test]
+fn a_negative_control_cited_deliberately_resolves() {
+    let dir = scratch("negative-control-paired");
+    let mut record = fixture_record_json();
+    record["role"] = serde_json::json!("negative-control");
+    let mut doc = fixture_doc_json();
+    for b in doc["blocks"].as_array_mut().expect("blocks").iter_mut() {
+        if b["kind"]["type"] == "claim" {
+            for e in b["kind"]["evidence"].as_array_mut().expect("evidence") {
+                e["role"] = serde_json::json!("negative-control");
+            }
+        }
+    }
+    assemble_mutated(&dir, &doc, &record, false)
+        .expect("a deliberate citation of a control must assemble");
+}
+
+/// Rule 4, second carrier: an `include` block's declared digest.
+///
+/// MEASURED 2026-08-21, and the reason this test exists: rule 4 is enforced in
+/// THREE independent places in `assemble.rs` -- `verify_inputs` (a document's
+/// or a record's declared inputs), `verify_artifact` (a certificate's artifact
+/// references) and the `sha256` on an `include` block. Deleting either of the
+/// last two killed ZERO tests, because the corpus documents pin the same file
+/// through all three and any one of them catches a tamper. That is the shape
+/// CLAUDE.md's "six of seven guards were removable" incident turns on: a
+/// property held by several guards, tested through only one of them.
+#[test]
+fn an_include_block_whose_declared_digest_is_stale_is_a_build_error() {
+    let dir = scratch("include-digest-stale");
+    let mut doc = fixture_doc_json();
+    for b in doc["blocks"].as_array_mut().expect("blocks") {
+        if b["kind"]["type"] == "include" {
+            b["kind"]["sha256"] = serde_json::json!("0".repeat(64));
+        }
+    }
+    let err = assemble_mutated(&dir, &doc, &fixture_record_json(), false)
+        .expect_err("an include pinned to bytes that are not there must refuse");
+    assert!(
+        matches!(err, AssembleError::HashMismatch { .. }),
+        "wrong refusal: {err}"
+    );
+    assert!(err.to_string().contains("include"), "{err}");
+}
+
+/// Rule 4, third carrier: a certificate's artifact reference. Same reasoning as
+/// the test above; without it, `verify_artifact`'s comparison is deletable with
+/// the whole suite still green.
+#[test]
+fn a_certificate_artifact_whose_declared_digest_is_stale_is_a_build_error() {
+    let dir = scratch("certificate-artifact-stale");
+    let mut doc = fixture_doc_json();
+    let mut touched = 0;
+    for b in doc["blocks"].as_array_mut().expect("blocks") {
+        if b["kind"]["type"] == "certificate" {
+            for a in b["kind"]["artifact_refs"]
+                .as_array_mut()
+                .expect("artifact_refs")
+            {
+                a["sha256"] = serde_json::json!("1".repeat(64));
+                touched += 1;
+            }
+        }
+    }
+    assert_eq!(touched, 1, "the fixture should pin exactly one artifact");
+    let err = assemble_mutated(&dir, &doc, &fixture_record_json(), false)
+        .expect_err("a certificate pinned to bytes that are not there must refuse");
+    assert!(
+        matches!(err, AssembleError::HashMismatch { .. }),
+        "wrong refusal: {err}"
+    );
 }
 
 /// Rule 1: a claim with no evidence is a build error, not a warning.

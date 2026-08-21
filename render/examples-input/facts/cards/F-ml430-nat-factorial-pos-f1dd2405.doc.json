@@ -169,29 +169,33 @@
               "group": "unproved",
               "href": "cards/F-ml430-nat-factorial-le-d0f4a912.doc.json",
               "id": "F:ml430-nat-factorial-le-d0f4a912",
-              "label": "Mathlib v4.30 source proposition Nat.factorial_le",
-              "status": "open"
+              "label": "ml430-nat-factorial-le",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.factorial_le"
             },
             {
               "group": "unproved",
               "href": "cards/F-ml430-nat-factorial-ne-zero-5fc0b0a1.doc.json",
               "id": "F:ml430-nat-factorial-ne-zero-5fc0b0a1",
-              "label": "Mathlib v4.30 source proposition Nat.factorial_ne_zero",
-              "status": "open"
+              "label": "ml430-nat-factorial-ne-zero",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.factorial_ne_zero"
             },
             {
               "group": "focus",
               "href": "cards/F-ml430-nat-factorial-pos-f1dd2405.doc.json",
               "id": "F:ml430-nat-factorial-pos-f1dd2405",
-              "label": "Mathlib v4.30 source proposition Nat.factorial_pos",
-              "status": "open"
+              "label": "ml430-nat-factorial-pos",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.factorial_pos"
             },
             {
               "group": "unproved",
               "href": "cards/F-ml430-nat-self-le-factorial-cfdffc69.doc.json",
               "id": "F:ml430-nat-self-le-factorial-cfdffc69",
-              "label": "Mathlib v4.30 source proposition Nat.self_le_factorial",
-              "status": "open"
+              "label": "ml430-nat-self-le-factorial",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.self_le_factorial"
             }
           ],
           "rankdir": "TB"

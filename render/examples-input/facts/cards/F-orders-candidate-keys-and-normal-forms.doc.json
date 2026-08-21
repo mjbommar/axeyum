@@ -718,15 +718,17 @@
               "group": "focus",
               "href": "cards/F-orders-candidate-keys-and-normal-forms.doc.json",
               "id": "F:orders-candidate-keys-and-normal-forms",
-              "label": "An order-line schema has exactly two candidate keys, is not in BCNF, and is not in 3NF -- with every subset of the attributes examined",
-              "status": "proved"
+              "label": "orders-candidate-keys-and-normal-forms",
+              "status": "proved",
+              "tooltip": "An order-line schema has exactly two candidate keys, is not in BCNF, and is not in 3NF -- with every subset of the attributes examined"
             },
             {
               "group": "search-certificate",
               "href": "cards/F-orders-fd-implication-certified.doc.json",
               "id": "F:orders-fd-implication-certified",
-              "label": "Two implied and two unimplied functional dependencies on a committed order-line schema, each with a replayable certificate",
-              "status": "proved"
+              "label": "orders-fd-implication-certified",
+              "status": "proved",
+              "tooltip": "Two implied and two unimplied functional dependencies on a committed order-line schema, each with a replayable certificate"
             }
           ],
           "rankdir": "TB"

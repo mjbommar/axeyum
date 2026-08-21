@@ -159,15 +159,17 @@
               "group": "unproved",
               "href": "cards/F-ml430-nat-sqrt-lt-4909537f.doc.json",
               "id": "F:ml430-nat-sqrt-lt-4909537f",
-              "label": "Mathlib v4.30 source proposition Nat.sqrt_lt",
-              "status": "open"
+              "label": "ml430-nat-sqrt-lt",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.sqrt_lt"
             },
             {
               "group": "focus",
               "href": "cards/F-ml430-nat-sqrt-lt-self-ff7a155a.doc.json",
               "id": "F:ml430-nat-sqrt-lt-self-ff7a155a",
-              "label": "Mathlib v4.30 source proposition Nat.sqrt_lt_self",
-              "status": "open"
+              "label": "ml430-nat-sqrt-lt-self",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.sqrt_lt_self"
             }
           ],
           "rankdir": "TB"

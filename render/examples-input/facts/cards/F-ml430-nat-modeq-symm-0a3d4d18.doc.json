@@ -164,22 +164,25 @@
               "group": "unproved",
               "href": "cards/F-ml430-nat-modeq-comm-24b71e7a.doc.json",
               "id": "F:ml430-nat-modeq-comm-24b71e7a",
-              "label": "Mathlib v4.30 source proposition Nat.ModEq.comm",
-              "status": "open"
+              "label": "ml430-nat-modeq-comm",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.ModEq.comm"
             },
             {
               "group": "unproved",
               "href": "cards/F-ml430-nat-modeq-dvd-iff-8f130450.doc.json",
               "id": "F:ml430-nat-modeq-dvd-iff-8f130450",
-              "label": "Mathlib v4.30 source proposition Nat.ModEq.dvd_iff",
-              "status": "open"
+              "label": "ml430-nat-modeq-dvd-iff",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.ModEq.dvd_iff"
             },
             {
               "group": "focus",
               "href": "cards/F-ml430-nat-modeq-symm-0a3d4d18.doc.json",
               "id": "F:ml430-nat-modeq-symm-0a3d4d18",
-              "label": "Mathlib v4.30 source proposition Nat.ModEq.symm",
-              "status": "open"
+              "label": "ml430-nat-modeq-symm",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.ModEq.symm"
             }
           ],
           "rankdir": "TB"

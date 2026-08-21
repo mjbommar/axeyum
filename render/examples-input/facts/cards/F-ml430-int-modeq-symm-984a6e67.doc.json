@@ -169,29 +169,33 @@
               "group": "unproved",
               "href": "cards/F-ml430-int-modeq-comm-1e4bcc07.doc.json",
               "id": "F:ml430-int-modeq-comm-1e4bcc07",
-              "label": "Mathlib v4.30 source proposition Int.modEq_comm",
-              "status": "open"
+              "label": "ml430-int-modeq-comm",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Int.modEq_comm"
             },
             {
               "group": "unproved",
               "href": "cards/F-ml430-int-modeq-dvd-iff-b7ffeff8.doc.json",
               "id": "F:ml430-int-modeq-dvd-iff-b7ffeff8",
-              "label": "Mathlib v4.30 source proposition Int.ModEq.dvd_iff",
-              "status": "open"
+              "label": "ml430-int-modeq-dvd-iff",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Int.ModEq.dvd_iff"
             },
             {
               "group": "unproved",
               "href": "cards/F-ml430-int-modeq-sub-3148f130.doc.json",
               "id": "F:ml430-int-modeq-sub-3148f130",
-              "label": "Mathlib v4.30 source proposition Int.modEq_sub",
-              "status": "open"
+              "label": "ml430-int-modeq-sub",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Int.modEq_sub"
             },
             {
               "group": "focus",
               "href": "cards/F-ml430-int-modeq-symm-984a6e67.doc.json",
               "id": "F:ml430-int-modeq-symm-984a6e67",
-              "label": "Mathlib v4.30 source proposition Int.ModEq.symm",
-              "status": "open"
+              "label": "ml430-int-modeq-symm",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Int.ModEq.symm"
             }
           ],
           "rankdir": "TB"

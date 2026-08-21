@@ -3,9 +3,9 @@
   "id": "R:noh-wt-certificate",
   "provenance": {
     "generator": "noh_wt_certificate.rs with --emit-run (render strand P0-A); base pin axeyum 75663ef8, built with rustc --edition 2024",
-    "command": "noh_wt_certificate --emit-run render/examples-input/cert/run-certificate.json --source render/producers/noh_wt_certificate_emitrun.rs --record-id R:noh-wt-certificate --replay-seconds 1",
+    "command": "noh_wt_certificate --emit-run render/examples-input/cert/run-certificate.json --source render/producers/noh_wt_certificate_emitrun.rs --record-id R:noh-wt-certificate --replay-seconds 1 --role production",
     "inputs": [
-      {"path": "render/producers/noh_wt_certificate_emitrun.rs", "sha256": "1a11efcbaa49bb4626ade0dc00734ae6ecf9007df8e34a663c7e2946fc1f20e4", "role": "source"}
+      {"path": "render/producers/noh_wt_certificate_emitrun.rs", "sha256": "3910f5f7519599f4a1beaff2f3d562757c0185bca72d308f943eb8ca6590a4bc", "role": "source"}
     ],
     "exit_status": 0,
     "epoch": {
@@ -15,6 +15,7 @@
     }
   },
   "summary": "7 of 7 checks of the p = 2 tame-point weight certificate passed; 0 assertion failures.",
+  "role": "production",
   "outcome": "established",
   "claims": [
     {
@@ -766,7 +767,7 @@
       }
   },
   "replay": {
-    "line": "rustc --edition 2024 -O -o /tmp/noh_wt_cert render/producers/noh_wt_certificate_emitrun.rs && /tmp/noh_wt_cert --emit-run render/examples-input/cert/run-certificate.json --source render/producers/noh_wt_certificate_emitrun.rs --record-id R:noh-wt-certificate --replay-seconds 1",
+    "line": "rustc --edition 2024 -O -o /tmp/noh_wt_cert render/producers/noh_wt_certificate_emitrun.rs && /tmp/noh_wt_cert --emit-run render/examples-input/cert/run-certificate.json --source render/producers/noh_wt_certificate_emitrun.rs --record-id R:noh-wt-certificate --replay-seconds 1 --role production",
     "cwd": ".",
     "expected_exit_status": 0,
     "expected_seconds": 1

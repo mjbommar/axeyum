@@ -159,15 +159,17 @@
               "group": "focus",
               "href": "cards/F-ml430-nat-exists-mul-self-e73ca9fa.doc.json",
               "id": "F:ml430-nat-exists-mul-self-e73ca9fa",
-              "label": "Mathlib v4.30 source proposition Nat.exists_mul_self",
-              "status": "open"
+              "label": "ml430-nat-exists-mul-self",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.exists_mul_self"
             },
             {
               "group": "unproved",
               "href": "cards/F-ml430-nat-sqrt-eq-79ae8eae.doc.json",
               "id": "F:ml430-nat-sqrt-eq-79ae8eae",
-              "label": "Mathlib v4.30 source proposition Nat.sqrt_eq",
-              "status": "open"
+              "label": "ml430-nat-sqrt-eq",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.sqrt_eq"
             }
           ],
           "rankdir": "TB"

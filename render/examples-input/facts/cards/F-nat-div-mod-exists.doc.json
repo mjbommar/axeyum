@@ -484,29 +484,33 @@
               "group": "kernel-lean",
               "href": "cards/F-int-euclidean-decomposition.doc.json",
               "id": "F:int-euclidean-decomposition",
-              "label": "Euclidean decomposition over the integers is derived, not assumed",
-              "status": "proved"
+              "label": "int-euclidean-decomposition",
+              "status": "proved",
+              "tooltip": "Euclidean decomposition over the integers is derived, not assumed"
             },
             {
               "group": "focus",
               "href": "cards/F-nat-div-mod-exists.doc.json",
               "id": "F:nat-div-mod-exists",
-              "label": "Division with remainder always exists for a positive divisor",
-              "status": "proved"
+              "label": "nat-div-mod-exists",
+              "status": "proved",
+              "tooltip": "Division with remainder always exists for a positive divisor"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-div-mod-unique.doc.json",
               "id": "F:nat-div-mod-unique",
-              "label": "The quotient and remainder of a division are unique",
-              "status": "proved"
+              "label": "nat-div-mod-unique",
+              "status": "proved",
+              "tooltip": "The quotient and remainder of a division are unique"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-exists-prime-dvd.doc.json",
               "id": "F:nat-exists-prime-dvd",
-              "label": "Every natural number at least 2 has a prime divisor",
-              "status": "proved"
+              "label": "nat-exists-prime-dvd",
+              "status": "proved",
+              "tooltip": "Every natural number at least 2 has a prime divisor"
             }
           ],
           "rankdir": "TB"

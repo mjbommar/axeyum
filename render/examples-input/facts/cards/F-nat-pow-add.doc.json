@@ -479,29 +479,33 @@
               "group": "kernel-lean",
               "href": "cards/F-nat-mul-assoc.doc.json",
               "id": "F:nat-mul-assoc",
-              "label": "Multiplication on the naturals is associative",
-              "status": "proved"
+              "label": "nat-mul-assoc",
+              "status": "proved",
+              "tooltip": "Multiplication on the naturals is associative"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-mul-comm.doc.json",
               "id": "F:nat-mul-comm",
-              "label": "Multiplication on the naturals is commutative",
-              "status": "proved"
+              "label": "nat-mul-comm",
+              "status": "proved",
+              "tooltip": "Multiplication on the naturals is commutative"
             },
             {
               "group": "kernel-lean",
               "href": "cards/F-nat-mul-one.doc.json",
               "id": "F:nat-mul-one",
-              "label": "One is a right identity for multiplication on the naturals",
-              "status": "proved"
+              "label": "nat-mul-one",
+              "status": "proved",
+              "tooltip": "One is a right identity for multiplication on the naturals"
             },
             {
               "group": "focus",
               "href": "cards/F-nat-pow-add.doc.json",
               "id": "F:nat-pow-add",
-              "label": "The first index law: powers add over a product",
-              "status": "proved"
+              "label": "nat-pow-add",
+              "status": "proved",
+              "tooltip": "The first index law: powers add over a product"
             }
           ],
           "rankdir": "TB"
