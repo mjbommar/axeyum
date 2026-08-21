@@ -88,14 +88,16 @@ fn run() -> Result<(), String> {
         authority_audit,
         receipt_candidate_path,
         gcd_shift_support,
+        gcd_shift_second_support,
     ) = match arguments.next() {
-        None => (false, None, false, None, false),
-        Some(flag) if flag == "--all-support" => (true, None, false, None, false),
+        None => (false, None, false, None, false, false),
+        Some(flag) if flag == "--all-support" => (true, None, false, None, false, false),
         Some(flag) if flag == "--exact-target" => (
             true,
             Some(required_path(&mut arguments, "fib-recurrence.ndjson")?),
             false,
             None,
+            false,
             false,
         ),
         Some(flag) if flag == "--exact-authority" => (
@@ -104,6 +106,7 @@ fn run() -> Result<(), String> {
             true,
             None,
             false,
+            false,
         ),
         Some(flag) if flag == "--issue-receipt" => (
             true,
@@ -111,12 +114,22 @@ fn run() -> Result<(), String> {
             false,
             Some(required_path(&mut arguments, "candidate-observation.json")?),
             false,
+            false,
         ),
         Some(flag) if flag == "--gcd-fib-add-self-support" => (
             true,
             Some(required_path(&mut arguments, "fib-recurrence.ndjson")?),
             false,
             None,
+            true,
+            false,
+        ),
+        Some(flag) if flag == "--gcd-fib-add-self-second-support" => (
+            true,
+            Some(required_path(&mut arguments, "fib-recurrence.ndjson")?),
+            false,
+            None,
+            true,
             true,
         ),
         Some(_) => return Err("unexpected trailing argument".to_owned()),
@@ -360,6 +373,97 @@ fn run() -> Result<(), String> {
             target_with_addition.receipt(),
         )
         .map_err(|error| format!("gcd-shift addition composition did not replay: {error:?}"))?;
+        if gcd_shift_second_support {
+            let cancellation =
+                fib_gcd_shift::reconstruct_cancellation_twice(&addition.kernel, &native_prelude)?;
+            let target_with_cancellation = match compose_checked_theorem_slice(
+                &cancellation.kernel,
+                target_with_addition.kernel(),
+                &[fib_gcd_shift::CANCELLATION_TARGET],
+            ) {
+                Ok(completed) => completed,
+                Err(error) => {
+                    let rendered = format!("{error:?}");
+                    if !rendered.contains("AdmissionRejected")
+                        || !rendered.contains("Nat.div_mod_exec")
+                        || !rendered.contains("TypeMismatch")
+                    {
+                        return Err(format!(
+                            "gcd-shift cancellation composition changed: {rendered}"
+                        ));
+                    }
+                    println!(
+                        "{}",
+                        serde_json::to_string_pretty(&json!({
+                            "schema_version": 1,
+                            "kind": "axeyum-nat-gcd-fib-add-self-support-control",
+                            "state": "second-support-reconstructed-target-composition-declined",
+                            "target_stream_sha256": GCD_SHIFT_STREAM_SHA256,
+                            "support_composition_receipt_sha256": completed.receipt().receipt_sha256,
+                            "native_recurrence_composition_receipt_sha256": native_with_recurrence.receipt().receipt_sha256,
+                            "target_recurrence_composition_receipt_sha256": target_with_recurrence.receipt().receipt_sha256,
+                            "addition_composition_receipt_sha256": target_with_addition.receipt().receipt_sha256,
+                            "supports": [addition.evidence, cancellation.evidence],
+                            "support_theorems_reconstructed": 2,
+                            "fresh_kernel_submissions_cumulative": 4,
+                            "kernel_checks_this_invocation": 4,
+                            "retained_support_replay_submissions": 2,
+                            "new_support_kernel_submissions": 2,
+                            "exact_source_target_submissions": 0,
+                            "proof_search_invocations": 0,
+                            "executor_invocations": 0,
+                            "failure": {
+                                "operation": "compose second native support into exact r091 kernel",
+                                "first_rejected": "Nat.div_mod_exec",
+                                "class": "incompatible-target-definition",
+                                "native_transport_authorized": false,
+                                "partial_kernel_published": false,
+                            },
+                            "evaluation_credit": 0,
+                            "ledger_writes": 0,
+                        }))
+                        .map_err(|error| error.to_string())?
+                    );
+                    return Ok(());
+                }
+            };
+            verify_checked_theorem_composition(
+                &cancellation.kernel,
+                target_with_addition.kernel(),
+                target_with_cancellation.kernel(),
+                target_with_cancellation.receipt(),
+            )
+            .map_err(|error| {
+                format!("gcd-shift cancellation composition did not replay: {error:?}")
+            })?;
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&json!({
+                    "schema_version": 1,
+                    "kind": "axeyum-nat-gcd-fib-add-self-support-control",
+                    "state": "both-supports-reconstructed-no-target-or-ledger-credit",
+                    "target_stream_sha256": GCD_SHIFT_STREAM_SHA256,
+                    "support_composition_receipt_sha256": completed.receipt().receipt_sha256,
+                    "native_recurrence_composition_receipt_sha256": native_with_recurrence.receipt().receipt_sha256,
+                    "target_recurrence_composition_receipt_sha256": target_with_recurrence.receipt().receipt_sha256,
+                    "addition_composition_receipt_sha256": target_with_addition.receipt().receipt_sha256,
+                    "cancellation_composition_receipt_sha256": target_with_cancellation.receipt().receipt_sha256,
+                    "supports": [addition.evidence, cancellation.evidence],
+                    "support_theorems_reconstructed": 2,
+                    "fresh_kernel_submissions_cumulative": 4,
+                    "kernel_checks_this_invocation": 4,
+                    "retained_support_replay_submissions": 2,
+                    "new_support_kernel_submissions": 2,
+                    "exact_source_target_submissions": 0,
+                    "proof_search_invocations": 0,
+                    "executor_invocations": 0,
+                    "evaluation_credit": 0,
+                    "ledger_writes": 0,
+                }))
+                .map_err(|error| error.to_string())?
+            );
+            return Ok(());
+        }
         println!(
             "{}",
             serde_json::to_string_pretty(&json!({
