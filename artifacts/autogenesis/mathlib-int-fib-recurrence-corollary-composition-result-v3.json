@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-exact-theorem-composition-result",
+  "state": "exact-target-specialized-exported-and-reimported-empty-footprint",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-composition-plan-v3.json",
+    "sha256": "b1f53e696aa85840091d5c637f108087971170f7220f8336304f37becfc99ccf",
+    "driver_commit": "d2ee482052ac027b8ad071cc0b7956ee1d43d40e"
+  },
+  "driver": {
+    "path": "crates/axeyum-lean-import/examples/int_fib_recurrence_corollary_composition.rs",
+    "sha256": "4d1f0845b594a8402e2e0dfee33fc8ef96e104130d599ed90f5b32dedc083476"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-recurrence-corollary-composition-v3",
+    "manifest_sha256": "18074e2cae1315e349e83beee8b937d853415a6eb4cb7c264f95d5ca5eefcb99",
+    "capsule_sha256": "d8823373479dce23213aa004b58e9e0c8912fd413b2cb29e52195639f57a7987",
+    "result_sha256": "6b4a64e465d68b0da64afea3f93aab2305ea60d024b255051eaba33632cee53b"
+  },
+  "execution": {
+    "complete_invocations": 1,
+    "exit": 0,
+    "target_submissions": 1,
+    "exports": 1,
+    "fresh_imports": 2,
+    "retries": 0
+  },
+  "target": {
+    "fact_id": "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
+    "name": "Int.fib_eq_fib_add_two_sub_fib_add_one",
+    "declaration_sha256": "095a25341329591091b618d64fbc2f249ed3d33337bf06e499d0c9a10f436a93",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [
+      "Axeyum.Autogenesis.intFibEqAddTwoSubAddOneResidualV2",
+      "Int.add_neg_cancel_right",
+      "Int.fib_add_two"
+    ]
+  },
+  "receipts": {
+    "residual_composition": "7a41d844dff949d181686a1255b69fa42abcafe208f0dead55bad727bc7f92eb",
+    "cancellation_composition": "67efbcc93f02bcc136ad3f7801d622277641b74dafb1dc8e7dcfba17d4a71d3e",
+    "specialization": "434af73a9fbe07bdd64c4dd0778a58d60d95bb1c1132a1784732083f0dfca500"
+  },
+  "authority": {
+    "exact_target_credit": 1,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Bind the non-rendered canonical kernel type identity, then preregister a sealed-capsule admission operation.",
+  "limitations": "The exact capsule is checked evidence but has no fact-ledger mutation authority."
+}
