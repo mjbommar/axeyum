@@ -383,6 +383,7 @@ fn run_target_native_dvd_utility_capsule(
     Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
 fn run_target_native_gcd_divisibility_capsule(
     mut args: impl Iterator<Item = std::ffi::OsString>,
 ) -> Result<(), String> {
