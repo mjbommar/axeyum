@@ -12,7 +12,7 @@ use axeyum_lean_import::{
     specialize_checked_theorem, verify_checked_theorem_composition,
     verify_checked_theorem_specialization,
 };
-use axeyum_lean_kernel::{Declaration, Kernel, NameId, build_nat_prelude};
+use axeyum_lean_kernel::{Declaration, Kernel, Lean4ExportMetadata, NameId, build_nat_prelude};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
@@ -57,7 +57,7 @@ const ALL_NAT_CLOSED: &str = "Axeyum.Autogenesis.dvdAddCancelAllNatClosedV1";
 const OFFICIAL_CANCELLATION: &str =
     "Axeyum.Autogenesis.officialCoprimeFactorDivisibilityCancellationV1";
 
-const USAGE: &str = "usage: official_coprime_factor_cancellation_composition <target-base> <mod-lt-adapter> <zero-left> <successor> <generic-balanced-bezout> <clean-mul-leaves> <residual-cancellation> <all-nat-adapter>";
+const USAGE: &str = "usage: official_coprime_factor_cancellation_composition <target-base> <mod-lt-adapter> <zero-left> <successor> <generic-balanced-bezout> <clean-mul-leaves> <residual-cancellation> <all-nat-adapter> [--export-capsule <output.ndjson>]";
 
 fn main() {
     if let Err(error) = run() {
@@ -77,6 +77,16 @@ fn run() -> Result<(), String> {
     let clean_mul_path = required_path(&mut arguments)?;
     let residual_path = required_path(&mut arguments)?;
     let all_nat_adapter_path = required_path(&mut arguments)?;
+    let capsule_path = match arguments.next() {
+        None => None,
+        Some(flag) if flag == "--export-capsule" => Some(
+            arguments
+                .next()
+                .map(PathBuf::from)
+                .ok_or("--export-capsule requires an output path")?,
+        ),
+        Some(_) => return Err(USAGE.to_owned()),
+    };
     if arguments.next().is_some() {
         return Err(USAGE.to_owned());
     }
@@ -403,6 +413,16 @@ fn run() -> Result<(), String> {
         ],
         OFFICIAL_CANCELLATION,
     )?;
+    let capsule = capsule_path
+        .as_deref()
+        .map(|path| {
+            export_checked_capsule(
+                official_cancellation.kernel(),
+                official_cancellation_name,
+                path,
+            )
+        })
+        .transpose()?;
 
     let output = json!({
         "schema_version": 1,
@@ -478,6 +498,7 @@ fn run() -> Result<(), String> {
             "successor_generic": SUCCESSOR_SHA256,
             "generic_balanced_bezout": GENERIC_SHA256,
         },
+        "portable_capsule": capsule,
         "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0},
         "proof_search_invocations": 0,
         "executor_invocations": 0,
@@ -491,6 +512,39 @@ fn run() -> Result<(), String> {
         serde_json::to_string_pretty(&output).map_err(|error| error.to_string())?
     );
     Ok(())
+}
+
+fn export_checked_capsule(kernel: &Kernel, root: NameId, output: &Path) -> Result<Value, String> {
+    if output.exists() {
+        return Err(format!(
+            "capsule output already exists: {}",
+            output.display()
+        ));
+    }
+    let root_name = kernel.display_name(root).to_string();
+    let metadata = Lean4ExportMetadata::axeyum("4.30.0");
+    let bytes = kernel
+        .render_lean4export_ndjson_roots(&metadata, &[root])
+        .map_err(|error| format!("root-selected capsule export failed: {error}"))?;
+    let expected = theorem_evidence(kernel, root)?;
+    for pass in 1..=2 {
+        let imported = import_ndjson(Cursor::new(bytes.as_bytes()), ImportLimits::default())
+            .map_err(|error| format!("capsule import {pass} failed: {error:?}"))?;
+        let imported_name = find_name(imported.kernel(), &root_name)?;
+        let actual = theorem_evidence(imported.kernel(), imported_name)?;
+        if actual != expected {
+            return Err(format!("capsule import {pass} changed theorem evidence"));
+        }
+    }
+    fs::write(output, &bytes).map_err(|error| format!("capsule write failed: {error}"))?;
+    Ok(json!({
+        "root": root_name,
+        "bytes": bytes.len(),
+        "sha256": hex_sha256(bytes.as_bytes()),
+        "fresh_imports": 2,
+        "theorem": expected,
+        "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0},
+    }))
 }
 
 fn required_path(

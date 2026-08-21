@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction now includes unconditional official balanced Bézout, official coprime-factor divisibility cancellation, and a clean divisibility-antisymmetry closure. The clean-order driver now has an explicit root-selected capsule boundary that reimports the generated stream twice and requires unchanged theorem evidence before writing it; focused gates are green without exporting.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction now includes unconditional official balanced Bézout, official coprime-factor divisibility cancellation, and a clean divisibility-antisymmetry closure. The clean-order capsule exported twice byte-identically and reimported four times with unchanged empty-footprint evidence. The official-cancellation driver now exposes the same fail-if-present, two-reimport boundary and passes focused gates without exporting.
 
-**Next:** pass the full Rust push gate for the clean-order capsule boundary, execute two fresh exports into the sealed NAS pack, and require byte identity plus two fresh imports per export before the first of four capsule credits.
+**Next:** pass the full Rust push gate for the official-cancellation capsule boundary, then execute two fresh root-selected exports into the existing NAS pack and require byte identity plus two fresh imports per export.
 
 <!-- plan-section: landed-changes -->
 
@@ -171,3 +171,5 @@
 | 2026-08-21 | (pending) | V5 clean zero-divisibility, divisor-bound, and divisibility-antisymmetry supports transport twice into r091 with byte-identical empty-footprint evidence |
 | 2026-08-21 | (pending) | Four portable root-selected support capsules are frozen before code or export so the exact target no longer depends on one monolithic reconstruction process |
 | 2026-08-21 | (pending) | Clean-order driver adds an explicit fail-if-present capsule path and two fresh independent imports before any proof-bearing stream write |
+| 2026-08-21 | (pending) | Clean divisibility antisymmetry exports twice as the same 158,285-byte root-selected capsule and independently reimports four times with unchanged empty-footprint evidence |
+| 2026-08-21 | (pending) | Official cancellation driver adds the same explicit capsule path, root selection, and two-import evidence check before writing |
