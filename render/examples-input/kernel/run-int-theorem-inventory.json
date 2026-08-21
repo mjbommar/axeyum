@@ -1,0 +1,48 @@
+{
+  "claims": [
+    {
+      "key": "int-derived-population",
+      "note": "--expect-derived/--expect-asserted pin both halves; a GROWTH in the asserted count is the failure that matters most, since it means something previously proved is now assumed.",
+      "statement": "The integer prelude carries 57 derived Int.* declarations and 0 still asserted.",
+      "status": "evidence"
+    },
+    {
+      "key": "int-footprints-empty",
+      "note": "The footprint column is printed by the tool per row; the count here is over those rows, and it is cross-checked against theorem_axiom_footprint in R:kernel-inventory-cross-check.",
+      "statement": "57 of the 57 derived Int.* declarations have an empty axiom footprint (Kernel::axiom_footprint, this kernel's #print axioms).",
+      "status": "evidence"
+    }
+  ],
+  "id": "R:kernel-int-theorem-inventory",
+  "outcome": "established",
+  "provenance": {
+    "command": "cargo run --release -q -p axeyum-lean-kernel --example int_theorem_inventory -- --expect-derived 57 --expect-asserted 0",
+    "epoch": {
+      "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+      "source": "commit",
+      "unix": 1787129238
+    },
+    "exit_status": 0,
+    "generator": "crates/axeyum-lean-kernel/examples/int_theorem_inventory.rs",
+    "inputs": [
+      {
+        "path": "crates/axeyum-lean-kernel/examples/int_theorem_inventory.rs",
+        "role": "source",
+        "sha256": "8d8e1fad90b6e8475611044664e9dfe2bd11016981a09a5dab9cf94804ecfe1b"
+      }
+    ]
+  },
+  "replay": {
+    "cwd": ".",
+    "expected_exit_status": 0,
+    "expected_seconds": 1,
+    "line": "cargo run --release -q -p axeyum-lean-kernel --example int_theorem_inventory -- --expect-derived 57 --expect-asserted 0"
+  },
+  "schema_version": 1,
+  "stats": {
+    "asserted": 0,
+    "axiom_free": 57,
+    "derived": 57
+  },
+  "summary": "57 Int.* declarations are derived and 0 still asserted; 57 of the derived ones have an empty axiom footprint."
+}

@@ -39,6 +39,19 @@ the coordinator commits via the private-index procedure.
         agent can close), commit, status note. P1 queue is the last section
         of 15-integrate-diary.md.
 
+## Round 3 (P1)
+- [x] P1-ADR -- ADR-0509 (proposed): Doc-IR + RunRecord + the kernel inventory
+        snapshot become public evidence formats (semantics/replay/checker per
+        Hard Rules); render/ promotes to axeyum-render on named triggers, not
+        yet; no-Node + self-containment and the fail-closed law (assembly
+        REFUSES, an emitter REPORTS) become repo-level. Index regenerated.
+        Plus the third producer family: render/producers-kernel/ ->
+        render/examples-input/kernel/ (3 documents, 5 run records, 2 inventory
+        snapshots; 139 Nat + 57 Int statement blocks, the first corpus use of
+        FormalRef::Kernel). Diary: docs/render-2026-08/19-adr-kernel-diary.md.
+        Owns: docs/research/09-decisions/adr-0509-*, the regenerated ADR index,
+        render/producers-kernel/, render/examples-input/kernel/, 19-*.md.
+
 ## Standing constraints (all agents)
 Rust+Python only; outputs md/LaTeX/self-contained HTML (+optional wasm);
 NO Node anywhere; real artifacts only — no synthetic evidence; fail-closed

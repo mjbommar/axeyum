@@ -1,0 +1,5123 @@
+{
+  "blocks": [
+    {
+      "id": "intro",
+      "kind": {
+        "text": "The Nat development is where this project makes its strongest claim: a prelude with an empty trusted surface, every law derived. This page is that development enumerated. The types are quoted from the kernel, not from doc comments -- transcribing them from comments once produced three ledger entries the kernel would have rejected, two of them unparseable.",
+        "type": "prose"
+      },
+      "tag": "essential"
+    },
+    {
+      "id": "coverage",
+      "kind": {
+        "text": "**What these numbers cover, and what they do not.** Every figure on this page came out of running an inventory example; none of it was read from source text, because this kernel's declarations go through a `.theorem(name, ...)` helper over interned name ids and are invisible to grep. Coverage is not uniform across the four tools and the differences matter: `nat_axiom_inventory` enumerates the trusted surface (axiom + opaque + quotient, not `Declaration::Axiom` alone) for all five prelude builders in the crate -- `logic`, `nat`, `real`, `integer`, `string` -- with the string prelude built at width 2; `theorem_axiom_footprint` covers `nat`, `integer` and `real` ONLY, so it says nothing about the string prelude, and it folds the logic prelude into `nat` because `build_nat_prelude` builds logic first; `nat_theorem_inventory` covers the Nat prelude alone; `int_theorem_inventory` filters to names prefixed `Int.`, so the whole Nat development the integer construction rests on is excluded from its counts and covered by its own inventory. A fifth tool, `prelude_axiom_inventory`, was run as a control: it covers `real`, `integer` and `string` only, so its zero Nat rows mean *never enumerated*, not *axiom-free* -- the two are indistinguishable in that output and the difference is the whole claim.",
+        "type": "prose"
+      },
+      "tag": "detail",
+      "title": "Coverage"
+    },
+    {
+      "id": "assembly-caveat",
+      "kind": {
+        "text": "**Only theorem rows are referenced.** `render/src/assemble.rs` resolves a kernel reference to `epistemic_status: proved` and `proof_route: kernel-lean` for every declaration in the snapshot, without consulting the `kind` column -- so an axiom row referenced from a statement block would render as proved. The two populations are therefore kept in two snapshots: `kernel-inventory.json` holds theorem rows and is the only file any statement block on any of these pages resolves against, and `kernel-assumptions.json` holds the trusted surface and is referenced by no statement block anywhere. The assumptions are rendered as a table, which carries no status at all.",
+        "type": "prose"
+      },
+      "tag": "detail",
+      "title": "Theorem rows only"
+    },
+    {
+      "id": "statements-heading",
+      "kind": {
+        "heading_level": 2,
+        "text": "The statements",
+        "type": "prose"
+      },
+      "tag": "essential"
+    },
+    {
+      "id": "statements-body",
+      "kind": {
+        "text": "Each entry below is a checked reference into the inventory snapshot: the type shown is the type the kernel admitted, rendered by `Kernel::render_lean`, and a name the snapshot does not carry is a build error rather than a blank.",
+        "type": "prose"
+      },
+      "tag": "essential"
+    },
+    {
+      "id": "thm-acc-inv",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Acc.inv"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Acc.inv"
+    },
+    {
+      "id": "thm-nat-add-assoc",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.add_assoc"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.add_assoc"
+    },
+    {
+      "id": "thm-nat-add-comm",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.add_comm"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.add_comm"
+    },
+    {
+      "id": "thm-nat-add-le-add-left",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.add_le_add_left"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.add_le_add_left"
+    },
+    {
+      "id": "thm-nat-add-le-add-right",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.add_le_add_right"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.add_le_add_right"
+    },
+    {
+      "id": "thm-nat-add-left-cancel",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.add_left_cancel"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.add_left_cancel"
+    },
+    {
+      "id": "thm-nat-add-lt-add-left",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.add_lt_add_left"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.add_lt_add_left"
+    },
+    {
+      "id": "thm-nat-add-right-cancel",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.add_right_cancel"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.add_right_cancel"
+    },
+    {
+      "id": "thm-nat-add-right-comm",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.add_right_comm"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.add_right_comm"
+    },
+    {
+      "id": "thm-nat-add-sub-cancel-left",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.add_sub_cancel_left"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.add_sub_cancel_left"
+    },
+    {
+      "id": "thm-nat-add-succ",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.add_succ"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.add_succ"
+    },
+    {
+      "id": "thm-nat-add-zero",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.add_zero"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.add_zero"
+    },
+    {
+      "id": "thm-nat-beq-eq-true-iff",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.beq_eq_true_iff"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.beq_eq_true_iff"
+    },
+    {
+      "id": "thm-nat-beq-eq-true-of-eq",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.beq_eq_true_of_eq"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.beq_eq_true_of_eq"
+    },
+    {
+      "id": "thm-nat-beq-refl",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.beq_refl"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.beq_refl"
+    },
+    {
+      "id": "thm-nat-bezout-of-scaled",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.bezout_of_scaled"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.bezout_of_scaled"
+    },
+    {
+      "id": "thm-nat-coprime-of-bezout-one",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.coprime_of_bezout_one"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.coprime_of_bezout_one"
+    },
+    {
+      "id": "thm-nat-div-mod-add-multiple",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.div_mod_add_multiple"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.div_mod_add_multiple"
+    },
+    {
+      "id": "thm-nat-div-mod-bounds",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.div_mod_bounds"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.div_mod_bounds"
+    },
+    {
+      "id": "thm-nat-div-mod-exact-exists",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.div_mod_exact_exists"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.div_mod_exact_exists"
+    },
+    {
+      "id": "thm-nat-div-mod-exec",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.div_mod_exec"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.div_mod_exec"
+    },
+    {
+      "id": "thm-nat-div-mod-exists",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.div_mod_exists"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.div_mod_exists"
+    },
+    {
+      "id": "thm-nat-div-mod-lt-mul-iff",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.div_mod_lt_mul_iff"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.div_mod_lt_mul_iff"
+    },
+    {
+      "id": "thm-nat-div-mod-mul-le-iff",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.div_mod_mul_le_iff"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.div_mod_mul_le_iff"
+    },
+    {
+      "id": "thm-nat-div-mod-remainder-eq-of-mod-eq",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.div_mod_remainder_eq_of_mod_eq"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.div_mod_remainder_eq_of_mod_eq"
+    },
+    {
+      "id": "thm-nat-div-mod-remainder-eq-zero-iff-dvd",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.div_mod_remainder_eq_zero_iff_dvd"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.div_mod_remainder_eq_zero_iff_dvd"
+    },
+    {
+      "id": "thm-nat-div-mod-same-remainder-mod-eq",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.div_mod_same_remainder_mod_eq"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.div_mod_same_remainder_mod_eq"
+    },
+    {
+      "id": "thm-nat-div-mod-unique",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.div_mod_unique"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.div_mod_unique"
+    },
+    {
+      "id": "thm-nat-div-mul-cancel-of-dvd",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.div_mul_cancel_of_dvd"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.div_mul_cancel_of_dvd"
+    },
+    {
+      "id": "thm-nat-div-succ",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.div_succ"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.div_succ"
+    },
+    {
+      "id": "thm-nat-div-zero",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.div_zero"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.div_zero"
+    },
+    {
+      "id": "thm-nat-dvd-add",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.dvd_add"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.dvd_add"
+    },
+    {
+      "id": "thm-nat-dvd-add-iff-right",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.dvd_add_iff_right"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.dvd_add_iff_right"
+    },
+    {
+      "id": "thm-nat-dvd-add-right-cancel-of-pos",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.dvd_add_right_cancel_of_pos"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.dvd_add_right_cancel_of_pos"
+    },
+    {
+      "id": "thm-nat-dvd-factorial-of-le",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.dvd_factorial_of_le"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.dvd_factorial_of_le"
+    },
+    {
+      "id": "thm-nat-dvd-gcd",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.dvd_gcd"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.dvd_gcd"
+    },
+    {
+      "id": "thm-nat-dvd-gcd-iff",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.dvd_gcd_iff"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.dvd_gcd_iff"
+    },
+    {
+      "id": "thm-nat-dvd-mod-iff",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.dvd_mod_iff"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.dvd_mod_iff"
+    },
+    {
+      "id": "thm-nat-dvd-mul",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.dvd_mul"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.dvd_mul"
+    },
+    {
+      "id": "thm-nat-dvd-mul-right-of-dvd",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.dvd_mul_right_of_dvd"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.dvd_mul_right_of_dvd"
+    },
+    {
+      "id": "thm-nat-dvd-of-mod-eq-zero-of-pos",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.dvd_of_mod_eq_zero_of_pos"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.dvd_of_mod_eq_zero_of_pos"
+    },
+    {
+      "id": "thm-nat-dvd-refl",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.dvd_refl"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.dvd_refl"
+    },
+    {
+      "id": "thm-nat-dvd-trans",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.dvd_trans"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.dvd_trans"
+    },
+    {
+      "id": "thm-nat-dvd-zero",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.dvd_zero"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.dvd_zero"
+    },
+    {
+      "id": "thm-nat-eq-of-beq-eq-true",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.eq_of_beq_eq_true"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.eq_of_beq_eq_true"
+    },
+    {
+      "id": "thm-nat-eq-one-of-dvd-one",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.eq_one_of_dvd_one"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.eq_one_of_dvd_one"
+    },
+    {
+      "id": "thm-nat-euclid-lemma",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.euclid_lemma"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.euclid_lemma"
+    },
+    {
+      "id": "thm-nat-exists-prime-dvd",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.exists_prime_dvd"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.exists_prime_dvd"
+    },
+    {
+      "id": "thm-nat-exists-prime-gt",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.exists_prime_gt"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.exists_prime_gt"
+    },
+    {
+      "id": "thm-nat-factorial-succ",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.factorial_succ"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.factorial_succ"
+    },
+    {
+      "id": "thm-nat-factorial-zero",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.factorial_zero"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.factorial_zero"
+    },
+    {
+      "id": "thm-nat-gcd-bezout",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.gcd_bezout"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.gcd_bezout"
+    },
+    {
+      "id": "thm-nat-gcd-cofactors-coprime",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.gcd_cofactors_coprime"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.gcd_cofactors_coprime"
+    },
+    {
+      "id": "thm-nat-gcd-dvd",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.gcd_dvd"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.gcd_dvd"
+    },
+    {
+      "id": "thm-nat-gcd-dvd-left",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.gcd_dvd_left"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.gcd_dvd_left"
+    },
+    {
+      "id": "thm-nat-gcd-dvd-right",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.gcd_dvd_right"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.gcd_dvd_right"
+    },
+    {
+      "id": "thm-nat-gcd-succ",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.gcd_succ"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.gcd_succ"
+    },
+    {
+      "id": "thm-nat-gcd-zero-left",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.gcd_zero_left"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.gcd_zero_left"
+    },
+    {
+      "id": "thm-nat-le-add-right",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.le_add_right"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.le_add_right"
+    },
+    {
+      "id": "thm-nat-le-antisymm",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.le_antisymm"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.le_antisymm"
+    },
+    {
+      "id": "thm-nat-le-dest",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.le_dest"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.le_dest"
+    },
+    {
+      "id": "thm-nat-le-intro",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.le_intro"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.le_intro"
+    },
+    {
+      "id": "thm-nat-le-of-add-le-add-left",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.le_of_add_le_add_left"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.le_of_add_le_add_left"
+    },
+    {
+      "id": "thm-nat-le-of-add-le-add-right",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.le_of_add_le_add_right"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.le_of_add_le_add_right"
+    },
+    {
+      "id": "thm-nat-le-of-dvd",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.le_of_dvd"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.le_of_dvd"
+    },
+    {
+      "id": "thm-nat-le-of-mul-le-mul-left",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.le_of_mul_le_mul_left"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.le_of_mul_le_mul_left"
+    },
+    {
+      "id": "thm-nat-le-of-mul-le-mul-left-succ",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.le_of_mul_le_mul_left_succ"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.le_of_mul_le_mul_left_succ"
+    },
+    {
+      "id": "thm-nat-le-of-succ-le-succ",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.le_of_succ_le_succ"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.le_of_succ_le_succ"
+    },
+    {
+      "id": "thm-nat-le-succ-succ",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.le_succ_succ"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.le_succ_succ"
+    },
+    {
+      "id": "thm-nat-le-total",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.le_total"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.le_total"
+    },
+    {
+      "id": "thm-nat-le-trans",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.le_trans"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.le_trans"
+    },
+    {
+      "id": "thm-nat-least-divisor-search",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.least_divisor_search"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.least_divisor_search"
+    },
+    {
+      "id": "thm-nat-left-distrib",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.left_distrib"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.left_distrib"
+    },
+    {
+      "id": "thm-nat-lt-irrefl",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.lt_irrefl"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.lt_irrefl"
+    },
+    {
+      "id": "thm-nat-lt-of-le-of-lt",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.lt_of_le_of_lt"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.lt_of_le_of_lt"
+    },
+    {
+      "id": "thm-nat-lt-of-lt-of-le",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.lt_of_lt_of_le"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.lt_of_lt_of_le"
+    },
+    {
+      "id": "thm-nat-lt-or-eq-of-le",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.lt_or_eq_of_le"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.lt_or_eq_of_le"
+    },
+    {
+      "id": "thm-nat-mod-eq-add",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.mod_eq_add"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.mod_eq_add"
+    },
+    {
+      "id": "thm-nat-mod-eq-add-left",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.mod_eq_add_left"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.mod_eq_add_left"
+    },
+    {
+      "id": "thm-nat-mod-eq-add-right",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.mod_eq_add_right"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.mod_eq_add_right"
+    },
+    {
+      "id": "thm-nat-mod-eq-iff-div-mod-remainder-eq",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.mod_eq_iff_div_mod_remainder_eq"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.mod_eq_iff_div_mod_remainder_eq"
+    },
+    {
+      "id": "thm-nat-mod-eq-mul",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.mod_eq_mul"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.mod_eq_mul"
+    },
+    {
+      "id": "thm-nat-mod-eq-mul-left",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.mod_eq_mul_left"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.mod_eq_mul_left"
+    },
+    {
+      "id": "thm-nat-mod-eq-mul-right",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.mod_eq_mul_right"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.mod_eq_mul_right"
+    },
+    {
+      "id": "thm-nat-mod-eq-refl",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.mod_eq_refl"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.mod_eq_refl"
+    },
+    {
+      "id": "thm-nat-mod-eq-symm",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.mod_eq_symm"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.mod_eq_symm"
+    },
+    {
+      "id": "thm-nat-mod-eq-trans",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.mod_eq_trans"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.mod_eq_trans"
+    },
+    {
+      "id": "thm-nat-mod-eq-zero-iff-dvd",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.mod_eq_zero_iff_dvd"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.mod_eq_zero_iff_dvd"
+    },
+    {
+      "id": "thm-nat-mod-eq-zero-of-dvd",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.mod_eq_zero_of_dvd"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.mod_eq_zero_of_dvd"
+    },
+    {
+      "id": "thm-nat-mod-lt",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.mod_lt"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.mod_lt"
+    },
+    {
+      "id": "thm-nat-mod-succ",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.mod_succ"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.mod_succ"
+    },
+    {
+      "id": "thm-nat-mod-zero",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.mod_zero"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.mod_zero"
+    },
+    {
+      "id": "thm-nat-mul-assoc",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.mul_assoc"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.mul_assoc"
+    },
+    {
+      "id": "thm-nat-mul-comm",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.mul_comm"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.mul_comm"
+    },
+    {
+      "id": "thm-nat-mul-le-mul-left",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.mul_le_mul_left"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.mul_le_mul_left"
+    },
+    {
+      "id": "thm-nat-mul-left-cancel-of-pos",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.mul_left_cancel_of_pos"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.mul_left_cancel_of_pos"
+    },
+    {
+      "id": "thm-nat-mul-one",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.mul_one"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.mul_one"
+    },
+    {
+      "id": "thm-nat-mul-sub-left-distrib",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.mul_sub_left_distrib"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.mul_sub_left_distrib"
+    },
+    {
+      "id": "thm-nat-mul-sub-left-distrib-total",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.mul_sub_left_distrib_total"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.mul_sub_left_distrib_total"
+    },
+    {
+      "id": "thm-nat-mul-succ",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.mul_succ"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.mul_succ"
+    },
+    {
+      "id": "thm-nat-mul-sumrange",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.mul_sumRange"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.mul_sumRange"
+    },
+    {
+      "id": "thm-nat-mul-sumrange-pow",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.mul_sumRange_pow"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.mul_sumRange_pow"
+    },
+    {
+      "id": "thm-nat-mul-zero",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.mul_zero"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.mul_zero"
+    },
+    {
+      "id": "thm-nat-not-dvd-one-add-mul-of-two-le",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.not_dvd_one_add_mul_of_two_le"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.not_dvd_one_add_mul_of_two_le"
+    },
+    {
+      "id": "thm-nat-not-dvd-one-of-two-le",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.not_dvd_one_of_two_le"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.not_dvd_one_of_two_le"
+    },
+    {
+      "id": "thm-nat-not-succ-le-zero",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.not_succ_le_zero"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.not_succ_le_zero"
+    },
+    {
+      "id": "thm-nat-one-le-factorial",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.one_le_factorial"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.one_le_factorial"
+    },
+    {
+      "id": "thm-nat-one-le-left-of-mul",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.one_le_left_of_mul"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.one_le_left_of_mul"
+    },
+    {
+      "id": "thm-nat-one-le-mul",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.one_le_mul"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.one_le_mul"
+    },
+    {
+      "id": "thm-nat-one-le-of-dvd-pos",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.one_le_of_dvd_pos"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.one_le_of_dvd_pos"
+    },
+    {
+      "id": "thm-nat-one-le-right-of-mul",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.one_le_right_of_mul"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.one_le_right_of_mul"
+    },
+    {
+      "id": "thm-nat-one-mul",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.one_mul"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.one_mul"
+    },
+    {
+      "id": "thm-nat-pow-add",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.pow_add"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.pow_add"
+    },
+    {
+      "id": "thm-nat-pow-succ",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.pow_succ"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.pow_succ"
+    },
+    {
+      "id": "thm-nat-pow-zero",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.pow_zero"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.pow_zero"
+    },
+    {
+      "id": "thm-nat-pred-succ",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.pred_succ"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.pred_succ"
+    },
+    {
+      "id": "thm-nat-pred-zero",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.pred_zero"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.pred_zero"
+    },
+    {
+      "id": "thm-nat-right-distrib",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.right_distrib"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.right_distrib"
+    },
+    {
+      "id": "thm-nat-sub-add-cancel",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.sub_add_cancel"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.sub_add_cancel"
+    },
+    {
+      "id": "thm-nat-sub-eq-zero-of-le",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.sub_eq_zero_of_le"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.sub_eq_zero_of_le"
+    },
+    {
+      "id": "thm-nat-sub-le-iff-le-add",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.sub_le_iff_le_add"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.sub_le_iff_le_add"
+    },
+    {
+      "id": "thm-nat-sub-self",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.sub_self"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.sub_self"
+    },
+    {
+      "id": "thm-nat-sub-succ",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.sub_succ"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.sub_succ"
+    },
+    {
+      "id": "thm-nat-sub-zero",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.sub_zero"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.sub_zero"
+    },
+    {
+      "id": "thm-nat-succ-add",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.succ_add"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.succ_add"
+    },
+    {
+      "id": "thm-nat-succ-injective",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.succ_injective"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.succ_injective"
+    },
+    {
+      "id": "thm-nat-succ-mul",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.succ_mul"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.succ_mul"
+    },
+    {
+      "id": "thm-nat-succ-sub-succ",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.succ_sub_succ"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.succ_sub_succ"
+    },
+    {
+      "id": "thm-nat-sumrange-congr",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.sumRange_congr"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.sumRange_congr"
+    },
+    {
+      "id": "thm-nat-sumrange-succ",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.sumRange_succ"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.sumRange_succ"
+    },
+    {
+      "id": "thm-nat-sumrange-zero",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.sumRange_zero"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.sumRange_zero"
+    },
+    {
+      "id": "thm-nat-two-le-succ-or-eq-one",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.two_le_succ_or_eq_one"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.two_le_succ_or_eq_one"
+    },
+    {
+      "id": "thm-nat-valuation-at-two-mul-sq",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.valuation_at_two_mul_sq"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.valuation_at_two_mul_sq"
+    },
+    {
+      "id": "thm-nat-zero-add",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.zero_add"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.zero_add"
+    },
+    {
+      "id": "thm-nat-zero-div",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.zero_div"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.zero_div"
+    },
+    {
+      "id": "thm-nat-zero-le",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.zero_le"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.zero_le"
+    },
+    {
+      "id": "thm-nat-zero-mod",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.zero_mod"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.zero_mod"
+    },
+    {
+      "id": "thm-nat-zero-mul",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Nat.zero_mul"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Nat.zero_mul"
+    },
+    {
+      "id": "thm-wellfounded-fix-eq",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "WellFounded.fix_eq"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "WellFounded.fix_eq"
+    }
+  ],
+  "meta": {
+    "abstract": {
+      "text": "Every theorem the Nat prelude admits, with the type as the kernel holds it. All 139 have an empty axiom footprint."
+    },
+    "authors": [
+      "Axeyum render strand (prose only; every name, type, count and footprint is machine-produced)"
+    ],
+    "doc_id": "kernel-nat-theorems",
+    "epoch": {
+      "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+      "source": "commit",
+      "unix": 1787129238
+    },
+    "genre": "result",
+    "options": {
+      "latex": {
+        "detail": "appendix",
+        "package": "axeyum"
+      },
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "repo": {
+      "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+      "root": "",
+      "url": "https://github.com/mjbommar/axeyum"
+    },
+    "subtitle": "139 kernel-admitted theorems, each with the canonical type the kernel accepted",
+    "title": "The Nat prelude, theorem by theorem"
+  },
+  "provenance": {
+    "command": "python3 render/producers-kernel/kernel_to_docir.py",
+    "epoch": {
+      "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+      "source": "commit",
+      "unix": 1787129238
+    },
+    "exit_status": 0,
+    "generator": "render/producers-kernel/kernel_to_docir.py",
+    "inputs": [
+      {
+        "path": "render/examples-input/kernel/kernel-inventory.json",
+        "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+      },
+      {
+        "path": "render/examples-input/kernel/kernel-assumptions.json",
+        "sha256": "b2314fae0f26f493fd3d02d8d73c6502a283acb9548a179933a305640f9ce222"
+      },
+      {
+        "path": "render/examples-input/kernel/run-nat-theorem-inventory.json",
+        "sha256": "a2956222062d7b19e569034d898f10654967f489cf1d24f7aa9c7bf9f00ffc58"
+      },
+      {
+        "path": "render/examples-input/kernel/run-int-theorem-inventory.json",
+        "sha256": "0eba32dd2c036af299c5fd0a58b4dfb0ac4155a8bfe7546109a166f7015aec94"
+      },
+      {
+        "path": "render/examples-input/kernel/run-theorem-axiom-footprint.json",
+        "sha256": "7ae215d149604d9003d02a20649504acb2a6bcee9ac36ad3d38b568ec9ea5060"
+      },
+      {
+        "path": "render/examples-input/kernel/run-nat-axiom-inventory.json",
+        "sha256": "be54b65947cde8a0cb4ccea041a7d3ca1ea40ffe8ddf2fc8fb1b356cbb6ac902"
+      },
+      {
+        "path": "render/examples-input/kernel/run-inventory-cross-check.json",
+        "sha256": "d491f71167d7fd946dee267c6dd039038b5b8f13a7c806d201ae6cc2ad967480"
+      }
+    ]
+  },
+  "schema_version": 1
+}

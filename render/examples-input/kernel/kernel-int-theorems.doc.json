@@ -1,0 +1,2171 @@
+{
+  "blocks": [
+    {
+      "id": "intro",
+      "kind": {
+        "text": "The integer prelude used to be a list of assumptions. It is now a development: 57 declarations, all derived from the axiom-free Nat construction. The Nat development the construction rests on is not repeated here -- `int_theorem_inventory` filters to `Int.` names, and the rest is on the Nat page.",
+        "type": "prose"
+      },
+      "tag": "essential"
+    },
+    {
+      "id": "coverage",
+      "kind": {
+        "text": "**What these numbers cover, and what they do not.** Every figure on this page came out of running an inventory example; none of it was read from source text, because this kernel's declarations go through a `.theorem(name, ...)` helper over interned name ids and are invisible to grep. Coverage is not uniform across the four tools and the differences matter: `nat_axiom_inventory` enumerates the trusted surface (axiom + opaque + quotient, not `Declaration::Axiom` alone) for all five prelude builders in the crate -- `logic`, `nat`, `real`, `integer`, `string` -- with the string prelude built at width 2; `theorem_axiom_footprint` covers `nat`, `integer` and `real` ONLY, so it says nothing about the string prelude, and it folds the logic prelude into `nat` because `build_nat_prelude` builds logic first; `nat_theorem_inventory` covers the Nat prelude alone; `int_theorem_inventory` filters to names prefixed `Int.`, so the whole Nat development the integer construction rests on is excluded from its counts and covered by its own inventory. A fifth tool, `prelude_axiom_inventory`, was run as a control: it covers `real`, `integer` and `string` only, so its zero Nat rows mean *never enumerated*, not *axiom-free* -- the two are indistinguishable in that output and the difference is the whole claim.",
+        "type": "prose"
+      },
+      "tag": "detail",
+      "title": "Coverage"
+    },
+    {
+      "id": "assembly-caveat",
+      "kind": {
+        "text": "**Only theorem rows are referenced.** `render/src/assemble.rs` resolves a kernel reference to `epistemic_status: proved` and `proof_route: kernel-lean` for every declaration in the snapshot, without consulting the `kind` column -- so an axiom row referenced from a statement block would render as proved. The two populations are therefore kept in two snapshots: `kernel-inventory.json` holds theorem rows and is the only file any statement block on any of these pages resolves against, and `kernel-assumptions.json` holds the trusted surface and is referenced by no statement block anywhere. The assumptions are rendered as a table, which carries no status at all.",
+        "type": "prose"
+      },
+      "tag": "detail",
+      "title": "Theorem rows only"
+    },
+    {
+      "id": "statements-heading",
+      "kind": {
+        "heading_level": 2,
+        "text": "The statements",
+        "type": "prose"
+      },
+      "tag": "essential"
+    },
+    {
+      "id": "statements-body",
+      "kind": {
+        "text": "Each entry below is a checked reference into the inventory snapshot: the type shown is the type the kernel admitted, rendered by `Kernel::render_lean`, and a name the snapshot does not carry is a build error rather than a blank.",
+        "type": "prose"
+      },
+      "tag": "essential"
+    },
+    {
+      "id": "thm-int-add-assoc",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.add_assoc"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.add_assoc"
+    },
+    {
+      "id": "thm-int-add-comm",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.add_comm"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.add_comm"
+    },
+    {
+      "id": "thm-int-add-le-add",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.add_le_add"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.add_le_add"
+    },
+    {
+      "id": "thm-int-add-lt-add-of-le-of-lt",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.add_lt_add_of_le_of_lt"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.add_lt_add_of_le_of_lt"
+    },
+    {
+      "id": "thm-int-add-neg",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.add_neg"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.add_neg"
+    },
+    {
+      "id": "thm-int-add-zero",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.add_zero"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.add_zero"
+    },
+    {
+      "id": "thm-int-eq-em",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.eq_em"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.eq_em"
+    },
+    {
+      "id": "thm-int-euclid-neg-succ",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.euclid_neg_succ"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.euclid_neg_succ"
+    },
+    {
+      "id": "thm-int-euclid-of-nat",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.euclid_of_nat"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.euclid_of_nat"
+    },
+    {
+      "id": "thm-int-euclidean-decomposition",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.euclidean_decomposition"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.euclidean_decomposition"
+    },
+    {
+      "id": "thm-int-le-dest",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.le_dest"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.le_dest"
+    },
+    {
+      "id": "thm-int-le-ofnat-add",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.le_ofNat_add"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.le_ofNat_add"
+    },
+    {
+      "id": "thm-int-le-of-lt",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.le_of_lt"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.le_of_lt"
+    },
+    {
+      "id": "thm-int-le-refl",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.le_refl"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.le_refl"
+    },
+    {
+      "id": "thm-int-le-total",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.le_total"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.le_total"
+    },
+    {
+      "id": "thm-int-le-trans",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.le_trans"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.le_trans"
+    },
+    {
+      "id": "thm-int-left-distrib",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.left_distrib"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.left_distrib"
+    },
+    {
+      "id": "thm-int-lt-dest",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.lt_dest"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.lt_dest"
+    },
+    {
+      "id": "thm-int-lt-irrefl",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.lt_irrefl"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.lt_irrefl"
+    },
+    {
+      "id": "thm-int-lt-ofnat-add",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.lt_ofNat_add"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.lt_ofNat_add"
+    },
+    {
+      "id": "thm-int-lt-of-le-of-lt",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.lt_of_le_of_lt"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.lt_of_le_of_lt"
+    },
+    {
+      "id": "thm-int-lt-of-le-of-ne",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.lt_of_le_of_ne"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.lt_of_le_of_ne"
+    },
+    {
+      "id": "thm-int-lt-of-lt-of-le",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.lt_of_lt_of_le"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.lt_of_lt_of_le"
+    },
+    {
+      "id": "thm-int-lt-trans",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.lt_trans"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.lt_trans"
+    },
+    {
+      "id": "thm-int-mul-assoc",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.mul_assoc"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.mul_assoc"
+    },
+    {
+      "id": "thm-int-mul-comm",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.mul_comm"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.mul_comm"
+    },
+    {
+      "id": "thm-int-mul-le-mul-of-nonneg-left",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.mul_le_mul_of_nonneg_left"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.mul_le_mul_of_nonneg_left"
+    },
+    {
+      "id": "thm-int-mul-negofnat-negsucc",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.mul_negOfNat_negSucc"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.mul_negOfNat_negSucc"
+    },
+    {
+      "id": "thm-int-mul-negofnat-ofnat",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.mul_negOfNat_ofNat"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.mul_negOfNat_ofNat"
+    },
+    {
+      "id": "thm-int-mul-negsucc-negofnat",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.mul_negSucc_negOfNat"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.mul_negSucc_negOfNat"
+    },
+    {
+      "id": "thm-int-mul-nonneg",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.mul_nonneg"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.mul_nonneg"
+    },
+    {
+      "id": "thm-int-mul-ofnat-negofnat",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.mul_ofNat_negOfNat"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.mul_ofNat_negOfNat"
+    },
+    {
+      "id": "thm-int-mul-one",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.mul_one"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.mul_one"
+    },
+    {
+      "id": "thm-int-mul-zero",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.mul_zero"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.mul_zero"
+    },
+    {
+      "id": "thm-int-nat-abs-neg",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.nat_abs_neg"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.nat_abs_neg"
+    },
+    {
+      "id": "thm-int-nat-abs-neg-of-nat",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.nat_abs_neg_of_nat"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.nat_abs_neg_of_nat"
+    },
+    {
+      "id": "thm-int-negofnat-add-negofnat",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.negOfNat_add_negOfNat"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.negOfNat_add_negOfNat"
+    },
+    {
+      "id": "thm-int-negofnat-add-ofnat",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.negOfNat_add_ofNat"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.negOfNat_add_ofNat"
+    },
+    {
+      "id": "thm-int-negsucc-add-subnatnat",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.negSucc_add_subNatNat"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.negSucc_add_subNatNat"
+    },
+    {
+      "id": "thm-int-negsucc-mul-subnatnat",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.negSucc_mul_subNatNat"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.negSucc_mul_subNatNat"
+    },
+    {
+      "id": "thm-int-no-int-between",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.no_int_between"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.no_int_between"
+    },
+    {
+      "id": "thm-int-ofnat-add-negofnat",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.ofNat_add_negOfNat"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.ofNat_add_negOfNat"
+    },
+    {
+      "id": "thm-int-ofnat-add-subnatnat",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.ofNat_add_subNatNat"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.ofNat_add_subNatNat"
+    },
+    {
+      "id": "thm-int-ofnat-mul-subnatnat",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.ofNat_mul_subNatNat"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.ofNat_mul_subNatNat"
+    },
+    {
+      "id": "thm-int-of-nat-nat-abs-of-nonneg",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.of_nat_nat_abs_of_nonneg"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.of_nat_nat_abs_of_nonneg"
+    },
+    {
+      "id": "thm-int-sq-nonneg",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.sq_nonneg"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.sq_nonneg"
+    },
+    {
+      "id": "thm-int-subnatnat-add-add",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.subNatNat_add_add"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.subNatNat_add_add"
+    },
+    {
+      "id": "thm-int-subnatnat-add-add-left",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.subNatNat_add_add_left"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.subNatNat_add_add_left"
+    },
+    {
+      "id": "thm-int-subnatnat-add-left",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.subNatNat_add_left"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.subNatNat_add_left"
+    },
+    {
+      "id": "thm-int-subnatnat-add-negsucc",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.subNatNat_add_negSucc"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.subNatNat_add_negSucc"
+    },
+    {
+      "id": "thm-int-subnatnat-add-ofnat",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.subNatNat_add_ofNat"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.subNatNat_add_ofNat"
+    },
+    {
+      "id": "thm-int-subnatnat-add-right",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.subNatNat_add_right"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.subNatNat_add_right"
+    },
+    {
+      "id": "thm-int-subnatnat-elim",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.subNatNat_elim"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.subNatNat_elim"
+    },
+    {
+      "id": "thm-int-subnatnat-succ-succ",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.subNatNat_succ_succ"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.subNatNat_succ_succ"
+    },
+    {
+      "id": "thm-int-subnatnat-zero",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.subNatNat_zero"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.subNatNat_zero"
+    },
+    {
+      "id": "thm-int-zero-lt-one",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.zero_lt_one"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.zero_lt_one"
+    },
+    {
+      "id": "thm-int-zero-subnatnat",
+      "kind": {
+        "ref": {
+          "inventory": "render/examples-input/kernel/kernel-inventory.json",
+          "kind": "kernel",
+          "name": "Int.zero_subNatNat"
+        },
+        "show": [
+          "title",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-kernel/kernel_to_docir.py",
+        "epoch": {
+          "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+          "source": "commit",
+          "unix": 1787129238
+        },
+        "exit_status": 0,
+        "generator": "render/producers-kernel/kernel_to_docir.py",
+        "inputs": [
+          {
+            "path": "render/examples-input/kernel/kernel-inventory.json",
+            "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Int.zero_subNatNat"
+    }
+  ],
+  "meta": {
+    "abstract": {
+      "text": "Every derived Int.* declaration, with the type the kernel accepted. The integer prelude asserted 34 of these once, then 1; it now asserts none."
+    },
+    "authors": [
+      "Axeyum render strand (prose only; every name, type, count and footprint is machine-produced)"
+    ],
+    "doc_id": "kernel-int-theorems",
+    "epoch": {
+      "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+      "source": "commit",
+      "unix": 1787129238
+    },
+    "genre": "result",
+    "options": {
+      "latex": {
+        "detail": "appendix",
+        "package": "axeyum"
+      },
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "repo": {
+      "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+      "root": "",
+      "url": "https://github.com/mjbommar/axeyum"
+    },
+    "subtitle": "57 derived Int declarations, none of them asserted",
+    "title": "The integer prelude, declaration by declaration"
+  },
+  "provenance": {
+    "command": "python3 render/producers-kernel/kernel_to_docir.py",
+    "epoch": {
+      "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+      "source": "commit",
+      "unix": 1787129238
+    },
+    "exit_status": 0,
+    "generator": "render/producers-kernel/kernel_to_docir.py",
+    "inputs": [
+      {
+        "path": "render/examples-input/kernel/kernel-inventory.json",
+        "sha256": "fad6b6d62b94e120d990cb36f9f9a89c9ccb1256463d505f488ee21a348ac307"
+      },
+      {
+        "path": "render/examples-input/kernel/kernel-assumptions.json",
+        "sha256": "b2314fae0f26f493fd3d02d8d73c6502a283acb9548a179933a305640f9ce222"
+      },
+      {
+        "path": "render/examples-input/kernel/run-nat-theorem-inventory.json",
+        "sha256": "a2956222062d7b19e569034d898f10654967f489cf1d24f7aa9c7bf9f00ffc58"
+      },
+      {
+        "path": "render/examples-input/kernel/run-int-theorem-inventory.json",
+        "sha256": "0eba32dd2c036af299c5fd0a58b4dfb0ac4155a8bfe7546109a166f7015aec94"
+      },
+      {
+        "path": "render/examples-input/kernel/run-theorem-axiom-footprint.json",
+        "sha256": "7ae215d149604d9003d02a20649504acb2a6bcee9ac36ad3d38b568ec9ea5060"
+      },
+      {
+        "path": "render/examples-input/kernel/run-nat-axiom-inventory.json",
+        "sha256": "be54b65947cde8a0cb4ccea041a7d3ca1ea40ffe8ddf2fc8fb1b356cbb6ac902"
+      },
+      {
+        "path": "render/examples-input/kernel/run-inventory-cross-check.json",
+        "sha256": "d491f71167d7fd946dee267c6dd039038b5b8f13a7c806d201ae6cc2ad967480"
+      }
+    ]
+  },
+  "schema_version": 1
+}

@@ -1,0 +1,1527 @@
+{
+  "commands": [
+    "cargo run --release -q -p axeyum-lean-kernel --example nat_theorem_inventory -- --expect-count 139",
+    "cargo run --release -q -p axeyum-lean-kernel --example int_theorem_inventory -- --expect-derived 57 --expect-asserted 0",
+    "cargo run --release -q -p axeyum-lean-kernel --example theorem_axiom_footprint"
+  ],
+  "declarations": [
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.add_assoc",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> Eq.{1} Int (Int.add (Int.add x0 x1) x2) (Int.add x0 (Int.add x1 x2)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.add_comm",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> ((x1 : Int) -> Eq.{1} Int (Int.add x0 x1) (Int.add x1 x0)))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.add_le_add",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int) -> ((x4 : Int.le x0 x1) -> ((x5 : Int.le x2 x3) -> Int.le (Int.add x0 x2) (Int.add x1 x3)))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.add_lt_add_of_le_of_lt",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int) -> ((x4 : Int.le x0 x1) -> ((x5 : Int.lt x2 x3) -> Int.lt (Int.add x0 x2) (Int.add x1 x3)))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.add_neg",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> Eq.{1} Int (Int.add x0 (Int.neg x0)) Int.zero)"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.add_zero",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> Eq.{1} Int (Int.add x0 Int.zero) x0)"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.eq_em",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> ((x1 : Int) -> Or (Eq.{1} Int x0 x1) (Not (Eq.{1} Int x0 x1))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.euclid_neg_succ",
+      "prelude": "integer",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Exists.{1} Int (fun (x2 : Int) => Exists.{1} Int (fun (x3 : Int) => And (Eq.{1} Int (Int.negSucc x0) (Int.add (Int.mul (Int.ofNat (AxNat.succ x1)) x2) x3)) (And (Int.le Int.zero x3) (Int.lt x3 (Int.ofNat (AxNat.succ x1))))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.euclid_of_nat",
+      "prelude": "integer",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Exists.{1} Int (fun (x2 : Int) => Exists.{1} Int (fun (x3 : Int) => And (Eq.{1} Int (Int.ofNat x0) (Int.add (Int.mul (Int.ofNat (AxNat.succ x1)) x2) x3)) (And (Int.le Int.zero x3) (Int.lt x3 (Int.ofNat (AxNat.succ x1))))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.euclidean_decomposition",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int.lt Int.zero x1) -> Exists.{1} Int (fun (x3 : Int) => Exists.{1} Int (fun (x4 : Int) => And (Eq.{1} Int x0 (Int.add (Int.mul x1 x3) x4)) (And (Int.le Int.zero x4) (Int.lt x4 x1)))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.le_dest",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int.le x0 x1) -> Exists.{1} AxNat (fun (x3 : AxNat) => Eq.{1} Int x1 (Int.add x0 (Int.ofNat x3))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.le_ofNat_add",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> ((x1 : AxNat) -> Int.le x0 (Int.add x0 (Int.ofNat x1))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.le_of_lt",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int.lt x0 x1) -> Int.le x0 x1)))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.le_refl",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> Int.le x0 x0)"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.le_total",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> ((x1 : Int) -> Or (Int.le x0 x1) (Int.le x1 x0)))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.le_trans",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int.le x0 x1) -> ((x4 : Int.le x1 x2) -> Int.le x0 x2)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.left_distrib",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> Eq.{1} Int (Int.mul x0 (Int.add x1 x2)) (Int.add (Int.mul x0 x1) (Int.mul x0 x2)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.lt_dest",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int.lt x0 x1) -> Exists.{1} AxNat (fun (x3 : AxNat) => Eq.{1} Int x1 (Int.add x0 (Int.ofNat (AxNat.succ x3)))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.lt_irrefl",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> Not (Int.lt x0 x0))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.lt_ofNat_add",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> ((x1 : AxNat) -> Int.lt x0 (Int.add x0 (Int.ofNat (AxNat.succ x1)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.lt_of_le_of_lt",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int.le x0 x1) -> ((x4 : Int.lt x1 x2) -> Int.lt x0 x2)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.lt_of_le_of_ne",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int.le x0 x1) -> ((x3 : Not (Eq.{1} Int x0 x1)) -> Int.lt x0 x1))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.lt_of_lt_of_le",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int.lt x0 x1) -> ((x4 : Int.le x1 x2) -> Int.lt x0 x2)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.lt_trans",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int.lt x0 x1) -> ((x4 : Int.lt x1 x2) -> Int.lt x0 x2)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.mul_assoc",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> Eq.{1} Int (Int.mul (Int.mul x0 x1) x2) (Int.mul x0 (Int.mul x1 x2)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.mul_comm",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> ((x1 : Int) -> Eq.{1} Int (Int.mul x0 x1) (Int.mul x1 x0)))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.mul_le_mul_of_nonneg_left",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int.le Int.zero x0) -> ((x4 : Int.le x1 x2) -> Int.le (Int.mul x0 x1) (Int.mul x0 x2))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.mul_negOfNat_negSucc",
+      "prelude": "integer",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} Int (Int.mul (Int.negOfNat x0) (Int.negSucc x1)) (Int.ofNat (AxNat.mul x0 (AxNat.succ x1)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.mul_negOfNat_ofNat",
+      "prelude": "integer",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} Int (Int.mul (Int.negOfNat x0) (Int.ofNat x1)) (Int.negOfNat (AxNat.mul x0 x1))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.mul_negSucc_negOfNat",
+      "prelude": "integer",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} Int (Int.mul (Int.negSucc x0) (Int.negOfNat x1)) (Int.ofNat (AxNat.mul (AxNat.succ x0) x1))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.mul_nonneg",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int.le Int.zero x0) -> ((x3 : Int.le Int.zero x1) -> Int.le Int.zero (Int.mul x0 x1)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.mul_ofNat_negOfNat",
+      "prelude": "integer",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} Int (Int.mul (Int.ofNat x0) (Int.negOfNat x1)) (Int.negOfNat (AxNat.mul x0 x1))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.mul_one",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> Eq.{1} Int (Int.mul x0 Int.one) x0)"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.mul_zero",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> Eq.{1} Int (Int.mul x0 Int.zero) Int.zero)"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.nat_abs_neg",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> Eq.{1} AxNat (Int.natAbs (Int.neg x0)) (Int.natAbs x0))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.nat_abs_neg_of_nat",
+      "prelude": "integer",
+      "type": "((x0 : AxNat) -> Eq.{1} AxNat (Int.natAbs (Int.negOfNat x0)) x0)"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.negOfNat_add_negOfNat",
+      "prelude": "integer",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} Int (Int.add (Int.negOfNat x0) (Int.negOfNat x1)) (Int.negOfNat (AxNat.add x0 x1))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.negOfNat_add_ofNat",
+      "prelude": "integer",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} Int (Int.add (Int.negOfNat x0) (Int.ofNat x1)) (Int.subNatNat x1 x0)))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.negSucc_add_subNatNat",
+      "prelude": "integer",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} Int (Int.add (Int.negSucc x0) (Int.subNatNat x1 x2)) (Int.subNatNat x1 (AxNat.add x2 (AxNat.succ x0))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.negSucc_mul_subNatNat",
+      "prelude": "integer",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} Int (Int.mul (Int.negSucc x0) (Int.subNatNat x1 x2)) (Int.subNatNat (AxNat.mul (AxNat.succ x0) x2) (AxNat.mul (AxNat.succ x0) x1)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.no_int_between",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> Not (And (Int.lt Int.zero x0) (Int.lt x0 Int.one)))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.ofNat_add_negOfNat",
+      "prelude": "integer",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} Int (Int.add (Int.ofNat x0) (Int.negOfNat x1)) (Int.subNatNat x0 x1)))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.ofNat_add_subNatNat",
+      "prelude": "integer",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} Int (Int.add (Int.ofNat x0) (Int.subNatNat x1 x2)) (Int.subNatNat (AxNat.add x0 x1) x2))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.ofNat_mul_subNatNat",
+      "prelude": "integer",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} Int (Int.mul (Int.ofNat x0) (Int.subNatNat x1 x2)) (Int.subNatNat (AxNat.mul x0 x1) (AxNat.mul x0 x2)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.of_nat_nat_abs_of_nonneg",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> ((x1 : Int.le Int.zero x0) -> Eq.{1} Int (Int.ofNat (Int.natAbs x0)) x0))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.sq_nonneg",
+      "prelude": "integer",
+      "type": "((x0 : Int) -> Int.le Int.zero (Int.mul x0 x0))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.subNatNat_add_add",
+      "prelude": "integer",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} Int (Int.subNatNat (AxNat.add x0 x2) (AxNat.add x1 x2)) (Int.subNatNat x0 x1))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.subNatNat_add_add_left",
+      "prelude": "integer",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} Int (Int.subNatNat (AxNat.add x0 x1) (AxNat.add x0 x2)) (Int.subNatNat x1 x2))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.subNatNat_add_left",
+      "prelude": "integer",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} Int (Int.subNatNat (AxNat.add x0 x1) x0) (Int.ofNat x1)))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.subNatNat_add_negSucc",
+      "prelude": "integer",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} Int (Int.add (Int.subNatNat x0 x1) (Int.negSucc x2)) (Int.subNatNat x0 (AxNat.add x1 (AxNat.succ x2))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.subNatNat_add_ofNat",
+      "prelude": "integer",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} Int (Int.add (Int.subNatNat x0 x1) (Int.ofNat x2)) (Int.subNatNat (AxNat.add x0 x2) x1))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.subNatNat_add_right",
+      "prelude": "integer",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} Int (Int.subNatNat x0 (AxNat.add x0 x1)) (Int.negOfNat x1)))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.subNatNat_elim",
+      "prelude": "integer",
+      "type": "((x0 : ((x0 : Int) -> Prop)) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : ((x3 : AxNat) -> ((x4 : Eq.{1} AxNat (AxNat.add x2 x3) x1) -> x0 (Int.ofNat x3)))) -> ((x4 : ((x4 : AxNat) -> ((x5 : Eq.{1} AxNat (AxNat.add x1 (AxNat.succ x4)) x2) -> x0 (Int.negSucc x4)))) -> x0 (Int.subNatNat x1 x2))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.subNatNat_succ_succ",
+      "prelude": "integer",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} Int (Int.subNatNat (AxNat.succ x0) (AxNat.succ x1)) (Int.subNatNat x0 x1)))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.subNatNat_zero",
+      "prelude": "integer",
+      "type": "((x0 : AxNat) -> Eq.{1} Int (Int.subNatNat x0 AxNat.zero) (Int.ofNat x0))"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.zero_lt_one",
+      "prelude": "integer",
+      "type": "Int.lt Int.zero Int.one"
+    },
+    {
+      "axiom_footprint": [],
+      "kind": "theorem",
+      "name": "Int.zero_subNatNat",
+      "prelude": "integer",
+      "type": "((x0 : AxNat) -> Eq.{1} Int (Int.subNatNat AxNat.zero x0) (Int.negOfNat x0))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 8,
+      "kind": "theorem",
+      "name": "Acc.inv",
+      "prelude": "nat",
+      "type": "((x0 : Sort (u)) -> ((x1 : ((x1 : x0) -> ((x2 : x0) -> Prop))) -> ((x2 : x0) -> ((x3 : x0) -> ((x4 : Acc.{u} x0 x1 x2) -> ((x5 : x1 x3 x2) -> Acc.{u} x0 x1 x3))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 3,
+      "kind": "theorem",
+      "name": "Nat.add_assoc",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.add (AxNat.add x0 x1) x2) (AxNat.add x0 (AxNat.add x1 x2)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.add_comm",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.add x0 x1) (AxNat.add x1 x0)))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 4,
+      "kind": "theorem",
+      "name": "Nat.add_le_add_left",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le x1 x2) -> AxNat.le (AxNat.add x0 x1) (AxNat.add x0 x2)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 4,
+      "kind": "theorem",
+      "name": "Nat.add_le_add_right",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le x1 x2) -> AxNat.le (AxNat.add x1 x0) (AxNat.add x2 x0)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 4,
+      "kind": "theorem",
+      "name": "Nat.add_left_cancel",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : Eq.{1} AxNat (AxNat.add x0 x1) (AxNat.add x0 x2)) -> Eq.{1} AxNat x1 x2))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 4,
+      "kind": "theorem",
+      "name": "Nat.add_lt_add_left",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.lt x1 x2) -> AxNat.lt (AxNat.add x0 x1) (AxNat.add x0 x2)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 4,
+      "kind": "theorem",
+      "name": "Nat.add_right_cancel",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : Eq.{1} AxNat (AxNat.add x0 x2) (AxNat.add x1 x2)) -> Eq.{1} AxNat x0 x1))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 3,
+      "kind": "theorem",
+      "name": "Nat.add_right_comm",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.add (AxNat.add x0 x1) x2) (AxNat.add (AxNat.add x0 x2) x1))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.add_sub_cancel_left",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.sub (AxNat.add x0 x1) x0) x1))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.add_succ",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.add x0 (AxNat.succ x1)) (AxNat.succ (AxNat.add x0 x1))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 1,
+      "kind": "theorem",
+      "name": "Nat.add_zero",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> Eq.{1} AxNat (AxNat.add x0 AxNat.zero) x0)"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.beq_eq_true_iff",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Iff (Eq.{1} Bool (AxNat.beq x0 x1) Bool.true) (Eq.{1} AxNat x0 x1)))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 3,
+      "kind": "theorem",
+      "name": "Nat.beq_eq_true_of_eq",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : Eq.{1} AxNat x0 x1) -> Eq.{1} Bool (AxNat.beq x0 x1) Bool.true)))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 1,
+      "kind": "theorem",
+      "name": "Nat.beq_refl",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> Eq.{1} Bool (AxNat.beq x0 x0) Bool.true)"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 5,
+      "kind": "theorem",
+      "name": "Nat.bezout_of_scaled",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le (AxNat.succ AxNat.zero) x0) -> ((x4 : AxNat.bezout (AxNat.mul x0 x1) (AxNat.mul x0 x2) x0) -> AxNat.bezout x1 x2 (AxNat.succ AxNat.zero))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 3,
+      "kind": "theorem",
+      "name": "Nat.coprime_of_bezout_one",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.bezout x0 x1 (AxNat.succ AxNat.zero)) -> Eq.{1} AxNat (AxNat.gcd x0 x1) (AxNat.succ AxNat.zero))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 6,
+      "kind": "theorem",
+      "name": "Nat.div_mod_add_multiple",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat.divMod x0 x1 x2 x3) -> AxNat.divMod x0 (AxNat.add x1 (AxNat.mul x0 x4)) (AxNat.add x2 x4) x3))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 5,
+      "kind": "theorem",
+      "name": "Nat.div_mod_bounds",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat.divMod x0 x1 x2 x3) -> And (AxNat.le (AxNat.mul x0 x2) x1) (AxNat.lt x1 (AxNat.mul x0 (AxNat.succ x2))))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 4,
+      "kind": "theorem",
+      "name": "Nat.div_mod_exact_exists",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le (AxNat.succ AxNat.zero) x0) -> ((x3 : AxNat.dvd x0 x1) -> Exists.{1} AxNat (fun (x4 : AxNat) => AxNat.divMod x0 x1 x4 AxNat.zero)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.div_mod_exec",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> AxNat.divMod (AxNat.succ x0) x1 (AxNat.div x1 (AxNat.succ x0)) (AxNat.mod x1 (AxNat.succ x0))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 3,
+      "kind": "theorem",
+      "name": "Nat.div_mod_exists",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le (AxNat.succ AxNat.zero) x0) -> Exists.{1} AxNat (fun (x3 : AxNat) => Exists.{1} AxNat (fun (x4 : AxNat) => AxNat.divMod x0 x1 x3 x4)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 6,
+      "kind": "theorem",
+      "name": "Nat.div_mod_lt_mul_iff",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat.divMod x0 x1 x2 x3) -> Iff (AxNat.lt x1 (AxNat.mul x0 x4)) (AxNat.lt x2 x4)))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 6,
+      "kind": "theorem",
+      "name": "Nat.div_mod_mul_le_iff",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat.divMod x0 x1 x2 x3) -> Iff (AxNat.le (AxNat.mul x0 x4) x1) (AxNat.le x4 x2)))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 10,
+      "kind": "theorem",
+      "name": "Nat.div_mod_remainder_eq_of_mod_eq",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : AxNat) -> ((x7 : AxNat.modEq x0 x1 x2) -> ((x8 : AxNat.divMod x0 x1 x3 x4) -> ((x9 : AxNat.divMod x0 x2 x5 x6) -> Eq.{1} AxNat x4 x6))))))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 5,
+      "kind": "theorem",
+      "name": "Nat.div_mod_remainder_eq_zero_iff_dvd",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat.divMod x0 x1 x2 x3) -> Iff (Eq.{1} AxNat x3 AxNat.zero) (AxNat.dvd x0 x1))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 8,
+      "kind": "theorem",
+      "name": "Nat.div_mod_same_remainder_mod_eq",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : AxNat.divMod x0 x1 x3 x5) -> ((x7 : AxNat.divMod x0 x2 x4 x5) -> AxNat.modEq x0 x1 x2))))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 8,
+      "kind": "theorem",
+      "name": "Nat.div_mod_unique",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : AxNat.divMod x0 x1 x2 x3) -> ((x7 : AxNat.divMod x0 x1 x4 x5) -> And (Eq.{1} AxNat x2 x4) (Eq.{1} AxNat x3 x5)))))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 4,
+      "kind": "theorem",
+      "name": "Nat.div_mul_cancel_of_dvd",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le (AxNat.succ AxNat.zero) x0) -> ((x3 : AxNat.dvd x0 x1) -> Eq.{1} AxNat (AxNat.mul x0 (AxNat.div x1 x0)) x1))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.div_succ",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.div (AxNat.succ x0) (AxNat.succ x1)) (Bool.rec.{1} (fun (x2 : Bool) => AxNat) (AxNat.succ (AxNat.div x0 (AxNat.succ x1))) (AxNat.div x0 (AxNat.succ x1)) (AxNat.beq (AxNat.mod x0 (AxNat.succ x1)) x1))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 1,
+      "kind": "theorem",
+      "name": "Nat.div_zero",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> Eq.{1} AxNat (AxNat.div x0 AxNat.zero) AxNat.zero)"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 5,
+      "kind": "theorem",
+      "name": "Nat.dvd_add",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.dvd x0 x1) -> ((x4 : AxNat.dvd x0 x2) -> AxNat.dvd x0 (AxNat.add x1 x2))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 4,
+      "kind": "theorem",
+      "name": "Nat.dvd_add_iff_right",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.dvd x0 x1) -> Iff (AxNat.dvd x0 x2) (AxNat.dvd x0 (AxNat.add x1 x2))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 6,
+      "kind": "theorem",
+      "name": "Nat.dvd_add_right_cancel_of_pos",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le (AxNat.succ AxNat.zero) x0) -> ((x4 : AxNat.dvd x0 x1) -> ((x5 : AxNat.dvd x0 (AxNat.add x1 x2)) -> AxNat.dvd x0 x2))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 4,
+      "kind": "theorem",
+      "name": "Nat.dvd_factorial_of_le",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le (AxNat.succ AxNat.zero) x0) -> ((x3 : AxNat.le x0 x1) -> AxNat.dvd x0 (AxNat.factorial x1)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 5,
+      "kind": "theorem",
+      "name": "Nat.dvd_gcd",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.dvd x0 x1) -> ((x4 : AxNat.dvd x0 x2) -> AxNat.dvd x0 (AxNat.gcd x1 x2))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 3,
+      "kind": "theorem",
+      "name": "Nat.dvd_gcd_iff",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Iff (AxNat.dvd x0 (AxNat.gcd x1 x2)) (And (AxNat.dvd x0 x1) (AxNat.dvd x0 x2)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 4,
+      "kind": "theorem",
+      "name": "Nat.dvd_mod_iff",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.dvd x0 (AxNat.succ x1)) -> Iff (AxNat.dvd x0 (AxNat.mod x2 (AxNat.succ x1))) (AxNat.dvd x0 x2)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.dvd_mul",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> AxNat.dvd x0 (AxNat.mul x0 x1)))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 4,
+      "kind": "theorem",
+      "name": "Nat.dvd_mul_right_of_dvd",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.dvd x0 x1) -> AxNat.dvd x0 (AxNat.mul x1 x2)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 4,
+      "kind": "theorem",
+      "name": "Nat.dvd_of_mod_eq_zero_of_pos",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le (AxNat.succ AxNat.zero) x0) -> ((x3 : AxNat.modEq x0 x1 AxNat.zero) -> AxNat.dvd x0 x1))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 1,
+      "kind": "theorem",
+      "name": "Nat.dvd_refl",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> AxNat.dvd x0 x0)"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 5,
+      "kind": "theorem",
+      "name": "Nat.dvd_trans",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.dvd x0 x1) -> ((x4 : AxNat.dvd x1 x2) -> AxNat.dvd x0 x2)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 1,
+      "kind": "theorem",
+      "name": "Nat.dvd_zero",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> AxNat.dvd x0 AxNat.zero)"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 3,
+      "kind": "theorem",
+      "name": "Nat.eq_of_beq_eq_true",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : Eq.{1} Bool (AxNat.beq x0 x1) Bool.true) -> Eq.{1} AxNat x0 x1)))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.eq_one_of_dvd_one",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat.dvd x0 (AxNat.succ AxNat.zero)) -> Eq.{1} AxNat x0 (AxNat.succ AxNat.zero)))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 7,
+      "kind": "theorem",
+      "name": "Nat.euclid_lemma",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) (((x3 : AxNat) -> ((x4 : AxNat.dvd x3 x0) -> Or (Eq.{1} AxNat x3 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x3 x0))))) -> ((x4 : AxNat.dvd x0 (AxNat.mul x1 x2)) -> Or (AxNat.dvd x0 x1) (AxNat.dvd x0 x2))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 4,
+      "kind": "theorem",
+      "name": "Nat.exists_prime_dvd",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) -> Exists.{1} AxNat (fun (x2 : AxNat) => And (And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x2) (((x3 : AxNat) -> ((x4 : AxNat.dvd x3 x2) -> Or (Eq.{1} AxNat x3 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x3 x2))))) (AxNat.dvd x2 x0))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 3,
+      "kind": "theorem",
+      "name": "Nat.exists_prime_gt",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> Exists.{1} AxNat (fun (x1 : AxNat) => And (AxNat.lt x0 x1) (And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x1) (((x2 : AxNat) -> ((x3 : AxNat.dvd x2 x1) -> Or (Eq.{1} AxNat x2 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x2 x1)))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 1,
+      "kind": "theorem",
+      "name": "Nat.factorial_succ",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> Eq.{1} AxNat (AxNat.factorial (AxNat.succ x0)) (AxNat.mul (AxNat.factorial x0) (AxNat.succ x0)))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 0,
+      "kind": "theorem",
+      "name": "Nat.factorial_zero",
+      "prelude": "nat",
+      "type": "Eq.{1} AxNat (AxNat.factorial AxNat.zero) (AxNat.succ AxNat.zero)"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.gcd_bezout",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> AxNat.bezout x0 x1 (AxNat.gcd x0 x1)))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 5,
+      "kind": "theorem",
+      "name": "Nat.gcd_cofactors_coprime",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le (AxNat.succ AxNat.zero) x0) -> ((x4 : Eq.{1} AxNat (AxNat.gcd (AxNat.mul x0 x1) (AxNat.mul x0 x2)) x0) -> Eq.{1} AxNat (AxNat.gcd x1 x2) (AxNat.succ AxNat.zero))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.gcd_dvd",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> And (AxNat.dvd (AxNat.gcd x0 x1) x0) (AxNat.dvd (AxNat.gcd x0 x1) x1)))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.gcd_dvd_left",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> AxNat.dvd (AxNat.gcd x0 x1) x0))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.gcd_dvd_right",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> AxNat.dvd (AxNat.gcd x0 x1) x1))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.gcd_succ",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.gcd (AxNat.succ x0) x1) (AxNat.gcd (AxNat.mod x1 (AxNat.succ x0)) (AxNat.succ x0))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 1,
+      "kind": "theorem",
+      "name": "Nat.gcd_zero_left",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> Eq.{1} AxNat (AxNat.gcd AxNat.zero x0) x0)"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.le_add_right",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> AxNat.le x0 (AxNat.add x0 x1)))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 4,
+      "kind": "theorem",
+      "name": "Nat.le_antisymm",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x0 x1) -> ((x3 : AxNat.le x1 x0) -> Eq.{1} AxNat x0 x1))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 3,
+      "kind": "theorem",
+      "name": "Nat.le_dest",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x0 x1) -> Exists.{1} AxNat (fun (x3 : AxNat) => Eq.{1} AxNat (AxNat.add x0 x3) x1))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 4,
+      "kind": "theorem",
+      "name": "Nat.le_intro",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : Eq.{1} AxNat (AxNat.add x0 x2) x1) -> AxNat.le x0 x1))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 4,
+      "kind": "theorem",
+      "name": "Nat.le_of_add_le_add_left",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le (AxNat.add x0 x1) (AxNat.add x0 x2)) -> AxNat.le x1 x2))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 4,
+      "kind": "theorem",
+      "name": "Nat.le_of_add_le_add_right",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le (AxNat.add x1 x0) (AxNat.add x2 x0)) -> AxNat.le x1 x2))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 4,
+      "kind": "theorem",
+      "name": "Nat.le_of_dvd",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le (AxNat.succ AxNat.zero) x1) -> ((x3 : AxNat.dvd x0 x1) -> AxNat.le x0 x1))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 5,
+      "kind": "theorem",
+      "name": "Nat.le_of_mul_le_mul_left",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le (AxNat.succ AxNat.zero) x0) -> ((x4 : AxNat.le (AxNat.mul x0 x1) (AxNat.mul x0 x2)) -> AxNat.le x1 x2)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 4,
+      "kind": "theorem",
+      "name": "Nat.le_of_mul_le_mul_left_succ",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le (AxNat.mul (AxNat.succ x0) x1) (AxNat.mul (AxNat.succ x0) x2)) -> AxNat.le x1 x2))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 3,
+      "kind": "theorem",
+      "name": "Nat.le_of_succ_le_succ",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le (AxNat.succ x0) (AxNat.succ x1)) -> AxNat.le x0 x1)))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 3,
+      "kind": "theorem",
+      "name": "Nat.le_succ_succ",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x0 x1) -> AxNat.le (AxNat.succ x0) (AxNat.succ x1))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.le_total",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Or (AxNat.le x0 x1) (AxNat.le x1 x0)))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 5,
+      "kind": "theorem",
+      "name": "Nat.le_trans",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le x0 x1) -> ((x4 : AxNat.le x1 x2) -> AxNat.le x0 x2)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 8,
+      "kind": "theorem",
+      "name": "Nat.least_divisor_search",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Or (Exists.{1} AxNat (fun (x2 : AxNat) => And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x2) (And (AxNat.dvd x2 x1) (((x3 : AxNat) -> ((x4 : AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x3) -> ((x5 : AxNat.lt x3 x2) -> Not (AxNat.dvd x3 x1)))))))) (((x2 : AxNat) -> ((x3 : AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x2) -> ((x4 : AxNat.le x2 x0) -> Not (AxNat.dvd x2 x1)))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 3,
+      "kind": "theorem",
+      "name": "Nat.left_distrib",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.mul x0 (AxNat.add x1 x2)) (AxNat.add (AxNat.mul x0 x1) (AxNat.mul x0 x2)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.lt_irrefl",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat.lt x0 x0) -> False))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 5,
+      "kind": "theorem",
+      "name": "Nat.lt_of_le_of_lt",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le x0 x1) -> ((x4 : AxNat.lt x1 x2) -> AxNat.lt x0 x2)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 5,
+      "kind": "theorem",
+      "name": "Nat.lt_of_lt_of_le",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.lt x0 x1) -> ((x4 : AxNat.le x1 x2) -> AxNat.lt x0 x2)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 3,
+      "kind": "theorem",
+      "name": "Nat.lt_or_eq_of_le",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x0 x1) -> Or (AxNat.lt x0 x1) (Eq.{1} AxNat x0 x1))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 7,
+      "kind": "theorem",
+      "name": "Nat.mod_eq_add",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat.modEq x0 x1 x2) -> ((x6 : AxNat.modEq x0 x3 x4) -> AxNat.modEq x0 (AxNat.add x1 x3) (AxNat.add x2 x4))))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 5,
+      "kind": "theorem",
+      "name": "Nat.mod_eq_add_left",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat.modEq x0 x1 x2) -> AxNat.modEq x0 (AxNat.add x3 x1) (AxNat.add x3 x2))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 5,
+      "kind": "theorem",
+      "name": "Nat.mod_eq_add_right",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat.modEq x0 x1 x2) -> AxNat.modEq x0 (AxNat.add x1 x3) (AxNat.add x2 x3))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 9,
+      "kind": "theorem",
+      "name": "Nat.mod_eq_iff_div_mod_remainder_eq",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : AxNat) -> ((x7 : AxNat.divMod x0 x1 x3 x4) -> ((x8 : AxNat.divMod x0 x2 x5 x6) -> Iff (AxNat.modEq x0 x1 x2) (Eq.{1} AxNat x4 x6))))))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 7,
+      "kind": "theorem",
+      "name": "Nat.mod_eq_mul",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat.modEq x0 x1 x2) -> ((x6 : AxNat.modEq x0 x3 x4) -> AxNat.modEq x0 (AxNat.mul x1 x3) (AxNat.mul x2 x4))))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 5,
+      "kind": "theorem",
+      "name": "Nat.mod_eq_mul_left",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat.modEq x0 x1 x2) -> AxNat.modEq x0 (AxNat.mul x3 x1) (AxNat.mul x3 x2))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 5,
+      "kind": "theorem",
+      "name": "Nat.mod_eq_mul_right",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat.modEq x0 x1 x2) -> AxNat.modEq x0 (AxNat.mul x1 x3) (AxNat.mul x2 x3))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.mod_eq_refl",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> AxNat.modEq x0 x1 x1))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 4,
+      "kind": "theorem",
+      "name": "Nat.mod_eq_symm",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.modEq x0 x1 x2) -> AxNat.modEq x0 x2 x1))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 6,
+      "kind": "theorem",
+      "name": "Nat.mod_eq_trans",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat.modEq x0 x1 x2) -> ((x5 : AxNat.modEq x0 x2 x3) -> AxNat.modEq x0 x1 x3))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.mod_eq_zero_iff_dvd",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Iff (AxNat.modEq x0 x1 AxNat.zero) (AxNat.dvd x0 x1)))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 3,
+      "kind": "theorem",
+      "name": "Nat.mod_eq_zero_of_dvd",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.dvd x0 x1) -> AxNat.modEq x0 x1 AxNat.zero)))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.mod_lt",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> AxNat.lt (AxNat.mod x1 (AxNat.succ x0)) (AxNat.succ x0)))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.mod_succ",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.mod (AxNat.succ x0) (AxNat.succ x1)) (Bool.rec.{1} (fun (x2 : Bool) => AxNat) AxNat.zero (AxNat.succ (AxNat.mod x0 (AxNat.succ x1))) (AxNat.beq (AxNat.mod x0 (AxNat.succ x1)) x1))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 1,
+      "kind": "theorem",
+      "name": "Nat.mod_zero",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> Eq.{1} AxNat (AxNat.mod x0 AxNat.zero) x0)"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 3,
+      "kind": "theorem",
+      "name": "Nat.mul_assoc",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.mul (AxNat.mul x0 x1) x2) (AxNat.mul x0 (AxNat.mul x1 x2)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.mul_comm",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.mul x0 x1) (AxNat.mul x1 x0)))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 4,
+      "kind": "theorem",
+      "name": "Nat.mul_le_mul_left",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le x1 x2) -> AxNat.le (AxNat.mul x0 x1) (AxNat.mul x0 x2)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 5,
+      "kind": "theorem",
+      "name": "Nat.mul_left_cancel_of_pos",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le (AxNat.succ AxNat.zero) x0) -> ((x4 : Eq.{1} AxNat (AxNat.mul x0 x1) (AxNat.mul x0 x2)) -> Eq.{1} AxNat x1 x2)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 1,
+      "kind": "theorem",
+      "name": "Nat.mul_one",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> Eq.{1} AxNat (AxNat.mul x0 (AxNat.succ AxNat.zero)) x0)"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 4,
+      "kind": "theorem",
+      "name": "Nat.mul_sub_left_distrib",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le x2 x1) -> Eq.{1} AxNat (AxNat.mul x0 (AxNat.sub x1 x2)) (AxNat.sub (AxNat.mul x0 x1) (AxNat.mul x0 x2))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 3,
+      "kind": "theorem",
+      "name": "Nat.mul_sub_left_distrib_total",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.mul x0 (AxNat.sub x1 x2)) (AxNat.sub (AxNat.mul x0 x1) (AxNat.mul x0 x2)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.mul_succ",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.mul x0 (AxNat.succ x1)) (AxNat.add (AxNat.mul x0 x1) x0)))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 4,
+      "kind": "theorem",
+      "name": "Nat.mul_sumRange",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : ((x1 : AxNat) -> AxNat)) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.mul x0 (AxNat.sumRange x1 x2)) (AxNat.sumRange (fun (x3 : AxNat) => AxNat.mul x0 (x1 x3)) x2))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.mul_sumRange_pow",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.mul x0 (AxNat.sumRange (fun (x2 : AxNat) => AxNat.pow x0 x2) x1)) (AxNat.sumRange (fun (x2 : AxNat) => AxNat.pow x0 (AxNat.succ x2)) x1)))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 1,
+      "kind": "theorem",
+      "name": "Nat.mul_zero",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> Eq.{1} AxNat (AxNat.mul x0 AxNat.zero) AxNat.zero)"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 3,
+      "kind": "theorem",
+      "name": "Nat.not_dvd_one_add_mul_of_two_le",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) -> Not (AxNat.dvd x0 (AxNat.add (AxNat.succ AxNat.zero) (AxNat.mul x0 x1))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.not_dvd_one_of_two_le",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) -> Not (AxNat.dvd x0 (AxNat.succ AxNat.zero))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.not_succ_le_zero",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat.le (AxNat.succ x0) AxNat.zero) -> False))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 1,
+      "kind": "theorem",
+      "name": "Nat.one_le_factorial",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> AxNat.le (AxNat.succ AxNat.zero) (AxNat.factorial x0))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 3,
+      "kind": "theorem",
+      "name": "Nat.one_le_left_of_mul",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le (AxNat.succ AxNat.zero) (AxNat.mul x0 x1)) -> AxNat.le (AxNat.succ AxNat.zero) x0)))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 4,
+      "kind": "theorem",
+      "name": "Nat.one_le_mul",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le (AxNat.succ AxNat.zero) x0) -> ((x3 : AxNat.le (AxNat.succ AxNat.zero) x1) -> AxNat.le (AxNat.succ AxNat.zero) (AxNat.mul x0 x1)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 4,
+      "kind": "theorem",
+      "name": "Nat.one_le_of_dvd_pos",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le (AxNat.succ AxNat.zero) x1) -> ((x3 : AxNat.dvd x0 x1) -> AxNat.le (AxNat.succ AxNat.zero) x0))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 3,
+      "kind": "theorem",
+      "name": "Nat.one_le_right_of_mul",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le (AxNat.succ AxNat.zero) (AxNat.mul x0 x1)) -> AxNat.le (AxNat.succ AxNat.zero) x1)))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 1,
+      "kind": "theorem",
+      "name": "Nat.one_mul",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> Eq.{1} AxNat (AxNat.mul (AxNat.succ AxNat.zero) x0) x0)"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 3,
+      "kind": "theorem",
+      "name": "Nat.pow_add",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.pow x0 (AxNat.add x1 x2)) (AxNat.mul (AxNat.pow x0 x1) (AxNat.pow x0 x2)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.pow_succ",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.pow x0 (AxNat.succ x1)) (AxNat.mul (AxNat.pow x0 x1) x0)))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 1,
+      "kind": "theorem",
+      "name": "Nat.pow_zero",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> Eq.{1} AxNat (AxNat.pow x0 AxNat.zero) (AxNat.succ AxNat.zero))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 1,
+      "kind": "theorem",
+      "name": "Nat.pred_succ",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> Eq.{1} AxNat (AxNat.pred (AxNat.succ x0)) x0)"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 0,
+      "kind": "theorem",
+      "name": "Nat.pred_zero",
+      "prelude": "nat",
+      "type": "Eq.{1} AxNat (AxNat.pred AxNat.zero) AxNat.zero"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 3,
+      "kind": "theorem",
+      "name": "Nat.right_distrib",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.mul (AxNat.add x0 x1) x2) (AxNat.add (AxNat.mul x0 x2) (AxNat.mul x1 x2)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 3,
+      "kind": "theorem",
+      "name": "Nat.sub_add_cancel",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x0 x1) -> Eq.{1} AxNat (AxNat.add (AxNat.sub x1 x0) x0) x1)))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 3,
+      "kind": "theorem",
+      "name": "Nat.sub_eq_zero_of_le",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x0 x1) -> Eq.{1} AxNat (AxNat.sub x0 x1) AxNat.zero)))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 3,
+      "kind": "theorem",
+      "name": "Nat.sub_le_iff_le_add",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Iff (AxNat.le (AxNat.sub x0 x1) x2) (AxNat.le x0 (AxNat.add x2 x1)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 1,
+      "kind": "theorem",
+      "name": "Nat.sub_self",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> Eq.{1} AxNat (AxNat.sub x0 x0) AxNat.zero)"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.sub_succ",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.sub x0 (AxNat.succ x1)) (AxNat.pred (AxNat.sub x0 x1))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 1,
+      "kind": "theorem",
+      "name": "Nat.sub_zero",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> Eq.{1} AxNat (AxNat.sub x0 AxNat.zero) x0)"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.succ_add",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.add (AxNat.succ x0) x1) (AxNat.succ (AxNat.add x0 x1))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 3,
+      "kind": "theorem",
+      "name": "Nat.succ_injective",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : Eq.{1} AxNat (AxNat.succ x0) (AxNat.succ x1)) -> Eq.{1} AxNat x0 x1)))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.succ_mul",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.mul (AxNat.succ x0) x1) (AxNat.add (AxNat.mul x0 x1) x1)))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.succ_sub_succ",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.sub (AxNat.succ x0) (AxNat.succ x1)) (AxNat.sub x0 x1)))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 7,
+      "kind": "theorem",
+      "name": "Nat.sumRange_congr",
+      "prelude": "nat",
+      "type": "((x0 : ((x0 : AxNat) -> AxNat)) -> ((x1 : ((x1 : AxNat) -> AxNat)) -> ((x2 : AxNat) -> ((x3 : ((x3 : AxNat) -> Eq.{1} AxNat (x0 x3) (x1 x3))) -> Eq.{1} AxNat (AxNat.sumRange x0 x2) (AxNat.sumRange x1 x2)))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 3,
+      "kind": "theorem",
+      "name": "Nat.sumRange_succ",
+      "prelude": "nat",
+      "type": "((x0 : ((x0 : AxNat) -> AxNat)) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.sumRange x0 (AxNat.succ x1)) (AxNat.add (AxNat.sumRange x0 x1) (x0 x1))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 2,
+      "kind": "theorem",
+      "name": "Nat.sumRange_zero",
+      "prelude": "nat",
+      "type": "((x0 : ((x0 : AxNat) -> AxNat)) -> Eq.{1} AxNat (AxNat.sumRange x0 AxNat.zero) AxNat.zero)"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 1,
+      "kind": "theorem",
+      "name": "Nat.two_le_succ_or_eq_one",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> Or (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) (AxNat.succ x0)) (Eq.{1} AxNat (AxNat.succ x0) (AxNat.succ AxNat.zero)))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 4,
+      "kind": "theorem",
+      "name": "Nat.valuation_at_two_mul_sq",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) -> ((x3 : Not (AxNat.dvd x0 x1)) -> AxNat.valuationAt x0 (AxNat.mul (AxNat.mul x0 x0) x1) (AxNat.succ (AxNat.succ AxNat.zero))))))"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 1,
+      "kind": "theorem",
+      "name": "Nat.zero_add",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> Eq.{1} AxNat (AxNat.add AxNat.zero x0) x0)"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 1,
+      "kind": "theorem",
+      "name": "Nat.zero_div",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> Eq.{1} AxNat (AxNat.div AxNat.zero x0) AxNat.zero)"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 1,
+      "kind": "theorem",
+      "name": "Nat.zero_le",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> AxNat.le AxNat.zero x0)"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 1,
+      "kind": "theorem",
+      "name": "Nat.zero_mod",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> Eq.{1} AxNat (AxNat.mod AxNat.zero x0) AxNat.zero)"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 1,
+      "kind": "theorem",
+      "name": "Nat.zero_mul",
+      "prelude": "nat",
+      "type": "((x0 : AxNat) -> Eq.{1} AxNat (AxNat.mul AxNat.zero x0) AxNat.zero)"
+    },
+    {
+      "axiom_footprint": [],
+      "binders": 13,
+      "kind": "theorem",
+      "name": "WellFounded.fix_eq",
+      "prelude": "nat",
+      "type": "((x0 : Sort (u)) -> ((x1 : ((x1 : x0) -> ((x2 : x0) -> Prop))) -> ((x2 : ((x2 : x0) -> Sort (v))) -> ((x3 : WellFounded.{u} x0 x1) -> ((x4 : ((x4 : x0) -> ((x5 : ((x5 : x0) -> ((x6 : x1 x5 x4) -> x2 x5))) -> x2 x4))) -> ((x5 : x0) -> Eq.{v} (x2 x5) (WellFounded.fix.{u, v} x0 x1 x2 x3 x4 x5) (x4 x5 (fun (x6 : x0) => fun (x7 : x1 x6 x5) => WellFounded.fix.{u, v} x0 x1 x2 x3 x4 x6))))))))"
+    }
+  ],
+  "epoch": {
+    "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+    "source": "commit",
+    "unix": 1787129238
+  },
+  "generator": "render/producers-kernel/kernel_to_docir.py",
+  "note": "Kernel inventory snapshot: THEOREM ROWS ONLY. Produced by running the inventory examples, never by reading source. Assembly resolves a kernel reference to `proved`/`kernel-lean` without consulting `kind`, so assumptions live in render/examples-input/kernel/kernel-assumptions.json and are referenced by no statement block."
+}
