@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-21 | `231a3992e` | Combined every retained Haar level before identity-path localization, reducing the sharp first-endpoint price to one aggregate path with 17 odd or 18 even half-contractions still unproved after the exact translation split. |
 | 2026-08-21 | `79e1c4a6e` | Proved that translation `f(x)->f(x+1)` forces exact half balance at identity-path level `2^v_2(n)`, spent that split in the endpoint ledger, and retained the remaining 19-split obligation and power-of-two boundary explicitly. |
 | 2026-08-21 | `2da5c9b4c` | Factored each retained Haar layer's polynomial identity share down the nested Witt path, reducing it to 20 half-balanced splits among 190 available levels at the first endpoint and exposing every exact parent/child mass without claiming the open split theorem. |
 | 2026-08-21 | `1a9145641` | Reduced the identity-cylinder variance to the polynomial share `16ell^2 F_j(1)<=F_j(global)`, exposed its exponentially permissive weak-kurtosis sufficient form, and added exact implication and fourth-power diagnostics without claiming the open delocalization theorem. |
@@ -538,6 +539,14 @@ level lies in the coarse path.  Lucas parity and the triangular coefficient
 action prove the statement; exact populations independently replay it.  This
 reduces the first endpoint price from 20 unknown half splits to 19, but gives
 no split when `n` is a power of two and therefore does not prove `(PL2)`.
+The retained Haar levels no longer need separate localization.  Their exact
+conditional-variance weights now form one aggregate nested identity path whose
+terminal mass is the full conditional-variance numerator.  Pricing that path
+against the sharp one-sided `(REL)` allowance lowers the first endpoint from
+20 separate half splits to 18 aggregate splits for `n=401` and 19 for
+`n=402`; translation leaves 17 and 18 respectively.  This is the selected
+positive-square bridge, but the remaining aggregate contractions are still an
+unproved uniform theorem rather than finite proof evidence.
 The companion characteristic-two Newton-over-Hodge result has also been
 priced conditionally: it forces only divisibility of the connected endpoint
 trace by eight.  At `ell=200` the existing envelope is already divisible by
