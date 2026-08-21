@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-r091-clean-dvd-antisymm-result-v2",
+  "state": "cancellation-first-run-declined-at-missing-recursive-acc-second-skipped",
+  "implementation_commit": "d969dc90edd1b59811211dea6bd742654c6b290f",
+  "evidence_pack": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/d969dc90e-official-r091-clean-dvd-antisymm-v2", "manifest_sha256": "6a637c964fbe3f7300cecff9257ed9135dec8c36c4f9dd7d43eaa38989d0fb83", "directory_mode": "0555", "file_mode": "0444"},
+  "decline": {"stage": "official-cancellation-composition-before-support-submission", "class": "UnsupportedMissingDeclaration", "name": "Acc", "kind": "recursive-inductive", "partial_kernel_published": false},
+  "execution": {"binary_builds": 1, "complete_invocations": 1, "input_stream_reads": 2, "successful_capsule_compositions": 0, "support_submissions": 0, "exports": 0, "exact_target_submissions": 0, "retries": 0, "second_invocation_skipped": true},
+  "authority": {"support_credit": 0, "target_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_boundary": "Preregister a same-capsule Nat.mod_lt bootstrap composition before the full official cancellation root, then construct clean order only if both compositions replay.",
+  "limitations": "No support theorem, capsule, exact target, fact, evaluation, or ledger state was established."
+}

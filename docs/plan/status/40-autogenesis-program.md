@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. The exact-target decline remains sealed with zero credit. The first official-r091 clean-order run stopped before support submission because pristine r091 has no named `Nat.mul`; the second run was skipped. V2 now freezes the corrected holistic order: compose and replay official cancellation first to establish its arithmetic representation, then resolve every handle and reconstruct all three clean-order supports inside that completed kernel.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. The exact-target decline remains sealed with zero credit. Cancellation-first V2 stopped before support submission because its full closure needs missing recursive inductive `Acc`; the second run was skipped. V3 now freezes a same-capsule two-stage bootstrap: compose and replay `Nat.mod_lt` alone to establish the canonical well-founded recursion package, then compose official cancellation, then resolve and submit clean order.
 
-**Next:** pass the full Rust gate for the Clippy-clean V2 cancellation-first sequencing change, then execute twice. Require three empty footprints, byte-identical exports, and two independent imports per export. Do not submit the exact GCD-shift target.
+**Next:** implement only the V3 `Nat.mod_lt` bootstrap composition before cancellation, pass the full gate, then execute twice. Stop before support submission on either composition failure; do not submit the exact GCD-shift target.
 
 <!-- plan-section: landed-changes -->
 
@@ -189,3 +189,5 @@
 | 2026-08-21 | (pending) | First official-r091 support run stops before submission because pristine r091 lacks named `Nat.mul`; second run is skipped |
 | 2026-08-21 | (pending) | V2 freezes official cancellation composition before all clean-order handle resolution and proof construction |
 | 2026-08-21 | (pending) | V2 composes official cancellation before resolving clean-order proof handles and passes focused Clippy without stream access |
+| 2026-08-21 | (pending) | Cancellation-first V2 stops before support submission at missing recursive `Acc`; second run is skipped |
+| 2026-08-21 | (pending) | V3 freezes same-capsule `Nat.mod_lt` bootstrap before full cancellation composition and clean-order construction |

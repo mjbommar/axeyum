@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-r091-clean-dvd-antisymm-plan-v3",
+  "state": "preregistered-same-capsule-mod-lt-bootstrap-before-cancellation-and-clean-order",
+  "predecessor": {"path": "artifacts/autogenesis/official-r091-clean-dvd-antisymm-result-v2.json", "sha256": "7c53e29797730977f7f46e1dff947ad57c50ad416269b01a466ec4bff956fa2a"},
+  "input_capsule": {"sha256": "6f9a3983ba4b0e7b2c872615d796ceb5414d3bd2cf51843ecb496b3ba83a52b0", "bootstrap_root": "Nat.mod_lt", "final_root": "Axeyum.Autogenesis.officialCoprimeFactorDivisibilityCancellationV1"},
+  "sequence": ["import pristine r091 and the official cancellation capsule once each", "compose Nat.mod_lt alone and require checked replay plus empty added footprints", "compose officialCoprimeFactorDivisibilityCancellationV1 from the same capsule into the completed bootstrap kernel and require replay", "resolve all clean-order handles only after both compositions", "submit the unchanged three official clean-order proofs", "export and roundtrip-check only the final antisymmetry root"],
+  "stop_rules": ["if Nat.mod_lt is absent from the capsule, stop before composition", "if bootstrap composition declines at any declaration, stop without trying the final root", "if final-root composition declines, stop before support submission", "no exact target submission"],
+  "acceptance": {"fresh_complete_invocations": 2, "bootstrap_compositions": 2, "cancellation_compositions": 2, "support_submissions": 6, "outputs_byte_identical": true, "fresh_imports": 4, "all_axiom_footprints": [], "exact_target_submissions": 0},
+  "budget": {"max_driver_builds": 1, "max_complete_invocations": 2, "max_capsule_stream_reads": 2, "max_compositions": 4, "max_support_submissions": 6, "max_exports": 2, "max_imports": 4, "max_exact_target_submissions": 0, "max_retries": 0},
+  "authority": {"support_credit_before_acceptance": 0, "target_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "limitations": "V3 changes only the official dependency ordering. It does not authorize a GCD-shift target attempt."
+}
