@@ -3779,6 +3779,18 @@ a stronger, potentially more local sufficient lemma rather than a proof:
 neither the half-balanced step count nor `(PL2)` is established.  ADR-0581
 records the boundary.
 
+The first half-balanced split is universal whenever it lies on the path.
+Translation `f(x)->f(x+1)` preserves degree and von Mangoldt weight.  If
+`t=2^v_2(n)`, Lucas parity makes `t` the first positive odd binomial index in
+row `n`; hence translation fixes the first `t-1` zero leading coefficients,
+toggles coefficient `t`, and permutes the two children at every later Haar
+level.  It follows exactly that `2M_t=M_(t-1)` whenever `t<=c_0`.  The native
+translation-split report checks the index and residual ledger, and every exact
+finite path independently reproduces the equality.  At `n=401` and `402` this
+spends one of the 20 required half splits, leaving 19.  For power-of-two `n`,
+however, `t=n` lies beyond the coarse path; translation alone cannot prove the
+remaining logarithmic split count.
+
 The most direct zero-`2`-rank shortcut is now priced exactly and gives no
 endpoint information.  Deuring--Shafarevich gives `2`-rank zero at both
 Carlitz levels, hence also on the relative Jacobian quotient.  But the general

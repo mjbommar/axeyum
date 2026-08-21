@@ -58,6 +58,32 @@ counts fit strictly inside the available path for both endpoint parities.
 These are deterministic implications, not proofs that the split inequalities
 hold.
 
+One split is now proved exactly.  Translation `f(x) -> f(x+1)` is a
+degree-preserving automorphism of `GF(2)[x]` and preserves `Lambda`.  Put
+`t=2^v_2(n)`.  Lucas parity says
+
+```text
+binom(n,r)=0 mod 2 for 0<r<t,   binom(n,t)=1 mod 2.
+```
+
+On a polynomial whose first `t-1` leading coefficients vanish, translation
+therefore preserves those coefficients and toggles coefficient `t`.  At every
+later refinement level `j`, its action on coefficient `j` has leading term
+`a_j` with coefficient one, so it permutes the two level-`j` children and
+preserves the squared sibling difference.  Thus it bijects the two children
+of the identity energy path at level `t` and proves
+
+```text
+2 M_t = M_(t-1)                                         (TR)
+```
+
+whenever `t<=c_0`.  The native
+`identity_cylinder_translation_split_implication` prices this theorem and the
+finite exact paths independently check the equality.  At both first endpoints
+`n=401,402`, `(TR)` lowers the remaining half-balanced count from 20 to 19.
+When `n` is a power of two, `t=n>c_0`, so this particular symmetry supplies no
+path split and is not a universal completion of `(HB)`.
+
 ## Evidence
 
 - `identity_cylinder_conditional_variance` reconstructs `M_i` directly from
@@ -68,6 +94,9 @@ hold.
 - Exact small rows show that half-balanced steps occur throughout the path and
   are not confined to one coordinate.  This is finite diagnostic evidence
   only; the first theorem-bearing range begins at `ell=200`.
+- On every exact row, the path entry at `2^v_2(n)` is required to be exactly
+  half-balanced whenever it lies inside the coarse path, independently
+  checking `(TR)` against the population transform.
 - The fact ledger keeps `(HB)` conjectured with no proof evidence or
   Autogenesis registration.
 

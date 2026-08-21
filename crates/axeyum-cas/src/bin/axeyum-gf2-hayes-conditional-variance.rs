@@ -2,6 +2,7 @@
 
 use axeyum_cas::gf2_hayes::{
     HayesLimits, identity_cylinder_conditional_variance, identity_cylinder_path_split_implication,
+    identity_cylinder_translation_split_implication,
 };
 
 const DEFAULT_ELL: usize = 18;
@@ -31,10 +32,12 @@ fn run() -> Result<(), String> {
     for degree in [2 * ell + 1, 2 * ell + 2] {
         let split = identity_cylinder_path_split_implication(ell, degree)
             .map_err(|error| error.to_string())?;
+        let translation = identity_cylinder_translation_split_implication(ell, degree)
+            .map_err(|error| error.to_string())?;
         let report = identity_cylinder_conditional_variance(ell, degree, HayesLimits::default())
             .map_err(|error| error.to_string())?;
         println!(
-            "GF2_HAYES_CONDITIONAL_VARIANCE|status=PASS|ell={ell}|degree={degree}|coarse_level={}|descendant_count={}|identity_population={}|coarse_identity_population={}|identity_scaled_deviation={}|connected_trace={}|conditional_scaled_square_sum={}|conditional_variance_numerator={}|quarter_scale_variance_target_numerator={}|maximum_conditional_scaled_square_sum_for_rel={}|conditional_cauchy_proves_rel={}|quarter_scale_variance_holds={}|rel_holds_exactly={}|exact_global_required_saving_ceiling={}|proved_weil_required_saving_ceiling={}|negative_allowance={}|required_half_balanced_steps={}|required_three_quarter_balanced_steps={}|half_balanced_depth_available={}|three_quarter_depth_available={}",
+            "GF2_HAYES_CONDITIONAL_VARIANCE|status=PASS|ell={ell}|degree={degree}|coarse_level={}|descendant_count={}|identity_population={}|coarse_identity_population={}|identity_scaled_deviation={}|connected_trace={}|conditional_scaled_square_sum={}|conditional_variance_numerator={}|quarter_scale_variance_target_numerator={}|maximum_conditional_scaled_square_sum_for_rel={}|conditional_cauchy_proves_rel={}|quarter_scale_variance_holds={}|rel_holds_exactly={}|exact_global_required_saving_ceiling={}|proved_weil_required_saving_ceiling={}|negative_allowance={}|required_half_balanced_steps={}|required_three_quarter_balanced_steps={}|half_balanced_depth_available={}|three_quarter_depth_available={}|translation_split_level={}|translation_split_within_path={}|residual_half_balanced_steps={}|residual_three_quarter_balanced_steps={}",
             report.coarse_level,
             report.descendant_count,
             report.identity_population,
@@ -55,6 +58,10 @@ fn run() -> Result<(), String> {
             split.required_three_quarter_balanced_steps,
             split.half_balanced_depth_available,
             split.three_quarter_depth_available,
+            translation.first_odd_binomial_index,
+            translation.forced_split_within_identity_path,
+            translation.residual_half_balanced_steps,
+            translation.residual_three_quarter_balanced_steps,
         );
         for level in &report.variance_levels {
             println!(

@@ -5425,6 +5425,32 @@ pub struct IdentityCylinderPathSplitImplication {
     pub three_quarter_depth_available: bool,
 }
 
+/// Translation-forced balanced split on the identity energy path.
+///
+/// Translation `f(x) -> f(x+1)` preserves the von Mangoldt weight.  If
+/// `t=2^v2(degree)`, Lucas parity makes `t` the first positive index with an
+/// odd binomial coefficient in row `degree`; translation therefore preserves
+/// the first `t-1` zero leading coefficients and toggles coefficient `t`.
+/// It also permutes the two level-`j` children, so it preserves `H_j^2` and
+/// forces exact half balance at path level `t` whenever `t<=coarse_level`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IdentityCylinderTranslationSplitImplication {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// Lemire endpoint degree.
+    pub degree: usize,
+    /// Coarse identity-cylinder level.
+    pub coarse_level: usize,
+    /// First positive odd-binomial index `2^v2(degree)`.
+    pub first_odd_binomial_index: usize,
+    /// Whether translation forces a split inside the retained identity path.
+    pub forced_split_within_identity_path: bool,
+    /// Half-balanced steps still required after spending the forced split.
+    pub residual_half_balanced_steps: usize,
+    /// Three-quarter-balanced steps still required after spending it.
+    pub residual_three_quarter_balanced_steps: usize,
+}
+
 /// Exact conditional variance and localized Haar reconstruction for the
 /// identity coarse Witt cylinder.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -6438,6 +6464,43 @@ pub fn identity_cylinder_path_split_implication(
         required_three_quarter_balanced_steps,
         half_balanced_depth_available: coarse_level >= required_half_balanced_steps,
         three_quarter_depth_available: coarse_level >= required_three_quarter_balanced_steps,
+    })
+}
+
+/// Price the exact `x -> x+1` symmetry against the identity-path split target.
+///
+/// The mathematical implication is described on
+/// [`IdentityCylinderTranslationSplitImplication`].  This operation performs
+/// only the exact Lucas-index and endpoint ledger arithmetic; finite path
+/// reports independently check the predicted equality.
+///
+/// # Errors
+///
+/// Rejects the same invalid endpoints as
+/// [`identity_cylinder_path_split_implication`] or an impossible machine-word
+/// shift.
+pub fn identity_cylinder_translation_split_implication(
+    ell: usize,
+    degree: usize,
+) -> Result<IdentityCylinderTranslationSplitImplication, HayesError> {
+    let split = identity_cylinder_path_split_implication(ell, degree)?;
+    let first_odd_binomial_index =
+        1_usize
+            .checked_shl(degree.trailing_zeros())
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("translation split index exceeds usize".to_owned())
+            })?;
+    let forced_split_within_identity_path = first_odd_binomial_index <= split.coarse_level;
+    let forced_count = usize::from(forced_split_within_identity_path);
+    Ok(IdentityCylinderTranslationSplitImplication {
+        ell,
+        degree,
+        coarse_level: split.coarse_level,
+        first_odd_binomial_index,
+        forced_split_within_identity_path,
+        residual_half_balanced_steps: split.required_half_balanced_steps - forced_count,
+        residual_three_quarter_balanced_steps: split.required_three_quarter_balanced_steps
+            - forced_count,
     })
 }
 
@@ -22098,6 +22161,41 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn translation_forces_the_first_odd_binomial_identity_split() {
+        let limits = HayesLimits::default();
+        for ell in 6_usize..=14 {
+            for degree in [2 * ell + 1, 2 * ell + 2] {
+                let translation =
+                    identity_cylinder_translation_split_implication(ell, degree).unwrap();
+                assert_eq!(
+                    translation.first_odd_binomial_index,
+                    1_usize << degree.trailing_zeros()
+                );
+                let report = identity_cylinder_conditional_variance(ell, degree, limits).unwrap();
+                if translation.forced_split_within_identity_path {
+                    assert!(report.variance_levels.iter().all(|level| {
+                        let step =
+                            &level.identity_energy_path[translation.first_odd_binomial_index - 1];
+                        step.at_most_one_half
+                            && (&step.identity_square_mass << 1) == step.parent_identity_square_mass
+                    }));
+                }
+            }
+        }
+        let odd = identity_cylinder_translation_split_implication(200, 401).unwrap();
+        assert_eq!(odd.first_odd_binomial_index, 1);
+        assert!(odd.forced_split_within_identity_path);
+        assert_eq!(odd.residual_half_balanced_steps, 19);
+        let even = identity_cylinder_translation_split_implication(200, 402).unwrap();
+        assert_eq!(even.first_odd_binomial_index, 2);
+        assert!(even.forced_split_within_identity_path);
+        assert_eq!(even.residual_half_balanced_steps, 19);
+        let power_of_two = identity_cylinder_translation_split_implication(511, 1024).unwrap();
+        assert_eq!(power_of_two.first_odd_binomial_index, 1024);
+        assert!(!power_of_two.forced_split_within_identity_path);
     }
 
     #[test]
