@@ -203,8 +203,13 @@ fn run_coprime_carrier_audit(
     let cancellation_path = path(&mut args)?;
     let addition_path = path(&mut args)?;
     let coprime_path = path(&mut args)?;
+    let blocked_text = args
+        .next()
+        .ok_or_else(|| "missing blocked dependency".to_owned())?
+        .into_string()
+        .map_err(|_| "blocked dependency is not valid UTF-8".to_owned())?;
     if args.next().is_some() {
-        return Err("usage: nat_gcd_fib_add_self_exact --coprime-carrier-audit <r091> <official-clean-order> <cancellation> <addition> <coprimality>".to_owned());
+        return Err("usage: nat_gcd_fib_add_self_exact --coprime-carrier-audit <r091> <official-clean-order> <cancellation> <addition> <coprimality> <blocked-dependency>".to_owned());
     }
     let r091 = import_bound(&r091_path, R091_SHA256, "r091")?;
     let clean = import_bound(&clean_path, CLEAN_ANTISYMM_CAPSULE, CLEAN_ANTISYMM)?;
@@ -236,8 +241,7 @@ fn run_coprime_carrier_audit(
     }
     let source = coprime.kernel();
     let root = find_name(source, COPRIME)?;
-    let blocked_text = "Axeyum.Autogenesis.gcdModel_succ";
-    let blocked = find_name(source, blocked_text)?;
+    let blocked = find_name(source, &blocked_text)?;
     let root_closure = source.declaration_dependency_closure(root);
     if !root_closure.contains(&blocked) {
         return Err(format!("{blocked_text} disappeared from {COPRIME} closure"));
