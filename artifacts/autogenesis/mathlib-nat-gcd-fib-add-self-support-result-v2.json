@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-gcd-fib-add-self-support-result",
+  "state": "second-support-reconstructed-target-composition-declined",
+  "tooling_commit": "3acb61ef5f79bd78622d90c8bc71bac3810d9261",
+  "implementation": [
+    {
+      "path": "crates/axeyum-lean-import/examples/nat_gcd_succ_specialization.rs",
+      "sha256": "de35a4cf972bd4c564f360a00f68fc13c73e413c9ec5d0477cf1ec34f3ebb717"
+    },
+    {
+      "path": "crates/axeyum-lean-import/examples/support/fib_gcd_shift.rs",
+      "sha256": "6ea52341e077cd6b058b0be9c2464dfc75f24f3af9704cbf9bff05855f5724fd"
+    }
+  ],
+  "frozen_plan": {
+    "path": "artifacts/autogenesis/mathlib-nat-gcd-fib-add-self-support-plan-v1.json",
+    "sha256": "6b4c3243ef2053b7743f028268b21d436e181b9b2835d56880c860284dd08f46"
+  },
+  "reference_pack": {
+    "root": "/nas3/data/axeyum/autogenesis/reference-packs/3acb61ef5-nat-coprime-factor-cancellation-v1",
+    "mode": "0555",
+    "manifest": "manifest.json",
+    "manifest_bytes": 4206,
+    "manifest_sha256": "1937d3abaabf56302ced49806d7132e4b1e329b17f6e3da152295476a58e2a63"
+  },
+  "result": {
+    "fact_id": "F:ml430-nat-gcd-fib-add-self-5a92d5e3",
+    "target_definition": "Axeyum.Autogenesis.Coverage.r091",
+    "support_id": "coprime-factor-divisibility-cancellation-v1",
+    "support_theorem": "Axeyum.Autogenesis.NatCoprimeFactorDivisibilityCancellation",
+    "support_theorems_reconstructed": 2,
+    "support_theorems_planned": 2,
+    "goal_sha256": "4b22a4c4d2a11ef915e033e6d2c66996e8b46de9594ee45bcb7501ee2e5612d4",
+    "proof_sha256": "796d456daab359175f298d9b5d47c76a8f11a6261c206c98218ce8323f1f1f8c",
+    "declaration_sha256": "879325e939a6ae474dcb7ec2041942547a3eea8b427fd35abe54274e70f66bd9",
+    "axiom_footprint": [],
+    "fresh_reconstructions": 2,
+    "fresh_kernel_submissions_cumulative": 4,
+    "kernel_checks_this_invocation": 4,
+    "retained_support_replay_submissions": 2,
+    "new_support_kernel_submissions": 2,
+    "exact_source_target_submissions": 0,
+    "executor_invocations": 0,
+    "retries": 0,
+    "semantic_theorem_receipts_issued": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "failure": {
+    "operation": "compose second native support into exact r091 kernel",
+    "first_rejected": "Nat.div_mod_exec",
+    "class": "incompatible-target-definition",
+    "native_transport_authorized": false,
+    "partial_kernel_published": false
+  },
+  "verification": "python3 scripts/check-autogenesis-nat-gcd-fib-add-self-support-result.py",
+  "limitations": "Both planned mathematical supports now reconstruct twice with empty footprints, but the second is not portable into the exact official target: its native balanced Bezout closure reaches the known-incompatible Nat.div_mod_exec declaration. No exact target submission, receipt, evaluation, or ledger credit is due."
+}
