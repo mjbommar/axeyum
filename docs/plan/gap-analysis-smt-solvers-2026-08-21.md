@@ -293,6 +293,37 @@ Lean-reconstructed), 78 crosscheck families are accepted by real Lean 4.30, and
 the trusted base is **30 assumptions, all in one legacy axiomatized package no
 shipped route reaches** — every constructed carrier measures 0.
 
+**And that 269 is roughly half attestation, which this document did not say.**
+Measured 2026-08-21 by classifying each instance's `lean_fragment` against
+`ProofFragment::lean_module_content`:
+
+| of the 269 Lean-reconstructed `unsat` | count | share |
+|---|---:|---:|
+| carry **theory reasoning** — a term built from the query | **142** | 52.8% |
+| **structural attestation** only | **127** | 47.2% |
+
+A structural attestation is a 21-line shim — `axiom P`, `axiom Not P`,
+`theorem _ : False := …` — that kernel-checks, is `sorry`-free, and contains
+**none** of the reasoning. `reconstruct.rs` is explicit about this ("the checking
+that matters happened in Rust"), 29 fragments funnel through one shared emitter
+whose output does not depend on the query beyond generated constant names, every
+such module carries `STRUCTURAL_ATTESTATION_MARKER`, and
+`prove_unsat_to_lean_theory_module` exists precisely to decline them. None of
+that is hidden. What was missing is that the **dominance metric does not make
+the distinction**, so "269/326 Lean-reconstructed" reads as a much stronger claim
+than it is — for 127 of them, Lean confirmed a tautology.
+
+The largest attestation families are `BoundedIntBlast` (20), `TermLevelEnum`
+(12), `BvUfLocal` (10) and `NraEvenPower` (10). Note `BoundedIntBlast` appears
+here *and* in the DRAT column above: its Lean module attests, while its
+certificate carries a genuinely external DRAT refutation. The two axes are
+independent, and neither alone describes an instance.
+
+`scripts/check-lean-gate.sh` already reports and floors this split for the
+crosscheck families (38 reasoning against 40 attestation). The dominance
+denominator should do the same, and until it does, **142 — not 269 — is the
+number to quote for "propositions Lean proved about the query."**
+
 ### 6.3 Interfaces — the weakest axis
 
 A consumer coming from `z3 file.smt2` hits these immediately [measured]:
