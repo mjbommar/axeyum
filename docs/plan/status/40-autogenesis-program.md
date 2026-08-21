@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction now includes unconditional official balanced Bézout and official coprime-factor divisibility cancellation. V4 reaches antisymmetry submission but fails closed because its inner induction sits beneath already-bound divisibility hypotheses, leaving the zero branch typed over the unspecialized outer dividend; no support credit is due.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction now includes unconditional official balanced Bézout and official coprime-factor divisibility cancellation. V5 moves inner induction over the complete antisymmetry proposition before either divisibility binder, so both branches receive specialized hypotheses; focused compile, Clippy, and importer tests are green without reading r091.
 
-**Next:** implement the preregistered inner induction over the complete antisymmetry proposition before binding branch-specific divisibility hypotheses, then require two byte-identical empty-footprint r091 replays.
+**Next:** pass the full Rust push gate for V5, then execute at most two complete r091 invocations. Require byte-identical source/target evidence, empty footprints, and replayed three-root composition before support credit.
 
 <!-- plan-section: landed-changes -->
 
@@ -167,3 +167,4 @@
 | 2026-08-21 | (pending) | V4 clean order driver replaces the absent convenience theorem with native order primitives and passes focused compile, Clippy, and importer tests |
 | 2026-08-21 | (pending) | First V4 replay reaches the trusted gate and rejects an unspecialized inner-induction hypothesis; the second is skipped and nothing publishes |
 | 2026-08-21 | (pending) | V5 freezes the complete antisymmetry proposition as the inner induction motive so each branch binds already-specialized divisibility hypotheses |
+| 2026-08-21 | (pending) | V5 clean order driver moves both divisibility binders inside the specialized induction branches and passes focused gates without reading r091 |

@@ -18,7 +18,7 @@ use sha2::{Digest, Sha256};
 const TARGET_SHA256: &str = "fc1117679c743009e8548a25d1f73f71f6cd42555ea77b3efce07844673670b2";
 const CLEAN_EQ_ZERO_OF_ZERO_DVD: &str = "Axeyum.Autogenesis.eqZeroOfZeroDvdCleanV1";
 const CLEAN_LE_OF_DVD: &str = "Axeyum.Autogenesis.leOfDvdCleanV1";
-const CLEAN_DVD_ANTISYMM: &str = "Axeyum.Autogenesis.dvdAntisymmCleanV4";
+const CLEAN_DVD_ANTISYMM: &str = "Axeyum.Autogenesis.dvdAntisymmCleanV5";
 const CLEAN_ZERO_DVD_DEPENDENCIES: [&str; 1] = ["Nat.zero_mul"];
 const CLEAN_LE_DEPENDENCIES: [&str; 3] = [
     "Nat.mul_le_mul_left",
@@ -255,17 +255,22 @@ impl Dev<'_> {
             },
             &|d, b_pred, _ih| {
                 let b_succ = d.succ(b_pred);
-                let forward_ty = d.dvd(a, b_succ);
-                let reverse_ty = d.dvd(b_succ, a);
-                d.arrow2_lambdas(forward_ty, reverse_ty, &|d, forward, reverse| {
-                    let result = d.induct(
-                        &|d, candidate_a| d.eq(candidate_a, b_succ),
-                        &|d| {
+                d.induct(
+                    &|d, candidate_a| d.antisymm_statement(candidate_a, b_succ),
+                    &|d| {
+                        let forward_ty = d.dvd(zero, b_succ);
+                        let reverse_ty = d.dvd(b_succ, zero);
+                        d.arrow2_lambdas(forward_ty, reverse_ty, &|d, forward, _reverse| {
                             let b_to_zero = d.lemma(eq_zero, &[b_succ, forward]);
-                            d.symm(b_succ, zero, b_to_zero)
-                        },
-                        &|d, a_pred, _a_ih| {
-                            let a_succ = d.succ(a_pred);
+                            Ok(d.symm(b_succ, zero, b_to_zero))
+                        })
+                        .expect("zero dividend branch is structurally complete")
+                    },
+                    &|d, a_pred, _a_ih| {
+                        let a_succ = d.succ(a_pred);
+                        let forward_ty = d.dvd(a_succ, b_succ);
+                        let reverse_ty = d.dvd(b_succ, a_succ);
+                        d.arrow2_lambdas(forward_ty, reverse_ty, &|d, forward, reverse| {
                             let zero = d.zero();
                             let zero_le_b = d.lemma(zero_le, &[b_pred]);
                             let b_positive = d.lemma(le_succ_succ, &[zero, b_pred, zero_le_b]);
@@ -273,13 +278,12 @@ impl Dev<'_> {
                             let a_positive = d.lemma(le_succ_succ, &[zero, a_pred, zero_le_a]);
                             let a_le_b = d.lemma(clean_le, &[a_succ, b_succ, b_positive, forward]);
                             let b_le_a = d.lemma(clean_le, &[b_succ, a_succ, a_positive, reverse]);
-                            d.lemma(le_antisymm, &[a_succ, b_succ, a_le_b, b_le_a])
-                        },
-                        a,
-                    );
-                    Ok(result)
-                })
-                .expect("successor divisibility branch is structurally complete")
+                            Ok(d.lemma(le_antisymm, &[a_succ, b_succ, a_le_b, b_le_a]))
+                        })
+                        .expect("successor dividend branch is structurally complete")
+                    },
+                    a,
+                )
             },
             b,
         ))
@@ -297,7 +301,7 @@ impl NatOps for Dev<'_> {
 }
 
 fn declare_clean_dvd_antisymm(kernel: &mut Kernel, prelude: &NatPrelude) -> Result<ExprId, String> {
-    let target = nested_name(kernel, &["Axeyum", "Autogenesis", "dvdAntisymmCleanV4"]);
+    let target = nested_name(kernel, &["Axeyum", "Autogenesis", "dvdAntisymmCleanV5"]);
     let state = NatState::new(kernel, *prelude);
     let mut d = Dev { kernel, state };
     d.theorem(target, 2, &|d, values| {
