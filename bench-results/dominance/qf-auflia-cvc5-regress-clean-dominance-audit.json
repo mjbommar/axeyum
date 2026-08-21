@@ -9,7 +9,7 @@
       "baseline_outcome": "unsat",
       "decision_backend": "auto-solve",
       "dominant_candidate": false,
-      "elapsed_ms": 1.669342,
+      "elapsed_ms": 0.952912,
       "evidence_certified": false,
       "evidence_check_mode": "not-applicable-uncertified",
       "evidence_checked": false,
@@ -20,12 +20,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.000172,
-        "lean_reconstruction": 0.170055,
-        "parse_evidence": 0.238215,
-        "parse_lean": 0.07182200000000001,
-        "produce_evidence": 1.151552,
-        "read": 0.020725
+        "check_evidence": 0.000143,
+        "lean_reconstruction": 0.078483,
+        "parse_evidence": 0.139298,
+        "parse_lean": 0.029580000000000002,
+        "produce_evidence": 0.6104539999999999,
+        "read": 0.032682
       },
       "trust_holes": [],
       "trust_steps": []
@@ -37,7 +37,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 2.222013,
+      "elapsed_ms": 1.243865,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -48,12 +48,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.032508,
+        "check_evidence": 0.010051000000000001,
         "lean_reconstruction": null,
-        "parse_evidence": 0.08265700000000001,
+        "parse_evidence": 0.047743,
         "parse_lean": null,
-        "produce_evidence": 2.063582,
-        "read": 0.036732
+        "produce_evidence": 1.168132,
+        "read": 0.016352
       },
       "trust_holes": [],
       "trust_steps": []
@@ -65,7 +65,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 1.977998,
+      "elapsed_ms": 1.3187360000000001,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -76,12 +76,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.013899,
+        "check_evidence": 0.009898,
         "lean_reconstruction": null,
-        "parse_evidence": 0.100326,
+        "parse_evidence": 0.052101,
         "parse_lean": null,
-        "produce_evidence": 1.8222909999999999,
-        "read": 0.036393999999999996
+        "produce_evidence": 1.2412969999999999,
+        "read": 0.013248
       },
       "trust_holes": [],
       "trust_steps": []
@@ -93,7 +93,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 0.526587,
+      "elapsed_ms": 0.30638,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -104,12 +104,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.0031999999999999997,
+        "check_evidence": 0.0021809999999999998,
         "lean_reconstruction": null,
-        "parse_evidence": 0.056844,
+        "parse_evidence": 0.022317,
         "parse_lean": null,
-        "produce_evidence": 0.43582099999999996,
-        "read": 0.027872
+        "produce_evidence": 0.266111,
+        "read": 0.013833
       },
       "trust_holes": [],
       "trust_steps": []
@@ -121,7 +121,7 @@
       "baseline_outcome": "unsat",
       "decision_backend": "auto-solve",
       "dominant_candidate": false,
-      "elapsed_ms": 59.876459,
+      "elapsed_ms": 1.8573680000000001,
       "evidence_certified": false,
       "evidence_check_mode": "not-applicable-uncertified",
       "evidence_checked": false,
@@ -132,23 +132,25 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.000143,
-        "lean_reconstruction": 0.275542,
-        "parse_evidence": 0.161044,
-        "parse_lean": 0.177602,
-        "produce_evidence": 59.221159,
-        "read": 0.022535
+        "check_evidence": 0.000065,
+        "lean_reconstruction": 0.171938,
+        "parse_evidence": 0.143437,
+        "parse_lean": 0.129441,
+        "produce_evidence": 1.277535,
+        "read": 0.015333000000000001
       },
       "trust_holes": [],
       "trust_steps": []
     }
   ],
-  "limit": null,
+  "limit": 1000,
   "logic": "QF_AUFLIA",
+  "prelude_warm_ms": 13103.738389,
+  "prelude_warmed": true,
   "slice": "qf-auflia-cvc5-regress-clean-solver-vs-z3-10s.json",
   "source_revision": {
     "dirty": false,
-    "sha": "2e207eba5",
+    "sha": "496288979",
     "source": "lane-snapshot"
   },
   "summary": {

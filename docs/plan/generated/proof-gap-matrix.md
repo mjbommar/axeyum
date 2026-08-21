@@ -32,13 +32,13 @@ end of this file against `git log -1 crates/axeyum-solver/src`.
 
 | Stage | Instances | Retained from baseline UNSAT |
 |---|---:|---:|
-| Baseline UNSAT | 324 | 100.0% |
-| Evidence audit reproduced UNSAT | 320 | 98.8% |
-| Evidence marked certified | 278 | 85.8% |
-| Evidence independently checked | 278 | 85.8% |
-| Audit UNSAT with no declared trust hole | 319 | 98.5% |
-| Lean reconstruction checked | 262 | 80.9% |
-| All dominance conditions | 262 | 80.9% |
+| Baseline UNSAT | 326 | 100.0% |
+| Evidence audit reproduced UNSAT | 322 | 98.8% |
+| Evidence marked certified | 280 | 85.9% |
+| Evidence independently checked | 280 | 85.9% |
+| Audit UNSAT with no declared trust hole | 321 | 98.5% |
+| Lean reconstruction checked | 269 | 82.5% |
+| All dominance conditions | 269 | 82.5% |
 
 The stages are not assumed to be a monotone funnel; the final row is the
 explicit conjunction of certification, independent checking, zero declared
@@ -58,8 +58,8 @@ normalizes uncertified outcomes to independently unchecked.
 | `evidence-check-gap` | 0 | Certified evidence exists but did not pass its independent checker. |
 | `trust-hole-and-lean-gap` | 1 | Checked evidence retains a trust hole and has no Lean reconstruction. |
 | `trust-hole` | 0 | Lean reconstruction exists, but a declared trust hole remains. |
-| `lean-reconstruction-gap` | 15 | Certified, checked, trust-free evidence lacks Lean reconstruction. |
-| `dominant` | 262 | Certified, checked, trust-free, and Lean-reconstructed UNSAT. |
+| `lean-reconstruction-gap` | 10 | Certified, checked, trust-free evidence lacks Lean reconstruction. |
+| `dominant` | 269 | Certified, checked, trust-free, and Lean-reconstructed UNSAT. |
 
 ## Evidence-kind gaps
 
@@ -71,10 +71,9 @@ mechanisms that should drive reconstruction work.
 | `bare-unsat` | 42 | 0 | 0 | 0 | 0 | 0 | 42 |
 | `(none)` | 4 | 0 | 0 | 0 | 4 | 0 | 4 |
 | `alethe-unsat` | 14 | 14 | 14 | 11 | 0 | 11 | 3 |
-| `monomial-bound-unsat` | 3 | 3 | 3 | 0 | 0 | 0 | 3 |
 | `real-handelman-unsat` | 3 | 3 | 3 | 0 | 0 | 0 | 3 |
-| `string-length-unsat` | 3 | 3 | 3 | 0 | 0 | 0 | 3 |
-| `real-product-unsat` | 2 | 2 | 2 | 0 | 0 | 0 | 2 |
+| `monomial-bound-unsat` | 3 | 3 | 3 | 1 | 0 | 1 | 2 |
+| `string-length-unsat` | 3 | 3 | 3 | 2 | 0 | 2 | 1 |
 | `real-zero-product-unsat` | 2 | 2 | 2 | 1 | 0 | 1 | 1 |
 | `drat-unsat` | 1 | 1 | 1 | 0 | 1 | 0 | 1 |
 | `array-axiom-unsat` | 85 | 85 | 85 | 85 | 0 | 85 | 0 |
@@ -82,7 +81,7 @@ mechanisms that should drive reconstruction work.
 | `term-level-unsat` | 16 | 16 | 16 | 16 | 0 | 16 | 0 |
 | `regex-emptiness-unsat` | 11 | 11 | 11 | 11 | 0 | 11 | 0 |
 | `nra-even-power-unsat` | 10 | 10 | 10 | 10 | 0 | 10 | 0 |
-| `sos-unsat` | 8 | 8 | 8 | 8 | 0 | 8 | 0 |
+| `sos-unsat` | 10 | 10 | 10 | 10 | 0 | 10 | 0 |
 | `arith-dpll-unsat` | 7 | 7 | 7 | 7 | 0 | 7 | 0 |
 | `bool-uf-exhaustive-unsat` | 7 | 7 | 7 | 7 | 0 | 7 | 0 |
 | `bool-euf-exhaustive-unsat` | 6 | 6 | 6 | 6 | 0 | 6 | 0 |
@@ -104,6 +103,7 @@ mechanisms that should drive reconstruction work.
 | `cross-store-array-disequality-unsat` | 2 | 2 | 2 | 2 | 0 | 2 | 0 |
 | `diophantine-unsat` | 2 | 2 | 2 | 2 | 0 | 2 | 0 |
 | `lra-dpll-unsat` | 2 | 2 | 2 | 2 | 0 | 2 | 0 |
+| `real-product-unsat` | 2 | 2 | 2 | 2 | 0 | 2 | 0 |
 | `aligned-write-chain-unsat` | 1 | 1 | 1 | 1 | 0 | 1 | 0 |
 | `binary-search16-unsat` | 1 | 1 | 1 | 1 | 0 | 1 | 0 |
 | `bool-array-read-collapse-unsat` | 1 | 1 | 1 | 1 | 0 | 1 | 0 |
@@ -143,9 +143,9 @@ mechanisms that should drive reconstruction work.
 | QF_NIA | `qf-nia-curated-iand-solver-vs-z3-10s.json` | 2 | 2 | 2 | 2 | 2 | 0 | 2 | 0 | - |
 | QF_NIA | `qf-nia-cvc5-regress-clean-solver-vs-z3-10s.json` | 15 | 15 | 5 | 5 | 2 | 0 | 2 | 0 | `uncertified-and-unchecked`=10, `lean-reconstruction-gap`=3 |
 | QF_NIA | `qf-nia-synthetic-graduated-vs-z3.json` | 16 | 16 | 16 | 16 | 16 | 0 | 16 | 0 | - |
-| QF_NRA | `qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json` | 14 | 14 | 12 | 12 | 3 | 0 | 3 | 0 | `lean-reconstruction-gap`=9, `uncertified-and-unchecked`=2 |
-| QF_NRA | `qf-nra-synthetic-graduated-vs-z3.json` | 17 | 17 | 17 | 17 | 17 | 0 | 17 | 0 | - |
-| QF_S | `qf-s-cvc5-regress-clean-solver-vs-z3-10s.json` | 26 | 26 | 12 | 12 | 9 | 0 | 9 | 0 | `uncertified-and-unchecked`=14, `lean-reconstruction-gap`=3 |
+| QF_NRA | `qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json` | 14 | 14 | 12 | 12 | 6 | 0 | 6 | 0 | `lean-reconstruction-gap`=6, `uncertified-and-unchecked`=2 |
+| QF_NRA | `qf-nra-synthetic-graduated-vs-z3.json` | 19 | 19 | 19 | 19 | 19 | 0 | 19 | 0 | - |
+| QF_S | `qf-s-cvc5-regress-clean-solver-vs-z3-10s.json` | 26 | 26 | 12 | 12 | 11 | 0 | 11 | 0 | `uncertified-and-unchecked`=14, `lean-reconstruction-gap`=1 |
 | QF_SEQ | `qf-seq-cvc5-regress-clean-solver-vs-z3-10s.json` | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | `uncertified-and-unchecked`=1 |
 | QF_SLIA | `qf-slia-cvc5-regress-clean-solver-vs-z3-10s.json` | 10 | 10 | 2 | 2 | 2 | 0 | 2 | 0 | `uncertified-and-unchecked`=8 |
 | QF_UF | `qf-uf-cvc5-regress-clean-bounded-solver-vs-z3-10s.json` | 15 | 15 | 15 | 15 | 15 | 0 | 15 | 0 | - |
@@ -188,22 +188,17 @@ correctness or certificate-production queue.
 | QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__arith__div.08.smt2` | `alethe-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint |
 | QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__minimal_unsat_core.smt2` | `alethe-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint |
 | QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__arith__mult.01.smt2` | `monomial-bound-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: real disequality (needs DPLL(T)) |
-| QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__ones.smt2` | `monomial-bound-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint |
 | QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__simple-mono-unsat.smt2` | `monomial-bound-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint |
 | QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__approx-sqrt-unsat.smt2` | `real-handelman-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: nonlinear real multiplication |
 | QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__coeff-unsat.smt2` | `real-handelman-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: nonlinear real multiplication |
 | QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__combine.smt2` | `real-handelman-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: nonlinear real multiplication |
-| QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__coeff-unsat-base.smt2` | `real-product-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: nonlinear real multiplication |
-| QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__simple-mono.smt2` | `real-product-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: nonlinear real multiplication |
 | QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__subs0-unsat-confirm.smt2` | `real-zero-product-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint |
-| QF_S | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_str004.smt2` | `string-length-unsat` | unknown |
-| QF_S | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_str005.smt2` | `string-length-unsat` | unknown |
 | QF_S | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-2.smt2` | `string-length-unsat` | unknown |
 
 ## Evidence-driven priority
 
 1. Replace the 42 uncertified audit-row occurrences with serialized, certified evidence and independently check every route. Use the [deduplicated shape census](proof-gap-shape-census.md) for mechanism prevalence.
-2. Add Lean reconstruction for the 15 already certified, checked, trust-free instances.
+2. Add Lean reconstruction for the 10 already certified, checked, trust-free instances.
 3. Eliminate the 1 declared trust-hole instances rather than counting Lean module acceptance alone.
 4. Fix the 4 proof-production errors and rerun their exact committed rows.
 
@@ -221,38 +216,38 @@ regressions to `unknown` still counted as decided.
 
 | Audit | Revision | Provenance |
 |---|---|---|
-| `bench-results/dominance/bv-bitwuzla-regress-clean-quantified-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/bv-cvc5-regress-clean-quantified-dominance-audit.json` | `5a25f247a` | stamped via lane-snapshot |
-| `bench-results/dominance/lia-cvc5-regress-clean-quantified-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-alia-cvc5-regress-clean-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-aufbv-cvc5-regress-clean-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-auflia-cvc5-regress-clean-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-ax-cvc5-regress-clean-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-bv-curated-bvred-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-bvfp-bitwuzla-regress-clean-dominance-audit.json` | `5a25f247a` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-dt-cvc5-regress-clean-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-ff-cvc5-regress-clean-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-fp-bitwuzla-regress-clean-dominance-audit.json` | `5a25f247a` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-lia-cvc5-regress-clean-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-lra-cvc5-regress-clean-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-nia-curated-iand-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-nia-cvc5-regress-clean-dominance-audit.json` | `562b65f13` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-nia-synthetic-graduated-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-nra-cvc5-regress-clean-dominance-audit.json` | `562b65f13` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json` | `1fff66825` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-s-cvc5-regress-clean-dominance-audit.json` | `1fff66825` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-seq-cvc5-regress-clean-dominance-audit.json` | `406662100` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-slia-cvc5-regress-clean-dominance-audit.json` | `1fff66825` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-uf-cvc5-regress-clean-overbound-uninterp-sorts-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-ufbv-bitwuzla-regress-clean-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-ufbv-cvc5-regress-clean-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-ufff-cvc5-regress-clean-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-uflia-curated-named-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-uflia-cvc5-regress-clean-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/uf-cvc5-regress-clean-quantified-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
+| `bench-results/dominance/bv-bitwuzla-regress-clean-quantified-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/bv-cvc5-regress-clean-quantified-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/lia-cvc5-regress-clean-quantified-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-alia-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-aufbv-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-auflia-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-ax-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-bv-curated-bvred-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-bvfp-bitwuzla-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-dt-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-ff-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-fp-bitwuzla-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-lia-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-lra-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-nia-curated-iand-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-nia-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-nia-synthetic-graduated-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-nra-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-s-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-seq-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-slia-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-uf-cvc5-regress-clean-overbound-uninterp-sorts-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-ufbv-bitwuzla-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-ufbv-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-ufff-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-uflia-curated-named-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-uflia-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/uf-cvc5-regress-clean-quantified-dominance-audit.json` | `496288979` | stamped via lane-snapshot |

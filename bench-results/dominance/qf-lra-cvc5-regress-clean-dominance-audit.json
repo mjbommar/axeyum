@@ -9,7 +9,7 @@
       "baseline_outcome": "unsat",
       "decision_backend": "lra-dpll-farkas-enumeration",
       "dominant_candidate": true,
-      "elapsed_ms": 3.0125249999999997,
+      "elapsed_ms": 1.507578,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -20,12 +20,12 @@
       "lean_fragment": "LraDpll",
       "lean_module_bytes": 3147,
       "phase_timings_ms": {
-        "check_evidence": 0.011732999999999999,
-        "lean_reconstruction": 2.224666,
-        "parse_evidence": 0.134259,
-        "parse_lean": 0.030345,
-        "produce_evidence": 0.588386,
-        "read": 0.017526
+        "check_evidence": 0.013747,
+        "lean_reconstruction": 0.631241,
+        "parse_evidence": 0.108712,
+        "parse_lean": 0.027379,
+        "produce_evidence": 0.501952,
+        "read": 0.036909000000000004
       },
       "trust_holes": [],
       "trust_steps": [
@@ -42,7 +42,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "lra-dpll-farkas-enumeration",
       "dominant_candidate": true,
-      "elapsed_ms": 0.185659,
+      "elapsed_ms": 0.231538,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -53,12 +53,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.002988,
+        "check_evidence": 0.002656,
         "lean_reconstruction": null,
-        "parse_evidence": 0.029383,
+        "parse_evidence": 0.029924,
         "parse_lean": null,
-        "produce_evidence": 0.137158,
-        "read": 0.013752
+        "produce_evidence": 0.1794,
+        "read": 0.017065
       },
       "trust_holes": [],
       "trust_steps": []
@@ -70,7 +70,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 0.602265,
+      "elapsed_ms": 0.6183960000000001,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -81,12 +81,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.004579,
+        "check_evidence": 0.003644,
         "lean_reconstruction": null,
-        "parse_evidence": 0.03661,
+        "parse_evidence": 0.045453,
         "parse_lean": null,
-        "produce_evidence": 0.546128,
-        "read": 0.012734
+        "produce_evidence": 0.53706,
+        "read": 0.029971
       },
       "trust_holes": [],
       "trust_steps": []
@@ -98,7 +98,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "nra-linear-abstraction",
       "dominant_candidate": true,
-      "elapsed_ms": 0.127443,
+      "elapsed_ms": 0.12504099999999999,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -109,12 +109,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.001614,
+        "check_evidence": 0.001686,
         "lean_reconstruction": null,
-        "parse_evidence": 0.019568,
+        "parse_evidence": 0.021887,
         "parse_lean": null,
-        "produce_evidence": 0.087723,
-        "read": 0.016671000000000002
+        "produce_evidence": 0.084819,
+        "read": 0.014701
       },
       "trust_holes": [],
       "trust_steps": []
@@ -126,7 +126,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "nra-linear-abstraction",
       "dominant_candidate": true,
-      "elapsed_ms": 0.157603,
+      "elapsed_ms": 0.203522,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -137,12 +137,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.0019410000000000002,
+        "check_evidence": 0.001896,
         "lean_reconstruction": null,
-        "parse_evidence": 0.022087,
+        "parse_evidence": 0.034373,
         "parse_lean": null,
-        "produce_evidence": 0.119182,
-        "read": 0.012531
+        "produce_evidence": 0.139462,
+        "read": 0.02583
       },
       "trust_holes": [],
       "trust_steps": []
@@ -154,7 +154,7 @@
       "baseline_outcome": "unsat",
       "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 0.408521,
+      "elapsed_ms": 0.384083,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -165,12 +165,12 @@
       "lean_fragment": "TermIdentity",
       "lean_module_bytes": 3032,
       "phase_timings_ms": {
-        "check_evidence": 0.000453,
-        "lean_reconstruction": 0.35311499999999996,
-        "parse_evidence": 0.020798,
-        "parse_lean": 0.013068999999999999,
-        "produce_evidence": 0.006089,
-        "read": 0.011099
+        "check_evidence": 0.000378,
+        "lean_reconstruction": 0.324318,
+        "parse_evidence": 0.020314,
+        "parse_lean": 0.012592,
+        "produce_evidence": 0.006095,
+        "read": 0.011386
       },
       "trust_holes": [],
       "trust_steps": []
@@ -182,7 +182,7 @@
       "baseline_outcome": "unsat",
       "decision_backend": "lra-dpll-farkas-enumeration",
       "dominant_candidate": true,
-      "elapsed_ms": 1.043218,
+      "elapsed_ms": 1.291337,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -193,12 +193,12 @@
       "lean_fragment": "LraDpll",
       "lean_module_bytes": 3147,
       "phase_timings_ms": {
-        "check_evidence": 0.031148000000000002,
-        "lean_reconstruction": 0.678729,
-        "parse_evidence": 0.030314,
-        "parse_lean": 0.023131,
-        "produce_evidence": 0.26122,
-        "read": 0.012497000000000001
+        "check_evidence": 0.028770999999999998,
+        "lean_reconstruction": 0.65814,
+        "parse_evidence": 0.031433,
+        "parse_lean": 0.021921,
+        "produce_evidence": 0.262614,
+        "read": 0.014046999999999999
       },
       "trust_holes": [],
       "trust_steps": [
@@ -215,7 +215,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "nra-linear-abstraction",
       "dominant_candidate": true,
-      "elapsed_ms": 0.148396,
+      "elapsed_ms": 0.136969,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -226,12 +226,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.0019450000000000001,
+        "check_evidence": 0.001635,
         "lean_reconstruction": null,
-        "parse_evidence": 0.022397,
+        "parse_evidence": 0.022634,
         "parse_lean": null,
-        "produce_evidence": 0.10872,
-        "read": 0.013364
+        "produce_evidence": 0.095061,
+        "read": 0.015697
       },
       "trust_holes": [],
       "trust_steps": []
@@ -243,7 +243,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "nra-linear-abstraction",
       "dominant_candidate": true,
-      "elapsed_ms": 0.145792,
+      "elapsed_ms": 0.241611,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -254,23 +254,25 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.001586,
+        "check_evidence": 0.001629,
         "lean_reconstruction": null,
-        "parse_evidence": 0.017427,
+        "parse_evidence": 0.01653,
         "parse_lean": null,
-        "produce_evidence": 0.11480900000000001,
-        "read": 0.010556
+        "produce_evidence": 0.210197,
+        "read": 0.011484000000000001
       },
       "trust_holes": [],
       "trust_steps": []
     }
   ],
-  "limit": null,
+  "limit": 1000,
   "logic": "QF_LRA",
+  "prelude_warm_ms": 13418.987535,
+  "prelude_warmed": true,
   "slice": "qf-lra-cvc5-regress-clean-solver-vs-z3-10s.json",
   "source_revision": {
     "dirty": false,
-    "sha": "2e207eba5",
+    "sha": "496288979",
     "source": "lane-snapshot"
   },
   "summary": {

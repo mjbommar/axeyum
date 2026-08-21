@@ -9,7 +9,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "smtlib-string-front-door",
       "dominant_candidate": false,
-      "elapsed_ms": 1.481563,
+      "elapsed_ms": 1.139597,
       "evidence_certified": true,
       "evidence_check_mode": "internal-route-replay-only",
       "evidence_checked": false,
@@ -20,12 +20,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.000184,
+        "check_evidence": 0.000142,
         "lean_reconstruction": null,
-        "parse_evidence": 0.210406,
+        "parse_evidence": 0.215541,
         "parse_lean": null,
-        "produce_evidence": 1.250461,
-        "read": 0.018146
+        "produce_evidence": 0.883276,
+        "read": 0.037571
       },
       "trust_holes": [],
       "trust_steps": []
@@ -37,7 +37,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "smtlib-string-front-door",
       "dominant_candidate": false,
-      "elapsed_ms": 7.019232000000001,
+      "elapsed_ms": 4.492356,
       "evidence_certified": true,
       "evidence_check_mode": "internal-route-replay-only",
       "evidence_checked": false,
@@ -48,12 +48,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.000078,
+        "check_evidence": 0.00007000000000000001,
         "lean_reconstruction": null,
-        "parse_evidence": 0.231873,
+        "parse_evidence": 0.213117,
         "parse_lean": null,
-        "produce_evidence": 6.771491999999999,
-        "read": 0.013485
+        "produce_evidence": 4.246246999999999,
+        "read": 0.030966
       },
       "trust_holes": [],
       "trust_steps": []
@@ -65,7 +65,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "smtlib-string-front-door",
       "dominant_candidate": false,
-      "elapsed_ms": 5.391611999999999,
+      "elapsed_ms": 3.722478,
       "evidence_certified": true,
       "evidence_check_mode": "internal-route-replay-only",
       "evidence_checked": false,
@@ -76,12 +76,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.000051,
+        "check_evidence": 0.000058,
         "lean_reconstruction": null,
-        "parse_evidence": 0.306126,
+        "parse_evidence": 0.199906,
         "parse_lean": null,
-        "produce_evidence": 5.067267999999999,
-        "read": 0.015548000000000001
+        "produce_evidence": 3.4922619999999998,
+        "read": 0.028464
       },
       "trust_holes": [],
       "trust_steps": []
@@ -93,7 +93,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "smtlib-string-front-door",
       "dominant_candidate": false,
-      "elapsed_ms": 1.06057,
+      "elapsed_ms": 1.014273,
       "evidence_certified": true,
       "evidence_check_mode": "internal-route-replay-only",
       "evidence_checked": false,
@@ -104,12 +104,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.00007900000000000001,
+        "check_evidence": 0.000059,
         "lean_reconstruction": null,
-        "parse_evidence": 0.071157,
+        "parse_evidence": 0.07208200000000001,
         "parse_lean": null,
-        "produce_evidence": 0.97241,
-        "read": 0.014402
+        "produce_evidence": 0.909636,
+        "read": 0.030043
       },
       "trust_holes": [],
       "trust_steps": []
@@ -121,7 +121,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "smtlib-string-front-door",
       "dominant_candidate": false,
-      "elapsed_ms": 1.102557,
+      "elapsed_ms": 1.010157,
       "evidence_certified": true,
       "evidence_check_mode": "internal-route-replay-only",
       "evidence_checked": false,
@@ -132,12 +132,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.000069,
+        "check_evidence": 0.000053,
         "lean_reconstruction": null,
-        "parse_evidence": 0.077083,
+        "parse_evidence": 0.062956,
         "parse_lean": null,
-        "produce_evidence": 1.0089210000000002,
-        "read": 0.014089
+        "produce_evidence": 0.931454,
+        "read": 0.013644
       },
       "trust_holes": [],
       "trust_steps": []
@@ -149,7 +149,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "smtlib-string-front-door",
       "dominant_candidate": false,
-      "elapsed_ms": 1.0117369999999999,
+      "elapsed_ms": 1.087233,
       "evidence_certified": true,
       "evidence_check_mode": "internal-route-replay-only",
       "evidence_checked": false,
@@ -160,12 +160,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.00006599999999999999,
+        "check_evidence": 0.000054,
         "lean_reconstruction": null,
-        "parse_evidence": 0.071671,
+        "parse_evidence": 0.062279999999999995,
         "parse_lean": null,
-        "produce_evidence": 0.923832,
-        "read": 0.01431
+        "produce_evidence": 1.005169,
+        "read": 0.017671
       },
       "trust_holes": [],
       "trust_steps": []
@@ -177,7 +177,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "smtlib-string-front-door",
       "dominant_candidate": false,
-      "elapsed_ms": 1.689837,
+      "elapsed_ms": 1.6779469999999999,
       "evidence_certified": true,
       "evidence_check_mode": "internal-route-replay-only",
       "evidence_checked": false,
@@ -188,12 +188,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.000036,
+        "check_evidence": 0.000059999999999999995,
         "lean_reconstruction": null,
-        "parse_evidence": 0.10992600000000001,
+        "parse_evidence": 0.10658999999999999,
         "parse_lean": null,
-        "produce_evidence": 1.562486,
-        "read": 0.01499
+        "produce_evidence": 1.55495,
+        "read": 0.014335
       },
       "trust_holes": [],
       "trust_steps": []
@@ -205,7 +205,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "smtlib-string-front-door",
       "dominant_candidate": false,
-      "elapsed_ms": 1.6475389999999999,
+      "elapsed_ms": 1.480484,
       "evidence_certified": true,
       "evidence_check_mode": "internal-route-replay-only",
       "evidence_checked": false,
@@ -216,12 +216,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.000051,
+        "check_evidence": 0.000053,
         "lean_reconstruction": null,
-        "parse_evidence": 0.07166800000000001,
+        "parse_evidence": 0.060064,
         "parse_lean": null,
-        "produce_evidence": 1.558992,
-        "read": 0.015002
+        "produce_evidence": 1.402971,
+        "read": 0.015384
       },
       "trust_holes": [],
       "trust_steps": []
@@ -233,7 +233,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "smtlib-string-front-door",
       "dominant_candidate": false,
-      "elapsed_ms": 3.884713,
+      "elapsed_ms": 3.779325,
       "evidence_certified": true,
       "evidence_check_mode": "internal-route-replay-only",
       "evidence_checked": false,
@@ -244,12 +244,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.000049999999999999996,
+        "check_evidence": 0.000073,
         "lean_reconstruction": null,
-        "parse_evidence": 0.08965300000000001,
+        "parse_evidence": 0.08457100000000001,
         "parse_lean": null,
-        "produce_evidence": 3.7797490000000002,
-        "read": 0.013007
+        "produce_evidence": 3.680486,
+        "read": 0.012098
       },
       "trust_holes": [],
       "trust_steps": []
@@ -261,7 +261,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "smtlib-string-front-door",
       "dominant_candidate": false,
-      "elapsed_ms": 5.927169,
+      "elapsed_ms": 7.288551,
       "evidence_certified": true,
       "evidence_check_mode": "internal-route-replay-only",
       "evidence_checked": false,
@@ -272,35 +272,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.000052000000000000004,
+        "check_evidence": 0.000057,
         "lean_reconstruction": null,
-        "parse_evidence": 0.202663,
+        "parse_evidence": 0.19146000000000002,
         "parse_lean": null,
-        "produce_evidence": 5.707368,
-        "read": 0.015351
-      },
-      "trust_holes": [],
-      "trust_steps": []
-    },
-    {
-      "audit_outcome": "parse-error",
-      "audit_phase": "parse-evidence",
-      "baseline_matches_audit": null,
-      "baseline_outcome": "sat",
-      "dominant_candidate": false,
-      "elapsed_ms": 0.143173,
-      "error": "term error: operands must share a sort: (_ BitVec 100) vs (_ BitVec 197)",
-      "evidence_certified": false,
-      "evidence_checked": false,
-      "evidence_kind": null,
-      "file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/sat__regress0__strings__issue5542-strings-seq-mix.smt2",
-      "lean_checked": false,
-      "lean_error": null,
-      "lean_fragment": null,
-      "lean_module_bytes": null,
-      "phase_timings_ms": {
-        "parse_evidence": 0.131256,
-        "read": 0.012419
+        "produce_evidence": 7.080475,
+        "read": 0.014709
       },
       "trust_holes": [],
       "trust_steps": []
@@ -312,7 +289,35 @@
       "baseline_outcome": "sat",
       "decision_backend": "smtlib-string-front-door",
       "dominant_candidate": false,
-      "elapsed_ms": 1.2893130000000002,
+      "elapsed_ms": 8.241099,
+      "evidence_certified": true,
+      "evidence_check_mode": "internal-route-replay-only",
+      "evidence_checked": false,
+      "evidence_kind": "sat-model",
+      "file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/sat__regress0__strings__issue5542-strings-seq-mix.smt2",
+      "lean_checked": false,
+      "lean_error": null,
+      "lean_fragment": null,
+      "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.000105,
+        "lean_reconstruction": null,
+        "parse_evidence": 0.300026,
+        "parse_lean": null,
+        "produce_evidence": 7.920404,
+        "read": 0.017385
+      },
+      "trust_holes": [],
+      "trust_steps": []
+    },
+    {
+      "audit_outcome": "sat",
+      "audit_phase": "complete",
+      "baseline_matches_audit": true,
+      "baseline_outcome": "sat",
+      "decision_backend": "smtlib-string-front-door",
+      "dominant_candidate": false,
+      "elapsed_ms": 1.356335,
       "evidence_certified": true,
       "evidence_check_mode": "internal-route-replay-only",
       "evidence_checked": false,
@@ -323,12 +328,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.000061000000000000005,
+        "check_evidence": 0.00008499999999999999,
         "lean_reconstruction": null,
-        "parse_evidence": 0.08232400000000001,
+        "parse_evidence": 0.111303,
         "parse_lean": null,
-        "produce_evidence": 1.192916,
-        "read": 0.011549
+        "produce_evidence": 1.215889,
+        "read": 0.026931
       },
       "trust_holes": [],
       "trust_steps": []
@@ -340,7 +345,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "smtlib-string-front-door",
       "dominant_candidate": false,
-      "elapsed_ms": 1.3789500000000001,
+      "elapsed_ms": 1.7685190000000002,
       "evidence_certified": true,
       "evidence_check_mode": "internal-route-replay-only",
       "evidence_checked": false,
@@ -351,12 +356,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.000057,
+        "check_evidence": 0.000053,
         "lean_reconstruction": null,
-        "parse_evidence": 0.10569300000000001,
+        "parse_evidence": 0.11268900000000001,
         "parse_lean": null,
-        "produce_evidence": 1.258263,
-        "read": 0.013349999999999999
+        "produce_evidence": 1.638072,
+        "read": 0.015869
       },
       "trust_holes": [],
       "trust_steps": []
@@ -368,7 +373,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "smtlib-string-front-door",
       "dominant_candidate": false,
-      "elapsed_ms": 3.223923,
+      "elapsed_ms": 3.914448,
       "evidence_certified": true,
       "evidence_check_mode": "internal-route-replay-only",
       "evidence_checked": false,
@@ -379,12 +384,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.000051,
+        "check_evidence": 0.000057,
         "lean_reconstruction": null,
-        "parse_evidence": 0.155914,
+        "parse_evidence": 0.216748,
         "parse_lean": null,
-        "produce_evidence": 3.052032,
-        "read": 0.014353
+        "produce_evidence": 3.681481,
+        "read": 0.01429
       },
       "trust_holes": [],
       "trust_steps": []
@@ -396,7 +401,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "smtlib-string-front-door",
       "dominant_candidate": false,
-      "elapsed_ms": 2.261981,
+      "elapsed_ms": 2.31689,
       "evidence_certified": true,
       "evidence_check_mode": "internal-route-replay-only",
       "evidence_checked": false,
@@ -407,12 +412,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.000047,
+        "check_evidence": 0.00006400000000000001,
         "lean_reconstruction": null,
-        "parse_evidence": 0.120247,
+        "parse_evidence": 0.154676,
         "parse_lean": null,
-        "produce_evidence": 2.1279559999999997,
-        "read": 0.011782
+        "produce_evidence": 2.136808,
+        "read": 0.023222
       },
       "trust_holes": [],
       "trust_steps": []
@@ -424,7 +429,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "smtlib-string-front-door",
       "dominant_candidate": false,
-      "elapsed_ms": 4.988829,
+      "elapsed_ms": 4.750332,
       "evidence_certified": true,
       "evidence_check_mode": "internal-route-replay-only",
       "evidence_checked": false,
@@ -435,12 +440,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.000049999999999999996,
+        "check_evidence": 0.000047,
         "lean_reconstruction": null,
-        "parse_evidence": 0.246265,
+        "parse_evidence": 0.25622,
         "parse_lean": null,
-        "produce_evidence": 4.726562,
-        "read": 0.014022999999999999
+        "produce_evidence": 4.473879,
+        "read": 0.018559
       },
       "trust_holes": [],
       "trust_steps": []
@@ -452,7 +457,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "smtlib-string-front-door",
       "dominant_candidate": false,
-      "elapsed_ms": 1.367739,
+      "elapsed_ms": 1.4236,
       "evidence_certified": true,
       "evidence_check_mode": "internal-route-replay-only",
       "evidence_checked": false,
@@ -463,12 +468,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.000044,
+        "check_evidence": 0.000042,
         "lean_reconstruction": null,
-        "parse_evidence": 0.126398,
+        "parse_evidence": 0.159423,
         "parse_lean": null,
-        "produce_evidence": 1.226188,
-        "read": 0.012657999999999999
+        "produce_evidence": 1.245178,
+        "read": 0.016463000000000002
       },
       "trust_holes": [],
       "trust_steps": []
@@ -480,7 +485,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "smtlib-string-front-door",
       "dominant_candidate": false,
-      "elapsed_ms": 1.679988,
+      "elapsed_ms": 1.716383,
       "evidence_certified": true,
       "evidence_check_mode": "internal-route-replay-only",
       "evidence_checked": false,
@@ -491,12 +496,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.000043,
+        "check_evidence": 0.000042,
         "lean_reconstruction": null,
-        "parse_evidence": 0.099319,
+        "parse_evidence": 0.107751,
         "parse_lean": null,
-        "produce_evidence": 1.5644820000000002,
-        "read": 0.014158
+        "produce_evidence": 1.5908689999999999,
+        "read": 0.015222
       },
       "trust_holes": [],
       "trust_steps": []
@@ -508,7 +513,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "smtlib-string-front-door",
       "dominant_candidate": false,
-      "elapsed_ms": 1.275186,
+      "elapsed_ms": 1.188369,
       "evidence_certified": true,
       "evidence_check_mode": "internal-route-replay-only",
       "evidence_checked": false,
@@ -519,12 +524,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.000046,
+        "check_evidence": 0.000053,
         "lean_reconstruction": null,
-        "parse_evidence": 0.078567,
+        "parse_evidence": 0.087286,
         "parse_lean": null,
-        "produce_evidence": 1.180684,
-        "read": 0.014107999999999999
+        "produce_evidence": 1.085107,
+        "read": 0.013753
       },
       "trust_holes": [],
       "trust_steps": []
@@ -536,7 +541,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "smtlib-string-front-door",
       "dominant_candidate": false,
-      "elapsed_ms": 0.8555579999999999,
+      "elapsed_ms": 0.9287399999999999,
       "evidence_certified": true,
       "evidence_check_mode": "internal-route-replay-only",
       "evidence_checked": false,
@@ -547,12 +552,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.000044,
+        "check_evidence": 0.000059,
         "lean_reconstruction": null,
-        "parse_evidence": 0.071996,
+        "parse_evidence": 0.104461,
         "parse_lean": null,
-        "produce_evidence": 0.7676780000000001,
-        "read": 0.013946
+        "produce_evidence": 0.79993,
+        "read": 0.022171000000000003
       },
       "trust_holes": [],
       "trust_steps": []
@@ -564,7 +569,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "smtlib-string-front-door",
       "dominant_candidate": false,
-      "elapsed_ms": 1.478783,
+      "elapsed_ms": 1.212863,
       "evidence_certified": true,
       "evidence_check_mode": "internal-route-replay-only",
       "evidence_checked": false,
@@ -575,12 +580,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.000031,
+        "check_evidence": 0.000053,
         "lean_reconstruction": null,
-        "parse_evidence": 0.110862,
+        "parse_evidence": 0.118558,
         "parse_lean": null,
-        "produce_evidence": 1.3486719999999999,
-        "read": 0.016834
+        "produce_evidence": 1.0756080000000001,
+        "read": 0.016578
       },
       "trust_holes": [],
       "trust_steps": []
@@ -592,7 +597,7 @@
       "baseline_outcome": "unsat",
       "decision_backend": "smtlib-string-front-door",
       "dominant_candidate": false,
-      "elapsed_ms": 1.1266559999999999,
+      "elapsed_ms": 1.21936,
       "evidence_certified": false,
       "evidence_check_mode": "not-applicable-uncertified",
       "evidence_checked": false,
@@ -603,34 +608,36 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.000073,
+        "check_evidence": 0.000047,
         "lean_reconstruction": null,
-        "parse_evidence": 0.08001,
+        "parse_evidence": 0.10958000000000001,
         "parse_lean": null,
-        "produce_evidence": 1.028691,
-        "read": 0.015654
+        "produce_evidence": 1.084334,
+        "read": 0.023225
       },
       "trust_holes": [],
       "trust_steps": []
     }
   ],
-  "limit": null,
+  "limit": 1000,
   "logic": "QF_SEQ",
+  "prelude_warm_ms": 13162.800883999998,
+  "prelude_warmed": true,
   "slice": "qf-seq-cvc5-regress-clean-solver-vs-z3-10s.json",
   "source_revision": {
     "dirty": false,
-    "sha": "406662100",
+    "sha": "496288979",
     "source": "lane-snapshot"
   },
   "summary": {
-    "audit_errors": 1,
+    "audit_errors": 0,
     "audited_decided": 22,
     "audited_unsat": 1,
     "baseline_decided": 22,
     "baseline_mismatches": 0,
     "dominant_candidates": 0,
     "dominant_pct_audited": 0.0,
-    "evidence_certified": 20,
+    "evidence_certified": 21,
     "evidence_checked": 0,
     "instances": 33,
     "lean_checked_unsat": 0,

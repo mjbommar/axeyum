@@ -2,12 +2,14 @@
   "baseline": "bench-results/baselines/lia-cvc5-regress-clean-quantified-solver-vs-z3-10s.json",
   "complete_audit": true,
   "instances": [],
-  "limit": null,
+  "limit": 1000,
   "logic": "LIA",
+  "prelude_warm_ms": 13307.301349,
+  "prelude_warmed": true,
   "slice": "lia-cvc5-regress-clean-quantified-solver-vs-z3-10s.json",
   "source_revision": {
     "dirty": false,
-    "sha": "2e207eba5",
+    "sha": "496288979",
     "source": "lane-snapshot"
   },
   "summary": {

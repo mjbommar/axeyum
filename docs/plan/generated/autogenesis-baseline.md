@@ -4,20 +4,20 @@
 > This is the stable Phase-0 source snapshot; an execution capture binds it
 > to an exact clean Git commit without creating a self-referential artifact.
 
-Source identity: `sha256:8dafbf1a197d61a814364468123fbe9463a0dce5fe10e3eb352ab88de81ecd07`
+Source identity: `sha256:aa1536a4ad36a1240f7f9fcfdbfa560ae4d9007c2a953125664210b4e5678f80`
 
 ## Ledger and chain substrate
 
 | Population | Facts | Edges | Isolated | Maximum depth |
 |---|---:|---:|---:|---:|
-| All facts | 324 | 135 | 173 | 6 |
-| `kernel-lean` | 40 | 52 | 6 | 6 |
+| All facts | 342 | 155 | 176 | 10 |
+| `kernel-lean` | 60 | 72 | 11 | 10 |
 
 The kernel row is a candidate substrate, not by itself proof that an edge is an
 operational unlock. The committed Autogenesis-1 result supplies the credited
 pre-B counterfactual and repeated authoritative two-write acquisition.
 The dependency gate can map **35** of
-**40** kernel facts to named theorems;
+**60** kernel facts to named theorems;
 the remaining facts stay explicit rather than being guessed.
 
 ## Backward requirements
@@ -53,6 +53,6 @@ the remaining facts stay explicit rather than being guessed.
 
 ## Proof-production context
 
-The current proof-gap authority covers **327** baseline UNSAT instances,
-of which **259** satisfy the recorded dominance conditions.
+The current proof-gap authority covers **326** baseline UNSAT instances,
+of which **269** satisfy the recorded dominance conditions.
 This is route evidence available to the programme, not autonomous-acquisition credit.

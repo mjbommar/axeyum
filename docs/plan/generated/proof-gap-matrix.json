@@ -33,12 +33,12 @@
     {
       "category": "lean-reconstruction-gap",
       "description": "Certified, checked, trust-free evidence lacks Lean reconstruction.",
-      "instances": 15
+      "instances": 10
     },
     {
       "category": "dominant",
       "description": "Certified, checked, trust-free, and Lean-reconstructed UNSAT.",
-      "instances": 262
+      "instances": 269
     }
   ],
   "evidence_kinds": [
@@ -88,19 +88,6 @@
       "dominant_unsat": 0,
       "evidence_certified": 3,
       "evidence_checked": 3,
-      "evidence_kind": "monomial-bound-unsat",
-      "lean_checked": 0,
-      "proof_errors": 0,
-      "trust_hole_free": 3,
-      "trust_hole_instances": 0
-    },
-    {
-      "audit_reported_checked": 3,
-      "audit_unsat": 3,
-      "baseline_unsat": 3,
-      "dominant_unsat": 0,
-      "evidence_certified": 3,
-      "evidence_checked": 3,
       "evidence_kind": "real-handelman-unsat",
       "lean_checked": 0,
       "proof_errors": 0,
@@ -111,26 +98,26 @@
       "audit_reported_checked": 3,
       "audit_unsat": 3,
       "baseline_unsat": 3,
-      "dominant_unsat": 0,
+      "dominant_unsat": 1,
       "evidence_certified": 3,
       "evidence_checked": 3,
-      "evidence_kind": "string-length-unsat",
-      "lean_checked": 0,
+      "evidence_kind": "monomial-bound-unsat",
+      "lean_checked": 1,
       "proof_errors": 0,
       "trust_hole_free": 3,
       "trust_hole_instances": 0
     },
     {
-      "audit_reported_checked": 2,
-      "audit_unsat": 2,
-      "baseline_unsat": 2,
-      "dominant_unsat": 0,
-      "evidence_certified": 2,
-      "evidence_checked": 2,
-      "evidence_kind": "real-product-unsat",
-      "lean_checked": 0,
+      "audit_reported_checked": 3,
+      "audit_unsat": 3,
+      "baseline_unsat": 3,
+      "dominant_unsat": 2,
+      "evidence_certified": 3,
+      "evidence_checked": 3,
+      "evidence_kind": "string-length-unsat",
+      "lean_checked": 2,
       "proof_errors": 0,
-      "trust_hole_free": 2,
+      "trust_hole_free": 3,
       "trust_hole_instances": 0
     },
     {
@@ -225,16 +212,16 @@
       "trust_hole_instances": 0
     },
     {
-      "audit_reported_checked": 8,
-      "audit_unsat": 8,
-      "baseline_unsat": 8,
-      "dominant_unsat": 8,
-      "evidence_certified": 8,
-      "evidence_checked": 8,
+      "audit_reported_checked": 10,
+      "audit_unsat": 10,
+      "baseline_unsat": 10,
+      "dominant_unsat": 10,
+      "evidence_certified": 10,
+      "evidence_checked": 10,
       "evidence_kind": "sos-unsat",
-      "lean_checked": 8,
+      "lean_checked": 10,
       "proof_errors": 0,
-      "trust_hole_free": 8,
+      "trust_hole_free": 10,
       "trust_hole_instances": 0
     },
     {
@@ -511,6 +498,19 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 2,
+      "audit_unsat": 2,
+      "baseline_unsat": 2,
+      "dominant_unsat": 2,
+      "evidence_certified": 2,
+      "evidence_checked": 2,
+      "evidence_kind": "real-product-unsat",
+      "lean_checked": 2,
+      "proof_errors": 0,
+      "trust_hole_free": 2,
+      "trust_hole_instances": 0
+    },
+    {
       "audit_reported_checked": 1,
       "audit_unsat": 1,
       "baseline_unsat": 1,
@@ -733,12 +733,6 @@
     },
     {
       "evidence_kind": "monomial-bound-unsat",
-      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__ones.smt2",
-      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
-      "logic": "QF_NRA"
-    },
-    {
-      "evidence_kind": "monomial-bound-unsat",
       "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__simple-mono-unsat.smt2",
       "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
       "logic": "QF_NRA"
@@ -762,34 +756,10 @@
       "logic": "QF_NRA"
     },
     {
-      "evidence_kind": "real-product-unsat",
-      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__coeff-unsat-base.smt2",
-      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: nonlinear real multiplication",
-      "logic": "QF_NRA"
-    },
-    {
-      "evidence_kind": "real-product-unsat",
-      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__simple-mono.smt2",
-      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: nonlinear real multiplication",
-      "logic": "QF_NRA"
-    },
-    {
       "evidence_kind": "real-zero-product-unsat",
       "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__subs0-unsat-confirm.smt2",
       "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
       "logic": "QF_NRA"
-    },
-    {
-      "evidence_kind": "string-length-unsat",
-      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_str004.smt2",
-      "lean_error": "unknown",
-      "logic": "QF_S"
-    },
-    {
-      "evidence_kind": "string-length-unsat",
-      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_str005.smt2",
-      "lean_error": "unknown",
-      "logic": "QF_S"
     },
     {
       "evidence_kind": "string-length-unsat",
@@ -1146,13 +1116,13 @@
       "audit_unsat": 14,
       "baseline_unsat": 14,
       "blockers": {
-        "lean-reconstruction-gap": 9,
+        "lean-reconstruction-gap": 6,
         "uncertified-and-unchecked": 2
       },
-      "dominant_unsat": 3,
+      "dominant_unsat": 6,
       "evidence_certified": 12,
       "evidence_checked": 12,
-      "lean_checked": 3,
+      "lean_checked": 6,
       "logic": "QF_NRA",
       "proof_errors": 0,
       "slice": "qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json",
@@ -1161,19 +1131,19 @@
       "trust_hole_instances": 0
     },
     {
-      "audit_reported_checked": 17,
-      "audit_unsat": 17,
-      "baseline_unsat": 17,
+      "audit_reported_checked": 19,
+      "audit_unsat": 19,
+      "baseline_unsat": 19,
       "blockers": {},
-      "dominant_unsat": 17,
-      "evidence_certified": 17,
-      "evidence_checked": 17,
-      "lean_checked": 17,
+      "dominant_unsat": 19,
+      "evidence_certified": 19,
+      "evidence_checked": 19,
+      "lean_checked": 19,
       "logic": "QF_NRA",
       "proof_errors": 0,
       "slice": "qf-nra-synthetic-graduated-vs-z3.json",
       "source": "bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json",
-      "trust_hole_free": 17,
+      "trust_hole_free": 19,
       "trust_hole_instances": 0
     },
     {
@@ -1181,13 +1151,13 @@
       "audit_unsat": 26,
       "baseline_unsat": 26,
       "blockers": {
-        "lean-reconstruction-gap": 3,
+        "lean-reconstruction-gap": 1,
         "uncertified-and-unchecked": 14
       },
-      "dominant_unsat": 9,
+      "dominant_unsat": 11,
       "evidence_certified": 12,
       "evidence_checked": 12,
-      "lean_checked": 9,
+      "lean_checked": 11,
       "logic": "QF_S",
       "proof_errors": 0,
       "slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
@@ -1415,156 +1385,156 @@
   "sources": [
     {
       "path": "bench-results/dominance/bv-bitwuzla-regress-clean-quantified-dominance-audit.json",
-      "sha256": "94ae8ca0d925618e9f8daea68d13525933110356bd0ee1ef27eec61b6c58c7f2"
+      "sha256": "f338919dc61bb94174170af97e424810787d08d6b1466d0d1a1f5193f0a0ae07"
     },
     {
       "path": "bench-results/dominance/bv-cvc5-regress-clean-quantified-dominance-audit.json",
-      "sha256": "e4cdb1d262cc9a8355d2932c2f8f3c78ee423abb4c293e0b256a5c4bc3764a1b"
+      "sha256": "8fd825e874adf1f4e70626578d42b1693c6ad2d81dcb531c493ff641b691c1e6"
     },
     {
       "path": "bench-results/dominance/lia-cvc5-regress-clean-quantified-dominance-audit.json",
-      "sha256": "3935de6c18cd3fda6d8dc276ad1987ab0094ef01586001392fee90b86ba9ea22"
+      "sha256": "683bbf5bc49b5d226bee58f2c6f85a930655cfc7e891ac41f616559ffece6040"
     },
     {
       "path": "bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json",
-      "sha256": "172bac2fdc53f806700a2e9a121fd05cf25aa1ca0847a3748df0b19b25db0127"
+      "sha256": "5e85c941ba853e53dd45d1877b0631de1d55026e8029fcbd4424d8c77a32214d"
     },
     {
       "path": "bench-results/dominance/qf-alia-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "945c332aec7884fa05d0ef2eacf1f308477dc91cf7433aa656b57b494e66a068"
+      "sha256": "e168eca5362d694d5ebfb0300fdbdb5be635257e04ce02c5646ee47494fbab00"
     },
     {
       "path": "bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json",
-      "sha256": "ad6ef2ce7d5a2b67eb190ec8694be3e11bfafd47158692032b8972c728085ccb"
+      "sha256": "67f4236ae0d8a2bb7396aa873438f9d76158f3129fb21fe1b1e26d71730f6043"
     },
     {
       "path": "bench-results/dominance/qf-aufbv-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "86f4730b252bf41fcd7ebd4d983174f6210b7327f77c86d116cbfeec236c0f68"
+      "sha256": "4ec1e53e6ae75222f72d4f8be5facf71cf273b1400f1cda2dadf3650dcad366a"
     },
     {
       "path": "bench-results/dominance/qf-auflia-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "adc41a6020c37bddffc625652f18c74d2052fecf73501a26c2237a22c84ccc9d"
+      "sha256": "1e701a0cfc39bdde86dbdbece3bc0c01e0752a32fecce24b53bfab8cc1d2c7cc"
     },
     {
       "path": "bench-results/dominance/qf-ax-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "c092bd4deb7e01f1ee17401cc6e6964c8a83460ac9e2346db4b4a5ce223aa132"
+      "sha256": "ba552c1f3f99c46b008e845add673c6ee860ab44706a7eeed7ec0cb899100c43"
     },
     {
       "path": "bench-results/dominance/qf-bv-curated-bvred-dominance-audit.json",
-      "sha256": "d14b62b5689533302a4e3de49b9062afae0ecef1678e43fdd13c595811331063"
+      "sha256": "f544962afd54ff66c46e767ebfa60680eca328402fb02b00ab4dbcbe431ca2ce"
     },
     {
       "path": "bench-results/dominance/qf-bvfp-bitwuzla-regress-clean-dominance-audit.json",
-      "sha256": "ae468294e3f0b9fa2536aa78a730d86e091da938da73b2af0f5109753389e370"
+      "sha256": "ec4264c703ecbe980b761453d0f18a14ce5058f82dd2a54783977ba4a577fbdb"
     },
     {
       "path": "bench-results/dominance/qf-dt-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "d2b72dbda9af3f21ad3eda5baf0ed71d4c8715f87b8d693779beab81a8407e5e"
+      "sha256": "fc2416b51321cd07b295c4afda30ef07505d6f5164b6e2e2dc254ec7cd7a71e2"
     },
     {
       "path": "bench-results/dominance/qf-ff-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "3321ff256e028b59d837642bf556b501dc893f94ca63d1c2594a719d400759e0"
+      "sha256": "b1444a20607944e79a667a9a62964586486f80fc6c9ddb71f480a7cba0d62df5"
     },
     {
       "path": "bench-results/dominance/qf-fp-bitwuzla-regress-clean-dominance-audit.json",
-      "sha256": "ed473f5706f0445def84758bc0bad4cc28c93df434abcf348ff69937b3ca7b85"
+      "sha256": "a953b166f45259ddd98f08c884c0a51fcabd205b60baaf5cb25ec80c5df71f15"
     },
     {
       "path": "bench-results/dominance/qf-lia-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "8b0a338dd735880178c833657b2fe8ddf2df760f38e0179653feb29503a8a337"
+      "sha256": "522117430e2314afc5956fb54ca04f238e7067717585e3d4fc4797da5bf3820e"
     },
     {
       "path": "bench-results/dominance/qf-lra-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "53049800fb5091637c9bc21fe5524f1c5272603e34a24e311d0f97a1a4a391ad"
+      "sha256": "51ff236f76e73c568f3237bcf5b17a6e3a8add6961b8870f1251216d61196ca7"
     },
     {
       "path": "bench-results/dominance/qf-nia-curated-iand-dominance-audit.json",
-      "sha256": "31d1df3a340b521b0e5719f3a9bef5337071e21ac7d5a49f0dfc0ad9c44ab5e4"
+      "sha256": "39778ea8ca6722d6216524e600a38019912e37eb05cf5f9261aeb6e627fb37a4"
     },
     {
       "path": "bench-results/dominance/qf-nia-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "a25e1d021468be89a43e52f2e395a230ad90e8eb0ba0ec4fb0755bc7e70718fa"
+      "sha256": "d2c19470944a3d3d31826ae8f975e1e96ef6126c348bc4cc137f02952f435ac8"
     },
     {
       "path": "bench-results/dominance/qf-nia-synthetic-graduated-dominance-audit.json",
-      "sha256": "5d58f41bae656d67eb0ab6c57e656c2f56fcdbdc651d93103f2707b5c1ce30c3"
+      "sha256": "d3e0e6fd11aa424ffa78988def5126a5c68fd3d56043ddc8d92adda9094331da"
     },
     {
       "path": "bench-results/dominance/qf-nra-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "6821bf126c6e4f8d9824a555c530023f70f3287d91b05a4b95eb0efde8e57df3"
+      "sha256": "640913399a9e5bacc3b92dde5aa3d790da8569d355bcf1b3245e5c82dc63a7db"
     },
     {
       "path": "bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json",
-      "sha256": "6fe1d7b02d6aef5a640ccfb52b922ebf8986fa62251b0e14ca534ed17d9ee25b"
+      "sha256": "7a522d5ee2b16b73705d2d06eb05591fa5d278c6fd8680519ea0fb16a18aeb80"
     },
     {
       "path": "bench-results/dominance/qf-s-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "33c7861182732db84bd728af51ac0646ce36b7058db0b8dcabd0769dea8784dd"
+      "sha256": "b770252f0a66ed3602dd1aaeb647de09dea7ae93db5b6477f90a1d63f381371c"
     },
     {
       "path": "bench-results/dominance/qf-seq-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "90364c84d80db5ffd922dbdf352f0133b8ae590eb4977af137aa68cf4ecbd732"
+      "sha256": "aea4c5e479b3c312a21db22be57ae00ba865bc199541a81dac820a8c98f122a7"
     },
     {
       "path": "bench-results/dominance/qf-slia-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "2e91265620a9d091d33fe5310427768e4b9cf8eab70f1d0b34b90b1e8cac821d"
+      "sha256": "6a06dce3aa4a0edae608ddfbede636d0bf225bc3273ed4d2259ce50e83d042d9"
     },
     {
       "path": "bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-dominance-audit.json",
-      "sha256": "5efc087332ec63d5662af8e3a83d0d29ef3a08532f1b870c463eee4e87c0c4f8"
+      "sha256": "db9fe2dcce8cee3182e4331e5eb0a46b32fd7fd04db504cacf46054314b2bb80"
     },
     {
       "path": "bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json",
-      "sha256": "ab3b0fa37acb3bc5a38fbc926407e7ee5fe19683e964e484a5beed416a82cb56"
+      "sha256": "99f3f4c402062d69ffe583e59c8d5d30e035d42379ea5ae4bf7edb3fe69c9979"
     },
     {
       "path": "bench-results/dominance/qf-uf-cvc5-regress-clean-overbound-uninterp-sorts-dominance-audit.json",
-      "sha256": "c7e774e4e6dda933b041c52691a2cfd1191792e80e2fa93b9243b1b16c9e85e3"
+      "sha256": "fd4a25c78e5474816fefbc0a649d867dfd5e3e9a2f098082a23ed8e235fe722e"
     },
     {
       "path": "bench-results/dominance/qf-ufbv-bitwuzla-regress-clean-dominance-audit.json",
-      "sha256": "dd58d41730ec5101a513473003284f113243485b09a92f4ade45e3ea6d1b6563"
+      "sha256": "b10c3cbcfcc77fbc040f23f8086acd52b7262d2fe4450eaa929f4ac3af1cf392"
     },
     {
       "path": "bench-results/dominance/qf-ufbv-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "c532748d2bab9a59dd9bab568bd4d41a7f996ec3bd3547c9e219f038d2501e08"
+      "sha256": "5334c355df006b6ca259ae4618ed054a17c929b9f56e1b553b9a36dabc266bad"
     },
     {
       "path": "bench-results/dominance/qf-ufff-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "7242b632a7a1dc1fd0429a4b137a0bb30e48f86a2615e8751ac9c75f8080687e"
+      "sha256": "ce323deb5d01660b557713c22d89392ffce56d5a9075de5ab00d6605d602724b"
     },
     {
       "path": "bench-results/dominance/qf-uflia-curated-named-dominance-audit.json",
-      "sha256": "580bb2f33492527b68e8b7248625efeb88ece383b6fda8280a2c7aeaee9c93e8"
+      "sha256": "13d579937b103e1e348596e348da8c2ca36271bb65df7cab6969471e56e022d8"
     },
     {
       "path": "bench-results/dominance/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json",
-      "sha256": "673cf1467a73952ff44a40bd2199433981ea60a08c88ed467cf6d8fcf7fed55b"
+      "sha256": "a04cfa7dd41d239de6531d3702e73b77a97bb4124213d0ba55b863748bc8e757"
     },
     {
       "path": "bench-results/dominance/qf-uflia-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "b54a1ef029542dfebf09104c2310adaf722923174928c8c16c724987e904a380"
+      "sha256": "5c10e9dd0a503a4000764044c4c1a85ff092c9db7bfffeef712fe05a6bde3418"
     },
     {
       "path": "bench-results/dominance/qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts-dominance-audit.json",
-      "sha256": "964ac6d7aaf9f2a91007f40ed7b1125490e93c4cac24cca5a9808a7bf4f38f60"
+      "sha256": "cad5129ecdd32bc5c5cbe39427816bb611b1259e03c75d34224772c8d38582a6"
     },
     {
       "path": "bench-results/dominance/uf-cvc5-regress-clean-quantified-dominance-audit.json",
-      "sha256": "47bea14253cf43dff400829d43993765383d894085437b1095f1815c833be88a"
+      "sha256": "c6656a7cbbeb0dc67f503de7570773d0bff2fa536ebdd051b40b92da421dca9c"
     }
   ],
   "summary": {
-    "audit_reported_checked": 278,
-    "audit_unsat": 320,
-    "baseline_unsat": 324,
+    "audit_reported_checked": 280,
+    "audit_unsat": 322,
+    "baseline_unsat": 326,
     "complete_audits": 35,
-    "dominant_unsat": 262,
-    "evidence_certified": 278,
-    "evidence_checked": 278,
-    "lean_checked": 262,
+    "dominant_unsat": 269,
+    "evidence_certified": 280,
+    "evidence_checked": 280,
+    "lean_checked": 269,
     "proof_errors": 4,
-    "trust_hole_free": 319,
+    "trust_hole_free": 321,
     "trust_hole_instances": 5
   },
   "trust_holes": [
