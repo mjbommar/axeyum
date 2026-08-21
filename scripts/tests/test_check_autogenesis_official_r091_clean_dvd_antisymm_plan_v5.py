@@ -48,6 +48,11 @@ assert EXACT_V5_SPEC and EXACT_V5_SPEC.loader
 EXACT_V5 = importlib.util.module_from_spec(EXACT_V5_SPEC)
 EXACT_V5_SPEC.loader.exec_module(EXACT_V5)
 
+COPRIME_AUDIT_SPEC = importlib.util.spec_from_file_location("coprime_carrier_audit", ROOT / "scripts/check-autogenesis-nat-gcd-fib-add-self-coprime-carrier-audit-plan.py")
+assert COPRIME_AUDIT_SPEC and COPRIME_AUDIT_SPEC.loader
+COPRIME_AUDIT = importlib.util.module_from_spec(COPRIME_AUDIT_SPEC)
+COPRIME_AUDIT_SPEC.loader.exec_module(COPRIME_AUDIT)
+
 
 class PlanControls(unittest.TestCase):
     def test_live_plan_passes(self) -> None:
@@ -148,6 +153,18 @@ class ExactV4V5Controls(unittest.TestCase):
         plan["execution_correction"]["source_changes_authorized"] = True
         with self.assertRaises(EXACT_V5.BoundaryError):
             EXACT_V5.validate(result, plan)
+
+
+class CoprimeCarrierAuditControls(unittest.TestCase):
+    def test_live_plan_passes(self) -> None:
+        self.assertEqual(COPRIME_AUDIT.validate()[1]["budget"]["max_complete_audits"], 1)
+
+    def test_rendering_mutation_fails(self) -> None:
+        result, plan = COPRIME_AUDIT.validate()
+        plan = copy.deepcopy(plan)
+        plan["audit"]["proof_terms_types_or_values_may_be_rendered"] = True
+        with self.assertRaises(COPRIME_AUDIT.PlanError):
+            COPRIME_AUDIT.validate(result, plan)
 
 
 if __name__ == "__main__":
