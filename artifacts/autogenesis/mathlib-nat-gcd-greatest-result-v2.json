@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-gcd-greatest-result-v2",
+  "state": "declined-before-theorem-construction-missing-separate-antisymmetry-root",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-nat-gcd-greatest-plan-v2.json"
+  },
+  "implementation_commit": "28ff674ba",
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/28ff674ba-target-native-gcd-greatest-v3",
+    "index_sha256": "0dbdeb7e5c91507a35dd53ae0751284ad9349b3b2a2a6ea999cea024f1d42d8e",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "decline": {
+    "stage": "post-input-import-required-root-resolution",
+    "class": "MissingSeparatelySealedProofRoot",
+    "missing_name": "Axeyum.Autogenesis.dvdAntisymmOfficialV1",
+    "cause": "the three GCD universal-property roots do not depend on divisibility antisymmetry, so their root-selected capsule correctly omits it",
+    "same_diagnostic_twice": true,
+    "stderr_sha256": "c6ea1925697f37ac416eb58242de29767ed627aa1c2833218ec10c96a38d4e0a"
+  },
+  "execution": {
+    "complete_invocations": 2,
+    "successful_input_imports": 2,
+    "exact_target_submissions": 0,
+    "exports": 0,
+    "fresh_output_imports": 0,
+    "retries": 0
+  },
+  "authority": {
+    "target_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next": "compose the independently sealed clean divisibility-antisymmetry root into the accepted GCD capsule before constructing the unchanged exact target proof",
+  "limitations": "No theorem or fact credit is granted."
+}

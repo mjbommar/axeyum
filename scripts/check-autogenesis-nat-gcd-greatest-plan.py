@@ -12,7 +12,7 @@ from typing import Any
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-PLAN = ROOT / "artifacts/autogenesis/mathlib-nat-gcd-greatest-plan-v2.json"
+PLAN = ROOT / "artifacts/autogenesis/mathlib-nat-gcd-greatest-plan-v3.json"
 FACT = ROOT / "artifacts/facts/F-ml430-nat-gcd-greatest-0a04214a.json"
 
 
@@ -36,9 +36,9 @@ def validate(plan: dict[str, Any] | None = None) -> dict[str, Any]:
     if (
         plan.get("schema_version") != 1
         or plan.get("kind")
-        != "axeyum-autogenesis-mathlib-nat-gcd-greatest-plan-v2"
+        != "axeyum-autogenesis-mathlib-nat-gcd-greatest-plan-v3"
         or plan.get("state")
-        != "preregistered-minimal-gcd-helper-before-code-or-execution"
+        != "preregistered-two-capsule-gcd-greatest-before-code-or-execution"
     ):
         raise PlanError("plan identity changed")
     predecessor = plan["predecessor"]
@@ -56,14 +56,20 @@ def validate(plan: dict[str, Any] | None = None) -> dict[str, Any]:
         or any(key in fact for key in ("proof_route", "axiom_footprint"))
     ):
         raise PlanError("target fact identity or open state changed")
-    capsule = plan["input_capsule"]
-    capsule_path = pathlib.Path(capsule["path"])
-    if (
-        sha256(capsule_path) != capsule["sha256"]
-        or capsule_path.stat().st_size != capsule["bytes"]
-        or stat.S_IMODE(capsule_path.stat().st_mode) != 0o444
-    ):
-        raise PlanError("input capsule changed")
+    capsules = plan["input_capsules"]
+    if [row.get("role") for row in capsules] != [
+        "gcd-universal-properties",
+        "divisibility-antisymmetry",
+    ]:
+        raise PlanError("input capsule roles changed")
+    for capsule in capsules:
+        capsule_path = pathlib.Path(capsule["path"])
+        if (
+            sha256(capsule_path) != capsule["sha256"]
+            or capsule_path.stat().st_size != capsule["bytes"]
+            or stat.S_IMODE(capsule_path.stat().st_mode) != 0o444
+        ):
+            raise PlanError(f"input capsule changed: {capsule['role']}")
     if plan["required_direct_theorem_dependencies"] != [
         "Axeyum.Autogenesis.dvdAntisymmOfficialV1",
         "Axeyum.Autogenesis.dvdGcdOfficialV1",
@@ -74,6 +80,7 @@ def validate(plan: dict[str, Any] | None = None) -> dict[str, Any]:
     if plan["acceptance"] != {
         "one_driver_build": True,
         "complete_invocations": 2,
+        "composition_receipts": 2,
         "exact_target_submissions": 2,
         "exports": 2,
         "fresh_imports": 4,
@@ -85,6 +92,7 @@ def validate(plan: dict[str, Any] | None = None) -> dict[str, Any]:
     if plan["budget"] != {
         "max_driver_builds": 1,
         "max_complete_invocations": 2,
+        "max_compositions": 2,
         "max_exact_target_submissions": 2,
         "max_exports": 2,
         "max_imports": 4,
