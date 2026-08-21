@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-hayes-exact-order-linear-saving",
+  "title": "Linear saving in exact-order binary Hayes trace layers",
+  "statement": "Let ell>=200, n in {2ell+1,2ell+2}, and a=ell-ceil(log2 ell)-1. For every a<=j<=ell and every nonempty family X_(j,s) of Hayes characters of exact conductor j and exact order 2^s, 4ell times the absolute signed trace sum over X_(j,s) is at most |X_(j,s)|(j-1)2^ceil(n/2).",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"bound\":\"4*ell*|T_(j,s)(n)| <= |X_(j,s)|*(j-1)*2^ceil(n/2)\",\"degrees\":[\"2*ell+1\",\"2*ell+2\"],\"field_order\":2,\"format\":\"axeyum-gf2-hayes-exact-order-linear-saving\",\"level_min\":200,\"version\":1}",
+    "fragment": "none",
+    "free_symbols": ["ell", "n", "j", "s"]
+  },
+  "epistemic_status": "conjectured",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:gf2-hayes-exact-order-spatial-orthogonality"
+  ],
+  "proof_route": "none",
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-21",
+    "established_by": "not established in this ledger",
+    "source": "Axeyum gf2-lemire lane; exact-order orthogonality and endpoint repricing"
+  },
+  "notes": "The native implication proves that this factor-4ell saving, together with proved low-conductor Weil bounds and the degree-400 handoff, settles both Lemire endpoints. Passing bounded Galois-order rows are falsification controls only."
+}

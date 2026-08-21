@@ -267,6 +267,38 @@ lemma.
   Thus absolute values must remain outside individual Galois orbits, and a
   future order-layer estimate must carry its conductor growth into the
   endpoint ledger before receiving proof credit.
+- Exact-order layers now have an independent spatial formula.  If
+  `H_(j,s)` is the subgroup of characters killed by `2^s`, orthogonality
+  identifies its annihilator with `2^s E_j`; writing `P_(j,s)` for the
+  Mangoldt mass on this power subgroup gives
+
+  ```text
+  T_(j,s)=h_(j,s)P_(j,s)-h_(j,s-1)P_(j,s-1)
+           -h_(j-1,s)P_(j-1,s)+h_(j-1,s-1)P_(j-1,s-1),
+  h_(j,s)=2^(j-floor(j/2^s)).
+  ```
+
+  The native class-space reconstruction agrees order by order with the
+  two-prime cyclotomic calculation at both endpoints through level 12.  When
+  `2^s` divides `j`, the cumulative `H_(j,s)` conductor trace is zero; otherwise
+  it is exactly
+  `h_(j-1,s)(2P_(j,s)-P_(j-1,s))`.  Thus the missing cancellation is a nested
+  sparse-coefficient imbalance, not an unexplained cyclotomic phenomenon.
+- Endpoint repricing makes the useful target much weaker than the first
+  finite experiment.  It is sufficient that every nonempty exact-order layer
+  in the top connected window satisfy
+
+  ```text
+  4 ell |T_(j,s)(n)|
+    <= #X_(j,s) (j-1) 2^ceil(n/2).
+  ```
+
+  This asks only a factor-`4ell` saving over the summed individual Weil
+  envelope.  The exact integer ledger checks both endpoint parities for every
+  `200<=ell<=1024`; at the first odd endpoint it charges 67 order layers.  The
+  stronger diagnostic coefficient `j^2` remains finite evidence only and is
+  not the selected theorem statement.  Proving the displayed linear saving,
+  or an aggregate substitute no stronger than it, would close `(REL)`.
 - Ma and Xing improve the Hasse--Weil estimate for an ordinary
   Artin--Schreier curve by relating it to the minimum distance of a code:
   [The Hasse--Weil bound for Artin--Schreier curves](https://arxiv.org/abs/2105.04370).

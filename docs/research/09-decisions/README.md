@@ -663,3 +663,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0588](adr-0588-price-translation-zeros-at-exact-conductor.md) | Separate cumulative translation-fixed characters from the exact-conductor zeros they force | accepted |
 | [0589](adr-0589-spend-translation-zeros-before-pricing-witt-low.md) | Remove every proved translation zero from the endpoint Weil ledger and retain the unchanged factor-626 odd price | accepted |
 | [0590](adr-0590-classify-binary-projective-hayes-symmetries.md) | Prove translation is the only nonidentity binary projective transformation acting on the fixed-degree Hayes quotient | accepted |
+| [0591](adr-0591-reconstruct-exact-order-traces-by-power-subgroup-orthogonality.md) | Convert every exact-order Hayes trace into four ordinary power-subgroup populations and price a factor-4ell order-layer saving that closes the endpoint | accepted |
