@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-clean-dvd-antisymm-result",
+  "state": "first-invocation-declined-at-unspecialized-inner-induction-hypothesis-no-retry",
+  "plan": {"path": "artifacts/autogenesis/nat-gcd-fib-add-self-clean-dvd-antisymm-plan-v4.json", "sha256": "2516af20087cd869da440f4c36268a00629439132b919e778ff27373773fb974", "commit": "4a77caf2e"},
+  "evidence_pack": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/3e17cc2ed-clean-dvd-antisymm-v4/manifest.json", "sha256": "228771c31dfa802cda9f98dc9918eb3fc18e5fde2023aaecc80d6b227fd165f6", "directory_mode": "0555", "file_mode": "0444"},
+  "implementation": {"path": "crates/axeyum-lean-import/examples/clean_dvd_antisymm.rs", "source_sha256": "9d2d9a1a6c5227a11dee5bd05be9f6c8a87a468d37101ab6c87a3083a2ef54c8", "binary_sha256": "8c3dadb5b43d1957ba003889f1e52a912255609a762bce6b9d309029d3f88c4d", "commit": "3e17cc2ed"},
+  "execution": {"binary_builds": 1, "complete_invocations": 1, "input_stream_reads": 1, "clean_zero_dvd_native_submissions": 1, "clean_le_of_dvd_native_submissions": 1, "clean_dvd_antisymm_rejected_submissions": 1, "composition_operations": 0, "published_support_theorems": 0, "exact_target_submissions": 0, "retries": 0, "second_invocation_skipped": true},
+  "decline": {"operation": "submit clean divisibility antisymmetry after inline native successor positivity", "class": "TypeMismatch", "expected_shape": "Nat.dvd 0 (Nat.succ b)", "actual_shape": "Nat.dvd a (Nat.succ b)", "interpretation": "the inner induction occurs beneath already-bound divisibility hypotheses, so its zero branch retains the unspecialized outer dividend", "partial_kernel_published": false},
+  "authority": {"support_credit": 0, "exact_target_submissions": 0, "target_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_boundary": {"required_next_increment": "preregister inner induction over the complete divisibility-antisymmetry proposition before binding its branch-specific hypotheses"},
+  "verification": "python3 scripts/check-autogenesis-nat-gcd-fib-add-self-clean-dvd-antisymm-result-v4.py",
+  "limitations": "No clean antisymmetry closure or partial kernel was published. This authorizes only a separately preregistered dependent-induction rearrangement; it grants no Fibonacci target or ledger credit."
+}
