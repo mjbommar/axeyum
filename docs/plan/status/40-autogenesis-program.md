@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction retains the accepted pointwise quotient witness. V1's balanced-Bézout update footprint was localized exactly to official `Nat.mul_assoc` and `Nat.right_distrib`; V2 is now preregistered with their exact clean contracts as proof parameters. Its diff retains the witness map, permutation helpers, and equality chain, changing only versioned names, two parameters, and four call sites. One compile/export and two fresh imports are authorized; leaf composition, gcd induction, targets, and ledger writes remain forbidden.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction now retains both the accepted pointwise quotient witness and an accepted parameterized balanced-Bézout Euclidean update. V2 compiled once, exported once, and reconstructed twice with byte-identical empty footprints. Its direct dependencies contain exactly the seven previously measured clean components and omit official `Nat.mul_assoc`, official `Nat.right_distrib`, `propext`, `funext`, public division, and ring normalization. The two clean leaf contracts remain unsupplied; gcd induction, targets, and ledger writes remain uncredited.
 
-**Next:** execute V2 exactly once on pinned `s5`. Accept only two byte-identical empty-footprint audits that omit the two official contaminated leaves. On acceptance, separately preregister identity-gated composition of the injected contracts from clean native or target-owned theorems before any gcd induction. Preserve every prior source and sealed pack, the exact three-file baseline, and zero Fibonacci/ledger authority until each independent gate passes.
+**Next:** preregister identity-gated composition of V2's exact multiplication-associativity and right-distributivity contracts from clean native or target-owned theorems. Measure type-shape compatibility and composed theorem footprints before any gcd induction. Preserve every prior source and sealed pack, the exact three-file baseline, and zero Fibonacci/ledger authority until each independent gate passes.
 
 <!-- plan-section: landed-changes -->
 
@@ -106,3 +106,4 @@
 | 2026-08-21 | (pending) | Exact nine-root dependency-local audit is frozen before one non-rendering sealed-stream read |
 | 2026-08-21 | (pending) | One sealed-stream read localizes the V1 footprint exactly to `Nat.mul_assoc` and `Nat.right_distrib` |
 | 2026-08-21 | (pending) | V2 injects exactly two clean leaf contracts while retaining the explicit balanced-Bézout update chain |
+| 2026-08-21 | (pending) | Parameterized V2 Euclidean update reconstructs twice with byte-identical empty footprints and no contaminated leaves |
