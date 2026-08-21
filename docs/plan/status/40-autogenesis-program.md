@@ -4,7 +4,7 @@
 
 **Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction has unconditional official balanced Bézout. Residual cancellation V2 now reconstructs two target-owned divisibility witnesses and the four-parameter cancellation theorem twice with byte-identical empty footprints. Balanced Bézout, clean associativity, and clean right distributivity are accepted; only additive divisibility cancellation remains open before official specialization.
 
-**Next:** preregister checked composition and specialization of residual cancellation with accepted balanced Bézout, multiplication associativity, and right distributivity, leaving exactly additive divisibility cancellation as the residual parameter. Preserve zero official cancellation/Fibonacci authority.
+**Next:** execute the preregistered zero/successor adapter from clean positive-divisor cancellation to all-Nat additive divisibility cancellation. Require two empty-footprint imports and keep the positive theorem explicit before composition.
 
 <!-- plan-section: landed-changes -->
 
@@ -144,3 +144,4 @@
 | 2026-08-21 | (pending) | Same-stream audit identifies `Nat.mul_assoc` as the witness's sole direct assumption carrier |
 | 2026-08-21 | `1d51489c7` | Residual V2 freezes exact multiplication-associativity parameterization before source construction |
 | 2026-08-21 | (pending) | Residual V2 reconstructs both witness leaves and four-parameter cancellation twice empty-footprint |
+| 2026-08-21 | (pending) | All-Nat additive cancellation adapter is frozen as zero-divisor witness elimination plus positive successor delegation |
