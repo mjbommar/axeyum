@@ -4171,6 +4171,20 @@ point count.  The report therefore keeps
 `(REL)` open, and further local smoothness work receives no endpoint credit
 (ADR-0576).
 
+Nor is the resulting relative trace sign-definite.  Exact populations give
+
+```text
+C_(5,11)=-608,   C_(7,16)=-4608.
+```
+
+The degree-11 row is already in the smooth odd regime above.  Its negative
+relative trace therefore cannot be blamed on singular local terms: `(REL)` is
+a virtual difference of two positive fixed-point sums, and the differently
+normalized coarse sum can exceed the fine sum.  A native regression pins both
+negative integers while independently requiring positive underlying identity
+populations.  Smooth localization cannot be upgraded to `C>=0`; only a genuine
+global comparison can prove the weaker lower bound `C>-B` (ADR-0577).
+
 Hast--Matei's explicit two-polynomial top-weight representation gives a
 useful but insufficient positive comparison.  With short-interval tail
 degree `h=floor(n/2)`, their partition cutoff is

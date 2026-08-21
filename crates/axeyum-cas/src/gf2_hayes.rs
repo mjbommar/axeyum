@@ -19171,6 +19171,36 @@ mod tests {
     }
 
     #[test]
+    fn connected_relative_trace_is_not_sign_definite_after_smooth_localization() {
+        let projection_limit = 2 * 7 * (1 << 7);
+        for (ell, degree, expected_trace) in [
+            (5_usize, 11_usize, -608_i64),
+            (7_usize, 16_usize, -4_608_i64),
+        ] {
+            let distribution =
+                class_population_distribution(ell, degree, HayesLimits::default()).unwrap();
+            let report = distribution
+                .population_refinement_triangle(projection_limit)
+                .unwrap();
+            assert_eq!(
+                report.connected_top_signed_numerator,
+                BigInt::from(expected_trace)
+            );
+            assert!(report.connected_top_signed_numerator < BigInt::from(0_u8));
+            assert!(distribution.counts[0] > 0);
+        }
+
+        let odd_local =
+            sawin_odd_frobenius_cycle_fixed_locus_report(11, SawinFoulkesLimits::default())
+                .unwrap();
+        assert_eq!(
+            odd_local.projective_local_status,
+            SawinOddFrobeniusCycleLocalStatus::SmoothTransverseUnitTerms
+        );
+        assert!(!odd_local.frobenius_weighted_trace_bound_certified);
+    }
+
+    #[test]
     fn top_polynomial_refinement_closes_the_finite_handoff() {
         let odd = population_refinement_top_polynomial_implication(200, 401).unwrap();
         let even = population_refinement_top_polynomial_implication(200, 402).unwrap();
