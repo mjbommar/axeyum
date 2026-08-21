@@ -1,0 +1,19 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-int-fib-natcast-rooted-construction-plan",
+  "state": "preregistered-after-compile-success-before-explicit-build-lib-olean-execution",
+  "policy_version": "int-fib-natcast-rooted-v2",
+  "prior_result": {"path": "artifacts/autogenesis/mathlib-int-fib-natcast-construction-result-v1.json", "required_state": "definition-compiles-export-root-unresolved-no-theorem-credit"},
+  "source": {"path": "artifacts/autogenesis/sources/int-fib-natcast-direct-v1.lean", "sha256": "81b384360641cb8a19719f48fac798cb2d547c6e3f94df6d50c8d522638fb26c"},
+  "target": {"fact": "F:ml430-int-fib-natcast-d5886be4", "theorem": "Axeyum.Autogenesis.intFibNatCastDirectV1"},
+  "remote": {
+    "source_path": "/home/mjbommar/lean-import-scale/mathlib4/AxeyumIntFibNatCastDirectV1.lean",
+    "olean_path": "/home/mjbommar/lean-import-scale/mathlib4/.lake/build/lib/lean/AxeyumIntFibNatCastDirectV1.olean",
+    "both_must_not_preexist": true,
+    "compile_shape": "<lake> env lean -o <olean_path> <source_path>",
+    "cleanup_both_paths": true
+  },
+  "execution": {"max_source_copies": 1, "max_compiler_invocations": 1, "max_exporter_invocations": 1, "max_importer_runs": 2, "max_proof_bearing_stream_reads": 2, "max_retries": 0, "max_new_theorem_submissions": 1, "max_ledger_writes": 0},
+  "success": {"required_axiom_footprint": [], "required_direct_theorem_dependencies": [], "identical_import_observations": true, "fact_admission_authorized": false},
+  "failure": {"stop_after_first_error": true, "theorem_credit": 0}
+}
