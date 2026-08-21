@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-balanced-bezout-clean-mul-leaves-result",
+  "state": "two-target-owned-leaves-reconstructed-twice-empty-footprint",
+  "plan": {"path": "artifacts/autogenesis/balanced-bezout-clean-mul-leaves-plan-v1.json", "sha256": "6183d4a1c3089b7f080e42d5d0b6944b2de30eb87cb3410f70e3dc2332fb7a0b", "commit": "5c66b82074dd57a34609894f338bda9ec408d78b"},
+  "evidence_pack": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/616fe5d01-balanced-bezout-clean-mul-leaves-v1/manifest.json", "sha256": "434b9490f1b317d037f5b9cad0799e09620b320650cdede4c34f02a045d1d61b", "directory_mode": "0555", "file_mode": "0444"},
+  "execution": {"source_copies": 1, "compiler_invocations": 1, "successful_compilations": 1, "exporter_invocations": 1, "importer_runs": 2, "proof_bearing_stream_reads": 2, "retries": 0},
+  "theorems": [
+    {
+      "name": "Axeyum.Autogenesis.balancedBezoutMulAssocLeafV1",
+      "contract": "forall a b c : Nat, a*b*c = a*(b*c)",
+      "declaration_sha256": "3e1ef3dc51f2702b9b457e5621457542c07757b30a57cede7db9e5b7273f7c00",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": ["Eq.symm", "Eq.trans", "Nat.left_distrib", "congrArg"]
+    },
+    {
+      "name": "Axeyum.Autogenesis.balancedBezoutRightDistribLeafV1",
+      "contract": "forall a b c : Nat, (a+b)*c = a*c+b*c",
+      "declaration_sha256": "7d41f955bf36b0825b925ec0d1d31b0df7551c0b413b0ed6cca4fcef1d833f05",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": ["Eq.trans", "_private.AxeyumAutogenesisBalancedBezoutCleanMulLeavesV1.0.Axeyum.Autogenesis.swapMiddleFourV1", "congrArg"]
+    }
+  ],
+  "audit": {"sha256": "ef1aadf35c8c91a0dc0ef2d82abcd22639a800396cc619630a82a072043f117a", "fresh_reconstructions_per_target": 2, "audits_byte_identical": true, "all_roots_empty": true, "forbidden_dependencies_present": [], "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0}},
+  "cleanup": {"exact_temporary_paths_removed": 3, "preexisting_status_entries_before": 3, "preexisting_status_entries_after": 3, "preexisting_baseline_unchanged": true},
+  "next_boundary": {"clean_leaf_credit": 2, "required_next_increment": "preregister a closed wrapper applying the accepted V2 update to these exact leaves", "euclidean_update_composition_completed": false, "generic_gcd_submission_authorized": false},
+  "authority": {"clean_leaf_credit": 2, "euclidean_update_composition_credit": 0, "generic_balanced_bezout_credit": 0, "target_specialization_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "verification": "python3 scripts/check-autogenesis-balanced-bezout-clean-mul-leaves-result.py",
+  "limitations": "This accepts only two target-owned arithmetic leaves. It does not apply them to V2 and grants no generic gcd theorem, target specialization, evaluation, fact, or ledger credit."
+}

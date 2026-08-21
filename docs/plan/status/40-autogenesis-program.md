@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction retains the accepted pointwise quotient witness and parameterized balanced-Bézout update. A two-leaf target-owned replacement is now preregistered for multiplication associativity and right distributivity: primitive Nat induction, pointwise transport, clean left distributivity, and an explicit addition permutation, with no use of either contaminated official theorem. Its source, one-compile/one-export/two-import ceiling, exact baseline/cleanup, and zero update-composition/gcd/ledger authority are frozen before execution.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction retains the accepted pointwise quotient witness and parameterized balanced-Bézout update. Both missing target-owned multiplication leaves are now accepted: primitive-induction associativity and right-distributivity replacements compiled once, exported once, and reconstructed twice each with byte-identical empty-footprint audits. Neither reaches the contaminated official theorem. Applying the leaves to V2, gcd induction, targets, and ledger writes remain uncredited.
 
-**Next:** execute the two target-owned multiplication leaves once on pinned `s5`. Accept only if both roots reconstruct twice with matching empty footprints and omit official `Nat.mul_assoc` and `Nat.right_distrib`. On acceptance, separately preregister a closed wrapper applying the accepted V2 update to those exact leaves. Preserve every prior source and sealed pack, the exact three-file baseline, and zero Fibonacci/ledger authority until each independent gate passes.
+**Next:** preregister a transparent closed wrapper applying the accepted V2 update to the exact two accepted leaf declarations. Compile/export once and require two matching empty-footprint audits whose direct dependencies bind all three accepted theorem identities. Preserve every prior source and sealed pack, the exact three-file baseline, and zero Fibonacci/ledger authority until each independent gate passes.
 
 <!-- plan-section: landed-changes -->
 
@@ -108,3 +108,4 @@
 | 2026-08-21 | (pending) | V2 injects exactly two clean leaf contracts while retaining the explicit balanced-Bézout update chain |
 | 2026-08-21 | (pending) | Parameterized V2 Euclidean update reconstructs twice with byte-identical empty footprints and no contaminated leaves |
 | 2026-08-21 | (pending) | Primitive-induction target-owned replacements for the two contaminated multiplication leaves are frozen before execution |
+| 2026-08-21 | (pending) | Both target-owned multiplication leaves reconstruct twice with empty footprints, closing the V2 parameter gap |
