@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-gcd-balanced-bezout-clean-plan",
+  "state": "preregistered-gcd-induction-with-two-explicit-gcd-leaves-before-compilation-no-theorem-credit",
+  "inputs": {
+    "quotient_witness_result": {"path": "artifacts/autogenesis/mod-quotient-witness-kernel-result-v1.json", "sha256": "1902254357d089a81485476b95ae5c7b76eaa0ebd10b280d1a95ee98b2160a80"},
+    "closed_update_result": {"path": "artifacts/autogenesis/balanced-bezout-euclidean-update-closed-result-v1.json", "sha256": "c23a80590629a77a824506914a77dd17bfd419378682ee54fc2055a6a4393542"},
+    "authored_source": {"path": "scripts/lean/autogenesis_official_gcd_balanced_bezout_clean_v1.lean", "sha256": "496473531076f3770f6b853f4d986b261d93113da0a5a9ed6f8968feaf5cc8e5"},
+    "support_sources": [
+      {"path": "scripts/lean/autogenesis_div_mod_go_reconstruct_v2.lean", "sha256": "d6daa848bea4fe5a86e9d180f2256a8b0851d44b3dd9c7245ab0c71d344599bf", "module": "autogenesis_div_mod_go_reconstruct_v2"},
+      {"path": "scripts/lean/autogenesis_mod_quotient_witness_v4.lean", "sha256": "6197ec88dd8fc726898e78e42fa616c54b70c579ba64d9d68dec26b7fcb11e5c", "module": "AxeyumAutogenesisModQuotientWitnessV4"},
+      {"path": "scripts/lean/autogenesis_balanced_bezout_euclidean_update_v2.lean", "sha256": "a589b50e7743a4853f9c5eb5d0e970e6e5c40afb58bf7cd59f5a00e0094afd40", "module": "AxeyumAutogenesisBalancedBezoutEuclideanUpdateV2"},
+      {"path": "scripts/lean/autogenesis_balanced_bezout_clean_mul_leaves_v1.lean", "sha256": "2c925db23b545067f1842b5914bce79990f94e576ff093bd79717f2a978aad89", "module": "AxeyumAutogenesisBalancedBezoutCleanMulLeavesV1"},
+      {"path": "scripts/lean/autogenesis_balanced_bezout_euclidean_update_closed_v1.lean", "sha256": "efb4ea9bb4760ee496260e60ab991b28c5b491bbba85dade4a9bc86c59338112", "module": "AxeyumAutogenesisBalancedBezoutEuclideanUpdateClosedV1"}
+    ]
+  },
+  "construction": {
+    "target": "Axeyum.Autogenesis.officialGcdBalancedBezoutCleanV1",
+    "contract": "gcd-zero-left -> gcd-succ -> forall m n, BalancedBezout m n (Nat.gcd m n)",
+    "required_direct_dependencies": ["Axeyum.Autogenesis.modQuotientWitnessV4", "Axeyum.Autogenesis.balancedBezoutEuclideanUpdateClosedV1", "Nat.gcd.induction"],
+    "gcd_leaf_parameters": ["forall n, Nat.gcd 0 n = n", "forall m n, Nat.gcd (succ m) n = Nat.gcd (mod n (succ m)) (succ m)"],
+    "method": "official Nat.gcd.induction, accepted quotient witness and closed update, explicit base certificate, and pointwise Eq.mp transport for gcd equalities",
+    "forbidden_dependencies": ["funext", "propext", "Nat.mul_assoc", "Nat.right_distrib", "Nat.div_eq", "Nat.mod_eq", "Mathlib.Tactic.Ring.Common", "Mathlib.Tactic.Ring.of_eq"],
+    "rewriting_tactic_used": false,
+    "ring_normalization_used": false,
+    "gcd_leaf_specialization_in_this_increment": false
+  },
+  "preexisting_status_baseline": [
+    {"path": "AxeyumFibGeneric.lean", "status": "untracked", "bytes": 1595, "mode": "0664", "sha256": "f9d3ea9024497cf1aed34a071fe541e515fb4169738d3d369dd6bf9a7ad414be"},
+    {"path": "AxeyumNatFibRecurrencePointwise.lean", "status": "untracked", "bytes": 632, "mode": "0664", "sha256": "b339a3d8e4ce1700d367fa5fdf0ac0e05d411cc48c49ce6f6e30b702a9b7baf5"},
+    {"path": "AxeyumNatGcdFixEq.lean", "status": "untracked", "bytes": 3603, "mode": "0664", "sha256": "939d225a168b5a94d042ceab47c4dd265a81bf149ea8cfbe08012ca5089373a7"}
+  ],
+  "fixed_environment": {"ssh_alias": "s5", "hostname": "server5", "mathlib_checkout": "/home/mjbommar/lean-import-scale/mathlib4", "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f", "lean_version": "4.30.0", "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622", "lake_binary": "/home/mjbommar/.elan/toolchains/leanprover--lean4---v4.30.0/bin/lake", "lake_binary_sha256": "d3e1f322c08d87f0d5850132a0b0309c1edbe53d641276b344717da448c8bc8b", "lean4export_binary": "/home/mjbommar/lean-import-scale/lean4export/.lake/build/bin/lean4export", "lean4export_binary_sha256": "8e763913b03762488571a93ced6ec1a4e04f7d8eebbe40bd1215ba41a6bd4449"},
+  "execution": {
+    "evidence_pack": "/nas3/data/axeyum/autogenesis/reference-packs/13038b3ff-official-gcd-balanced-bezout-clean-v1",
+    "remote_modules": ["autogenesis_div_mod_go_reconstruct_v2", "AxeyumAutogenesisModQuotientWitnessV4", "AxeyumAutogenesisBalancedBezoutEuclideanUpdateV2", "AxeyumAutogenesisBalancedBezoutCleanMulLeavesV1", "AxeyumAutogenesisBalancedBezoutEuclideanUpdateClosedV1", "AxeyumAutogenesisOfficialGcdBalancedBezoutCleanV1"],
+    "all_eighteen_temporary_paths_must_be_absent_before_copy": true,
+    "status_must_equal_exact_baseline_before_copy": true,
+    "status_must_equal_exact_baseline_after_cleanup": true,
+    "cleanup_scope_is_exactly_six_sources_and_twelve_outputs": true,
+    "proof_terms_types_or_values_may_be_rendered": false
+  },
+  "acceptance": {"all_six_sources_must_compile": true, "fresh_kernel_imports_required": 2, "rows_must_match": true, "axiom_footprints_must_be_empty": true, "required_dependencies_must_be_present": true, "forbidden_dependencies_must_be_absent": true, "failed_compilation_or_first_import_ends_increment": true},
+  "budget": {"max_source_copies": 6, "max_source_compilations": 6, "max_exporter_invocations": 1, "max_importer_runs": 2, "max_proof_bearing_stream_reads": 2, "max_retries": 0, "max_new_theorem_submissions": 1, "max_gcd_leaf_specializations": 0, "max_exact_fibonacci_target_submissions": 0, "max_executor_invocations": 0},
+  "authority": {"proof_bodies_readable_by_model": false, "upstream_proof_sources_readable_by_model": false, "preexisting_files_may_be_opened_by_model": false, "preexisting_files_may_be_changed_or_removed": false, "generic_balanced_bezout_credit_requires_acceptance": true, "target_specialization_credit": 0, "cancellation_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_on_accept": "Preregister the closed specialization to the existing accepted gcdZeroLeft and gcdSucc target-owned leaves.",
+  "output": "artifacts/autogenesis/official-gcd-balanced-bezout-clean-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-official-gcd-balanced-bezout-clean-plan.py",
+  "limitations": "This increment may establish only the generic theorem conditional on two gcd computation leaves. It grants no closed specialization, cancellation, Fibonacci target, evaluation, fact, or ledger credit."
+}

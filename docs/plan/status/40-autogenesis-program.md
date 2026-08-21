@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction now retains an accepted pointwise quotient witness and a fully closed balanced-Bézout Euclidean update. The transparent wrapper rebuilt the exact parameterized update and two clean leaves, then reconstructed twice with byte-identical empty footprints and exactly those three direct theorem dependencies. The arithmetic seam is unconditional; generic gcd induction, target specialization, and ledger writes remain uncredited.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction retains an accepted pointwise quotient witness and fully closed balanced-Bézout Euclidean update. The clean generic official-gcd induction is now preregistered with `gcdZeroLeft` and `gcdSucc` as its only remaining parameters. It uses official `Nat.gcd.induction`, the accepted quotient/update results, a direct base certificate, and pointwise `Eq.mp` transport. Six exact module builds, two imports, eighteen-path cleanup, and zero gcd-leaf specialization/target/ledger authority are frozen before execution.
 
-**Next:** preregister generic official-gcd balanced-Bézout induction using the accepted pointwise quotient witness, closed Euclidean update, `Nat.gcd.induction`, and the already reconstructed clean `gcdZeroLeft`/`gcdSucc` specialization leaves. Require the theorem to reconstruct twice before any cancellation or Fibonacci target use. Preserve every prior source and sealed pack, the exact three-file baseline, and zero Fibonacci/ledger authority until each independent gate passes.
+**Next:** execute the generic official-gcd induction once on pinned `s5`. Accept only two matching empty-footprint audits containing the quotient witness, closed update, and `Nat.gcd.induction` without contaminated arithmetic/division/ring roots. On acceptance, separately preregister closure with the accepted gcd computation leaves. Preserve every prior source and sealed pack, the exact three-file baseline, and zero Fibonacci/ledger authority until each independent gate passes.
 
 <!-- plan-section: landed-changes -->
 
@@ -111,3 +111,4 @@
 | 2026-08-21 | (pending) | Both target-owned multiplication leaves reconstruct twice with empty footprints, closing the V2 parameter gap |
 | 2026-08-21 | (pending) | Exact three-theorem wrapper is frozen to close the balanced-Bézout Euclidean update before gcd induction |
 | 2026-08-21 | (pending) | Closed Euclidean update reconstructs twice empty-footprint with exactly the accepted update and two leaf dependencies |
+| 2026-08-21 | (pending) | Clean official-gcd balanced-Bézout induction is frozen with only two gcd computation leaves still explicit |
