@@ -709,6 +709,34 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   list: **before believing a result, ask what the command would print if it were
   broken.** If that is what it just printed, it is not evidence.
 
+- **A HAND-ROLLED MUTATION LOOP OVER A PYTHON FILE REPORTS THE PREVIOUS MUTANT'S
+  RESULT.** Python caches compiled modules on `(source mtime in whole SECONDS,
+  source size in bytes)`. Mutation testing produces equal-size mutants **by
+  construction** — one fixed string replaced by another fixed string at
+  different sites — written back to back, well inside one second. So the cache
+  is not a corner case here; it is the default.
+
+  Measured 2026-08-20: three copies of one guard in
+  `check-lra-hypothesis-binding.py` (`bind_structural`, `bind_anchored`,
+  `classify_attestation`, all 138,581 bytes when mutated) each reported killing
+  the *same* test — `AStructuralModule…`. Clearing `__pycache__` between
+  iterations, each kills its own distinct control, correctly named. The loop was
+  restoring and re-mutating exactly as intended; only the bytecode was stale, and
+  `git diff` confirmed the right line changed every time, which is what made the
+  wrong answer so convincing.
+
+  Both directions occur. If the BASELINE is cached, a real kill reports
+  `SURVIVED` — you go hunting a gap that does not exist. If a KILLED mutant is
+  cached, a mutation that changes nothing reports `KILLED` — coverage that was
+  never measured, which is the failure this repository cares most about.
+
+  `scripts/tests/mutation_controls.py` is **not** vulnerable: its `Unittest.build`
+  runs `py_compile` on every target, which rewrites the cache entry. That step
+  was written to catch a subject that does not parse; its second job is invisible
+  from its own code. It is now pinned by `StaleBytecodeTests` and by a self-table
+  entry that keeps the syntax check and drops only the recompile. Use the
+  harness. If you must loop by hand, `find . -name __pycache__ -exec rm -rf {} +`
+  between iterations, and never trust two mutants that report the same dead test.
 - **Tools in this repo have lied more often than the solver has been weak.**
   In one session: a corpus gate that ran zero tests for 15 days while exiting 0;
   a pre-push hook that had never run because `core.hooksPath` was unset; a

@@ -242,6 +242,66 @@ class BuildProbeTests(unittest.TestCase):
         self.assertTrue(built, why)
 
 
+class StaleBytecodeTests(unittest.TestCase):
+    """Two equal-size mutants written in the same second must not share bytecode.
+
+    Python caches compiled modules on `(source mtime in whole SECONDS, source
+    size in bytes)`. Mutation testing produces equal-size mutants **by
+    construction** — one fixed string replaced by another fixed string, applied
+    at different sites — and a harness writes them back to back, well inside one
+    second. So this is not a corner case; it is the normal case, and every
+    Python mutation verdict in this repository depends on something defeating it.
+
+    That something is the `py_compile` call in `Unittest.build`, which was
+    written to catch a subject that does not parse. Its second job is invisible
+    from its own code, and deleting it does not break the check it was written
+    for — so this control exists to say the step is load-bearing twice.
+
+    Measured 2026-08-20, with the recompile removed: a mutant that neuters a
+    guard reports `SURVIVED`, because the run executes the **baseline's**
+    bytecode. That is the harmless direction. Run the mutants in the other
+    order and a mutant that changes nothing reports `KILLED`, which is the
+    direction that manufactures coverage that was never measured. I hit the
+    second one by hand the same day, in an ad-hoc loop with no recompile, and
+    read three copies of one guard as each having its own control when two of
+    the three answers were the first one's bytecode.
+    """
+
+    #: `subject.guard(-1)` must be False; the neutered mutant returns True.
+    #: The comment line is padded so both mutants are byte-identical in size.
+    _BASE = "# AAAA\ndef guard(x):\n    if x < 0:\n        return False\n    return True\n"
+    _NEUTERED = "# AAAA\ndef guard(x):\n    if False:\n        return False\n    return True\n"
+    _COMMENT_ONLY = "# BBBB\ndef guard(x):\n    if x < 0:\n        return False\n    return True\n"
+
+    def _verdict(self, work: pathlib.Path, source: str) -> str:
+        (work / "subject.py").write_text(source, encoding="utf-8")
+        built, why = MC.Unittest("t_subject").build(work, ["subject.py"])
+        self.assertTrue(built, why)
+        return MC.Unittest("t_subject").measure(work, 1).outcome
+
+    def test_a_neutered_guard_is_killed_even_after_a_same_size_baseline(self) -> None:
+        tmp = tempfile.mkdtemp(prefix="mutation-stale-pyc-")
+        work = pathlib.Path(tmp)
+        (work / "t_subject.py").write_text(
+            "import unittest, subject\n"
+            "class T(unittest.TestCase):\n"
+            "    def test_negative_is_refused(self):\n"
+            "        self.assertFalse(subject.guard(-1))\n",
+            encoding="utf-8",
+        )
+        self.assertEqual(len(self._BASE), len(self._NEUTERED))
+        self.assertEqual(len(self._BASE), len(self._COMMENT_ONLY))
+
+        self.assertEqual(self._verdict(work, self._BASE), MC.SURVIVED)
+        # Same size, same second, opposite behaviour. A stale cache reports this
+        # as SURVIVED — a guard the harness would report as untested.
+        self.assertEqual(self._verdict(work, self._NEUTERED), MC.KILLED)
+        # And back the other way: a mutant that changes nothing must not inherit
+        # the KILLED verdict of the one before it. This is the dangerous
+        # direction — it invents coverage.
+        self.assertEqual(self._verdict(work, self._COMMENT_ONLY), MC.SURVIVED)
+
+
 # -------------------------------------------------------- end-to-end guards
 
 
