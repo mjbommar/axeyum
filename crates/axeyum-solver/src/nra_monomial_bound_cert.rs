@@ -65,6 +65,27 @@ pub enum MonomialBound {
     Exactly(WireRat),
 }
 
+/// Which comparison the refuted atom makes against the carried constant.
+///
+/// Carried because the refutation *arithmetic* differs by kind and nothing else
+/// in the certificate records it. `M < k` is refuted by `M >= k`; `M <= k` needs
+/// the strictly stronger `M > k`. Measured 2026-08-20 before this existed: the
+/// checker accepted `factors a,b >= 1`, `AtLeast(1)`, `against 1` against the
+/// query `a >= 1 ∧ b >= 1 ∧ a*b <= 1` — which is **satisfiable** at `a = b = 1`.
+/// The producer declined it (its `closes` test does distinguish the two), so
+/// nothing wrong ever shipped, but the independent re-validator would have
+/// certified a forged refutation of a SAT query. A checker that cannot tell the
+/// two atoms apart is not checking the step that matters.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RefutedAtom {
+    /// `M < k` — refuted by a lower bound `M >= k`.
+    LessThan,
+    /// `M <= k` — refuted only by a *strict* lower bound `M > k`.
+    AtMost,
+    /// `M != k` — refuted by an exact value `M == k`.
+    NotEqual,
+}
+
 /// A refutation from per-variable bounds on one monomial.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MonomialBoundRefutationCertificate {
@@ -77,6 +98,8 @@ pub struct MonomialBoundRefutationCertificate {
     bound: MonomialBound,
     /// The constant the refuted atom compares against.
     refuted_against: WireRat,
+    /// Which comparison that atom makes. See [`RefutedAtom`].
+    refuted_kind: RefutedAtom,
 }
 
 impl MonomialBoundRefutationCertificate {
@@ -90,6 +113,44 @@ impl MonomialBoundRefutationCertificate {
     #[must_use]
     pub fn factors(&self) -> &[(String, u32, Option<WireRat>)] {
         &self.factors
+    }
+
+    /// The constant the refuted atom compares the monomial against.
+    #[must_use]
+    pub const fn refuted_against(&self) -> WireRat {
+        self.refuted_against
+    }
+
+    /// Which comparison the refuted atom makes against [`Self::refuted_against`].
+    #[must_use]
+    pub const fn refuted_kind(&self) -> RefutedAtom {
+        self.refuted_kind
+    }
+
+    /// Build a certificate from parts **without checking it**, for tests only.
+    ///
+    /// `#[doc(hidden)]` and test-only: a public constructor would let a caller
+    /// mint an unchecked certificate, which is the opposite of the point. It
+    /// exists so a forged certificate can be aimed at the *reconstruction* from
+    /// another module, which the struct-literal forgeries in this file's own
+    /// tests cannot do.
+    #[doc(hidden)]
+    #[cfg(test)]
+    #[must_use]
+    pub fn testing_from_parts(
+        factors: Vec<(String, u32, Option<WireRat>)>,
+        uppers: Vec<(String, WireRat)>,
+        bound: MonomialBound,
+        refuted_against: WireRat,
+        refuted_kind: RefutedAtom,
+    ) -> Self {
+        MonomialBoundRefutationCertificate {
+            factors,
+            uppers,
+            bound,
+            refuted_against,
+            refuted_kind,
+        }
     }
 }
 
@@ -158,6 +219,17 @@ fn monomial(arena: &TermArena, term: TermId) -> Option<BTreeMap<String, u32>> {
 struct Bounds {
     lower: BTreeMap<String, Rational>,
     upper: BTreeMap<String, Rational>,
+    /// The subset of [`Self::lower`] a conjunct states **as an atom** —
+    /// `x >= k`, `x > k`, `k <= x`, `k < x`, `x = k` — paired with whether that
+    /// atom is strict.
+    ///
+    /// Deliberately excludes the disjunction hull. `(or (= a 4) (= a 3))`
+    /// *entails* `a >= 3`, but the query does not *state* it, and the difference
+    /// matters to a consumer that mints the bound as a kernel hypothesis: doing
+    /// that for a hull assumes a proposition no assertion carries, and recovering
+    /// it honestly needs case analysis over the disjunction. The producer and the
+    /// checker are happy with the hull; a reconstruction is not.
+    lower_direct: BTreeMap<String, (Rational, bool)>,
 }
 
 impl Bounds {
@@ -170,6 +242,19 @@ impl Bounds {
                 }
             })
             .or_insert(value);
+    }
+
+    /// Record a lower bound the query states as an atom. Keeps the greatest, and
+    /// on a tie the strict one, which is the stronger of the two.
+    fn note_lower_direct(&mut self, name: String, value: Rational, strict: bool) {
+        self.lower_direct
+            .entry(name)
+            .and_modify(|e| {
+                if value > e.0 || (value == e.0 && strict) {
+                    *e = (value, strict);
+                }
+            })
+            .or_insert((value, strict));
     }
 
     fn note_upper(&mut self, name: String, value: Rational) {
@@ -258,24 +343,29 @@ fn collect_bounds(arena: &TermArena, conjuncts: &[TermId]) -> Bounds {
             let flipped = var_name(arena, *rhs).zip(constant(arena, *lhs));
             match op {
                 Op::RealGe | Op::IntGe | Op::RealGt | Op::IntGt => {
+                    let strict = matches!(op, Op::RealGt | Op::IntGt);
                     if let Some((n, k)) = pair {
-                        bounds.note_lower(n, k);
+                        bounds.note_lower(n.clone(), k);
+                        bounds.note_lower_direct(n, k, strict);
                     }
                     if let Some((n, k)) = flipped {
                         bounds.note_upper(n, k);
                     }
                 }
                 Op::RealLe | Op::IntLe | Op::RealLt | Op::IntLt => {
+                    let strict = matches!(op, Op::RealLt | Op::IntLt);
                     if let Some((n, k)) = pair {
                         bounds.note_upper(n, k);
                     }
                     if let Some((n, k)) = flipped {
-                        bounds.note_lower(n, k);
+                        bounds.note_lower(n.clone(), k);
+                        bounds.note_lower_direct(n, k, strict);
                     }
                 }
                 Op::Eq => {
                     if let Some((n, k)) = pair.or(flipped) {
                         bounds.note_lower(n.clone(), k);
+                        bounds.note_lower_direct(n.clone(), k, false);
                         bounds.note_upper(n, k);
                     }
                 }
@@ -301,6 +391,18 @@ enum Refuted {
     Below(Rational, bool),
     /// `M != k`; an exact value `== k` refutes it.
     NotEqual(Rational),
+}
+
+impl Refuted {
+    /// The wire-level kind, which is what a certificate carries and a checker
+    /// compares against.
+    const fn kind(&self) -> RefutedAtom {
+        match self {
+            Refuted::Below(_, true) => RefutedAtom::LessThan,
+            Refuted::Below(_, false) => RefutedAtom::AtMost,
+            Refuted::NotEqual(_) => RefutedAtom::NotEqual,
+        }
+    }
 }
 
 fn refuted_atom(arena: &TermArena, conjunct: TermId) -> Option<(BTreeMap<String, u32>, Refuted)> {
@@ -340,6 +442,28 @@ fn refuted_atom(arena: &TermArena, conjunct: TermId) -> Option<(BTreeMap<String,
     let mono = monomial(arena, *cmp_lhs)?;
     let against = constant(arena, *cmp_rhs)?;
     Some((mono, Refuted::Below(against, strict)))
+}
+
+/// Every factor pinned to a single nonnegative value: the uppers to carry and
+/// the exact product, or `None` when something is not pinned.
+///
+/// A lower bound alone is not a pin — `lo == hi`, both asserted, is.
+fn pinned_value(
+    bounds: &Bounds,
+    mono: &BTreeMap<String, u32>,
+) -> Option<(Vec<(String, WireRat)>, Rational)> {
+    let zero = Rational::integer(0);
+    let mut uppers = Vec::new();
+    let mut pinned = Rational::integer(1);
+    for (name, &exp) in mono {
+        let (&lo, &hi) = bounds.lower.get(name).zip(bounds.upper.get(name))?;
+        if lo != hi || lo < zero {
+            return None;
+        }
+        uppers.push((name.clone(), wire(hi)));
+        pinned = pinned.checked_mul(pow(lo, exp)?)?;
+    }
+    Some((uppers, pinned))
 }
 
 /// Derive a certificate from the exact source query, or decline.
@@ -411,6 +535,11 @@ pub fn monomial_bound_refutation(
                         uppers: Vec::new(),
                         bound: MonomialBound::AtLeast(wire(derived_lo)),
                         refuted_against: wire(k),
+                        refuted_kind: if strict {
+                            RefutedAtom::LessThan
+                        } else {
+                            RefutedAtom::AtMost
+                        },
                     });
                 }
             }
@@ -420,36 +549,16 @@ pub fn monomial_bound_refutation(
                 if any_unbounded {
                     continue;
                 }
-                let mut uppers = Vec::new();
-                let mut pinned = Rational::integer(1);
-                let mut all_pinned = true;
-                for (name, &exp) in &mono {
-                    let (Some(&lo), Some(&hi)) = (bounds.lower.get(name), bounds.upper.get(name))
-                    else {
-                        all_pinned = false;
-                        break;
-                    };
-                    if lo != hi || lo < zero {
-                        all_pinned = false;
-                        break;
-                    }
-                    uppers.push((name.clone(), wire(hi)));
-                    let Some(term) = pow(lo, exp) else {
-                        all_pinned = false;
-                        break;
-                    };
-                    let Some(next) = pinned.checked_mul(term) else {
-                        all_pinned = false;
-                        break;
-                    };
-                    pinned = next;
-                }
-                if all_pinned && pinned == k {
+                let Some((uppers, pinned)) = pinned_value(&bounds, &mono) else {
+                    continue;
+                };
+                if pinned == k {
                     return Some(MonomialBoundRefutationCertificate {
                         factors,
                         uppers,
                         bound: MonomialBound::Exactly(wire(pinned)),
                         refuted_against: wire(k),
+                        refuted_kind: RefutedAtom::NotEqual,
                     });
                 }
             }
@@ -493,14 +602,13 @@ fn binds_to_query(
         if mono != carried {
             continue;
         }
-        // The atom's KIND must match the bound's kind -- a lower bound refutes
-        // `M < k`, an exact value refutes `M != k`, and crossing them proves
-        // nothing -- and the constant must be the one carried.
-        let kind_ok = matches!(
-            (&refuted, certificate.bound),
-            (Refuted::Below(_, _), MonomialBound::AtLeast(_))
-                | (Refuted::NotEqual(_), MonomialBound::Exactly(_))
-        );
+        // The atom this certificate names must be an atom the query actually
+        // states, DOWN TO ITS COMPARISON: `M < k` and `M <= k` are different
+        // refutation problems (see [`RefutedAtom`]), and a certificate that
+        // claims the strict one against a query stating the non-strict one is
+        // refuting something nobody asserted. Whether the carried bound is
+        // strong enough for that comparison is stage 2's job.
+        let kind_ok = refuted.kind() == certificate.refuted_kind;
         let constant_ok = match &refuted {
             Refuted::Below(k, _) | Refuted::NotEqual(k) => *k == against,
         };
@@ -555,13 +663,21 @@ fn arithmetic_holds(
         product = next;
     }
 
-    match certificate.bound {
-        MonomialBound::AtLeast(w) => {
+    match (certificate.bound, certificate.refuted_kind) {
+        // `M < k` falls to `M >= k`.
+        (MonomialBound::AtLeast(w), RefutedAtom::LessThan) => {
             let Some(claimed) = rat(w) else { return false };
             let derived = if any_unbounded { zero } else { product };
             claimed == derived && claimed >= against
         }
-        MonomialBound::Exactly(w) => {
+        // `M <= k` needs the STRICT `M > k`. `claimed >= against` here would
+        // accept `a*b >= 1` as refuting `a*b <= 1`, which a = b = 1 satisfies.
+        (MonomialBound::AtLeast(w), RefutedAtom::AtMost) => {
+            let Some(claimed) = rat(w) else { return false };
+            let derived = if any_unbounded { zero } else { product };
+            claimed == derived && claimed > against
+        }
+        (MonomialBound::Exactly(w), RefutedAtom::NotEqual) => {
             let Some(claimed) = rat(w) else { return false };
             if any_unbounded || certificate.uppers.len() != certificate.factors.len() {
                 return false;
@@ -575,7 +691,31 @@ fn arithmetic_holds(
             });
             pinned && claimed == product && claimed == against
         }
+        // A lower bound does not refute `M != k`, and an exact value is not what
+        // a `<`/`<=` atom is refuted by. Crossing them proves nothing.
+        (MonomialBound::AtLeast(_), RefutedAtom::NotEqual)
+        | (MonomialBound::Exactly(_), RefutedAtom::LessThan | RefutedAtom::AtMost) => false,
     }
+}
+
+/// The lower bounds this query states **as atoms**, `name -> (value, strict)`.
+///
+/// Strictly narrower than what the certificate's `factors` may carry: a bound
+/// derived from a disjunction hull is entailed by the query but is not asserted
+/// by it, and is absent here. See [`Bounds::lower_direct`].
+///
+/// Used by the Lean reconstruction, which mints each bound as a kernel
+/// hypothesis and therefore may only mint bounds an assertion actually states.
+#[must_use]
+pub(crate) fn directly_asserted_lower_bounds(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> BTreeMap<String, (Rational, bool)> {
+    let mut conjuncts = Vec::new();
+    for &a in assertions {
+        collect_top_conjuncts(arena, a, &mut conjuncts);
+    }
+    collect_bounds(arena, &conjuncts).lower_direct
 }
 
 /// Independently re-validate against the **original** assertions.
@@ -797,6 +937,7 @@ mod tests {
             uppers: Vec::new(),
             bound: MonomialBound::AtLeast((0, 1)),
             refuted_against: (0, 1),
+            refuted_kind: RefutedAtom::LessThan,
         };
         assert!(
             !check_monomial_bound_refutation(&arena, &assertions, &forged),
@@ -818,6 +959,7 @@ mod tests {
             uppers: Vec::new(),
             bound: MonomialBound::AtLeast((6, 1)),
             refuted_against: (6, 1),
+            refuted_kind: RefutedAtom::LessThan,
         };
         assert!(
             !check_monomial_bound_refutation(&arena, &assertions, &forged),
@@ -889,6 +1031,7 @@ mod tests {
             uppers: vec![("n".to_owned(), (1, 1)), ("x".to_owned(), (1, 1))],
             bound: MonomialBound::Exactly((1, 1)),
             refuted_against: (1, 1),
+            refuted_kind: RefutedAtom::NotEqual,
         };
         assert!(
             !check_monomial_bound_refutation(&arena, &assertions, &forged),
@@ -908,5 +1051,73 @@ mod tests {
         assert_eq!(pow(Rational::new(3, 2), 2), Some(Rational::new(9, 4)));
         assert_eq!(pow(Rational::integer(2), 10), Some(Rational::integer(1024)));
         assert_eq!(pow(Rational::integer(5), 0), Some(Rational::integer(1)));
+    }
+
+    /// **SATISFIABLE** at a = b = 1. The atom is NON-strict, so a lower bound of
+    /// exactly 1 does not contradict it — `1 <= 1` holds.
+    const AT_MOST_SAT: &str = "(set-logic QF_NRA)\n\
+        (declare-fun a () Real)(declare-fun b () Real)\n\
+        (assert (>= a 1))(assert (>= b 1))\n\
+        (assert (<= (* a b) 1))\n(check-sat)";
+
+    #[test]
+    fn the_producer_declines_the_non_strict_atom_it_cannot_close() {
+        let (arena, assertions) = query(AT_MOST_SAT);
+        assert!(monomial_bound_refutation(&arena, &assertions).is_none());
+    }
+
+    #[test]
+    fn a_non_strict_atom_needs_a_strictly_greater_bound() {
+        // Stage 1 accepts this in full: the query really states `a*b <= 1`, the
+        // certificate names that atom by kind and constant, and both carried
+        // lower bounds are exactly what the query asserts. Only stage 2's
+        // `claimed > against` for `AtMost` stops it — with `>=` there instead,
+        // this certifies a query that a = b = 1 satisfies. That was the shipped
+        // behaviour until 2026-08-20.
+        let (arena, assertions) = query(AT_MOST_SAT);
+        let forged = MonomialBoundRefutationCertificate {
+            factors: vec![
+                ("a".to_owned(), 1, Some((1, 1))),
+                ("b".to_owned(), 1, Some((1, 1))),
+            ],
+            uppers: Vec::new(),
+            bound: MonomialBound::AtLeast((1, 1)),
+            refuted_against: (1, 1),
+            refuted_kind: RefutedAtom::AtMost,
+        };
+        assert!(
+            !check_monomial_bound_refutation(&arena, &assertions, &forged),
+            "`a*b >= 1` does not refute `a*b <= 1`; a = b = 1 satisfies this query"
+        );
+    }
+
+    #[test]
+    fn an_atom_kind_the_query_never_states_is_rejected() {
+        // The same numbers, relabelled as the STRICT atom — for which the bound
+        // would be strong enough. The query states `<= 1` and no `< 1`, so
+        // stage 1's kind comparison is the only thing between this and a
+        // refutation of an atom nobody asserted.
+        let (arena, assertions) = query(AT_MOST_SAT);
+        let forged = MonomialBoundRefutationCertificate {
+            factors: vec![
+                ("a".to_owned(), 1, Some((1, 1))),
+                ("b".to_owned(), 1, Some((1, 1))),
+            ],
+            uppers: Vec::new(),
+            bound: MonomialBound::AtLeast((1, 1)),
+            refuted_against: (1, 1),
+            refuted_kind: RefutedAtom::LessThan,
+        };
+        assert!(
+            !check_monomial_bound_refutation(&arena, &assertions, &forged),
+            "the query states `a*b <= 1`, not `a*b < 1`"
+        );
+    }
+
+    #[test]
+    fn the_corpus_shapes_carry_the_atom_kind_they_refute() {
+        assert_eq!(cert_for(ONES).refuted_kind(), RefutedAtom::LessThan);
+        assert_eq!(cert_for(MULT01).refuted_kind(), RefutedAtom::NotEqual);
+        assert_eq!(cert_for(SIMPLE_MONO).refuted_kind(), RefutedAtom::LessThan);
     }
 }
