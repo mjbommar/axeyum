@@ -1714,11 +1714,6 @@ fn run_fib_gcd_exists_rec_minor_type_diagnostic(
     let predecessor_fv = d.fresh();
     let predecessor = d.kernel.fvar(predecessor_fv);
     let m = d.succ(predecessor);
-    let hm_ty = {
-        let zero = d.zero();
-        let one = d.succ(zero);
-        d.le(one, m)
-    };
     let remainder = d.modulo(n, m)?;
     let ih_ty = fib_gcd_statement(&mut d, remainder, m);
     let hm_fv = d.fresh();
