@@ -158,6 +158,8 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-21 | `1a9145641` | Reduced the identity-cylinder variance to the polynomial share `16ell^2 F_j(1)<=F_j(global)`, exposed its exponentially permissive weak-kurtosis sufficient form, and added exact implication and fourth-power diagnostics without claiming the open delocalization theorem. |
+| 2026-08-20 | `b1b4f407a` | Added exact local/global Haar layer energies, refuted perfect uniform sharing on control rows, and priced a stronger linear local-Carleson diagnostic with exponential endpoint surplus. |
 | 2026-08-20 | `79c5c95c8` | Reduced REL to one exact identity-cylinder conditional variance, reconstructed its localized Haar/Carleson energy level by level, and proved that Newton-over-Hodge divisibility by eight gives no endpoint rounding gain. |
 | 2026-08-20 | `c59ae115d` | Refuted relative-trace positivity with exact negative odd/even rows after smooth localization, preventing unit local terms from being substituted for the still-required global REL comparison. |
 | 2026-08-20 | `838fd5e3e` | Proved that every proper odd-endpoint `Frob*c` orbit collapses to the cone vertex and every projective fixed point is smooth, transverse, and has unit local multiplicity, while retaining the unbounded global trace as REL. |
@@ -436,7 +438,7 @@ cannot instantiate, which is why all three multi-goal probes decline; widening
 `hypotheses` to carry a universal it cannot instantiate as an assumption rather
 than dropping the goal would reach them. Neither is a soundness item.
 
-**WIP** (`gf2-lemire`, 2026-08-20).  The non-strict statement is independently
+**WIP** (`gf2-lemire`, 2026-08-21).  The non-strict statement is independently
 checked through degree 400.  Bounded native CAS operations now cover Hayes
 populations, moments/conductor filtration, and exact prime-power inversion.
 At odd endpoints they certify `N_(2ell+1)(1)=1+(2ell+1)I_(2ell+1)(1)`; hence
@@ -510,6 +512,18 @@ identity `R V_id=sum_j 2^(j-c_0-1)sum_p H_j(p)^2`, level by level.  The clean
 premise is false on some small rows but holds at both endpoints for every exact
 row `14<=ell<=23`; this remains finite evidence, not a theorem.  The missing
 statement is now a local Carleson-energy estimate on one ramified Witt subtree.
+Exact pricing weakens that bridge substantially: it is enough that the identity
+cylinder carry at most `1/(16ell^2)` of each retained level's global Haar
+square energy.  The native `(PL2)=>(ICV)=>(REL)` report checks both endpoint
+parities through `ell=1024`.  Equivalently, Cauchy reduces `(PL2)` to a global
+normalized Haar kurtosis as large as `2^c_0/(256ell^4)`, so neither Gaussian
+behavior nor an absolute fourth-moment constant is required.  The exact report
+now retains the global fourth powers and tests this weak threshold without
+division.  These are implication checkers and finite diagnostics; `(PL2)`
+remains an unproved polynomial-delocalization theorem.  Pinned fleet runs at
+`19<=ell<=23` preserve the stronger `(LC2)` on all ten endpoint rows while
+refuting perfect uniform sharing on 39 retained layers, so the diagnostic is
+non-vacuous but remains non-credit-bearing.
 The companion characteristic-two Newton-over-Hodge result has also been
 priced conditionally: it forces only divisibility of the connected endpoint
 trace by eight.  At `ell=200` the existing envelope is already divisible by
@@ -518,8 +532,9 @@ leaving 406 bits missing.  It receives no `(REL)` proof credit.
 
 **Next:** prove `(REL)`, encode it as replayable evidence, remove the
 manuscript's fail-visible warning, and perform the final source audit.  The
-active sufficient form is the localized identity-cylinder Haar/Carleson
-energy bound from ADR-0578.  Any proof must control the complete relative Witt
+active sufficient form is the polynomial identity-cylinder Haar share `(PL2)`
+from ADR-0580; the stronger linear local-Carleson pattern is diagnostic only.
+Any proof must control the complete relative Witt
 weight/zero-fibre distribution before characterwise absolute values; zero
 `2`-rank, a scalar minimum distance, or an elementary-abelian cover theorem is
 not sufficient.  At the odd endpoint, merely smoothing or counting the cycle

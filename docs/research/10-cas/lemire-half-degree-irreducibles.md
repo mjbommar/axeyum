@@ -3725,8 +3725,9 @@ the clean variance target in the `(LC2)` normalization is
 `2^170`, whereas (LC2) assumes only `200`.
 
 The stronger uniform share `2^c_0 F_j(1)<=F_j(global)` fails on many exact
-rows.  By contrast (LC2) survives the exact rows checked so far, but that is
-still finite evidence and is much stronger than the selected `(PL2)`.
+rows.  By contrast (LC2) survives both endpoint parities through `ell=23`,
+including pinned fleet runs for `19<=ell<=23`, but that is still finite
+evidence and is much stronger than the selected `(PL2)`.
 The natural prospective proof is a characteristic-free `m=2` Hast--Matei
 short-interval variety sliced by the `c_0` fixed common leading
 coefficients, with the level-`j` sibling twist retained.  Hast--Matei's

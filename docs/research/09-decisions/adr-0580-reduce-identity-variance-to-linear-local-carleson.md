@@ -122,9 +122,12 @@ against an unnecessary absolute constant.
 - The same report now computes `Q_j` directly and checks `(WK2)` by a
   denominator-free integer comparison; the result is a finite diagnostic, not
   a theorem.
-- Exact local rows through `ell=18` satisfy the much stronger `(LC2)` while
-  repeatedly refuting the uniform-share control.  Larger pinned fleet rows are
-  recorded only after they complete; no finite row is universal evidence.
+- Exact local rows through `ell=23` satisfy the much stronger `(LC2)` while
+  repeatedly refuting the uniform-share control.  On the pinned `b1b4f407a`
+  fleet rows `ell=19,20,21,22,23`, the maximum integral `(LC2)` localization
+  multipliers were respectively `14,3,3,3,5`; all ten endpoint rows passed
+  `(LC2)` and `(ICV)`.  The false uniform-share control failed on respectively
+  `10,10,7,6,6` retained layers.  No finite row is universal evidence.
 - The symbolic endpoint implication uses the proved envelope `(G2)`, not the
   observed global square sum.
 - `F:gf2-hayes-identity-cylinder-polynomial-share` remains conjectured with no
