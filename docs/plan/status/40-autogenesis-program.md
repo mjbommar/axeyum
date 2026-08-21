@@ -315,3 +315,4 @@
 | 2026-08-21 | (pending) | V7 advances to multiplicative monotonicity; V8 freezes two target-owned order leaves |
 | 2026-08-21 | (pending) | Parity V4 exposes overloaded addition but stops at opaque `Nat.mod`; V5 freezes a direct definitional-equality test without the failing unfold |
 | 2026-08-21 | (pending) | Parity V5 proves the two-step recurrence is not definitional; one non-rendering audit freezes the explicit recurrence and range primitives |
+| 2026-08-21 | (pending) | The old parity stream lacks `Nat.mod_lt`; a fresh exact-root export is frozen instead of treating incomplete coverage as evidence |
