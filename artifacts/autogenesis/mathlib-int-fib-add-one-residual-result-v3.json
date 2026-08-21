@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-parameterized-residual-result",
+  "state": "exported-and-reproduced-empty-footprint",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-add-one-residual-plan-v3.json",
+    "sha256": "3a1aad83f5598321662681c03b07dd0f1e2b47b4c0fb9e1398714661b646e327",
+    "commit": "11e9b2b77a7cbd40f3d407de5beb74d5d8479feb"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-add-one-residual-v3.lean",
+    "sha256": "9aae37f5e1774d3565fee35ecbb1e499448edb8a99201be932d44b8c580afda1"
+  },
+  "environment": {
+    "host": "s5",
+    "lean_version": "4.30.0",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-one-residual-v3-v1",
+    "manifest_sha256": "fd362643c5146e5a1b085219074cdede153500157d65e7d5454fea623efd9290",
+    "stream_sha256": "1705049d25be1b04447d7cd02b08f02c18d7f11e62dd500ad5f980be352bd65b",
+    "stream_bytes": 85543,
+    "audit_sha256": "493098e3b162410f19291b01a8f3d5bbfd6b5cefb99e643d40111c7a6187e9cf",
+    "sealed_modes": {
+      "directory": "0555",
+      "files": "0444"
+    }
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit": 0,
+    "exporter_invocations": 1,
+    "exporter_exit": 0,
+    "importer_runs": 2,
+    "retries": 0
+  },
+  "audit": {
+    "theorem": "Axeyum.Autogenesis.intFibAddOneResidualV3",
+    "declaration_sha256": "b6ed4c26bf6c1fe7da81bd131ff8a2949e094e0377704f57d9af839e3aae3fd1",
+    "direct_theorem_dependencies": [
+      "Eq.symm",
+      "Eq.trans",
+      "congrArg"
+    ],
+    "axiom_footprint": []
+  },
+  "authority": {
+    "residual_credit": 1,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "transfer_note": "The successful s5 exporter wrote to an s5-local /nas3 namespace. Its exact stream and exit files were transferred once into the sealed caller-visible evidence pack; the exporter was not retried.",
+  "next_boundary": "Preregister exact composition of admitted Int.fib_add_two, native Int.add_comm and Int.add_neg_cancel_right, and this residual into Int.fib_add_one.",
+  "limitations": "The accepted theorem is function-parameterized support only. It does not establish the exact Fibonacci theorem or mutate the fact ledger."
+}
