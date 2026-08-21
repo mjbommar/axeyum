@@ -5526,22 +5526,28 @@ pub struct IdentityCylinderTranslationSplitImplication {
     pub residual_three_quarter_balanced_steps: usize,
 }
 
+/// One exact-conductor row of the translation spectral involution.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HayesTranslationConductorVanishing {
+    /// Exact character level; the conductor is `x^(level+1)`.
+    pub level: usize,
+    /// Number `2^(level-1)` of characters of exact level.
+    pub exact_character_count: usize,
+    /// Number of exact-level characters fixed by `chi -> chi o tau`.
+    pub tau_fixed_character_count: usize,
+    /// Number of exact-level fixed characters with `chi(c)=-1`.
+    pub forced_vanishing_character_count: usize,
+}
+
 /// Exact translation involution on the complete binary Hayes character group.
 ///
 /// If `u(t)` is the truncated reciprocal class of a monic degree-`n`
-/// polynomial, translation `F(x) -> F(x+1)` acts by
-///
-/// ```text
-/// sigma(u) = c * tau(u),
-/// c = (1+t)^n,
-/// tau(u)(t) = u(t/(1+t))                 mod t^(ell+1).
-/// ```
-///
-/// The report checks the group identities and the induced permutation of the
-/// exact Mangoldt populations.  If `K={tau(g)g^(-1)}`, the `tau`-fixed dual
-/// characters are the dual of `G/K`.  Exactly half of them have
-/// `chi(c)=-1` when `n` is odd, and none do when `n` is even; every such
-/// character has zero Mangoldt and squared-discrepancy Fourier coefficient.
+/// polynomial, translation acts by `sigma(u)=c*tau(u)`, where
+/// `c=(1+t)^n` and `tau(u)(t)=u(t/(1+t))` modulo `t^(ell+1)`.  The cumulative
+/// and exact-conductor counts are kept separately.  In
+/// particular, at odd level `j>=3` there are `2^((j-1)/2)` fixed characters
+/// of exact level, but only `2^((j-3)/2)` have negative translation sign and
+/// are forced to vanish.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HayesTranslationSpectralInvolutionReport {
     /// Leading-coefficient prefix length.
@@ -5560,6 +5566,8 @@ pub struct HayesTranslationSpectralInvolutionReport {
     pub forced_vanishing_character_count: usize,
     /// Whether `c` lies in `K`.
     pub translation_class_in_commutator_image: bool,
+    /// Exact fixed and forced-vanishing counts at every conductor level.
+    pub conductor_levels: Vec<HayesTranslationConductorVanishing>,
 }
 
 /// Balanced-step summary for the Haar-weighted aggregate identity path.
@@ -6773,6 +6781,163 @@ fn construct_translation_involution(
     })
 }
 
+fn translation_conductor_vanishing_rows(
+    ell: usize,
+    degree: usize,
+    group_order: usize,
+    factors: &[PrincipalUnitFactor],
+    unit_to_index: &BTreeMap<u64, usize>,
+    translation_class: u64,
+) -> Result<Vec<HayesTranslationConductorVanishing>, HayesError> {
+    let cyclotomic_order = factors.iter().map(|factor| factor.order).max().unwrap_or(1);
+    if cyclotomic_order < 2 || !cyclotomic_order.is_multiple_of(2) {
+        return Err(HayesError::Invariant(
+            "translation character order is not a positive power of two".to_owned(),
+        ));
+    }
+    let translation_class_index = *unit_to_index
+        .get(&translation_class)
+        .ok_or_else(|| HayesError::Invariant("translation class has no Witt index".to_owned()))?;
+    let mut commutator_generator_indices = Vec::with_capacity(factors.len());
+    for factor in factors {
+        let generator = 1_u64 | (1_u64 << factor.odd_degree);
+        let commutator = unit_multiply(
+            principal_unit_tau(generator, ell),
+            principal_unit_inverse(generator, ell),
+            ell,
+        );
+        commutator_generator_indices.push(*unit_to_index.get(&commutator).ok_or_else(|| {
+            HayesError::Invariant("translation commutator generator has no Witt index".to_owned())
+        })?);
+    }
+
+    let mut rows = (1..=ell)
+        .map(|level| HayesTranslationConductorVanishing {
+            level,
+            exact_character_count: 0,
+            tau_fixed_character_count: 0,
+            forced_vanishing_character_count: 0,
+        })
+        .collect::<Vec<_>>();
+    for character in 0..group_order {
+        let Some(level) = mixed_radix_character_conductor(character, factors)? else {
+            continue;
+        };
+        let row = rows.get_mut(level - 1).ok_or_else(|| {
+            HayesError::Invariant("translation character conductor exceeds ell".to_owned())
+        })?;
+        row.exact_character_count += 1;
+        let mut tau_fixed = true;
+        for &class in &commutator_generator_indices {
+            if character_root_exponent(character, class, factors, cyclotomic_order)? != 0 {
+                tau_fixed = false;
+                break;
+            }
+        }
+        if !tau_fixed {
+            continue;
+        }
+        row.tau_fixed_character_count += 1;
+        let translation_exponent = character_root_exponent(
+            character,
+            translation_class_index,
+            factors,
+            cyclotomic_order,
+        )?;
+        if translation_exponent != 0 && translation_exponent != cyclotomic_order / 2 {
+            return Err(HayesError::Invariant(
+                "tau-fixed character has a non-sign translation evaluation".to_owned(),
+            ));
+        }
+        row.forced_vanishing_character_count +=
+            usize::from(translation_exponent == cyclotomic_order / 2);
+    }
+
+    validate_translation_conductor_closed_forms(&rows, degree)?;
+    Ok(rows)
+}
+
+fn validate_translation_conductor_closed_forms(
+    rows: &[HayesTranslationConductorVanishing],
+    degree: usize,
+) -> Result<(), HayesError> {
+    let power_of_two = |exponent: usize| -> Result<usize, HayesError> {
+        1_usize
+            .checked_shl(u32::try_from(exponent).map_err(|_| {
+                HayesError::InvalidParameter(
+                    "translation conductor-count exponent exceeds u32".to_owned(),
+                )
+            })?)
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("translation conductor count overflow".to_owned())
+            })
+    };
+    for row in rows {
+        let expected_exact = power_of_two(row.level - 1)?;
+        let fixed_through_level = power_of_two(row.level.div_ceil(2))?;
+        let fixed_through_previous = if row.level == 1 {
+            1
+        } else {
+            power_of_two((row.level - 1).div_ceil(2))?
+        };
+        let expected_fixed = fixed_through_level - fixed_through_previous;
+        let expected_forced = if degree.is_multiple_of(2) {
+            0
+        } else if row.level == 1 {
+            1
+        } else if row.level.is_multiple_of(2) {
+            0
+        } else {
+            power_of_two((row.level - 3) / 2)?
+        };
+        if row.exact_character_count != expected_exact
+            || row.tau_fixed_character_count != expected_fixed
+            || row.forced_vanishing_character_count != expected_forced
+        {
+            return Err(HayesError::Invariant(format!(
+                "translation conductor count disagrees with the closed form at level {}",
+                row.level
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn validate_translation_conductor_totals(
+    rows: &[HayesTranslationConductorVanishing],
+    group_order: usize,
+    tau_fixed_character_count: usize,
+    forced_vanishing_character_count: usize,
+) -> Result<(), HayesError> {
+    if rows
+        .iter()
+        .map(|row| row.exact_character_count)
+        .sum::<usize>()
+        != group_order - 1
+        || rows
+            .iter()
+            .map(|row| row.tau_fixed_character_count)
+            .sum::<usize>()
+            + 1
+            != tau_fixed_character_count
+    {
+        return Err(HayesError::Invariant(
+            "exact-conductor translation rows do not recover the character totals".to_owned(),
+        ));
+    }
+    if rows
+        .iter()
+        .map(|row| row.forced_vanishing_character_count)
+        .sum::<usize>()
+        != forced_vanishing_character_count
+    {
+        return Err(HayesError::Invariant(
+            "exact-conductor translation zeros do not recover the cumulative count".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
 /// Construct and check the complete translation involution on Hayes classes.
 ///
 /// Translation preserves degree and the polynomial von Mangoldt weight.  The
@@ -6858,6 +7023,20 @@ pub fn hayes_translation_spectral_involution(
         }
         tau_fixed_character_count / 2
     };
+    let conductor_levels = translation_conductor_vanishing_rows(
+        ell,
+        degree,
+        structure.group_order,
+        &factors,
+        &unit_to_index,
+        translation_class,
+    )?;
+    validate_translation_conductor_totals(
+        &conductor_levels,
+        structure.group_order,
+        tau_fixed_character_count,
+        forced_vanishing_character_count,
+    )?;
 
     let distribution = class_population_distribution(ell, degree, limits)?;
     if distribution.counts.len() != structure.group_order {
@@ -6885,6 +7064,7 @@ pub fn hayes_translation_spectral_involution(
         tau_fixed_character_count,
         forced_vanishing_character_count,
         translation_class_in_commutator_image,
+        conductor_levels,
     })
 }
 
@@ -20428,12 +20608,56 @@ mod tests {
                         report.tau_fixed_character_count / 2
                     }
                 );
+                assert_eq!(report.conductor_levels.len(), ell);
+                for row in &report.conductor_levels {
+                    assert_eq!(row.exact_character_count, 1_usize << (row.level - 1));
+                    assert_eq!(
+                        row.tau_fixed_character_count,
+                        if row.level == 1 {
+                            1
+                        } else if row.level.is_multiple_of(2) {
+                            0
+                        } else {
+                            1_usize << ((row.level - 1) / 2)
+                        }
+                    );
+                    assert_eq!(
+                        row.forced_vanishing_character_count,
+                        if degree.is_multiple_of(2) || row.level.is_multiple_of(2) {
+                            0
+                        } else if row.level == 1 {
+                            1
+                        } else {
+                            1_usize << ((row.level - 3) / 2)
+                        }
+                    );
+                }
             }
         }
         let odd = hayes_translation_spectral_involution(8, 17, limits).unwrap();
         assert_eq!(odd.commutator_image_order, 16);
         assert_eq!(odd.tau_fixed_character_count, 16);
         assert_eq!(odd.forced_vanishing_character_count, 8);
+        assert_eq!(
+            odd.conductor_levels
+                .iter()
+                .map(|row| (
+                    row.level,
+                    row.tau_fixed_character_count,
+                    row.forced_vanishing_character_count,
+                ))
+                .collect::<Vec<_>>(),
+            vec![
+                (1, 1, 1),
+                (2, 0, 0),
+                (3, 2, 1),
+                (4, 0, 0),
+                (5, 4, 2),
+                (6, 0, 0),
+                (7, 8, 4),
+                (8, 0, 0),
+            ]
+        );
         let even = hayes_translation_spectral_involution(8, 18, limits).unwrap();
         assert_eq!(even.commutator_image_order, 16);
         assert_eq!(even.tau_fixed_character_count, 16);
