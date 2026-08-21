@@ -43,6 +43,7 @@
 | 2026-08-21 | `f2057f744` | V5 compiles and reproduces but fails closed with a seven-name assumption footprint; all 23 direct dependencies are frozen for one audit |
 | 2026-08-21 | (pending) | One read splits nine clean dependencies from fourteen assumption carriers and freezes a seven-contract residualization route with zero closed-target authority |
 | 2026-08-21 | (pending) | First seven-contract source closes the natural and parity interfaces, then stops at retained negative-constructor matches; V2 freezes explicit conditional presentation only |
+| 2026-08-21 | (pending) | V2 exposes both negative conditionals and stops only at the two mis-parenthesized algebra contracts; V3 freezes their exact post-rewrite shapes |
 
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |

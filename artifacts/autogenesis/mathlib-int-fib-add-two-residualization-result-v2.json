@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-add-two-residualization-result",
+  "state": "parameterized-source-stops-at-residual-contract-shape-no-export",
+  "plan_sha256": "3085bd6c11187dcf1a27c52ce5d4beddaece0023fb65851a3c86fa7e82106f0a",
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-add-two-residual-v2.lean",
+    "sha256": "a7e84c706f7ebf07a3875154afb414c8afff11327f7b3729cc7d5ab676c6fbed"
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit_status": 1,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "target_theorem_submissions": 0,
+    "retries": 0,
+    "search_invocations": 0,
+    "ledger_writes": 0
+  },
+  "diagnostic": {
+    "conditional_reduction": "accepted after the explicit change in both parity branches",
+    "natural_recurrence_and_casts": "accepted from natRec and castAdd parameters",
+    "remaining_failure": "the evenAdd and oddAdd parameter propositions use a parenthesization and negation distribution different from the exact post-rewrite goals",
+    "even_goal": "-a = -(a + (b + a)) + (b + a)",
+    "odd_goal": "a = a + (b + a) + -(b + a)",
+    "repair": "replace only the two residual algebra contract types with the exact post-rewrite propositions"
+  },
+  "cleanup": {
+    "temporary_source_removed": true,
+    "temporary_olean_removed": true,
+    "checkout_baseline_restored": true
+  },
+  "authority": {
+    "parameterized_support_credit": 0,
+    "closed_target_authorized": false,
+    "ledger_writes": 0
+  }
+}
