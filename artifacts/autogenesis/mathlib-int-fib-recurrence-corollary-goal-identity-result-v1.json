@@ -1,0 +1,25 @@
+{
+  "input": {
+    "bytes": 879304,
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-recurrence-corollary-composition-v3/int-fib-recurrence-corollary-1.ndjson",
+    "sha256": "d8823373479dce23213aa004b58e9e0c8912fd413b2cb29e52195639f57a7987"
+  },
+  "kind": "axeyum-theorem-goal-identity-audit",
+  "rendered_material": {
+    "proof_terms": 0,
+    "theorem_types": 0,
+    "theorem_values": 0
+  },
+  "schema_version": 1,
+  "theorem": {
+    "axiom_footprint": [],
+    "canonical_declaration_sha256": "095a25341329591091b618d64fbc2f249ed3d33337bf06e499d0c9a10f436a93",
+    "canonical_type_sha256": "2295addae4552672b3f69a9a489c9173deddc7e68c74cfa12429490fffc825ad",
+    "direct_theorem_dependencies": [
+      "Axeyum.Autogenesis.intFibEqAddTwoSubAddOneResidualV2",
+      "Int.add_neg_cancel_right",
+      "Int.fib_add_two"
+    ],
+    "name": "Int.fib_eq_fib_add_two_sub_fib_add_one"
+  }
+}

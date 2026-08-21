@@ -16,7 +16,8 @@
 | 2026-08-21 | `cfd23abfa` | V5 exports the function-parameterized rearrangement twice with empty footprint; exact three-capsule specialization is frozen before driver code exists |
 | 2026-08-21 | `339213b8e` | First composition declines at recursive `Nat.le` while importing recurrence into the tiny residual base; V2 freezes recurrence as the base before one code repair |
 | 2026-08-21 | `8fa456002` | V2 reaches an empty-footprint exact target but rejects a role-ordered expected dependency array; V3 freezes the lexical order repair |
-| 2026-08-21 | (pending) | V3 specializes and reimports the exact corollary empty-footprint; one hash-only sealed-stream read is frozen before admission authority exists |
+| 2026-08-21 | `3ad85619a` | V3 specializes and reimports the exact corollary empty-footprint; one hash-only sealed-stream read is frozen before admission authority exists |
+| 2026-08-21 | (pending) | Hash-only audit binds canonical type `2295adda…25ad`; exact three-dependency crash-safe admission is frozen before operation code or ledger write |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |

@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-recurrence-corollary-admission-plan-v1",
+  "state": "preregistered-sealed-capsule-admission-before-operation-code-or-ledger-write",
+  "target": {
+    "fact_id": "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
+    "fact_sha256": "aeb5bcc29621ce36f402eb1fc316771d29af39dceef0910535b979480801c9f8",
+    "name": "Int.fib_eq_fib_add_two_sub_fib_add_one"
+  },
+  "evidence": {
+    "construction_result": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-composition-result-v3.json",
+    "construction_result_sha256": "11be30622a78fce1eed8accca59dceb254c5cf3a3bf05d15e237aad295cac907",
+    "identity_result": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-goal-identity-result-v1.json",
+    "identity_result_sha256": "c434952c4d9b92f1e7b256c25bc22ae14e2657ed9242d4f05e90dc1192edd87c",
+    "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-recurrence-corollary-composition-v3/int-fib-recurrence-corollary-1.ndjson",
+    "capsule_sha256": "d8823373479dce23213aa004b58e9e0c8912fd413b2cb29e52195639f57a7987",
+    "capsule_bytes": 879304,
+    "goal_sha256": "2295addae4552672b3f69a9a489c9173deddc7e68c74cfa12429490fffc825ad",
+    "declaration_sha256": "095a25341329591091b618d64fbc2f249ed3d33337bf06e499d0c9a10f436a93",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [
+      "Axeyum.Autogenesis.intFibEqAddTwoSubAddOneResidualV2",
+      "Int.add_neg_cancel_right",
+      "Int.fib_add_two"
+    ]
+  },
+  "protocol": {
+    "add_exact_capsule_checker": true,
+    "register_exact_operation": true,
+    "extend_transaction_assurance_for_exact_three-dependency_capsule": true,
+    "derive_transaction_from_clean_commit": true,
+    "fault_injection_after_intent_exit": 75,
+    "require_fact_unchanged_before_recovery": true,
+    "authoritative_ledger_writes": 1,
+    "fixture_writes": 0,
+    "archive_primary_run": true,
+    "isolated_clean_replay": true
+  },
+  "budget": {
+    "max_operation_registrations": 1,
+    "max_fault_injection_executions": 1,
+    "max_authoritative_ledger_writes": 1,
+    "max_recovery_executions": 1,
+    "max_clean_replays": 1,
+    "max_search_invocations": 0,
+    "max_evaluations": 0
+  },
+  "next_on_accept": "measure the newly ready frontier and select the next integer Fibonacci child while preserving the negative-index route",
+  "limitations": "This authorizes only one exact fact transition from the named immutable capsule and grants no authority to close any newly ready proposition."
+}
