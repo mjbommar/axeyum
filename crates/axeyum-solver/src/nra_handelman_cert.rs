@@ -331,7 +331,7 @@ fn wire_rational(wire: WireRat) -> Option<Rational> {
 ///    disjunct of a disjunction the query asserts, with the cases exhausting it.
 /// 2. **Re-derive.** The carried coefficients are multiplied out with exact
 ///    rational arithmetic; the sum must collapse to the carried residual, and
-///    [`residual_refutes`] must close.
+///    `residual_refutes` must close.
 ///
 /// The checker runs no LP and reuses none of the producer's search, so it can
 /// disagree with the producer rather than only with a different query.
@@ -829,7 +829,7 @@ fn refute_case(atoms: &[(NamedPoly, AtomSign)], case_atom: Option<usize>) -> Opt
 /// `assemble_case` refuses a non-positive multiplier and a combination that does
 /// not collapse to a constant, the atoms are asserted by construction, and the
 /// engine's own `FarkasCertificate::verify` guarantees the combined relation is
-/// unsatisfiable — which is exactly [`residual_refutes`]'s precondition. So no
+/// unsatisfiable — which is exactly `residual_refutes`'s precondition. So no
 /// fixture can pass everything else and fail only here.
 ///
 /// It is kept anyway, on the same terms as `lra_farkas_certificate`'s self-check
