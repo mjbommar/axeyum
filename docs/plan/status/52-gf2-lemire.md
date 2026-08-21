@@ -265,6 +265,20 @@ still running at the time of this snapshot.  Neither result is proof evidence,
 and the surviving odd row cannot revive a diagnostic already refuted by the
 level-23 even row.
 
+The theorem-first reset is now explicit in
+`docs/research/10-cas/lemire-high-witt-expert-brief.md`.  It records the
+smallest currently known sufficient high-Witt order-layer theorem, its exact
+factor-`4ell` endpoint price, and the hypotheses a specialist result must
+actually meet.  A fresh primary-source check of Hast--Matei confirms that its
+short-interval bounds are fixed-degree, large-field statements with
+degree-dependent constants (and `p>n` for higher moments); even a wild port
+does not supply this uniform high-order theorem.  This retires that route from
+active proof work rather than generating another finite diagnostic.  A second
+primary-source check rules out the nearby uniform high-conductor result of
+Gorodetsky--Kovaleva as a direct bridge: over `F_2` it concerns a special
+order-two additive character, whereas every order-two through `Q` layer has
+already been paid and the remaining `HWO` families have higher Witt order.
+
 **Next:** prove `(REL)`, encode it as replayable evidence, remove the
 manuscript's fail-visible warning, and perform the final source audit.  The
 active geometric form is the complete signed lower Witt trace `(WITT-LOW)`,
