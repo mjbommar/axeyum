@@ -1,32 +1,70 @@
 {
-  "schema_version": 1,
-  "id": "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
-  "title": "Mathlib v4.30 source proposition Int.fib_eq_fib_add_two_sub_fib_add_one",
-  "statement": "The proposition declared as `Int.fib_eq_fib_add_two_sub_fib_add_one` in the pinned Mathlib v4.30 source.",
-  "formal": {
-    "language": "lean4-surface",
-    "statement": "∀ (n : ℤ), Int.fib n = Int.fib (n + 2) - Int.fib (n + 1)",
-    "fragment": "Int"
-  },
-  "epistemic_status": "open",
-  "external_status": "proved",
+  "axiom_footprint": [],
   "depends_on": [
     "F:ml430-int-fib-add-two-739358dd"
   ],
-  "evidence": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "artifact": "sha256:d9d8e4b4551397b71e97ab7116e969c950fa00311137e65d56dec6193544f1dc",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-autogenesis-fact-operation.py --fact artifacts/facts/F-ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d.json",
+      "checker_operation": {
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-recurrence-corollary-composition-v3/int-fib-recurrence-corollary-1.ndjson",
+        "capsule_sha256": "d8823373479dce23213aa004b58e9e0c8912fd413b2cb29e52195639f57a7987",
+        "declaration_sha256": "095a25341329591091b618d64fbc2f249ed3d33337bf06e499d0c9a10f436a93",
+        "direct_theorem_dependencies": [
+          "Axeyum.Autogenesis.intFibEqAddTwoSubAddOneResidualV2",
+          "Int.add_neg_cancel_right",
+          "Int.fib_add_two"
+        ],
+        "execution_sha256": "d9d8e4b4551397b71e97ab7116e969c950fa00311137e65d56dec6193544f1dc",
+        "formal_statement_sha256": "4db1e3e40062ce4d129d63e3bada8c0cff0edb510acb054d788c0d504db8dd34",
+        "frontier_sha256": "078babba6f0c67bbd6d49d9d70bacc5e7278c692c7e45d955c9725f851e51296",
+        "goal_sha256": "2295addae4552672b3f69a9a489c9173deddc7e68c74cfa12429490fffc825ad",
+        "id": "authoritative-mathlib-int-fib-recurrence-corollary-kernel-capsule-v1",
+        "operation_sha256": "20cbdacb3d0d8ed195ac83150fe4a0df14ad26e8462a92509356a798398d94a7",
+        "receipt_sha256": "90360a5c12c827afcdcd77fc9b02ff2ef2868b74a71010dddc19d67de65fe276",
+        "registry_sha256_at_execution": "f0169b3794a49f5a4d73ec75295588888b3daec34f29dacf26b01ce59f7ae692",
+        "result_manifest": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-goal-identity-result-v1.json",
+        "result_manifest_sha256": "b48540b031c0fd0ddd2e23cf6ed03f1339f847a01e8102c5b7edccee6df4e0f2",
+        "target_theorem": "Int.fib_eq_fib_add_two_sub_fib_add_one"
+      },
+      "checkers": [
+        "three-root-integer-fibonacci-recurrence-corollary-composition-v1",
+        "axeyum-lean-import/sealed-int-fib-recurrence-corollary-capsule-receipt-v1",
+        "axeyum-lean-import/sealed-kernel-capsule-v1"
+      ],
+      "id": "autogenesis-operation-d9d8e4b4551397b7",
+      "kind": "kernel-term",
+      "notes": "Derived from a clean-commit typed execution receipt. The registered fact-operation checker replays the immutable capsule and committed identity manifest and requires its exact theorem identity, two fresh imports, empty axiom footprint, and three named direct theorem dependencies; no caller-authored route, footprint, checker, or shell command is accepted.",
+      "supports": "The proposition declared as `Int.fib_eq_fib_add_two_sub_fib_add_one` in the pinned Mathlib v4.30 source."
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Int",
+    "language": "lean4-surface",
+    "statement": "\u2200 (n : \u2124), Int.fib n = Int.fib (n + 2) - Int.fib (n + 1)"
+  },
+  "id": "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
+  "notes": "CLOSED BY AXEYUM AUTOGENESIS. The machine frontier selected this exact fact for registered operation `authoritative-mathlib-int-fib-recurrence-corollary-kernel-capsule-v1`; execution receipt `d9d8e4b4551397b71e97ab7116e969c950fa00311137e65d56dec6193544f1dc` produced a three-root-composed axiom-free sealed integer Fibonacci recurrence corollary capsule, and the typed transaction derived this status, route, footprint, evidence row, checker, and provenance without caller-authored admission metadata.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
   "provenance": {
     "date": "2026-08-18",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Int.fib_eq_fib_add_two_sub_fib_add_one` from Mathlib v4.30.0; no proof value was exposed",
+    "established_by": "axeyum-autogenesis execution df25730a6197ffc08c13fa9c9f949c407ff89240c8744ba361083c92d517e4e7",
     "prior_art": [
       {
-        "who": "the Mathlib contributors",
+        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted",
         "what": "the theorem declaration `Int.fib_eq_fib_add_two_sub_fib_add_one`",
         "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
-        "year": 2026,
-        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted"
+        "who": "the Mathlib contributors",
+        "year": 2026
       }
-    ]
+    ],
+    "source": "statement-only extraction of `Int.fib_eq_fib_add_two_sub_fib_add_one` from Mathlib v4.30.0; no proof value was exposed"
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "schema_version": 1,
+  "statement": "The proposition declared as `Int.fib_eq_fib_add_two_sub_fib_add_one` in the pinned Mathlib v4.30 source.",
+  "title": "Mathlib v4.30 source proposition Int.fib_eq_fib_add_two_sub_fib_add_one"
 }
