@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-extended-gcd-root-audit-plan",
+  "state": "preregistered-before-single-root-remote-export-or-local-batch-import-no-reconstruction-authority",
+  "policy_version": "extended-gcd-coefficient-root-audit-v1",
+  "inputs": {
+    "public_gcd_def_decline": {
+      "path": "artifacts/autogenesis/public-gcd-def-direct-reconstruction-result-v1.json",
+      "sha256": "fe3c2ffc68d89e64c7a179cb87e5aa1ac534bfe7de0be89566240fb6ae473f90"
+    },
+    "generated_gcd_dependency_audit": {
+      "path": "artifacts/autogenesis/generated-gcd-novel-dependency-audit-result-v1.json",
+      "sha256": "30698c40a963f6d39880a366cb318bc4da60ae5907957cb9731961fda75ca107"
+    },
+    "statement_inventory": {
+      "path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-nat-int-statement-inventory-v2.ndjson",
+      "sha256": "4285e551680abf3b0cafb11709015f04b3aef3eb05ce23af2392b12cec31aecc",
+      "mode": "0444"
+    }
+  },
+  "fixed_environment": {
+    "ssh_alias": "s5",
+    "hostname": "server5",
+    "mathlib_checkout": "/home/mjbommar/lean-import-scale/mathlib4",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "mathlib_status_entries": 0,
+    "lean_toolchain": "leanprover/lean4:v4.30.0",
+    "lean_version": "4.30.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "module_olean": {
+      "path": "/home/mjbommar/lean-import-scale/mathlib4/.lake/build/lib/lean/Mathlib/Data/Int/GCD.olean",
+      "bytes": 101976,
+      "sha256": "97e242adc99140b6355053247cf26c35504661f9248875f6d24886b2558a27c3"
+    },
+    "lean4export_checkout": "/home/mjbommar/lean-import-scale/lean4export",
+    "lean4export_commit": "a3e35a584f59b390667db7269cd37fca8575e4bf",
+    "lean4export_status_entries": 0,
+    "lean4export_version": "3.1.0",
+    "lean4export_binary_sha256": "8e763913b03762488571a93ced6ec1a4e04f7d8eebbe40bd1215ba41a6bd4449"
+  },
+  "fixed_root": {
+    "module": "Mathlib.Data.Int.GCD",
+    "name": "Nat.gcd_eq_gcd_ab",
+    "source_row_sha256": "eef44084661bf954cc6d2f2b75138116a29846e028c9aabceffd2cecf56a66c3",
+    "type": "∀ (x y : ℕ), ↑(x.gcd y) = ↑x * x.gcdA y + ↑y * x.gcdB y",
+    "type_repr_sha256": "8ef93bec028bce2707ff7f147f7f522a52f0c8af093a6eed732caaca77801421"
+  },
+  "fixed_measurement": {
+    "export_command_shape": "cd <mathlib_checkout> && <lean-4.30-bin>/lake env <lean4export-binary> Mathlib.Data.Int.GCD -- Nat.gcd_eq_gcd_ab",
+    "proof_bearing_stream": "/nas3/data/axeyum/autogenesis/reference-packs/609241d91-extended-gcd-root-audit-v1/extended-gcd.ndjson",
+    "tool_path": "crates/axeyum-lean-import/examples/theorem_footprint_batch_audit.rs",
+    "tool_sha256": "38e40236fec86f1080af52bafb9394f9f1505ad161dae96e9c48979d00b1094a",
+    "tool_interface": "theorem_footprint_batch_audit <stream> Nat.gcd_eq_gcd_ab",
+    "proof_terms_types_or_values_may_be_rendered": false,
+    "root_must_resolve_as_theorem": true
+  },
+  "decision_rule": {
+    "empty_footprint_next": "preregister a target-side integer coefficient adapter using gcdA and gcdB",
+    "assumption_bearing_next": "preregister an audit of exactly the root's novel direct theorem dependencies",
+    "authorize_either_successor_in_this_increment": false
+  },
+  "budget": {
+    "max_exporter_invocations": 1,
+    "max_batch_importer_runs": 1,
+    "max_proof_bearing_stream_reads": 1,
+    "max_retries": 0,
+    "max_reconstruction_source_compilations": 0,
+    "max_new_theorem_submissions": 0,
+    "max_exact_target_submissions": 0,
+    "max_executor_invocations": 0
+  },
+  "authority": {
+    "proof_bodies_readable_by_model": false,
+    "theorem_types_readable_by_model": false,
+    "theorem_values_readable_by_model": false,
+    "reconstruction_allowed": false,
+    "support_theorem_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/extended-gcd-root-audit-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-extended-gcd-root-audit-plan.py",
+  "limitations": "This pass measures one official extended-gcd theorem. It does not reconstruct gcd, Bezout, cancellation, or Fibonacci results and grants no theorem or ledger credit."
+}
