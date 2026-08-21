@@ -180,6 +180,7 @@ compounding, not automation theatre.
 | [Constructive official Euclidean bridge plan](81-constructive-euclidean-bridge-plan.md) | Which bounded bottom-up route repairs the official division/Bézout foundation without importing an assumption-bearing proof or spending target credit? |
 | [Official division equation root audit](82-official-division-equation-root-audit.md) | Are the three generated quotient/remainder computation roots independently checkable with empty footprints before authored bridge work begins? |
 | [Proof-isolated Euclidean construction capsule](83-proof-isolated-euclidean-construction-capsule.md) | Can a fresh construction context receive every allowed statement and audited identity without being exposed to upstream proof material? |
+| [Current-stable Mathlib statement comparison plan](84-current-stable-mathlib-statement-comparison-plan.md) | Which exact stable release and bounded proof-free process should measure whether the selected v4.30 statement surface survives upstream evolution? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
