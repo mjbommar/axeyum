@@ -78,11 +78,11 @@ The latest credited weak arithmetic and combination edges are:
 
 | Division | Axeyum | Reference | Ratio | Disagreements |
 |---|---:|---:|---:|---:|
-| QF_NIA | 34/200 | 89/200 | 38.2% | 0 |
-| QF_UFLIA | 94/200 | 180/200 | 52.2% | 0 |
-| QF_IDL | 68/200 | 124/200 | 54.8% | 0 |
-| QF_LRA | 86/200 | 146/200 | 58.9% | 0 |
-| QF_RDL | 105/200 | 155/200 | 67.7% | 0 |
+| QF_NIA | 33/200 | 81/200 | 40.7% | 0 |
+| QF_UFLIA | 113/200 | 180/200 | 62.8% | 0 |
+| QF_IDL | 66/200 | 118/200 | 55.9% | 0 |
+| QF_LRA | 88/200 | 134/200 | 65.7% | 0 |
+| QF_RDL | 102/200 | 148/200 | 68.9% | 0 |
 
 The stronger selected cells include QF_SLIA, QF_BV, UF, and QF_LIA.
 `bench-results/parity-lists/` also carries committed QF_ABV and QF_UF lists that

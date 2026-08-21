@@ -120,6 +120,9 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | All 35 dominance audits re-run at `496288979` from a `lane-snapshot` tree; `dominant_unsat` 262 / 324 → **269 / 326**, `lean-reconstruction-gap` 15 → **10**, certified/checked 278 → 280. Four rows moved: QF_NRA cvc5 (+3, `RealProduct`×2 + `MonomialBound`), QF_S (+2, `StringLength`), QF_NRA synthetic (+2, the prelude-warm instrument fix, proved by an A/B with the warm suppressed at two revisions), QF_SEQ (a `parse-error` became `sat`, no dominance change). `gen-proof-gap-matrix`, `gen-proof-gap-shape-census`, `gen-dominance-scoreboard` and `gen-autogenesis-baseline` regenerated; the six moved markers in `PROJECT-STATE.md` and the gap analysis renumbered **with** the account of what moved them, and the ten remaining Lean-reconstruction gaps recorded one line each with the fragment's own decline reason rather than the fallback route's. |
 | 2026-08-21 | `a3799dca2` | **`QF_FP/fp_misc`'s "timeout" was an unmemoized DAG walk in the classifier.** `array_bv_abs::abstract_term` re-explored shared subterms once per path; 8/8 `gdb` samples sat in it. Memo + visit budget, each guard mutation-verified to kill exactly one test: **124.7 s timeout → 314 ms**, 4,194,309 visits → 4,365 over 5,762 nodes. QF_FP `timeouts 1 → 0`, certified/checked 15/16 → **16/16**; `dominant` stays 15/16 and the row now declares `bit-blast` instead of `timeout`, because `887b52e64` withdrew its term-level FP route on purpose. Also measured and pinned: `QF_BVFP/Float-no-simp3-main` is not the "evidence exceeds 120 s" it was recorded as — its reduction certificate is `proved` in **28.3 ms** and is withheld only by `produce_evidence`'s blanket "timeout set → skip", whose deadline covers the SAT search and none of `lower_terms` / `tseitin_encode` / `check_drat` / LRAT. QF_FP and QF_BVFP audits re-run at `a3799dca2`; `proof_errors` 4 → **3**, certified/checked 280 → **281**, and the four moved markers in `PROJECT-STATE.md` and the gap analysis renumbered with the account of what moved them. |
 | 2026-08-21 | `17079b33d` | `:pattern` was parsed and dropped; the author's trigger now decides. Arena side table, alternatives unioned, multi-patterns joined, declines explicit. ADR-0537. |
+| 2026-08-21 | `df30d9fa9` | `parity-run.sh` said every ratio is a LOWER bound under contention. True of each solver's own count, false of the quotient: QF_LRA measured 89/127 = 70.1% at load 32 and 88/137 = 64.2% quiet, so the loaded run read six points HIGHER because the reference lost ten files and we lost none. Also: the freshness gate now reports each entry's `solver commit`, ancestry and `behind=N` — QF_BV was 4.0 days fresh and 352 solver commits behind, the number nobody had. Advisory by design; making it fatal kills seven controls. |
+| 2026-08-21 | `e7d8629c5` | `docs/PROJECT-STATE.md` said the parity ledger holds "eleven divisions" and named QF_ABV among its parity cells. It holds nine and has never held a QF_ABV entry — that list is committed and was never run. Two guards added to `check-parity-docs.py`, both derived from the ledger and both shown to fire on the real tree before the prose was fixed. |
+| 2026-08-21 | `35f46112b` | `scripts/parity-run.sh` was invoked by NO gate, so the repository's declared headline froze on 2026-08-06 for fifteen days and nothing went red. `scripts/check-parity-freshness.py` fails past 14 days per logic (warn 10), wired into BOTH `scripts/check.sh` and the justfile's `check`. Parser classifies every `## ` header and exits 2 on one it does not recognise — a silently skipped entry is indistinguishable from an absent one, which is how a stale logic reads as fresh. 12 controls, every guard mutation-verified. |
 | 2026-08-21 | `c4c6524ac` | Exact `Int.fib_neg` root audit is frozen against the pinned clean exporter environment with zero reconstruction or ledger authority |
 | 2026-08-21 | (pending) | One root export and non-rendering importer pass find 26 direct dependencies and an assumption-bearing official `Int.fib_neg` proof |
 | 2026-08-21 | `1c728c757` | Exact 26-root dependency descent is frozen against the immutable `Int.fib_neg` stream with zero theorem authority |
@@ -1179,6 +1182,53 @@ before the flood-control cost function is touched (ADR-0537 §5); and the parser
 declines any trigger outside an application tree over declared uninterpreted
 functions, which rules out arithmetic subterms — the first real workload with
 `(f (+ x 1))` as a pattern will want that.
+
+**The parity ledger has a gate, it is ENFORCING in both aggregate gate sets, and
+the board behind it has been re-measured** (`WIP`, agent-parity-gate,
+2026-08-21). `bench-results/PARITY.md` is the declared headline — external list
+pinned by sha256 before each run, `DISAGREEMENTS > 0` voids an entry — and
+`scripts/parity-run.sh`, the only thing that writes it, was invoked by **no
+gate**: not `just check`, not `scripts/check.sh`, not CI. So the board froze on
+2026-08-06 for fifteen days, through UF 32 → 85 and QF_RDL 10 → 105, and nothing
+went red.
+
+`scripts/check-parity-freshness.py` derives a per-logic as-of date from each
+entry's own header and fails past **14 days** (warn at 10). 14 is not a round
+number: any budget ≥ 15 days would have sat green through the whole episode the
+gate exists for, and below it the binding constraint is cost — the ledger's own
+2026-08-06 sequence puts a division at 68–170 minutes. The budget is **per
+logic**, so a red costs one sweep, not a board refresh. The population comes
+from the append-only ledger, never from `bench-results/parity-lists/`: a list
+can be deleted, so anchoring there would let a logic be dropped from the tracked
+set to go green.
+
+**Freshness is not correctness, and that nearly bit on day one.** Mid-sweep,
+`40a1ab969` (ADR-0538) landed — one file, `dpll_lia.rs` — and the sweep tree did
+not contain it. A `2026-08-21` entry carrying the pre-fix QF_UFLIA number would
+have been *fresher-looking and more wrong* than the 2026-08-06 entry it
+replaced, with this gate green over it. Every arithmetic division was re-swept
+from a post-fix tree, and the gate now reports each entry's `solver commit`,
+its ancestry, and `behind=N` commits touching `crates/` — advisory, because a
+commit-count bound is red-by-construction during a burst and non-ancestry is
+legitimate when a lane measures from its own branch.
+
+**Two instrument defects fixed, both found by measuring.** `parity-run.sh`
+claimed every ratio is a lower bound under contention; true of each solver's own
+count, false of their quotient — QF_LRA read 70.1% at load 32 and 64.2% quiet,
+because contention cost the reference ten files and cost us none. And
+`docs/PROJECT-STATE.md` claimed the ledger held "eleven divisions" and named
+QF_ABV as a parity cell; it holds nine and has never held a QF_ABV entry —
+`parity-lists/QF_ABV.txt` is a committed list that was never run.
+
+Controls: 16 cases, every guard mutation-verified by deletion, mutation map in
+the suite's header. Two run against the real committed ledger, because a parser
+never pointed at its subject returns the same empty answer as a strong negative.
+
+**Next.** Wire the gate into `.github/workflows/ci.yml` (the third place the
+gap analysis named) once the board is green; measure QF_ABV and QF_UF, whose
+lists are committed and have never been run; and hand UF's reproducible
+composition shift (both/only 77/8/14 → 60/23/33 across ~100 commits) to the UF
+lane.
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, and now `Int.fib_natCast` are durably proved. The target-owned integer Fibonacci definition replaces the official `Int.instDecidablePredEven` closure with constructor matching and explicit Nat parity; crash-safe recovery admitted its exact natural-cast theorem with an empty footprint and made `Int.fib_add_two` newly ready.
 
