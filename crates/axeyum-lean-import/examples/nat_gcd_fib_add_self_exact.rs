@@ -1,5 +1,8 @@
 //! Reconstruct exact `Nat.gcd_fib_add_self` from four sealed proof capsules.
 
+#[path = "support/fib_coprime.rs"]
+mod fib_coprime;
+
 use std::fmt::Write as _;
 use std::fs;
 use std::io::Cursor;
@@ -96,6 +99,7 @@ const GCD_DIVISIBILITY_CLOSED: &str = "Axeyum.Autogenesis.gcdDivisibilityFamilyC
 const TARGET_GCD_DVD_LEFT: &str = "Axeyum.Autogenesis.gcdDvdLeftOfficialV1";
 const TARGET_GCD_DVD_RIGHT: &str = "Axeyum.Autogenesis.gcdDvdRightOfficialV1";
 const TARGET_DVD_GCD: &str = "Axeyum.Autogenesis.dvdGcdOfficialV1";
+const TARGET_FIB_COPRIME: &str = "Axeyum.Autogenesis.fibCoprimeFibSuccOfficialV1";
 const COPRIME_CAPSULE: &str = "9106a3442d75a5fdaf51e35436e6fdbea78714d743e666bec27ffd9641160b11";
 const CLEAN_GCD_COMM: &str = "Axeyum.Autogenesis.gcdCommCleanV1";
 const OFFICIAL_EQ_ZERO: &str = "Axeyum.Autogenesis.eqZeroOfZeroDvdOfficialV1";
@@ -154,6 +158,10 @@ fn run() -> Result<(), String> {
     let mut args = std::env::args_os().skip(1);
     if args.next().as_deref() == Some(std::ffi::OsStr::new("--target-native-gcd-parameter-audit")) {
         return run_target_native_gcd_parameter_audit(args);
+    }
+    let mut args = std::env::args_os().skip(1);
+    if args.next().as_deref() == Some(std::ffi::OsStr::new("--target-native-fib-coprime-capsule")) {
+        return run_target_native_fib_coprime_capsule(args);
     }
     let mut args = std::env::args_os().skip(1);
     let r091_path = path(&mut args)?;
@@ -626,6 +634,141 @@ fn run_target_native_gcd_parameter_audit(
         .map_err(|error| error.to_string())?
     );
     Ok(())
+}
+
+#[allow(clippy::too_many_lines)]
+fn run_target_native_fib_coprime_capsule(
+    mut args: impl Iterator<Item = std::ffi::OsString>,
+) -> Result<(), String> {
+    let r091_path = path(&mut args)?;
+    let inputs = [
+        (
+            path(&mut args)?,
+            CLEAN_ANTISYMM_CAPSULE,
+            vec![CLEAN_ANTISYMM],
+        ),
+        (path(&mut args)?, CANCELLATION_CAPSULE, vec![CANCELLATION]),
+        (path(&mut args)?, ADDITION_CAPSULE, vec![ADDITION]),
+        (
+            path(&mut args)?,
+            "ce0db76dc93690e1e345627ce555e9f53b532a396643581fe554a7bcdce18322",
+            vec![TARGET_DVD_ADD, TARGET_EQ_ONE_OF_DVD_ONE],
+        ),
+        (
+            path(&mut args)?,
+            "51f5e30677457cb0e6f39799fe062c11d115b1120c04dd23e17dbed596ff3cf3",
+            vec![TARGET_DVD_REFL, TARGET_DVD_MUL_RIGHT],
+        ),
+        (
+            path(&mut args)?,
+            "9ecf0b10d1390f880040790fb1845a11d7987b94c0d3a71acf4ad8dca0c5a304",
+            vec![TARGET_GCD_DVD_LEFT, TARGET_GCD_DVD_RIGHT, TARGET_DVD_GCD],
+        ),
+    ];
+    let output_path = path(&mut args)?;
+    if args.next().is_some() || output_path.exists() {
+        return Err("usage: nat_gcd_fib_add_self_exact --target-native-fib-coprime-capsule <r091> <official-clean-order> <cancellation> <addition> <simple-support> <dvd-utilities> <gcd-divisibility> <output>".to_owned());
+    }
+    let r091 = import_bound(&r091_path, R091_SHA256, "r091")?;
+    let mut kernel = r091.kernel().clone();
+    let mut setup = Vec::new();
+    for (source_path, expected_sha256, roots) in inputs {
+        let source = import_bound(&source_path, expected_sha256, roots[0])?;
+        let completed = compose_checked_theorem_slice(source.kernel(), &kernel, &roots)
+            .map_err(|error| format!("target-native coprime setup declined: {error:?}"))?;
+        verify_checked_theorem_composition(
+            source.kernel(),
+            &kernel,
+            completed.kernel(),
+            completed.receipt(),
+        )
+        .map_err(|error| format!("target-native coprime setup did not replay: {error:?}"))?;
+        setup.push(json!({"roots":roots,"receipt_sha256":completed.receipt().receipt_sha256}));
+        kernel = completed.kernel().clone();
+    }
+    let target = nested_name(
+        &mut kernel,
+        &["Axeyum", "Autogenesis", "fibCoprimeFibSuccOfficialV1"],
+    );
+    let goal = target_native_fib_coprime_goal(&mut kernel)?;
+    let (theorem, _, _) = fib_coprime::admit_target_native(
+        &mut kernel,
+        target,
+        goal,
+        "Axeyum.Autogenesis.fibAddTwo",
+    )?;
+    require_empty(&kernel, theorem, TARGET_FIB_COPRIME)?;
+    let expected = evidence(&kernel, theorem)?;
+    let forbidden = [
+        "Iff",
+        "Iff.rec",
+        "Nat.dvd_add_iff_right",
+        "Nat.dvd_gcd",
+        "Nat.eq_one_of_dvd_one",
+        "Nat.gcd_dvd_left",
+        "Nat.gcd_dvd_right",
+        "Nat.gcd_zero_left",
+        "propext",
+        "Quot.sound",
+    ];
+    let transitive = transitive_dependencies(&kernel, theorem);
+    if let Some(name) = forbidden
+        .iter()
+        .find(|name| transitive.iter().any(|item| item == **name))
+    {
+        return Err(format!(
+            "target-native coprime reaches forbidden dependency {name}"
+        ));
+    }
+    let bytes = kernel
+        .render_lean4export_ndjson_roots(&Lean4ExportMetadata::axeyum("4.30.0"), &[theorem])
+        .map_err(|error| format!("target-native coprime capsule export failed: {error}"))?;
+    for pass in 1..=2 {
+        let replay = import_ndjson(Cursor::new(bytes.as_bytes()), ImportLimits::default())
+            .map_err(|error| format!("target-native coprime import {pass} failed: {error:?}"))?;
+        let replayed = find_name(replay.kernel(), TARGET_FIB_COPRIME)?;
+        if evidence(replay.kernel(), replayed)? != expected {
+            return Err(format!(
+                "target-native coprime import {pass} changed theorem"
+            ));
+        }
+    }
+    fs::write(&output_path, &bytes)
+        .map_err(|error| format!("target-native coprime capsule write failed: {error}"))?;
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "schema_version":1,
+            "kind":"axeyum-autogenesis-target-native-fib-coprime-capsule",
+            "state":"target-native-fibonacci-coprimality-reconstructed-empty-footprint-roundtrip-checked",
+            "setup_compositions":setup,
+            "theorem":expected,
+            "transitive_theorem_dependencies":transitive,
+            "capsule":{"bytes":bytes.len(),"sha256":hex_sha256(bytes.as_bytes()),"fresh_imports":2},
+            "execution":{"coprime_submissions":1,"exports":1,"fresh_imports":2,"retries":0},
+            "rendered_material":{"proof_terms":0,"theorem_types":0,"theorem_values":0},
+            "exact_target_submissions":0,
+            "fact_status_changes":0,
+            "evaluation_credit":0,
+            "ledger_writes":0
+        }))
+        .map_err(|error| error.to_string())?
+    );
+    Ok(())
+}
+
+fn target_native_fib_coprime_goal(kernel: &mut Kernel) -> Result<ExprId, String> {
+    let mut d = Dev::new(kernel)?;
+    let nat = d.nat_ty();
+    let value_fv = d.fresh();
+    let value = d.kernel.fvar(value_fv);
+    let successor = d.succ(value);
+    let left = d.fib(value);
+    let right = d.fib(successor);
+    let gcd = d.gcd(left, right);
+    let one = d.num(1);
+    let conclusion = d.eq(gcd, one);
+    Ok(d.pi(value_fv, nat, conclusion))
 }
 
 fn run_target_native_gcd_surface_audit(
