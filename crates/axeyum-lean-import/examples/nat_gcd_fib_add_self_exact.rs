@@ -23,6 +23,7 @@ const CLEAN_ANTISYMM: &str = "Axeyum.Autogenesis.dvdAntisymmCleanV5";
 const CLEAN_ANTISYMM_CAPSULE: &str =
     "d3b881ce30488b188bb4f557afc125418fdc21f5707b233a00934c9c97faa434";
 const CANCELLATION: &str = "Axeyum.Autogenesis.officialCoprimeFactorDivisibilityCancellationV1";
+const CANCELLATION_BOOTSTRAP: &str = "Nat.mod_lt";
 const CANCELLATION_CAPSULE: &str =
     "6f9a3983ba4b0e7b2c872615d796ceb5414d3bd2cf51843ecb496b3ba83a52b0";
 const ADDITION: &str = "Axeyum.Autogenesis.NatFibSuccessorAddition";
@@ -169,6 +170,26 @@ fn run_official_clean_order_capsule(
     }
     let mut kernel = imported.kernel().clone();
     let cancellation = import_bound(&cancellation_path, CANCELLATION_CAPSULE, CANCELLATION)?;
+    let bootstrap =
+        compose_checked_theorem_slice(cancellation.kernel(), &kernel, &[CANCELLATION_BOOTSTRAP])
+            .map_err(|error| format!("official cancellation bootstrap declined: {error:?}"))?;
+    verify_checked_theorem_composition(
+        cancellation.kernel(),
+        &kernel,
+        bootstrap.kernel(),
+        bootstrap.receipt(),
+    )
+    .map_err(|error| format!("official cancellation bootstrap did not replay: {error:?}"))?;
+    if bootstrap
+        .receipt()
+        .added_theorems
+        .iter()
+        .any(|row| !row.axiom_footprint.is_empty())
+    {
+        return Err("official cancellation bootstrap added assumptions".to_owned());
+    }
+    let bootstrap_receipt = bootstrap.receipt().receipt_sha256.clone();
+    kernel = bootstrap.kernel().clone();
     let compatible = compose_checked_theorem_slice(cancellation.kernel(), &kernel, &[CANCELLATION])
         .map_err(|error| format!("official cancellation compatibility declined: {error:?}"))?;
     verify_checked_theorem_composition(
@@ -222,6 +243,8 @@ fn run_official_clean_order_capsule(
             "state": "official-clean-order-compatible-with-cancellation-and-roundtrip-checked",
             "supports": [evidence(&kernel, eq_zero)?, evidence(&kernel, le_of_dvd)?, expected],
             "official_cancellation_compatibility": {
+                "bootstrap_root": CANCELLATION_BOOTSTRAP,
+                "bootstrap_receipt_sha256": bootstrap_receipt,
                 "root": CANCELLATION,
                 "receipt_sha256": compatibility_receipt,
                 "replayed": true,

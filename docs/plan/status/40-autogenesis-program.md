@@ -4,7 +4,7 @@
 
 **Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. The exact-target decline remains sealed with zero credit. Cancellation-first V2 stopped before support submission because its full closure needs missing recursive inductive `Acc`; the second run was skipped. V3 now freezes a same-capsule two-stage bootstrap: compose and replay `Nat.mod_lt` alone to establish the canonical well-founded recursion package, then compose official cancellation, then resolve and submit clean order.
 
-**Next:** implement only the V3 `Nat.mod_lt` bootstrap composition before cancellation, pass the full gate, then execute twice. Stop before support submission on either composition failure; do not submit the exact GCD-shift target.
+**Next:** pass the full Rust gate for the Clippy-clean V3 `Nat.mod_lt` bootstrap, then execute twice. Stop before support submission on either composition failure; do not submit the exact GCD-shift target.
 
 <!-- plan-section: landed-changes -->
 
@@ -191,3 +191,4 @@
 | 2026-08-21 | (pending) | V2 composes official cancellation before resolving clean-order proof handles and passes focused Clippy without stream access |
 | 2026-08-21 | (pending) | Cancellation-first V2 stops before support submission at missing recursive `Acc`; second run is skipped |
 | 2026-08-21 | (pending) | V3 freezes same-capsule `Nat.mod_lt` bootstrap before full cancellation composition and clean-order construction |
+| 2026-08-21 | (pending) | V3 composes and replays same-capsule `Nat.mod_lt` before cancellation and passes focused Clippy without stream access |
