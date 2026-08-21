@@ -161,7 +161,9 @@ one identity-path split.  The exact class formula
 the functional equations `A(chi)=chi((1+t)^n)A(chi o tau)` for both the
 Mangoldt and squared-discrepancy spectra.  A bounded native report checks every
 class, generator, commutator quotient, and exact population permutation.  It
-also proves the sharp parity boundary: at odd degree exactly half of the
+also proves the universal count `|Fix(tau)|=2^ceil(ell/2)` by a triangular
+rank argument for `tau-1`; the CAS rejects any quotient-order disagreement.
+The sharp parity boundary is then exact: at odd degree exactly half of the
 `tau`-fixed dual is forced to vanish, while at even degree none is.  At level
 eight this is eight of sixteen fixed characters for degree 17 and zero for
 degree 18.  The theorem promotes useful AC-bridge structure into Axeyum, but
@@ -875,6 +877,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-21 | `56b2a94da` | Proved the translation-fixed dual has exact order `2^ceil(ell/2)` at every level and made the bounded CAS reject any disagreement with the triangular rank theorem. |
 | 2026-08-21 | `7d194f794` | Promoted the complete translation involution to the bounded CAS, proved its spectral functional equation, and showed it forces half of the fixed dual to vanish only at odd degrees and none at even degrees. |
 | 2026-08-21 | `1a5f30b31` | Added the exact extension-field high-character/low-twist trace, proved `T_1(q)=0` and `T_2(q)=q^9(q-1)^2` at `(ell,n,c)=(3,7,2)`, and rejected repeated cohomology drops from affine-shell dimension alone. |
 | 2026-08-21 | `396dc81aa` | Matched the shifted high-character family to Sawin's joint Witt monodromy, proved its power-sum representation has no top-cohomology invariant at either endpoint, and isolated the fixed-binary lower-cohomology trace `(WITT-LOW)` as the remaining geometric estimate. |
