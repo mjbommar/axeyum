@@ -28,6 +28,11 @@ assert V8_SPEC and V8_SPEC.loader
 V8 = importlib.util.module_from_spec(V8_SPEC)
 V8_SPEC.loader.exec_module(V8)
 
+V9_SPEC = importlib.util.spec_from_file_location("v8_v9", ROOT / "scripts/check-autogenesis-official-r091-clean-dvd-antisymm-v8-v9.py")
+assert V9_SPEC and V9_SPEC.loader
+V9 = importlib.util.module_from_spec(V9_SPEC)
+V9_SPEC.loader.exec_module(V9)
+
 
 class PlanControls(unittest.TestCase):
     def test_live_plan_passes(self) -> None:
@@ -80,6 +85,18 @@ class V7V8BoundaryControls(unittest.TestCase):
         plan["budget"]["max_exact_target_submissions"] = 1
         with self.assertRaises(CHECK.PlanError):
             CHECK.validate(plan)
+
+
+class V8V9BoundaryControls(unittest.TestCase):
+    def test_live_boundary_passes(self) -> None:
+        self.assertEqual(V9.validate()[1]["correction"]["v9_supplied_universe_arity"], 0)
+
+    def test_broadened_correction_fails(self) -> None:
+        result, plan = V9.validate()
+        plan = copy.deepcopy(plan)
+        plan["correction"]["other_term_changes_authorized"] = True
+        with self.assertRaises(V9.BoundaryError):
+            V9.validate(result, plan)
 
 
 if __name__ == "__main__":
