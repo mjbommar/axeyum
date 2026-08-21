@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-exact-theorem-composition-result",
+  "state": "exact-target-constructed-but-dependency-order-assertion-failed",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-composition-plan-v2.json",
+    "sha256": "5479b758d60ebe0fb3f3409c8a1da77d8bda60054db07d35908927e30dcf89e3",
+    "driver_commit": "26c0ab7cde3fade5a24d6d69613f2d2ea3625e2b"
+  },
+  "driver": {
+    "path": "crates/axeyum-lean-import/examples/int_fib_recurrence_corollary_composition.rs",
+    "sha256": "69c53e74ebeb325f1761a1cdea0f76474b2e96f3a6f25427963f3a3fa612c11f"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-recurrence-corollary-composition-v2",
+    "manifest_sha256": "7f8525aeeeae45ba5837756f7bd0d9a79f9baeb12fd475a131325c58f8aff19f",
+    "stderr_sha256": "b21b200d0137cd4bb74fec6be5fa4449e9835d08bbc0453532be35954190ab0e"
+  },
+  "execution": {
+    "complete_invocations": 1,
+    "exit": 1,
+    "target_submissions": 1,
+    "exports": 0,
+    "fresh_imports": 0,
+    "retries": 0
+  },
+  "decline": {
+    "stage": "post-specialization direct-dependency assertion",
+    "message": "exact target dependency set changed",
+    "diagnosis": "the observed names are sorted by the shared names helper, but the expected array was written in role order rather than lexical order"
+  },
+  "authority": {
+    "exact_target_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Preregister only the lexically sorted expected dependency array before another complete invocation.",
+  "limitations": "The in-memory target passed specialization replay and empty-footprint checking but was not exported or freshly reimported, so it receives no durable theorem credit."
+}

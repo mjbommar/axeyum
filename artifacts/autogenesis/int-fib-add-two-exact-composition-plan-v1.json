@@ -1,0 +1,18 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-exact-composition-plan",
+  "state": "preregistered-before-driver-construction-or-stream-read",
+  "predecessor": {"path": "artifacts/autogenesis/int-fib-clean-parity-leaves-result-v4.json", "required_state": "all-parity-contracts-reconstructed-empty-footprint"},
+  "target": {"name": "Int.fib_add_two", "construction": "apply Int.fib_add_two_residual to seven independently qualified theorem roots in contract order"},
+  "inputs": [
+    {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-residual-v5/residual.ndjson", "sha256": "3d20dc04f7598a1625ab87efd2456901fe322ccb0e19cd51f82a04dd37c3bfc9", "root": "Int.fib_add_two_residual"},
+    {"path": "/nas3/data/axeyum/autogenesis/reference-packs/9b21389e9-nat-gcd-fib-add-self-portable-support-capsules-v1/fibonacci-addition-1.ndjson", "sha256": "f46e3dd4053c930984b3232ff98320021daa2fcdb3451e84bfbf011945a18621", "root": "Axeyum.Autogenesis.NatFibSuccessorAddition"},
+    {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-clean-parity-leaves-v4/roots.ndjson", "sha256": "0e310823ba37adfbd9087c0da2f85ad57261228d601d9388800cf069b5b2ce82", "roots": ["Axeyum.IntFib.modCases", "Axeyum.IntFib.succOne", "Axeyum.IntFib.succZero"]},
+    {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-contract-leaves-v3/leaves.ndjson", "sha256": "0fa66a39f3caec4c4bd00cfefa402b328b37a3fcbd4dd840e17e3f7f292439a5", "root": "Axeyum.IntFib.castAdd"},
+    {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-raw-cancellation-v11/leaves.ndjson", "sha256": "40e8ea3b85312f3067808a0772ecedb6689b656999ce86acd2602d9a114d9076", "roots": ["Axeyum.IntFib.evenAdd", "Axeyum.IntFib.oddAdd"]}
+  ],
+  "composition_order": ["Int.fib_add_two_residual", "Axeyum.Autogenesis.NatFibSuccessorAddition", "Axeyum.IntFib.modCases", "Axeyum.IntFib.succOne", "Axeyum.IntFib.succZero", "Axeyum.IntFib.castAdd", "Axeyum.IntFib.evenAdd", "Axeyum.IntFib.oddAdd"],
+  "acceptance": {"all_input_hashes_bound": true, "each_slice_composition_verified": true, "target_type_checked": true, "fresh_complete_invocations": 2, "target_submissions": 2, "exports": 2, "fresh_imports": 4, "outputs_byte_identical": true, "axiom_footprint": [], "exact_direct_dependencies": ["Axeyum.Autogenesis.NatFibSuccessorAddition", "Axeyum.IntFib.castAdd", "Axeyum.IntFib.evenAdd", "Axeyum.IntFib.modCases", "Axeyum.IntFib.oddAdd", "Axeyum.IntFib.succOne", "Axeyum.IntFib.succZero", "Int.fib_add_two_residual"]},
+  "execution": {"driver": "crates/axeyum-lean-import/examples/int_fib_add_two_composition.rs", "max_driver_builds": 1, "max_complete_invocations": 2, "max_target_submissions": 2, "max_exports": 2, "max_imports": 4, "max_retries": 0, "max_ledger_writes": 0},
+  "output": "artifacts/autogenesis/int-fib-add-two-exact-composition-result-v1.json"
+}

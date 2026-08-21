@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-parameterized-residual-export-result",
+  "state": "export-command-unavailable",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-residual-plan-v3.json",
+    "commit": "98657cef7ace7a477a1de27997e1af63cd315b77"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-recurrence-corollary-residual-v2.lean",
+    "sha256": "8ccbbf2e436afd0c5f7315f0e281bf11989abd7394056ca45b9fdf20b48e11d6",
+    "change_from_v2": "none"
+  },
+  "execution": {
+    "host": "s5",
+    "exporter_invocations": 1,
+    "export_stream_bytes": 0,
+    "importer_runs": 0,
+    "retries": 0,
+    "diagnostic_probe": "lake env lean4export --help: could not execute external process 'lean4export'"
+  },
+  "diagnosis": "The pinned Mathlib environment does not install lean4export by command name. Successful retained plans pass the external exporter binary path as lake env's command.",
+  "authority": {
+    "residual_credit": 0,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Preregister lake env followed by the absolute lean4export binary path.",
+  "limitations": "No export stream or audit exists, so this result establishes no theorem identity, dependency closure, footprint, or ledger transition."
+}

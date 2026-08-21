@@ -127,6 +127,25 @@ now. Nothing was deleted.
 | 2026-08-21 | `e7d8629c5` | `docs/PROJECT-STATE.md` said the parity ledger holds "eleven divisions" and named QF_ABV among its parity cells. It holds nine and has never held a QF_ABV entry — that list is committed and was never run. Two guards added to `check-parity-docs.py`, both derived from the ledger and both shown to fire on the real tree before the prose was fixed. |
 | 2026-08-21 | `35f46112b` | `scripts/parity-run.sh` was invoked by NO gate, so the repository's declared headline froze on 2026-08-06 for fifteen days and nothing went red. `scripts/check-parity-freshness.py` fails past 14 days per logic (warn 10), wired into BOTH `scripts/check.sh` and the justfile's `check`. Parser classifies every `## ` header and exits 2 on one it does not recognise — a silently skipped entry is indistinguishable from an absent one, which is how a stale logic reads as fresh. 12 controls, every guard mutation-verified. |
 | 2026-08-21 | `45587c513` | QF_NIA gap #4 diagnosed. "Multi-year catch-up" confirmed for the search — three cheapest levers yield 0 / +1 / +3 files, 4× clock buys 0 of 20 timeouts — and three premises corrected: **cvc5 is on this host** (`/nas3/data/axeyum/harness/bin/cvc5`, not on `$PATH`; two docs say otherwise), **z3 is 60 files from cvc5 here** (136 vs 76, cvc5's set a strict subset), and **the deficit is one family** (`VeryMax/ITS` = 74 of 104 misses; excluding it, 74.4 % of cvc5). `int-blast-ladder` decisive on 158/161; its constant-fit rule leaves **1 live rung on 32 files, 0 decided**. Four per-file passes committed. |
+| 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
+| 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
+| 2026-08-21 | `98657cef7` | V2 source compiles but a direct exporter invocation yields an empty stream; V3 freezes the unchanged source and exact `lake env lean4export` command |
+| 2026-08-21 | `fb81c699c` | V3 exposes that `lean4export` is not installed by name; V4 freezes `lake env` plus the absolute pinned exporter path |
+| 2026-08-21 | `bc55d7d5b` | V4 is blocked by s5's user quota before any bytes exist; V5 freezes direct output to the writable shared evidence pack |
+| 2026-08-21 | `cfd23abfa` | V5 exports the function-parameterized rearrangement twice with empty footprint; exact three-capsule specialization is frozen before driver code exists |
+| 2026-08-21 | `339213b8e` | First composition declines at recursive `Nat.le` while importing recurrence into the tiny residual base; V2 freezes recurrence as the base before one code repair |
+| 2026-08-21 | `8fa456002` | V2 reaches an empty-footprint exact target but rejects a role-ordered expected dependency array; V3 freezes the lexical order repair |
+| 2026-08-21 | (pending) | V3 specializes and reimports the exact corollary empty-footprint; one hash-only sealed-stream read is frozen before admission authority exists |
+| 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
+| 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
+| 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
+| 2026-08-21 | (pending) | The Lean surface exposes four borrow goals; native `Int.add_neg_cancel_right` is derived instead from Axeyum's axiom-free associativity, inverse, and zero laws |
+| 2026-08-21 | `93a314e15` | A fresh pinned Mathlib 4.30 two-root export is frozen to replace the failed full-closure corollary audit |
+| 2026-08-21 | (pending) | The two-root export remains 15.1 MB and its audit emits no report, so official closure import is declined in favor of target-owned rearrangement |
+| 2026-08-21 | `6f10d2c1a` | The two newly ready integer Fibonacci recurrence corollaries are frozen for one exact non-rendering root audit before route selection |
+| 2026-08-21 | (pending) | The single full-closure audit emits no report and receives no retry; the route moves to a fresh bounded two-root export |
+| 2026-08-21 | `c254e3c9a` | Crash-safe recovery admits exact `Int.fib_add_two` with one authoritative write and makes two integer Fibonacci descendants newly ready |
+| 2026-08-21 | (pending) | Immutable primary evidence and an isolated clean replay seal the exact recurrence admission and reproduce its two-fact readiness delta |
 | 2026-08-21 | `c4c6524ac` | Exact `Int.fib_neg` root audit is frozen against the pinned clean exporter environment with zero reconstruction or ledger authority |
 | 2026-08-21 | (pending) | One root export and non-rendering importer pass find 26 direct dependencies and an assumption-bearing official `Int.fib_neg` proof |
 | 2026-08-21 | `1c728c757` | Exact 26-root dependency descent is frozen against the immutable `Int.fib_neg` stream with zero theorem authority |
@@ -388,6 +407,19 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Recurrence audit isolates `Nat.mod_eq` as the sole direct assumption carrier; its four-edge `modCore` boundary is frozen next |
 | 2026-08-21 | (pending) | `Nat.modCore_eq` is the deepest assumption-bearing bridge; its finite direct closure is frozen to separate recursion from simp infrastructure |
 | 2026-08-21 | (pending) | All modulo recursion machinery is clean; only generic simp proposition equalities carry assumptions, so a manual branch proof is frozen |
+| 2026-08-21 | (pending) | Manual modulo-core V1 preserves the route and stops on three elaboration details; V2 freezes only those corrections |
+| 2026-08-21 | (pending) | V2 reaches the inaccessible private clean fuel theorem; V3 freezes a local structural duplicate plus the unchanged branch proof |
+| 2026-08-21 | (pending) | V3 reconstructs fuel congruence and `modCoreEq` with empty footprints; the three clean public modulo bridges are frozen next |
+| 2026-08-21 | (pending) | Bridge V1 fails before execution on a self-containment policy conflict; V2 permits only the already-qualified fuel reduction |
+| 2026-08-21 | (pending) | V2 reconstructs all public modulo bridges empty-footprint; exact modulo-two step, cases, and successor leaves are frozen next |
+| 2026-08-21 | (pending) | Parity V1 finds its specialized recurrence already normalized; V2 removes only the redundant `dsimp` before qualification |
+| 2026-08-21 | (pending) | Parity V2 qualifies step and both successor roots cleanly; V3 replaces only `modCases`'s dependent match carrier |
+| 2026-08-21 | (pending) | Parity V3's explicit cases are accepted; V4 freezes the two required reflexive successful branches |
+| 2026-08-21 | (pending) | Parity V4 closes all four roots empty-footprint; exact eight-root `Int.fib_add_two` kernel composition is frozen before code |
+| 2026-08-21 | (pending) | Exact composition V1 fails before submission on the wrong Fibonacci support shape; V2 freezes the exact one-index recurrence capsule |
+| 2026-08-21 | (pending) | Exact composition V2 reconstructs `Int.fib_add_two` twice byte-identically with an empty footprint; ledger admission remains separate |
+| 2026-08-21 | (pending) | Exact recurrence admission freezes one non-rendering canonical goal-identity audit before operation registration |
+| 2026-08-21 | (pending) | Canonical goal identity matches the exact capsule; one eight-dependency sealed-capsule operation is registered pending crash-safe execution |
 | 2026-08-21 | `40a1ab969` | `crates/axeyum-solver/src/dpll_lia.rs` + ADR-0538 + `bench-results/lia-core-minimisation-20260821/`: theory-core minimisation rationed by an oracle-call work budget instead of a core-width gate. QF_UFLIA 92 → 114 (+22, −0) at 0 disagreements against z3 and 0 against the declared `:status`. |
 | 2026-08-21 | (pending) | `docs/research/05-algorithms/linear-arithmetic-deficit-diagnosis-2026-08-21.md` + `bench-results/linear-arithmetic-diagnosis-20260821/`: gap #1 diagnosed — three causes not one, 800-file per-file classification, two A/Bs (one refuted, one +17 QF_UFLIA files at 0 disagreements). |
 | 2026-08-21 | `9333f779d` | **`bv_nego` returned a wrong `sat` above 128 bits.** `1u128 << (w - 1)` with legal widths to 65536: Rust masks the shift mod 128, so at `w = 129` the term became `x == 1` instead of `x == 2^128` and the shipped `SatBvBackend` answered **`sat`** to an unsatisfiable query (measured with overflow checks off; debug panicked instead). Fixed by following `bv_umulo`'s existing wide branch. Corpus reachability, which the gap analysis marked UNVERIFIED: **0 of 1430** tracked `.smt2` files use `bvnego` (control: `bvadd` in 106), so it is reachable only from the parser on user input. Three tests close the width asymmetry that hid it — widths 129/130/191/192/193/256/4096 by value *and* by the constant's structure, the 128-bit boundary staying narrow, and the end-to-end backend verdict. Two guards, each mutation-verified to kill exactly one test, registered as `ir-bv-nego-width`. |
@@ -1340,9 +1372,9 @@ linear integer problem to the LIA route, measured against the 74 `VeryMax/ITS`
 misses. It is the one hypothesis these measurements have not refuted; it is
 unpriced, and it is a route, not a constant.
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, and now `Int.fib_natCast` are durably proved. The target-owned integer Fibonacci definition replaces the official `Int.instDecidablePredEven` closure with constructor matching and explicit Nat parity; crash-safe recovery admitted its exact natural-cast theorem with an empty footprint and made `Int.fib_add_two` newly ready.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, and now `Int.fib_add_two` are durably proved. The recurrence composes eight exact target-owned roots into an empty-footprint kernel theorem; crash-safe recovery performed one authoritative write and made two integer Fibonacci descendants newly ready.
 
-**Next:** rebuild exact `Int.fib_add_two` over the admitted target-owned integer Fibonacci definition, then use it with the clean sign/parity transports to reconstruct `Int.fib_neg_natCast`.
+**Next:** qualify the two newly ready descendants, select the one that advances the sign/parity route most directly, and continue toward `Int.fib_neg_natCast` without importing official proof terms.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
@@ -2849,7 +2881,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | CAS parity | `BLOCKED` by deliberate pause | Wave-24 code `01d47334` and pause commit `245d8f25` are ancestors of current main. Do not start wave 25 until the user resumes it and retained specialized gate evidence is re-audited. |
 | Consumer apps / verified systems | `WIP`, non-critical path | Existing EVM, verifier, property, reflection, and symbolic-execution slices remain useful; do not preempt A2–A7 without measured demand. |
 | Foundational resources | `WIP`, separate content lane | Keep generated-resource gates green; record only project-level priority changes here. |
-| Public documentation and examples | `DONE`, current comprehensive pass | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; all 128 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, optional EVM/verifier certificate fields, and source-comment UNSAT-proof overclaims. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; reopen only for concrete drift. |
+| Public documentation and examples | `DONE`, current comprehensive pass | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; all 129 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, optional EVM/verifier certificate fields, and source-comment UNSAT-proof overclaims. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; reopen only for concrete drift. |
 | Worktree and build-cache hygiene | `WIP`, recovered | A11; only clean `main` is registered and published. A verified 2026-08-12 external Git bundle preserves the retired refs/stashes; all old branches, salvage stashes, inactive checkouts, and their large Cargo targets are removed. Next automate deterministic read-only inventory and exact-target cleanup classification. |
 
 ## Resume protocol

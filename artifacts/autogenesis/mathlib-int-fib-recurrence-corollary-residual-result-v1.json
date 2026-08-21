@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-parameterized-residual-result",
+  "state": "compiled-and-reproduced-but-footprint-rejected",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-residual-plan-v1.json",
+    "sha256": "9fc5f8b4e9f3606fbe4b79219fc5f892de7cb3330eb471f9f92464f193c8acbc",
+    "commit": "acd940d19d9e8c2d29444082fca3755f685abf9a"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-recurrence-corollary-residual-v1.lean",
+    "sha256": "5c4caf63e5c37828a9a30d6624d7ebb6529ca16d4fd125ece6ed96bf629d0179"
+  },
+  "environment": {
+    "host": "s5",
+    "lean_version": "4.30.0",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-recurrence-corollary-residual-v1",
+    "stream_sha256": "a01494f95f62555aaac63a1753c8d70290e6f7c90c98395ec9b0d783d29ce408",
+    "stream_bytes": 9837604,
+    "audit_sha256": "6b8a95f3df5b52b08ca7e0f9ab2b6e7aac1e5f9138ce13aa99677633acee6020",
+    "manifest_sha256": "a00eca0f0324e83c0c2f03eb837f8aecab2204abf21cb981515328eb446cb739"
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit": 0,
+    "exporter_invocations": 1,
+    "importer_runs": 2,
+    "retries": 0
+  },
+  "audit": {
+    "theorem": "Int.fib_eq_fib_add_two_sub_fib_add_one_residual",
+    "declaration_sha256": "9fe59a8b5c255b456d2f8aa76409535614be76d8645e0716f73caea282644506",
+    "direct_theorem_dependencies": [
+      "Eq.symm",
+      "Eq.trans",
+      "congrArg"
+    ],
+    "axiom_footprint": [
+      "Classical.choice",
+      "Lean.opaqueId",
+      "Quot",
+      "Quot.lift",
+      "Quot.mk",
+      "Quot.sound",
+      "String.Internal.append",
+      "propext"
+    ]
+  },
+  "authority": {
+    "residual_credit": 0,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Parameterize the Fibonacci function itself so the elementary rearrangement does not inherit the official opaque Int.fib closure.",
+  "limitations": "Compilation and deterministic audit are retained, but the nonempty footprint violates the plan's acceptance contract and grants no theorem or ledger authority."
+}

@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-theorem-root-audit-plan",
+  "state": "preregistered-before-single-existing-stream-read",
+  "predecessor": {
+    "fact_id": "F:ml430-int-fib-add-two-739358dd",
+    "admission_manifest": "artifacts/autogenesis/mathlib-int-fib-add-two-admission-v1.json",
+    "required_state": "durably-admitted-archived-and-clean-replayed"
+  },
+  "input": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-root-audit-v1/int-fib-neg.ndjson",
+    "bytes": 14596588,
+    "sha256": "7df7f5dce9c7159f9c468b6f47f13be3e589fb2c1559af554ce73cc48b18730e",
+    "mode": "0444",
+    "proof_bearing_render_forbidden": true
+  },
+  "roots": [
+    "Int.fib_add_one",
+    "Int.fib_eq_fib_add_two_sub_fib_add_one"
+  ],
+  "selection": {
+    "facts": [
+      "F:ml430-int-fib-add-one-33f1b748",
+      "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d"
+    ],
+    "reason": "Both facts became dependency-ready in the measured recurrence admission. Auditing them together identifies the exact algebraic convenience roots to replace once, bottom-up, before choosing the corollary that best advances negative-index induction."
+  },
+  "execution": {
+    "tool": "theorem_root_audit",
+    "max_importer_runs": 1,
+    "max_stream_reads": 1,
+    "max_retries": 0,
+    "max_theorem_submissions": 0,
+    "max_fact_status_changes": 0,
+    "max_ledger_writes": 0
+  },
+  "acceptance": {
+    "exact_two_roots_required": true,
+    "root_types_and_values_must_not_be_rendered": true,
+    "axiom_footprints_and_direct_theorem_dependencies_must_be_reported": true,
+    "assumption_bearing_roots_must_not_be_reused": true
+  },
+  "sequencing": {
+    "top_down": "Prefer the corollary whose recurrence orientation directly supports the next negative-index induction step.",
+    "bottom_up": "Replace every rejected integer rearrangement dependency with the smallest constructor-level cancellation theorem before submitting either exact target.",
+    "over_horizon": "Package any clean generic rearrangement once so later integer recurrences, linear identities, and sign transports do not repeat raw Int constructor work."
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-root-audit-result-v1.json",
+  "limitations": "This authorizes one non-rendering audit only. It proves neither corollary, chooses no authoritative operation, changes no fact, and grants no ledger authority."
+}

@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-exact-theorem-composition-result",
+  "state": "declined-before-specialization-at-recursive-inductive",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-composition-plan-v1.json",
+    "sha256": "0cf72bc3fda3e7d4e54c5b7ab0e91fceda9ddbf1dbefec0ce73b036f30656c22",
+    "driver_commit": "25c42b0339d2d2359aa0b8e52c4359b41b17881d"
+  },
+  "driver": {
+    "path": "crates/axeyum-lean-import/examples/int_fib_recurrence_corollary_composition.rs",
+    "sha256": "4616f2c7151f48d33338605db10f5ea2be3845cf859e9b216479e3b3b2d2e58a"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-recurrence-corollary-composition-v1",
+    "manifest_sha256": "3b60a19be7a9ce8119608c588fc5eaafc894ebe4254e68e70a5de4e5004d9d93",
+    "stderr_sha256": "bf0d2231b6537b22493d4163a840d8cbb13394ed30f17977e87cda5083cd9a01"
+  },
+  "execution": {
+    "complete_invocations": 1,
+    "exit": 1,
+    "target_submissions": 0,
+    "exports": 0,
+    "fresh_imports": 0,
+    "retries": 0
+  },
+  "decline": {
+    "stage": "compose recurrence closure into residual base",
+    "kind": "UnsupportedMissingDeclaration",
+    "name": "Nat.le",
+    "declaration_kind": "recursive-inductive"
+  },
+  "authority": {
+    "exact_target_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Reverse the composition base: retain the already checked recurrence kernel, then compose the small residual and cancellation roots into it before specialization.",
+  "limitations": "The decline occurred before specialization. No exact target declaration or capsule exists."
+}

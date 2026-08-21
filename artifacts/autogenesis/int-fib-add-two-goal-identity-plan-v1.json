@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-add-two-goal-identity-plan-v1",
+  "state": "preregistered-before-single-nonrendering-capsule-read",
+  "predecessor": {"path": "artifacts/autogenesis/int-fib-add-two-exact-composition-result-v2.json", "sha256": "4a83b16e91c30fcef985b10a0694f76c61318927fbeae049acbc82277daa321b", "required_state": "exact-target-reconstructed-twice-byte-identical-empty-footprint"},
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-exact-composition-v2/int-fib-add-two-1.ndjson", "bytes": 771121, "sha256": "0fbbb4d55ed862f7feb1b8efa3bf45eed24269067b3702c727d05e45c8947219", "root": "Int.fib_add_two"},
+  "execution": {"tool": "theorem_goal_identity_audit", "max_importer_runs": 1, "max_stream_reads": 1, "max_retries": 0, "rendered_proof_terms": 0, "rendered_theorem_types": 0, "rendered_theorem_values": 0, "ledger_writes": 0},
+  "acceptance": {"name": "Int.fib_add_two", "declaration_sha256": "cd1612aa68107d4b35b842f4ad2798f07d15256462d49236b8d34ab852de805f", "axiom_footprint": [], "direct_theorem_dependency_count": 8},
+  "output": "artifacts/autogenesis/int-fib-add-two-goal-identity-result-v1.json"
+}

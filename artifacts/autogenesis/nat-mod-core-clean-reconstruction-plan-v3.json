@@ -1,0 +1,11 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-clean-reconstruction-plan",
+  "state": "preregistered-after-private-name-boundary-before-v3-source",
+  "predecessor": {"path": "artifacts/autogenesis/nat-mod-core-clean-reconstruction-result-v2.json", "required_state": "private-clean-fuel-root-not-source-addressable"},
+  "targets": ["Axeyum.NatMod.fuelCongr", "Axeyum.NatMod.modCoreEq"],
+  "repair": {"only_change": "duplicate the audited empty-footprint private fuel-congruence theorem as Axeyum.NatMod.fuelCongr and replace the inaccessible call with that local theorem", "fuel_proof_shape": "structural recursion on both fuels; unfold only Nat.modCore.go; recurse in the true branch and use rfl in the false branch"},
+  "forbidden": ["propext", "and_false", "and_self", "eq_false", "eq_self", "eq_true", "false_and", "ite_cond_eq_false", "ite_cond_eq_true", "omega", "native_decide", "general modulo convenience theorems"],
+  "execution": {"source": "artifacts/autogenesis/sources/nat-mod-core-clean-reconstruction-v3.lean", "source_present_at_plan_commit": false, "pack": "/nas3/data/axeyum/autogenesis/reference-packs/nat-mod-core-clean-reconstruction-v3", "max_compiler_invocations": 1, "max_exporter_invocations": 1, "max_importer_runs": 1, "max_retries": 0, "max_theorem_submissions": 2, "max_ledger_writes": 0},
+  "output": "artifacts/autogenesis/nat-mod-core-clean-reconstruction-result-v3.json"
+}

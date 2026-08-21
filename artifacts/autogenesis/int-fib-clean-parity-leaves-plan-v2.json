@@ -1,0 +1,11 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-clean-reconstruction-plan",
+  "state": "preregistered-after-redundant-normalization-before-v2-source",
+  "predecessor": {"path": "artifacts/autogenesis/int-fib-clean-parity-leaves-result-v1.json", "required_state": "specialized-mod-step-already-normalized"},
+  "targets": ["Axeyum.IntFib.modStepTwo", "Axeyum.IntFib.modCases", "Axeyum.IntFib.succOne", "Axeyum.IntFib.succZero"],
+  "repair": {"only_change": "remove dsimp only [Nat.add, Nat.sub] at h from modStepTwo and retain exact h", "support_unchanged": true, "parity_proofs_unchanged": true},
+  "forbidden": ["Nat.add_mod", "Nat.mod_eq_sub_mod", "Nat.mod_two_eq_zero_or_one", "omega", "simp in new parity targets", "simpa", "native_decide", "propext"],
+  "execution": {"source": "artifacts/autogenesis/sources/int-fib-clean-parity-leaves-v2.lean", "source_present_at_plan_commit": false, "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-clean-parity-leaves-v2", "max_compiler_invocations": 1, "max_exporter_invocations": 1, "max_importer_runs": 1, "max_retries": 0, "max_theorem_submissions": 9, "max_ledger_writes": 0},
+  "output": "artifacts/autogenesis/int-fib-clean-parity-leaves-result-v2.json"
+}

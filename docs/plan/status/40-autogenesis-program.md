@@ -2,11 +2,31 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, and now `Int.fib_natCast` are durably proved. The target-owned integer Fibonacci definition replaces the official `Int.instDecidablePredEven` closure with constructor matching and explicit Nat parity; crash-safe recovery admitted its exact natural-cast theorem with an empty footprint and made `Int.fib_add_two` newly ready.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, and now `Int.fib_add_two` are durably proved. The recurrence composes eight exact target-owned roots into an empty-footprint kernel theorem; crash-safe recovery performed one authoritative write and made two integer Fibonacci descendants newly ready.
 
-**Next:** rebuild exact `Int.fib_add_two` over the admitted target-owned integer Fibonacci definition, then use it with the clean sign/parity transports to reconstruct `Int.fib_neg_natCast`.
+**Next:** qualify the two newly ready descendants, select the one that advances the sign/parity route most directly, and continue toward `Int.fib_neg_natCast` without importing official proof terms.
 
 <!-- plan-section: landed-changes -->
+
+| 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
+| 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
+| 2026-08-21 | `98657cef7` | V2 source compiles but a direct exporter invocation yields an empty stream; V3 freezes the unchanged source and exact `lake env lean4export` command |
+| 2026-08-21 | `fb81c699c` | V3 exposes that `lean4export` is not installed by name; V4 freezes `lake env` plus the absolute pinned exporter path |
+| 2026-08-21 | `bc55d7d5b` | V4 is blocked by s5's user quota before any bytes exist; V5 freezes direct output to the writable shared evidence pack |
+| 2026-08-21 | `cfd23abfa` | V5 exports the function-parameterized rearrangement twice with empty footprint; exact three-capsule specialization is frozen before driver code exists |
+| 2026-08-21 | `339213b8e` | First composition declines at recursive `Nat.le` while importing recurrence into the tiny residual base; V2 freezes recurrence as the base before one code repair |
+| 2026-08-21 | `8fa456002` | V2 reaches an empty-footprint exact target but rejects a role-ordered expected dependency array; V3 freezes the lexical order repair |
+| 2026-08-21 | (pending) | V3 specializes and reimports the exact corollary empty-footprint; one hash-only sealed-stream read is frozen before admission authority exists |
+| 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
+| 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
+| 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
+| 2026-08-21 | (pending) | The Lean surface exposes four borrow goals; native `Int.add_neg_cancel_right` is derived instead from Axeyum's axiom-free associativity, inverse, and zero laws |
+| 2026-08-21 | `93a314e15` | A fresh pinned Mathlib 4.30 two-root export is frozen to replace the failed full-closure corollary audit |
+| 2026-08-21 | (pending) | The two-root export remains 15.1 MB and its audit emits no report, so official closure import is declined in favor of target-owned rearrangement |
+| 2026-08-21 | `6f10d2c1a` | The two newly ready integer Fibonacci recurrence corollaries are frozen for one exact non-rendering root audit before route selection |
+| 2026-08-21 | (pending) | The single full-closure audit emits no report and receives no retry; the route moves to a fresh bounded two-root export |
+| 2026-08-21 | `c254e3c9a` | Crash-safe recovery admits exact `Int.fib_add_two` with one authoritative write and makes two integer Fibonacci descendants newly ready |
+| 2026-08-21 | (pending) | Immutable primary evidence and an isolated clean replay seal the exact recurrence admission and reproduce its two-fact readiness delta |
 
 | 2026-08-21 | `c4c6524ac` | Exact `Int.fib_neg` root audit is frozen against the pinned clean exporter environment with zero reconstruction or ledger authority |
 | 2026-08-21 | (pending) | One root export and non-rendering importer pass find 26 direct dependencies and an assumption-bearing official `Int.fib_neg` proof |
@@ -320,3 +340,16 @@
 | 2026-08-21 | (pending) | Recurrence audit isolates `Nat.mod_eq` as the sole direct assumption carrier; its four-edge `modCore` boundary is frozen next |
 | 2026-08-21 | (pending) | `Nat.modCore_eq` is the deepest assumption-bearing bridge; its finite direct closure is frozen to separate recursion from simp infrastructure |
 | 2026-08-21 | (pending) | All modulo recursion machinery is clean; only generic simp proposition equalities carry assumptions, so a manual branch proof is frozen |
+| 2026-08-21 | (pending) | Manual modulo-core V1 preserves the route and stops on three elaboration details; V2 freezes only those corrections |
+| 2026-08-21 | (pending) | V2 reaches the inaccessible private clean fuel theorem; V3 freezes a local structural duplicate plus the unchanged branch proof |
+| 2026-08-21 | (pending) | V3 reconstructs fuel congruence and `modCoreEq` with empty footprints; the three clean public modulo bridges are frozen next |
+| 2026-08-21 | (pending) | Bridge V1 fails before execution on a self-containment policy conflict; V2 permits only the already-qualified fuel reduction |
+| 2026-08-21 | (pending) | V2 reconstructs all public modulo bridges empty-footprint; exact modulo-two step, cases, and successor leaves are frozen next |
+| 2026-08-21 | (pending) | Parity V1 finds its specialized recurrence already normalized; V2 removes only the redundant `dsimp` before qualification |
+| 2026-08-21 | (pending) | Parity V2 qualifies step and both successor roots cleanly; V3 replaces only `modCases`'s dependent match carrier |
+| 2026-08-21 | (pending) | Parity V3's explicit cases are accepted; V4 freezes the two required reflexive successful branches |
+| 2026-08-21 | (pending) | Parity V4 closes all four roots empty-footprint; exact eight-root `Int.fib_add_two` kernel composition is frozen before code |
+| 2026-08-21 | (pending) | Exact composition V1 fails before submission on the wrong Fibonacci support shape; V2 freezes the exact one-index recurrence capsule |
+| 2026-08-21 | (pending) | Exact composition V2 reconstructs `Int.fib_add_two` twice byte-identically with an empty footprint; ledger admission remains separate |
+| 2026-08-21 | (pending) | Exact recurrence admission freezes one non-rendering canonical goal-identity audit before operation registration |
+| 2026-08-21 | (pending) | Canonical goal identity matches the exact capsule; one eight-dependency sealed-capsule operation is registered pending crash-safe execution |

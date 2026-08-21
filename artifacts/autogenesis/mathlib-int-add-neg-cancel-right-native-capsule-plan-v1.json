@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-native-kernel-capsule-plan",
+  "state": "preregistered-before-export-driver-implementation",
+  "predecessor": {
+    "commit": "2e3ec60307c2c8c10038f9c0ecda29527349edc2",
+    "theorem": "Int.add_neg_cancel_right",
+    "required_axiom_footprint": []
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/int_add_neg_cancel_right_capsule.rs",
+    "operation": "build native Int prelude, root-export only Int.add_neg_cancel_right, import the capsule into two fresh kernels, and report exact theorem identity and dependencies"
+  },
+  "output": {
+    "directory": "/nas3/data/axeyum/autogenesis/reference-packs/int-add-neg-cancel-right-native-v1",
+    "capsule": "int-add-neg-cancel-right.ndjson",
+    "must_not_preexist": true
+  },
+  "budget": {
+    "driver_builds": 1,
+    "complete_invocations": 2,
+    "native_prelude_builds": 2,
+    "exports": 2,
+    "fresh_imports": 2,
+    "retries": 0,
+    "Fibonacci_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "capsules_must_be_byte_identical": true,
+    "fresh_imports_must_succeed": true,
+    "target_name": "Int.add_neg_cancel_right",
+    "axiom_footprint_must_be_empty": true,
+    "direct_theorem_dependencies": [
+      "Int.add_assoc",
+      "Int.add_neg",
+      "Int.add_zero"
+    ]
+  },
+  "next_boundary": "Compose the exact Int.fib_eq_fib_add_two_sub_fib_add_one theorem from this capsule and the admitted recurrence capsule without reading any official corollary proof.",
+  "limitations": "This accepts one generic native algebra theorem only. It grants no Fibonacci theorem, fact transition, or ledger authority."
+}
