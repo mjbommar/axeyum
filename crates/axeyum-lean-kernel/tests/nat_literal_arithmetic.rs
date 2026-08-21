@@ -689,3 +689,166 @@ fn acceleration_trusts_the_declared_type_not_the_body() {
         "the rule evaluates by name and type, not by the declared body"
     );
 }
+
+// ---------------------------------------------------------------------------
+// Where the rule is called from, and what the `has_fvars` guard gives up
+// (ADR-0533)
+// ---------------------------------------------------------------------------
+
+/// `Nat.rec.{1} (motive := fun _ => Nat) 111 (fun _ _ => 222) major`.
+///
+/// A probe for *where* the acceleration runs. `Kernel::reduce_rec` normalizes
+/// its major with `whnf_core` — the δ-performing loop — so which minor this
+/// selects reports whether the acceleration was reached from that loop or the
+/// major was δ-unfolded to its declared body instead. `111` and `222` are
+/// arbitrary and distinct; nothing else in the fixture produces either.
+fn rec_on_major(kernel: &mut Kernel, env: &Env, major: ExprId) -> ExprId {
+    let anon = kernel.anon();
+    let one_level = {
+        let zero = kernel.level_zero();
+        kernel.level_succ(zero)
+    };
+    let motive = kernel.lam(anon, env.nat_type, env.nat_type, BinderInfo::Default);
+    let on_zero = nat_lit(kernel, 111);
+    let on_succ = nat_lit(kernel, 222);
+    let step_inner = kernel.lam(anon, env.nat_type, on_succ, BinderInfo::Default);
+    let step = kernel.lam(anon, env.nat_type, step_inner, BinderInfo::Default);
+
+    let rec_const = kernel.const_(env.nat_rec, vec![one_level]);
+    let applied = kernel.app(rec_const, motive);
+    let applied = kernel.app(applied, on_zero);
+    let applied = kernel.app(applied, step);
+    kernel.app(applied, major)
+}
+
+/// `Nat.mod arg 0` — an operation whose *declared body* is the stub `fun _ _ =>
+/// Nat.zero` and whose *accelerated* value is Lean's `x % 0 = x`. The two
+/// answers differ for every nonzero `x`, so this application is a discriminator
+/// between "the acceleration fired" and "the declaration decided".
+fn mod_by_zero(kernel: &mut Kernel, env: &Env, arg: ExprId) -> ExprId {
+    let name = kernel.name_str(env.nat, "mod");
+    let head = kernel.const_(name, vec![]);
+    let zero = nat_lit(kernel, 0);
+    let applied = kernel.app(head, arg);
+    kernel.app(applied, zero)
+}
+
+/// `(fun _ : Nat => 7) x` — a term that *mentions* the free variable `x` and
+/// whose weak head normal form is nonetheless the literal `7`.
+///
+/// This is the exact class the `has_fvars` guard gives up, and it is the reason
+/// the guard is a decision rather than an optimization: `has_fvars` is
+/// structural, so it cannot see that this argument reduces to a literal.
+fn seven_mentioning(kernel: &mut Kernel, env: &Env, variable: ExprId) -> ExprId {
+    let anon = kernel.anon();
+    let seven = nat_lit(kernel, 7);
+    let constant = kernel.lam(anon, env.nat_type, seven, BinderInfo::Default);
+    kernel.app(constant, variable)
+}
+
+/// **The δ-loop call site.** The acceleration is called from `Kernel::whnf_core`
+/// — after the δ-free step and before δ — which is Lean's `whnf`
+/// (`type_checker.cpp:670`), not Lean's `whnf_core`. `reduce_rec` normalizes its
+/// major there, so a recursor whose major is `Nat.mod 7 0` selects the successor
+/// minor (the accelerated `7`) rather than the zero minor (the stub body).
+///
+/// Deleting the `reduce_nat_binop` call in `Kernel::whnf_core` flips this to
+/// `111` and kills this test and nothing else in the file.
+#[test]
+fn a_recursor_major_is_accelerated_by_the_delta_loop() {
+    let mut kernel = Kernel::new();
+    let env = lean_env(&mut kernel);
+    let seven = nat_lit(&mut kernel, 7);
+    let major = mod_by_zero(&mut kernel, &env, seven);
+    let probe = rec_on_major(&mut kernel, &env, major);
+
+    let on_succ = nat_lit(&mut kernel, 222);
+    let on_zero = nat_lit(&mut kernel, 111);
+    assert!(
+        kernel.def_eq(probe, on_succ),
+        "`Nat.mod 7 0` must accelerate to 7 while the recursor normalizes its major"
+    );
+    assert!(
+        !kernel.def_eq(probe, on_zero),
+        "the stub body must not be what decides a closed major"
+    );
+}
+
+/// **What the guard costs, at the δ-loop call site.** The same probe with a
+/// major that *mentions* a free variable, and whose argument still reduces to
+/// the literal `7`. Lean's `whnf` would accelerate it; we do not, because the
+/// `has_fvars` guard Lean applies only in `lazy_delta_reduction`
+/// (`type_checker.cpp:978`) is applied here too (ADR-0533).
+///
+/// So the *declaration* decides instead, and the answer is the stub's `111`.
+/// That is the whole observable identification cost of the guard, written down
+/// as an assertion rather than as prose: **deleting the `!self.has_fvars(whnfd)`
+/// guard in `Kernel::whnf_core` flips this to `222` and kills this test.**
+///
+/// Note what is *not* lost: the term is still identified with something — the
+/// kernel does not get stuck, it computes the environment's own answer. The
+/// hazard the acceleration exists to remove (an unbounded successor chain) is
+/// only reachable for a declaration whose body really does recurse, and there
+/// the answers agree.
+#[test]
+fn an_open_recursor_major_is_decided_by_the_declaration_not_the_acceleration() {
+    let mut kernel = Kernel::new();
+    let env = lean_env(&mut kernel);
+    let anon = kernel.anon();
+
+    let variable = kernel.bvar(0);
+    let argument = seven_mentioning(&mut kernel, &env, variable);
+    let major = mod_by_zero(&mut kernel, &env, argument);
+    let probe = rec_on_major(&mut kernel, &env, major);
+    let probe = kernel.lam(anon, env.nat_type, probe, BinderInfo::Default);
+
+    let on_zero = nat_lit(&mut kernel, 111);
+    let stub_answer = kernel.lam(anon, env.nat_type, on_zero, BinderInfo::Default);
+    let on_succ = nat_lit(&mut kernel, 222);
+    let accelerated_answer = kernel.lam(anon, env.nat_type, on_succ, BinderInfo::Default);
+
+    assert!(
+        kernel.def_eq(probe, stub_answer),
+        "an open major must be decided by the declaration's own body"
+    );
+    assert!(
+        !kernel.def_eq(probe, accelerated_answer),
+        "the acceleration must not fire on a major that mentions a free variable"
+    );
+}
+
+/// **What the guard costs, at the lazy-delta call site.** The other of the two
+/// call sites, reached from `def_eq` directly: `def_eq_core` normalizes both
+/// sides with the δ-*free* step (Lean's `whnf_core`, which carries no `Nat`
+/// rule) and then enters `lazy_delta_step`, where Lean tries `reduce_nat` under
+/// `!has_fvar(t_n) && !has_fvar(s_n)`.
+///
+/// **Deleting the `has_fvars` conjunction in `Kernel::lazy_delta_step` flips
+/// both assertions and kills this test.** Deleting the whole `reduce_nat_binop`
+/// block there instead kills `totality_conventions_match_lean`, which is the
+/// closed control for the same site.
+#[test]
+fn an_open_operand_is_decided_by_the_declaration_in_lazy_delta() {
+    let mut kernel = Kernel::new();
+    let env = lean_env(&mut kernel);
+    let anon = kernel.anon();
+
+    let variable = kernel.bvar(0);
+    let argument = seven_mentioning(&mut kernel, &env, variable);
+    let open_mod = mod_by_zero(&mut kernel, &env, argument);
+    let probe = kernel.lam(anon, env.nat_type, open_mod, BinderInfo::Default);
+
+    let zero = kernel.const_(env.nat_zero, vec![]);
+    let stub_answer = kernel.lam(anon, env.nat_type, zero, BinderInfo::Default);
+    let seven = nat_lit(&mut kernel, 7);
+    let accelerated_answer = kernel.lam(anon, env.nat_type, seven, BinderInfo::Default);
+
+    assert!(
+        kernel.def_eq(probe, stub_answer),
+        "an open `Nat.mod` must δ-unfold to its declared body"
+    );
+    assert!(
+        !kernel.def_eq(probe, accelerated_answer),
+        "the acceleration must not fire when either side mentions a free variable"
+    );
+}
