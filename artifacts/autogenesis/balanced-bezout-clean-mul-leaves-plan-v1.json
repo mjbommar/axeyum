@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-balanced-bezout-clean-mul-leaves-plan",
+  "state": "preregistered-primitive-induction-two-leaf-source-before-compilation-no-theorem-credit",
+  "inputs": {
+    "accepted_parameterized_update": {
+      "path": "artifacts/autogenesis/balanced-bezout-euclidean-update-result-v2.json",
+      "sha256": "acf28ea301b77acd6844c5fbbdd2bc09bd277942d5e1d4685491babfcbed6e60"
+    },
+    "native_design_reference": {
+      "path": "crates/axeyum-lean-kernel/src/nat_prelude/algebra.rs",
+      "functions": ["declare_multiplicative_theorems"],
+      "role": "primitive induction proof design only"
+    },
+    "authored_source": {
+      "path": "scripts/lean/autogenesis_balanced_bezout_clean_mul_leaves_v1.lean",
+      "sha256": "2c925db23b545067f1842b5914bce79990f94e576ff093bd79717f2a978aad89"
+    }
+  },
+  "construction": {
+    "targets": [
+      {"name": "Axeyum.Autogenesis.balancedBezoutMulAssocLeafV1", "contract": "forall a b c : Nat, a*b*c = a*(b*c)"},
+      {"name": "Axeyum.Autogenesis.balancedBezoutRightDistribLeafV1", "contract": "forall a b c : Nat, (a+b)*c = a*c+b*c"}
+    ],
+    "method": "primitive induction on the second-recursive multiplication argument, pointwise congrArg, clean Nat.left_distrib, and explicit addition permutation",
+    "required_dependency_families": ["Eq.symm", "Eq.trans", "Nat.add_assoc", "Nat.add_right_comm", "Nat.left_distrib", "congrArg"],
+    "forbidden_dependencies": ["funext", "propext", "Nat.mul_assoc", "Nat.right_distrib", "Mathlib.Tactic.Ring.Common", "Mathlib.Tactic.Ring.of_eq"],
+    "rewriting_tactic_used": false,
+    "simplification_tactic_used": false,
+    "ring_normalization_used": false,
+    "public_division_used": false
+  },
+  "preexisting_status_baseline": [
+    {"path": "AxeyumFibGeneric.lean", "status": "untracked", "bytes": 1595, "mode": "0664", "sha256": "f9d3ea9024497cf1aed34a071fe541e515fb4169738d3d369dd6bf9a7ad414be"},
+    {"path": "AxeyumNatFibRecurrencePointwise.lean", "status": "untracked", "bytes": 632, "mode": "0664", "sha256": "b339a3d8e4ce1700d367fa5fdf0ac0e05d411cc48c49ce6f6e30b702a9b7baf5"},
+    {"path": "AxeyumNatGcdFixEq.lean", "status": "untracked", "bytes": 3603, "mode": "0664", "sha256": "939d225a168b5a94d042ceab47c4dd265a81bf149ea8cfbe08012ca5089373a7"}
+  ],
+  "fixed_environment": {
+    "ssh_alias": "s5",
+    "hostname": "server5",
+    "mathlib_checkout": "/home/mjbommar/lean-import-scale/mathlib4",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean_version": "4.30.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "lake_binary": "/home/mjbommar/.elan/toolchains/leanprover--lean4---v4.30.0/bin/lake",
+    "lake_binary_sha256": "d3e1f322c08d87f0d5850132a0b0309c1edbe53d641276b344717da448c8bc8b",
+    "lean4export_binary": "/home/mjbommar/lean-import-scale/lean4export/.lake/build/bin/lean4export",
+    "lean4export_binary_sha256": "8e763913b03762488571a93ced6ec1a4e04f7d8eebbe40bd1215ba41a6bd4449"
+  },
+  "execution": {
+    "evidence_pack": "/nas3/data/axeyum/autogenesis/reference-packs/616fe5d01-balanced-bezout-clean-mul-leaves-v1",
+    "remote_source": "/home/mjbommar/lean-import-scale/mathlib4/AxeyumAutogenesisBalancedBezoutCleanMulLeavesV1.lean",
+    "temporary_output_stem": "/home/mjbommar/lean-import-scale/mathlib4/.lake/build/lib/lean/AxeyumAutogenesisBalancedBezoutCleanMulLeavesV1",
+    "all_three_temporary_paths_must_be_absent_before_copy": true,
+    "status_must_equal_exact_baseline_before_copy": true,
+    "status_must_equal_exact_baseline_after_cleanup": true,
+    "cleanup_scope_is_exactly_the_source_and_two_outputs": true,
+    "proof_terms_types_or_values_may_be_rendered": false
+  },
+  "acceptance": {
+    "source_must_compile": true,
+    "fresh_kernel_imports_required": 2,
+    "both_targets_audited_per_import": true,
+    "rows_must_match_by_target": true,
+    "axiom_footprints_must_be_empty": true,
+    "forbidden_dependencies_must_be_absent": true,
+    "failed_compilation_or_first_import_ends_increment": true
+  },
+  "budget": {
+    "max_source_copies": 1,
+    "max_source_compilations": 1,
+    "max_exporter_invocations": 1,
+    "max_importer_runs": 2,
+    "max_proof_bearing_stream_reads": 2,
+    "max_retries": 0,
+    "max_new_theorem_submissions": 2,
+    "max_update_compositions": 0,
+    "max_generic_gcd_submissions": 0,
+    "max_executor_invocations": 0
+  },
+  "authority": {
+    "proof_bodies_readable_by_model": false,
+    "upstream_proof_sources_readable_by_model": false,
+    "preexisting_files_may_be_opened_by_model": false,
+    "preexisting_files_may_be_changed_or_removed": false,
+    "leaf_credit_requires_both_targets_acceptance": true,
+    "euclidean_update_composition_credit": 0,
+    "generic_balanced_bezout_credit": 0,
+    "target_specialization_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_on_accept": "Preregister a closed wrapper that applies the accepted V2 update to these exact two clean leaves and reconstruct it twice.",
+  "output": "artifacts/autogenesis/balanced-bezout-clean-mul-leaves-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-balanced-bezout-clean-mul-leaves-plan.py",
+  "limitations": "This increment may establish only two target-owned arithmetic leaves. It grants no application to V2, generic gcd theorem, target specialization, evaluation, fact, or ledger credit."
+}
