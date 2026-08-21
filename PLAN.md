@@ -138,7 +138,8 @@ now. Nothing was deleted.
 | 2026-08-21 | `3ad85619a` | V3 specializes and reimports the exact corollary empty-footprint; one hash-only sealed-stream read is frozen before admission authority exists |
 | 2026-08-21 | `4263b1c04` | Hash-only audit binds canonical type `2295adda…25ad`; exact three-dependency crash-safe admission is frozen before operation code or ledger write |
 | 2026-08-21 | `2f9dd5bef` | Exact capsule checker, operation registry, gate coupling, and transaction mutation control make the corollary uniquely executable with zero ledger writes |
-| 2026-08-21 | (pending) | First apply preflight rejects an archived `--before-fact` before intent or write; V2 freezes the canonical fact path with unchanged transaction identities |
+| 2026-08-21 | `e1e9a6d9b` | First apply preflight rejects an archived `--before-fact` before intent or write; V2 freezes the canonical fact path with unchanged transaction identities |
+| 2026-08-21 | (pending) | V2 correctly rejects receipt replay from a descendant checkout; V3 freezes a dedicated clean worktree at exact registration commit `2f9dd5bef` |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
