@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-cancellation-acc-package-composition-plan",
+  "state": "preregistered-declaration-exact-official-acc-package-before-code-or-composition",
+  "inputs": {
+    "path_audit_result": {
+      "path": "artifacts/autogenesis/official-cancellation-acc-path-audit-result-v1.json",
+      "sha256": "f7210223e7de17764a09c8311fb4349d584216e2a90f9c00993947470ef163f7"
+    },
+    "source_capsule_sha256": "6f9a3983ba4b0e7b2c872615d796ceb5414d3bd2cf51843ecb496b3ba83a52b0",
+    "target_r091_sha256": "fc1117679c743009e8548a25d1f73f71f6cd42555ea77b3efce07844673670b2",
+    "cancellation_root": "Axeyum.Autogenesis.officialCoprimeFactorDivisibilityCancellationV1"
+  },
+  "authorized_recursive_package": {
+    "family": "Acc",
+    "constructor": "Acc.intro",
+    "recursor": "Acc.rec",
+    "exact_source_declaration_sha256": {
+      "Acc": "ae8b799311c1ef25f167d7413eb10abf55df398053cf994f953bd31624f96e27",
+      "Acc.intro": "73c42b8287c3b2b680731deb89003732efda90b571c0dd737a81cbcf2ef024c2",
+      "Acc.rec": "67cc978e963fa24e78a117380175be35753a051986230e1c5f2fd2b3a2df85ac"
+    }
+  },
+  "implementation": {
+    "boundary": "extend the existing recursive-singleton composition allow-list by exact three-declaration package identity, while retaining target-kernel reconstruction and post-admission exact-identity verification",
+    "forbidden": [
+      "name-only Acc authorization",
+      "structural recursive-inductive authorization",
+      "partial family, constructor, or recursor admission",
+      "unchecked insertion",
+      "proof or theorem-type rendering"
+    ],
+    "required_controls": [
+      "the exact official package is accepted atomically",
+      "each one-bit identity mutation is rejected before target publication",
+      "a same-name recursive lookalike remains rejected",
+      "partial package input remains rejected",
+      "the completed cancellation theorem has an empty footprint and replays from its receipt"
+    ]
+  },
+  "execution": {
+    "complete_invocations": 2,
+    "source_reads": 2,
+    "target_reads": 2,
+    "cancellation_compositions": 2,
+    "clean_order_submissions": 0,
+    "exact_target_submissions": 0,
+    "retries": 0
+  },
+  "acceptance": {
+    "outputs_byte_identical": true,
+    "official_acc_package_reconstructed_exactly": true,
+    "cancellation_root_reconstructed": true,
+    "cancellation_axiom_footprint": [],
+    "receipt_replays": true,
+    "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0}
+  },
+  "authority": {
+    "acc_package_credit_before_acceptance": 0,
+    "cancellation_composition_credit_before_acceptance": 0,
+    "support_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_on_accept": "Reconstruct official clean divisibility antisymmetry over the composed cancellation environment, export it twice, and only then preregister a second exact Nat.gcd_fib_add_self attempt.",
+  "output": "artifacts/autogenesis/official-cancellation-acc-package-composition-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-official-cancellation-acc-package-composition-plan.py",
+  "limitations": "This may establish only exact official Acc package and cancellation composition compatibility. It grants no clean-order theorem, Fibonacci target, fact, evaluation, or ledger credit."
+}

@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-cancellation-acc-path-audit-result",
+  "state": "single-read-complete-canonical-acc-package-is-nearest-missing-carrier",
+  "plan": {
+    "path": "artifacts/autogenesis/official-cancellation-acc-path-audit-plan-v1.json",
+    "sha256": "2a2ddb119ec0c99a119fa1cbe2b584be078ff0d8d611f87439b2dea6fa4472ad"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/audits/7d931d9d3-official-cancellation-acc-path-audit-v1",
+    "manifest_sha256": "d538ab62038d3b911d465acbb26319d47a38d356da0009602b50454cf5fb5acc",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "execution": {
+    "binary_builds": 1,
+    "audit_invocations": 1,
+    "source_reads": 1,
+    "target_reads": 1,
+    "kernel_submissions": 0,
+    "retries": 0
+  },
+  "summary": {
+    "root_closure_size": 382,
+    "carrier_count": 16,
+    "carriers_present_in_target": 0,
+    "assumption_bearing_carriers": 0,
+    "nearest_carrier": "Acc",
+    "nearest_carrier_kind": "inductive",
+    "nearest_complete_package": ["Acc", "Acc.intro", "Acc.rec"]
+  },
+  "nearest_package_identities": {
+    "Acc": "ae8b799311c1ef25f167d7413eb10abf55df398053cf994f953bd31624f96e27",
+    "Acc.intro": "73c42b8287c3b2b680731deb89003732efda90b571c0dd737a81cbcf2ef024c2",
+    "Acc.rec": "67cc978e963fa24e78a117380175be35753a051986230e1c5f2fd2b3a2df85ac"
+  },
+  "authority": {
+    "dependency_path_credit": 1,
+    "support_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Preregister one declaration-exact official Acc package reconstruction, then retry only the official cancellation composition before any clean-order or Fibonacci target submission.",
+  "verification": "python3 scripts/check-autogenesis-official-cancellation-acc-path-audit-result.py",
+  "limitations": "This is a read-only dependency classification. It establishes no support theorem, exact Fibonacci target, fact transition, evaluation credit, or ledger write."
+}
