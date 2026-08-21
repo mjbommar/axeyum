@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-add-two-v5-dependency-audit-result",
+  "state": "single-read-partitions-clean-supports-from-convenience-layer-carriers",
+  "input": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-clean-v5/int-fib-add-two.ndjson",
+    "bytes": 7928593,
+    "sha256": "55d4515a8e211d630ef0ca2e7c62306a116785b91a33e66411d7d6b2a1466d36"
+  },
+  "summary": {
+    "population": 23,
+    "empty_footprint": 9,
+    "propext_bearing": 13,
+    "other_assumption_bearing": 1
+  },
+  "empty_footprint": [
+    "Eq.symm",
+    "Eq.trans",
+    "Iff.mpr",
+    "Nat.add_assoc",
+    "congr",
+    "congrArg",
+    "congrFun'",
+    "ite_congr",
+    "neg_add_rev"
+  ],
+  "propext_bearing": [
+    "Int.fib_add_two._abel_1_6",
+    "Int.fib_add_two._abel_1_7",
+    "Nat.add_mod_right",
+    "Nat.cast_add",
+    "Nat.fib_add_two",
+    "Nat.instNeZeroSucc",
+    "Nat.mod_two_eq_zero_or_one",
+    "Nat.succ_mod_two_eq_one_iff",
+    "Nat.succ_mod_two_eq_zero_iff",
+    "eq_self",
+    "ite_cond_eq_false",
+    "ite_cond_eq_true",
+    "one_ne_zero._simp_1"
+  ],
+  "other_assumption_bearing": {
+    "funext": [
+      "Quot",
+      "Quot.lift",
+      "Quot.mk",
+      "Quot.sound"
+    ]
+  },
+  "localization": {
+    "mathematical_core": "constructor split, explicit parity alternation, natural Fibonacci recurrence, and two additive identities",
+    "assumption_carriers": [
+      "official Nat recurrence and parity convenience theorems",
+      "generic simplifier conditional/equality helpers",
+      "Abel generated normalization theorems"
+    ],
+    "selected_repair": "residualize those contracts as explicit parameters, avoid broad simp and Abel in the target theorem, then compose only independently reconstructed clean supports"
+  },
+  "execution": {
+    "importer_runs": 1,
+    "proof_bearing_stream_reads": 1,
+    "retries": 0,
+    "theorem_submissions": 0,
+    "rendered_proof_terms_types_or_values": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "fact_admission_authorized": false,
+    "theorem_credit": 0,
+    "ledger_writes": 0
+  }
+}
