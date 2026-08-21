@@ -484,7 +484,6 @@ fn audit_instance(
 
     let mut lean_fragment = JsonValue::Null;
     let mut lean_checked = false;
-    let mut lean_theory = false;
     let mut lean_content = JsonValue::Null;
     let mut lean_error = JsonValue::Null;
     let mut lean_module_bytes = JsonValue::Null;
@@ -556,7 +555,6 @@ fn audit_instance(
                         // stronger than it was by a factor of nearly two.
                         lean_content = match fragment.lean_module_content() {
                             Some(LeanModuleContent::TheoryReconstruction) => {
-                                lean_theory = true;
                                 json!("theory")
                             }
                             Some(LeanModuleContent::StructuralAttestation) => json!("attestation"),
