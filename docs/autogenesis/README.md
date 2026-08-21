@@ -195,6 +195,7 @@ compounding, not automation theatre.
 | [Public Euclidean recursion plan](96-public-euclidean-recursion-plan.md) | How can synchronized public `/` and `%` recursion prove exact `Nat.div_add_mod` without reusing the failed wrapper route? |
 | [Public Euclidean recursion decline](97-public-euclidean-recursion-decline.md) | Did the exact public recurrence remain axiom-free, and which generated recursion declaration carries the remaining footprint? |
 | [Public Euclidean bounded-induction plan](98-public-euclidean-bounded-induction-plan.md) | Can primitive induction over an inclusive bound express the same recurrence without any generated well-founded theorem? |
+| [Public Euclidean bounded-induction decline](99-public-euclidean-bounded-induction-decline.md) | Did primitive bounded induction remove generated recursion, and where is the remaining footprint now exposed? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
