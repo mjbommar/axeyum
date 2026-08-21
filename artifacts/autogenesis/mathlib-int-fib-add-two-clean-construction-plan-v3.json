@@ -1,0 +1,41 @@
+{
+  "schema_version": 3,
+  "kind": "axeyum-autogenesis-int-fib-add-two-clean-construction-plan",
+  "state": "preregistered-after-v2-parity-branch-failure-before-v3-source",
+  "prior_result": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-add-two-clean-construction-result-v2.json",
+    "required_state": "v2-closes-constructor-addition-but-leaves-parity-branch-and-sign-algebra"
+  },
+  "repair": {
+    "facts": [
+      "current index mod two",
+      "successor index mod two",
+      "successor-successor index mod two"
+    ],
+    "lemmas": [
+      "Nat.succ_mod_two_eq_zero_iff",
+      "Nat.succ_mod_two_eq_one_iff",
+      "Nat.fib_add_two"
+    ],
+    "conditional_rewriting": "explicit named equalities before unfolding Int.fib",
+    "new_automation": false,
+    "representation_unchanged": true
+  },
+  "execution": {
+    "host": "s5",
+    "source": "artifacts/autogenesis/sources/int-fib-add-two-clean-v3.lean",
+    "source_present_at_plan_commit": false,
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-clean-v3",
+    "pack_present_at_plan_commit": false
+  },
+  "budget": {
+    "max_compiler_invocations": 1,
+    "max_exporter_invocations": 1,
+    "max_importer_runs": 2,
+    "max_retries": 0,
+    "max_target_theorem_submissions": 1,
+    "max_search_invocations": 0,
+    "max_ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-add-two-clean-construction-result-v3.json"
+}
