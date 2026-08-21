@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. The exact official `Acc` package and cancellation composition are accepted. Clean-order V5 then stopped before its first support submission because the shared proof builder eagerly resolved absent `Iff`, although none of the three official support proofs calls its sole `iff_reverse` consumer; run two was skipped and support credit remains zero. V6 freezes only lazy call-site resolution, with proof bodies and target authority unchanged.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved`; its sole ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Exact official `Acc` and cancellation composition are accepted. V6 removed the unused eager `Iff` requirement and submitted only local zero-divisibility before stopping at absent `Nat.one_le_right_of_mul`; nothing was exported, run two was skipped, and support credit remains zero. V7 freezes a target-owned primitive-induction replacement over five already present empty-footprint leaves, with the downstream proof bodies otherwise unchanged.
 
-**Next:** implement V6 lazy `Iff` resolution, then execute two fresh official clean-order reconstructions and four imports. Do not submit `Nat.gcd_fib_add_self` until that support capsule is deterministic and empty-footprint.
+**Next:** implement V7 target-owned positive-product right-factor support, then execute two fresh official clean-order reconstructions and four imports. Do not submit `Nat.gcd_fib_add_self` until that support capsule is deterministic and empty-footprint.
 
 <!-- plan-section: landed-changes -->
 
@@ -204,3 +204,5 @@
 | 2026-08-21 | (pending) | Official cancellation composes twice over r091 with exact `Acc`, byte-identical receipts, and an empty footprint |
 | 2026-08-21 | (pending) | V5 freezes official clean-order reconstruction after exact `Acc` and cancellation acceptance |
 | 2026-08-21 | (pending) | V5 cancellation composition succeeds but eager unused `Iff` lookup stops before support submission; V6 freezes lazy resolution only |
+| 2026-08-21 | `f37c82184` | Shared proof builder resolves `Iff` only at its sole consumer |
+| 2026-08-21 | (pending) | V6 advances to missing positive-product factor support; V7 freezes a primitive-induction replacement |

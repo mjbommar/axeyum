@@ -18,6 +18,11 @@ assert BOUNDARY_SPEC and BOUNDARY_SPEC.loader
 BOUNDARY = importlib.util.module_from_spec(BOUNDARY_SPEC)
 BOUNDARY_SPEC.loader.exec_module(BOUNDARY)
 
+V7_SPEC = importlib.util.spec_from_file_location("v6_v7", ROOT / "scripts/check-autogenesis-official-r091-clean-dvd-antisymm-v6-v7.py")
+assert V7_SPEC and V7_SPEC.loader
+V7 = importlib.util.module_from_spec(V7_SPEC)
+V7_SPEC.loader.exec_module(V7)
+
 
 class PlanControls(unittest.TestCase):
     def test_live_plan_passes(self) -> None:
@@ -40,6 +45,18 @@ class V5V6BoundaryControls(unittest.TestCase):
         plan["budget"]["max_retries"] = 1
         with self.assertRaises(BOUNDARY.BoundaryError):
             BOUNDARY.validate(result, plan)
+
+
+class V6V7BoundaryControls(unittest.TestCase):
+    def test_live_boundary_passes(self) -> None:
+        self.assertEqual(V7.validate()[1]["new_support"]["name"], "Axeyum.Autogenesis.oneLeRightOfMulOfficialV1")
+
+    def test_leaf_mutation_fails(self) -> None:
+        result, plan = V7.validate()
+        plan = copy.deepcopy(plan)
+        plan["new_support"]["exact_required_theorem_leaves"].pop()
+        with self.assertRaises(V7.BoundaryError):
+            V7.validate(result, plan)
 
     def test_target_budget_mutation_fails(self) -> None:
         plan = copy.deepcopy(CHECK.load())
