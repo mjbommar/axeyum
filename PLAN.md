@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-21 | `8e8196f7a` | Expanded each high-conductor aggregate split into one signed two-Mobius order-pair correlation, proved translation kills every order cell at its forced layer, and isolated the missing characteristic-two Witt-local-system refinement of Hast--Matei `m=2`. |
 | 2026-08-21 | `231a3992e` | Combined every retained Haar level before identity-path localization, reducing the sharp first-endpoint price to one aggregate path with 17 odd or 18 even half-contractions still unproved after the exact translation split. |
 | 2026-08-21 | `79e1c4a6e` | Proved that translation `f(x)->f(x+1)` forces exact half balance at identity-path level `2^v_2(n)`, spent that split in the endpoint ledger, and retained the remaining 19-split obligation and power-of-two boundary explicitly. |
 | 2026-08-21 | `2da5c9b4c` | Factored each retained Haar layer's polynomial identity share down the nested Witt path, reducing it to 20 half-balanced splits among 190 available levels at the first endpoint and exposing every exact parent/child mass without claiming the open split theorem. |
@@ -560,6 +561,19 @@ the translation-forced zero.  This is narrower than the earlier full `(CDL)`
 object, but its required low-twist decorrelation remains unproved; large-field
 variance theorems, central-L-value moments, and random-matrix models do not
 settle the fixed-`q=2` trace-power estimate.
+Expanding that shifted moment before Cauchy now gives an exact two-Mobius
+correlation, not the older four-shift parallelogram.  A native order-pair
+report reconstructs every layer independently and shows that taking absolute
+values cell by cell loses factors 26--57 on the pinned nonzero rows.
+Translation is stronger at convolution-order resolution: it preserves each
+Mobius order separately, so every order-pair cell vanishes at level
+`2^v_2(n)`, not merely their aggregate.  Hast--Matei's `m=2`
+complete-intersection geometry is valid in characteristic two and is the
+natural carrier for this paired phase, but its published untwisted
+large-field covariance has degree-dependent constants.  The selected
+geometric continuation is now a degree-uniform principal-unit/Witt
+local-system trace bound after coarse-character subtraction; no such bound or
+canonical ordered-root lift is yet proved, so `(REL)` remains open.
 The companion characteristic-two Newton-over-Hodge result has also been
 priced conditionally: it forces only divisibility of the connected endpoint
 trace by eight.  At `ell=200` the existing envelope is already divisible by
