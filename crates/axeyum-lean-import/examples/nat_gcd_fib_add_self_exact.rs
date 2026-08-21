@@ -941,21 +941,41 @@ fn run_target_native_exact_capsule(
 fn run_target_native_gcd_greatest(
     mut args: impl Iterator<Item = std::ffi::OsString>,
 ) -> Result<(), String> {
-    let input_path = path(&mut args)?;
+    let gcd_input_path = path(&mut args)?;
+    let antisymm_input_path = path(&mut args)?;
     let output_path = path(&mut args)?;
     if args.next().is_some() || output_path.exists() {
         return Err(
             "usage: nat_gcd_fib_add_self_exact --target-native-gcd-greatest \
-             <gcd-divisibility> <output>"
+             <gcd-divisibility> <clean-antisymmetry> <output>"
                 .to_owned(),
         );
     }
-    let source = import_bound(
-        &input_path,
+    let gcd_source = import_bound(
+        &gcd_input_path,
         "9ecf0b10d1390f880040790fb1845a11d7987b94c0d3a71acf4ad8dca0c5a304",
         "target-native GCD divisibility",
     )?;
-    let mut kernel = source.kernel().clone();
+    let antisymm_source = import_bound(
+        &antisymm_input_path,
+        CLEAN_ANTISYMM_CAPSULE,
+        "clean divisibility antisymmetry",
+    )?;
+    let composed = compose_checked_theorem_slice(
+        antisymm_source.kernel(),
+        gcd_source.kernel(),
+        &[CLEAN_ANTISYMM],
+    )
+    .map_err(|error| format!("Nat.gcd_greatest setup composition declined: {error:?}"))?;
+    verify_checked_theorem_composition(
+        antisymm_source.kernel(),
+        gcd_source.kernel(),
+        composed.kernel(),
+        composed.receipt(),
+    )
+    .map_err(|error| format!("Nat.gcd_greatest setup composition did not replay: {error:?}"))?;
+    let composition_receipt = composed.receipt().receipt_sha256.clone();
+    let mut kernel = composed.kernel().clone();
     let theorem = declare_target_native_gcd_greatest(&mut kernel)?;
     require_empty(&kernel, theorem, GCD_GREATEST_TARGET)?;
     let expected = evidence(&kernel, theorem)?;
@@ -992,6 +1012,7 @@ fn run_target_native_gcd_greatest(
             "schema_version":1,
             "kind":"axeyum-autogenesis-target-native-nat-gcd-greatest-capsule",
             "state":"exact-target-reconstructed-empty-footprint-roundtrip-checked",
+            "composition_receipt_sha256":composition_receipt,
             "target_goal_sha256":goal_sha256,
             "target":expected,
             "capsule":{"bytes":bytes.len(),"sha256":hex_sha256(bytes.as_bytes()),"fresh_imports":2},
