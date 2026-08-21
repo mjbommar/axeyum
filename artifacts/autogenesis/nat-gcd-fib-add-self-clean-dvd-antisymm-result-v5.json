@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-clean-dvd-antisymm-result",
+  "state": "three-clean-supports-transported-twice-byte-identically-empty-footprint",
+  "plan": {"path": "artifacts/autogenesis/nat-gcd-fib-add-self-clean-dvd-antisymm-plan-v5.json", "sha256": "4e18a295d042e114b66a744ded7858777ddc43330de68c5b4823e033d8521bd1", "commit": "298ec71ea"},
+  "evidence_pack": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/7da31933f-clean-dvd-antisymm-v5/manifest.json", "sha256": "5b35fda424057206b6d94afcead81c3581383e8ed463ba3d5d8c7af11ee1fb6c", "directory_mode": "0555", "file_mode": "0444"},
+  "implementation": {"path": "crates/axeyum-lean-import/examples/clean_dvd_antisymm.rs", "source_sha256": "d621f9f64ae7b4b950a4ec9a6562b4f5e47318aa3a4f642421218166d7343633", "binary_sha256": "38f47496c23f909f711d473642f9b84e6995f8496a3c347bf39a6b981da0eaeb", "commit": "7da31933f"},
+  "execution": {"binary_builds": 1, "complete_invocations": 2, "input_stream_reads": 2, "new_support_theorem_submissions": 6, "composition_operations": 2, "checked_composition_replays": 2, "published_support_theorems_per_invocation": 3, "exact_target_submissions": 0, "retries": 0},
+  "result": {"transport_receipt_sha256": "14a4680f0c715e4572fc8d9049644b4772b816a631a23461fa665a775040beb0", "outputs_sha256": "3a9651d264e239f01db87a3acc904d5dae4a62544d1a35b11103b035eded069d", "outputs_byte_identical": true, "source_target_evidence_identical": true, "support_theorems": ["Axeyum.Autogenesis.eqZeroOfZeroDvdCleanV1", "Axeyum.Autogenesis.leOfDvdCleanV1", "Axeyum.Autogenesis.dvdAntisymmCleanV5"], "axiom_footprints": [], "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0}},
+  "authority": {"support_credit": 3, "exact_target_submissions": 0, "target_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_boundary": {"required_next_increment": "preregister exact Nat.gcd_fib_add_self construction from accepted Fibonacci addition, official cancellation, and clean divisibility antisymmetry"},
+  "verification": "python3 scripts/check-autogenesis-nat-gcd-fib-add-self-clean-dvd-antisymm-result-v5.py",
+  "limitations": "This credits only three reusable empty-footprint supports in r091. No exact Fibonacci target was submitted and no fact, evaluation, or ledger state changed."
+}
