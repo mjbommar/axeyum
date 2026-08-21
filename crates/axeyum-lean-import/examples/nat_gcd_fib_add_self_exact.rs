@@ -6,8 +6,10 @@ use std::io::Cursor;
 use std::path::{Path, PathBuf};
 
 use axeyum_lean_import::{
-    ImportLimits, canonical_declaration_sha256, canonical_expression_sha256,
-    compose_checked_theorem_slice, import_ndjson, verify_checked_theorem_composition,
+    ImportLimits, ReusedTypeCompatibility, canonical_declaration_sha256,
+    canonical_expression_sha256, checked_reused_declaration_compatibility,
+    compose_checked_theorem_slice, compose_checked_theorem_slice_with_target_leaves, import_ndjson,
+    verify_checked_theorem_composition, verify_checked_theorem_composition_with_target_leaves,
 };
 use axeyum_lean_kernel::{
     BinderInfo, Declaration, ExprId, Kernel, Lean4ExportMetadata, LevelId, NameId,
@@ -170,29 +172,27 @@ fn run_official_clean_order_capsule(
     }
     let mut kernel = imported.kernel().clone();
     let cancellation = import_bound(&cancellation_path, CANCELLATION_CAPSULE, CANCELLATION)?;
-    let bootstrap =
-        compose_checked_theorem_slice(cancellation.kernel(), &kernel, &[CANCELLATION_BOOTSTRAP])
-            .map_err(|error| format!("official cancellation bootstrap declined: {error:?}"))?;
-    verify_checked_theorem_composition(
+    let mod_lt_reuse = checked_reused_declaration_compatibility(
         cancellation.kernel(),
         &kernel,
-        bootstrap.kernel(),
-        bootstrap.receipt(),
+        CANCELLATION_BOOTSTRAP,
     )
-    .map_err(|error| format!("official cancellation bootstrap did not replay: {error:?}"))?;
-    if bootstrap
-        .receipt()
-        .added_theorems
-        .iter()
-        .any(|row| !row.axiom_footprint.is_empty())
+    .map_err(|error| format!("Nat.mod_lt checked reuse declined: {error:?}"))?;
+    if mod_lt_reuse.source_declaration_sha256 != mod_lt_reuse.target_declaration_sha256
+        || mod_lt_reuse.compatibility != ReusedTypeCompatibility::KernelTypeShape
     {
-        return Err("official cancellation bootstrap added assumptions".to_owned());
+        return Err("Nat.mod_lt checked reuse identity or type shape changed".to_owned());
     }
-    let bootstrap_receipt = bootstrap.receipt().receipt_sha256.clone();
-    kernel = bootstrap.kernel().clone();
-    let compatible = compose_checked_theorem_slice(cancellation.kernel(), &kernel, &[CANCELLATION])
-        .map_err(|error| format!("official cancellation compatibility declined: {error:?}"))?;
-    verify_checked_theorem_composition(
+    let target_mod_lt = find_name(&kernel, CANCELLATION_BOOTSTRAP)?;
+    require_empty(&kernel, target_mod_lt, CANCELLATION_BOOTSTRAP)?;
+    let compatible = compose_checked_theorem_slice_with_target_leaves(
+        cancellation.kernel(),
+        &kernel,
+        &[CANCELLATION],
+        &[CANCELLATION_BOOTSTRAP],
+    )
+    .map_err(|error| format!("official cancellation compatibility declined: {error:?}"))?;
+    verify_checked_theorem_composition_with_target_leaves(
         cancellation.kernel(),
         &kernel,
         compatible.kernel(),
@@ -244,7 +244,9 @@ fn run_official_clean_order_capsule(
             "supports": [evidence(&kernel, eq_zero)?, evidence(&kernel, le_of_dvd)?, expected],
             "official_cancellation_compatibility": {
                 "bootstrap_root": CANCELLATION_BOOTSTRAP,
-                "bootstrap_receipt_sha256": bootstrap_receipt,
+                "source_declaration_sha256": mod_lt_reuse.source_declaration_sha256,
+                "target_declaration_sha256": mod_lt_reuse.target_declaration_sha256,
+                "compatibility": mod_lt_reuse.compatibility.as_str(),
                 "root": CANCELLATION,
                 "receipt_sha256": compatibility_receipt,
                 "replayed": true,
