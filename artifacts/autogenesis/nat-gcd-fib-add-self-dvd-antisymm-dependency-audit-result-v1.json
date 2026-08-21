@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-dvd-antisymm-dependency-audit-result",
+  "state": "five-root-audit-complete-le-of-dvd-sole-propext-carrier",
+  "plan": {"path": "artifacts/autogenesis/nat-gcd-fib-add-self-dvd-antisymm-dependency-audit-plan-v1.json", "sha256": "6770c130445c15ee6a394477eb59281010ebb8177fc648d4e8e884d5ae144cb2", "commit": "76462c935"},
+  "evidence_pack": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/76462c935-gcd-shift-dvd-antisymm-dependency-audit-v1/manifest.json", "sha256": "78bfd1a6ff42c82db971c4bc6f91d7d54cfeff42c378404ea21d4ac7c1f8ec24", "directory_mode": "0555", "file_mode": "0444"},
+  "execution": {"binary_builds": 1, "importer_runs": 1, "proof_bearing_stream_reads": 1, "new_theorem_submissions": 0, "exact_target_submissions": 0, "retries": 0},
+  "summary": {"population": 5, "empty_footprint": 4, "propext_bearing": 1, "other_assumption_bearing": 0, "sole_assumption_carrier": "Nat.le_of_dvd"},
+  "rows": [
+    {"name": "Eq.symm", "declaration_sha256": "fb271ec2ea3431e3c34737664fb7b6e308edb40ce00c7f038724eb0e4a08245f", "axiom_footprint": [], "direct_theorem_dependencies": [], "class": "empty-footprint"},
+    {"name": "Nat.eq_zero_of_zero_dvd", "declaration_sha256": "af369b60decfc8486718908e2921511a38cc3f2660ee11f71b46c8392ed06b21", "axiom_footprint": [], "direct_theorem_dependencies": ["Eq.trans", "Nat.zero_mul"], "class": "empty-footprint"},
+    {"name": "Nat.le_antisymm", "declaration_sha256": "30f4be5e408a2a1ccfb93c90ec97d2c5be21e210193daa171b4df836660d6908", "axiom_footprint": [], "direct_theorem_dependencies": ["Nat.lt_irrefl", "Nat.lt_of_le_of_lt"], "class": "empty-footprint"},
+    {"name": "Nat.le_of_dvd", "declaration_sha256": "c2be0900a04e579dbc5561e96e28762c16b309cf358a0e24a44d322fe8f7a55b", "axiom_footprint": ["propext"], "direct_theorem_dependencies": ["Nat.lt_irrefl._simp_1", "Nat.mul_le_mul_left", "Nat.mul_one", "Nat.succ_pos", "congrArg"], "class": "propext-bearing"},
+    {"name": "Nat.succ_pos", "declaration_sha256": "cd7597de70a41e58b58481f1d56c39e4a2ff0577a12c5deea96f099a888b96df", "axiom_footprint": [], "direct_theorem_dependencies": ["Nat.zero_lt_succ"], "class": "empty-footprint"}
+  ],
+  "authority": {"replacement_source_compilations": 0, "new_theorem_submissions": 0, "exact_target_submissions": 0, "proof_terms_rendered": 0, "theorem_types_rendered": 0, "theorem_values_rendered": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_boundary": {"required_next_increment": "preregister a target-owned divisibility-antisymmetry theorem parameterized only over a clean le_of_dvd contract while reusing the other four empty-footprint dependencies"},
+  "verification": "python3 scripts/check-autogenesis-nat-gcd-fib-add-self-dvd-antisymm-dependency-audit-result.py",
+  "limitations": "This localizes the sole direct assumption carrier. It grants no replacement theorem or Fibonacci target credit."
+}

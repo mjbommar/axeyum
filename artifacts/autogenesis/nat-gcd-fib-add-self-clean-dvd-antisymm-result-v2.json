@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-clean-dvd-antisymm-result",
+  "state": "first-invocation-aborted-at-missing-native-zero-divisibility-leaf-no-retry",
+  "plan": {
+    "path": "artifacts/autogenesis/nat-gcd-fib-add-self-clean-dvd-antisymm-plan-v2.json",
+    "sha256": "d12313b9839e30e02109e92717e7f450c0fd70201afc7cd63ee9630e1ed3609f",
+    "commit": "cc99bd5ad"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/fa993f97a-clean-dvd-antisymm-v2/manifest.json",
+    "sha256": "d4af64d38832b1d884ae9b6a1cf8bb8467d7b0a4ca959af9bc61facce478e0d8",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/clean_dvd_antisymm.rs",
+    "source_sha256": "130929f39baece5a69b474a151083b08b5868516643af6889a30513211ba816e",
+    "binary_sha256": "207a57e49ebe37408d09eb160faef5bf90759023320c1ad563fb7c335fc61cfe",
+    "commit": "fa993f97a"
+  },
+  "execution": {
+    "binary_builds": 1,
+    "complete_invocations": 1,
+    "input_stream_reads": 1,
+    "clean_le_of_dvd_native_submissions": 1,
+    "clean_dvd_antisymm_submissions": 0,
+    "composition_operations": 0,
+    "published_support_theorems": 0,
+    "exact_target_submissions": 0,
+    "retries": 0,
+    "second_invocation_skipped": true
+  },
+  "decline": {
+    "operation": "construct clean divisibility antisymmetry wholly in the preregistered native kernel",
+    "class": "MissingDeclaration",
+    "diagnostic": "declaration is absent: Nat.eq_zero_of_zero_dvd",
+    "interpretation": "the single-kernel repair is correct, but build_nat_prelude does not install the clean zero-divisibility equality leaf required by the zero branches",
+    "partial_kernel_published": false
+  },
+  "authority": {
+    "support_credit": 0,
+    "exact_target_submissions": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": {
+    "required_next_increment": "preregister and construct a target-owned zero-divisibility equality leaf in the same native kernel before rebuilding clean divisibility antisymmetry"
+  },
+  "verification": "python3 scripts/check-autogenesis-nat-gcd-fib-add-self-clean-dvd-antisymm-result-v2.py",
+  "limitations": "No clean antisymmetry closure or partial kernel was published. This result authorizes only a separately preregistered same-kernel zero-divisibility leaf and rebuilt support; it grants no Fibonacci target or ledger credit."
+}

@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-portable-support-capsules-plan",
+  "state": "preregistered-four-root-selected-roundtrip-checked-capsules-before-code-or-export",
+  "accepted_inputs": {
+    "fibonacci_addition": {"path": "artifacts/autogenesis/mathlib-nat-gcd-fib-add-self-support-result-v1.json", "sha256": "419b9253161eeadb823357c072b1b462ab0845cbf36dfd53a8342c5c044e166f", "root": "Axeyum.Autogenesis.NatFibSuccessorAddition"},
+    "fibonacci_coprimality": {"path": "artifacts/autogenesis/mathlib-nat-fib-coprime-admission-v1.json", "sha256": "b0fe0713d09bdca250d7911c3e8e776a6db4f5e749d5b97914c5941e16b1a844", "root": "Nat.fib_coprime_fib_succ"},
+    "official_cancellation": {"path": "artifacts/autogenesis/official-coprime-factor-cancellation-exact-reuse-result-v1.json", "sha256": "84d66b3365a82db334e388d508b26ca1ccd7cbcbbb293305e82158a3f5c3a26f", "root": "Axeyum.Autogenesis.officialCoprimeFactorDivisibilityCancellationV1"},
+    "clean_divisibility_antisymmetry": {"path": "artifacts/autogenesis/nat-gcd-fib-add-self-clean-dvd-antisymm-result-v5.json", "sha256": "48386b02df68b2678c3767d7ccf155a495fe015161e0dc06b200fc735a5b7bf5", "root": "Axeyum.Autogenesis.dvdAntisymmCleanV5"}
+  },
+  "storage": {
+    "location": "/nas3/data/axeyum/autogenesis/reference-packs/<implementation-commit>-nat-gcd-fib-add-self-portable-support-capsules-v1",
+    "git_policy": "only manifests, identities, checks, and bounded results enter Git; proof-bearing NDJSON remains in the sealed external pack",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "construction": {
+    "format": "Axeyum root-selected Lean 4.30 lean4export NDJSON",
+    "metadata": "Lean4ExportMetadata::axeyum(\"4.30.0\")",
+    "roots_per_capsule": 1,
+    "exports_per_root": 2,
+    "required_properties": ["byte-identical repeated exports", "fresh independent importer acceptance", "canonical declaration identity equals the accepted source identity", "complete axiom footprint empty", "exactly the selected theorem root is credited", "proof terms, theorem types, and theorem values never enter JSON or logs"]
+  },
+  "implementation_sequence": [
+    "add an optional explicit output-path export boundary to the clean-order driver and retain two checked capsules",
+    "add the same boundary to the official-cancellation driver and retain two checked capsules",
+    "expose the already reconstructed Fibonacci addition and coprimality kernels through the existing gcd/Fibonacci driver and retain two checked capsules each",
+    "build a separate exact-target driver that consumes the four sealed capsules plus r091; do not submit the target in this increment"
+  ],
+  "acceptance": {"capsules": 4, "fresh_exports_per_capsule": 2, "outputs_per_capsule_must_be_byte_identical": true, "each_capsule_must_import_twice": true, "each_root_declaration_sha256_must_match_accepted_result": true, "each_root_axiom_footprint": [], "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0}},
+  "budget": {"max_driver_builds": 3, "max_complete_reconstruction_invocations": 8, "max_root_selected_exports": 8, "max_fresh_capsule_imports": 8, "max_exact_target_submissions": 0, "max_retries": 0},
+  "authority": {"capsule_credit": 0, "exact_target_submissions": 0, "target_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_on_accept": "Preregister and execute the exact Nat.gcd_fib_add_self theorem construction using only r091 and the four checked portable capsules.",
+  "output": "artifacts/autogenesis/nat-gcd-fib-add-self-portable-support-capsules-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-nat-gcd-fib-add-self-portable-support-capsules-plan.py",
+  "limitations": "This increment changes support portability only. It grants no exact target submission, theorem receipt, fact transition, evaluation credit, or ledger write."
+}

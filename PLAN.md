@@ -216,6 +216,23 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Revised cancellation driver reuses both exact leaves without composition and passes the focused importer gate without stream execution |
 | 2026-08-21 | (pending) | Official coprime-factor divisibility cancellation reconstructs twice byte-identically with an empty footprint and exact five-theorem dependency set |
 | 2026-08-21 | (pending) | Five direct dependencies beneath assumption-bearing `Nat.dvd_antisymm` are frozen for one nonrendering audit before the gcd-shift target |
+| 2026-08-21 | (pending) | One exact audit localizes `Nat.dvd_antisymm`'s sole `propext` carrier to `Nat.le_of_dvd`; four direct dependencies are clean |
+| 2026-08-21 | (pending) | Clean native `le_of_dvd` duplication and target-owned divisibility antisymmetry are frozen before code or stream access |
+| 2026-08-21 | (pending) | Bounded clean divisibility-antisymmetry driver compiles without reading either proof-isolated input |
+| 2026-08-21 | (pending) | First clean antisymmetry run declines at a cross-kernel `NatPrelude` handle; no support publishes and the second run is skipped |
+| 2026-08-21 | (pending) | V2 freezes single-native-kernel support construction and checked named transport into r091 before code or stream access |
+| 2026-08-21 | (pending) | V2 clean order driver compiles Clippy-clean with all kernel-local handles confined to their native construction environment |
+| 2026-08-21 | (pending) | First V2 replay stops before antisymmetry submission because the native prelude lacks `Nat.eq_zero_of_zero_dvd`; the second is skipped and no support publishes |
+| 2026-08-21 | (pending) | V3 freezes an existential-witness proof of zero divisibility equality in the same native kernel before rebuilding or transporting antisymmetry |
+| 2026-08-21 | (pending) | V3 clean order driver closes the missing zero-divisibility leaf and passes Clippy plus the full importer suite without reading r091 |
+| 2026-08-21 | (pending) | First V3 replay accepts both prerequisite supports, then stops at absent convenience theorem `Nat.succ_pos`; the second is skipped and nothing publishes |
+| 2026-08-21 | (pending) | V4 freezes successor positivity as an inline native `zero_le` plus `le_succ_succ` proof before rebuilding antisymmetry |
+| 2026-08-21 | (pending) | V4 clean order driver replaces the absent convenience theorem with native order primitives and passes focused compile, Clippy, and importer tests |
+| 2026-08-21 | (pending) | First V4 replay reaches the trusted gate and rejects an unspecialized inner-induction hypothesis; the second is skipped and nothing publishes |
+| 2026-08-21 | (pending) | V5 freezes the complete antisymmetry proposition as the inner induction motive so each branch binds already-specialized divisibility hypotheses |
+| 2026-08-21 | (pending) | V5 clean order driver moves both divisibility binders inside the specialized induction branches and passes focused gates without reading r091 |
+| 2026-08-21 | (pending) | V5 clean zero-divisibility, divisor-bound, and divisibility-antisymmetry supports transport twice into r091 with byte-identical empty-footprint evidence |
+| 2026-08-21 | (pending) | Four portable root-selected support capsules are frozen before code or export so the exact target no longer depends on one monolithic reconstruction process |
 | 2026-08-20 | `9eb81822f` | Isolate persistent pre-push worktree metadata from the caller lane and register the two-sided control |
 | 2026-08-20 | `24b16642e` | Confirm the repaired hook against a live Rust push with unchanged caller state and a clean exact-SHA gate checkout |
 | 2026-08-20 | (pending) | The string family's first re-derivable UNSAT artifact beyond word-clash/regex-emptiness: `Evidence::UnsatStringLength` abstracts every string term to an integer length keyed on its SOURCE NAME, names the five theory lemmas the argument uses, and closes with one nonnegative combination per case-split branch. The checker is two stages — bind each lemma to the conjunct that licenses it, then re-derive the arithmetic — and is arena-free, because a string script's flat view is the bounded packed-BV encoding rather than the query. 23 guards mutation-checked; two killed nothing and were fixed rather than kept (one was dead code the command allow-list already covered, one had no multi-`check-sat` fixture). Also: `diagnose_evidence` reported the ARENA front door for string files, i.e. a query nobody solves — it now reports the text front door too, and agreed with the dominance audit for the first time. |
@@ -1029,9 +1046,9 @@ budget guard to a real remaining-time attempt (this alone would move
 then `Fpa2Bv` certification, which is what both FP rows actually need for
 dominance.
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction now includes unconditional official balanced Bézout and official coprime-factor divisibility cancellation. The latter reconstructed twice byte-identically with an empty footprint after exact checked reuse of both already-present multiplication leaves. No Fibonacci target or ledger state changed.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction now includes unconditional official balanced Bézout, official coprime-factor divisibility cancellation, and a clean divisibility-antisymmetry closure. V5 transports all three clean order supports into r091 twice with byte-identical source/target evidence and empty footprints; no exact Fibonacci target has yet been submitted.
 
-**Next:** execute the preregistered five-root, nonrendering dependency audit beneath official `Nat.dvd_antisymm`, the remaining gcd-extensionality obligation for `Nat.gcd_fib_add_self`. Use the result to freeze the smallest target-owned empty-footprint replacement before source construction.
+**Next:** implement four root-selected, independently reimported support capsules for Fibonacci addition, Fibonacci coprimality, official cancellation, and clean divisibility antisymmetry. Keep proof-bearing NDJSON only in the sealed NAS pack; no target submission is authorized yet.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
