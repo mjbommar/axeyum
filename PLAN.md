@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-21 | `7d194f794` | Promoted the complete translation involution to the bounded CAS, proved its spectral functional equation, and showed it forces half of the fixed dual to vanish only at odd degrees and none at even degrees. |
 | 2026-08-21 | `1a5f30b31` | Added the exact extension-field high-character/low-twist trace, proved `T_1(q)=0` and `T_2(q)=q^9(q-1)^2` at `(ell,n,c)=(3,7,2)`, and rejected repeated cohomology drops from affine-shell dimension alone. |
 | 2026-08-21 | `396dc81aa` | Matched the shifted high-character family to Sawin's joint Witt monodromy, proved its power-sum representation has no top-cohomology invariant at either endpoint, and isolated the fixed-binary lower-cohomology trace `(WITT-LOW)` as the remaining geometric estimate. |
 | 2026-08-21 | `8e8196f7a` | Expanded each high-conductor aggregate split into one signed two-Mobius order-pair correlation, proved translation kills every order cell at its forced layer, and isolated the missing characteristic-two Witt-local-system refinement of Hast--Matei `m=2`. |
@@ -597,6 +598,18 @@ extension.  Generic lissity, affineness, or perverse concentration is not the
 missing bridge.  A proof of `(WITT-LOW)` must now exploit the alternating
 lower trace, the two-Mobius virtual representation, or cancellation across
 conductor orders.
+Translation is now available on the complete Hayes dual rather than only as
+one identity-path split.  The exact class formula
+`sigma(u)=(1+t)^n u(t/(1+t))` gives an involutive group automorphism `tau` and
+the functional equations `A(chi)=chi((1+t)^n)A(chi o tau)` for both the
+Mangoldt and squared-discrepancy spectra.  A bounded native report checks every
+class, generator, commutator quotient, and exact population permutation.  It
+also proves the sharp parity boundary: at odd degree exactly half of the
+`tau`-fixed dual is forced to vanish, while at even degree none is.  At level
+eight this is eight of sixteen fixed characters for degree 17 and zero for
+degree 18.  The theorem promotes useful AC-bridge structure into Axeyum, but
+the odd vanishing fraction decays with conductor and the even endpoint gets no
+`(WITT-LOW)` saving, so ADR-0587 assigns no `(REL)` proof credit.
 The companion characteristic-two Newton-over-Hodge result has also been
 priced conditionally: it forces only divisibility of the connected endpoint
 trace by eight.  At `ell=200` the existing envelope is already divisible by
@@ -608,8 +621,10 @@ manuscript's fail-visible warning, and perform the final source audit.  The
 active geometric form is the complete signed lower Witt trace `(WITT-LOW)`,
 with its exact contraction price supplied by the aggregate identity path.
 ADR-0586 rules out obtaining that price from affine-shell dimension alone;
-the next theorem attempt must retain the Adams/Mobius virtual signs or the
-cross-conductor sum.  The polynomial identity-cylinder Haar share `(PL2)`
+ADR-0587 now supplies the full translation spectral functional equation and
+prevents its shrinking odd fixed set from being counted as a uniform layer
+bound.  The next theorem attempt must retain the Adams/Mobius virtual signs or
+the cross-conductor sum.  The polynomial identity-cylinder Haar share `(PL2)`
 from ADR-0580 remains a sufficient fallback.  ADR-0581's stronger but more
 local continuation needs only `O(log ell)` half-balanced splits per retained
 layer; the stronger linear local-Carleson pattern is diagnostic only.
