@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-gcd-balanced-bezout-exact-reuse-plan",
+  "state": "preregistered-exact-Nat-mod-lt-reuse-before-code-or-stream-access",
+  "predecessor": {
+    "path": "artifacts/autogenesis/official-gcd-balanced-bezout-generic-base-result-v1.json",
+    "sha256": "b0a560a10bcbed88f9eb4f3b42d09ecfb1ac682cae8dc21d27c6723bdf00be32",
+    "finding": "Nat.mod_lt composition declined with NoAdditions because the declaration is already present"
+  },
+  "inputs": {
+    "generic_base": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/13038b3ff-official-gcd-balanced-bezout-clean-v1/official-gcd-balanced-bezout-clean.ndjson", "sha256": "c106a1e03a329535042f17f6a9d3cf408361e4b4691b5ea6bac4d1a71186bb56", "root": "Axeyum.Autogenesis.officialGcdBalancedBezoutCleanV1"},
+    "mod_lt_source": {"path": "/nas3/data/axeyum/autogenesis/coverage/26fcc2c2f-mathlib-v4.30.0-reflexivity-train-development-v1/streams/r082.ndjson", "sha256": "6afa79d79481403d3e3273ea3eea26b4d1194762f9bd623ec019f8e821323cfd", "root": "Nat.mod_lt"},
+    "mod_lt_adapter": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/f94489c74-lean430-nat-gcd-succ-bridge-v1/nat-gcd-bridge.ndjson", "sha256": "6e99d4ae83b3916f8ee36c541bac18fc91b9f922252ca0af1cf658578b4e20db", "root": "Axeyum.Autogenesis.modLtSucc"},
+    "zero_left": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/0a73f8458-official-gcd-zero-left-root-v1/official-gcd-zero-left-root.ndjson", "sha256": "824399899916c72329f201c0ea8c1b0fe25315ea013c4f392586668f67f606a0", "root": "Axeyum.Autogenesis.nat_gcd_zero_left"},
+    "successor": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/dfcff00d1-official-gcd-succ-root-v1/official-gcd-succ-root.ndjson", "sha256": "2af40b2c7d89a0959bbe3018da60841ea1dc933ae2f40112ae84d95feab6044c", "root": "Axeyum.Autogenesis.nat_gcd_succ"}
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/official_gcd_balanced_bezout_composition.rs",
+    "required_change": "check canonical declaration equality and checked compatibility for Nat.mod_lt, then compose only modLtSucc, zero-left, and successor into the generic base",
+    "proof_terms_types_or_values_may_be_rendered": false
+  },
+  "acceptance": {
+    "fresh_complete_invocations": 2,
+    "outputs_must_be_byte_identical": true,
+    "all_input_streams_must_be_axiom_free": true,
+    "Nat_mod_lt_source_and_target_declaration_sha256_must_match": true,
+    "Nat_mod_lt_checked_compatibility_must_be_kernel_type_shape": true,
+    "composed_roots": ["Axeyum.Autogenesis.modLtSucc", "Axeyum.Autogenesis.nat_gcd_zero_left", "Axeyum.Autogenesis.nat_gcd_succ"],
+    "composition_operations_per_invocation": 3,
+    "specialization_operations_per_invocation": 3,
+    "every_composition_and_specialization_must_replay": true,
+    "closed_balanced_bezout_axiom_footprint": [],
+    "required_closed_direct_dependencies": ["Axeyum.Autogenesis.nat_gcd_zero_left", "Axeyum.Autogenesis.officialGcdBalancedBezoutCleanV1", "Axeyum.Autogenesis.officialNatGcdSuccClosedV1"],
+    "forbidden_dependencies": ["Nat.gcd_zero_left", "Nat.gcd_succ", "WellFounded.Nat.fix_eq", "funext", "propext"]
+  },
+  "budget": {
+    "max_binary_builds": 1,
+    "max_complete_invocations": 2,
+    "max_input_stream_reads": 10,
+    "max_composition_operations": 6,
+    "max_specialization_operations": 6,
+    "max_new_closed_theorem_submissions": 2,
+    "max_retries": 0,
+    "max_exact_fibonacci_target_submissions": 0,
+    "max_executor_invocations": 0
+  },
+  "execution": {
+    "evidence_pack": "/nas3/data/axeyum/autogenesis/reference-packs/578b76a93-official-gcd-balanced-bezout-exact-reuse-v1",
+    "retain_exact_executed_rust_source": true
+  },
+  "authority": {
+    "closed_gcd_balanced_bezout_credit": 0,
+    "cancellation_credit": 0,
+    "target_specialization_credit": 0,
+    "exact_fibonacci_target_submissions": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_on_accept": "Preregister reconstruction of coprime-factor cancellation using the unconditional official-kernel balanced-Bezout theorem.",
+  "output": "artifacts/autogenesis/official-gcd-balanced-bezout-exact-reuse-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-official-gcd-balanced-bezout-exact-reuse-plan.py",
+  "limitations": "This plan may close only official balanced-Bezout. It grants no cancellation, Fibonacci target, fact, evaluation, or ledger authority before accepted execution evidence."
+}

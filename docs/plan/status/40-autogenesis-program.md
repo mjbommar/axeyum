@@ -4,7 +4,7 @@
 
 **Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction has the accepted generic official-gcd balanced-Bézout theorem plus both official-representation gcd computation leaves. The first reverse-direction run declines immediately with `NoAdditions` because exact `Nat.mod_lt` is already in the generic kernel; this selects checked declaration reuse, with zero specialization, partial publication, or closed/downstream credit.
 
-**Next:** preregister exact `Nat.mod_lt` reuse across the two pinned kernels, then revise the driver to compose only `modLtSucc` and the two gcd leaves into the generic base. Require the reuse receipt plus all remaining compositions and three specializations to replay in two byte-identical empty-footprint runs.
+**Next:** implement the preregistered exact `Nat.mod_lt` identity and compatibility check, then compose only `modLtSucc` and the two gcd leaves into the generic base. Require the reuse receipt plus all remaining compositions and three specializations to replay in two byte-identical empty-footprint runs.
 
 <!-- plan-section: landed-changes -->
 
@@ -129,3 +129,4 @@
 | 2026-08-21 | `2d62fc4a7` | Generic-kernel-base reversal is frozen with the same five streams and zero downstream authority |
 | 2026-08-21 | `c4bf44f90` | Reverse-direction driver compiles Clippy-clean with generic composition removed and no execution |
 | 2026-08-21 | (pending) | First generic-base run finds `Nat.mod_lt` already present; exact reuse replaces a zero-addition composition |
+| 2026-08-21 | (pending) | Exact `Nat.mod_lt` identity reuse and the remaining three-root composition are frozen before code or stream access |
