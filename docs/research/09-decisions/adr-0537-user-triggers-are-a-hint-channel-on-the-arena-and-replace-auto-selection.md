@@ -145,6 +145,24 @@ guesswork. It stays out until there is a corpus that moves under it.
   completeness cost is real in principle and absorbed here in practice — which
   is why the tests measure the proposed *instance set*, the direct observable of
   a trigger, and not the verdict, which several other routes can also reach.
+- **Whether an annotation reached the loop is not otherwise observable**, so
+  `AXEYUM_QPROBE=1` now prints `user-triggers vars=N written=W used=U` per
+  annotated universal — including `used=0`, the declined case, which is the one
+  that looks like success from the outside. Measured through the shipped front
+  door on the motivating files: `written=1 used=1`, and `written=2 used=2` for
+  two alternatives. The annotation survives the front door's rewriting and
+  reaches `run_egraph_quantified_fallback`; it does **not** survive
+  skolemization, which mints new terms, so the second (skolemized) e-graph pass
+  in `auto.rs` runs on auto-selected triggers. That is a known and deliberate
+  boundary, not an oversight: carrying annotations across a term rewrite needs
+  the rewriter to be annotation-aware, which is a separate change.
+- **The alternative-union path was live and unguarded for one round of testing.**
+  Deleting it — forcing the historical flat conjunctive join — killed **zero**
+  tests, because the only test exercising alternatives went through the one-shot
+  `instantiate_forall_via_egraph` and not through the session's
+  `witness_tuples_with_overrides`, which is the path the shipped loop runs. Two
+  code paths, one tested. `the_session_unions_alternatives_instead_of_intersecting_them`
+  now covers the second.
 - `witness_tuples_via_egraph` and `instantiate_forall_via_egraph`, the public
   one-shot APIs, honour annotations too. Their documented contract of "the
   complete match set" now means complete *for the trigger in force*, which for

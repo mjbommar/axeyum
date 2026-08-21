@@ -3571,9 +3571,26 @@ impl IncrementalEmatchSession {
                 // is also the only direction that can cost anything, so it costs
                 // *completeness*: fewer proposed tuples, never a wrong verdict.
                 // See [`usable_trigger_groups`] for why that asymmetry holds.
-                let user_groups = user_trigger_groups(arena, assertion)
-                    .map(|groups| usable_trigger_groups(arena, &groups, &var_index, &binders))
+                let annotation = user_trigger_groups(arena, assertion);
+                let user_groups = annotation
+                    .as_ref()
+                    .map(|groups| usable_trigger_groups(arena, groups, &var_index, &binders))
                     .filter(|groups| !groups.is_empty());
+                // Whether an annotation reached this loop at all is not
+                // otherwise observable — the verdict is not a reliable witness,
+                // because term invention can reach an instance the trigger
+                // excludes. `AXEYUM_QPROBE=1` says so directly, including the
+                // declined case, which is the one that looks like success.
+                if std::env::var_os("AXEYUM_QPROBE").is_some()
+                    && let Some(annotation) = &annotation
+                {
+                    eprintln!(
+                        "QPROBE user-triggers vars={} written={} used={}",
+                        vars.len(),
+                        annotation.len(),
+                        user_groups.as_ref().map_or(0, Vec::len)
+                    );
+                }
                 let source_groups =
                     user_groups.unwrap_or_else(|| vec![select_triggers(arena, body, &var_index)]);
                 for group in source_groups {
@@ -11287,6 +11304,49 @@ mod tests {
             kept,
             vec![vec![gx]],
             "alternatives are independent: a bad one must not take a good one with it"
+        );
+    }
+
+    #[test]
+    fn the_session_unions_alternatives_instead_of_intersecting_them() {
+        // The `pattern_groups` join is a SEPARATE code path from the one-shot
+        // `instantiate_forall_via_egraph`, and it is the one the shipped loop
+        // runs. Flattening the alternatives into the historical single
+        // conjunctive join here produced NO test failure at all until this test
+        // existed — the union was live and unguarded.
+        //
+        // `h a` and `f b` are the only ground applications. `(h x)` binds
+        // `x := a`, `(f x)` binds `x := b`. Unioned that is two tuples;
+        // intersected it is none.
+        let mut arena = TermArena::new();
+        let sort = Sort::Uninterpreted(arena.declare_uninterpreted_sort("U"));
+        let func_f = arena.declare_fun("f", &[sort], sort).expect("f");
+        let func_h = arena.declare_fun("h", &[sort], sort).expect("h");
+        let sym_a = arena.declare("a", sort).expect("a");
+        let sym_b = arena.declare("b", sort).expect("b");
+        let sym_x = arena.declare("x", sort).expect("x");
+        let (at, bt, xt) = (arena.var(sym_a), arena.var(sym_b), arena.var(sym_x));
+        let fx = arena.apply(func_f, &[xt]).expect("f x");
+        let hx = arena.apply(func_h, &[xt]).expect("h x");
+        let body = arena.eq(fx, at).expect("body");
+        let forall = arena.forall(sym_x, body).expect("forall");
+        arena.set_quantifier_patterns(forall, vec![vec![hx], vec![fx]]);
+
+        let ha = arena.apply(func_h, &[at]).expect("h a");
+        let fb = arena.apply(func_f, &[bt]).expect("f b");
+
+        let mut session = IncrementalEmatchSession::new(&mut arena, &[forall]);
+        assert_eq!(
+            session.quantifiers[0].pattern_groups.len(),
+            2,
+            "two `:pattern` attributes are two alternatives"
+        );
+        session.extend_ground(&arena, &[ha, fb]);
+        let tuples = session.match_witness_tuples(None).remove(0);
+        assert_eq!(
+            tuples,
+            Some(vec![vec![at], vec![bt]]),
+            "alternatives must be unioned; intersecting them yields nothing here"
         );
     }
 

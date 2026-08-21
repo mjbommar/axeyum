@@ -6196,6 +6196,36 @@ fn one_unbuildable_term_declines_its_whole_multi_pattern() {
 }
 
 #[test]
+fn a_trigger_nested_past_the_depth_ceiling_is_declined() {
+    // `build_trigger_term` is recursive — the frame machine is not usable for
+    // triggers, because a queued evaluation propagates its error with `?` and an
+    // annotation must never fail a parse that succeeds today. So the recursion
+    // needs its own ceiling, and the ceiling needs a test: without one it is a
+    // guard that has never been shown to fire.
+    let build = |depth: usize| {
+        let mut term = "x".to_owned();
+        for _ in 0..depth {
+            term = format!("(f {term})");
+        }
+        let text = format!(
+            "{TRIGGER_PRELUDE}
+             (assert (forall ((x U)) (! (= (f x) a) :pattern ({term}))))
+             (check-sat)"
+        );
+        let script = parse_script(&text).unwrap();
+        script
+            .arena
+            .quantifier_patterns(script.assertions[0])
+            .is_some()
+    };
+    assert!(build(4), "an ordinary nested trigger builds");
+    assert!(
+        !build(64),
+        "past the ceiling it is declined, like any other unbuildable pattern"
+    );
+}
+
+#[test]
 fn a_bare_variable_pattern_is_declined() {
     let text = format!(
         "{TRIGGER_PRELUDE}
