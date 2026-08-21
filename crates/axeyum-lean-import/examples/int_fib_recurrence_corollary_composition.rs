@@ -116,7 +116,7 @@ fn run() -> Result<(), String> {
     let target = find_name(&kernel, TARGET)?;
     require_empty(&kernel, target, TARGET)?;
     let target_evidence = evidence(&kernel, target)?;
-    let expected_dependencies = [CANCELLATION, RECURRENCE, RESIDUAL];
+    let expected_dependencies = [RESIDUAL, CANCELLATION, RECURRENCE];
     if names(&kernel, &kernel.theorem_dependencies(target)) != expected_dependencies {
         return Err("exact target dependency set changed".to_owned());
     }
