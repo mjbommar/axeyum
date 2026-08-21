@@ -1,0 +1,196 @@
+{
+  "claims": [
+    {
+      "key": "nat-add-assoc-footprint-nat-add-assoc",
+      "statement": "Fact-ledger evidence row `footprint-Nat.add_assoc` of `F:nat-add-assoc` (kind `exhaustive-enumeration`) was replayed by running its recorded `checker_command`; the command exited 0.",
+      "status": "checked",
+      "supports": {
+        "id": "F:nat-add-assoc",
+        "kind": "fact"
+      }
+    },
+    {
+      "key": "nat-add-comm-footprint-add-comm",
+      "statement": "Fact-ledger evidence row `footprint-add-comm` of `F:nat-add-comm` (kind `instance-pin`) was replayed by running its recorded `checker_command`; the command exited 0.",
+      "status": "checked",
+      "supports": {
+        "id": "F:nat-add-comm",
+        "kind": "fact"
+      }
+    },
+    {
+      "key": "nat-div-mod-exists-footprint-nat-div-mod-exists",
+      "statement": "Fact-ledger evidence row `footprint-Nat.div_mod_exists` of `F:nat-div-mod-exists` (kind `exhaustive-enumeration`) was replayed by running its recorded `checker_command`; the command exited 0.",
+      "status": "checked",
+      "supports": {
+        "id": "F:nat-div-mod-exists",
+        "kind": "fact"
+      }
+    },
+    {
+      "key": "nat-dvd-add-footprint-nat-dvd-add",
+      "statement": "Fact-ledger evidence row `footprint-Nat.dvd_add` of `F:nat-dvd-add` (kind `exhaustive-enumeration`) was replayed by running its recorded `checker_command`; the command exited 0.",
+      "status": "checked",
+      "supports": {
+        "id": "F:nat-dvd-add",
+        "kind": "fact"
+      }
+    },
+    {
+      "key": "nat-dvd-gcd-iff-footprint-nat-dvd-gcd-iff",
+      "statement": "Fact-ledger evidence row `footprint-Nat.dvd_gcd_iff` of `F:nat-dvd-gcd-iff` (kind `exhaustive-enumeration`) was replayed by running its recorded `checker_command`; the command exited 0.",
+      "status": "checked",
+      "supports": {
+        "id": "F:nat-dvd-gcd-iff",
+        "kind": "fact"
+      }
+    },
+    {
+      "key": "nat-euclid-lemma-footprint-nat-euclid-lemma",
+      "statement": "Fact-ledger evidence row `footprint-Nat.euclid_lemma` of `F:nat-euclid-lemma` (kind `exhaustive-enumeration`) was replayed by running its recorded `checker_command`; the command exited 0.",
+      "status": "checked",
+      "supports": {
+        "id": "F:nat-euclid-lemma",
+        "kind": "fact"
+      }
+    },
+    {
+      "key": "nat-exists-prime-dvd-footprint-nat-exists-prime-dvd",
+      "statement": "Fact-ledger evidence row `footprint-Nat.exists_prime_dvd` of `F:nat-exists-prime-dvd` (kind `exhaustive-enumeration`) was replayed by running its recorded `checker_command`; the command exited 0.",
+      "status": "checked",
+      "supports": {
+        "id": "F:nat-exists-prime-dvd",
+        "kind": "fact"
+      }
+    },
+    {
+      "key": "nat-exists-prime-gt-footprint-nat-exists-prime-gt",
+      "statement": "Fact-ledger evidence row `footprint-Nat.exists_prime_gt` of `F:nat-exists-prime-gt` (kind `exhaustive-enumeration`) was replayed by running its recorded `checker_command`; the command exited 0.",
+      "status": "checked",
+      "supports": {
+        "id": "F:nat-exists-prime-gt",
+        "kind": "fact"
+      }
+    },
+    {
+      "key": "nat-gcd-bezout-footprint-nat-gcd-bezout",
+      "statement": "Fact-ledger evidence row `footprint-Nat.gcd_bezout` of `F:nat-gcd-bezout` (kind `exhaustive-enumeration`) was replayed by running its recorded `checker_command`; the command exited 0.",
+      "status": "checked",
+      "supports": {
+        "id": "F:nat-gcd-bezout",
+        "kind": "fact"
+      }
+    },
+    {
+      "key": "nat-gcd-succ-footprint-nat-gcd-succ",
+      "statement": "Fact-ledger evidence row `footprint-Nat.gcd_succ` of `F:nat-gcd-succ` (kind `exhaustive-enumeration`) was replayed by running its recorded `checker_command`; the command exited 0.",
+      "status": "checked",
+      "supports": {
+        "id": "F:nat-gcd-succ",
+        "kind": "fact"
+      }
+    },
+    {
+      "key": "nat-left-distrib-footprint-nat-left-distrib",
+      "statement": "Fact-ledger evidence row `footprint-Nat.left_distrib` of `F:nat-left-distrib` (kind `exhaustive-enumeration`) was replayed by running its recorded `checker_command`; the command exited 0.",
+      "status": "checked",
+      "supports": {
+        "id": "F:nat-left-distrib",
+        "kind": "fact"
+      }
+    },
+    {
+      "key": "nat-mul-assoc-footprint-nat-mul-assoc",
+      "statement": "Fact-ledger evidence row `footprint-Nat.mul_assoc` of `F:nat-mul-assoc` (kind `exhaustive-enumeration`) was replayed by running its recorded `checker_command`; the command exited 0.",
+      "status": "checked",
+      "supports": {
+        "id": "F:nat-mul-assoc",
+        "kind": "fact"
+      }
+    },
+    {
+      "key": "nat-mul-comm-footprint-nat-mul-comm",
+      "statement": "Fact-ledger evidence row `footprint-Nat.mul_comm` of `F:nat-mul-comm` (kind `exhaustive-enumeration`) was replayed by running its recorded `checker_command`; the command exited 0.",
+      "status": "checked",
+      "supports": {
+        "id": "F:nat-mul-comm",
+        "kind": "fact"
+      }
+    },
+    {
+      "key": "nat-mul-one-footprint-nat-mul-one",
+      "statement": "Fact-ledger evidence row `footprint-Nat.mul_one` of `F:nat-mul-one` (kind `exhaustive-enumeration`) was replayed by running its recorded `checker_command`; the command exited 0.",
+      "status": "checked",
+      "supports": {
+        "id": "F:nat-mul-one",
+        "kind": "fact"
+      }
+    },
+    {
+      "key": "nat-pow-add-footprint-nat-pow-add",
+      "statement": "Fact-ledger evidence row `footprint-Nat.pow_add` of `F:nat-pow-add` (kind `exhaustive-enumeration`) was replayed by running its recorded `checker_command`; the command exited 0.",
+      "status": "checked",
+      "supports": {
+        "id": "F:nat-pow-add",
+        "kind": "fact"
+      }
+    },
+    {
+      "key": "nat-succ-add-footprint-succ-add",
+      "statement": "Fact-ledger evidence row `footprint-succ-add` of `F:nat-succ-add` (kind `instance-pin`) was replayed by running its recorded `checker_command`; the command exited 0.",
+      "status": "checked",
+      "supports": {
+        "id": "F:nat-succ-add",
+        "kind": "fact"
+      }
+    },
+    {
+      "key": "nat-zero-add-footprint-zero-add",
+      "statement": "Fact-ledger evidence row `footprint-zero-add` of `F:nat-zero-add` (kind `instance-pin`) was replayed by running its recorded `checker_command`; the command exited 0.",
+      "status": "checked",
+      "supports": {
+        "id": "F:nat-zero-add",
+        "kind": "fact"
+      }
+    }
+  ],
+  "id": "R:shared-nat-axiom-inventory-b5515894",
+  "notes": "Produced by replaying fact-ledger evidence rows, not by re-deriving the mathematics. The command is the ledger's `checker_command` verbatim; this record asserts only that it was run, from the repository root, and exited with the status recorded here. Cited by: F:nat-add-assoc/footprint-Nat.add_assoc, F:nat-add-comm/footprint-add-comm, F:nat-div-mod-exists/footprint-Nat.div_mod_exists, F:nat-dvd-add/footprint-Nat.dvd_add, F:nat-dvd-gcd-iff/footprint-Nat.dvd_gcd_iff, F:nat-euclid-lemma/footprint-Nat.euclid_lemma, F:nat-exists-prime-dvd/footprint-Nat.exists_prime_dvd, F:nat-exists-prime-gt/footprint-Nat.exists_prime_gt, F:nat-gcd-bezout/footprint-Nat.gcd_bezout, F:nat-gcd-succ/footprint-Nat.gcd_succ, F:nat-left-distrib/footprint-Nat.left_distrib, F:nat-mul-assoc/footprint-Nat.mul_assoc, F:nat-mul-comm/footprint-Nat.mul_comm, F:nat-mul-one/footprint-Nat.mul_one, F:nat-pow-add/footprint-Nat.pow_add, F:nat-succ-add/footprint-succ-add, F:nat-zero-add/footprint-zero-add. NOT PINNED: `inputs` pins the example source, not the rest of `axeyum-lean-kernel` that it links; a change inside the crate would not trip the render's input-hash guard. ONE EXECUTION, 17 CITATIONS. These rows share one command byte for byte, so they are one check supporting 17 facts, not 17 independent checks.",
+  "outcome": "established",
+  "provenance": {
+    "command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+    "duration_ms": 563,
+    "epoch": {
+      "commit": "839d1e50a287fa816490dd2ee7ec19d6a202c25d",
+      "source": "commit",
+      "unix": 1787319265
+    },
+    "exit_status": 0,
+    "generator": "crates/axeyum-lean-kernel/examples/nat_axiom_inventory.rs (via `cargo run --example`), invoked by render/producers-runrec/facts_to_runrec.py",
+    "inputs": [
+      {
+        "path": "crates/axeyum-lean-kernel/examples/nat_axiom_inventory.rs",
+        "role": "checker",
+        "sha256": "3cccf280b1fae8517ea340fdc32d1c66bbfda29489cc4d77539735e10c9d3c75"
+      }
+    ]
+  },
+  "replay": {
+    "cwd": ".",
+    "expected_exit_status": 0,
+    "expected_seconds": 1,
+    "line": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat"
+  },
+  "role": "production",
+  "schema_version": 1,
+  "stats": {
+    "exact_type_pinned": false,
+    "rows_covered": 17,
+    "stderr_bytes": 285,
+    "stderr_sha256": "e66b9379832fa5f89da3380894486a17449978f60eddd415e22fb2860be56431",
+    "stdout_bytes": 5513,
+    "stdout_sha256": "8af83c750c66c090b36205b80ed63a6c19e755de64a178fa267e435987db9f13",
+    "wall_seconds": 0.563
+  },
+  "summary": "GREEN: `cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-fre...` exited 0 in 0.6s, replaying 17 fact-ledger evidence row(s)."
+}

@@ -52,6 +52,21 @@ the coordinator commits via the private-index procedure.
         Owns: docs/research/09-decisions/adr-0509-*, the regenerated ADR index,
         render/producers-kernel/, render/examples-input/kernel/, 19-*.md.
 
+- [x] P1-RUNREC -- ran the fact ledger's own checkers and recorded them: 19
+        facts (arith pilot + both Rado headlines), 38 evidence rows, 22 distinct
+        commands, 22 green / 0 red / 0 skipped, 1m13s total; 22 production run
+        records + 1 negative control in render/examples-input/runrec/, all 23
+        valid, plus runrec-index.json mapping (fact, row) -> record. Fact cards
+        can now carry Claim blocks -- bridge spec + the four assembly guards
+        measured through the real binary in 18-runrec-diary.md. Ledger findings
+        for the coordinator: no evidence row in the ledger carries an artifact
+        digest (0 of 200, 104 name a file); 13 of 17 kernel-term rows check the
+        theorem NAME not its type (negative control shows the checker exits 0
+        on a falsified type); F:rado-r4-a5-b4's row sweeps all 104 claims in
+        61s when --only scopes it to 0.84s. Diary:
+        docs/render-2026-08/18-runrec-diary.md. Owns:
+        render/producers-runrec/, render/examples-input/runrec/, 18-*.md.
+
 ## Standing constraints (all agents)
 Rust+Python only; outputs md/LaTeX/self-contained HTML (+optional wasm);
 NO Node anywhere; real artifacts only — no synthetic evidence; fail-closed

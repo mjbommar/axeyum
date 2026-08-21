@@ -1,0 +1,57 @@
+{
+  "claims": [
+    {
+      "key": "rado-r4-a5-b3-claim-rado-r4-a5-b3",
+      "statement": "Fact-ledger evidence row `claim-rado-r4-a5-b3` of `F:rado-r4-a5-b3` (kind `claim-ref`) was replayed by running its recorded `checker_command`; the command exited 0.",
+      "status": "evidence",
+      "supports": {
+        "id": "F:rado-r4-a5-b3",
+        "kind": "fact"
+      }
+    }
+  ],
+  "id": "R:rado-r4-a5-b3-claim-rado-r4-a5-b3",
+  "notes": "Produced by replaying fact-ledger evidence rows, not by re-deriving the mathematics. The command is the ledger's `checker_command` verbatim; this record asserts only that it was run, from the repository root, and exited with the status recorded here. Cited by: F:rado-r4-a5-b3/claim-rado-r4-a5-b3. NOT PINNED: This checker SWEEPS the whole claim ledger (104 `claim.json` files under `artifacts/claims/`), so its verdict depends on far more bytes than the row's own artifact; pinning all of them would make every unrelated ledger edit break every render, so only the row's artifact and the script are pinned.",
+  "outcome": "established",
+  "provenance": {
+    "command": "python3 scripts/validate-claims.py",
+    "duration_ms": 4438,
+    "epoch": {
+      "commit": "839d1e50a287fa816490dd2ee7ec19d6a202c25d",
+      "source": "commit",
+      "unix": 1787319265
+    },
+    "exit_status": 0,
+    "generator": "scripts/validate-claims.py, invoked by render/producers-runrec/facts_to_runrec.py",
+    "inputs": [
+      {
+        "path": "artifacts/claims/rado/rado-r4-a5-b3/claim.json",
+        "role": "artifact",
+        "sha256": "a3f6de260c858473355b2bf29f458b884174be7188d72d48fd5e572588d60834"
+      },
+      {
+        "path": "scripts/validate-claims.py",
+        "role": "checker",
+        "sha256": "de3e86c94349986a987e42eebdfdc6ecb9f011660a1c34f92cf217fdd535e654"
+      }
+    ]
+  },
+  "replay": {
+    "cwd": ".",
+    "expected_exit_status": 0,
+    "expected_seconds": 5,
+    "line": "python3 scripts/validate-claims.py"
+  },
+  "role": "production",
+  "schema_version": 1,
+  "stats": {
+    "exact_type_pinned": false,
+    "rows_covered": 1,
+    "stderr_bytes": 0,
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stdout_bytes": 5181,
+    "stdout_sha256": "c2d6c60a3409277a1689e5a826263753edb6652be024f57ff65f2ac434f2d8d7",
+    "wall_seconds": 4.438
+  },
+  "summary": "GREEN: `python3 scripts/validate-claims.py` exited 0 in 4.4s, replaying 1 fact-ledger evidence row(s)."
+}
