@@ -217,6 +217,14 @@ fn run() -> Result<(), String> {
         return run_fib_gcd_step_branch_diagnostic(args);
     }
     let mut args = std::env::args_os().skip(1);
+    if args.next().as_deref()
+        == Some(std::ffi::OsStr::new(
+            "--target-native-fib-gcd-witness-elim-diagnostic",
+        ))
+    {
+        return run_fib_gcd_witness_elim_diagnostic(args);
+    }
+    let mut args = std::env::args_os().skip(1);
     if args.next().as_deref() == Some(std::ffi::OsStr::new("--target-native-goal-audit")) {
         return run_target_native_goal_audit(args);
     }
@@ -1410,6 +1418,134 @@ fn run_fib_gcd_step_branch_diagnostic(
     Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
+fn run_fib_gcd_witness_elim_diagnostic(
+    mut args: impl Iterator<Item = std::ffi::OsString>,
+) -> Result<(), String> {
+    let greatest_path = path(&mut args)?;
+    let shift_path = path(&mut args)?;
+    if args.next().is_some() {
+        return Err("usage: nat_gcd_fib_add_self_exact \
+             --target-native-fib-gcd-witness-elim-diagnostic \
+             <gcd-greatest> <gcd-fib-add-self>"
+            .to_owned());
+    }
+    let greatest = import_bound(&greatest_path, GCD_GREATEST_CAPSULE, "gcd-greatest")?;
+    let shift = import_bound(&shift_path, GCD_FIB_SHIFT_CAPSULE, "gcd-fib-add-self")?;
+    let composed = compose_checked_theorem_slice(shift.kernel(), greatest.kernel(), &[TARGET])
+        .map_err(|error| format!("witness diagnostic composition declined: {error:?}"))?;
+    verify_checked_theorem_composition(
+        shift.kernel(),
+        greatest.kernel(),
+        composed.kernel(),
+        composed.receipt(),
+    )
+    .map_err(|error| format!("witness diagnostic composition did not replay: {error:?}"))?;
+    let mut kernel = composed.kernel().clone();
+    declare_fib_gcd_quotient_iteration(&mut kernel)?;
+    let mut d = Dev::new(&mut kernel)?;
+    let quotient = d.exact("Axeyum.Autogenesis.modQuotientWitnessV4")?;
+    let helper = d.exact(FIB_GCD_ITERATION)?;
+    let gcd_comm = d.exact(CLEAN_GCD_COMM)?;
+    let nat = d.nat_ty();
+    let n_fv = d.fresh();
+    let n = d.kernel.fvar(n_fv);
+    let predecessor_fv = d.fresh();
+    let predecessor = d.kernel.fvar(predecessor_fv);
+    let m = d.succ(predecessor);
+    let hm_ty = {
+        let zero = d.zero();
+        let one = d.succ(zero);
+        d.le(one, m)
+    };
+    let remainder = d.modulo(n, m)?;
+    let ih_ty = fib_gcd_statement(&mut d, remainder, m);
+    let hm_fv = d.fresh();
+    let hm = d.kernel.fvar(hm_fv);
+    let ih_fv = d.fresh();
+    let ih = d.kernel.fvar(ih_fv);
+    let witness = d.lemma(quotient, &[m, n, hm]);
+    let parts = build_fib_gcd_witness_elim(&mut d, m, n, remainder, ih, witness, helper, gcd_comm);
+    let close_outer = |d: &mut Dev<'_>, value: ExprId, with_hm: bool, with_ih: bool| {
+        let value = if with_ih {
+            d.lam(ih_fv, ih_ty, value)
+        } else {
+            value
+        };
+        let value = if with_hm {
+            d.lam(hm_fv, hm_ty, value)
+        } else {
+            value
+        };
+        let value = d.lam(predecessor_fv, nat, value);
+        d.lam(n_fv, nat, value)
+    };
+    let left = close_outer(&mut d, parts.left_to_mr, false, true);
+    let left_ty = d
+        .kernel
+        .infer(left)
+        .map_err(|error| format!("ih-gcd-comm stage inference failed: {error:?}"))?;
+    let mr_to_sum = d.lam(parts.q_fv, nat, parts.mr_to_sum);
+    let mr_to_sum = close_outer(&mut d, mr_to_sum, false, false);
+    let mr_to_sum_ty = d
+        .kernel
+        .infer(mr_to_sum)
+        .map_err(|error| format!("quotient-iteration stage inference failed: {error:?}"))?;
+    let sum_to_n = d.lam(parts.equation_fv, parts.equation_ty, parts.sum_to_n);
+    let sum_to_n = d.lam(parts.q_fv, nat, sum_to_n);
+    let sum_to_n = close_outer(&mut d, sum_to_n, false, false);
+    let sum_to_n_ty = d
+        .kernel
+        .infer(sum_to_n)
+        .map_err(|error| format!("quotient-congruence stage inference failed: {error:?}"))?;
+    let body = d.lam(parts.equation_fv, parts.equation_ty, parts.body);
+    let body = d.lam(parts.q_fv, nat, body);
+    let body = close_outer(&mut d, body, false, true);
+    let body_ty = d
+        .kernel
+        .infer(body)
+        .map_err(|error| format!("combined-chain stage inference failed: {error:?}"))?;
+    let minor = close_outer(&mut d, parts.minor, false, true);
+    let minor_ty = d
+        .kernel
+        .infer(minor)
+        .map_err(|error| format!("exists-minor stage inference failed: {error:?}"))?;
+    let result = close_outer(&mut d, parts.result, true, true);
+    let result_ty = d
+        .kernel
+        .infer(result)
+        .map_err(|error| format!("exists-rec stage inference failed: {error:?}"))?;
+    let stages = [
+        ("ih_gcd_comm", left_ty),
+        ("quotient_iteration", mr_to_sum_ty),
+        ("quotient_congruence", sum_to_n_ty),
+        ("combined_chain", body_ty),
+        ("exists_minor", minor_ty),
+        ("exists_rec", result_ty),
+    ]
+    .into_iter()
+    .map(|(name, ty)| {
+        Ok(json!({
+            "name":name,
+            "type":d.kernel.render_lean(ty),
+            "sha256":canonical_expression_sha256(d.kernel,ty)?
+        }))
+    })
+    .collect::<Result<Vec<_>, String>>()?;
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "schema_version":1,
+            "kind":"axeyum-autogenesis-nat-fib-gcd-witness-elim-diagnostic-v1",
+            "state":"all-six-closed-witness-elimination-stages-inferred",
+            "stages":stages,
+            "execution":{"complete_diagnostics":1,"helper_theorem_submissions":1,"ordered_stage_inferences":6,"target_theorem_submissions":0,"proof_values_rendered":0,"capsule_writes":0,"retries":0,"ledger_writes":0}
+        }))
+        .map_err(|error| error.to_string())?
+    );
+    Ok(())
+}
+
 fn fib_gcd_iteration_statement(d: &mut Dev<'_>, m: ExprId, r: ExprId, q: ExprId) -> ExprId {
     let fib_m = d.fib(m);
     let product = d.mul(m, q);
@@ -1711,6 +1847,32 @@ fn fib_gcd_witness_elim(
     helper: NameId,
     gcd_comm: NameId,
 ) -> ExprId {
+    build_fib_gcd_witness_elim(d, m, n, remainder, ih, witness, helper, gcd_comm).result
+}
+
+struct FibGcdWitnessElimParts {
+    q_fv: u64,
+    equation_fv: u64,
+    equation_ty: ExprId,
+    left_to_mr: ExprId,
+    mr_to_sum: ExprId,
+    sum_to_n: ExprId,
+    body: ExprId,
+    minor: ExprId,
+    result: ExprId,
+}
+
+#[allow(clippy::too_many_arguments)]
+fn build_fib_gcd_witness_elim(
+    d: &mut Dev<'_>,
+    m: ExprId,
+    n: ExprId,
+    remainder: ExprId,
+    ih: ExprId,
+    witness: ExprId,
+    helper: NameId,
+    gcd_comm: NameId,
+) -> FibGcdWitnessElimParts {
     let nat = d.nat_ty();
     let result_ty = fib_gcd_statement(d, m, n);
     let predicate = {
@@ -1758,7 +1920,18 @@ fn fib_gcd_witness_elim(
     let minor = d.lam(equation_fv, equation_ty, body);
     let minor = d.lam(q_fv, nat, minor);
     let rec = d.kernel.const_(d.exists_rec, vec![one]);
-    d.apply(rec, &[nat, predicate, motive, minor, witness])
+    let result = d.apply(rec, &[nat, predicate, motive, minor, witness]);
+    FibGcdWitnessElimParts {
+        q_fv,
+        equation_fv,
+        equation_ty,
+        left_to_mr,
+        mr_to_sum,
+        sum_to_n,
+        body,
+        minor,
+        result,
+    }
 }
 
 #[allow(clippy::too_many_lines)]
