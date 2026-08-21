@@ -74,6 +74,21 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
 
     candidate = manifest["candidate"]
     fact = load(FACT)
+    fact_status = fact.get("epistemic_status")
+    fact_evidence = fact.get("evidence")
+    live_state_valid = (
+        fact_status == "open"
+        and fact_evidence == []
+        and not any(key in fact for key in ("proof_route", "axiom_footprint"))
+    ) or (
+        fact_status == "proved"
+        and fact.get("proof_route") == "kernel-lean"
+        and fact.get("axiom_footprint") == []
+        and isinstance(fact_evidence, list)
+        and len(fact_evidence) == 1
+        and fact_evidence[0].get("kind") == "kernel-term"
+        and fact_evidence[0].get("check_status") == "checked"
+    )
     if (
         candidate["fact_id"] != "F:ml430-nat-gcd-fib-add-self-5a92d5e3"
         or candidate["candidate_id"]
@@ -82,11 +97,9 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         or candidate["partition"] != "train"
         or fact.get("formal", {}).get("statement") != candidate["statement"]
         or fact.get("depends_on") != candidate["depends_on"]
-        or fact.get("epistemic_status") != "open"
-        or fact.get("evidence") != []
-        or any(key in fact for key in ("proof_route", "axiom_footprint"))
+        or not live_state_valid
     ):
-        raise QualificationError("live candidate identity or open state changed")
+        raise QualificationError("live candidate identity or monotonic state changed")
 
     admission = loaded["unlock_admission"]
     if (

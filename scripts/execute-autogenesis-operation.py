@@ -40,6 +40,9 @@ CHECKED_THEOREM_RECEIPT_CHECKER = (
 DEPENDENCY_THEOREM_RECEIPT_CHECKER = (
     ROOT / "scripts/check-autogenesis-nat-fib-coprime-premise-plan.py"
 )
+SEALED_KERNEL_CAPSULE_CHECKER = (
+    ROOT / "scripts/check-autogenesis-sealed-kernel-capsule.py"
+)
 COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 EVIDENCE_RE = re.compile(
     r"^;\s*evidence\s+kind=(\S+)\s+certified=(\S+)\s+"
@@ -286,6 +289,68 @@ def run_dependency_theorem_receipt_registered(
     if not isinstance(fact, dict):
         raise ExecutionError("dependency-theorem receipt input fact is absent")
     return expected_dependency_theorem_receipt_observation(operation, fact)
+
+
+def sealed_kernel_capsule_contract(
+    operation: dict[str, Any], fact: dict[str, Any]
+) -> dict[str, Any]:
+    """Replay the immutable capsule checker and bind it to the registered fact."""
+    executor = operation["executor"]
+    checker = load_module(
+        "sealed_kernel_capsule_checker_for_execution", SEALED_KERNEL_CAPSULE_CHECKER
+    )
+    try:
+        checked = checker.validate()
+    except checker.CapsuleError as error:
+        raise ExecutionError(f"sealed kernel capsule failed: {error}") from error
+    authority = checked["authority"]
+    if (
+        authority["fact_id"] != fact.get("id")
+        or authority["result_manifest"] != executor["result_manifest"]
+        or authority["capsule_path"] != executor["capsule_path"]
+        or authority["capsule_sha256"] != executor["capsule_sha256"]
+        or authority["target_theorem"] != executor["target_theorem"]
+        or authority["goal_sha256"] != executor["goal_sha256"]
+        or authority["declaration_sha256"] != executor["declaration_sha256"]
+        or checked["receipt_sha256"] != executor["receipt_sha256"]
+    ):
+        raise ExecutionError("sealed kernel capsule source contract is inconsistent")
+    return checked
+
+
+def expected_sealed_kernel_capsule_observation(
+    operation: dict[str, Any], fact: dict[str, Any]
+) -> dict[str, Any]:
+    checked = sealed_kernel_capsule_contract(operation, fact)
+    authority = checked["authority"]
+    return {
+        "verdict": "proved",
+        "evidence_label": operation["executor"]["expected_evidence_label"],
+        "receipt_sha256": checked["receipt_sha256"],
+        "result_manifest_sha256": authority["result_manifest_sha256"],
+        "capsule_sha256": authority["capsule_sha256"],
+        "goal_sha256": authority["goal_sha256"],
+        "declaration_sha256": authority["declaration_sha256"],
+        "fresh_imports": authority["fresh_imports"],
+        "fixed_plan_reconstructions": authority["fixed_plan_reconstructions"],
+        "search_invocations": authority["search_invocations"],
+        "target_theorem_submissions": authority["target_theorem_submissions"],
+        "axiom_footprint": authority["axiom_footprint"],
+        "retained_answer_dependencies": authority["direct_theorem_dependencies"],
+        "ledger_writes": authority["ledger_writes"],
+    }
+
+
+def run_sealed_kernel_capsule_registered(
+    operation: dict[str, Any],
+) -> dict[str, Any]:
+    frontier_module = load_module(
+        "frontier_for_sealed_kernel_capsule_execution", FRONTIER_SCRIPT
+    )
+    fact = frontier_module.load().get(operation["executor"]["input_fact_id"])
+    if not isinstance(fact, dict):
+        raise ExecutionError("sealed kernel capsule input fact is absent")
+    return expected_sealed_kernel_capsule_observation(operation, fact)
 
 
 def run_statement_reflexivity_registered(
@@ -1161,6 +1226,10 @@ def run_registered(
         if trigger is not None:
             raise ExecutionError("dependency-theorem receipt operation rejects a trigger")
         return run_dependency_theorem_receipt_registered(operation)
+    if driver == "axeyum-lean-import/sealed-kernel-capsule-v1":
+        if trigger is not None:
+            raise ExecutionError("sealed kernel capsule operation rejects a trigger")
+        return run_sealed_kernel_capsule_registered(operation)
     raise ExecutionError(f"unsupported execution driver {driver!r}")
 
 
@@ -1319,6 +1388,27 @@ def build_receipt(
             "transitive_dependency_set_sha256": executor[
                 "transitive_dependency_set_sha256"
             ],
+        }
+    elif executor["driver"] == "axeyum-lean-import/sealed-kernel-capsule-v1":
+        checked = sealed_kernel_capsule_contract(operation, fact)
+        authority = checked["authority"]
+        expected_observation = expected_sealed_kernel_capsule_observation(
+            operation, fact
+        )
+        input_identity = {
+            "formal_statement_sha256": authority["formal_statement_sha256"],
+            "result_manifest_sha256": authority["result_manifest_sha256"],
+            "receipt_sha256": checked["receipt_sha256"],
+            "capsule_sha256": authority["capsule_sha256"],
+        }
+        request_input = {
+            "result_manifest": executor["result_manifest"],
+            "capsule_path": executor["capsule_path"],
+            "capsule_sha256": executor["capsule_sha256"],
+            "target_theorem": executor["target_theorem"],
+            "goal_sha256": executor["goal_sha256"],
+            "declaration_sha256": executor["declaration_sha256"],
+            "receipt_sha256": executor["receipt_sha256"],
         }
     else:
         raise ExecutionError(f"unsupported execution driver {executor['driver']!r}")

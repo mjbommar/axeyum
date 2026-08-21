@@ -431,6 +431,59 @@ def build_authoritative_transaction(
             "exact two-fresh-kernel proof, empty axiom footprint, eight named direct "
             "premise identities, and replay-bound transitive dependency digest"
         )
+    elif executor["driver"] == "axeyum-lean-import/sealed-kernel-capsule-v1":
+        expected_statement_sha = hashlib.sha256(
+            before_fact["formal"]["statement"].encode()
+        ).hexdigest()
+        observation = result.get("observation")
+        dependencies = (
+            observation.get("retained_answer_dependencies")
+            if isinstance(observation, dict)
+            else None
+        )
+        if (
+            identity.get("formal_statement_sha256") != expected_statement_sha
+            or identity.get("receipt_sha256") != executor["receipt_sha256"]
+            or identity.get("capsule_sha256") != executor["capsule_sha256"]
+            or not isinstance(observation, dict)
+            or observation.get("verdict") != "proved"
+            or observation.get("receipt_sha256") != executor["receipt_sha256"]
+            or observation.get("capsule_sha256") != executor["capsule_sha256"]
+            or observation.get("goal_sha256") != executor["goal_sha256"]
+            or observation.get("declaration_sha256")
+            != executor["declaration_sha256"]
+            or observation.get("axiom_footprint") != []
+            or not isinstance(dependencies, list)
+            or len(dependencies) != 12
+            or observation.get("fresh_imports") != 4
+            or observation.get("fixed_plan_reconstructions") != 2
+            or observation.get("target_theorem_submissions") != 2
+            or observation.get("search_invocations") != 0
+            or observation.get("ledger_writes") != 0
+        ):
+            raise TransactionError(
+                "sealed kernel capsule execution assurance is inconsistent"
+            )
+        execution_input_binding = {
+            "result_manifest": executor["result_manifest"],
+            "result_manifest_sha256": identity["result_manifest_sha256"],
+            "capsule_path": executor["capsule_path"],
+            "capsule_sha256": identity["capsule_sha256"],
+            "receipt_sha256": identity["receipt_sha256"],
+            "formal_statement_sha256": expected_statement_sha,
+            "target_theorem": executor["target_theorem"],
+            "goal_sha256": observation["goal_sha256"],
+            "declaration_sha256": observation["declaration_sha256"],
+            "direct_theorem_dependencies": dependencies,
+        }
+        result_description = (
+            "twice-reconstructed axiom-free sealed kernel theorem capsule"
+        )
+        replay_description = (
+            "immutable capsule and committed result manifest and requires their exact "
+            "twice-reconstructed theorem identity, empty axiom footprint, and named "
+            "direct theorem dependencies"
+        )
     else:
         raise TransactionError("authoritative operation uses an unsupported driver")
     after_fact = json.loads(json.dumps(before_fact))

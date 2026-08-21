@@ -48,6 +48,23 @@ def validate(plan: dict[str, Any] | None = None) -> dict[str, Any]:
     target_fact = load(ROOT / inputs["target_fact"]["path"])
     premise_fact = load(ROOT / inputs["premise_fact"]["path"])
     target = plan["target"]
+    target_status = target_fact.get("epistemic_status")
+    target_evidence = target_fact.get("evidence")
+    target_state_valid = (
+        target_status == "open"
+        and target_evidence == []
+        and not any(
+            key in target_fact for key in ("proof_route", "axiom_footprint")
+        )
+    ) or (
+        target_status == "proved"
+        and target_fact.get("proof_route") == "kernel-lean"
+        and target_fact.get("axiom_footprint") == []
+        and isinstance(target_evidence, list)
+        and len(target_evidence) == 1
+        and target_evidence[0].get("kind") == "kernel-term"
+        and target_evidence[0].get("check_status") == "checked"
+    )
     if (
         target["fact_id"] != "F:ml430-nat-gcd-fib-add-self-5a92d5e3"
         or target["source_name"] != "Nat.gcd_fib_add_self"
@@ -56,11 +73,9 @@ def validate(plan: dict[str, Any] | None = None) -> dict[str, Any]:
         != "fc1117679c743009e8548a25d1f73f71f6cd42555ea77b3efce07844673670b2"
         or target_fact.get("formal", {}).get("statement") != target["statement"]
         or target_fact.get("depends_on") != target["ledger_premises"]
-        or target_fact.get("epistemic_status") != "open"
-        or target_fact.get("evidence") != []
-        or any(key in target_fact for key in ("proof_route", "axiom_footprint"))
+        or not target_state_valid
     ):
-        raise PlanError("target identity or open state changed")
+        raise PlanError("target identity or monotonic state changed")
 
     premise = inputs["premise_fact"]
     evidence = premise_fact.get("evidence")

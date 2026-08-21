@@ -48,14 +48,31 @@ def validate(plan: dict[str, Any] | None = None) -> dict[str, Any]:
     if sha256(ROOT / support["path"]) != support["sha256"]:
         raise PlanError("support result identity changed")
     target_fact = load(ROOT / inputs["target_fact"]["path"])
-    if (
-        sha256(ROOT / inputs["target_fact"]["path"])
-        != inputs["target_fact"]["sha256_at_plan"]
-        or target_fact.get("epistemic_status") != "open"
-        or target_fact.get("evidence") != []
-        or any(key in target_fact for key in ("proof_route", "axiom_footprint"))
-    ):
-        raise PlanError("target fact is no longer the frozen open target")
+    target_status = target_fact.get("epistemic_status")
+    if target_status == "open":
+        target_state_valid = (
+            sha256(ROOT / inputs["target_fact"]["path"])
+            == inputs["target_fact"]["sha256_at_plan"]
+            and target_fact.get("evidence") == []
+            and not any(
+                key in target_fact for key in ("proof_route", "axiom_footprint")
+            )
+        )
+    else:
+        evidence = target_fact.get("evidence")
+        target_state_valid = (
+            target_status == "proved"
+            and target_fact.get("proof_route") == "kernel-lean"
+            and target_fact.get("axiom_footprint") == []
+            and isinstance(evidence, list)
+            and len(evidence) == 1
+            and evidence[0].get("kind") == "kernel-term"
+            and evidence[0].get("check_status") == "checked"
+        )
+    if not target_state_valid:
+        raise PlanError(
+            "target fact is neither the frozen open target nor a checked closure"
+        )
 
     for key in ("statement_inventory", "mod_equation_pack", "division_support_audit"):
         source = inputs[key]
