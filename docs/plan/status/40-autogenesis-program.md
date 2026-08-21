@@ -71,6 +71,7 @@
 | 2026-08-21 | (pending) | V5 reaches one raw `Nat.add 0 z` node; V6 freezes exact equality transport through `Nat.succ` instead of a generic rewrite |
 | 2026-08-21 | (pending) | V6 compiles wrapper-free raw cancellation but both roots retain propext; six remaining Nat helpers are frozen for exact classification |
 | 2026-08-21 | (pending) | Four Nat helpers are clean; V7 replaces the two propext subtraction conveniences with direct structural recursion and removes commutativity detours |
+| 2026-08-21 | (pending) | V7's local recursions stop at overloaded Nat operations; V8 freezes explicit `Nat.add`/`Nat.sub` propositions with all integer branches unchanged |
 
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
