@@ -85,6 +85,7 @@
 | 2026-08-21 | (pending) | `Nat.add_mod` localizes to two directional modulo normalizers; both are frozen for clean specialization selection |
 | 2026-08-21 | (pending) | Both modulo normalizers retain propext; `add_mul_mod_self_left` and `mod_add_div` are frozen as the underlying arithmetic core |
 | 2026-08-21 | (pending) | General modulo arithmetic remains propext-bearing; V2 freezes a target-only two-step modulo-two recursion with all conveniences forbidden |
+| 2026-08-21 | (pending) | V2's parity recursion reaches only opaque `(k+2)%2`; V3 freezes explicit Nat add/mod unfolding inside the two local step proofs |
 
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |

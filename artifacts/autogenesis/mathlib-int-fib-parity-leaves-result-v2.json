@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-parity-leaves-result",
+  "state": "two-step-recursion-stops-at-opaque-modulo",
+  "plan_sha256": "bbeb0b1f5cc7081ce3369a5300275ecb44adae64a977cb7a1f7966821a4d721f",
+  "source": {"path": "artifacts/autogenesis/sources/int-fib-parity-leaves-v2.lean", "sha256": "f43c3192102a2ebf06044382c7e894fb7d0ef81316cca90bfc470b0196136cbb"},
+  "execution": {"compiler_invocations": 1, "compiler_exit_status": 1, "exporter_invocations": 0, "importer_runs": 0, "theorem_submissions": 0, "retries": 0, "ledger_writes": 0},
+  "diagnostic": {"recursive_parity_structure": "elaborates up to local step", "failed_statement": "forall k, (k + 2) % 2 = k % 2", "failure": "not definitionally equal at ordinary transparency", "repair": "explicitly unfold Nat.add and Nat.mod only inside both local step proofs"},
+  "cleanup": {"temporary_source_removed": true, "temporary_olean_removed": true, "checkout_baseline_restored": true},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}
