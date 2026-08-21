@@ -1716,7 +1716,7 @@ fn declare_target_native_dvd_refl(kernel: &mut Kernel) -> Result<NameId, String>
 fn declare_target_native_dvd_mul_right(kernel: &mut Kernel) -> Result<NameId, String> {
     let target = nested_name(kernel, &["Axeyum", "Autogenesis", "dvdMulRightOfficialV1"]);
     let mut d = Dev::new(kernel)?;
-    let mul_assoc = d.exact("Nat.mul_assoc")?;
+    let mul_assoc = d.exact("Axeyum.Autogenesis.balancedBezoutMulAssocLeafV1")?;
     let exists_intro = d.exact("Exists.intro")?;
     let nat = d.nat_ty();
     let divisor_fv = d.fresh();
