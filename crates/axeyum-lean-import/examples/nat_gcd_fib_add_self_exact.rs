@@ -9,7 +9,9 @@ use axeyum_lean_import::{
     ImportLimits, canonical_declaration_sha256, canonical_expression_sha256,
     compose_checked_theorem_slice, import_ndjson, verify_checked_theorem_composition,
 };
-use axeyum_lean_kernel::{BinderInfo, Declaration, ExprId, Kernel, LevelId, NameId};
+use axeyum_lean_kernel::{
+    BinderInfo, Declaration, ExprId, Kernel, Lean4ExportMetadata, LevelId, NameId,
+};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
@@ -28,6 +30,9 @@ const ADDITION_CAPSULE: &str = "f46e3dd4053c930984b3232ff98320021daa2fcdb3451e84
 const COPRIME: &str = "Nat.fib_coprime_fib_succ";
 const COPRIME_CAPSULE: &str = "9106a3442d75a5fdaf51e35436e6fdbea78714d743e666bec27ffd9641160b11";
 const CLEAN_GCD_COMM: &str = "Axeyum.Autogenesis.gcdCommCleanV1";
+const OFFICIAL_EQ_ZERO: &str = "Axeyum.Autogenesis.eqZeroOfZeroDvdOfficialV1";
+const OFFICIAL_LE_OF_DVD: &str = "Axeyum.Autogenesis.leOfDvdOfficialV1";
+const OFFICIAL_ANTISYMM: &str = "Axeyum.Autogenesis.dvdAntisymmOfficialV1";
 const USAGE: &str = "usage: nat_gcd_fib_add_self_exact <r091> <clean-order> <cancellation> <addition> <coprimality>";
 
 fn main() {
@@ -39,6 +44,10 @@ fn main() {
 
 #[allow(clippy::too_many_lines)]
 fn run() -> Result<(), String> {
+    let mut args = std::env::args_os().skip(1);
+    if args.next().as_deref() == Some(std::ffi::OsStr::new("--official-clean-order-capsule")) {
+        return run_official_clean_order_capsule(args);
+    }
     let mut args = std::env::args_os().skip(1);
     let r091_path = path(&mut args)?;
     let capsules = [
@@ -144,6 +153,97 @@ fn run() -> Result<(), String> {
     Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
+fn run_official_clean_order_capsule(
+    mut args: impl Iterator<Item = std::ffi::OsString>,
+) -> Result<(), String> {
+    let r091_path = path(&mut args)?;
+    let cancellation_path = path(&mut args)?;
+    let output_path = path(&mut args)?;
+    if args.next().is_some() || output_path.exists() {
+        return Err("usage: nat_gcd_fib_add_self_exact --official-clean-order-capsule <r091> <official-cancellation> <output>".to_owned());
+    }
+    let imported = import_bound(&r091_path, R091_SHA256, "r091")?;
+    if !imported.report().axioms.is_empty() {
+        return Err("r091 is not proof-isolated".to_owned());
+    }
+    let mut kernel = imported.kernel().clone();
+    let eq_zero = declare_official_eq_zero(&mut kernel)?;
+    require_empty(&kernel, eq_zero, OFFICIAL_EQ_ZERO)?;
+    let le_of_dvd = declare_official_le_of_dvd(&mut kernel)?;
+    require_empty(&kernel, le_of_dvd, OFFICIAL_LE_OF_DVD)?;
+    let antisymm = declare_official_antisymm(&mut kernel)?;
+    require_empty(&kernel, antisymm, OFFICIAL_ANTISYMM)?;
+
+    let cancellation = import_bound(&cancellation_path, CANCELLATION_CAPSULE, CANCELLATION)?;
+    let compatible = compose_checked_theorem_slice(cancellation.kernel(), &kernel, &[CANCELLATION])
+        .map_err(|error| format!("official cancellation compatibility declined: {error:?}"))?;
+    verify_checked_theorem_composition(
+        cancellation.kernel(),
+        &kernel,
+        compatible.kernel(),
+        compatible.receipt(),
+    )
+    .map_err(|error| format!("official cancellation compatibility did not replay: {error:?}"))?;
+    if compatible
+        .receipt()
+        .added_theorems
+        .iter()
+        .any(|row| !row.axiom_footprint.is_empty())
+    {
+        return Err("official cancellation compatibility added assumptions".to_owned());
+    }
+
+    let root = find_name(&kernel, OFFICIAL_ANTISYMM)?;
+    let expected = evidence(&kernel, root)?;
+    let bytes = kernel
+        .render_lean4export_ndjson_roots(&Lean4ExportMetadata::axeyum("4.30.0"), &[root])
+        .map_err(|error| format!("official clean-order capsule export failed: {error}"))?;
+    for pass in 1..=2 {
+        let replay = import_ndjson(Cursor::new(bytes.as_bytes()), ImportLimits::default())
+            .map_err(|error| {
+                format!("official clean-order capsule import {pass} failed: {error:?}")
+            })?;
+        let replay_root = find_name(replay.kernel(), OFFICIAL_ANTISYMM)?;
+        if evidence(replay.kernel(), replay_root)? != expected {
+            return Err(format!(
+                "official clean-order capsule import {pass} changed evidence"
+            ));
+        }
+    }
+    fs::write(&output_path, &bytes)
+        .map_err(|error| format!("official clean-order capsule write failed: {error}"))?;
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "schema_version": 1,
+            "kind": "axeyum-autogenesis-official-r091-clean-dvd-antisymm-capsule",
+            "state": "official-clean-order-compatible-with-cancellation-and-roundtrip-checked",
+            "supports": [evidence(&kernel, eq_zero)?, evidence(&kernel, le_of_dvd)?, expected],
+            "official_cancellation_compatibility": {
+                "root": CANCELLATION,
+                "receipt_sha256": compatible.receipt().receipt_sha256,
+                "replayed": true,
+            },
+            "portable_capsule": {
+                "root": OFFICIAL_ANTISYMM,
+                "bytes": bytes.len(),
+                "sha256": hex_sha256(bytes.as_bytes()),
+                "fresh_imports": 2,
+                "theorem": evidence(&kernel, root)?,
+                "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0},
+            },
+            "exact_target_submissions": 0,
+            "target_credit": 0,
+            "fact_status_changes": 0,
+            "evaluation_credit": 0,
+            "ledger_writes": 0,
+        }))
+        .map_err(|error| error.to_string())?
+    );
+    Ok(())
+}
+
 struct Dev<'a> {
     kernel: &'a mut Kernel,
     anon: NameId,
@@ -155,12 +255,14 @@ struct Dev<'a> {
     mul: NameId,
     gcd: NameId,
     dvd: NameId,
+    le: NameId,
     fib: NameId,
     eq: NameId,
     eq_refl: NameId,
     eq_rec: NameId,
     iff: NameId,
     iff_rec: NameId,
+    exists_rec: NameId,
     next_fvar: u64,
 }
 
@@ -176,12 +278,14 @@ impl<'a> Dev<'a> {
             mul: find_name(kernel, "Nat.mul")?,
             gcd: find_name(kernel, "Nat.gcd")?,
             dvd: find_name(kernel, "Nat.dvd")?,
+            le: find_name(kernel, "Nat.le")?,
             fib: find_name(kernel, "Nat.fib")?,
             eq: find_name(kernel, "Eq")?,
             eq_refl: find_name(kernel, "Eq.refl")?,
             eq_rec: find_name(kernel, "Eq.rec")?,
             iff: find_name(kernel, "Iff")?,
             iff_rec: find_name(kernel, "Iff.rec")?,
+            exists_rec: find_name(kernel, "Exists.rec")?,
             kernel,
             next_fvar: 10_000,
         })
@@ -211,6 +315,13 @@ impl<'a> Dev<'a> {
         let head = self.kernel.const_(self.succ, vec![]);
         self.kernel.app(head, value)
     }
+    fn num(&mut self, value: u32) -> ExprId {
+        let mut result = self.zero();
+        for _ in 0..value {
+            result = self.succ(result);
+        }
+        result
+    }
     fn add(&mut self, left: ExprId, right: ExprId) -> ExprId {
         self.lemma(self.add, &[left, right])
     }
@@ -222,6 +333,9 @@ impl<'a> Dev<'a> {
     }
     fn dvd(&mut self, divisor: ExprId, value: ExprId) -> ExprId {
         self.lemma(self.dvd, &[divisor, value])
+    }
+    fn le(&mut self, left: ExprId, right: ExprId) -> ExprId {
+        self.lemma(self.le, &[left, right])
     }
     fn fib(&mut self, value: ExprId) -> ExprId {
         self.lemma(self.fib, &[value])
@@ -284,6 +398,25 @@ impl<'a> Dev<'a> {
         let base = self.refl(left);
         self.transport(left, motive, base, right, proof)
     }
+    fn trans(
+        &mut self,
+        left: ExprId,
+        middle: ExprId,
+        right: ExprId,
+        first: ExprId,
+        second: ExprId,
+    ) -> ExprId {
+        let motive = self.eq_motive(middle, &|d, value| d.eq(left, value));
+        self.transport(middle, motive, first, right, second)
+    }
+    fn dvd_predicate(&mut self, divisor: ExprId, value: ExprId) -> ExprId {
+        let witness_fv = self.fresh();
+        let witness = self.kernel.fvar(witness_fv);
+        let product = self.mul(divisor, witness);
+        let body = self.eq(value, product);
+        let nat = self.nat_ty();
+        self.lam(witness_fv, nat, body)
+    }
     fn transport_dvd(
         &mut self,
         divisor: ExprId,
@@ -335,6 +468,222 @@ impl<'a> Dev<'a> {
         let rec = self.kernel.const_(self.rec, vec![zero]);
         self.apply(rec, &[motive_term, base_term, step_term, target])
     }
+    fn two_lambdas(
+        &mut self,
+        first_ty: ExprId,
+        second_ty: ExprId,
+        body: &dyn Fn(&mut Self, ExprId, ExprId) -> ExprId,
+    ) -> ExprId {
+        let first_fv = self.fresh();
+        let first = self.kernel.fvar(first_fv);
+        let second_fv = self.fresh();
+        let second = self.kernel.fvar(second_fv);
+        let result = body(self, first, second);
+        let result = self.lam(second_fv, second_ty, result);
+        self.lam(first_fv, first_ty, result)
+    }
+}
+
+fn declare_official_eq_zero(kernel: &mut Kernel) -> Result<NameId, String> {
+    let target = nested_name(
+        kernel,
+        &["Axeyum", "Autogenesis", "eqZeroOfZeroDvdOfficialV1"],
+    );
+    let mut d = Dev::new(kernel)?;
+    let zero_mul = d.exact("Nat.zero_mul")?;
+    let nat = d.nat_ty();
+    let n_fv = d.fresh();
+    let n = d.kernel.fvar(n_fv);
+    let zero = d.zero();
+    let hypothesis_ty = d.dvd(zero, n);
+    let hypothesis_fv = d.fresh();
+    let hypothesis = d.kernel.fvar(hypothesis_fv);
+    let goal = d.eq(n, zero);
+    let predicate = d.dvd_predicate(zero, n);
+    let motive = d
+        .kernel
+        .lam(d.anon, hypothesis_ty, goal, BinderInfo::Default);
+    let witness_fv = d.fresh();
+    let witness = d.kernel.fvar(witness_fv);
+    let product = d.mul(zero, witness);
+    let equation_ty = d.eq(n, product);
+    let equation_fv = d.fresh();
+    let equation = d.kernel.fvar(equation_fv);
+    let collapse = d.lemma(zero_mul, &[witness]);
+    let proof = d.trans(n, product, zero, equation, collapse);
+    let minor = d.lam(equation_fv, equation_ty, proof);
+    let minor = d.lam(witness_fv, nat, minor);
+    let one = d.one_level();
+    let rec = d.kernel.const_(d.exists_rec, vec![one]);
+    let proof = d.apply(rec, &[nat, predicate, motive, minor, hypothesis]);
+    let proof = d.lam(hypothesis_fv, hypothesis_ty, proof);
+    let proof = d.lam(n_fv, nat, proof);
+    let ty = d.arrow(hypothesis_ty, goal);
+    let ty = d.pi(n_fv, nat, ty);
+    d.kernel
+        .add_declaration(Declaration::Theorem {
+            name: target,
+            uparams: vec![],
+            ty,
+            value: proof,
+        })
+        .map_err(|error| format!("official zero-divisibility equality rejected: {error:?}"))?;
+    Ok(target)
+}
+
+#[allow(clippy::too_many_lines)]
+fn declare_official_le_of_dvd(kernel: &mut Kernel) -> Result<NameId, String> {
+    let target = nested_name(kernel, &["Axeyum", "Autogenesis", "leOfDvdOfficialV1"]);
+    let mut d = Dev::new(kernel)?;
+    let one_le_right = d.exact("Nat.one_le_right_of_mul")?;
+    let mul_le_left = d.exact("Nat.mul_le_mul_left")?;
+    let mul_one = d.exact("Nat.mul_one")?;
+    let nat = d.nat_ty();
+    let a_fv = d.fresh();
+    let a = d.kernel.fvar(a_fv);
+    let n_fv = d.fresh();
+    let n = d.kernel.fvar(n_fv);
+    let one = d.num(1);
+    let positive_ty = d.le(one, n);
+    let divides_ty = d.dvd(a, n);
+    let conclusion = d.le(a, n);
+    let positive_fv = d.fresh();
+    let positive = d.kernel.fvar(positive_fv);
+    let divides_fv = d.fresh();
+    let divides = d.kernel.fvar(divides_fv);
+    let predicate = d.dvd_predicate(a, n);
+    let motive = d
+        .kernel
+        .lam(d.anon, divides_ty, conclusion, BinderInfo::Default);
+    let witness_fv = d.fresh();
+    let witness = d.kernel.fvar(witness_fv);
+    let product = d.mul(a, witness);
+    let equation_ty = d.eq(n, product);
+    let equation_fv = d.fresh();
+    let equation = d.kernel.fvar(equation_fv);
+    let product_positive = {
+        let motive = d.eq_motive(n, &|d, value| {
+            let one = d.num(1);
+            d.le(one, value)
+        });
+        d.transport(n, motive, positive, product, equation)
+    };
+    let witness_positive = d.lemma(one_le_right, &[a, witness, product_positive]);
+    let scaled = d.lemma(mul_le_left, &[a, one, witness, witness_positive]);
+    let a_one = d.mul(a, one);
+    let collapse = d.lemma(mul_one, &[a]);
+    let bounded_product = {
+        let motive = d.eq_motive(a_one, &|d, value| d.le(value, product));
+        d.transport(a_one, motive, scaled, a, collapse)
+    };
+    let reverse_equation = d.symm(n, product, equation);
+    let body = {
+        let motive = d.eq_motive(product, &|d, value| d.le(a, value));
+        d.transport(product, motive, bounded_product, n, reverse_equation)
+    };
+    let minor = d.lam(equation_fv, equation_ty, body);
+    let minor = d.lam(witness_fv, nat, minor);
+    let one_level = d.one_level();
+    let rec = d.kernel.const_(d.exists_rec, vec![one_level]);
+    let proof = d.apply(rec, &[nat, predicate, motive, minor, divides]);
+    let proof = d.lam(divides_fv, divides_ty, proof);
+    let proof = d.lam(positive_fv, positive_ty, proof);
+    let proof = d.lam(n_fv, nat, proof);
+    let proof = d.lam(a_fv, nat, proof);
+    let ty = d.arrow(divides_ty, conclusion);
+    let ty = d.arrow(positive_ty, ty);
+    let ty = d.pi(n_fv, nat, ty);
+    let ty = d.pi(a_fv, nat, ty);
+    d.kernel
+        .add_declaration(Declaration::Theorem {
+            name: target,
+            uparams: vec![],
+            ty,
+            value: proof,
+        })
+        .map_err(|error| format!("official divisor bound rejected: {error:?}"))?;
+    Ok(target)
+}
+
+fn antisymm_statement(d: &mut Dev<'_>, a: ExprId, b: ExprId) -> ExprId {
+    let forward = d.dvd(a, b);
+    let reverse = d.dvd(b, a);
+    let equality = d.eq(a, b);
+    let rest = d.arrow(reverse, equality);
+    d.arrow(forward, rest)
+}
+
+#[allow(clippy::too_many_lines)]
+fn declare_official_antisymm(kernel: &mut Kernel) -> Result<NameId, String> {
+    let target = nested_name(kernel, &["Axeyum", "Autogenesis", "dvdAntisymmOfficialV1"]);
+    let mut d = Dev::new(kernel)?;
+    let eq_zero = d.exact(OFFICIAL_EQ_ZERO)?;
+    let clean_le = d.exact(OFFICIAL_LE_OF_DVD)?;
+    let le_antisymm = d.exact("Nat.le_antisymm")?;
+    let zero_le = d.exact("Nat.zero_le")?;
+    let le_succ = d.exact("Nat.le_succ_succ")?;
+    let nat = d.nat_ty();
+    let a_fv = d.fresh();
+    let a = d.kernel.fvar(a_fv);
+    let b_fv = d.fresh();
+    let b = d.kernel.fvar(b_fv);
+    let proof = d.induct(
+        &|d, candidate_b| antisymm_statement(d, a, candidate_b),
+        &|d| {
+            let zero = d.zero();
+            let forward_ty = d.dvd(a, zero);
+            let reverse_ty = d.dvd(zero, a);
+            d.two_lambdas(forward_ty, reverse_ty, &|d, _forward, reverse| {
+                d.lemma(eq_zero, &[a, reverse])
+            })
+        },
+        &|d, b_pred, _ih| {
+            let b_succ = d.succ(b_pred);
+            d.induct(
+                &|d, candidate_a| antisymm_statement(d, candidate_a, b_succ),
+                &|d| {
+                    let zero = d.zero();
+                    let forward_ty = d.dvd(zero, b_succ);
+                    let reverse_ty = d.dvd(b_succ, zero);
+                    d.two_lambdas(forward_ty, reverse_ty, &|d, forward, _reverse| {
+                        let collapse = d.lemma(eq_zero, &[b_succ, forward]);
+                        d.symm(b_succ, zero, collapse)
+                    })
+                },
+                &|d, a_pred, _a_ih| {
+                    let a_succ = d.succ(a_pred);
+                    let forward_ty = d.dvd(a_succ, b_succ);
+                    let reverse_ty = d.dvd(b_succ, a_succ);
+                    d.two_lambdas(forward_ty, reverse_ty, &|d, forward, reverse| {
+                        let zero = d.zero();
+                        let zero_b = d.lemma(zero_le, &[b_pred]);
+                        let b_positive = d.lemma(le_succ, &[zero, b_pred, zero_b]);
+                        let zero_a = d.lemma(zero_le, &[a_pred]);
+                        let a_positive = d.lemma(le_succ, &[zero, a_pred, zero_a]);
+                        let a_le_b = d.lemma(clean_le, &[a_succ, b_succ, b_positive, forward]);
+                        let b_le_a = d.lemma(clean_le, &[b_succ, a_succ, a_positive, reverse]);
+                        d.lemma(le_antisymm, &[a_succ, b_succ, a_le_b, b_le_a])
+                    })
+                },
+                a,
+            )
+        },
+        b,
+    );
+    let ty = antisymm_statement(&mut d, a, b);
+    let proof = d.lam(b_fv, nat, proof);
+    let proof = d.lam(a_fv, nat, proof);
+    let ty = d.pi(b_fv, nat, ty);
+    let ty = d.pi(a_fv, nat, ty);
+    d.kernel
+        .add_declaration(Declaration::Theorem {
+            name: target,
+            uparams: vec![],
+            ty,
+            value: proof,
+        })
+        .map_err(|error| format!("official divisibility antisymmetry rejected: {error:?}"))?;
+    Ok(target)
 }
 
 #[allow(clippy::similar_names)]
