@@ -1,0 +1,10 @@
+{
+  "schema_version":1,"kind":"axeyum-autogenesis-nat-gcd-fib-add-self-exact-result-v9","state":"checked-two-leaf-coprimality-still-retains-foreign-gcd-type-closure",
+  "plan":{"path":"artifacts/autogenesis/nat-gcd-fib-add-self-exact-plan-v9.json","sha256":"9d0a827d9a9543d3e147be16666d744e22ac0e47e877af9f97f66edb4cbc8ceb"},
+  "implementation_commit":"43715d604","evidence_pack":{"path":"/nas3/data/axeyum/autogenesis/reference-packs/43715d604-nat-gcd-fib-add-self-exact-v9","manifest_sha256":"fd8a1b73d75acb80942e16b80a3e1a6f3f8c7d583bd17e8a56a6c8cdf9073a0d","directory_mode":"0555","file_mode":"0444"},
+  "decline":{"stage":"coprimality-two-target-leaf-composition","class":"TypeShapeMismatch","name":"WellFounded.fix","source_sha256":"0c2e9552a1056133fbd4e6a318344cfb1310468f7d2113efb37ebba0bf6ef32c","target_sha256":"f45b230503d6ddc03c61714008f6165dd055ff995d927507fc6d7aaffcf6afd6","interpretation":"target theorem leaves retain source type dependencies, and Nat.gcd_zero_left mentions the foreign Nat.gcd representation","partial_kernel_published":false},
+  "execution":{"complete_invocations":1,"successful_capsule_compositions":3,"existing_zero_left_reuses":1,"checked_alias_submissions":1,"exact_target_submissions":0,"retries":0,"second_invocation_skipped":true},
+  "authority":{"target_credit":0,"fact_status_changes":0,"evaluation_credit":0,"ledger_writes":0},
+  "next_boundary":"Map the accepted fib_coprime constructor's eight direct premises against the three-root composed target, then reconstruct Nat.fib_coprime_fib_succ directly over target-native declarations instead of composing its foreign closure.",
+  "limitations":"No coprimality or exact target theorem was published and no ledger credit is granted."
+}
