@@ -167,6 +167,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Direct cancellation stops at two unavailable generic names; a fixed eight-candidate integer declaration probe is frozen before retrying proof code |
 | 2026-08-21 | (pending) | The probe resolves four integer cancellation types; V2 freezes direct odd cancellation and explicit negation transport for the even identity |
 | 2026-08-21 | (pending) | Both direct algebra leaves compile but retain propext; one sealed-stream read is frozen to classify their seven distinct dependencies |
+| 2026-08-21 | (pending) | Four transports are clean while integer commutativity and cancellation retain propext; their eight nearest parents are frozen for one final descent |
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
 | 2026-08-21 | `a9610560c` | The durable construction checker binds the separately stored target goal identity without weakening capsule checks |
