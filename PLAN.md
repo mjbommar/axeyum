@@ -209,6 +209,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Residual V2 reconstructs both witness leaves and four-parameter cancellation twice empty-footprint |
 | 2026-08-21 | `c9379241e` | All-Nat additive cancellation adapter is frozen as zero-divisor witness elimination plus positive successor delegation |
 | 2026-08-21 | (pending) | The all-Nat adapter reconstructs twice empty-footprint with only positive-divisor cancellation explicit |
+| 2026-08-21 | (pending) | Official cancellation composition is frozen across eight streams and one native positive-divisor leaf before code |
 | 2026-08-20 | `9eb81822f` | Isolate persistent pre-push worktree metadata from the caller lane and register the two-sided control |
 | 2026-08-20 | `24b16642e` | Confirm the repaired hook against a live Rust push with unchanged caller state and a clean exact-SHA gate checkout |
 | 2026-08-20 | (pending) | The string family's first re-derivable UNSAT artifact beyond word-clash/regex-emptiness: `Evidence::UnsatStringLength` abstracts every string term to an integer length keyed on its SOURCE NAME, names the five theory lemmas the argument uses, and closes with one nonnegative combination per case-split branch. The checker is two stages — bind each lemma to the conjunct that licenses it, then re-derive the arithmetic — and is arena-free, because a string script's flat view is the bounded packed-BV encoding rather than the query. 23 guards mutation-checked; two killed nothing and were fixed rather than kept (one was dead code the command allow-list already covered, one had no multi-`check-sat` fixture). Also: `diagnose_evidence` reported the ARENA front door for string files, i.e. a query nobody solves — it now reports the text front door too, and agreed with the dominance audit for the first time. |
@@ -1024,7 +1025,7 @@ dominance.
 
 **Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction has unconditional official balanced Bézout. Residual cancellation V2 and both witness leaves are accepted empty-footprint. The all-Nat additive cancellation adapter now also reconstructs twice empty-footprint; only its positive-divisor parameter remains, and that theorem already exists in the clean native Nat prelude.
 
-**Next:** preregister checked composition of native `Nat.dvd_add_right_cancel_of_pos`, specialize the all-Nat adapter, then specialize residual cancellation with balanced Bézout and the two clean multiplication leaves. Require replayed empty-footprint receipts before official cancellation credit.
+**Next:** implement the preregistered eight-stream composition driver: replay official balanced Bézout, compose native positive-divisor cancellation and the four accepted authored roots, then perform two checked specializations. Require two byte-identical empty-footprint runs before official cancellation credit.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
