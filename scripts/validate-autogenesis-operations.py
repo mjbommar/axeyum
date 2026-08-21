@@ -84,6 +84,13 @@ SEALED_CAPSULE_CONTRACTS = {
         "target_theorem": "Int.fib_eq_fib_add_two_sub_fib_add_one",
         "receipt_sha256": "90360a5c12c827afcdcd77fc9b02ff2ef2868b74a71010dddc19d67de65fe276",
     },
+    "F:ml430-int-fib-add-one-33f1b748": {
+        "result_manifest": "artifacts/autogenesis/mathlib-int-fib-add-one-goal-identity-result-v1.json",
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-one-composition-v1/int-fib-add-one.ndjson",
+        "capsule_sha256": "81fb760e78ee25d12fa7b78f8e2d84892809a36db8a4f8d9cc63fda6be66f27c",
+        "target_theorem": "Int.fib_add_one",
+        "receipt_sha256": "b90147a33567106afe6c5532246d5684637e7ef1f45d93c2fffec47949ee3d9c",
+    },
 }
 
 
@@ -342,6 +349,7 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             "F:ml430-int-fib-natcast-d5886be4",
             "F:ml430-int-fib-add-two-739358dd",
             "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
+            "F:ml430-int-fib-add-one-33f1b748",
         }:
             theorem = manifest.get("theorem") or {}
             execution = manifest.get("execution") or {}
@@ -351,6 +359,9 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             is_corollary = (
                 value["input_fact_id"]
                 == "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d"
+            )
+            is_add_one = (
+                value["input_fact_id"] == "F:ml430-int-fib-add-one-33f1b748"
             )
             expected_dependencies = (
                 [
@@ -370,6 +381,13 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
                     "Int.fib_add_two",
                 ]
                 if is_corollary
+                else [
+                    "Axeyum.Autogenesis.intFibAddOneResidualV3",
+                    "Int.add_comm",
+                    "Int.add_neg_cancel_right",
+                    "Int.fib_add_two",
+                ]
+                if is_add_one
                 else []
             )
             if (
@@ -377,7 +395,7 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
                 or manifest.get("state")
                 != (
                     "exact-goal-identity-bound-without-rendering"
-                    if is_add_two or is_corollary
+                    if is_add_two or is_corollary or is_add_one
                     else "single-read-hash-only-identity-qualified"
                 )
                 or value["capsule_path"] != contract["capsule_path"]
@@ -393,13 +411,13 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
                 or execution.get("importer_runs") != 1
                 or execution.get(
                     "stream_reads"
-                    if is_add_two or is_corollary
+                    if is_add_two or is_corollary or is_add_one
                     else "proof_bearing_stream_reads"
                 )
                 != 1
                 or (
                     execution.get("theorem_submissions") != 0
-                    if not is_add_two and not is_corollary
+                    if not is_add_two and not is_corollary and not is_add_one
                     else execution.get("ledger_writes") != 0
                 )
                 or execution.get("retries") != 0
@@ -416,6 +434,7 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
                 "F:ml430-int-fib-natcast-d5886be4",
                 "F:ml430-int-fib-add-two-739358dd",
                 "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
+                "F:ml430-int-fib-add-one-33f1b748",
             }
             and (
                 manifest_path != expected_manifest
