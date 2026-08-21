@@ -395,12 +395,13 @@ impl<'a> Dev<'a> {
         self.apply(head, &[nat, value])
     }
     fn congr_succ(&mut self, left: ExprId, right: ExprId, equality: ExprId) -> ExprId {
-        let congr_arg = find_name(self.kernel, "congrArg").expect("congrArg must exist");
-        let one = self.one_level();
-        let nat = self.nat_ty();
-        let succ = self.kernel.const_(self.succ, vec![]);
-        let congr_arg = self.kernel.const_(congr_arg, vec![one, one]);
-        self.apply(congr_arg, &[nat, nat, succ, left, right, equality])
+        let successor_left = self.succ(left);
+        let motive = self.eq_motive(left, &|d, value| {
+            let successor = d.succ(value);
+            d.eq(successor_left, successor)
+        });
+        let base = self.refl(successor_left);
+        self.transport(left, motive, base, right, equality)
     }
     fn false_elim(&mut self, goal: ExprId, contradiction: ExprId) -> ExprId {
         let false_name = find_name(self.kernel, "False").expect("False must exist");
