@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-definition-blocker-path-audit-result",
+  "state": "strict-all-blockers-assumption-fails-at-Quot-ind-no-completed-audit",
+  "plan_sha256": "389e8517cd80f1bb26e6e2be0bcb0e80ecdc1f1b6746f2e5b4884254dee79b59",
+  "execution": {"importer_runs": 1, "proof_bearing_stream_reads": 1, "completed_audit_documents": 0, "retries": 0},
+  "measured": {"first_absent_blocker": "Quot.ind", "conclusion": "the theorem footprint is not identical to the Int.fib declaration closure"},
+  "next": "use an absent-aware blocker partition under a new preregistration",
+  "authority": {"rendered_proof_terms": 0, "rendered_definition_bodies": 0, "theorem_credit": 0, "ledger_writes": 0}
+}

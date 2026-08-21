@@ -231,6 +231,7 @@ compounding, not automation theatre.
 | [Rooted `Int.fib_natCast` construction retry](203-int-fib-natcast-rooted-retry-plan.md) | Can the accepted definitional proof be exported when its olean is placed explicitly in Mathlib's build-library root? |
 | [`Int.fib_natCast` definition contamination](204-int-fib-natcast-definition-contamination.md) | Does a dependency-free `rfl` proof become clean, or does the official integer Fibonacci representation itself carry assumptions? |
 | [`Int.fib` definition blocker-path audit plan](205-int-fib-definition-blocker-path-audit-plan.md) | Which declaration carriers connect official integer Fibonacci to each blocked assumption without exposing its definition body? |
+| [Absent-aware `Int.fib` blocker partition retry](206-int-fib-definition-blocker-partition-retry.md) | Which theorem-footprint blockers are truly inside `Int.fib`, after the strict all-present assumption fails? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

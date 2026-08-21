@@ -66,7 +66,12 @@ fn run() -> Result<(), String> {
 fn audit_blocker(kernel: &Kernel, root_closure: &[NameId], blocked: &str) -> Result<Value, String> {
     let blocked_name = find_name(kernel, blocked)?;
     if !root_closure.contains(&blocked_name) {
-        return Err(format!("{blocked} is absent from the dependency closure"));
+        return Ok(json!({
+            "name": blocked,
+            "present_in_root_closure": false,
+            "carrier_count": 0,
+            "carriers_nearest_first": [],
+        }));
     }
     let mut carriers = root_closure
         .iter()
@@ -93,7 +98,12 @@ fn audit_blocker(kernel: &Kernel, root_closure: &[NameId], blocked: &str) -> Res
             }))
         })
         .collect::<Result<Vec<_>, _>>()?;
-    Ok(json!({"name": blocked, "carrier_count": rows.len(), "carriers_nearest_first": rows}))
+    Ok(json!({
+        "name": blocked,
+        "present_in_root_closure": true,
+        "carrier_count": rows.len(),
+        "carriers_nearest_first": rows,
+    }))
 }
 
 fn declaration_kind(declaration: &Declaration) -> &'static str {

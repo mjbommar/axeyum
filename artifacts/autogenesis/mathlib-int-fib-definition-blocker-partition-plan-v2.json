@@ -1,0 +1,13 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-int-fib-definition-blocker-partition-plan",
+  "state": "preregistered-after-strict-audit-failure-before-absent-aware-single-read",
+  "prior_result": {"path": "artifacts/autogenesis/mathlib-int-fib-definition-blocker-path-audit-result-v1.json", "required_state": "strict-all-blockers-assumption-fails-at-Quot-ind-no-completed-audit"},
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-natcast-rooted-v2/int-fib-natcast.ndjson", "bytes": 9835690, "sha256": "70311503a7c3c167972c03b921418608b1295445e1615e30a3f80b8f218d6706", "mode": "0444"},
+  "root": "Int.fib",
+  "ordered_blockers": ["Classical.choice", "Lean.opaqueId", "Quot", "Quot.ind", "Quot.lift", "Quot.mk", "Quot.sound", "String.Internal.append", "propext"],
+  "measurement": {"tool_path": "crates/axeyum-lean-import/examples/declaration_blocker_path_batch_audit.rs", "tool_sha256": "cdf582bc9226aa2dd31bcfa172042f14ba6af582f99eb93ee61ca39904852d6a", "tool_behavior": "emit-present-false-for-blockers-absent-from-root-closure", "proof_terms_types_or_values_may_be_rendered": false},
+  "budget": {"max_importer_runs": 1, "max_proof_bearing_stream_reads": 1, "max_retries": 0, "max_theorem_submissions": 0, "max_ledger_writes": 0},
+  "authority": {"reconstruction_allowed": false, "definition_bodies_readable_by_model": false, "theorem_credit": 0, "ledger_writes": 0},
+  "output": "artifacts/autogenesis/mathlib-int-fib-definition-blocker-partition-result-v2.json"
+}
