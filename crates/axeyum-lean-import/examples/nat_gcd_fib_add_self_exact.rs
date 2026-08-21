@@ -1831,7 +1831,7 @@ fn run_fib_gcd_gcd_recursion_bridge_audit(
                 "present":true,
                 "type_sha256":canonical_expression_sha256(&kernel,ty)?,
                 "definitionally_equal":kernel.def_eq(expected,ty),
-                "axiom_footprint":kernel.axiom_footprint(name).map_err(|error| format!("{candidate} footprint failed: {error:?}"))?.iter().map(|name| kernel.render_name(*name)).collect::<Vec<_>>()
+                "axiom_footprint_count":kernel.axiom_footprint(name).len()
             }));
         } else {
             rows.push(json!({"name":candidate,"present":false}));
