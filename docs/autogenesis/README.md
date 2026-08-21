@@ -212,6 +212,7 @@ compounding, not automation theatre.
 | [Generated gcd carrier audit result](113-generated-gcd-carrier-audit-result.md) | Which three compiler-generated dependencies remain before a primitive gcd-equation decision? |
 | [Generated gcd novel-dependency audit plan](114-generated-gcd-novel-dependency-audit-plan.md) | Is `WellFounded.Nat.fix_eq` the sole remaining assumption carrier? |
 | [Generated gcd novel-dependency audit result](115-generated-gcd-novel-dependency-audit-result.md) | Why is a bounded official-gcd equation reconstruction now justified? |
+| [Public gcd definition direct-reconstruction plan](116-public-gcd-def-direct-reconstruction-plan.md) | Does the stable official equation follow without the isolated well-founded fix theorem? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
