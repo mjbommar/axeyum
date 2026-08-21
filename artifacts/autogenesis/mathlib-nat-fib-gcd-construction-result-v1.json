@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-construction-result-v1",
+  "state": "first-helper-submission-type-mismatch-second-run-skipped-zero-target-credit",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-nat-fib-gcd-construction-plan-v1.json",
+    "sha256": "ede11730d1bc41afbecee2374146bae3717ba093b434cb2dbe1b38cc4d757711"
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+    "sha256": "ddaf09df4ffe5c4378986831c964551a370672dfa85f31e21c27b50b0946f776"
+  },
+  "observation": {
+    "invocation": 1,
+    "stage": "helper trusted-kernel submission",
+    "helper": "Axeyum.Autogenesis.fibGcdQuotientIterationV1",
+    "error": "Fibonacci quotient iteration rejected: TypeMismatch { expected: ExprId(109659), got: ExprId(109670) }",
+    "process_local_expression_ids_are_not_semantic_evidence": true,
+    "capsule_output_written": false,
+    "target_submitted": false,
+    "second_invocation_skipped": true
+  },
+  "execution": {
+    "driver_builds": 1,
+    "complete_invocations": 0,
+    "capsule_reads": 2,
+    "fresh_output_imports": 0,
+    "helper_theorem_submissions": 1,
+    "target_theorem_submissions": 0,
+    "proof_search_invocations": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "helper_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "preregister one no-submission diagnostic that infers and renders only the helper proof type and compares it with the frozen expected helper type",
+  "limitations": "This is a retained rejection, not theorem evidence. The target was never constructed or submitted, no capsule was written, and the process-local ExprId values grant no diagnostic meaning beyond locating the trusted gate."
+}

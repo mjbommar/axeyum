@@ -29,6 +29,12 @@ const TARGET_NATIVE_GOAL_SHA256: &str =
     "0ac365e0654218862f44cc19391e699b85e495ab1b9608fc3eca79585c0e0475";
 const TARGET: &str = "Nat.gcd_fib_add_self";
 const GCD_GREATEST_TARGET: &str = "Nat.gcd_greatest";
+const FIB_GCD_TARGET: &str = "Nat.fib_gcd";
+const FIB_GCD_ITERATION: &str = "Axeyum.Autogenesis.fibGcdQuotientIterationV1";
+const GCD_GREATEST_CAPSULE: &str =
+    "c233478948b4d4aedc01c839ef9013c3feb2ddb0009d8b57699d7efb755375e6";
+const GCD_FIB_SHIFT_CAPSULE: &str =
+    "279dc4db5daa6dc2f532f9876052500a7e278c54264b32ccbc9d4256907dfc24";
 const CLEAN_ANTISYMM: &str = "Axeyum.Autogenesis.dvdAntisymmOfficialV1";
 const CLEAN_ANTISYMM_CAPSULE: &str =
     "bc147e08e6425ce8c31f3a10ccd5e9a7f7774ef0265b45784700588cb4bbcb25";
@@ -173,6 +179,10 @@ fn run() -> Result<(), String> {
     let mut args = std::env::args_os().skip(1);
     if args.next().as_deref() == Some(std::ffi::OsStr::new("--target-native-gcd-greatest")) {
         return run_target_native_gcd_greatest(args);
+    }
+    let mut args = std::env::args_os().skip(1);
+    if args.next().as_deref() == Some(std::ffi::OsStr::new("--target-native-fib-gcd")) {
+        return run_target_native_fib_gcd(args);
     }
     let mut args = std::env::args_os().skip(1);
     if args.next().as_deref() == Some(std::ffi::OsStr::new("--target-native-goal-audit")) {
@@ -1091,6 +1101,399 @@ fn declare_target_native_gcd_greatest(kernel: &mut Kernel) -> Result<NameId, Str
     Ok(target)
 }
 
+fn run_target_native_fib_gcd(
+    mut args: impl Iterator<Item = std::ffi::OsString>,
+) -> Result<(), String> {
+    let greatest_path = path(&mut args)?;
+    let shift_path = path(&mut args)?;
+    let output_path = path(&mut args)?;
+    if args.next().is_some() || output_path.exists() {
+        return Err("usage: nat_gcd_fib_add_self_exact --target-native-fib-gcd \
+             <gcd-greatest> <gcd-fib-add-self> <output>"
+            .to_owned());
+    }
+    let greatest = import_bound(&greatest_path, GCD_GREATEST_CAPSULE, "gcd-greatest")?;
+    let shift = import_bound(&shift_path, GCD_FIB_SHIFT_CAPSULE, "gcd-fib-add-self")?;
+    let composed = compose_checked_theorem_slice(shift.kernel(), greatest.kernel(), &[TARGET])
+        .map_err(|error| format!("Nat.fib_gcd setup composition declined: {error:?}"))?;
+    verify_checked_theorem_composition(
+        shift.kernel(),
+        greatest.kernel(),
+        composed.kernel(),
+        composed.receipt(),
+    )
+    .map_err(|error| format!("Nat.fib_gcd setup composition did not replay: {error:?}"))?;
+    let composition_receipt = composed.receipt().receipt_sha256.clone();
+    let mut kernel = composed.kernel().clone();
+    let helper = declare_fib_gcd_quotient_iteration(&mut kernel)?;
+    require_empty(&kernel, helper, FIB_GCD_ITERATION)?;
+    let theorem = declare_fib_gcd(&mut kernel)?;
+    require_empty(&kernel, theorem, FIB_GCD_TARGET)?;
+    let helper_evidence = evidence(&kernel, helper)?;
+    let target_evidence = evidence(&kernel, theorem)?;
+    let target_goal = theorem_type(&kernel, theorem)?;
+    let target_goal_sha256 = canonical_expression_sha256(&kernel, target_goal)?;
+    let bytes = kernel
+        .render_lean4export_ndjson_roots(&Lean4ExportMetadata::axeyum("4.30.0"), &[theorem])
+        .map_err(|error| format!("Nat.fib_gcd capsule export failed: {error}"))?;
+    for pass in 1..=2 {
+        let replay = import_ndjson(Cursor::new(bytes.as_bytes()), ImportLimits::default())
+            .map_err(|error| format!("Nat.fib_gcd import {pass} failed: {error:?}"))?;
+        let replayed = find_name(replay.kernel(), FIB_GCD_TARGET)?;
+        if evidence(replay.kernel(), replayed)? != target_evidence {
+            return Err(format!("Nat.fib_gcd import {pass} changed theorem"));
+        }
+    }
+    fs::write(&output_path, &bytes)
+        .map_err(|error| format!("Nat.fib_gcd capsule write failed: {error}"))?;
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "schema_version":1,
+            "kind":"axeyum-autogenesis-target-native-nat-fib-gcd-capsule",
+            "state":"exact-helper-and-target-reconstructed-empty-footprint-roundtrip-checked",
+            "composition_receipt_sha256":composition_receipt,
+            "target_goal_sha256":target_goal_sha256,
+            "helper":helper_evidence,
+            "target":target_evidence,
+            "capsule":{"bytes":bytes.len(),"sha256":hex_sha256(bytes.as_bytes()),"fresh_imports":2},
+            "execution":{"helper_theorem_submissions":1,"target_theorem_submissions":1,"exports":1,"fresh_imports":2,"retries":0},
+            "rendered_material":{"proof_terms":0,"theorem_types":0,"theorem_values":0},
+            "search_invocations":0,
+            "fact_status_changes":0,
+            "evaluation_credit":0,
+            "ledger_writes":0
+        }))
+        .map_err(|error| error.to_string())?
+    );
+    Ok(())
+}
+
+fn fib_gcd_iteration_statement(d: &mut Dev<'_>, m: ExprId, r: ExprId, q: ExprId) -> ExprId {
+    let fib_m = d.fib(m);
+    let product = d.mul(m, q);
+    let index = d.add(product, r);
+    let fib_index = d.fib(index);
+    let fib_r = d.fib(r);
+    let left = d.gcd(fib_m, fib_index);
+    let right = d.gcd(fib_m, fib_r);
+    d.eq(left, right)
+}
+
+#[allow(clippy::too_many_lines)]
+fn declare_fib_gcd_quotient_iteration(kernel: &mut Kernel) -> Result<NameId, String> {
+    if optional_name(kernel, FIB_GCD_ITERATION)?.is_some() {
+        return Err("Fibonacci quotient-iteration helper unexpectedly exists".to_owned());
+    }
+    let target = nested_name(
+        kernel,
+        &["Axeyum", "Autogenesis", "fibGcdQuotientIterationV1"],
+    );
+    let mut d = Dev::new(kernel)?;
+    let add_zero = d.exact("Nat.zero_add")?;
+    let add_assoc = d.exact("Nat.add_assoc")?;
+    let add_comm = d.exact("Nat.add_comm")?;
+    let mul_succ = d.exact("Nat.mul_succ")?;
+    let shift = d.exact(TARGET)?;
+    let nat = d.nat_ty();
+    let m_fv = d.fresh();
+    let m = d.kernel.fvar(m_fv);
+    let r_fv = d.fresh();
+    let r = d.kernel.fvar(r_fv);
+    let q_fv = d.fresh();
+    let q = d.kernel.fvar(q_fv);
+    let proof = d.induct(
+        &|d, candidate| fib_gcd_iteration_statement(d, m, r, candidate),
+        &|d| {
+            let zero = d.zero();
+            let source = d.add(zero, r);
+            let equality = d.lemma(add_zero, &[r]);
+            d.congr(source, r, equality, &|d, index| {
+                let fib_m = d.fib(m);
+                let fib_index = d.fib(index);
+                d.gcd(fib_m, fib_index)
+            })
+        },
+        &|d, predecessor, ih| {
+            let successor = d.succ(predecessor);
+            let product = d.mul(m, predecessor);
+            let source_product = d.mul(m, successor);
+            let source = d.add(source_product, r);
+            let product_plus_m = d.add(product, m);
+            let first_target = d.add(product_plus_m, r);
+            let mul_step = d.lemma(mul_succ, &[m, predecessor]);
+            let first = d.congr(source_product, product_plus_m, mul_step, &|d, value| {
+                d.add(value, r)
+            });
+            let m_plus_r = d.add(m, r);
+            let middle_one = d.add(product, m_plus_r);
+            let second = d.lemma(add_assoc, &[product, m, r]);
+            let r_plus_m = d.add(r, m);
+            let swapped = d.lemma(add_comm, &[m, r]);
+            let third = d.congr(m_plus_r, r_plus_m, swapped, &|d, value| {
+                d.add(product, value)
+            });
+            let product_plus_r = d.add(product, r);
+            let target = d.add(product_plus_r, m);
+            let associated = d.lemma(add_assoc, &[product, r, m]);
+            let fourth = d.symm(target, middle_one, associated);
+            let first_two = d.trans(source, first_target, middle_one, first, second);
+            let product_plus_r_plus_m = d.add(product, r_plus_m);
+            let first_three = d.trans(source, middle_one, product_plus_r_plus_m, first_two, third);
+            let index_equality =
+                d.trans(source, product_plus_r_plus_m, target, first_three, fourth);
+            let normalized = d.congr(source, target, index_equality, &|d, index| {
+                let fib_m = d.fib(m);
+                let fib_index = d.fib(index);
+                d.gcd(fib_m, fib_index)
+            });
+            let shifted = d.add(product, r);
+            let shift_proof = d.lemma(shift, &[m, shifted]);
+            let source_gcd = {
+                let fib_m = d.fib(m);
+                let fib_source = d.fib(source);
+                d.gcd(fib_m, fib_source)
+            };
+            let target_gcd = {
+                let fib_m = d.fib(m);
+                let fib_target = d.fib(target);
+                d.gcd(fib_m, fib_target)
+            };
+            let shifted_gcd = {
+                let fib_m = d.fib(m);
+                let fib_shifted = d.fib(shifted);
+                d.gcd(fib_m, fib_shifted)
+            };
+            let through_shift =
+                d.trans(source_gcd, target_gcd, shifted_gcd, normalized, shift_proof);
+            let final_gcd = {
+                let fib_m = d.fib(m);
+                let fib_r = d.fib(r);
+                d.gcd(fib_m, fib_r)
+            };
+            d.trans(source_gcd, shifted_gcd, final_gcd, through_shift, ih)
+        },
+        q,
+    );
+    let proof = d.lam(q_fv, nat, proof);
+    let proof = d.lam(r_fv, nat, proof);
+    let proof = d.lam(m_fv, nat, proof);
+    let ty = fib_gcd_iteration_statement(&mut d, m, r, q);
+    let ty = d.pi(q_fv, nat, ty);
+    let ty = d.pi(r_fv, nat, ty);
+    let ty = d.pi(m_fv, nat, ty);
+    d.kernel
+        .add_declaration(Declaration::Theorem {
+            name: target,
+            uparams: vec![],
+            ty,
+            value: proof,
+        })
+        .map_err(|error| format!("Fibonacci quotient iteration rejected: {error:?}"))?;
+    Ok(target)
+}
+
+fn fib_gcd_statement(d: &mut Dev<'_>, m: ExprId, n: ExprId) -> ExprId {
+    let gcd_indices = d.gcd(m, n);
+    let left = d.fib(gcd_indices);
+    let fib_m = d.fib(m);
+    let fib_n = d.fib(n);
+    let right = d.gcd(fib_m, fib_n);
+    d.eq(left, right)
+}
+
+fn declare_fib_gcd(kernel: &mut Kernel) -> Result<NameId, String> {
+    if optional_name(kernel, FIB_GCD_TARGET)?.is_some() {
+        return Err("Nat.fib_gcd unexpectedly already exists".to_owned());
+    }
+    let target = nested_name(kernel, &["Nat", "fib_gcd"]);
+    let mut d = Dev::new(kernel)?;
+    let gcd_induction = d.exact("Nat.gcd.induction")?;
+    let quotient = d.exact("Axeyum.Autogenesis.modQuotientWitnessV4")?;
+    let helper = d.exact(FIB_GCD_ITERATION)?;
+    let gcd_comm = d.exact(CLEAN_GCD_COMM)?;
+    let nat = d.nat_ty();
+    let m_fv = d.fresh();
+    let m = d.kernel.fvar(m_fv);
+    let n_fv = d.fresh();
+    let n = d.kernel.fvar(n_fv);
+    let motive = d.two_lambdas(nat, nat, &|d, left, right| {
+        fib_gcd_statement(d, left, right)
+    });
+    let base_n_fv = d.fresh();
+    let base_n = d.kernel.fvar(base_n_fv);
+    let fib_base_n = d.fib(base_n);
+    let base = d.refl(fib_base_n);
+    let base = d.lam(base_n_fv, nat, base);
+    let step = fib_gcd_step(&mut d, quotient, helper, gcd_comm)?;
+    let induction = d.kernel.const_(gcd_induction, vec![]);
+    let proof = d.apply(induction, &[motive, m, n, base, step]);
+    let proof = d.lam(n_fv, nat, proof);
+    let proof = d.lam(m_fv, nat, proof);
+    let ty = fib_gcd_statement(&mut d, m, n);
+    let ty = d.pi(n_fv, nat, ty);
+    let ty = d.pi(m_fv, nat, ty);
+    d.kernel
+        .add_declaration(Declaration::Theorem {
+            name: target,
+            uparams: vec![],
+            ty,
+            value: proof,
+        })
+        .map_err(|error| format!("exact Nat.fib_gcd rejected: {error:?}"))?;
+    Ok(target)
+}
+
+fn fib_gcd_step(
+    d: &mut Dev<'_>,
+    quotient: NameId,
+    helper: NameId,
+    gcd_comm: NameId,
+) -> Result<ExprId, String> {
+    let nat = d.nat_ty();
+    let m_fv = d.fresh();
+    let m = d.kernel.fvar(m_fv);
+    let n_fv = d.fresh();
+    let n = d.kernel.fvar(n_fv);
+    let hm_ty = {
+        let zero = d.zero();
+        let one = d.succ(zero);
+        d.le(one, m)
+    };
+    let remainder = d.modulo(n, m)?;
+    let ih_ty = fib_gcd_statement(d, remainder, m);
+    let hm_fv = d.fresh();
+    let hm = d.kernel.fvar(hm_fv);
+    let ih_fv = d.fresh();
+    let ih = d.kernel.fvar(ih_fv);
+    let body = fib_gcd_step_by_cases(d, m, n, quotient, helper, gcd_comm);
+    let body = d.apply(body, &[hm, ih]);
+    let body = d.lam(ih_fv, ih_ty, body);
+    let body = d.lam(hm_fv, hm_ty, body);
+    let body = d.lam(n_fv, nat, body);
+    Ok(d.lam(m_fv, nat, body))
+}
+
+fn fib_gcd_step_by_cases(
+    d: &mut Dev<'_>,
+    m: ExprId,
+    n: ExprId,
+    quotient: NameId,
+    helper: NameId,
+    gcd_comm: NameId,
+) -> ExprId {
+    let branch_motive = |d: &mut Dev<'_>, candidate: ExprId| -> ExprId {
+        let hm_ty = {
+            let zero = d.zero();
+            let one = d.succ(zero);
+            d.le(one, candidate)
+        };
+        let remainder = d.modulo(n, candidate).expect("Nat.mod must exist");
+        let ih_ty = fib_gcd_statement(d, remainder, candidate);
+        let result = fib_gcd_statement(d, candidate, n);
+        let after_ih = d.arrow(ih_ty, result);
+        d.arrow(hm_ty, after_ih)
+    };
+    d.induct(
+        &branch_motive,
+        &|d| {
+            let zero = d.zero();
+            let hm_ty = {
+                let one = d.succ(zero);
+                d.le(one, zero)
+            };
+            let remainder = d.modulo(n, zero).expect("Nat.mod must exist");
+            let ih_ty = fib_gcd_statement(d, remainder, zero);
+            let hm_fv = d.fresh();
+            let ih_fv = d.fresh();
+            let fib_n = d.fib(n);
+            let proof = d.refl(fib_n);
+            let proof = d.lam(ih_fv, ih_ty, proof);
+            d.lam(hm_fv, hm_ty, proof)
+        },
+        &|d, predecessor, _case_ih| {
+            let sm = d.succ(predecessor);
+            let hm_ty = {
+                let zero = d.zero();
+                let one = d.succ(zero);
+                d.le(one, sm)
+            };
+            let remainder = d.modulo(n, sm).expect("Nat.mod must exist");
+            let ih_ty = fib_gcd_statement(d, remainder, sm);
+            let hm_fv = d.fresh();
+            let hm = d.kernel.fvar(hm_fv);
+            let ih_fv = d.fresh();
+            let ih = d.kernel.fvar(ih_fv);
+            let witness = d.lemma(quotient, &[sm, n, hm]);
+            let result = fib_gcd_witness_elim(d, sm, n, remainder, ih, witness, helper, gcd_comm);
+            let result = d.lam(ih_fv, ih_ty, result);
+            d.lam(hm_fv, hm_ty, result)
+        },
+        m,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn fib_gcd_witness_elim(
+    d: &mut Dev<'_>,
+    m: ExprId,
+    n: ExprId,
+    remainder: ExprId,
+    ih: ExprId,
+    witness: ExprId,
+    helper: NameId,
+    gcd_comm: NameId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let result_ty = fib_gcd_statement(d, m, n);
+    let predicate = {
+        let q_fv = d.fresh();
+        let q = d.kernel.fvar(q_fv);
+        let product = d.mul(m, q);
+        let sum = d.add(product, remainder);
+        let equation = d.eq(sum, n);
+        d.lam(q_fv, nat, equation)
+    };
+    let one = d.one_level();
+    let exists = find_name(d.kernel, "Exists").expect("Exists must exist");
+    let exists_head = d.kernel.const_(exists, vec![one]);
+    let witness_ty = d.apply(exists_head, &[nat, predicate]);
+    let proof_fv = d.fresh();
+    let motive = d.lam(proof_fv, witness_ty, result_ty);
+    let q_fv = d.fresh();
+    let q = d.kernel.fvar(q_fv);
+    let product = d.mul(m, q);
+    let sum = d.add(product, remainder);
+    let equation_ty = d.eq(sum, n);
+    let equation_fv = d.fresh();
+    let equation = d.kernel.fvar(equation_fv);
+    let fib_r = d.fib(remainder);
+    let fib_m = d.fib(m);
+    let gcd_r_m = d.gcd(fib_r, fib_m);
+    let gcd_m_r = d.gcd(fib_m, fib_r);
+    let comm = d.lemma(gcd_comm, &[fib_r, fib_m]);
+    let gcd_indices = d.gcd(remainder, m);
+    let left = d.fib(gcd_indices);
+    let left_to_mr = d.trans(left, gcd_r_m, gcd_m_r, ih, comm);
+    let helper_proof = d.lemma(helper, &[m, remainder, q]);
+    let fib_sum = d.fib(sum);
+    let gcd_m_sum = d.gcd(fib_m, fib_sum);
+    let mr_to_sum = d.symm(gcd_m_sum, gcd_m_r, helper_proof);
+    let sum_to_n = d.congr(sum, n, equation, &|d, index| {
+        let fib_m = d.fib(m);
+        let fib_index = d.fib(index);
+        d.gcd(fib_m, fib_index)
+    });
+    let fib_n = d.fib(n);
+    let gcd_m_n = d.gcd(fib_m, fib_n);
+    let mr_to_n = d.trans(gcd_m_r, gcd_m_sum, gcd_m_n, mr_to_sum, sum_to_n);
+    let body = d.trans(left, gcd_m_r, gcd_m_n, left_to_mr, mr_to_n);
+    let minor = d.lam(equation_fv, equation_ty, body);
+    let minor = d.lam(q_fv, nat, minor);
+    let rec = d.kernel.const_(d.exists_rec, vec![one]);
+    d.apply(rec, &[nat, predicate, motive, minor, witness])
+}
+
 #[allow(clippy::too_many_lines)]
 fn run_target_native_goal_audit(
     mut args: impl Iterator<Item = std::ffi::OsString>,
@@ -1884,6 +2287,10 @@ impl<'a> Dev<'a> {
     }
     fn mul(&mut self, left: ExprId, right: ExprId) -> ExprId {
         self.lemma(self.mul, &[left, right])
+    }
+    fn modulo(&mut self, left: ExprId, right: ExprId) -> Result<ExprId, String> {
+        let modulo = find_name(self.kernel, "Nat.mod")?;
+        Ok(self.lemma(modulo, &[left, right]))
     }
     fn gcd(&mut self, left: ExprId, right: ExprId) -> ExprId {
         self.lemma(self.gcd, &[left, right])
