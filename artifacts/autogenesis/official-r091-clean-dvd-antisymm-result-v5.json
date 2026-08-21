@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-r091-clean-dvd-antisymm-result-v5",
+  "state": "first-run-declined-at-eager-unused-iff-resolution-second-skipped",
+  "plan": {
+    "path": "artifacts/autogenesis/official-r091-clean-dvd-antisymm-plan-v5.json",
+    "sha256": "cc755669d347e0cfa8ab0a3992a9ee8f9c4e847ee29ec0dffc0b64b91e7de45a"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/344c32835-official-r091-clean-dvd-antisymm-v5",
+    "manifest_sha256": "bc5f3191f6e08b9039386a6039c94410a01c6248a3f9c711c5ae7a61e01818c0",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "decline": {
+    "stage": "support-builder-initialization-after-successful-cancellation-composition",
+    "class": "MissingDeclaration",
+    "name": "Iff",
+    "used_by_official_support_route": false,
+    "partial_kernel_published": false
+  },
+  "execution": {
+    "binary_builds": 1,
+    "complete_invocations": 1,
+    "successful_cancellation_compositions": 1,
+    "support_submissions": 0,
+    "exports": 0,
+    "imports": 0,
+    "exact_target_submissions": 0,
+    "retries": 0,
+    "second_invocation_skipped": true
+  },
+  "authority": {
+    "support_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Preregister lazy Iff/Iff.rec resolution only at iff_reverse call sites; keep the official support proof bodies, identities, budgets, and target authority unchanged.",
+  "limitations": "The exact Acc and cancellation composition succeeded, but no clean-order theorem was submitted or exported and no downstream credit is granted."
+}

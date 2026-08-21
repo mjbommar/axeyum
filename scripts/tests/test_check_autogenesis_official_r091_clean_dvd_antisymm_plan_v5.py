@@ -13,6 +13,11 @@ assert SPEC and SPEC.loader
 CHECK = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(CHECK)
 
+BOUNDARY_SPEC = importlib.util.spec_from_file_location("v5_v6", ROOT / "scripts/check-autogenesis-official-r091-clean-dvd-antisymm-v5-v6.py")
+assert BOUNDARY_SPEC and BOUNDARY_SPEC.loader
+BOUNDARY = importlib.util.module_from_spec(BOUNDARY_SPEC)
+BOUNDARY_SPEC.loader.exec_module(BOUNDARY)
+
 
 class PlanControls(unittest.TestCase):
     def test_live_plan_passes(self) -> None:
@@ -23,6 +28,18 @@ class PlanControls(unittest.TestCase):
         plan["construction"]["supports"].pop()
         with self.assertRaises(CHECK.PlanError):
             CHECK.validate(plan)
+
+
+class V5V6BoundaryControls(unittest.TestCase):
+    def test_live_boundary_passes(self) -> None:
+        self.assertEqual(BOUNDARY.validate()[0]["decline"]["name"], "Iff")
+
+    def test_retry_mutation_fails(self) -> None:
+        result, plan = BOUNDARY.validate()
+        plan = copy.deepcopy(plan)
+        plan["budget"]["max_retries"] = 1
+        with self.assertRaises(BOUNDARY.BoundaryError):
+            BOUNDARY.validate(result, plan)
 
     def test_target_budget_mutation_fails(self) -> None:
         plan = copy.deepcopy(CHECK.load())
