@@ -5371,6 +5371,42 @@ pub struct PopulationRefinementOneSidedConnectedImplication {
     pub candidate_target_numerator: BigUint,
 }
 
+/// One-sided connected-trace ledger after spending all translation zeros.
+///
+/// This report subtracts ADR-0588's exact forced-zero characters from the
+/// individual Weil envelopes both below and inside the connected top window.
+/// It retains the baseline fields so the improvement, including a possible
+/// unchanged integer saving ceiling, remains explicit.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TranslationAdjustedOneSidedConnectedImplication {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// Endpoint degree `2ell+1` or `2ell+2`.
+    pub degree: usize,
+    /// First level retained inside the connected identity-path trace.
+    pub first_top_level: usize,
+    /// Baseline low-level individual-Weil envelope.
+    pub baseline_low_weil_numerator: BigUint,
+    /// Low-level envelope after removing translation-forced zeros.
+    pub adjusted_low_weil_numerator: BigUint,
+    /// Baseline individual-Weil envelope in the connected top window.
+    pub baseline_connected_top_weil_numerator: BigUint,
+    /// Top-window envelope after removing translation-forced zeros.
+    pub adjusted_connected_top_weil_numerator: BigUint,
+    /// Baseline harmful-negative allowance.
+    pub baseline_negative_allowance_numerator: BigUint,
+    /// Harmful-negative allowance after the improved low-level envelope.
+    pub adjusted_negative_allowance_numerator: BigUint,
+    /// Baseline integer saving requested from the connected top trace.
+    pub baseline_required_saving_ceiling: BigUint,
+    /// Integer saving still requested after every translation zero is spent.
+    pub adjusted_required_saving_ceiling: BigUint,
+    /// Forced-zero characters below the connected top window.
+    pub low_forced_vanishing_character_count: BigUint,
+    /// Forced-zero characters inside the connected top window.
+    pub top_forced_vanishing_character_count: BigUint,
+}
+
 /// Exact conditional variance inside the identity coarse Witt cylinder.
 ///
 /// Let `c=first_top_level-1`, let `R=2^(ell-c)`, and let `x_e` be the fine
@@ -6338,6 +6374,89 @@ pub fn population_refinement_one_sided_connected_implication(
         negative_allowance_numerator,
         required_saving_ceiling,
         candidate_target_numerator: symmetric.candidate_target_numerator,
+    })
+}
+
+fn translation_forced_zero_count_big(level: usize, degree: usize) -> BigUint {
+    if degree.is_multiple_of(2) || level.is_multiple_of(2) {
+        BigUint::from(0_u8)
+    } else if level == 1 {
+        BigUint::from(1_u8)
+    } else {
+        BigUint::from(1_u8) << ((level - 3) / 2)
+    }
+}
+
+/// Reprice the one-sided connected trace after every translation zero.
+///
+/// A character of exact level `j` has the individual Weil envelope
+/// `(j-1)2^ceil(n/2)`.  ADR-0588 proves that translation forces exactly one
+/// such character to vanish at level one and `2^((j-3)/2)` at odd `j>=3`
+/// when `n` is odd; it forces none at even `j` or even `n`.  This operation
+/// removes those terms before recomputing the low-level allowance and the
+/// top-window saving ceiling.  It is a proved ledger improvement, not a bound
+/// on any residual character.
+///
+/// # Errors
+///
+/// Rejects the same invalid endpoints as
+/// [`population_refinement_one_sided_connected_implication`] and fails closed
+/// if a forced-zero count exceeds an exact conductor population.
+pub fn translation_adjusted_one_sided_connected_implication(
+    ell: usize,
+    degree: usize,
+) -> Result<TranslationAdjustedOneSidedConnectedImplication, HayesError> {
+    let baseline = population_refinement_one_sided_connected_implication(ell, degree)?;
+    let weil_scale = BigUint::from(1_u8) << degree.div_ceil(2);
+    let mut adjusted_low_weil_numerator = BigUint::from(0_u8);
+    let mut adjusted_connected_top_weil_numerator = BigUint::from(0_u8);
+    let mut low_forced_vanishing_character_count = BigUint::from(0_u8);
+    let mut top_forced_vanishing_character_count = BigUint::from(0_u8);
+    for level in 1..=ell {
+        let exact_character_count = BigUint::from(1_u8) << (level - 1);
+        let forced = translation_forced_zero_count_big(level, degree);
+        if forced > exact_character_count {
+            return Err(HayesError::Invariant(
+                "translation zero count exceeds exact conductor population".to_owned(),
+            ));
+        }
+        let adjusted_level_envelope =
+            (exact_character_count - &forced) * BigUint::from(level - 1) * &weil_scale;
+        if level < baseline.first_top_level {
+            adjusted_low_weil_numerator += adjusted_level_envelope;
+            low_forced_vanishing_character_count += forced;
+        } else {
+            adjusted_connected_top_weil_numerator += adjusted_level_envelope;
+            top_forced_vanishing_character_count += forced;
+        }
+    }
+    if adjusted_low_weil_numerator > baseline.low_weil_triangle_numerator
+        || adjusted_connected_top_weil_numerator > baseline.connected_top_individual_weil_numerator
+    {
+        return Err(HayesError::Invariant(
+            "translation adjustment increased an individual-Weil envelope".to_owned(),
+        ));
+    }
+    let adjusted_negative_allowance_numerator =
+        &baseline.candidate_target_numerator - &adjusted_low_weil_numerator;
+    let adjusted_required_saving_ceiling = (&adjusted_connected_top_weil_numerator
+        + &adjusted_negative_allowance_numerator
+        - BigUint::from(1_u8))
+        / &adjusted_negative_allowance_numerator;
+    Ok(TranslationAdjustedOneSidedConnectedImplication {
+        ell,
+        degree,
+        first_top_level: baseline.first_top_level,
+        baseline_low_weil_numerator: baseline.low_weil_triangle_numerator,
+        adjusted_low_weil_numerator,
+        baseline_connected_top_weil_numerator: baseline.connected_top_individual_weil_numerator,
+        adjusted_connected_top_weil_numerator,
+        baseline_negative_allowance_numerator: baseline.negative_allowance_numerator,
+        adjusted_negative_allowance_numerator,
+        baseline_required_saving_ceiling: baseline.required_saving_ceiling,
+        adjusted_required_saving_ceiling,
+        low_forced_vanishing_character_count,
+        top_forced_vanishing_character_count,
     })
 }
 
@@ -21420,6 +21539,71 @@ mod tests {
         }
         assert!(population_refinement_one_sided_connected_implication(3, 7).is_err());
         assert!(population_refinement_one_sided_connected_implication(200, 400).is_err());
+    }
+
+    #[test]
+    fn translation_zeros_are_spent_in_the_one_sided_endpoint_ledger() {
+        let odd = translation_adjusted_one_sided_connected_implication(200, 401).unwrap();
+        assert_eq!(
+            odd.low_forced_vanishing_character_count,
+            BigUint::from(1_u8) << 94
+        );
+        assert_eq!(
+            odd.top_forced_vanishing_character_count,
+            BigUint::from(31_u8) << 94
+        );
+        assert!(odd.adjusted_low_weil_numerator < odd.baseline_low_weil_numerator);
+        assert!(
+            odd.adjusted_connected_top_weil_numerator < odd.baseline_connected_top_weil_numerator
+        );
+        assert!(
+            odd.adjusted_negative_allowance_numerator > odd.baseline_negative_allowance_numerator
+        );
+        assert_eq!(odd.adjusted_required_saving_ceiling, BigUint::from(626_u16));
+
+        let even = translation_adjusted_one_sided_connected_implication(200, 402).unwrap();
+        assert_eq!(
+            even.low_forced_vanishing_character_count,
+            BigUint::from(0_u8)
+        );
+        assert_eq!(
+            even.top_forced_vanishing_character_count,
+            BigUint::from(0_u8)
+        );
+        assert_eq!(
+            even.adjusted_low_weil_numerator,
+            even.baseline_low_weil_numerator
+        );
+        assert_eq!(
+            even.adjusted_connected_top_weil_numerator,
+            even.baseline_connected_top_weil_numerator
+        );
+        assert_eq!(
+            even.adjusted_required_saving_ceiling,
+            even.baseline_required_saving_ceiling
+        );
+
+        for ell in 200_usize..=1_024 {
+            for degree in [2 * ell + 1, 2 * ell + 2] {
+                let report =
+                    translation_adjusted_one_sided_connected_implication(ell, degree).unwrap();
+                assert!(
+                    report.adjusted_required_saving_ceiling
+                        <= report.baseline_required_saving_ceiling
+                );
+                if degree.is_multiple_of(2) {
+                    assert_eq!(
+                        report.adjusted_connected_top_weil_numerator,
+                        report.baseline_connected_top_weil_numerator
+                    );
+                } else {
+                    assert!(
+                        report.adjusted_connected_top_weil_numerator
+                            < report.baseline_connected_top_weil_numerator
+                    );
+                }
+            }
+        }
     }
 
     #[test]
