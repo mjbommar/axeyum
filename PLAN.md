@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-20 | `838fd5e3e` | Proved that every proper odd-endpoint `Frob*c` orbit collapses to the cone vertex and every projective fixed point is smooth, transverse, and has unit local multiplicity, while retaining the unbounded global trace as REL. |
 | 2026-08-20 | `fbeb97a2b` | Proved the odd-endpoint projective cycle eigenlines smooth and transverse with exact Vandermonde Jacobians and tangent weights, while correcting the relative Lefschetz--Verdier source and retaining the distinct `Frob*c` trace as open. |
 | 2026-08-20 | `0d6b5a524` | Added bounded binary Hankel `(rho,pi)` characteristics with exhaustive independent rank controls, while proving from source scope that the published divisor variance does not supply the signed prime-weighted higher moment or REL. |
 | 2026-08-20 | `7e1c34a41` | Applied the zero-2-rank trace theorem to the exact relative Carlitz Jacobian quotient, proved its endpoint content is only parity, and stopped scalar Artin--Schreier or elementary-abelian bounds from receiving REL credit. |
@@ -484,7 +485,15 @@ localize the different `Frob*c` correspondence: its ordinary fixed locus is
 the original short-interval count.  A source audit also corrected the relative
 Lefschetz--Verdier pointer to Lu--Zheng arXiv `2005.08522`; that functorial
 theorem supplies no numerical REL estimate, while the previously cited arXiv
-`2309.02587` is a singular-support paper.
+`2309.02587` is a singular-support paper.  The actual odd-endpoint `Frob*c`
+fixed locus is now locally complete as well.  Every proper Frobenius-orbit
+stratum has odd multiplicity, lies inside the triangular zero-prefix range,
+and collapses to the affine cone vertex.  Consequently every projective fixed
+point has a full distinct-root orbit, Vandermonde Jacobian rank `ell`, and a
+transverse unit local term because Frobenius has zero differential.  Literal
+extension-field enumeration independently checks the collapse.  This removes
+all odd singular local corrections, but the sum of the unit terms remains the
+unknown global point count and supplies no REL saving.
 
 **Next:** prove `(REL)`, encode it as replayable evidence, remove the
 manuscript's fail-visible warning, and perform the final source audit.  The
@@ -492,9 +501,10 @@ next coding/geometric bridge must control the complete relative Witt
 weight/zero-fibre distribution before characterwise absolute values; zero
 `2`-rank, a scalar minimum distance, or an elementary-abelian cover theorem is
 not sufficient.  At the odd endpoint, merely smoothing or counting the cycle
-eigenlines is also finished and insufficient: a geometric continuation must
-bound `Frob*c` itself or construct and bound genuinely Frobenius-dependent
-local terms.  A Hankel continuation must prove a signed prime-weighted
+eigenlines and the complete `Frob*c` fixed locus is also finished and
+insufficient: a geometric continuation must bound the global trace on the
+smooth exact-orbit locus, rather than compute more local terms.  A Hankel
+continuation must prove a signed prime-weighted
 all-quasi-regular estimate and immediately discharge the endpoint ledger;
 rank-only or divisor-only tables receive no proof credit.  The stronger
 sufficient fourth-moment bound is
