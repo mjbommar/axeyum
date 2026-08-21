@@ -76,6 +76,7 @@
 | 2026-08-21 | (pending) | V9 exposes predecessor-oriented `Nat.sub`; exact `add_sub_cancel` and `sub_self_add` candidates are frozen for a two-name type probe |
 | 2026-08-21 | (pending) | Two exact-oriented Nat subtraction equations are bound; V10 freezes direct use plus clean commutativity transport in the unchanged integer proof |
 | 2026-08-21 | (pending) | V10 compiles but retains propext through oriented Nat subtraction; the two exact roots are frozen for nearest-boundary classification |
+| 2026-08-21 | (pending) | Both oriented Nat equations are propext-bearing; two add/sub translation roots plus zero subtraction are frozen for the next clean boundary |
 
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |

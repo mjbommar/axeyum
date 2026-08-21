@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-subtraction-translation-audit-plan",
+  "state": "preregistered-before-three-root-single-read",
+  "predecessor": {"path": "artifacts/autogenesis/mathlib-nat-oriented-subtraction-audit-result-v1.json", "required_state": "both-oriented-subtraction-equations-propext-bearing"},
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-raw-cancellation-v10/leaves.ndjson", "bytes": 258097, "sha256": "0b01976d35be7f7c161ca7635e2569f753be3b0d4e4541dd00a147ad5eb5965b"},
+  "roots": ["Nat.add_sub_add_right", "Nat.add_sub_add_left", "Nat.zero_sub"],
+  "budget": {"max_importer_runs": 1, "max_proof_bearing_stream_reads": 1, "max_compiler_invocations": 0, "max_exporter_invocations": 0, "max_theorem_submissions": 0, "max_ledger_writes": 0},
+  "output": "artifacts/autogenesis/mathlib-nat-subtraction-translation-audit-result-v1.json",
+  "decision_rule": "Use empty-footprint translation roots directly; otherwise reconstruct their nearest raw predecessor equation and stop using the official subtraction convenience layer.",
+  "limitations": "This audit grants no cancellation or Fibonacci theorem credit."
+}
