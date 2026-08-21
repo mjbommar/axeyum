@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-add-two-residualization-result",
+  "state": "parameterized-source-compiles-exporter-cannot-find-module-before-stream",
+  "plan_sha256": "eca21e128ccf24b2986999e1db44e2855a1210af596aed3116bb6de8cf10c1f0",
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-add-two-residual-v3.lean",
+    "sha256": "d1f615db6821c187ddc47e4524eee1555caf4d89fa24ae3595a428c46a2ef6ea"
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit_status": 0,
+    "exporter_invocations": 1,
+    "exporter_exit_status": 1,
+    "importer_runs": 0,
+    "target_theorem_submissions": 1,
+    "retries": 0,
+    "search_invocations": 0,
+    "ledger_writes": 0
+  },
+  "diagnostic": {
+    "proof": "the unchanged seven-contract theorem compiles successfully",
+    "export_environment": "pinned lake env successfully resolves the exporter lean subprocess",
+    "export_failure": "the checking invocation emitted no olean, so the exporter reports unknown module prefix",
+    "stream_bytes": 0,
+    "repair": "compile once with an explicit output path in Mathlib's .lake/build/lib/lean search root before the unchanged exporter invocation"
+  },
+  "failed_episode": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-residual-v4",
+    "retained_zero_byte_stream": true
+  },
+  "cleanup": {
+    "temporary_source_removed": true,
+    "temporary_olean_removed": true,
+    "checkout_baseline_restored": true
+  },
+  "authority": {
+    "parameterized_support_credit": 0,
+    "closed_target_authorized": false,
+    "ledger_writes": 0
+  }
+}

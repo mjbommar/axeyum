@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-add-two-residualization-result",
+  "state": "parameterized-source-stops-at-negative-match-reduction-no-export",
+  "plan_sha256": "057317a55a960026d5dbd393e4f6837fd2cd47ef6c072746576802db00e7cd48",
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-add-two-residual-v1.lean",
+    "sha256": "eb7c5073649c51b2f51e2f37403aaac1ea5c3cd3a80736d0f3e249ae04134702"
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit_status": 1,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "target_theorem_submissions": 0,
+    "retries": 0,
+    "search_invocations": 0,
+    "ledger_writes": 0
+  },
+  "diagnostic": {
+    "nonnegative_case": "accepted from natRec and castAdd parameters",
+    "parity_facts": "accepted from modCases, succOne, and succZero parameters",
+    "remaining_failure": "unfold preserves three negSucc match expressions, so if_pos/if_neg cannot find their conditional patterns",
+    "repair": "change each negative branch directly to the three explicit conditional expressions before rewriting"
+  },
+  "cleanup": {
+    "temporary_source_removed": true,
+    "temporary_olean_removed": true,
+    "checkout_baseline_restored": true
+  },
+  "authority": {
+    "parameterized_support_credit": 0,
+    "closed_target_authorized": false,
+    "ledger_writes": 0
+  }
+}

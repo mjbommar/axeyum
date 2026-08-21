@@ -1,0 +1,37 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-int-fib-add-two-clean-construction-result",
+  "state": "v2-closes-constructor-addition-but-leaves-parity-branch-and-sign-algebra",
+  "plan_sha256": "d412ed7b8aa1382ad29df4c6c93f08c52581cf00f828ecf16f7ac1ff15e03556",
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-add-two-clean-v2.lean",
+    "sha256": "27e7a97c8d7ceff0e850848f58c6a4e5cba4653fa3d7df04252bbcf6eb691491"
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit_status": 1,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "target_theorem_submissions": 0,
+    "retries": 0,
+    "search_invocations": 0,
+    "ledger_writes": 0
+  },
+  "diagnostic": {
+    "constructor_addition_normalized": true,
+    "parity_hypothesis_normalized": true,
+    "remaining_goals": 2,
+    "cause": "broad simp does not orient the selected parity equality into the current and successor if branches, leaving both sign identities symbolic",
+    "next": "derive named current, successor, and successor-successor parity facts and rewrite each if branch explicitly before additive normalization"
+  },
+  "cleanup": {
+    "temporary_source_removed": true,
+    "temporary_olean_removed": true,
+    "checkout_baseline_restored": true
+  },
+  "authority": {
+    "fact_admission_authorized": false,
+    "theorem_credit": 0,
+    "ledger_writes": 0
+  }
+}

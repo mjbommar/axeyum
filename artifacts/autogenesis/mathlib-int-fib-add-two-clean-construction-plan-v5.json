@@ -1,0 +1,33 @@
+{
+  "schema_version": 5,
+  "kind": "axeyum-autogenesis-int-fib-add-two-clean-construction-plan",
+  "state": "preregistered-after-v4-missing-tactic-before-v5-source",
+  "prior_result": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-add-two-clean-construction-result-v4.json",
+    "required_state": "v4-stops-at-unavailable-abel-tactic-no-export"
+  },
+  "repair": {
+    "only_source_change": "import Mathlib.Tactic.Abel",
+    "proof_body_unchanged": true,
+    "required_postcompile_audit": "root-selected export and two non-rendering imports",
+    "footprint_policy": "must-be-empty",
+    "fallback_if_assumption_bearing": "replace the normalization with target-owned additive lemmas"
+  },
+  "execution": {
+    "host": "s5",
+    "source": "artifacts/autogenesis/sources/int-fib-add-two-clean-v5.lean",
+    "source_present_at_plan_commit": false,
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-clean-v5",
+    "pack_present_at_plan_commit": false
+  },
+  "budget": {
+    "max_compiler_invocations": 1,
+    "max_exporter_invocations": 1,
+    "max_importer_runs": 2,
+    "max_retries": 0,
+    "max_target_theorem_submissions": 1,
+    "max_search_invocations": 0,
+    "max_ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-add-two-clean-construction-result-v5.json"
+}

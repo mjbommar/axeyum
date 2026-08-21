@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-add-two-residualization-plan",
+  "state": "preregistered-after-exact-dependency-partition-before-residual-source-or-code",
+  "parent_result": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-add-two-v5-dependency-audit-result-v1.json",
+    "required_state": "single-read-partitions-clean-supports-from-convenience-layer-carriers"
+  },
+  "target": "Int.fib_add_two",
+  "residual_contracts": [
+    "clean natural Fibonacci recurrence",
+    "mod-two zero-or-one split",
+    "successor parity zero-to-one",
+    "successor parity one-to-zero",
+    "nonnegative cast-add transport",
+    "even-sign additive identity",
+    "odd-sign additive identity"
+  ],
+  "reuse": {
+    "fact_id": "F:ml430-nat-fib-add-two-b86e0c82",
+    "status": "proved",
+    "rule": "reuse only through its independently checked receipt or a declaration-exact clean capsule, never the official assumption-bearing proof"
+  },
+  "implementation": {
+    "first_step": "construct a parameterized Lean theorem with no broad simp, funext, conditional congruence, or Abel dependency",
+    "second_step": "reconstruct the six remaining elementary contracts in the target kernel",
+    "third_step": "compose exact accepted supports and audit the closed theorem twice",
+    "source_or_code_present_at_plan_commit": false
+  },
+  "budget": {
+    "max_parameterized_compiler_invocations": 1,
+    "max_parameterized_exporter_invocations": 1,
+    "max_parameterized_importer_runs": 2,
+    "max_closed_target_submissions": 0,
+    "max_search_invocations": 0,
+    "max_ledger_writes": 0
+  },
+  "authority": {
+    "parameterized_support_credit_only": true,
+    "closed_target_authorized": false,
+    "fact_admission_authorized": false,
+    "ledger_writes": 0
+  }
+}

@@ -4,7 +4,7 @@
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, and now `Int.fib_natCast` are durably proved. The target-owned integer Fibonacci definition replaces the official `Int.instDecidablePredEven` closure with constructor matching and explicit Nat parity; crash-safe recovery admitted its exact natural-cast theorem with an empty footprint and made `Int.fib_add_two` newly ready.
 
-**Next:** archive and clean-replay the exact `Int.fib_natCast` admission, then rebuild `Int.fib_add_two` and `Int.fib_neg_natCast` over the admitted target-owned integer Fibonacci definition.
+**Next:** rebuild exact `Int.fib_add_two` over the admitted target-owned integer Fibonacci definition, then use it with the clean sign/parity transports to reconstruct `Int.fib_neg_natCast`.
 
 <!-- plan-section: landed-changes -->
 
@@ -30,7 +30,22 @@
 | 2026-08-21 | `1ebf8e8e0` | Exact crash-safe `Int.fib_natCast` admission is frozen against its sealed capsule before operation code or ledger mutation |
 | 2026-08-21 | `e4d92ddb0` | An exact authoritative operation binds the clean integer Fibonacci capsule, theorem identity, and empty-footprint admission contract |
 | 2026-08-21 | `bd55299d4` | First transaction preparation fails closed because the generic capsule path required nonempty dependencies and two submissions; exact zero-dependency definitional assurance is added with mutation coverage |
-| 2026-08-21 | (pending) | Crash-safe recovery admits exact `Int.fib_natCast` with one authoritative write and makes exact `Int.fib_add_two` newly ready |
+| 2026-08-21 | `4309e904f` | Crash-safe recovery admits exact `Int.fib_natCast` with one authoritative write and makes exact `Int.fib_add_two` newly ready |
+| 2026-08-21 | `c0092fb89` | Immutable primary evidence and isolated clean replay seal the exact `Int.fib_natCast` admission and its one-fact readiness delta |
+| 2026-08-21 | `c99a5c237` | Direct target-owned `Int.fib_add_two` construction is frozen after its premise becomes ready and before source or execution exists |
+| 2026-08-21 | `e7285abf2` | First recurrence source closes nonnegative and boundary cases, then stops at two explicit negative-successor normalization goals with zero submission or retry |
+| 2026-08-21 | `2a731be9b` | V2 freezes only explicit negative-constructor addition and hypothesis normalization before a new source exists |
+| 2026-08-21 | `aa9a3cfda` | V2 removes constructor-addition opacity but retains two explicit parity-branch sign identities with zero submission or retry |
+| 2026-08-21 | `1f40d30d7` | V3 freezes three named parity equalities and explicit conditional rewriting before its source exists |
+| 2026-08-21 | `4278c8f43` | V3 closes all parity and Fibonacci obligations and isolates exactly two additive-group normalization goals |
+| 2026-08-21 | `4278c8f43` | V4 freezes deterministic abelian normalization after all substantive recurrence reasoning |
+| 2026-08-21 | (pending) | V4 stops at the unavailable tactic before elaboration; V5 freezes only the narrow Abel import plus mandatory footprint audit |
+| 2026-08-21 | `f2057f744` | V5 compiles and reproduces but fails closed with a seven-name assumption footprint; all 23 direct dependencies are frozen for one audit |
+| 2026-08-21 | (pending) | One read splits nine clean dependencies from fourteen assumption carriers and freezes a seven-contract residualization route with zero closed-target authority |
+| 2026-08-21 | (pending) | First seven-contract source closes the natural and parity interfaces, then stops at retained negative-constructor matches; V2 freezes explicit conditional presentation only |
+| 2026-08-21 | (pending) | V2 exposes both negative conditionals and stops only at the two mis-parenthesized algebra contracts; V3 freezes their exact post-rewrite shapes |
+| 2026-08-21 | (pending) | V3 compiles the complete seven-contract theorem, then its sole exporter call fails before writing because `lean` is absent from PATH; V4 freezes the unchanged source under pinned `lake env` |
+| 2026-08-21 | (pending) | V4 resolves the exporter runtime but finds no compiled module; V5 freezes an explicit `.lake/build/lib/lean` output path for the unchanged theorem |
 
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |

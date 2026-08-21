@@ -1,0 +1,47 @@
+{
+  "schema_version": 5,
+  "kind": "axeyum-autogenesis-int-fib-add-two-clean-construction-result",
+  "state": "v5-compiles-reproducibly-but-declines-assumption-bearing-Abel-closure",
+  "plan_sha256": "2f469fc938d367734f9dbab8c77150cba9d2e9942e570e5100e6dac534a0d31f",
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-add-two-clean-v5.lean",
+    "sha256": "ad1a2a5e90059985cbfd761daa91027102ea25defe66f9cfeb2ffee4b7986195"
+  },
+  "pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-clean-v5",
+    "manifest_sha256": "6c596d03de4e001a4d830d3c04932be454f58f85dd1977189e727a89a896d106",
+    "stream_sha256": "55d4515a8e211d630ef0ca2e7c62306a116785b91a33e66411d7d6b2a1466d36",
+    "observation_sha256": "f7e5b241431eea7303c6ed549f95d147d3e621396ea096e0c7b34685889dcfd0"
+  },
+  "theorem": {
+    "name": "Int.fib_add_two",
+    "canonical_type_sha256": "acd1e0af4faea9717102d1a977fa510295245969d95f86f64cbfcdacd33f3508",
+    "canonical_declaration_sha256": "c7ccb75c18ea7dca24ab6fa7682f0fe67c277a0a4c0669fd468ce1ba78a29bf2",
+    "axiom_footprint": [
+      "Classical.choice",
+      "Quot",
+      "Quot.lift",
+      "Quot.mk",
+      "Quot.sound",
+      "String.Internal.append",
+      "propext"
+    ],
+    "direct_theorem_dependency_count": 23
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "exporter_invocations": 1,
+    "importer_runs": 2,
+    "target_theorem_submissions": 1,
+    "observations_byte_identical": true,
+    "retries": 0,
+    "search_invocations": 0,
+    "ledger_writes": 0
+  },
+  "conclusion": {
+    "construction_compiled": true,
+    "construction_accepted": false,
+    "fact_admission_authorized": false,
+    "next": "audit all 23 direct dependencies once and replace only the exact assumption carriers"
+  }
+}

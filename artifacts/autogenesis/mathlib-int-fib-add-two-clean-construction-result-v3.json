@@ -1,0 +1,37 @@
+{
+  "schema_version": 3,
+  "kind": "axeyum-autogenesis-int-fib-add-two-clean-construction-result",
+  "state": "v3-closes-parity-and-leaves-two-abelian-group-identities",
+  "plan_sha256": "34b06910037a2a90e5d6d5c5d914bfb892dc0bca59bea221ad372eb3a7a95e7b",
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-add-two-clean-v3.lean",
+    "sha256": "922aebd0ef5c9e0e9b7b0a2807d77f04c1740587741fc034ad83367d6c4e8e73"
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit_status": 1,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "target_theorem_submissions": 0,
+    "retries": 0,
+    "search_invocations": 0,
+    "ledger_writes": 0
+  },
+  "diagnostic": {
+    "parity_branches_closed": true,
+    "conditional_signs_resolved": true,
+    "remaining_goals": 2,
+    "remaining_class": "abelian-group normalization over two cast Fibonacci values",
+    "next": "apply deterministic abelian-group normalization only after all Fibonacci and parity rewriting"
+  },
+  "cleanup": {
+    "temporary_source_removed": true,
+    "temporary_olean_removed": true,
+    "checkout_baseline_restored": true
+  },
+  "authority": {
+    "fact_admission_authorized": false,
+    "theorem_credit": 0,
+    "ledger_writes": 0
+  }
+}

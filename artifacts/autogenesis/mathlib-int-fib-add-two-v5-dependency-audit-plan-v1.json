@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-add-two-v5-dependency-audit-plan",
+  "state": "preregistered-after-v5-footprint-decline-before-single-dependency-read",
+  "parent_result": "artifacts/autogenesis/mathlib-int-fib-add-two-clean-construction-result-v5.json",
+  "input": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-clean-v5/int-fib-add-two.ndjson",
+    "bytes": 7928593,
+    "sha256": "55d4515a8e211d630ef0ca2e7c62306a116785b91a33e66411d7d6b2a1466d36",
+    "mode": "0444"
+  },
+  "ordered_roots": [
+    "Eq.symm",
+    "Eq.trans",
+    "Iff.mpr",
+    "Int.fib_add_two._abel_1_6",
+    "Int.fib_add_two._abel_1_7",
+    "Nat.add_assoc",
+    "Nat.add_mod_right",
+    "Nat.cast_add",
+    "Nat.fib_add_two",
+    "Nat.instNeZeroSucc",
+    "Nat.mod_two_eq_zero_or_one",
+    "Nat.succ_mod_two_eq_one_iff",
+    "Nat.succ_mod_two_eq_zero_iff",
+    "congr",
+    "congrArg",
+    "congrFun'",
+    "eq_self",
+    "funext",
+    "ite_cond_eq_false",
+    "ite_cond_eq_true",
+    "ite_congr",
+    "neg_add_rev",
+    "one_ne_zero._simp_1"
+  ],
+  "measurement": {
+    "tool": "crates/axeyum-lean-import/examples/theorem_footprint_batch_audit.rs",
+    "tool_sha256": "38e40236fec86f1080af52bafb9394f9f1505ad161dae96e9c48979d00b1094a",
+    "proof_terms_types_or_values_may_be_rendered": false
+  },
+  "budget": {
+    "max_importer_runs": 1,
+    "max_proof_bearing_stream_reads": 1,
+    "max_retries": 0,
+    "max_theorem_submissions": 0,
+    "max_ledger_writes": 0
+  },
+  "authority": {
+    "reconstruction_allowed": false,
+    "theorem_credit": 0,
+    "ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-add-two-v5-dependency-audit-result-v1.json"
+}

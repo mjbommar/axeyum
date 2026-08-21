@@ -1,0 +1,32 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-int-fib-add-two-residualization-plan",
+  "state": "preregistered-after-v3-exporter-environment-failure-before-v4-replay",
+  "prior_result": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-add-two-residualization-result-v3.json",
+    "required_state": "parameterized-source-compiles-exporter-environment-fails-before-stream"
+  },
+  "repair": {
+    "only_change": "invoke lean4export through the pinned Mathlib lake env so its lean subprocess is resolvable",
+    "source_unchanged": true,
+    "contracts_unchanged": true,
+    "proof_route_unchanged": true
+  },
+  "execution": {
+    "source": "artifacts/autogenesis/sources/int-fib-add-two-residual-v3.lean",
+    "source_sha256": "d1f615db6821c187ddc47e4524eee1555caf4d89fa24ae3595a428c46a2ef6ea",
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-residual-v4",
+    "pack_present_at_plan_commit": false
+  },
+  "budget": {
+    "max_compiler_invocations": 1,
+    "max_exporter_invocations": 1,
+    "max_importer_runs": 2,
+    "max_retries": 0,
+    "max_parameterized_theorem_submissions": 1,
+    "max_closed_target_submissions": 0,
+    "max_search_invocations": 0,
+    "max_ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-add-two-residualization-result-v4.json"
+}

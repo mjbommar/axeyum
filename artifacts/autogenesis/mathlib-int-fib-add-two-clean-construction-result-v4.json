@@ -1,0 +1,36 @@
+{
+  "schema_version": 4,
+  "kind": "axeyum-autogenesis-int-fib-add-two-clean-construction-result",
+  "state": "v4-stops-at-unavailable-abel-tactic-no-export",
+  "plan_sha256": "8ba0bf247f7d3503e65d3e3efb594712db61e7365ae364a261e5688719c7b2a7",
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-add-two-clean-v4.lean",
+    "sha256": "33cad1454870a34caf62a9d7c2b2263b7117b8bcdcad33b14f7a6b3931376905"
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit_status": 1,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "target_theorem_submissions": 0,
+    "retries": 0,
+    "search_invocations": 0,
+    "ledger_writes": 0
+  },
+  "diagnostic": {
+    "failure": "unknown tactic abel",
+    "import_surface": "Mathlib.Data.Nat.Fib.Basic does not expose the tactic",
+    "mathematical_frontier_unchanged": "two additive-group identities",
+    "next": "add the narrow Mathlib.Tactic.Abel import and independently audit the resulting kernel footprint"
+  },
+  "cleanup": {
+    "temporary_source_removed": true,
+    "temporary_olean_removed": true,
+    "checkout_baseline_restored": true
+  },
+  "authority": {
+    "fact_admission_authorized": false,
+    "theorem_credit": 0,
+    "ledger_writes": 0
+  }
+}
