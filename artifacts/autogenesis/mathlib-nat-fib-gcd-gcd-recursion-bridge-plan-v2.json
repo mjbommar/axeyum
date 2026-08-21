@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-gcd-recursion-bridge-plan-v2",
+  "state": "preregistered-public-footprint-count-correction-before-code",
+  "input": {
+    "result": "artifacts/autogenesis/mathlib-nat-fib-gcd-gcd-recursion-bridge-result-v1.json",
+    "sha256": "5eb5116e62ce6b439d859f6bd3827b070fe52d4f8834d0a890fe35a887dc8c6f"
+  },
+  "implementation_prestate": {
+    "path": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+    "sha256": "43d7ea4f017575347376617fcfd15ac4904677ae8490fa3b910f04d2f888d1dd"
+  },
+  "correction": {
+    "replace": "map_err plus private render_name over axiom_footprint",
+    "with": "the length of the public Vec<NameId> returned by axiom_footprint",
+    "required_count": 0,
+    "other_source_changes": 0
+  },
+  "budget": {
+    "complete_audits": 1,
+    "kernel_submissions": 0,
+    "capsule_writes": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "limitations": "This authorizes one reporting-only correction and one fresh audit; it does not reset or credit the compile-only V1 attempt."
+}
