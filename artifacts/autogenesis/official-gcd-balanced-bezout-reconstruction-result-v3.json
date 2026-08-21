@@ -1,0 +1,21 @@
+{
+  "schema_version": 3,
+  "kind": "axeyum-autogenesis-official-gcd-balanced-bezout-reconstruction-result",
+  "state": "compiled-exported-first-import-assumption-bearing-second-import-forbidden",
+  "plan": {"path": "artifacts/autogenesis/official-gcd-balanced-bezout-reconstruction-plan-v3.json", "sha256": "aa2bfdb5530056d478bcaf809d74e91ef67c05ffbd6959b228493a66fd720fca", "commit": "eb061c9bfe2d021a684ba8b32004359c75b9e508"},
+  "evidence_pack": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/f96a2319d-official-gcd-balanced-bezout-v3-v1/manifest.json", "sha256": "683fab713611a5fc3ceb1e0ed4e84cdad0833b46b9cb7d7ff4a3381f62d27ba0", "directory_mode": "0555", "file_mode": "0444"},
+  "execution": {"source_copies": 2, "compiler_invocations": 2, "successful_compilations": 2, "failed_compilations": 0, "exporter_invocations": 1, "importer_runs": 1, "proof_bearing_stream_reads": 1, "second_import_forbidden_by_first_gate": true, "retries": 0},
+  "roots": [
+    {"name": "Axeyum.Autogenesis.modQuotientWitnessV3", "declaration_sha256": "5132ea365b8403b82d722b4ae6457d1a8e632d1eab0d52a3eb5d448396bb52ac", "axiom_footprint": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound"], "decisive_dependencies": ["funext", "if_neg", "if_pos", "dif_pos"]},
+    {"name": "Axeyum.Autogenesis.officialGcdBalancedBezoutV3", "declaration_sha256": "14d2853b99034e480936acda5af178e45dc7696eb3d75a54458ddf2f197b7c0c", "axiom_footprint": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound", "propext"], "decisive_dependencies": ["Axeyum.Autogenesis.modQuotientWitnessV3", "Mathlib.Tactic.Ring.Common", "Mathlib.Tactic.Ring.of_eq"]}
+  ],
+  "cleanup": {"exact_temporary_paths_removed": 6, "preexisting_status_entries_before": 3, "preexisting_status_entries_after": 3, "preexisting_baseline_unchanged": true},
+  "next_boundary": {
+    "lean_tactic_source_route_accepted": false,
+    "required_replacement": "construct the quotient witness and balanced Euclidean update with explicit kernel terms and clean arithmetic leaves, avoiding funext, conditional simplifier proofs, and Mathlib ring normalization",
+    "reuse_compilation_as_theorem_credit": false
+  },
+  "authority": {"generic_balanced_bezout_credit": 0, "target_specialization_credit": 0, "cancellation_credit": 0, "exact_fibonacci_target_submissions": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "verification": "python3 scripts/check-autogenesis-official-gcd-balanced-bezout-reconstruction-result-v3.py",
+  "limitations": "V3 proves only that the convenient Lean tactic route compiles but remains assumption-bearing. It establishes no accepted generic theorem, target specialization, cancellation, Fibonacci target, receipt, evaluation result, fact transition, or ledger write."
+}
