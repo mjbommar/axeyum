@@ -646,3 +646,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0571](adr-0571-work-backward-from-the-lemire-proof-paper.md) | Freeze the sub-five-page proof surface and require every new Lemire estimate to discharge its sole open top-conductor lemma | accepted |
 | [0572](adr-0572-select-the-one-sided-relative-trace-target.md) | Replace separate top-conductor maxima by the exact one-sided identity-path trace allowance left after the proved Weil prefix | accepted |
 | [0573](adr-0573-reject-scalar-artin-schreier-and-p-rank-bounds-for-rel.md) | Price zero 2-rank on the relative Carlitz quotient and require a genuinely collective Witt zero-fibre estimate | accepted |
+| [0574](adr-0574-add-binary-hankel-rank-without-importing-a-divisor-moment.md) | Add bounded GF(2) Hankel rank characteristics while keeping the prime-weighted higher-moment residue explicit | accepted |

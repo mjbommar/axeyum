@@ -138,6 +138,156 @@ impl Gf2Poly {
     }
 }
 
+/// Exact rank characteristic of a finite binary Hankel sequence.
+///
+/// For `alpha=(alpha_0,...,alpha_n)`, put
+/// `n1=floor((n+2)/2)` and `n2=floor((n+3)/2)`.  Following the finite-field
+/// Hankel convention used by Yiasemides, `rho` is the largest `r` for which
+/// the leading `r x r` Hankel matrix is nonsingular, and
+/// `pi=rank(H_(n1,n2))-rho`.  A sequence is quasi-regular exactly when
+/// `pi=0`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct BinaryHankelCharacteristic {
+    /// Last sequence index `n` (the sequence has length `n+1`).
+    pub sequence_degree: usize,
+    /// `floor((n+2)/2)`.
+    pub balanced_rows: usize,
+    /// `floor((n+3)/2)`.
+    pub balanced_columns: usize,
+    /// Rank of the balanced `n1 x n2` Hankel matrix over `GF(2)`.
+    pub rank: usize,
+    /// Largest nonsingular leading square Hankel size.
+    pub rho: usize,
+    /// Rank defect `rank-rho`.
+    pub pi: usize,
+    /// Number of initial zero entries in the sequence.
+    pub initial_zero_count: usize,
+    /// Whether `pi=0`.
+    pub quasi_regular: bool,
+}
+
+fn binary_hankel_rank(
+    sequence: &[bool],
+    rows: usize,
+    columns: usize,
+    work_used: &mut u64,
+    work_limit: u64,
+) -> Result<usize, Gf2Error> {
+    let words = columns.div_ceil(64);
+    let cells = rows.checked_mul(columns).ok_or(Gf2Error::WorkLimit {
+        used: u64::MAX,
+        limit: work_limit,
+    })?;
+    let cells = u64::try_from(cells).unwrap_or(u64::MAX);
+    let next_work = work_used.checked_add(cells).unwrap_or(u64::MAX);
+    if next_work > work_limit {
+        return Err(Gf2Error::WorkLimit {
+            used: next_work,
+            limit: work_limit,
+        });
+    }
+    *work_used = next_work;
+
+    let mut matrix = vec![vec![0_u64; words]; rows];
+    for (row, packed) in matrix.iter_mut().enumerate() {
+        for column in 0..columns {
+            if sequence[row + column] {
+                packed[column / 64] |= 1_u64 << (column % 64);
+            }
+        }
+    }
+
+    let mut rank = 0_usize;
+    for column in 0..columns {
+        let Some(pivot) =
+            (rank..rows).find(|&row| matrix[row][column / 64] & (1_u64 << (column % 64)) != 0)
+        else {
+            continue;
+        };
+        matrix.swap(rank, pivot);
+        let pivot_words = matrix[rank].clone();
+        for (row, target_row) in matrix.iter_mut().enumerate() {
+            if row == rank || target_row[column / 64] & (1_u64 << (column % 64)) == 0 {
+                continue;
+            }
+            let start = column / 64;
+            let charged = u64::try_from(words - start).unwrap_or(u64::MAX);
+            let next_work = work_used.checked_add(charged).unwrap_or(u64::MAX);
+            if next_work > work_limit {
+                return Err(Gf2Error::WorkLimit {
+                    used: next_work,
+                    limit: work_limit,
+                });
+            }
+            *work_used = next_work;
+            for (target, source) in target_row[start..].iter_mut().zip(&pivot_words[start..]) {
+                *target ^= source;
+            }
+        }
+        rank += 1;
+        if rank == rows {
+            break;
+        }
+    }
+    Ok(rank)
+}
+
+/// Compute the exact binary Hankel `(rho,pi)` characteristic of a sequence.
+///
+/// This is the finite-field rank primitive needed to replay the fixed-`q`
+/// Hankel stratification.  It is deliberately only a structural operation: it
+/// does not infer a divisor or prime moment bound from a measured rank.
+///
+/// # Errors
+///
+/// Returns a typed decline for an empty sequence, a sequence beyond the input
+/// ceiling, or elimination work beyond `limits.max_word_ops`.
+pub fn binary_hankel_characteristic(
+    sequence: &[bool],
+    limits: Gf2Limits,
+) -> Result<BinaryHankelCharacteristic, Gf2Error> {
+    let Some(sequence_degree) = sequence.len().checked_sub(1) else {
+        return Err(Gf2Error::InvalidCertificate(
+            "binary Hankel sequence must be nonempty",
+        ));
+    };
+    if sequence_degree > limits.max_input_degree {
+        return Err(Gf2Error::DegreeLimit {
+            observed: sequence_degree,
+            limit: limits.max_input_degree,
+        });
+    }
+    let balanced_rows = sequence_degree / 2 + 1;
+    let balanced_columns = sequence_degree.div_ceil(2) + 1;
+    let mut work_used = 0_u64;
+    let rank = binary_hankel_rank(
+        sequence,
+        balanced_rows,
+        balanced_columns,
+        &mut work_used,
+        limits.max_word_ops,
+    )?;
+    let mut rho = 0_usize;
+    for size in 1..=balanced_rows {
+        if binary_hankel_rank(sequence, size, size, &mut work_used, limits.max_word_ops)? == size {
+            rho = size;
+        }
+    }
+    let pi = rank.checked_sub(rho).ok_or(Gf2Error::InvalidCertificate(
+        "binary Hankel rho exceeds balanced rank",
+    ))?;
+    Ok(BinaryHankelCharacteristic {
+        sequence_degree,
+        balanced_rows,
+        balanced_columns,
+        rank,
+        rho,
+        pi,
+        initial_zero_count: sequence.iter().take_while(|entry| !**entry).count(),
+        quasi_regular: pi == 0,
+    })
+}
+
 /// Exact checked Rabin verdict retained by a parity-split report.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Gf2IrreducibilityVerdict {
@@ -1781,6 +1931,7 @@ fn trim(words: &mut Vec<u64>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::BTreeSet;
 
     fn poly(exponents: &[usize]) -> Gf2Poly {
         Gf2Poly::from_exponents(exponents, Gf2Limits::default()).unwrap()
@@ -1818,6 +1969,99 @@ mod tests {
             }
         }
         true
+    }
+
+    fn independent_hankel_rank(sequence: &[bool], rows: usize, columns: usize) -> usize {
+        assert!(rows <= 16 && columns <= 16);
+        let packed_rows = (0..rows)
+            .map(|row| {
+                (0..columns).fold(0_u16, |value, column| {
+                    value | (u16::from(sequence[row + column]) << column)
+                })
+            })
+            .collect::<Vec<_>>();
+        let span = (0..(1_usize << rows))
+            .map(|subset| {
+                packed_rows
+                    .iter()
+                    .enumerate()
+                    .filter(|(row, _)| subset & (1_usize << row) != 0)
+                    .fold(0_u16, |value, (_, row)| value ^ row)
+            })
+            .collect::<BTreeSet<_>>();
+        usize::try_from(span.len().ilog2()).unwrap()
+    }
+
+    #[test]
+    fn binary_hankel_characteristics_match_independent_span_enumeration() {
+        let limits = Gf2Limits::default();
+        for length in 1_usize..=9 {
+            for mask in 0..(1_usize << length) {
+                let sequence = (0..length)
+                    .map(|index| mask & (1_usize << index) != 0)
+                    .collect::<Vec<_>>();
+                let report = binary_hankel_characteristic(&sequence, limits).unwrap();
+                let n = length - 1;
+                let rows = n / 2 + 1;
+                let columns = n.div_ceil(2) + 1;
+                let independent_rank = independent_hankel_rank(&sequence, rows, columns);
+                let independent_rho = (1..=rows)
+                    .filter(|&size| independent_hankel_rank(&sequence, size, size) == size)
+                    .max()
+                    .unwrap_or(0);
+                assert_eq!(report.sequence_degree, n);
+                assert_eq!(
+                    (report.balanced_rows, report.balanced_columns),
+                    (rows, columns)
+                );
+                assert_eq!(
+                    report.rank, independent_rank,
+                    "length={length} mask={mask:#b}"
+                );
+                assert_eq!(
+                    report.rho, independent_rho,
+                    "length={length} mask={mask:#b}"
+                );
+                assert_eq!(report.pi, independent_rank - independent_rho);
+                assert_eq!(report.quasi_regular, report.pi == 0);
+                assert_eq!(
+                    report.initial_zero_count,
+                    sequence.iter().take_while(|entry| !**entry).count()
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn binary_hankel_characteristic_declines_outside_bounded_domain() {
+        let limits = Gf2Limits::default();
+        assert!(matches!(
+            binary_hankel_characteristic(&[], limits),
+            Err(Gf2Error::InvalidCertificate(_))
+        ));
+        assert_eq!(
+            binary_hankel_characteristic(
+                &[false, true, false],
+                Gf2Limits {
+                    max_input_degree: 1,
+                    ..limits
+                }
+            ),
+            Err(Gf2Error::DegreeLimit {
+                observed: 2,
+                limit: 1
+            })
+        );
+        assert!(matches!(
+            binary_hankel_characteristic(
+                &[true, false, true],
+                Gf2Limits {
+                    max_word_ops: 0,
+                    ..limits
+                }
+            ),
+            Err(Gf2Error::WorkLimit { .. })
+        ));
     }
 
     #[test]

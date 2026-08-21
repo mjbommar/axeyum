@@ -3609,6 +3609,25 @@ not apply to the cyclic `2`-power blocks of this quotient.  ADR-0573 records
 the source-level audit and selects a collective Witt complete-weight or
 zero-fibre estimate as the necessary form of any coding bridge.
 
+The fixed-`q` Hankel route is now source-audited and natively representable,
+but it does not yet improve this target.  Yiasemides's theorem computes the
+second moment of the divisor function `d_2`, not a prime-weighted fourth moment.
+The Lemire interval does lie in its favorable half-degree regime.  However, the
+source's own higher-moment reduction stops at additively constrained triples
+whose truncated Hankel sequences are all quasi-regular; its Dirichlet
+`L`-function fourth-moment discussion separately retains simultaneous rank,
+kernel, and truncation conditions.  Expanding `Lambda=mu*deg` additionally
+restores the signed cross-order convolution already present in (HFC).
+
+`binary_hankel_characteristic` now computes the exact balanced binary Hankel
+rank and `(rho,pi)` characteristic under deterministic limits.  Exhaustive
+tests through sequence length nine compare every output with independent
+row-span enumeration.  This removes a CAS gap and permits a signed residual
+stratum to be stated without external algebra software; it does not turn the
+published divisor variance into a proof of (REL).  ADR-0574 requires any
+further Hankel result to retain the Mobius signs and discharge an endpoint
+ledger before receiving proof credit.
+
 The top-conductor projector also has an exact Möbius-order decomposition.
 Applying the fine-minus-coarse scales before absolute values gives, at
 `ell=8`,
