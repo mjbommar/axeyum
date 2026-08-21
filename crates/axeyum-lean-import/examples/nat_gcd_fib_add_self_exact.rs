@@ -106,9 +106,12 @@ fn run() -> Result<(), String> {
             .map_err(|error| {
                 format!("public gcd zero-left type compatibility declined: {error:?}")
             })?;
-            if public_compatibility.compatibility != ReusedTypeCompatibility::KernelTypeShape {
+            if public_compatibility.compatibility
+                != ReusedTypeCompatibility::TranslatedDefinitionalEquality
+            {
                 return Err(
-                    "public gcd zero-left did not require checked type-shape reuse".to_owned(),
+                    "public gcd zero-left did not require checked translated definitional reuse"
+                        .to_owned(),
                 );
             }
             let source_leaf = find_name(source.kernel(), COPRIME_GCD_SUCC_LEAF)?;
