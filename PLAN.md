@@ -141,6 +141,7 @@ now. Nothing was deleted.
 | 2026-08-21 | `09ddeb5b8` | One non-rendering sealed-stream read binds the exact canonical theorem type hash with unchanged empty footprint and zero ledger authority |
 | 2026-08-21 | `1ebf8e8e0` | Exact crash-safe `Int.fib_natCast` admission is frozen against its sealed capsule before operation code or ledger mutation |
 | 2026-08-21 | (pending) | An exact authoritative operation binds the clean integer Fibonacci capsule, theorem identity, and empty-footprint admission contract |
+| 2026-08-21 | (pending) | First transaction preparation fails closed because the generic capsule path required nonempty dependencies and two submissions; exact zero-dependency definitional assurance is added with mutation coverage |
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
 | 2026-08-21 | `a9610560c` | The durable construction checker binds the separately stored target goal identity without weakening capsule checks |

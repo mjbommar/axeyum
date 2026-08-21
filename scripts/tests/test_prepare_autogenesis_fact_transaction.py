@@ -16,6 +16,7 @@ REFLEXIVITY_FACT = "F:ml430-nat-descfactorial-zero-966b01df"
 FIB_FACT = "F:ml430-nat-fib-add-two-b86e0c82"
 FIB_COPRIME_FACT = "F:ml430-nat-fib-coprime-fib-succ-162fc738"
 GCD_GREATEST_FACT = "F:ml430-nat-gcd-greatest-0a04214a"
+INT_FIB_NATCAST_FACT = "F:ml430-int-fib-natcast-d5886be4"
 
 
 def settle_reflexivity_fact(facts):
@@ -24,6 +25,7 @@ def settle_reflexivity_fact(facts):
         FIB_FACT,
         FIB_COPRIME_FACT,
         GCD_GREATEST_FACT,
+        INT_FIB_NATCAST_FACT,
     ):
         target = copy.deepcopy(facts[fact_id])
         target["epistemic_status"] = "proved"
@@ -509,6 +511,58 @@ class AuthoritativeFactTransactionTests(unittest.TestCase):
 
         changed = copy.deepcopy(execution_receipt)
         changed["result"]["observation"]["retained_answer_dependencies"] = []
+        with self.assertRaisesRegex(MODULE.TransactionError, "assurance"):
+            MODULE.build_authoritative_transaction(
+                before_fact=before,
+                execution=changed,
+                operation=operation,
+                registry=registry,
+            )
+
+    def test_zero_dependency_integer_fibonacci_capsule_is_admissible(self):
+        executor = MODULE.load_module(
+            "executor_for_int_fib_natcast_transaction_test",
+            MODULE.EXECUTOR_SCRIPT,
+        )
+        frontier_module = executor.load_module(
+            "frontier_for_int_fib_natcast_transaction_test",
+            executor.FRONTIER_SCRIPT,
+        )
+        facts = frontier_module.load()
+        settle_reflexivity_fact(facts)
+        target = copy.deepcopy(facts[INT_FIB_NATCAST_FACT])
+        target["epistemic_status"] = "open"
+        target["evidence"] = []
+        target.pop("proof_route", None)
+        target.pop("axiom_footprint", None)
+        facts[INT_FIB_NATCAST_FACT] = target
+        frontier = frontier_module.build_machine_frontier(facts)
+        before, operation, registry = executor.selected_inputs(frontier, facts)
+        observation = executor.expected_sealed_kernel_capsule_observation(
+            operation, before
+        )
+        self.assertEqual(observation["retained_answer_dependencies"], [])
+        execution_receipt = executor.build_receipt(
+            frontier={"frontier_sha256": "3" * 64},
+            fact=before,
+            operation=operation,
+            registry=registry,
+            git_commit="5" * 40,
+            observation=observation,
+        )
+        transaction = MODULE.build_authoritative_transaction(
+            before_fact=before,
+            execution=execution_receipt,
+            operation=operation,
+            registry=registry,
+        )
+        binding = transaction["authoritative_write"]["after_fact"]["evidence"][0][
+            "checker_operation"
+        ]
+        self.assertEqual(binding["direct_theorem_dependencies"], [])
+
+        changed = copy.deepcopy(execution_receipt)
+        changed["result"]["observation"]["fresh_imports"] = 4
         with self.assertRaisesRegex(MODULE.TransactionError, "assurance"):
             MODULE.build_authoritative_transaction(
                 before_fact=before,
