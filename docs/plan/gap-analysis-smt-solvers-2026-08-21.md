@@ -404,6 +404,24 @@ axis where the grammar has a rule.
 Three of this document's corrections exist because a measurement instrument
 could not fail. This is the part most likely to repeat.
 
+0. **The frozen zero was not confined to the quantified rows, and that is worse
+   than it was reported.** The fix landed for a row that decided *nothing*
+   (quantified LIA, `instances: []`), which framed it as a corner case. Running
+   the fixed tool against **QF_ABV** — a row at 169/169, which nobody suspected
+   of anything — prints:
+
+   ```
+   NEWLY DECIDED 22/24 the baseline recorded as undecided (the baseline is stale)
+   ```
+
+   Twenty-two instances in a healthy row that the audit had never re-run,
+   because the baseline had recorded them undecided and that verdict was never
+   revisited. The committed 35 are therefore understating by an unknown amount
+   in an unknown number of rows, and every headline in this document that rests
+   on them (269, 281, 326) is a floor rather than a measurement. A full refresh
+   is queued; it needs a quiet box, because a contended sweep would replace a
+   known-low number with an unreliable one.
+
 1. **An audit that audits only what the baseline decided.**
    `lia-cvc5-regress-clean-quantified-dominance-audit.json`, re-run 2026-08-21,
    reports `"instances": []` and `audited_decided: 0`. It audits rows the
