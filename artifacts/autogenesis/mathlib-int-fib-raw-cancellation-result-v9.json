@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-raw-cancellation-result",
+  "state": "explicit-nat-unfold-reveals-pred-oriented-subtraction",
+  "plan_sha256": "d7deff1413b8a7ec24ba790f4611e9f9542b625b3eebb7cfec88a90e60c6d6a4",
+  "source": {"path": "artifacts/autogenesis/sources/int-fib-raw-cancellation-v9.lean", "sha256": "3d9c271b13565bd8b4e3d1a59d361b07dcef4a9f9b0d682517a7c635d545ebe4"},
+  "execution": {"compiler_invocations": 1, "compiler_exit_status": 1, "exporter_invocations": 0, "importer_runs": 0, "theorem_submissions": 0, "retries": 0, "ledger_writes": 0},
+  "diagnostic": {
+    "implementation_shape": "Nat.sub successor reduction is pred-oriented rather than definitionally identical to the simple induction hypothesis",
+    "selected_replacements": ["Nat.add_sub_cancel for (x + z) - z = x", "Nat.sub_self_add plus Nat.add_comm transport for z - (x + z) = 0"],
+    "next": "bind both candidate types before another theorem attempt"
+  },
+  "cleanup": {"temporary_source_removed": true, "temporary_olean_removed": true, "checkout_baseline_restored": true},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}
