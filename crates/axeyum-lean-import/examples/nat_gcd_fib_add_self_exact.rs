@@ -164,6 +164,10 @@ fn run() -> Result<(), String> {
         return run_target_native_fib_coprime_capsule(args);
     }
     let mut args = std::env::args_os().skip(1);
+    if args.next().as_deref() == Some(std::ffi::OsStr::new("--target-native-exact-capsule")) {
+        return run_target_native_exact_capsule(args);
+    }
+    let mut args = std::env::args_os().skip(1);
     let r091_path = path(&mut args)?;
     let capsules = [
         (CLEAN_ANTISYMM, path(&mut args)?, CLEAN_ANTISYMM_CAPSULE),
@@ -277,9 +281,9 @@ fn run() -> Result<(), String> {
     if goal_sha256 != GOAL_SHA256 {
         return Err(format!("r091 goal identity changed: {goal_sha256}"));
     }
-    let comm = declare_clean_gcd_comm(&mut kernel)?;
+    let comm = declare_clean_gcd_comm(&mut kernel, false)?;
     require_empty(&kernel, comm, CLEAN_GCD_COMM)?;
-    let theorem = declare_target(&mut kernel, goal)?;
+    let theorem = declare_target(&mut kernel, goal, false)?;
     require_empty(&kernel, theorem, TARGET)?;
     let proof = match kernel.environment().get(theorem) {
         Some(Declaration::Theorem { value, .. }) => *value,
@@ -769,6 +773,142 @@ fn target_native_fib_coprime_goal(kernel: &mut Kernel) -> Result<ExprId, String>
     let one = d.num(1);
     let conclusion = d.eq(gcd, one);
     Ok(d.pi(value_fv, nat, conclusion))
+}
+
+#[allow(clippy::too_many_lines)]
+fn run_target_native_exact_capsule(
+    mut args: impl Iterator<Item = std::ffi::OsString>,
+) -> Result<(), String> {
+    let r091_path = path(&mut args)?;
+    let inputs = [
+        (
+            path(&mut args)?,
+            CLEAN_ANTISYMM_CAPSULE,
+            vec![CLEAN_ANTISYMM],
+        ),
+        (path(&mut args)?, CANCELLATION_CAPSULE, vec![CANCELLATION]),
+        (path(&mut args)?, ADDITION_CAPSULE, vec![ADDITION]),
+        (
+            path(&mut args)?,
+            "9ecf0b10d1390f880040790fb1845a11d7987b94c0d3a71acf4ad8dca0c5a304",
+            vec![TARGET_GCD_DVD_LEFT, TARGET_GCD_DVD_RIGHT, TARGET_DVD_GCD],
+        ),
+        (
+            path(&mut args)?,
+            "e7933242c5caeb90a17bb7141656fe12a1c78780a83e82958c9ddd38ccd85d3f",
+            vec![TARGET_FIB_COPRIME],
+        ),
+    ];
+    let output_path = path(&mut args)?;
+    if args.next().is_some() || output_path.exists() {
+        return Err("usage: nat_gcd_fib_add_self_exact --target-native-exact-capsule <r091> <official-clean-order> <cancellation> <addition> <gcd-divisibility> <target-native-coprimality> <output>".to_owned());
+    }
+    let r091 = import_bound(&r091_path, R091_SHA256, "r091")?;
+    let mut kernel = r091.kernel().clone();
+    let mut setup = Vec::new();
+    for (source_path, expected_sha256, roots) in inputs {
+        let source = import_bound(&source_path, expected_sha256, roots[0])?;
+        let completed = compose_checked_theorem_slice(source.kernel(), &kernel, &roots)
+            .map_err(|error| format!("target-native exact setup declined: {error:?}"))?;
+        verify_checked_theorem_composition(
+            source.kernel(),
+            &kernel,
+            completed.kernel(),
+            completed.receipt(),
+        )
+        .map_err(|error| format!("target-native exact setup did not replay: {error:?}"))?;
+        setup.push(json!({"roots":roots,"receipt_sha256":completed.receipt().receipt_sha256}));
+        kernel = completed.kernel().clone();
+    }
+    let goal_name = find_name(&kernel, GOAL_DEFINITION)?;
+    let goal = match kernel.environment().get(goal_name) {
+        Some(Declaration::Definition { value, .. }) => *value,
+        _ => return Err("r091 goal carrier is not a definition".to_owned()),
+    };
+    let goal_sha256 = canonical_expression_sha256(&kernel, goal)?;
+    if goal_sha256 != GOAL_SHA256 {
+        return Err(format!("r091 goal identity changed: {goal_sha256}"));
+    }
+    let comm = declare_clean_gcd_comm(&mut kernel, true)?;
+    require_empty(&kernel, comm, CLEAN_GCD_COMM)?;
+    let theorem = declare_target(&mut kernel, goal, true)?;
+    require_empty(&kernel, theorem, TARGET)?;
+    let transitive = transitive_dependencies(&kernel, theorem);
+    let required = [
+        CLEAN_ANTISYMM,
+        CANCELLATION,
+        ADDITION,
+        TARGET_GCD_DVD_LEFT,
+        TARGET_GCD_DVD_RIGHT,
+        TARGET_DVD_GCD,
+        TARGET_DVD_MUL_RIGHT,
+        TARGET_DVD_ADD,
+        "Axeyum.Autogenesis.dvdAddCancelAllNatClosedV1",
+        TARGET_FIB_COPRIME,
+    ];
+    if let Some(name) = required
+        .iter()
+        .find(|name| !transitive.iter().any(|item| item == **name))
+    {
+        return Err(format!(
+            "target-native exact proof is independent of {name}"
+        ));
+    }
+    let forbidden = [
+        "Iff",
+        "Iff.rec",
+        "Nat.dvd_add_iff_right",
+        "Nat.dvd_gcd",
+        "Nat.gcd_dvd_left",
+        "Nat.gcd_dvd_right",
+        "Nat.dvd_mul_right_of_dvd",
+        "Nat.dvd_add",
+        "propext",
+        "Quot.sound",
+    ];
+    if let Some(name) = forbidden
+        .iter()
+        .find(|name| transitive.iter().any(|item| item == **name))
+    {
+        return Err(format!(
+            "target-native exact proof reaches forbidden dependency {name}"
+        ));
+    }
+    let expected = evidence(&kernel, theorem)?;
+    let bytes = kernel
+        .render_lean4export_ndjson_roots(&Lean4ExportMetadata::axeyum("4.30.0"), &[theorem])
+        .map_err(|error| format!("target-native exact capsule export failed: {error}"))?;
+    for pass in 1..=2 {
+        let replay = import_ndjson(Cursor::new(bytes.as_bytes()), ImportLimits::default())
+            .map_err(|error| format!("target-native exact import {pass} failed: {error:?}"))?;
+        let replayed = find_name(replay.kernel(), TARGET)?;
+        if evidence(replay.kernel(), replayed)? != expected {
+            return Err(format!("target-native exact import {pass} changed theorem"));
+        }
+    }
+    fs::write(&output_path, &bytes)
+        .map_err(|error| format!("target-native exact capsule write failed: {error}"))?;
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "schema_version":1,
+            "kind":"axeyum-autogenesis-target-native-nat-gcd-fib-add-self-capsule",
+            "state":"exact-target-reconstructed-empty-footprint-roundtrip-checked",
+            "target_goal_sha256":goal_sha256,
+            "setup_compositions":setup,
+            "local_gcd_comm":evidence(&kernel,comm)?,
+            "target":expected,
+            "transitive_theorem_dependencies":transitive,
+            "capsule":{"bytes":bytes.len(),"sha256":hex_sha256(bytes.as_bytes()),"fresh_imports":2},
+            "execution":{"local_gcd_comm_submissions":1,"exact_target_submissions":1,"exports":1,"fresh_imports":2,"retries":0},
+            "rendered_material":{"proof_terms":0,"theorem_types":0,"theorem_values":0},
+            "fact_status_changes":0,
+            "evaluation_credit":0,
+            "ledger_writes":0
+        }))
+        .map_err(|error| error.to_string())?
+    );
+    Ok(())
 }
 
 fn run_target_native_gcd_surface_audit(
@@ -2481,13 +2621,25 @@ fn declare_public_gcd_zero_left(kernel: &mut Kernel) -> Result<NameId, String> {
     Ok(target)
 }
 
-fn declare_clean_gcd_comm(kernel: &mut Kernel) -> Result<NameId, String> {
+fn declare_clean_gcd_comm(kernel: &mut Kernel, target_native: bool) -> Result<NameId, String> {
     let target = nested_name(kernel, &["Axeyum", "Autogenesis", "gcdCommCleanV1"]);
     let mut d = Dev::new(kernel)?;
     let antisymm = d.exact(CLEAN_ANTISYMM)?;
-    let gcd_left = d.exact("Nat.gcd_dvd_left")?;
-    let gcd_right = d.exact("Nat.gcd_dvd_right")?;
-    let dvd_gcd = d.exact("Nat.dvd_gcd")?;
+    let gcd_left = d.exact(if target_native {
+        TARGET_GCD_DVD_LEFT
+    } else {
+        "Nat.gcd_dvd_left"
+    })?;
+    let gcd_right = d.exact(if target_native {
+        TARGET_GCD_DVD_RIGHT
+    } else {
+        "Nat.gcd_dvd_right"
+    })?;
+    let dvd_gcd = d.exact(if target_native {
+        TARGET_DVD_GCD
+    } else {
+        "Nat.dvd_gcd"
+    })?;
     let nat = d.nat_ty();
     let a_fv = d.fresh();
     let a = d.kernel.fvar(a_fv);
@@ -2518,20 +2670,57 @@ fn declare_clean_gcd_comm(kernel: &mut Kernel) -> Result<NameId, String> {
     Ok(target)
 }
 
-fn declare_target(kernel: &mut Kernel, goal: ExprId) -> Result<NameId, String> {
+enum AdditiveCancellation {
+    Direct(NameId),
+    Iff(NameId),
+}
+
+fn declare_target(
+    kernel: &mut Kernel,
+    goal: ExprId,
+    target_native: bool,
+) -> Result<NameId, String> {
     let target = nested_name(kernel, &["Nat", "gcd_fib_add_self"]);
     let mut d = Dev::new(kernel)?;
     let addition = d.exact(ADDITION)?;
-    let coprime = d.exact(COPRIME)?;
+    let coprime = d.exact(if target_native {
+        TARGET_FIB_COPRIME
+    } else {
+        COPRIME
+    })?;
     let cancellation = d.exact(CANCELLATION)?;
     let antisymm = d.exact(CLEAN_ANTISYMM)?;
     let gcd_comm = d.exact(CLEAN_GCD_COMM)?;
-    let gcd_left = d.exact("Nat.gcd_dvd_left")?;
-    let gcd_right = d.exact("Nat.gcd_dvd_right")?;
-    let dvd_gcd = d.exact("Nat.dvd_gcd")?;
-    let dvd_mul = d.exact("Nat.dvd_mul_right_of_dvd")?;
-    let dvd_add = d.exact("Nat.dvd_add")?;
-    let dvd_add_iff = d.exact("Nat.dvd_add_iff_right")?;
+    let gcd_left = d.exact(if target_native {
+        TARGET_GCD_DVD_LEFT
+    } else {
+        "Nat.gcd_dvd_left"
+    })?;
+    let gcd_right = d.exact(if target_native {
+        TARGET_GCD_DVD_RIGHT
+    } else {
+        "Nat.gcd_dvd_right"
+    })?;
+    let dvd_gcd = d.exact(if target_native {
+        TARGET_DVD_GCD
+    } else {
+        "Nat.dvd_gcd"
+    })?;
+    let dvd_mul = d.exact(if target_native {
+        TARGET_DVD_MUL_RIGHT
+    } else {
+        "Nat.dvd_mul_right_of_dvd"
+    })?;
+    let dvd_add = d.exact(if target_native {
+        TARGET_DVD_ADD
+    } else {
+        "Nat.dvd_add"
+    })?;
+    let additive_cancellation = if target_native {
+        AdditiveCancellation::Direct(d.exact("Axeyum.Autogenesis.dvdAddCancelAllNatClosedV1")?)
+    } else {
+        AdditiveCancellation::Iff(d.exact("Nat.dvd_add_iff_right")?)
+    };
     let mul_comm = d.exact("Nat.mul_comm")?;
     let nat = d.nat_ty();
     let m_fv = d.fresh();
@@ -2562,7 +2751,7 @@ fn declare_target(kernel: &mut Kernel, goal: ExprId) -> Result<NameId, String> {
                 dvd_gcd,
                 dvd_mul,
                 dvd_add,
-                dvd_add_iff,
+                &additive_cancellation,
                 mul_comm,
             )
         },
@@ -2610,7 +2799,7 @@ fn prove_successor(
     dvd_gcd: NameId,
     dvd_mul: NameId,
     dvd_add: NameId,
-    dvd_add_iff: NameId,
+    additive_cancellation: &AdditiveCancellation,
     mul_comm: NameId,
 ) -> ExprId {
     let sk = d.succ(k);
@@ -2644,11 +2833,18 @@ fn prove_successor(
     let left_c = d.lemma(gcd_right, &[a, c]);
     let left_sum = d.transport_dvd(left, c, sum, left_c, c_eq_sum);
     let left_ax = d.lemma(dvd_mul, &[left, a, x, left_a]);
-    let left_fb_ty = d.dvd(left, fb);
-    let left_sum_ty = d.dvd(left, sum);
-    let iff = d.lemma(dvd_add_iff, &[left, ax, fb, left_ax]);
-    let reverse = d.iff_reverse(left_fb_ty, left_sum_ty, iff);
-    let left_fb = d.apply(reverse, &[left_sum]);
+    let left_fb = match additive_cancellation {
+        AdditiveCancellation::Direct(cancel) => {
+            d.lemma(*cancel, &[left, ax, fb, left_ax, left_sum])
+        }
+        AdditiveCancellation::Iff(dvd_add_iff) => {
+            let left_fb_ty = d.dvd(left, fb);
+            let left_sum_ty = d.dvd(left, sum);
+            let iff = d.lemma(*dvd_add_iff, &[left, ax, fb, left_ax]);
+            let reverse = d.iff_reverse(left_fb_ty, left_sum_ty, iff);
+            d.apply(reverse, &[left_sum])
+        }
+    };
 
     let coprime_f_a = d.lemma(coprime, &[k]);
     let f_a = d.gcd(f, a);
