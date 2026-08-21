@@ -1,0 +1,33 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-int-fib-add-two-residualization-plan",
+  "state": "preregistered-after-v4-missing-olean-before-v5-replay",
+  "prior_result": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-add-two-residualization-result-v4.json",
+    "required_state": "parameterized-source-compiles-exporter-cannot-find-module-before-stream"
+  },
+  "repair": {
+    "only_change": "pass -o .lake/build/lib/lean/AxeyumIntFibAddTwoResidualV3.olean to the pinned compiler invocation",
+    "source_unchanged": true,
+    "contracts_unchanged": true,
+    "proof_route_unchanged": true,
+    "exporter_environment_unchanged": true
+  },
+  "execution": {
+    "source": "artifacts/autogenesis/sources/int-fib-add-two-residual-v3.lean",
+    "source_sha256": "d1f615db6821c187ddc47e4524eee1555caf4d89fa24ae3595a428c46a2ef6ea",
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-residual-v5",
+    "pack_present_at_plan_commit": false
+  },
+  "budget": {
+    "max_compiler_invocations": 1,
+    "max_exporter_invocations": 1,
+    "max_importer_runs": 2,
+    "max_retries": 0,
+    "max_parameterized_theorem_submissions": 1,
+    "max_closed_target_submissions": 0,
+    "max_search_invocations": 0,
+    "max_ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-add-two-residualization-result-v5.json"
+}
