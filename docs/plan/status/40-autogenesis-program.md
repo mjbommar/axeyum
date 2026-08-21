@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction has the accepted generic official-gcd balanced-Bézout theorem plus both official-representation gcd computation leaves. The driver now implements the preregistered reverse direction, compiles and passes Clippy, keeps the complete generic kernel with recursive `Acc` as its base, and has performed zero new stream reads or theorem submissions.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction has the accepted generic official-gcd balanced-Bézout theorem plus both official-representation gcd computation leaves. The first reverse-direction run declines immediately with `NoAdditions` because exact `Nat.mod_lt` is already in the generic kernel; this selects checked declaration reuse, with zero specialization, partial publication, or closed/downstream credit.
 
-**Next:** pass the full Rust push gate for the exact reverse-direction driver, retain its source, build once, and run exactly two five-stream invocations. Accept only byte-identical replayed empty-footprint output with four small-root compositions and zero generic-theorem composition operations.
+**Next:** preregister exact `Nat.mod_lt` reuse across the two pinned kernels, then revise the driver to compose only `modLtSucc` and the two gcd leaves into the generic base. Require the reuse receipt plus all remaining compositions and three specializations to replay in two byte-identical empty-footprint runs.
 
 <!-- plan-section: landed-changes -->
 
@@ -127,4 +127,5 @@
 | 2026-08-21 | `f1e0edb57` | Dedicated official-kernel driver compiles Clippy-clean and passes the full importer test suite without stream execution |
 | 2026-08-21 | `47343f64f` | First official-kernel invocation declines at missing recursive `Acc`; reverse composition base is selected with zero theorem credit |
 | 2026-08-21 | `2d62fc4a7` | Generic-kernel-base reversal is frozen with the same five streams and zero downstream authority |
-| 2026-08-21 | (pending) | Reverse-direction driver compiles Clippy-clean with generic composition removed and no execution |
+| 2026-08-21 | `c4bf44f90` | Reverse-direction driver compiles Clippy-clean with generic composition removed and no execution |
+| 2026-08-21 | (pending) | First generic-base run finds `Nat.mod_lt` already present; exact reuse replaces a zero-addition composition |
