@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-21 | `2da5c9b4c` | Factored each retained Haar layer's polynomial identity share down the nested Witt path, reducing it to 20 half-balanced splits among 190 available levels at the first endpoint and exposing every exact parent/child mass without claiming the open split theorem. |
 | 2026-08-21 | `1a9145641` | Reduced the identity-cylinder variance to the polynomial share `16ell^2 F_j(1)<=F_j(global)`, exposed its exponentially permissive weak-kurtosis sufficient form, and added exact implication and fourth-power diagnostics without claiming the open delocalization theorem. |
 | 2026-08-20 | `b1b4f407a` | Added exact local/global Haar layer energies, refuted perfect uniform sharing on control rows, and priced a stronger linear local-Carleson diagnostic with exponential endpoint surplus. |
 | 2026-08-20 | `79c5c95c8` | Reduced REL to one exact identity-cylinder conditional variance, reconstructed its localized Haar/Carleson energy level by level, and proved that Newton-over-Hodge divisibility by eight gives no endpoint rounding gain. |
