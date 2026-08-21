@@ -142,7 +142,8 @@ now. Nothing was deleted.
 | 2026-08-21 | `72a756086` | V2 correctly rejects receipt replay from a descendant checkout; V3 freezes a dedicated clean worktree at exact registration commit `2f9dd5bef` |
 | 2026-08-21 | `11ceccd8d` | V3 reaches apply preflight but rejects a cross-filesystem journal; V4 freezes a dedicated `/data0` journal beside the exact-commit worktree |
 | 2026-08-21 | `6dd5cd1c2` | V4 stops after durable intent with exit 75, recovery performs one write, and the exact corollary settles axiom-free with no newly ready descendants |
-| 2026-08-21 | (pending) | Complete immutable archive v4 binds all primary identities; one isolated clean semantic replay is frozen before execution |
+| 2026-08-21 | `f6937f80d` | Complete immutable archive v4 binds all primary identities; one isolated clean semantic replay is frozen before execution |
+| 2026-08-21 | (pending) | Isolated replay repeats selection, exit-75 recovery, exact checked result, one write, and the empty readiness delta from source commit `6dd5cd1c2` |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
