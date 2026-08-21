@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. All four exact supports remain sealed, reproducible, identity-stable, and empty-footprint. V2 removed all seven original compiler diagnostics, but its one build stopped before executable creation because `run` is 103 lines against Clippy's 100-line threshold. Cumulatively both builds read zero streams and submitted zero theorems. V3 authorizes only a scoped `too_many_lines` allowance with the proof body and authority unchanged.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. All four exact supports remain sealed, reproducible, identity-stable, and empty-footprint. The V3 exact-target driver now composes only r091 plus those four capsules, constructs clean gcd commutativity, proves the two GCD divisibility directions, and closes with clean antisymmetry. Its sole authorized line-count allowance passes formatting and Clippy; no proof-bearing stream has yet been read under V3.
 
-**Next:** add only the V3 scoped line-count allowance, require one Clippy-clean build, then run the exact `Nat.gcd_fib_add_self` driver exactly twice with no retries. Retain zero target credit unless both complete outputs agree and the target footprint is empty.
+**Next:** pass the full Rust publication gate, then run the exact `Nat.gcd_fib_add_self` driver exactly twice with no retries. Retain zero target credit unless both complete outputs agree and the target footprint is empty.
 
 <!-- plan-section: landed-changes -->
 
@@ -182,3 +182,4 @@
 | 2026-08-21 | (pending) | V2 freezes only compiler-level corrections while preserving the exact proof route and zero-retry trusted-gate budget |
 | 2026-08-21 | (pending) | V2 clears all original diagnostics but stops before execution at one 103-line Clippy threshold with zero stream reads |
 | 2026-08-21 | (pending) | V3 freezes exactly one scoped line-count allowance with the proof body and target authority unchanged |
+| 2026-08-21 | (pending) | V3 exact-target driver compiles Clippy-clean over r091 plus four sealed roots without reading proof-bearing inputs |
