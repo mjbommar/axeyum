@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-xgcd-val-rooted-reconstruction-result",
+  "state": "preflight-declined-unbound-three-file-status-baseline-no-execution",
+  "plan": {
+    "path": "artifacts/autogenesis/xgcd-val-rooted-reconstruction-plan-v1.json",
+    "sha256": "cc5b32ef86bc407cc3dd4772f0d1dc214cf4abcacc43b3846b2b731eb3c36327"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/9f135d4f0-xgcd-val-rooted-v1/manifest.json",
+    "sha256": "33ae1f917c4156741b408be52faeac070f99814db47275f2ca521b7ff665f788",
+    "mode": "0444"
+  },
+  "preexisting_status_baseline": [
+    {
+      "path": "AxeyumFibGeneric.lean",
+      "bytes": 1595,
+      "mode": "0664",
+      "sha256": "f9d3ea9024497cf1aed34a071fe541e515fb4169738d3d369dd6bf9a7ad414be"
+    },
+    {
+      "path": "AxeyumNatFibRecurrencePointwise.lean",
+      "bytes": 632,
+      "mode": "0664",
+      "sha256": "b339a3d8e4ce1700d367fa5fdf0ac0e05d411cc48c49ce6f6e30b702a9b7baf5"
+    },
+    {
+      "path": "AxeyumNatGcdFixEq.lean",
+      "bytes": 3603,
+      "mode": "0664",
+      "sha256": "939d225a168b5a94d042ceab47c4dd265a81bf149ea8cfbe08012ca5089373a7"
+    }
+  ],
+  "outcome": {
+    "precondition_satisfied": false,
+    "planned_temporary_paths_present": 0,
+    "execution_started": false,
+    "source_copied": false,
+    "source_compiled": false,
+    "exported": false,
+    "kernel_imports": 0,
+    "projection_equation_accepted": false,
+    "decline_reason": "the plan required zero status entries but the full checkout status contained three preexisting untracked files"
+  },
+  "budget": {
+    "source_copies": 0,
+    "source_compilations": 0,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "proof_bearing_stream_reads": 0,
+    "retries": 0,
+    "new_theorem_submissions": 0,
+    "exact_target_submissions": 0,
+    "executor_invocations": 0
+  },
+  "authority": {
+    "checkout_files_removed": 0,
+    "projection_equation_credit": 0,
+    "extended_gcd_reconstructions": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Preregister the same exact three-file status baseline by path, size, mode, and hash; require it unchanged before copy and after exact cleanup; keep the three planned temporary names absent before execution.",
+  "limitations": "This preflight result neither compiled nor tested the xgcd projection theorem. The three existing untracked files were identified by metadata only and were not opened, changed, or removed."
+}
