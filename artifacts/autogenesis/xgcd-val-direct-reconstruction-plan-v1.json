@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-xgcd-val-direct-reconstruction-plan",
+  "state": "preregistered-before-one-source-compilation-no-projection-credit",
+  "policy_version": "xgcd-val-direct-reconstruction-v1",
+  "inputs": {
+    "frontier_result": {
+      "path": "artifacts/autogenesis/extended-gcd-novel-dependency-audit-result-v1.json",
+      "sha256": "15ae23fb0107b76e59905eb2c58f8988db45a406f1e8cc178fb24ec704fa1cb9"
+    },
+    "statement_inventory": {
+      "path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-nat-int-statement-inventory-v2.ndjson",
+      "sha256": "4285e551680abf3b0cafb11709015f04b3aef3eb05ce23af2392b12cec31aecc",
+      "mode": "0444"
+    }
+  },
+  "target": {
+    "module": "Mathlib.Data.Int.GCD",
+    "name": "Nat.xgcd_val",
+    "source_row_sha256": "dcfc5a58ccf0cccc3c80cf79beaab28d5449877a5ef943e75626a234c51c8e0c",
+    "type": "∀ (x y : ℕ), x.xgcd y = (x.gcdA y, x.gcdB y)",
+    "type_sha256": "15f2274bf30c6540ff1415cd5f567ddc7e1438282b834a1bf0c7dc88d40ff79c",
+    "type_repr_sha256": "17791b9c4a2d56e129e1509ad1c180f84ed446928a82605be009ea062ab34f53",
+    "authored_name": "Axeyum.Autogenesis.xgcdValDirect"
+  },
+  "fixed_environment": {
+    "ssh_alias": "s5",
+    "hostname": "server5",
+    "mathlib_checkout": "/home/mjbommar/lean-import-scale/mathlib4",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean_version": "4.30.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "lean4export_commit": "a3e35a584f59b390667db7269cd37fca8575e4bf",
+    "lean4export_binary_sha256": "8e763913b03762488571a93ced6ec1a4e04f7d8eebbe40bd1215ba41a6bd4449"
+  },
+  "construction": {
+    "source_path": "scripts/lean/autogenesis_xgcd_val_direct.lean",
+    "source_sha256": "077e5c6320ac8972ca18edb0b75226faac0b062b726609e9d7a213b7f27d2e62",
+    "module_name": "AxeyumAutogenesisXgcdVal",
+    "evidence_pack": "/nas3/data/axeyum/autogenesis/reference-packs/17cf9888b-xgcd-val-direct-v1",
+    "method": "definitional equality only",
+    "proof_search_allowed": false,
+    "upstream_proof_bodies_read": false,
+    "forbidden_dependencies": [
+      "Nat.xgcd_val",
+      "Nat.xgcd.eq_1",
+      "propext",
+      "Quot",
+      "Quot.lift",
+      "Quot.mk",
+      "Quot.sound"
+    ],
+    "forbidden_tactics": ["aesop", "simp", "simpa", "omega", "native_decide"]
+  },
+  "acceptance": {
+    "source_must_compile": true,
+    "exported_type_must_match_target": true,
+    "fresh_kernel_imports_required": 2,
+    "axiom_footprint_must_be_empty": true,
+    "forbidden_dependencies_must_be_absent": true,
+    "failed_compilation_ends_increment": true
+  },
+  "budget": {
+    "max_source_compilations": 1,
+    "max_exporter_invocations": 1,
+    "max_importer_runs": 2,
+    "max_proof_bearing_stream_reads": 2,
+    "max_retries": 0,
+    "max_new_theorem_submissions": 2,
+    "max_exact_target_submissions": 0,
+    "max_executor_invocations": 0
+  },
+  "authority": {
+    "proof_bodies_readable_by_model": false,
+    "proof_search_allowed": false,
+    "projection_equation_credit": 0,
+    "extended_gcd_reconstruction_allowed": false,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/xgcd-val-direct-reconstruction-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-xgcd-val-direct-reconstruction-plan.py",
+  "limitations": "The one-shot probe tests only whether the public xgcd/gcdA/gcdB projection equation follows by definitional equality. Success does not prove the extended-gcd coefficient identity; failure requires target-owned coefficient definitions."
+}
