@@ -1304,9 +1304,9 @@ fn build_fib_gcd_quotient_iteration(
             let product_plus_r = d.add(product, r);
             let target = d.add(product_plus_r, m);
             let associated = d.lemma(add_assoc, &[product, r, m]);
-            let fourth = d.symm(target, middle_one, associated);
-            let first_two = d.trans(source, first_target, middle_one, first, second);
             let product_plus_r_plus_m = d.add(product, r_plus_m);
+            let fourth = d.symm(target, product_plus_r_plus_m, associated);
+            let first_two = d.trans(source, first_target, middle_one, first, second);
             let first_three = d.trans(source, middle_one, product_plus_r_plus_m, first_two, third);
             let index_equality =
                 d.trans(source, product_plus_r_plus_m, target, first_three, fourth);
