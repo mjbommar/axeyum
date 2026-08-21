@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction now includes unconditional official balanced Bézout and official coprime-factor divisibility cancellation. For gcd extensionality, V2 constructs both clean order supports wholly in one native kernel and transports only their checked named closures into r091; it compiles Clippy-clean without rereading r091.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction now includes unconditional official balanced Bézout and official coprime-factor divisibility cancellation. The V2 gcd-extensionality run correctly confined handles to one native kernel, then stopped before antisymmetry submission because that kernel does not install `Nat.eq_zero_of_zero_dvd`; the second replay was skipped and no support credit is due.
 
-**Next:** pass the full Rust push gate for the V2 single-kernel driver, then execute at most two complete r091 invocations. Require byte-identical source/target evidence, empty footprints, and replayed named composition before support credit.
+**Next:** preregister a target-owned same-kernel proof of zero divisibility equality, compose it into clean divisibility antisymmetry, and require two byte-identical empty-footprint r091 replays before support credit.
 
 <!-- plan-section: landed-changes -->
 
@@ -159,3 +159,4 @@
 | 2026-08-21 | (pending) | First clean antisymmetry run declines at a cross-kernel `NatPrelude` handle; no support publishes and the second run is skipped |
 | 2026-08-21 | (pending) | V2 freezes single-native-kernel support construction and checked named transport into r091 before code or stream access |
 | 2026-08-21 | (pending) | V2 clean order driver compiles Clippy-clean with all kernel-local handles confined to their native construction environment |
+| 2026-08-21 | (pending) | First V2 replay stops before antisymmetry submission because the native prelude lacks `Nat.eq_zero_of_zero_dvd`; the second is skipped and no support publishes |
