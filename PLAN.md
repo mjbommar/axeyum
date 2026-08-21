@@ -199,6 +199,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Parity V1 compiles but all roots inherit propext from `Nat.add_mod`; its single dependency closure is frozen for descent |
 | 2026-08-21 | (pending) | `Nat.add_mod` localizes to two directional modulo normalizers; both are frozen for clean specialization selection |
 | 2026-08-21 | (pending) | Both modulo normalizers retain propext; `add_mul_mod_self_left` and `mod_add_div` are frozen as the underlying arithmetic core |
+| 2026-08-21 | (pending) | General modulo arithmetic remains propext-bearing; V2 freezes a target-only two-step modulo-two recursion with all conveniences forbidden |
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
 | 2026-08-21 | `a9610560c` | The durable construction checker binds the separately stored target goal identity without weakening capsule checks |
