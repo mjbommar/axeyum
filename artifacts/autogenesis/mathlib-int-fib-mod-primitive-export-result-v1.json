@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-root-export-result",
+  "state": "exact-roots-exported-and-audited",
+  "plan_sha256": "c4040419f18a5b1ab5f7cacaec72ee65a09ed05d1a3289a74c330b2d99610f64",
+  "evidence": {"pack": "/nas3/data/axeyum/autogenesis/reference-packs/nat-mod-primitive-roots-v1", "manifest_sha256": "f48ed2782ef975850ed60a93e1e4b5dd567e16dabd7e27eb1ab4afd0dcb876c8", "stream_sha256": "e853f65e058893db16bf29c382fe7a9ed3bb737fb4577013f129602e9577d76f", "stream_bytes": 530110, "audit_sha256": "f102d686250384b4075de3c6107a52f22ddd3d2f0d6bbe2524a98442d86cbc06", "sealed": true},
+  "roots": [
+    {"name": "Nat.mod_eq_sub_mod", "declaration_sha256": "0eed08456d0d8b78a994cdd4db60e1cb1ba442ed0ee8567e01e5c2cfcdb6c6ad", "axiom_footprint": ["propext"], "direct_theorem_dependencies": ["Eq.symm", "Nat.eq_zero_or_pos", "Nat.mod_eq", "Nat.sub_zero", "if_pos"]},
+    {"name": "Nat.mod_lt", "declaration_sha256": "34e06b0574c094ba8dc2e317ef541822292b21cd0295e0f8126af92e4ab0f305", "axiom_footprint": [], "direct_theorem_dependencies": ["Nat.lt_of_not_le", "Nat.modCore_lt", "Nat.zero_lt_succ"]}
+  ],
+  "execution": {"exporter_invocations": 1, "importer_runs": 1, "retries": 0, "theorem_submissions": 0, "ledger_writes": 0},
+  "conclusion": {"clean_range_root": "Nat.mod_lt", "rejected_recurrence_root": "Nat.mod_eq_sub_mod", "next_boundary": "audit the recurrence root's five direct dependencies and replace only the assumption carrier"},
+  "authority": {"support_credit": 1, "closed_target_authorized": false, "ledger_writes": 0}
+}
