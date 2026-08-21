@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-coprime-factor-cancellation-residual-result",
+  "state": "residual-reconstructed-twice-dvd-mul-witness-propext",
+  "plan": {"path": "artifacts/autogenesis/coprime-factor-cancellation-residual-plan-v1.json", "sha256": "ccb85e83d59ff996fa3e9f74f912f29813fba60750018fd41dd1687f272d6ad7", "commit": "4c81f2ce2"},
+  "source": {"path": "scripts/lean/autogenesis_coprime_factor_cancellation_residual_v1.lean", "sha256": "a9f90409cbb27a05c4ca65712768ab197ed346cd57a4693911784d43d335e32d"},
+  "evidence": {"pack": "/nas3/data/axeyum/autogenesis/reference-packs/4c81f2ce2-coprime-factor-cancellation-residual-v1", "manifest_sha256": "700688eed6ae81148bf61d039111b8701a8f5f9d92591d9be2c6920c78548e33", "stream_sha256": "3bab0b939e7164402824dd4a6dbe4e7760bf9a655add46e8fd414e723618a43d", "audit_sha256": "370b572cc0b6586c459a796eb01aefb63119816957cb842b3334decdb007b410"},
+  "execution": {"source_copies": 1, "compiler_invocations": 1, "exporter_invocations": 1, "importer_runs": 2, "proof_bearing_stream_reads": 2, "retries": 0},
+  "classification": {"clean_roots": ["Axeyum.Autogenesis.dvdAddWitnessV1"], "propext_roots": ["Axeyum.Autogenesis.dvdMulRightWitnessV1", "Axeyum.Autogenesis.coprimeFactorDivisibilityCancellationResidualV1"], "unexpected_dvd_mul_direct_dependencies": ["Eq.trans", "Nat.mul_assoc", "congrArg"]},
+  "authority": {"support_leaf_credit": 1, "residual_cancellation_credit": 0, "official_cancellation_credit": 0, "target_specialization_credit": 0, "exact_fibonacci_target_submissions": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_boundary": {"required_next_increment": "preregister an exact Eq.trans Nat.mul_assoc congrArg footprint audit in this sealed stream"},
+  "verification": "python3 scripts/check-autogenesis-coprime-factor-cancellation-residual-result.py",
+  "limitations": "Only dvdAddWitnessV1 is accepted. The multiplicative witness and residual theorem reach propext and receive no credit."
+}

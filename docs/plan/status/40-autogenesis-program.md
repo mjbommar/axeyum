@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction has an unconditional official-representation balanced-Bézout theorem. Self-contained generic cancellation reconstructs deterministically but reaches `propext`; its exact seventeen-root audit splits eleven clean dependencies from six named carriers, with no cancellation credit.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction has unconditional official balanced Bézout. Residual cancellation removes five of six measured carriers and accepts a clean additive divisibility-witness leaf, but its multiplicative witness unexpectedly retains `propext` through three previously clean-looking dependencies; no residual cancellation credit is granted.
 
-**Next:** execute the preregistered residual cancellation source: two target-owned divisibility witness lemmas and a theorem parameterized only by balanced Bézout, clean right distributivity, and additive divisibility cancellation. Require two byte-identical empty-footprint imports and preserve zero official cancellation/Fibonacci authority.
+**Next:** preregister one exact footprint/identity audit of `Eq.trans`, `Nat.mul_assoc`, and `congrArg` in the residual stream. Resolve whether the remaining footprint is declaration drift or a direct axiom edge before changing the multiplicative witness.
 
 <!-- plan-section: landed-changes -->
 
@@ -138,4 +138,5 @@
 | 2026-08-21 | (pending) | Self-contained cancellation reconstructs twice deterministically but localizes its rejected footprint to `propext` |
 | 2026-08-21 | `efe97708a` | All seventeen direct cancellation dependencies are frozen before one non-rendering sealed-stream audit |
 | 2026-08-21 | (pending) | One exact audit splits eleven clean cancellation dependencies from six `propext` carriers |
-| 2026-08-21 | (pending) | Residual cancellation freezes direct witness replacements and leaves exactly three explicit theorem parameters |
+| 2026-08-21 | `4c81f2ce2` | Residual cancellation freezes direct witness replacements and leaves exactly three explicit theorem parameters |
+| 2026-08-21 | (pending) | Residual replay accepts the additive witness but retains one unexpected multiplicative-witness `propext` edge |

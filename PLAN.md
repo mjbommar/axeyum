@@ -200,7 +200,8 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Self-contained cancellation reconstructs twice deterministically but localizes its rejected footprint to `propext` |
 | 2026-08-21 | `efe97708a` | All seventeen direct cancellation dependencies are frozen before one non-rendering sealed-stream audit |
 | 2026-08-21 | (pending) | One exact audit splits eleven clean cancellation dependencies from six `propext` carriers |
-| 2026-08-21 | (pending) | Residual cancellation freezes direct witness replacements and leaves exactly three explicit theorem parameters |
+| 2026-08-21 | `4c81f2ce2` | Residual cancellation freezes direct witness replacements and leaves exactly three explicit theorem parameters |
+| 2026-08-21 | (pending) | Residual replay accepts the additive witness but retains one unexpected multiplicative-witness `propext` edge |
 | 2026-08-20 | `9eb81822f` | Isolate persistent pre-push worktree metadata from the caller lane and register the two-sided control |
 | 2026-08-20 | `24b16642e` | Confirm the repaired hook against a live Rust push with unchanged caller state and a clean exact-SHA gate checkout |
 | 2026-08-20 | (pending) | The string family's first re-derivable UNSAT artifact beyond word-clash/regex-emptiness: `Evidence::UnsatStringLength` abstracts every string term to an integer length keyed on its SOURCE NAME, names the five theory lemmas the argument uses, and closes with one nonnegative combination per case-split branch. The checker is two stages — bind each lemma to the conjunct that licenses it, then re-derive the arithmetic — and is arena-free, because a string script's flat view is the bounded packed-BV encoding rather than the query. 23 guards mutation-checked; two killed nothing and were fixed rather than kept (one was dead code the command allow-list already covered, one had no multi-`check-sat` fixture). Also: `diagnose_evidence` reported the ARENA front door for string files, i.e. a query nobody solves — it now reports the text front door too, and agreed with the dominance audit for the first time. |
@@ -957,9 +958,9 @@ analysis that would close the two principled declines; and the dir-branch drop,
 which makes a synthetic row's denominator depend on what the audit could decide
 that day.
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction has an unconditional official-representation balanced-Bézout theorem. Self-contained generic cancellation reconstructs deterministically but reaches `propext`; its exact seventeen-root audit splits eleven clean dependencies from six named carriers, with no cancellation credit.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction has unconditional official balanced Bézout. Residual cancellation removes five of six measured carriers and accepts a clean additive divisibility-witness leaf, but its multiplicative witness unexpectedly retains `propext` through three previously clean-looking dependencies; no residual cancellation credit is granted.
 
-**Next:** execute the preregistered residual cancellation source: two target-owned divisibility witness lemmas and a theorem parameterized only by balanced Bézout, clean right distributivity, and additive divisibility cancellation. Require two byte-identical empty-footprint imports and preserve zero official cancellation/Fibonacci authority.
+**Next:** preregister one exact footprint/identity audit of `Eq.trans`, `Nat.mul_assoc`, and `congrArg` in the residual stream. Resolve whether the remaining footprint is declaration drift or a direct axiom edge before changing the multiplicative witness.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
