@@ -642,9 +642,25 @@ that was never run.
 - **The competition figures are 15 days old** (QF_BV 4 days). Nothing since
   should have moved them much — this session's work was evidence and proofs, not
   decision procedures — but that is an argument, not a measurement.
-- **Every claim about cvc5 and Bitwuzla is source- or doc-derived**, not
-  measured: neither binary is installed on this host. Only Z3 4.13.3 was probed
-  directly.
+- ~~Every claim about cvc5 and Bitwuzla is source- or doc-derived; neither
+  binary is installed on this host.~~ **FALSE, corrected 2026-08-21.** Both are
+  installed — `/nas3/data/axeyum/harness/bin/{cvc5,bitwuzla}`, cvc5 1.3.4
+  (`git f3b21c4`) and Bitwuzla 0.9.1, the exact versions the parity ledger names.
+  They are simply not on `$PATH`, and three separate documents (this one, the
+  reference-solver research, and the linear-arithmetic note, twice) recorded
+  "not installed" from a bare `command -v`.
+
+  That is the same mistake as `lean`, which this repository already documents:
+  `check-lean-gate.sh`'s header exists because `which lean` printed nothing while
+  elan had it under `~/.elan`. **An absent binary on `$PATH` is not an absent
+  binary**, and it took a fourth lane running `find` to notice.
+
+  The cost was not hypothetical. Claims about cvc5 in §4 were source-derived when
+  they could have been measured, and gap 4b was sized with z3 as a *proxy* for
+  cvc5 — while §9 row 4's diagnosis measured **z3 136/200 against cvc5 76/200 on
+  QF_NIA**, sixty files apart, with cvc5's decided set a strict subset of z3's.
+  A proxy that disagrees by 60 files on one division cannot be assumed to agree
+  on another.
 - **Our Z3 is 22 months old** (§2.2), so both the head-to-head and the
   differential fuzzing are against a solver two major versions behind.
 - **`bv_nego` reachability is unverified** (§7), and so is the WASM build and
