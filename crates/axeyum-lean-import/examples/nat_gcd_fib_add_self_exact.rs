@@ -9,8 +9,9 @@ use axeyum_lean_import::{
     ImportLimits, ReusedTypeCompatibility, canonical_declaration_sha256,
     canonical_expression_sha256, canonical_kernel_type_shape_sha256,
     checked_reused_declaration_compatibility, compose_checked_theorem_slice,
-    compose_checked_theorem_slice_with_target_leaves, import_ndjson,
+    compose_checked_theorem_slice_with_target_leaves, import_ndjson, specialize_checked_theorem,
     verify_checked_theorem_composition, verify_checked_theorem_composition_with_target_leaves,
+    verify_checked_theorem_specialization,
 };
 use axeyum_lean_kernel::{
     BinderInfo, Declaration, ExprId, Kernel, Lean4ExportMetadata, LevelId, NameId,
@@ -88,6 +89,13 @@ const TARGET_DVD_ADD: &str = "Axeyum.Autogenesis.dvdAddOfficialV1";
 const TARGET_EQ_ONE_OF_DVD_ONE: &str = "Axeyum.Autogenesis.eqOneOfDvdOneOfficialV1";
 const TARGET_DVD_REFL: &str = "Axeyum.Autogenesis.dvdReflOfficialV1";
 const TARGET_DVD_MUL_RIGHT: &str = "Axeyum.Autogenesis.dvdMulRightOfficialV1";
+const GCD_DIVISIBILITY_GENERIC: &str = "Axeyum.Autogenesis.gcdDivisibilityFamilyGenericV1";
+const GCD_DIVISIBILITY_GENERIC_CAPSULE: &str =
+    "69971cb5f19607b454ba716966aebc4b1e3e3e3675fdc1f8534c5475b15ee5b2";
+const GCD_DIVISIBILITY_CLOSED: &str = "Axeyum.Autogenesis.gcdDivisibilityFamilyClosedV1";
+const TARGET_GCD_DVD_LEFT: &str = "Axeyum.Autogenesis.gcdDvdLeftOfficialV1";
+const TARGET_GCD_DVD_RIGHT: &str = "Axeyum.Autogenesis.gcdDvdRightOfficialV1";
+const TARGET_DVD_GCD: &str = "Axeyum.Autogenesis.dvdGcdOfficialV1";
 const COPRIME_CAPSULE: &str = "9106a3442d75a5fdaf51e35436e6fdbea78714d743e666bec27ffd9641160b11";
 const CLEAN_GCD_COMM: &str = "Axeyum.Autogenesis.gcdCommCleanV1";
 const OFFICIAL_EQ_ZERO: &str = "Axeyum.Autogenesis.eqZeroOfZeroDvdOfficialV1";
@@ -134,6 +142,14 @@ fn run() -> Result<(), String> {
     let mut args = std::env::args_os().skip(1);
     if args.next().as_deref() == Some(std::ffi::OsStr::new("--target-native-dvd-utility-capsule")) {
         return run_target_native_dvd_utility_capsule(args);
+    }
+    let mut args = std::env::args_os().skip(1);
+    if args.next().as_deref()
+        == Some(std::ffi::OsStr::new(
+            "--target-native-gcd-divisibility-capsule",
+        ))
+    {
+        return run_target_native_gcd_divisibility_capsule(args);
     }
     let mut args = std::env::args_os().skip(1);
     let r091_path = path(&mut args)?;
@@ -364,6 +380,141 @@ fn run_target_native_dvd_utility_capsule(
     println!("{}", serde_json::to_string_pretty(&json!({
         "schema_version":1,"kind":"axeyum-autogenesis-target-native-dvd-utility-capsule","state":"two-dvd-utilities-reconstructed-empty-footprint-roundtrip-checked","setup_compositions":setup,"supports":expected,"capsule":{"bytes":bytes.len(),"sha256":hex_sha256(bytes.as_bytes()),"fresh_imports":2},"execution":{"support_submissions":2,"exports":1,"fresh_imports":2,"retries":0},"rendered_material":{"proof_terms":0,"theorem_types":0,"theorem_values":0},"exact_target_submissions":0,"fact_status_changes":0,"evaluation_credit":0,"ledger_writes":0
     })).map_err(|error| error.to_string())?);
+    Ok(())
+}
+
+fn run_target_native_gcd_divisibility_capsule(
+    mut args: impl Iterator<Item = std::ffi::OsString>,
+) -> Result<(), String> {
+    let r091_path = path(&mut args)?;
+    let clean_path = path(&mut args)?;
+    let cancellation_path = path(&mut args)?;
+    let addition_path = path(&mut args)?;
+    let simple_path = path(&mut args)?;
+    let dvd_path = path(&mut args)?;
+    let generic_path = path(&mut args)?;
+    let output_path = path(&mut args)?;
+    if args.next().is_some() || output_path.exists() {
+        return Err("usage: nat_gcd_fib_add_self_exact --target-native-gcd-divisibility-capsule <r091> <official-clean-order> <cancellation> <addition> <simple-support> <dvd-utilities> <generic-family> <output>".to_owned());
+    }
+    let inputs = [
+        (clean_path, CLEAN_ANTISYMM_CAPSULE, vec![CLEAN_ANTISYMM]),
+        (cancellation_path, CANCELLATION_CAPSULE, vec![CANCELLATION]),
+        (addition_path, ADDITION_CAPSULE, vec![ADDITION]),
+        (
+            simple_path,
+            "ce0db76dc93690e1e345627ce555e9f53b532a396643581fe554a7bcdce18322",
+            vec![TARGET_DVD_ADD, TARGET_EQ_ONE_OF_DVD_ONE],
+        ),
+        (
+            dvd_path,
+            "51f5e30677457cb0e6f39799fe062c11d115b1120c04dd23e17dbed596ff3cf3",
+            vec![TARGET_DVD_REFL, TARGET_DVD_MUL_RIGHT],
+        ),
+        (
+            generic_path,
+            GCD_DIVISIBILITY_GENERIC_CAPSULE,
+            vec![GCD_DIVISIBILITY_GENERIC],
+        ),
+    ];
+    let r091 = import_bound(&r091_path, R091_SHA256, "r091")?;
+    let mut kernel = r091.kernel().clone();
+    let mut setup = Vec::new();
+    for (source_path, expected_sha256, roots) in inputs {
+        let source = import_bound(&source_path, expected_sha256, roots[0])?;
+        let completed = compose_checked_theorem_slice(source.kernel(), &kernel, &roots)
+            .map_err(|error| format!("GCD divisibility setup composition declined: {error:?}"))?;
+        verify_checked_theorem_composition(
+            source.kernel(),
+            &kernel,
+            completed.kernel(),
+            completed.receipt(),
+        )
+        .map_err(|error| format!("GCD divisibility setup did not replay: {error:?}"))?;
+        setup.push(json!({"roots":roots,"receipt_sha256":completed.receipt().receipt_sha256}));
+        kernel = completed.kernel().clone();
+    }
+
+    let generic = find_name(&kernel, GCD_DIVISIBILITY_GENERIC)?;
+    let arguments = [
+        find_name(&kernel, GCD_ZERO_LEFT_GENERIC)?,
+        find_name(&kernel, COPRIME_GCD_SUCC_LEAF)?,
+        find_name(&kernel, "Axeyum.Autogenesis.modQuotientWitnessV4")?,
+        find_name(&kernel, TARGET_DVD_REFL)?,
+        find_name(&kernel, TARGET_DVD_MUL_RIGHT)?,
+        find_name(&kernel, TARGET_DVD_ADD)?,
+        find_name(&kernel, "Axeyum.Autogenesis.dvdAddCancelAllNatClosedV1")?,
+    ];
+    let closed_name = nested_name(
+        &mut kernel,
+        &["Axeyum", "Autogenesis", "gcdDivisibilityFamilyClosedV1"],
+    );
+    let closed = specialize_checked_theorem(&kernel, generic, &arguments, closed_name)
+        .map_err(|error| format!("GCD divisibility specialization declined: {error:?}"))?;
+    verify_checked_theorem_specialization(
+        &kernel,
+        closed.kernel(),
+        generic,
+        &arguments,
+        closed_name,
+        closed.receipt(),
+    )
+    .map_err(|error| format!("GCD divisibility specialization did not replay: {error:?}"))?;
+    kernel = closed.kernel().clone();
+    require_empty(&kernel, closed_name, GCD_DIVISIBILITY_CLOSED)?;
+
+    let left = declare_target_native_gcd_dvd_projection(&mut kernel, true)?;
+    require_empty(&kernel, left, TARGET_GCD_DVD_LEFT)?;
+    let right = declare_target_native_gcd_dvd_projection(&mut kernel, false)?;
+    require_empty(&kernel, right, TARGET_GCD_DVD_RIGHT)?;
+    let greatest = declare_target_native_dvd_gcd_projection(&mut kernel)?;
+    require_empty(&kernel, greatest, TARGET_DVD_GCD)?;
+    let expected = [
+        evidence(&kernel, left)?,
+        evidence(&kernel, right)?,
+        evidence(&kernel, greatest)?,
+    ];
+    let bytes = kernel
+        .render_lean4export_ndjson_roots(
+            &Lean4ExportMetadata::axeyum("4.30.0"),
+            &[left, right, greatest],
+        )
+        .map_err(|error| format!("GCD divisibility capsule export failed: {error}"))?;
+    for pass in 1..=2 {
+        let replay = import_ndjson(Cursor::new(bytes.as_bytes()), ImportLimits::default())
+            .map_err(|error| format!("GCD divisibility capsule import {pass} failed: {error:?}"))?;
+        for (name, expected_row) in [
+            (TARGET_GCD_DVD_LEFT, &expected[0]),
+            (TARGET_GCD_DVD_RIGHT, &expected[1]),
+            (TARGET_DVD_GCD, &expected[2]),
+        ] {
+            let theorem = find_name(replay.kernel(), name)?;
+            if evidence(replay.kernel(), theorem)? != *expected_row {
+                return Err(format!("GCD divisibility import {pass} changed {name}"));
+            }
+        }
+    }
+    fs::write(&output_path, &bytes)
+        .map_err(|error| format!("GCD divisibility capsule write failed: {error}"))?;
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "schema_version":1,
+            "kind":"axeyum-autogenesis-target-native-gcd-divisibility-capsule",
+            "state":"three-gcd-divisibility-theorems-reconstructed-empty-footprint-roundtrip-checked",
+            "setup_compositions":setup,
+            "closed_family":evidence(&kernel, closed_name)?,
+            "supports":expected,
+            "capsule":{"bytes":bytes.len(),"sha256":hex_sha256(bytes.as_bytes()),"fresh_imports":2},
+            "execution":{"closed_theorem_submissions":3,"exports":1,"fresh_imports":2,"retries":0},
+            "rendered_material":{"proof_terms":0,"theorem_types":0,"theorem_values":0},
+            "exact_target_submissions":0,
+            "fact_status_changes":0,
+            "evaluation_credit":0,
+            "ledger_writes":0
+        }))
+        .map_err(|error| error.to_string())?
+    );
     Ok(())
 }
 
@@ -1079,6 +1230,38 @@ impl<'a> Dev<'a> {
         self.kernel
             .pi(self.anon, domain, codomain, BinderInfo::Default)
     }
+    fn and(&mut self, left: ExprId, right: ExprId) -> ExprId {
+        let and = find_name(self.kernel, "And").expect("And must exist");
+        self.lemma(and, &[left, right])
+    }
+    fn and_left(&mut self, left: ExprId, right: ExprId, proof: ExprId) -> ExprId {
+        let pair = self.and(left, right);
+        let pair_fv = self.fresh();
+        let motive = self.lam(pair_fv, pair, left);
+        let left_fv = self.fresh();
+        let left_proof = self.kernel.fvar(left_fv);
+        let right_fv = self.fresh();
+        let minor = self.lam(right_fv, right, left_proof);
+        let minor = self.lam(left_fv, left, minor);
+        let zero = self.kernel.level_zero();
+        let and_rec = find_name(self.kernel, "And.rec").expect("And.rec must exist");
+        let rec = self.kernel.const_(and_rec, vec![zero]);
+        self.apply(rec, &[left, right, motive, minor, proof])
+    }
+    fn and_right(&mut self, left: ExprId, right: ExprId, proof: ExprId) -> ExprId {
+        let pair = self.and(left, right);
+        let pair_fv = self.fresh();
+        let motive = self.lam(pair_fv, pair, right);
+        let left_fv = self.fresh();
+        let right_fv = self.fresh();
+        let right_proof = self.kernel.fvar(right_fv);
+        let minor = self.lam(right_fv, right, right_proof);
+        let minor = self.lam(left_fv, left, minor);
+        let zero = self.kernel.level_zero();
+        let and_rec = find_name(self.kernel, "And.rec").expect("And.rec must exist");
+        let rec = self.kernel.const_(and_rec, vec![zero]);
+        self.apply(rec, &[left, right, motive, minor, proof])
+    }
     fn eq_motive(&mut self, source: ExprId, body: &dyn Fn(&mut Self, ExprId) -> ExprId) -> ExprId {
         let value_fv = self.fresh();
         let value = self.kernel.fvar(value_fv);
@@ -1773,6 +1956,108 @@ fn declare_target_native_dvd_mul_right(kernel: &mut Kernel) -> Result<NameId, St
             value: proof,
         })
         .map_err(|error| format!("target-native dvd multiplication rejected: {error:?}"))?;
+    Ok(target)
+}
+
+fn gcd_divides_pair_type(d: &mut Dev<'_>) -> ExprId {
+    let nat = d.nat_ty();
+    let left_fv = d.fresh();
+    let left = d.kernel.fvar(left_fv);
+    let right_fv = d.fresh();
+    let right = d.kernel.fvar(right_fv);
+    let gcd = d.gcd(left, right);
+    let divides_left = d.dvd(gcd, left);
+    let divides_right = d.dvd(gcd, right);
+    let pair = d.and(divides_left, divides_right);
+    let pair = d.pi(right_fv, nat, pair);
+    d.pi(left_fv, nat, pair)
+}
+
+fn divides_gcd_type(d: &mut Dev<'_>) -> ExprId {
+    let nat = d.nat_ty();
+    let divisor_fv = d.fresh();
+    let divisor = d.kernel.fvar(divisor_fv);
+    let left_fv = d.fresh();
+    let left = d.kernel.fvar(left_fv);
+    let right_fv = d.fresh();
+    let right = d.kernel.fvar(right_fv);
+    let divides_left = d.dvd(divisor, left);
+    let divides_right = d.dvd(divisor, right);
+    let gcd = d.gcd(left, right);
+    let conclusion = d.dvd(divisor, gcd);
+    let ty = d.arrow(divides_right, conclusion);
+    let ty = d.arrow(divides_left, ty);
+    let ty = d.pi(right_fv, nat, ty);
+    let ty = d.pi(left_fv, nat, ty);
+    d.pi(divisor_fv, nat, ty)
+}
+
+fn declare_target_native_gcd_dvd_projection(
+    kernel: &mut Kernel,
+    project_left: bool,
+) -> Result<NameId, String> {
+    let target_name = if project_left {
+        "gcdDvdLeftOfficialV1"
+    } else {
+        "gcdDvdRightOfficialV1"
+    };
+    let target = nested_name(kernel, &["Axeyum", "Autogenesis", target_name]);
+    let mut d = Dev::new(kernel)?;
+    let family_name = d.exact(GCD_DIVISIBILITY_CLOSED)?;
+    let family = d.kernel.const_(family_name, vec![]);
+    let pair_family_ty = gcd_divides_pair_type(&mut d);
+    let greatest_family_ty = divides_gcd_type(&mut d);
+    let pair_family = d.and_left(pair_family_ty, greatest_family_ty, family);
+    let nat = d.nat_ty();
+    let left_fv = d.fresh();
+    let left = d.kernel.fvar(left_fv);
+    let right_fv = d.fresh();
+    let right = d.kernel.fvar(right_fv);
+    let pair = d.apply(pair_family, &[left, right]);
+    let gcd = d.gcd(left, right);
+    let divides_left = d.dvd(gcd, left);
+    let divides_right = d.dvd(gcd, right);
+    let body = if project_left {
+        d.and_left(divides_left, divides_right, pair)
+    } else {
+        d.and_right(divides_left, divides_right, pair)
+    };
+    let proof = d.lam(right_fv, nat, body);
+    let proof = d.lam(left_fv, nat, proof);
+    let conclusion = if project_left {
+        divides_left
+    } else {
+        divides_right
+    };
+    let ty = d.pi(right_fv, nat, conclusion);
+    let ty = d.pi(left_fv, nat, ty);
+    d.kernel
+        .add_declaration(Declaration::Theorem {
+            name: target,
+            uparams: vec![],
+            ty,
+            value: proof,
+        })
+        .map_err(|error| format!("target-native {target_name} rejected: {error:?}"))?;
+    Ok(target)
+}
+
+fn declare_target_native_dvd_gcd_projection(kernel: &mut Kernel) -> Result<NameId, String> {
+    let target = nested_name(kernel, &["Axeyum", "Autogenesis", "dvdGcdOfficialV1"]);
+    let mut d = Dev::new(kernel)?;
+    let family_name = d.exact(GCD_DIVISIBILITY_CLOSED)?;
+    let family = d.kernel.const_(family_name, vec![]);
+    let pair_family_ty = gcd_divides_pair_type(&mut d);
+    let greatest_family_ty = divides_gcd_type(&mut d);
+    let proof = d.and_right(pair_family_ty, greatest_family_ty, family);
+    d.kernel
+        .add_declaration(Declaration::Theorem {
+            name: target,
+            uparams: vec![],
+            ty: greatest_family_ty,
+            value: proof,
+        })
+        .map_err(|error| format!("target-native dvdGcdOfficialV1 rejected: {error:?}"))?;
     Ok(target)
 }
 
