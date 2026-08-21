@@ -474,6 +474,38 @@ that read as "we are slower" is substantially "we stop early". And 26 files —
   verdict is a blunt instrument for "was the annotation obeyed" — the direct
   observable is the proposed instance set, and that is what changed.
 
+**Row 1's fix is landed, and it is better than the experiment.** ADR-0538
+(`40a1ab969`): theory-core minimisation is now rationed by **oracle calls**, not
+gated on core width. Measured on the pinned 200-file list, three arms with z3 run
+adjacent per file:
+
+```
+QF_UFLIA   base 92  →  constant-bump A/B 112  →  shipped 114   (+22, −0)
+           0 disagreements vs z3 · 0 vs declared :status
+QF_IDL     control  66 → 65
+```
+
+Verified independently from the per-file data and by re-running six of the
+newly-decided files live (6/6 reproduced, agreeing with z3 and the declared
+status). It **strictly dominates** the diagnosis's constant bump — every file
+that decided, plus two more — while keeping the memory protection the raw bump
+traded away: a minimised-but-still-300-wide core costs the SAT solver what an
+unminimised one costs, so the old constant survives as a *retention* bound.
+
+The budget unit was chosen on this repository's determinism promise. Wall-clock
+would make the learned clause set — and therefore the verdict on a marginal
+instance — a function of machine load. One deletion candidate is one oracle
+call, so the unit is machine-independent and proportional to the cost rationed.
+
+**The control's single loss is real and reported as one.** All three arms
+re-decide `diamonds.12.2.i.a.u` in isolation, but the shipped arm is ~11% slower
+on it, which under load pushed a 15-second file past the external kill. The
+change costs measurable time on QF_IDL and buys nothing there.
+
+At 114/180 that division moves from 52.2% to roughly **63%** — pending the
+re-measurement, which is running from a tree that predates this fix and will
+therefore understate it.
+
 **Sized and deprioritised (2).** Row 10 proposed the CAV-2024 bit-blasting
 abstraction on the grounds that both specialist references have it and the QF_BV
 podium is tight. Both facts are true and neither is about us. Our QF_BV slice:
