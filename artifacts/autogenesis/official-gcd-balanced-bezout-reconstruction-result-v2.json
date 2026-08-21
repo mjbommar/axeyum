@@ -1,0 +1,62 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-official-gcd-balanced-bezout-reconstruction-result",
+  "state": "corrected-main-source-compilation-declined-no-retry-no-theorem-credit",
+  "plan": {
+    "path": "artifacts/autogenesis/official-gcd-balanced-bezout-reconstruction-plan-v2.json",
+    "sha256": "30d56bc3d4597cc1a2335cfc4032cb3988fdb461f1396fe1a7b48982c06562c9",
+    "commit": "f96a2319d1c94be35607b7555028a69b59bb32be"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/1de1558f7-official-gcd-balanced-bezout-v2-v1/manifest.json",
+    "sha256": "d5532817d252b359fb7a9fb01324c48b619ad64d8e79b3208fbba3b084c055a0",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "execution": {
+    "source_copies": 2,
+    "compiler_invocations": 2,
+    "successful_compilations": 1,
+    "failed_compilations": 1,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "proof_bearing_stream_reads": 0,
+    "retries_after_compilation": 0
+  },
+  "result": {
+    "generic_main_source_compiled": false,
+    "generic_theorems_reconstructed": 0,
+    "diagnostic_count": 4,
+    "diagnostic_classes": [
+      "unfolded Nat.modCore retains a positive-divisor dependent conditional",
+      "congrArg multiplication equalities remain beta-redexes and do not rewrite normalized products",
+      "induction hypothesis notation requires an explicit definitional change before contextual rewrite"
+    ],
+    "proof_material_rendered": false
+  },
+  "cleanup": {
+    "exact_temporary_paths_removed": 6,
+    "preexisting_status_entries_before": 3,
+    "preexisting_status_entries_after": 3,
+    "preexisting_baseline_unchanged": true
+  },
+  "next_boundary": {
+    "requires_new_preregistration": true,
+    "source_corrections": [
+      "eliminate the unfolded Nat.modCore dependent conditional with the existing positive-divisor proof",
+      "give the congrArg equalities explicit normalized product types",
+      "change the induction hypothesis definitionally to direct Nat.mod and Nat.succ notation before rewriting"
+    ]
+  },
+  "authority": {
+    "generic_balanced_bezout_credit": 0,
+    "target_specialization_credit": 0,
+    "cancellation_credit": 0,
+    "exact_fibonacci_target_submissions": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "verification": "python3 scripts/check-autogenesis-official-gcd-balanced-bezout-reconstruction-result-v2.py",
+  "limitations": "V2 is a source-compilation decline. It establishes no generic theorem, target specialization, cancellation, Fibonacci target, receipt, evaluation result, fact transition, or ledger write."
+}
