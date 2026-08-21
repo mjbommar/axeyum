@@ -3,18 +3,15 @@
 <!-- plan-section: lane-status -->
 
 **Open queue, in the order I intend to clear it** (`WIP`,
-capability-assurance, 2026-08-19). Two items cleared themselves while it stood,
-by the lanes that owned them — a queue listing resolved work is the same defect
-as stale prose, so they are struck rather than carried.
+capability-assurance, 2026-08-20). Items that clear themselves are struck rather
+than carried — a queue listing resolved work is the same defect as stale prose.
 
-1. **`hooks/pre-push` runs `cargo test -p axeyum-lean-kernel` WHOLESALE**
-   (line 260), and that package gained two real-Lean suites today —
-   `real_lean_creal_carrier_kernel_replay` (~62 s) and
-   `real_lean_wellfounded_elaborator_divergence` (~115 s, four Lean
-   invocations). `scripts/check-lean-gate.sh` already owns both. Every push in
-   the repository pays for them twice, on a step documented at 206-248 s and
-   measured at 2,396 s under contention. First, because it taxes every other
-   lane continuously.
+1. ~~`hooks/pre-push` runs `cargo test -p axeyum-lean-kernel` WHOLESALE~~ —
+   **cleared 2026-08-20.** The Lean-prelude suites moved to `just check`, which
+   already owned them and which gates a different property; the hook went
+   **630 s → 130 s**. It also gained `cargo check --all-targets` (not
+   `--workspace`, which does not compile the bench examples and let me break
+   `main`) and a route-agreement step.
 2. **One guard in `check-lra-hypothesis-binding.py:1244` measurably SURVIVES**
    (`bind_structural`'s opaque-sort check). Needs a control in
    `102-attestation-gap`'s test module; the mutation harness reports it rather
@@ -70,3 +67,7 @@ guard-count correction rather than publishing the wrong number.
 
 | 2026-08-18 | `pending` | `scripts/cargo-serialized.sh`: heavy cargo now takes an flock and a memory ceiling, because "serialize" was prose and prose does not hold a lock (two dev boxes downed, one agent session OOM-killed). **`MemoryMax` alone does not bite** — it *is* applied (`memory.max` = 67108864) and a 400 MB allocation still succeeds by swapping, on a box whose 7 G of swap is 6 G full. With `MemorySwapMax=0` the same allocation is SIGKILLed by the cgroup (137), host untouched. `--self-check` proves it per host and discriminates: `AXEYUM_CARGO_SWAP=1G` flips it to `SURVIVED`, exit 1. |
 | 2026-08-18 | `pending` | `local-ci.sh`, the declared authoritative gate for `main`, cannot run on any fleet host and never has (`cargo nextest` 101, `rustup run 1.88.0` 1, on s4/s5/s7). Now refuses to start rather than limp, `--record` leaves a tracked per-(sha,host) JSON, and `provision-fleet-host.sh` installs the prerequisites (`1.88.0` needs `--profile minimal`, else rustup fails on `miri`/`cranelift` inherited from the nightly profile). The record carries per-step TEST COUNTS and marks a step that exited 0 having run zero tests as `vacuous`. |
+
+| 2026-08-20 | `4e1f9b092` | **The `whnf_core` tripwire was gated on the ENTRY, and the links it guards are not the entry.** The new δ-chain memo routes each link into the split cache by *that link's own* closedness, but the `reduction_ctx_reads` assertion beside it read `!entry_closed || …` — a different set. An OPEN entry δ-unfolds to a CLOSED link, and that link is written to the kernel-global half whose key has **no context component at all**, unchecked. Measured before writing the guard: one `build_creal_prelude` routes **6 links** that way (0 with a tail context read, so the memo was correct — just unchecked). Now per-link, against a `reduction_ctx_reads` snapshot taken when each link is pushed. Reachability is what makes it more than decoration, so it has a test; `chain.into_iter().take(1)` kills exactly that test. **Neutering the assertion itself kills nothing, and the code says so** — no input can make it fire, because "a closed term's reduction cannot reach a context lookup" is a theorem about `has_fvars`. Its `entry_closed` sibling was always in that category too, and did not say so. |
+| 2026-08-20 | `813b80daa` | **13 stale measured markers, and renumbering them would have been wrong.** The prose explained the numbers and the explanations no longer described the artifacts. Fully-dominant fell 23/35 → 20/35, and **only two of the four losses are losses**: `QF_FP/fp_misc` went from fully Lean-reconstructed to a timeout, and `QF_BVFP/Float-no-simp3-main` stopped producing a certificate; against those, `fp_fromsbv` merely began declaring a `bit-blast` trust hole and `seq-ex1` merely met the redefinition of `evidence_checked` as *re-derives* rather than *portable*. A criterion that tightens under a metric moves it in the same direction as a capability regression, so the two are now reported apart. Also corrected: the baseline/audit gap was documented as "QF_NIA proof production rejects `IntPow2`", i.e. a refusal — all four are evidence-audit **timeouts**, which is a different fact. And two of the 20 "fully dominant" rows audited **zero** decisions, since `dominant_pct_audited == 100.0` and `audited_decided == 0` are not distinguished. |
+| 2026-08-20 | (open, dispatched) | **`QF_FP/solver__fp__fp_misc.smt2` no longer reconstructs, and it is not the prelude.** Fully Lean-reconstructed on 2026-07-21; at HEAD it times out in the `lean-reconstruction` phase at **14.7 s of 15 s and 124.7 s of 125 s**. The obvious hypothesis — that the audit ran inside the 11-hour window when `502184d3f` had prelude construction at 33 s — is **wrong**, and I tested it rather than publishing it: warming is now 6.6–11.9 s and the instance still times out at a 125 s budget. First hypothesis for whoever picks it up is the exponential-DAG-walk bug this repository has now shipped five separate times; FP lowers into exactly the large shared BV DAGs that trigger it. |
