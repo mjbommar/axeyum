@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-euclidean-public-recursion-decline",
+  "state": "exact-public-equation-declined-after-first-propext-kernel-import",
+  "plan": {
+    "path": "artifacts/autogenesis/euclidean-public-recursion-plan-v1.json",
+    "sha256": "1d5fad47b16a2d6cae1f3e9c3c5ae332a0a9e19d0a0f7297f2e09940e5fdec35"
+  },
+  "authored_source": {
+    "path": "scripts/lean/autogenesis_div_add_mod_public_recursion.lean",
+    "sha256": "52721420e47706b35ebfe600b9a81c9019c0015304e9e79ebe20f3001a1f5c50",
+    "compiled": true,
+    "proof_search_invocations": 0,
+    "upstream_proof_bodies_read": 0
+  },
+  "type_inventory_source": {
+    "path": "scripts/lean/autogenesis_div_add_mod_type_inventory.lean",
+    "sha256": "25b9fd758da84fbd843850b1996a4f91e435de948fb1bee6d7d04837b3bc61ea"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/52721420e-public-euclidean-recursion-decline-v1/manifest.json",
+    "sha256": "9d4c00992ffab48b6ac5bf7b2b620c677aa6c5b3b50955ba1024486099725444",
+    "mode": "0444"
+  },
+  "observation": {
+    "authored_type_repr_sha256": "0a0c92fdac6e526a524d7883d9676e19dc679fca46ebb25ea049df56f0d4ccbb",
+    "official_type_repr_sha256": "0a0c92fdac6e526a524d7883d9676e19dc679fca46ebb25ea049df56f0d4ccbb",
+    "exact_type_match": true,
+    "first_import_exit_status": 0,
+    "declaration_sha256": "00d72d9368679215749fcc9d33f3aa3ad3c7d3301cc67835029e100f1f141a69",
+    "axiom_footprint": [
+      "propext"
+    ],
+    "direct_theorem_dependencies": [
+      "Axeyum.Autogenesis.divAddModPublicRecursion._unary"
+    ],
+    "generated_recursion_dependency_count": 1,
+    "accepted_public_support": false,
+    "second_submission_skipped": true
+  },
+  "budget": {
+    "revised_source_paths": 1,
+    "public_support_theorem_declarations": 1,
+    "kernel_theorem_submissions": 1,
+    "exact_fibonacci_target_submissions": 0,
+    "executor_invocations": 0,
+    "retries_after_kernel_decline": 0
+  },
+  "authority": {
+    "proof_bodies_read": 0,
+    "theorem_values_read": 0,
+    "balanced_bezout_reconstructions": 0,
+    "coprime_cancellation_reconstructions": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Preregister a public-equation proof whose induction principle is explicit in the authored term, so the target does not depend on Lean's generated well-founded-recursion theorem. Measure that route before any downstream Bezout work.",
+  "limitations": "The mathematical recurrence and exact public statement compiled, but the first independent kernel import was not axiom-free. No second run, public-support acceptance, downstream reconstruction, evaluation credit, or ledger write is authorized."
+}
