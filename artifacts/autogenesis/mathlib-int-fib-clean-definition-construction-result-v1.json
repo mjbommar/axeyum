@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-clean-definition-construction-result",
+  "state": "target-owned-int-fib-and-exact-natcast-reconstruct-axiom-free",
+  "plan_sha256": "1f8a9f59423ffe9d17af1931da09ab4dc78605255eecdd6f1a143b16fde46763",
+  "pack_manifest_sha256": "c012c41f66c9ab606094da1fc3ecdfbe218f12e3269f0959657ef455731dcac5",
+  "theorem": {"name": "Int.fib_natCast", "declaration_sha256": "73b8742709bbb1b91780f41ff4a475b5b3f0b1c2981999c868b53fc38334bea3", "axiom_footprint": [], "direct_theorem_dependencies": []},
+  "representation": {"definition": "Int.fib", "official_stream_bytes": 9835690, "target_owned_stream_bytes": 374550, "removed_carrier": "Int.instDecidablePredEven", "strategy": "Int constructor matching plus explicit Nat.mod parity"},
+  "execution": {"compiler_invocations": 1, "exporter_invocations": 1, "importer_runs": 2, "byte_identical_observations": true, "retries": 0, "theorem_submissions": 1},
+  "conclusion": {"construction_succeeded": true, "fact_admission_authorized": false, "next": "preregister a sealed-capsule fact operation for F:ml430-int-fib-natcast-d5886be4"},
+  "authority": {"fact_status_changes": 0, "ledger_writes": 0}
+}

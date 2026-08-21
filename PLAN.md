@@ -133,6 +133,10 @@ now. Nothing was deleted.
 | 2026-08-21 | `8107bfa44` | Dedicated root audit selects dependency-free `Int.fib_natCast` and freezes one direct definitional construction |
 | 2026-08-21 | `89d97d476` | Corrected build-library-root execution is frozen after the first export-path failure without changing the proof |
 | 2026-08-21 | (pending) | Direct `rfl` theorem reproduces twice but retains nine assumptions, localizing the obstruction to official `Int.fib` itself |
+| 2026-08-21 | `eda6359ea` | One reusable non-rendering batch path auditor and exact `Int.fib` blocker audit are frozen before stream access |
+| 2026-08-21 | `f50e55508` | Absent-aware retry is frozen after theorem footprint and definition closure diverge at `Quot.ind` |
+| 2026-08-21 | `d1a17a762` | Target-owned constructor/parity replacement for official `Int.fib` is frozen before its single construction attempt |
+| 2026-08-21 | (pending) | Exact `Int.fib_natCast` reconstructs twice axiom-free over the 374 KB clean target-owned representation closure |
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
 | 2026-08-21 | `a9610560c` | The durable construction checker binds the separately stored target goal identity without weakening capsule checks |
@@ -1155,9 +1159,9 @@ declines any trigger outside an application tree over declared uninterpreted
 functions, which rules out arithmetic subterms — the first real workload with
 `(f (+ x 1))` as a pattern will want that.
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd` and `Nat.fib_dvd` remain durably proved. The integer Fibonacci descent selected dependency-free `Int.fib_natCast`; its direct `rfl` proof compiles, exports, and reproduces twice byte-identically with zero theorem dependencies, but still carries the full nine-name footprint. Contamination is therefore below proof search, in the official `Int.fib` definition or representation.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd` and `Nat.fib_dvd` remain durably proved. The integer Fibonacci representation blocker is now repaired: replacing the official `Int.instDecidablePredEven` closure with constructor matching and explicit Nat parity shrinks the root stream from 9.8 MB to 374 KB, and exact `Int.fib_natCast` reconstructs twice byte-identically with zero dependencies and an empty footprint.
 
-**Next:** preregister a non-rendering declaration/definition closure audit of official `Int.fib`, then reconstruct the smallest target-owned clean integer Fibonacci representation before retrying `Int.fib_natCast`.
+**Next:** register the clean `Int.fib_natCast` capsule as a typed fact operation, admit it crash-safely, and then rebuild `Int.fib_add_two` and `Int.fib_neg_natCast` over the target-owned integer Fibonacci definition.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
