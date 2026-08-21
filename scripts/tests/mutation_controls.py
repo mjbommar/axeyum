@@ -1326,6 +1326,39 @@ SUITES["array-bv-abstraction-walk"] = (
 
 
 # --------------------------------------------------------------------------
+# `ir-bv-nego-width` — a width guard that was MISSING, not weak.
+#
+# `TermArena::bv_nego` built the signed minimum as `1u128 << (w - 1)` while legal
+# widths run to `MAX_BV_WIDTH = 65536`.  Rust masks a shift amount mod 128, so
+# `w = 129` produced `1` in **release** — a silently wrong term, `x == 1` where
+# `x == 2^128` was meant — and a panic in debug.  The sibling `bv_umulo` had
+# handled the wide case since it was written; `bv_nego` never did.
+#
+# It survived because the exhaustive overflow-predicate sweep loops
+# `for w in 1..=4` and the one wide test in the suite covered `bv_umulo` only.
+# Registered so the asymmetry cannot come back: the first mutation removes the
+# wide branch, the second moves the boundary onto 128 itself.
+# --------------------------------------------------------------------------
+
+SUITES["ir-bv-nego-width"] = (
+    "crates/axeyum-ir/src/arena.rs",
+    Cargo(("-p", "axeyum-ir", "--test", "ir"), "ir-bv-nego-width"),
+    [
+        (
+            "the >128-bit signed-minimum branch exists at all",
+            "        let min = if w > 128 {",
+            "        let min = if false {",
+        ),
+        (
+            "128 itself stays on the narrow path (the boundary, not the guard)",
+            "        let min = if w > 128 {",
+            "        let min = if w >= 128 {",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
 # `mutation-controls` — the harness applied to itself.  The table lives in the
 # sibling module: an anchor stored in the file it mutates matches twice and the
 # harness rightly refuses it (`AMBIGUOUS ANCHOR`).

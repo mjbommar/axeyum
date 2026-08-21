@@ -1519,6 +1519,55 @@ def main() -> int:
                 f"{PROJECT_STATE.relative_to(ROOT)}: missing measured marker {marker!r}"
             )
 
+    # HOW MANY divisions the ledger actually holds, and WHICH ones may be named.
+    #
+    # Both claims had rotted, in the direction that flatters us, and neither was
+    # guarded (measured 2026-08-21): PROJECT-STATE said the ledger "contains
+    # head-to-head entries for eleven divisions" over a ledger holding NINE, and
+    # named QF_ABV among its stronger selected cells over a ledger that has
+    # never held a QF_ABV entry at all. `bench-results/parity-lists/QF_ABV.txt`
+    # is committed and has never been run -- which is exactly how a benchmark
+    # list gets mistaken for a result. The five exact rows below were guarded;
+    # the sentences AROUND them were not, so the numbers stayed honest while the
+    # prose framing them did not.
+    number_words = {
+        1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six",
+        7: "seven", 8: "eight", 9: "nine", 10: "ten", 11: "eleven",
+        12: "twelve", 13: "thirteen", 14: "fourteen", 15: "fifteen",
+        16: "sixteen", 17: "seventeen", 18: "eighteen", 19: "nineteen",
+        20: "twenty",
+    }
+    # Flattened, because the claim wraps across source lines and a raw
+    # substring test would silently never match -- a guard that cannot fire.
+    state_flat = re.sub(r"\s+", " ", project_state_text)
+    division_count = len(parity_rows)
+    want_divisions = (
+        "head-to-head entries for "
+        f"{number_words.get(division_count, str(division_count))} divisions"
+    )
+    if want_divisions not in state_flat:
+        failures.append(
+            f"{PROJECT_STATE.relative_to(ROOT)}: the parity ledger holds "
+            f"{division_count} division(s), so the text must say "
+            f"{want_divisions!r}"
+        )
+    named = re.search(
+        r"The stronger selected cells include ([^.]+)\.", state_flat
+    )
+    if named is None:
+        failures.append(
+            f"{PROJECT_STATE.relative_to(ROOT)}: missing the 'stronger selected "
+            "cells' sentence this gate reads division names out of"
+        )
+    else:
+        for division in re.findall(r"\b[A-Z][A-Z0-9_]{1,}\b", named.group(1)):
+            if division not in parity_rows:
+                failures.append(
+                    f"{PROJECT_STATE.relative_to(ROOT)}: names {division} as a "
+                    "parity cell, but "
+                    f"{PARITY_LEDGER.relative_to(ROOT)} has no {division} entry"
+                )
+
     for logic in ("QF_NIA", "QF_UFLIA", "QF_IDL", "QF_LRA", "QF_RDL"):
         if logic not in parity_rows:
             failures.append(

@@ -1584,11 +1584,92 @@ fn check_set_cardinality_evidence(
         .is_some_and(|fresh| fresh == *cert)
 }
 
+/// The largest certified-`unsat` family in the repository — 85 of 281 instances,
+/// 30.2%, measured 2026-08-21 — and until now its check was a re-run of the
+/// producer compared for equality.
+///
+/// That is a **determinism** check, not a soundness check. If
+/// `array_axiom_refutation`'s recognizer matched a satisfiable query, it would
+/// match it identically on the re-run and `fresh == *cert` would hold; the
+/// checker whose job is to catch a wrong producer would agree with it. The
+/// certificate cannot help, because it carries three arena-local `TermId`s and a
+/// schema tag and nothing a checker could re-derive from.
+///
+/// So the re-run is kept — it is what binds the certificate to the assertion the
+/// search chose — and two independent stages are added on top. Each is decided
+/// from the certificate and the arena WITHOUT asking the recognizer anything:
+///
+/// 1. `is_degenerate` — `lhs == rhs` justifies nothing, and the rendered Lean
+///    module for it proves `False` by `rfl` alone. The producer filters this;
+///    the checker never did.
+/// 2. `certificate_is_axiom_instance` — `lhs = rhs` really is an instance of the
+///    schema the certificate names.
+///
+/// **What is still owed, stated rather than implied.** `ReadCongruence`
+/// certificates are not schema matches — they come out of equality facts
+/// accumulated across assertions — so stage 2 cannot decide them and they rest
+/// on the re-run alone. Likewise the BTOR-derived path, where the named
+/// assertion *entails* `¬(lhs = rhs)` rather than stating it:
+/// `assertion_states_disequality` decides the stating case and returns `false`
+/// for the entailing one. Both residuals are the same shape — an independent
+/// checker for facts derived across assertions — and both are real.
 fn check_array_axiom_evidence(
     arena: &TermArena,
     assertions: &[TermId],
     cert: &ArrayAxiomRefutationCertificate,
 ) -> bool {
+    // A degenerate certificate justifies nothing: its Lean module proves `False`
+    // by `rfl` alone, using neither the query nor the array axioms. The producer
+    // filters this; the checker never did.
+    //
+    // Stated plainly, because a guard that cannot fail is worse than none:
+    // **deleting this kills no test**, and that is not an oversight. On the
+    // independent route stage 2 refuses `lhs == rhs` anyway (`x = x` is not an
+    // instance of any array schema), and on the residual route the producer
+    // filters degeneracy before the comparison. It is kept as an explicit and
+    // cheap precondition on a value that can arrive deserialized from outside
+    // this process — but it is subsumed, and the two guards below are the ones
+    // carrying the weight.
+    if cert.is_degenerate() {
+        return false;
+    }
+
+    // THE INDEPENDENT ROUTE. Both conditions are decided from the certificate
+    // and the query alone, without asking the recognizer anything, so a
+    // recognizer that matched a satisfiable query is caught here rather than
+    // agreed with.
+    //
+    // Note what it does NOT do: fall through to the re-run on failure. Anything
+    // reachable by this route is decided by it, because a guard that sits behind
+    // `fresh == *cert` is unreachable — the equality subsumes it, and both
+    // guards then kill no test at all. That is measured, not argued: staged
+    // behind the re-run, deleting either of these changed no test result.
+    let states_the_disequality =
+        crate::array_axiom::assertion_states_disequality(arena, cert.assertion, cert.lhs, cert.rhs);
+    let is_a_schema_kind = cert.kind != crate::array_axiom::ArrayAxiomKind::ReadCongruence;
+    if is_a_schema_kind && states_the_disequality && assertions.contains(&cert.assertion) {
+        // `assertions.contains` is load-bearing and not a formality: without it a
+        // certificate may name a VALID axiom instance the query never asserts,
+        // and `¬(valid identity)` being unsatisfiable would then "refute" a
+        // perfectly satisfiable query.
+        return crate::array_axiom::certificate_is_axiom_instance(arena, cert);
+    }
+
+    // THE RESIDUAL, named rather than implied. Two shapes reach here and both
+    // still rest on re-running the producer and comparing for equality, which is
+    // a determinism check and not a soundness check:
+    //
+    //   * `ReadCongruence` — built from equality facts accumulated ACROSS
+    //     assertions, not by matching a schema against two terms, so there is no
+    //     two-term claim for stage 2 to decide.
+    //   * the BTOR-derived path, where the named assertion *entails*
+    //     `¬(lhs = rhs)` through bit-blasted Boolean structure rather than
+    //     stating it.
+    //
+    // Both need the same missing thing: an independent checker for a fact
+    // derived across assertions. `corpus_array_axiom_certificates_are_measured_against_both_stages`
+    // counts how much of the family is on which side, so this residual is a
+    // number rather than a caveat.
     crate::array_axiom::array_axiom_refutation(arena, assertions)
         .is_some_and(|fresh| fresh == *cert)
 }
@@ -4750,6 +4831,113 @@ mod tests {
         assert!(
             !outcome.is_verified(),
             "the bounded/empty view must never fabricate a verification, got {outcome:?}"
+        );
+    }
+
+    /// Two forged array-axiom certificates over **satisfiable** queries, each
+    /// rejected by exactly one of the two independent stages.
+    ///
+    /// This family is 30.2% of all certified `unsat` (85 of 281, 2026-08-21).
+    /// Its checker used to be `array_axiom_refutation(..).is_some_and(|fresh|
+    /// fresh == *cert)` — a determinism check. A recognizer that matched a
+    /// satisfiable query matches it identically on the re-run, so the checker
+    /// whose entire job is to catch a wrong producer would agree with it.
+    ///
+    /// Writing the fixtures is what proves the stages are real. Both queries
+    /// below are SAT; both certificates are shaped exactly as an honest one; and
+    /// each is refused for one specific reason. CLAUDE.md's rule is that a guard
+    /// which kills no test is a gap — and staged behind the re-run, both of these
+    /// killed nothing, because the equality comparison subsumed them.
+    #[test]
+    fn a_forged_array_axiom_certificate_over_a_sat_query_is_refused() {
+        use crate::array_axiom::{ArrayAxiomKind, ArrayAxiomRefutationCertificate};
+
+        // FIXTURE 1 — the schema claim is a lie.
+        // `(not (= (select a i) (select a j)))` is satisfiable (take i != j), and
+        // it is not an instance of ANY array axiom. The certificate names the
+        // real assertion, is non-degenerate, and claims `ReadOverWrite`.
+        // Stage 1 accepts (the assertion does state this disequality) and only
+        // stage 2 can refuse it.
+        let mut arena = TermArena::new();
+        let key = Sort::BitVec(4);
+        let value = Sort::BitVec(8);
+        let array_sort = Sort::Array {
+            index: axeyum_ir::ArraySortKey::BitVec(4),
+            element: axeyum_ir::ArraySortKey::BitVec(8),
+        };
+        let a_sym = arena.declare("a", array_sort).expect("declare a");
+        let a = arena.var(a_sym);
+        let i_sym = arena.declare("i", key).expect("declare i");
+        let i = arena.var(i_sym);
+        let j_sym = arena.declare("j", key).expect("declare j");
+        let j = arena.var(j_sym);
+        let read_i = arena.select(a, i).expect("select");
+        let read_j = arena.select(a, j).expect("select");
+        let equality = arena.eq(read_i, read_j).expect("eq");
+        let assertion = arena.not(equality).expect("not");
+        let assertions = vec![assertion];
+
+        let forged = Evidence::UnsatArrayAxiom(ArrayAxiomRefutationCertificate {
+            assertion,
+            lhs: read_i,
+            rhs: read_j,
+            kind: ArrayAxiomKind::ReadOverWrite,
+        });
+        assert!(
+            !check_array_axiom_evidence(
+                &arena,
+                &assertions,
+                match &forged {
+                    Evidence::UnsatArrayAxiom(c) => c,
+                    _ => unreachable!(),
+                }
+            ),
+            "`select(a,i) = select(a,j)` is not a ReadOverWrite instance, and the \
+             query it is claimed against is satisfiable at i != j"
+        );
+
+        // FIXTURE 2 — the axiom instance is real, but the query never asserts it.
+        // `lhs = rhs` here IS a valid read-over-write identity, so `not (lhs =
+        // rhs)` would be unsatisfiable — but this query does not assert it. It
+        // asserts something else entirely and is satisfiable. Only the
+        // `assertions.contains` half of stage 1 stands between this certificate
+        // and a "refutation" of a SAT query.
+        let v_sym = arena.declare("v", value).expect("declare v");
+        let v = arena.var(v_sym);
+        let stored = arena.store(a, i, v).expect("store");
+        let lhs = arena.select(stored, j).expect("select");
+        let same_index = arena.eq(i, j).expect("eq");
+        let read_a_j = arena.select(a, j).expect("select");
+        let rhs = arena.ite(same_index, v, read_a_j).expect("ite");
+
+        // The certificate names a disequality term that STATES `lhs != rhs`, so
+        // stage 1's structural half accepts it. The query does not assert that
+        // term — it asserts `i = j` and is satisfiable. Only `assertions.contains`
+        // separates the two, which is why the fixture must build the term and
+        // then withhold it from the assertion list rather than reusing an
+        // unrelated assertion (an earlier draft did, and it was rejected by the
+        // wrong guard — it never reached the one under test).
+        let forged_equality = arena.eq(lhs, rhs).expect("eq");
+        let forged_assertion = arena.not(forged_equality).expect("not");
+        let unrelated = arena.eq(i, j).expect("eq");
+        let unrelated_assertions = vec![unrelated];
+        let forged_instance = ArrayAxiomRefutationCertificate {
+            assertion: forged_assertion,
+            lhs,
+            rhs,
+            kind: ArrayAxiomKind::ReadOverWrite,
+        };
+        assert!(
+            crate::array_axiom::assertion_states_disequality(&arena, forged_assertion, lhs, rhs),
+            "the fixture must clear stage 1's structural half, or it tests the wrong guard"
+        );
+        assert!(
+            crate::array_axiom::certificate_is_axiom_instance(&arena, &forged_instance),
+            "the fixture must be a REAL axiom instance, or it tests the wrong guard"
+        );
+        assert!(
+            !check_array_axiom_evidence(&arena, &unrelated_assertions, &forged_instance),
+            "a valid axiom instance the query never asserts refutes nothing"
         );
     }
 }

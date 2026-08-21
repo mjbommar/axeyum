@@ -202,6 +202,13 @@ step local-ci-record-controls ./scripts/tests/test-local-ci-record.sh
 # authoritative sweep still passes back into a gate that cannot fail.
 step local-ci-freshness ./scripts/check-local-ci-freshness.sh
 step local-ci-freshness-controls ./scripts/tests/test-check-local-ci-freshness.sh
+# `bench-results/PARITY.md` is this repository's declared headline, and
+# `scripts/parity-run.sh` -- the only thing that writes it -- was invoked by NO
+# gate: not this script, not `just check`, not CI (measured 2026-08-21). The
+# board consequently froze on 2026-08-06 through the steepest improvement in the
+# project's history and nothing went red. This is the gate that reds.
+step parity-freshness ./scripts/check-parity-freshness.py
+step parity-freshness-controls ./scripts/tests/test-check-parity-freshness.sh
 step new-fact-controls ./scripts/tests/test-new-fact-controls.sh
 step lane-commit-controls ./scripts/tests/test-lane-commit.sh
 step lane-push-controls ./scripts/tests/test-lane-push-target.sh
