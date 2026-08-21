@@ -4,7 +4,7 @@
 
 **Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction now includes unconditional official balanced Bézout, official coprime-factor divisibility cancellation, and clean divisibility antisymmetry. All four exact supports—clean antisymmetry, official cancellation, Fibonacci addition, and official Fibonacci coprimality—now exist as sealed root-selected capsules: each exported twice byte-identically, each output independently reimported twice, all declaration identities unchanged, and every complete footprint empty. The proof-free result checker binds the external manifest, all eight capsule files, all eight run records, read-only modes, and the zero-target-credit boundary.
 
-**Next:** preregister the exact `Nat.gcd_fib_add_self` construction over r091 and only the four sealed support capsules. Make the first target driver reconstruct a clean local `gcd_comm`, prove both divisibility directions, close equality with the accepted clean antisymmetry theorem, and retain zero target credit unless two fresh complete runs agree with empty footprints.
+**Next:** implement the preregistered exact `Nat.gcd_fib_add_self` driver over r091 and only the four sealed support capsules. Reconstruct a clean local `gcd_comm`, prove both divisibility directions, close equality with clean antisymmetry, and retain zero target credit unless two fresh complete runs agree with empty footprints.
 
 <!-- plan-section: landed-changes -->
 
@@ -177,3 +177,4 @@
 | 2026-08-21 | (pending) | Dedicated Fibonacci-addition capsule driver reconstructs from the pinned recurrence and requires two independent imports before its fail-if-present write |
 | 2026-08-21 | `975bf5b47` | Exact Fibonacci coprimality gains a root-selected fail-if-present capsule boundary with two independent imports before write |
 | 2026-08-21 | (pending) | Four portable support roots export twice byte-identically, reimport sixteen raw times, and seal with unchanged identities and empty footprints |
+| 2026-08-21 | (pending) | Exact Fibonacci GCD-shift construction freezes induction, clean commutativity, mutual divisibility, and two zero-retry submissions before code |
