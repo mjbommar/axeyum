@@ -12,7 +12,7 @@ from typing import Any
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-PLAN = ROOT / "artifacts/autogenesis/mathlib-nat-gcd-greatest-plan-v1.json"
+PLAN = ROOT / "artifacts/autogenesis/mathlib-nat-gcd-greatest-plan-v2.json"
 FACT = ROOT / "artifacts/facts/F-ml430-nat-gcd-greatest-0a04214a.json"
 
 
@@ -36,14 +36,15 @@ def validate(plan: dict[str, Any] | None = None) -> dict[str, Any]:
     if (
         plan.get("schema_version") != 1
         or plan.get("kind")
-        != "axeyum-autogenesis-mathlib-nat-gcd-greatest-plan-v1"
+        != "axeyum-autogenesis-mathlib-nat-gcd-greatest-plan-v2"
         or plan.get("state")
-        != "preregistered-target-native-gcd-greatest-before-code-or-execution"
+        != "preregistered-minimal-gcd-helper-before-code-or-execution"
     ):
         raise PlanError("plan identity changed")
     predecessor = plan["predecessor"]
-    if sha256(ROOT / predecessor["path"]) != predecessor["sha256"]:
-        raise PlanError("predecessor admission identity changed")
+    predecessor_result = load(ROOT / predecessor["path"])
+    if predecessor_result.get("state") != predecessor["required_state"]:
+        raise PlanError("predecessor decline identity changed")
     fact = load(FACT)
     target = plan["target"]
     if (
@@ -57,18 +58,12 @@ def validate(plan: dict[str, Any] | None = None) -> dict[str, Any]:
         raise PlanError("target fact identity or open state changed")
     capsule = plan["input_capsule"]
     capsule_path = pathlib.Path(capsule["path"])
-    result_path = ROOT / capsule["result_manifest"]
-    result = load(result_path)
     if (
         sha256(capsule_path) != capsule["sha256"]
         or capsule_path.stat().st_size != capsule["bytes"]
         or stat.S_IMODE(capsule_path.stat().st_mode) != 0o444
-        or sha256(result_path) != capsule["result_manifest_sha256"]
-        or result.get("state")
-        != "three-gcd-divisibility-theorems-reconstructed-twice-byte-identical-empty-footprint"
-        or any(row.get("axiom_footprint") != [] for row in result.get("supports", []))
     ):
-        raise PlanError("input capsule or accepted GCD support changed")
+        raise PlanError("input capsule changed")
     if plan["required_direct_theorem_dependencies"] != [
         "Axeyum.Autogenesis.dvdAntisymmOfficialV1",
         "Axeyum.Autogenesis.dvdGcdOfficialV1",
