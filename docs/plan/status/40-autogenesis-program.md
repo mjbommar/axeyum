@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction now includes unconditional official balanced Bézout, official coprime-factor divisibility cancellation, and a clean divisibility-antisymmetry closure. Clean antisymmetry and official cancellation have each exported twice byte-identically and reimported four times with unchanged empty-footprint evidence. A dedicated Fibonacci-addition capsule driver now reconstructs the accepted theorem from the pinned recurrence, root-selects it, and verifies two fresh imports before writing; focused gates are green without exporting.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction now includes unconditional official balanced Bézout, official coprime-factor divisibility cancellation, and a clean divisibility-antisymmetry closure. Clean antisymmetry, official cancellation, and Fibonacci addition have each exported twice byte-identically and reimported four times with unchanged empty-footprint evidence. The existing exact Fibonacci-coprimality reconstruction now has a fail-if-present root-selected capsule mode that checks the pinned declaration identity and performs two fresh independent imports before writing; focused gates are green without exporting.
 
-**Next:** pass the full Rust push gate for the Fibonacci-addition capsule driver, then execute two fresh exports into the existing NAS pack and require byte identity plus two fresh imports per export.
+**Next:** pass the full Rust push gate for the Fibonacci-coprimality capsule mode, then execute two fresh exports into the existing NAS pack and require byte identity plus two fresh imports per export. Seal a proof-free manifest over all four portable capsules only after their identities and read-only storage state are independently checked.
 
 <!-- plan-section: landed-changes -->
 

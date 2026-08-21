@@ -10,7 +10,7 @@ mod fib_gcd_shift;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io::Cursor;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use axeyum_lean_import::{
     CHECKED_DEPENDENCY_THEOREM_RECEIPT_VERSION, CheckedDependencyTheoremAuthority,
@@ -23,7 +23,7 @@ use axeyum_lean_import::{
     verify_checked_dependency_theorem_receipt, verify_checked_theorem_composition,
     verify_checked_theorem_composition_with_target_leaves, verify_checked_theorem_specialization,
 };
-use axeyum_lean_kernel::{Declaration, Kernel, NameId, build_nat_prelude};
+use axeyum_lean_kernel::{Declaration, Kernel, Lean4ExportMetadata, NameId, build_nat_prelude};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
@@ -100,10 +100,11 @@ fn run() -> Result<(), String> {
         gcd_shift_second_support,
         balanced_bezout_path,
         audit_balanced_bezout_fix,
+        exact_target_capsule_path,
     ) = match arguments.next() {
-        None => (false, None, false, None, false, false, None, false),
+        None => (false, None, false, None, false, false, None, false, None),
         Some(flag) if flag == "--all-support" => {
-            (true, None, false, None, false, false, None, false)
+            (true, None, false, None, false, false, None, false, None)
         }
         Some(flag) if flag == "--exact-target" => (
             true,
@@ -114,6 +115,18 @@ fn run() -> Result<(), String> {
             false,
             None,
             false,
+            None,
+        ),
+        Some(flag) if flag == "--exact-target-capsule" => (
+            true,
+            Some(required_path(&mut arguments, "fib-recurrence.ndjson")?),
+            false,
+            None,
+            false,
+            false,
+            None,
+            false,
+            Some(required_path(&mut arguments, "output.ndjson")?),
         ),
         Some(flag) if flag == "--exact-authority" => (
             true,
@@ -124,6 +137,7 @@ fn run() -> Result<(), String> {
             false,
             None,
             false,
+            None,
         ),
         Some(flag) if flag == "--issue-receipt" => (
             true,
@@ -134,6 +148,7 @@ fn run() -> Result<(), String> {
             false,
             None,
             false,
+            None,
         ),
         Some(flag) if flag == "--gcd-fib-add-self-support" => (
             true,
@@ -144,6 +159,7 @@ fn run() -> Result<(), String> {
             false,
             None,
             false,
+            None,
         ),
         Some(flag) if flag == "--gcd-fib-add-self-second-support" => (
             true,
@@ -154,6 +170,7 @@ fn run() -> Result<(), String> {
             true,
             None,
             false,
+            None,
         ),
         Some(flag) if flag == "--closed-balanced-bezout" => (
             true,
@@ -167,6 +184,7 @@ fn run() -> Result<(), String> {
                 "official-gcd-balanced-bezout-clean.ndjson",
             )?),
             false,
+            None,
         ),
         Some(flag) if flag == "--audit-balanced-bezout-fix" => (
             true,
@@ -180,11 +198,18 @@ fn run() -> Result<(), String> {
                 "official-gcd-balanced-bezout-clean.ndjson",
             )?),
             true,
+            None,
         ),
         Some(_) => return Err("unexpected trailing argument".to_owned()),
     };
     if arguments.next().is_some() {
         return Err("unexpected trailing argument".to_owned());
+    }
+    if exact_target_capsule_path
+        .as_ref()
+        .is_some_and(|path| path.exists())
+    {
+        return Err("exact-target capsule output already exists".to_owned());
     }
     if receipt_candidate_path.is_some()
         && hex_sha256(
@@ -583,6 +608,7 @@ fn run() -> Result<(), String> {
             .map(axeyum_lean_import::CompletedImport::kernel),
         authority_audit,
         receipt_candidate_path.as_ref(),
+        exact_target_capsule_path.as_deref(),
     )?;
     let kind = if receipt_candidate_path.is_some() {
         "axeyum-exact-fibonacci-dependency-theorem-receipt"
@@ -917,6 +943,7 @@ fn retry_native_support(
     exact_source: Option<&Kernel>,
     authority_audit: bool,
     receipt_candidate_path: Option<&PathBuf>,
+    exact_target_capsule_path: Option<&Path>,
 ) -> Result<Value, String> {
     match compose_checked_theorem_slice_with_target_leaves(source, target, roots, &DVD_GCD_LEAVES) {
         Ok(completed) => {
@@ -954,7 +981,12 @@ fn retry_native_support(
                         candidate_path,
                     )?
                 } else {
-                    compose_exact_target(exact_source, completed.kernel(), authority_audit)?
+                    compose_exact_target(
+                        exact_source,
+                        completed.kernel(),
+                        authority_audit,
+                        exact_target_capsule_path,
+                    )?
                 };
             }
             Ok(with_optional_roots(value, roots))
@@ -996,6 +1028,7 @@ fn compose_exact_target(
     source: &Kernel,
     target: &Kernel,
     authority_audit: bool,
+    capsule_path: Option<&Path>,
 ) -> Result<Value, String> {
     let first = reconstruct_exact_target(source, target)?;
     let replay = reconstruct_exact_target(source, target)?;
@@ -1005,7 +1038,80 @@ fn compose_exact_target(
         result["receipt_authority_audit"] =
             receipt_authority_audit(&first.kernel, &first.dependency_ids)?;
     }
+    if let Some(capsule_path) = capsule_path {
+        result["portable_capsule"] = export_checked_exact_target_capsule(&first, capsule_path)?;
+    }
     Ok(result)
+}
+
+fn export_checked_exact_target_capsule(
+    admission: &ExactTargetAdmission,
+    output: &Path,
+) -> Result<Value, String> {
+    if output.exists() {
+        return Err(format!(
+            "capsule output already exists: {}",
+            output.display()
+        ));
+    }
+    let expected = exact_target_evidence(&admission.kernel, admission.theorem)?;
+    let bytes = admission
+        .kernel
+        .render_lean4export_ndjson_roots(
+            &Lean4ExportMetadata::axeyum("4.30.0"),
+            &[admission.theorem],
+        )
+        .map_err(|error| format!("root-selected capsule export failed: {error}"))?;
+    for pass in 1..=2 {
+        let imported = import_ndjson(Cursor::new(bytes.as_bytes()), ImportLimits::default())
+            .map_err(|error| format!("capsule import {pass} failed: {error:?}"))?;
+        let theorem = find_name(imported.kernel(), FIB_COPRIME_TARGET)?;
+        if exact_target_evidence(imported.kernel(), theorem)? != expected {
+            return Err(format!("capsule import {pass} changed theorem evidence"));
+        }
+    }
+    fs::write(output, &bytes).map_err(|error| format!("capsule write failed: {error}"))?;
+    Ok(json!({
+        "root": FIB_COPRIME_TARGET,
+        "bytes": bytes.len(),
+        "sha256": hex_sha256(bytes.as_bytes()),
+        "fresh_imports": 2,
+        "theorem": expected,
+        "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0},
+    }))
+}
+
+fn exact_target_evidence(kernel: &Kernel, theorem: NameId) -> Result<Value, String> {
+    if !matches!(
+        kernel.environment().get(theorem),
+        Some(Declaration::Theorem { .. })
+    ) {
+        return Err(format!("{} is not a theorem", kernel.display_name(theorem)));
+    }
+    let declaration_sha256 = canonical_declaration_sha256(kernel, theorem)?;
+    if declaration_sha256 != CANDIDATE_THEOREM_SHA256 {
+        return Err(format!(
+            "exact Fibonacci theorem identity changed: {declaration_sha256}"
+        ));
+    }
+    let mut footprint = kernel
+        .axiom_footprint(theorem)
+        .into_iter()
+        .map(|name| kernel.display_name(name).to_string())
+        .collect::<Vec<_>>();
+    let mut dependencies = kernel
+        .theorem_dependencies(theorem)
+        .into_iter()
+        .map(|name| kernel.display_name(name).to_string())
+        .collect::<Vec<_>>();
+    footprint.sort();
+    dependencies.sort();
+    Ok(json!({
+        "name": FIB_COPRIME_TARGET,
+        "declaration_sha256": declaration_sha256,
+        "axiom_footprint": footprint,
+        "direct_theorem_dependencies": dependencies,
+    }))
 }
 
 fn reconstruct_exact_target(
