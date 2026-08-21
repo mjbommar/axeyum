@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-clean-reconstruction-result",
+  "state": "clean-mod-core-equation-reconstructed",
+  "plan_sha256": "3a7f0d5473df56d6eba7ea67f0d112c0210f22e83423df52eed05563a1764433",
+  "source": {"path": "artifacts/autogenesis/sources/nat-mod-core-clean-reconstruction-v3.lean", "sha256": "f73f1c2e7a33ebe7d5898866a665f2f8af64dc0ed0418a5072abe9741ae68e49"},
+  "evidence": {"pack": "/nas3/data/axeyum/autogenesis/reference-packs/nat-mod-core-clean-reconstruction-v3", "manifest_sha256": "d57ac9cdcdb22eb7f94b0efe1b3f7cc3b5aa8bd4a62c07b58966240f3e483a4b", "stream_sha256": "46c636cc8d70c5c7e02c568445863f0ebd0f5f291c13da6ffbd1af5877e39bf9", "stream_bytes": 393466, "audit_sha256": "5be1f05bea6abacb30256dc1268e086b664f4b75e383972f20d4e0ed5e2f05ea", "stream_axioms": [], "sealed": true},
+  "roots": [
+    {"name": "Axeyum.NatMod.fuelCongr", "declaration_sha256": "ab2f7c9bbd9dd450de16da600b6cc60367080c1dba5f83ba3b9630a46d2a3382", "axiom_footprint": []},
+    {"name": "Axeyum.NatMod.modCoreEq", "declaration_sha256": "60c7d5b005e756fec3fb8a769f3f8cfca53e130ff4d7730c230948e7dfdc4819", "axiom_footprint": []}
+  ],
+  "execution": {"compiler_invocations": 1, "compiler_exit_status": 0, "exporter_invocations": 1, "importer_runs": 1, "retries": 0, "theorem_submissions": 2, "ledger_writes": 0},
+  "authority": {"support_credit": 2, "closed_target_authorized": false, "ledger_writes": 0}
+}

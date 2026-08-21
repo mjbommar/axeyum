@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-exact-composition-result",
+  "state": "first-contract-type-mismatch-no-target-published",
+  "plan_sha256": "85c3ab5f27fbf450df5f321566900cdd5a8b68b951eaa07c94134dba6a8c39d2",
+  "implementation": {"path": "crates/axeyum-lean-import/examples/int_fib_add_two_composition.rs", "sha256": "d1863fdb11304558432a34de83f7baa0b83c7b8dbaf115994766e6c97b495532"},
+  "execution": {"driver_builds": 1, "complete_invocations": 1, "second_invocation_skipped": true, "target_submissions": 0, "exports": 0, "fresh_imports": 0, "retries": 0, "ledger_writes": 0},
+  "diagnostic": {"stage": "seven-argument specialization before target submission", "error": "TypeMismatch", "cause": "Axeyum.Autogenesis.NatFibSuccessorAddition is a two-index Fibonacci addition theorem, not the one-index recurrence required by natRec", "correct_root": "Axeyum.Autogenesis.fibAddTwo", "correct_stream": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/d12736b63-lean430-exact-fibonacci-coprimality-v1/fib-recurrence.ndjson", "sha256": "5220ace53dcbf0b89121ba72c8e63cc7dcb2a2d7836b313bc597607859d78674"}},
+  "publication": {"target_capsule_written": false, "partial_kernel_published": false},
+  "authority": {"target_credit": 0, "fact_status_changes": 0, "ledger_writes": 0}
+}

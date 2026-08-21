@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-clean-reconstruction-result",
+  "state": "clean-public-modulo-bridges-reconstructed",
+  "plan_sha256": "5389126de4607e2897b98f35f19abfa98dd01d3d83cee62564d19aca30f9d915",
+  "source": {"path": "artifacts/autogenesis/sources/nat-mod-clean-bridge-stack-v2.lean", "sha256": "c7c84328d09eec14cbcbf8a359b284400f9cd18f470afbcc4f765a2168fc27c9"},
+  "evidence": {"pack": "/nas3/data/axeyum/autogenesis/reference-packs/nat-mod-clean-bridge-stack-v2", "manifest_sha256": "a868b3a25406371a42a7f88f1423d5a0b2bffd5a90ff1c5f98bc16672bb04456", "stream_sha256": "2154bb98f8bab787168bff53740e3185ac13f128b8b5757abd0142acecb83432", "stream_bytes": 444918, "audit_sha256": "2e9190abf9726492c9e5f66a4b60367353e04f8ffb2fa20d69086ae37a53fec1", "stream_axioms": [], "sealed": true},
+  "roots": [
+    {"name": "Axeyum.NatMod.modCoreEqMod", "declaration_sha256": "f2b1297c0c990c40f055c8b91f7bc83ffda0425eaffdd2872089e30516b9d6a6", "axiom_footprint": []},
+    {"name": "Axeyum.NatMod.modEq", "declaration_sha256": "cbb4607588ef2935438fc06dcfb114eb23d2f379e325ad83ccec68801c68eba2", "axiom_footprint": []},
+    {"name": "Axeyum.NatMod.modEqSubMod", "declaration_sha256": "0556f4909e593b372492d76e85a97151a2332f53cbd06c6202d494f5cb5cad62", "axiom_footprint": []}
+  ],
+  "execution": {"compiler_invocations": 1, "compiler_exit_status": 0, "exporter_invocations": 1, "importer_runs": 1, "retries": 0, "theorem_submissions": 5, "ledger_writes": 0},
+  "authority": {"support_credit": 3, "closed_target_authorized": false, "ledger_writes": 0}
+}
