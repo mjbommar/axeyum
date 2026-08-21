@@ -450,7 +450,7 @@ Ordered by *measured* cost, not by how large the hole feels.
 | 1 | **Linear arithmetic depth** — LRA 58.9%, IDL 54.8%, RDL 67.7%, UFLIA 52.2% | §2; **diagnosed 2026-08-21**: [linear-arithmetic-deficit-diagnosis](../research/05-algorithms/linear-arithmetic-deficit-diagnosis-2026-08-21.md) | The largest aggregate deficit. The "one shared cause" clause is **refuted**: the 278 misses split into **three** causes — `dl-online` search timeout (QF_IDL + QF_RDL, the one genuinely shared pair), the LRA route's 1,024-atom refusal plus its slow CDCL(T) (QF_LRA + QF_RDL's tail), and the lazy UF/arith CEGAR (QF_UFLIA, 82/82) — plus 26 QF_UFLIA files lost at the **parser** to `Int` literals beyond `i128`. Highest-leverage fix named and A/B-measured: minimise wide LIA theory cores instead of declining at 5% budget use — **+17 QF_UFLIA files, 0 regressions, 0 disagreements** (94/180 = 52.2% would project to 111/180 = 61.7%; not a parity run). The obvious fix (drop the LRA atom cap's terminality) was built and **refuted**: 0 new decides, 54 of 71 turn into memory aborts |
 | 2 | **Re-measure, then gate the measurement** | §2.1, §8 | 15 days dark on the headline; cheap, and everything else is priced off it |
 | 3 | **Consumer interface** — single-query CLI, inert `set-option`, no-op `get-*` | §6.3 | Nothing here is research; it is the difference between a library and a solver a stranger can run |
-| 4 | **QF_NIA at 38.2%** | §2 | The genuine multi-year catch-up; still correctly last among decision work |
+| 4 | **QF_NIA at 38.2%** | §2; **diagnosed 2026-08-21**: [nia-deficit-diagnosis](../research/05-algorithms/nia-deficit-diagnosis-2026-08-21.md) | **"Multi-year catch-up" CONFIRMED for the search — and the sizing is wrong in three ways.** (a) **cvc5 1.3.4 IS on this host** (`/nas3/data/axeyum/harness/bin/cvc5`, not on `$PATH`), so this was measured against the recorded reference, not a stand-in — and **z3 is not a stand-in for cvc5 here**: same run, z3 **136/200** vs cvc5 **76/200**, 60 files apart, cvc5's decided set a strict SUBSET of z3's. The sibling note's "z3 within 5 files" holds on the linear divisions and does not transfer. So the row means 38.2% of *plain cvc5*; against z3 it is **27.9%**. (b) **58 of our 162 undecided files are decided by neither reference** — a gap sized by "files we miss" rather than "files the reference decides" overstates this division by 36%. (c) **The deficit is one benchmark family.** `20170427-VeryMax/ITS` is 134 of the 200 pinned files and **74 of the 104 misses**; excluding it the same run gives 29/39 = **74.4% of cvc5**, around QF_RDL's rate, and on `20220315-MathProblems` we decide **6/9 where both references decide 0**. Mechanism: every specialised nonlinear-integer route declines and `int-blast-ladder` is decisive on **158/161**; its width ladder admits a rung only if every integer *literal* fits, so a `2^30` Farkas coefficient leaves **1 live rung on 32 files, of which we decide 0**. **No cheap win exists and three were measured to prove it**: lifting the projected-clause ceiling by the measured 9.4x over-approximation → **0 of 49**; admitting `nia-linearize` past the `dpll_lia` pre-SAT envelope (the same constant as gap #1's QF_IDL class) → **+1 of 200**; **4x the wall clock → 0 of 20** `Timeout` files. z3 decides 74 of the 104 misses in under 5 s — this is a different algorithm, not lost time. Residual hypothesis, unpriced: an **eager** small-domain product split (`nia_linearize.rs:750-777` already implements the lemma and its width-4 limit matches the `[-2,2]` boxes these benchmarks declare) reached *without* the lazy refinement loop that fails |
 | 5 | **Externally-portable evidence — 15.7%, not the 8.5% first published** | §6.2 | The metric was counted from labels and undercounted by 1.75x; it is now decided from the certificate and guarded by a test that reads the source. The remaining 84% re-validates only inside axeyum, and that is the real target |
 | 6 | **~30 checkers that re-run the producer** | §6.2 | A determinism check sold as a soundness check, over the highest-volume family |
 | 7 | **User triggers (`:pattern`, `:weight`)** | §5 | The one quantifier gap that is real vs Z3, now that the sat-direction is closed |
@@ -599,6 +599,38 @@ many of those the *reference* solves: **z3 4.13.3 at 20 s decides 11 of the 26**
 So "13% of a division" is a real defect and roughly a **+11** opportunity, not a
 +26 one. A gap sized by "files we cannot parse" rather than "files the reference
 decides and we do not" would have overstated this by more than double.
+
+**Confirmed, and re-sized (row 4).** QF_NIA's "genuine multi-year catch-up" is
+the one framing in §9 that survived being measured against: the three cheapest
+levers in the division yield **0**, **+1** and **+3** files, and 4x the wall
+clock buys **0 of 20** search timeouts. Ranking it last among decision work is
+right. Three things the row got wrong anyway, all of which change what the
+number means:
+
+- **cvc5 is on this host** at `/nas3/data/axeyum/harness/bin/cvc5` — it is simply
+  not on `$PATH`. The diagnosis note for row 1 states twice that it is absent,
+  and this document's own §0 method note says solver probes ran against z3. The
+  reference we score against was reachable the whole time.
+- **z3 is not interchangeable with cvc5 outside the linear divisions.** Row 1's
+  note verified them within 5 files on QF_LRA/IDL/RDL/UFLIA, which is true and
+  does not transfer: on QF_NIA, one run gives z3 **136/200** and cvc5 **76/200**,
+  with cvc5's decided set a strict **subset** of z3's. "38.2 % of the reference"
+  therefore means 38.2 % of *plain cvc5*; against z3 the same axeyum score is
+  **27.9 %**. `parity-run.sh`'s header reasons that picking cvc5 makes our ratio
+  harder — on this division it does the opposite, and the row named neither.
+- **The deficit is one benchmark family**, not a theory. `20170427-VeryMax/ITS`
+  is 67 % of the pinned list and **74 of the 104 misses**; drop it and the same
+  run reads **74.4 % of cvc5**, around QF_RDL. On `20220315-MathProblems` we
+  decide **6 of 9 and both references decide 0**. As with row 9, the population a
+  gap is scored against is a choice — and here it is a choice that is producing
+  the division's headline number.
+
+The mechanism is worth one line because it is the same shape as row 1's §3.2:
+the decisive route on **158 of 161** undecided files is a generic bounded
+integer bit-blast whose width ladder admits a rung only if every integer
+*literal* fits it, so a `2^30` Farkas coefficient — a coefficient, not a bound —
+leaves **one live rung on 32 files, of which we decide zero**. Unreconciled
+admission constants again, one division further on.
 
 **Found while discharging, and not in the original document.** The parity ledger
 holds **nine** divisions, not the eleven `PROJECT-STATE.md` claimed, and has
