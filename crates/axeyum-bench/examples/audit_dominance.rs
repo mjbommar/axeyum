@@ -31,8 +31,8 @@ use std::time::{Duration, Instant};
 use axeyum_ir::{TermArena, TermId};
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{
-    Evidence, LraReconstructCtx, SolverConfig, produce_evidence, produce_evidence_smtlib,
-    prove_unsat_to_lean_module, scan_proof_fragment,
+    Evidence, LeanModuleContent, LraReconstructCtx, SolverConfig, produce_evidence,
+    produce_evidence_smtlib, prove_unsat_to_lean_module, scan_proof_fragment,
 };
 use serde_json::{Value as JsonValue, json};
 
@@ -484,6 +484,7 @@ fn audit_instance(
 
     let mut lean_fragment = JsonValue::Null;
     let mut lean_checked = false;
+    let mut lean_content = JsonValue::Null;
     let mut lean_error = JsonValue::Null;
     let mut lean_module_bytes = JsonValue::Null;
     let mut parse_lean_ms = JsonValue::Null;
@@ -537,6 +538,32 @@ fn audit_instance(
                         lean_fragment = json!(format!("{fragment:?}"));
                         lean_module_bytes = json!(module.len());
                         lean_checked = true;
+                        // WHAT KIND of Lean module this is, not just that one
+                        // exists. `lean_checked` alone reads as "Lean proved
+                        // something about the query" and for roughly half of
+                        // these it does not: 29 fragments emit a structural
+                        // ATTESTATION — `axiom P`, `axiom Not P`,
+                        // `theorem _ : False` — which kernel-checks, is
+                        // sorry-free, and contains none of the reasoning. The
+                        // checking that mattered happened in Rust.
+                        //
+                        // Measured 2026-08-21 over the 269 Lean-reconstructed
+                        // `unsat` in the committed audits: 142 reason, 127
+                        // attest. `check-lean-gate.sh` already reports and
+                        // floors this split for the crosscheck families; the
+                        // dominance denominator did not, so the headline read
+                        // stronger than it was by a factor of nearly two.
+                        lean_content = match fragment.lean_module_content() {
+                            Some(LeanModuleContent::TheoryReconstruction) => {
+                                json!("theory")
+                            }
+                            Some(LeanModuleContent::StructuralAttestation) => json!("attestation"),
+                            // A fragment outside the `ProofFragment` table —
+                            // the string and regex routes reconstruct through
+                            // their own emitters. Recorded as unclassified
+                            // rather than silently counted either way.
+                            None => json!("unclassified"),
+                        };
                     }
                     Err(error) => {
                         lean_reconstruction_ms = json!(ms(lean_start.elapsed()));
@@ -583,6 +610,7 @@ fn audit_instance(
             "evidence_check_mode": evidence_check_mode,
             "lean_fragment": lean_fragment,
             "lean_checked": lean_checked,
+            "lean_module_content": lean_content,
             "lean_module_bytes": lean_module_bytes,
             "lean_error": lean_error,
             "trust_steps": trust_steps,
@@ -803,6 +831,9 @@ fn main() {
     // those the solver decides today. See the long comment at the skip site.
     let mut newly_audited = 0usize;
     let mut newly_decided = 0usize;
+    // Of the Lean-reconstructed unsat, how many carry REASONING rather than a
+    // structural attestation. See the producer for why the distinction matters.
+    let mut lean_theory_unsat = 0usize;
     // Re-probing the undecided set is pure added cost on rows where nothing has
     // changed, so it is capped independently of `limit`. A row with a zero
     // baseline is exactly the case this must cover, and those rows are small.
@@ -882,6 +913,14 @@ fn main() {
             }
             if result.lean_checked {
                 lean_checked_unsat += 1;
+                if result
+                    .record
+                    .get("lean_module_content")
+                    .and_then(JsonValue::as_str)
+                    == Some("theory")
+                {
+                    lean_theory_unsat += 1;
+                }
             }
             if result.timed_out {
                 timed_out += 1;
@@ -951,6 +990,14 @@ fn main() {
             }
             if result.lean_checked {
                 lean_checked_unsat += 1;
+                if result
+                    .record
+                    .get("lean_module_content")
+                    .and_then(JsonValue::as_str)
+                    == Some("theory")
+                {
+                    lean_theory_unsat += 1;
+                }
             }
             if result.timed_out {
                 timed_out += 1;
@@ -1014,6 +1061,7 @@ fn main() {
             "evidence_certified": evidence_certified,
             "evidence_checked": evidence_checked,
             "lean_checked_unsat": lean_checked_unsat,
+            "lean_theory_unsat": lean_theory_unsat,
             "lean_unsat_pct": lean_unsat_pct,
             "dominant_candidates": dominant_candidates,
             "dominant_pct_audited": dominant_pct_audited,
@@ -1037,6 +1085,10 @@ fn main() {
     // frozen zero stayed invisible for three months while the solver could
     // decide 12 of those 12. If the re-probe found capability the baseline never
     // recorded, say so on the line a human actually reads.
+    // Split the Lean figure on the line a human reads. `Lean unsat 85/85` invites
+    // "Lean proved 85 things about these queries"; for a structural attestation it
+    // proved a tautology, and the reader cannot tell without this.
+    let attesting = lean_checked_unsat.saturating_sub(lean_theory_unsat);
     let newly = if newly_decided > 0 {
         format!(
             ", NEWLY DECIDED {newly_decided}/{newly_audited} the baseline recorded as undecided (the baseline is stale)"
@@ -1045,7 +1097,7 @@ fn main() {
         String::new()
     };
     eprintln!(
-        "dominance audit {logic}: {dominant_candidates}/{audited_decided} audited decided ({dominant_pct_audited:.1}%), Lean unsat {lean_checked_unsat}/{audited_unsat} ({lean_unsat_pct:.1}%), mismatches {baseline_mismatches}, audit errors {audit_errors}, timeouts {timed_out}{newly}"
+        "dominance audit {logic}: {dominant_candidates}/{audited_decided} audited decided ({dominant_pct_audited:.1}%), Lean unsat {lean_checked_unsat}/{audited_unsat} ({lean_unsat_pct:.1}%, of which {lean_theory_unsat} reason and {attesting} attest), mismatches {baseline_mismatches}, audit errors {audit_errors}, timeouts {timed_out}{newly}"
     );
 }
 
