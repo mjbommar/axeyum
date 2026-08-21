@@ -33,10 +33,10 @@ end of this file against `git log -1 crates/axeyum-solver/src`.
 | Stage | Instances | Retained from baseline UNSAT |
 |---|---:|---:|
 | Baseline UNSAT | 324 | 100.0% |
-| Evidence audit reproduced UNSAT | 318 | 98.1% |
-| Evidence marked certified | 277 | 85.5% |
-| Evidence independently checked | 277 | 85.5% |
-| Audit UNSAT with no declared trust hole | 318 | 98.1% |
+| Evidence audit reproduced UNSAT | 320 | 98.8% |
+| Evidence marked certified | 278 | 85.8% |
+| Evidence independently checked | 278 | 85.8% |
+| Audit UNSAT with no declared trust hole | 319 | 98.5% |
 | Lean reconstruction checked | 262 | 80.9% |
 | All dominance conditions | 262 | 80.9% |
 
@@ -52,11 +52,11 @@ normalizes uncertified outcomes to independently unchecked.
 
 | Category | Instances | Meaning |
 |---|---:|---|
-| `proof-production-error` | 6 | Evidence production did not reproduce UNSAT. |
-| `uncertified-and-unchecked` | 41 | The UNSAT route is neither certified nor independently checked. |
+| `proof-production-error` | 4 | Evidence production did not reproduce UNSAT. |
+| `uncertified-and-unchecked` | 42 | The UNSAT route is neither certified nor independently checked. |
 | `uncertified-but-checked` | 0 | Reserved invalid combination; normalized into uncertified-and-unchecked. |
 | `evidence-check-gap` | 0 | Certified evidence exists but did not pass its independent checker. |
-| `trust-hole-and-lean-gap` | 0 | Checked evidence retains a trust hole and has no Lean reconstruction. |
+| `trust-hole-and-lean-gap` | 1 | Checked evidence retains a trust hole and has no Lean reconstruction. |
 | `trust-hole` | 0 | Lean reconstruction exists, but a declared trust hole remains. |
 | `lean-reconstruction-gap` | 15 | Certified, checked, trust-free evidence lacks Lean reconstruction. |
 | `dominant` | 262 | Certified, checked, trust-free, and Lean-reconstructed UNSAT. |
@@ -68,14 +68,15 @@ mechanisms that should drive reconstruction work.
 
 | Evidence kind | Baseline UNSAT | Certified | Checked | Lean | Trust holes | Dominant | Gap |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| `bare-unsat` | 41 | 0 | 0 | 0 | 0 | 0 | 41 |
-| `(none)` | 6 | 0 | 0 | 0 | 6 | 0 | 6 |
+| `bare-unsat` | 42 | 0 | 0 | 0 | 0 | 0 | 42 |
+| `(none)` | 4 | 0 | 0 | 0 | 4 | 0 | 4 |
 | `alethe-unsat` | 14 | 14 | 14 | 11 | 0 | 11 | 3 |
 | `monomial-bound-unsat` | 3 | 3 | 3 | 0 | 0 | 0 | 3 |
 | `real-handelman-unsat` | 3 | 3 | 3 | 0 | 0 | 0 | 3 |
 | `string-length-unsat` | 3 | 3 | 3 | 0 | 0 | 0 | 3 |
 | `real-product-unsat` | 2 | 2 | 2 | 0 | 0 | 0 | 2 |
 | `real-zero-product-unsat` | 2 | 2 | 2 | 1 | 0 | 1 | 1 |
+| `drat-unsat` | 1 | 1 | 1 | 0 | 1 | 0 | 1 |
 | `array-axiom-unsat` | 85 | 85 | 85 | 85 | 0 | 85 | 0 |
 | `bounded-int-blast-unsat` | 20 | 20 | 20 | 20 | 0 | 20 | 0 |
 | `term-level-unsat` | 16 | 16 | 16 | 16 | 0 | 16 | 0 |
@@ -133,7 +134,7 @@ mechanisms that should drive reconstruction work.
 | QF_AUFLIA | `qf-auflia-cvc5-regress-clean-solver-vs-z3-10s.json` | 2 | 2 | 0 | 0 | 0 | 0 | 0 | 0 | `uncertified-and-unchecked`=2 |
 | QF_AX | `qf-ax-cvc5-regress-clean-solver-vs-z3-10s.json` | 5 | 5 | 5 | 5 | 5 | 0 | 5 | 0 | - |
 | QF_BV | `qf-bv-curated-bvred-solver-vs-z3-10s.json` | 2 | 2 | 2 | 2 | 2 | 0 | 2 | 0 | - |
-| QF_BVFP | `qf-bvfp-bitwuzla-regress-clean-solver-vs-z3-10s.json` | 3 | 1 | 1 | 1 | 1 | 2 | 1 | 2 | `proof-production-error`=2 |
+| QF_BVFP | `qf-bvfp-bitwuzla-regress-clean-solver-vs-z3-10s.json` | 3 | 3 | 2 | 2 | 1 | 1 | 1 | 0 | `trust-hole-and-lean-gap`=1, `uncertified-and-unchecked`=1 |
 | QF_DT | `qf-dt-cvc5-regress-clean-solver-vs-z3-10s.json` | 3 | 3 | 3 | 3 | 3 | 0 | 3 | 0 | - |
 | QF_FF | `qf-ff-cvc5-regress-clean-solver-vs-z3-10s.json` | 10 | 10 | 10 | 10 | 10 | 0 | 10 | 0 | - |
 | QF_FP | `qf-fp-bitwuzla-regress-clean-solver-vs-z3-10s.json` | 7 | 6 | 6 | 6 | 6 | 1 | 6 | 1 | `proof-production-error`=1 |
@@ -163,7 +164,8 @@ mechanisms that should drive reconstruction work.
 
 | Trust hole | Instances |
 |---|---:|
-| `timeout` | 6 |
+| `timeout` | 4 |
+| `bit-blast` | 1 |
 
 ## Proof-production errors
 
@@ -172,8 +174,6 @@ mechanisms that should drive reconstruction work.
 | BV | `corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__cond-var-elim-binary.smt2` | `lean-reconstruction` | unknown |
 | BV | `corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__bug802.smt2` | `lean-reconstruction` | unknown |
 | BV | `corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__small-pipeline-fixpoint-3.smt2` | `lean-reconstruction` | unknown |
-| QF_BVFP | `corpus/public-curated/non-incremental/QF_BVFP/bitwuzla-regress-clean/solver__fp__Float-no-simp3-main.smt2` | `produce-evidence` | unknown |
-| QF_BVFP | `corpus/public-curated/non-incremental/QF_BVFP/bitwuzla-regress-clean/solver__fp__fp_fromsbv.smt2` | `lean-reconstruction` | unknown |
 | QF_FP | `corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_misc.smt2` | `lean-reconstruction` | unknown |
 
 ## Lean reconstruction gaps
@@ -202,10 +202,10 @@ correctness or certificate-production queue.
 
 ## Evidence-driven priority
 
-1. Replace the 41 uncertified audit-row occurrences with serialized, certified evidence and independently check every route. Use the [deduplicated shape census](proof-gap-shape-census.md) for mechanism prevalence.
+1. Replace the 42 uncertified audit-row occurrences with serialized, certified evidence and independently check every route. Use the [deduplicated shape census](proof-gap-shape-census.md) for mechanism prevalence.
 2. Add Lean reconstruction for the 15 already certified, checked, trust-free instances.
-3. Eliminate the 0 declared trust-hole instances rather than counting Lean module acceptance alone.
-4. Fix the 6 proof-production errors and rerun their exact committed rows.
+3. Eliminate the 1 declared trust-hole instances rather than counting Lean module acceptance alone.
+4. Fix the 4 proof-production errors and rerun their exact committed rows.
 
 These priorities are prevalence-ranked within the committed audits. They do
 not authorize a mechanism until an exact residual-shape census identifies a
@@ -222,7 +222,7 @@ regressions to `unknown` still counted as decided.
 | Audit | Revision | Provenance |
 |---|---|---|
 | `bench-results/dominance/bv-bitwuzla-regress-clean-quantified-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/bv-cvc5-regress-clean-quantified-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
+| `bench-results/dominance/bv-cvc5-regress-clean-quantified-dominance-audit.json` | `5a25f247a` | stamped via lane-snapshot |
 | `bench-results/dominance/lia-cvc5-regress-clean-quantified-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
 | `bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
 | `bench-results/dominance/qf-alia-cvc5-regress-clean-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
@@ -231,10 +231,10 @@ regressions to `unknown` still counted as decided.
 | `bench-results/dominance/qf-auflia-cvc5-regress-clean-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
 | `bench-results/dominance/qf-ax-cvc5-regress-clean-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
 | `bench-results/dominance/qf-bv-curated-bvred-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-bvfp-bitwuzla-regress-clean-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-bvfp-bitwuzla-regress-clean-dominance-audit.json` | `5a25f247a` | stamped via lane-snapshot |
 | `bench-results/dominance/qf-dt-cvc5-regress-clean-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
 | `bench-results/dominance/qf-ff-cvc5-regress-clean-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-fp-bitwuzla-regress-clean-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-fp-bitwuzla-regress-clean-dominance-audit.json` | `5a25f247a` | stamped via lane-snapshot |
 | `bench-results/dominance/qf-lia-cvc5-regress-clean-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
 | `bench-results/dominance/qf-lra-cvc5-regress-clean-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
 | `bench-results/dominance/qf-nia-curated-iand-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |

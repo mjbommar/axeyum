@@ -43,7 +43,7 @@ Complete audit rows have one audit record for every baseline-decided instance in
 | QF_AUFLIA | `qf-auflia-cvc5-regress-clean` | 5 | 60% (3/5) | 0% (0/2) | Lean unsat 0/2, evidence certified 3/5, evidence checked 3/5 | `bench-results/dominance/qf-auflia-cvc5-regress-clean-dominance-audit.json` |
 | QF_AX | `qf-ax-cvc5-regress-clean` | 8 | 100% (8/8) | 100% (5/5) | none | `bench-results/dominance/qf-ax-cvc5-regress-clean-dominance-audit.json` |
 | QF_BV | `qf-bv-curated-bvred` | 6 | 100% (6/6) | 100% (2/2) | none | `bench-results/dominance/qf-bv-curated-bvred-dominance-audit.json` |
-| QF_BVFP | `qf-bvfp-bitwuzla-regress-clean` | 7 | 71% (5/7) | 33% (1/3) | timeouts 2, Lean unsat 1/3, evidence certified 5/7, evidence checked 5/7, trust holes timeout, timeout phases lean-reconstruction 1, produce-evidence 1 | `bench-results/dominance/qf-bvfp-bitwuzla-regress-clean-dominance-audit.json` |
+| QF_BVFP | `qf-bvfp-bitwuzla-regress-clean` | 7 | 71% (5/7) | 33% (1/3) | Lean unsat 1/3, evidence certified 6/7, evidence checked 6/7, trust holes bit-blast | `bench-results/dominance/qf-bvfp-bitwuzla-regress-clean-dominance-audit.json` |
 | QF_DT | `qf-dt-cvc5-regress-clean` | 3 | 100% (3/3) | 100% (3/3) | none | `bench-results/dominance/qf-dt-cvc5-regress-clean-dominance-audit.json` |
 | QF_FF | `qf-ff-cvc5-regress-clean` | 24 | 100% (24/24) | 100% (10/10) | none | `bench-results/dominance/qf-ff-cvc5-regress-clean-dominance-audit.json` |
 | QF_FP | `qf-fp-bitwuzla-regress-clean` | 16 | 94% (15/16) | 86% (6/7) | timeouts 1, Lean unsat 6/7, evidence certified 15/16, evidence checked 15/16, trust holes timeout, timeout phases lean-reconstruction 1 | `bench-results/dominance/qf-fp-bitwuzla-regress-clean-dominance-audit.json` |
@@ -92,7 +92,7 @@ These rows are the best immediate candidates: they are already decide-strong and
 | QF_AUFLIA | `qf-auflia-cvc5-regress-clean` | 7 | 5 | 71% | mid | 0 | complete | 60% (3/5) | 0% (0/2) | close Lean unsat gaps | finish decide frontier before spending cert budget beyond narrow refuters |
 | QF_AX | `qf-ax-cvc5-regress-clean` | 8 | 8 | 100% | strong | 0 | complete | 100% (8/8) | 100% (5/5) | dominant on audited row | broaden beyond this small cvc5 slice with neutral QF_AX arrays |
 | QF_BV | `qf-bv-curated-bvred` | 6 | 6 | 100% | strong | 0 | complete | 100% (6/6) | 100% (2/2) | dominant on audited row | add per-instance BV operator classifier; close mul/rem/shift Lean gap |
-| QF_BVFP | `qf-bvfp-bitwuzla-regress-clean` | 8 | 7 | 88% | strong | 0 | complete | 71% (5/7) | 33% (1/3) | fix audit timeouts | separate pure-BV certs from FP-to-BV trust-hole cases |
+| QF_BVFP | `qf-bvfp-bitwuzla-regress-clean` | 8 | 7 | 88% | strong | 0 | complete | 71% (5/7) | 33% (1/3) | close Lean unsat gaps | separate pure-BV certs from FP-to-BV trust-hole cases |
 | QF_DT | `qf-dt-cvc5-regress-clean` | 3 | 3 | 100% | strong | 0 | complete | 100% (3/3) | 100% (3/3) | dominant on audited row | witness the general DatatypeElim dispatch end to end |
 | QF_FF | `qf-ff-cvc5-regress-clean` | 30 | 24 | 80% | strong | 0 | complete | 100% (24/24) | 100% (10/10) | dominant on audited row | broaden finite-field audits beyond the cvc5 slice and grow algebraic certificates |
 | QF_FP | `qf-fp-bitwuzla-regress-clean` | 16 | 16 | 100% | strong | 0 | complete | 94% (15/16) | 86% (6/7) | fix audit timeouts | keep FP as measured-competitive, not Lean-dominant, until Fpa2Bv certs grow |
