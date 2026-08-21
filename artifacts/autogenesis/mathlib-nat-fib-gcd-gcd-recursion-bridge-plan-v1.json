@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-gcd-recursion-bridge-plan-v1",
+  "state": "preregistered-proof-free-bridge-audit-before-code",
+  "input": {
+    "result": "artifacts/autogenesis/mathlib-nat-fib-gcd-exists-rec-minor-type-result-v1.json",
+    "sha256": "1701115c1315ec2ecfc2fcabb9874b038922e384c3c442805c81c175c82ec78b"
+  },
+  "implementation_prestate": {
+    "path": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+    "sha256": "f3195c2b34420cf020cdf93ce30020c5c84128577024136740819f1efc5908cc"
+  },
+  "audit": {
+    "mode": "--target-native-fib-gcd-gcd-recursion-bridge-audit",
+    "composed_input_roots": ["Nat.gcd_greatest", "Nat.gcd_fib_add_self"],
+    "ordered_candidates": [
+      "Axeyum.Autogenesis.officialNatGcdSuccClosedV1",
+      "Axeyum.Autogenesis.nat_gcd_succ"
+    ],
+    "required_contract": "∀ m n, Nat.gcd (Nat.succ m) n = Nat.gcd (n % Nat.succ m) (Nat.succ m)",
+    "required_axiom_footprint": [],
+    "proof_values_rendered": 0
+  },
+  "budget": {
+    "complete_audits": 1,
+    "kernel_submissions": 0,
+    "capsule_writes": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "next_on_accept": "preregister one explicit left-side congruence and equality-chain repair using the first compatible empty-footprint candidate",
+  "next_on_decline": "retain candidate absence or type mismatch and compose the sealed official successor root explicitly before another target repair",
+  "limitations": "This is a proof-free declaration audit. Presence and type compatibility authorize selection only, not theorem or target credit."
+}

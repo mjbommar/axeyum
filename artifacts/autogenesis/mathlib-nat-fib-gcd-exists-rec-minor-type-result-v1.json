@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-exists-rec-minor-type-result-v1",
+  "state": "minor-types-rendered-left-gcd-recursion-transport-missing",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-nat-fib-gcd-exists-rec-minor-type-plan-v1.json",
+    "sha256": "23516b15d22db078f858f65f26481fd230d5263cd1fa965b14501c93eb30e969"
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+    "sha256": "80ddc357d67bfdbf703329a154ea81a7a0b998aea11f1c017db49daa62a93686"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/audits/4d8488fbd-nat-fib-gcd-exists-rec-minor-type-v1",
+    "index_sha256": "6d747676e40b6a98886ceba9393e897e31c871a537468ceea5d4403481d7145d",
+    "observation_sha256": "26b1061f4bbe2815abb996f13a0ab1e4f5211fde1ff1ff32e51c290b274597f1",
+    "stderr_sha256": "6dca3dd4f06a51fdbe125a0529471474993322c6411bc07d12e910a6320b09ab",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "observation": {
+    "expected_type_sha256": "b55c0ac4340514f3268b11462cd264d50947784df104cbcedb1672084bdcc068",
+    "actual_type_sha256": "7d8d68aa9e02e9623c84afc7d971e5d3b4e52faf260cdc4f80f796236a12458a",
+    "definitionally_equal": false,
+    "expected_left_index": "gcd (succ predecessor) n",
+    "actual_left_index": "gcd (n % succ predecessor) (succ predecessor)",
+    "localized_missing_transport": "explicit positive-divisor gcd recursion equality before the induction-hypothesis equality chain",
+    "proof_values_rendered": 0,
+    "target_submitted": false
+  },
+  "execution": {
+    "complete_diagnostics": 1,
+    "helper_theorem_submissions": 1,
+    "type_inferences": 2,
+    "target_theorem_submissions": 0,
+    "proof_values_rendered": 0,
+    "capsule_writes": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "helper_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "preregister a proof-free presence and exact-type audit for the clean successor-GCD bridge already produced in the admitted support stack",
+  "limitations": "The type difference proves that an explicit left-side GCD recursion transport is missing. It does not authorize a particular theorem name or proof until that bridge is audited in the composed target kernel."
+}

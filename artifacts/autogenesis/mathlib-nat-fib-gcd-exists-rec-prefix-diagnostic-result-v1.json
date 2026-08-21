@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-exists-rec-prefix-diagnostic-result-v1",
+  "state": "three-prefixes-infer-minor-argument-type-mismatch",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-nat-fib-gcd-exists-rec-prefix-diagnostic-plan-v1.json",
+    "sha256": "fc087bdc4757b459f96abb66ae9ca5846ba3cfc4a57944f6b0d21abffe0ded02"
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+    "sha256": "b34429215d3b27926eed52d49559f844d76236b1e6ecfc88b6ba6a1315ff043e"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/audits/645f8ea2f-nat-fib-gcd-exists-rec-prefix-diagnostic-v1",
+    "index_sha256": "2c662592e25070f3194e7e18ea2e0d419d0cbb3d6b23363366790d0c487d2f14",
+    "observation_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "3205b517bae2c6a96c4e44ec7535c1e366642bdb135d1447eb480da08880c3f7",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "observation": {
+    "successful_prefixes": ["Nat", "predicate", "motive"],
+    "failed_argument": "minor",
+    "error": "Exists.rec minor prefix inference failed: TypeMismatch { expected: ExprId(110092), got: ExprId(110685) }",
+    "process_local_expression_ids_are_not_semantic_evidence": true,
+    "proof_values_rendered": 0,
+    "target_submitted": false
+  },
+  "execution": {
+    "complete_diagnostics": 0,
+    "helper_theorem_submissions": 1,
+    "prefix_inferences_attempted": 4,
+    "prefix_inferences_succeeded": 3,
+    "target_theorem_submissions": 0,
+    "proof_values_rendered": 0,
+    "capsule_writes": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "helper_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "preregister a proof-free comparison between the minor type expected after the motive prefix and the independently inferred closed minor type",
+  "limitations": "Nat, predicate, and motive are accepted. The first incompatible eliminator argument is the minor; its exact type-shape difference is not yet rendered."
+}
