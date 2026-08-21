@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction retains the accepted pointwise quotient witness, while the explicit four-Nat balanced-Bézout update V1 is declined at one `propext`. A dependency-local audit is now preregistered over exactly the nine direct theorem roots from that first result. It binds the sealed stream and audit binary identities, permits one stream read and no compile/export/retry, renders no proof/type/value material, and grants only dependency-classification credit.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction retains the accepted pointwise quotient witness, while the explicit four-Nat balanced-Bézout update V1 is declined at one `propext`. The exact nine-root dependency audit has now localized that footprint: seven roots, including both private permutation helpers, are clean; only official Lean 4.30 `Nat.mul_assoc` and `Nat.right_distrib` carry `propext`. The sealed one-read result rendered no proof/type/value material and grants only classification credit.
 
-**Next:** execute the exact nine-root dependency audit once against the sealed V1 stream. Report the exact `propext` carrier subset. If nonempty, preregister a V2 replacing only that subset; if empty, preregister a source-shape isolation for a direct or definition/elaboration-borne carrier before V2. Preserve every prior source and sealed pack, the exact three-file baseline, and zero Fibonacci/ledger authority until each independent gate passes.
+**Next:** preregister V2 with exact clean multiplication-associativity and right-distributivity contracts injected as specialization parameters. Retain the V1 witness map, permutation helpers, and equality chain byte-for-byte except for those two leaf calls. Measure the generic update twice before any native/official leaf composition or gcd induction. Preserve every prior source and sealed pack, the exact three-file baseline, and zero Fibonacci/ledger authority until each independent gate passes.
 
 <!-- plan-section: landed-changes -->
 
@@ -104,3 +104,4 @@
 | 2026-08-21 | (pending) | Explicit four-Nat balanced-Bézout Euclidean update is frozen before its one authorized compilation |
 | 2026-08-21 | (pending) | Explicit update compiles but its first audit retains one `propext`; exact nine-dependency descent replaces source guessing |
 | 2026-08-21 | (pending) | Exact nine-root dependency-local audit is frozen before one non-rendering sealed-stream read |
+| 2026-08-21 | (pending) | One sealed-stream read localizes the V1 footprint exactly to `Nat.mul_assoc` and `Nat.right_distrib` |
