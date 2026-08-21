@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-parity-leaves-result",
+  "state": "two-step-unfold-stops-at-opaque-nat-mod",
+  "plan_sha256": "78e48cadacb5484fa717b26e85565536340f0f020b1047bbb72363b9c0af4f0f",
+  "source": {"path": "artifacts/autogenesis/sources/int-fib-parity-leaves-v4.lean", "sha256": "035092bed3b61b9764e7b1c7c3ef4a1c7bb7a0dcf9d5f036a22f65ea7024d84c"},
+  "execution": {"compiler_invocations": 1, "compiler_exit_status": 1, "exporter_invocations": 0, "importer_runs": 0, "theorem_submissions": 0, "retries": 0, "ledger_writes": 0},
+  "diagnostic": {"failed_operation": "unfold Nat.mod", "cause": "after Add and HAdd projections reduce, Nat.mod remains opaque to the unfold tactic", "repair": "remove only the failing unfold and let kernel definitional equality test the exposed two-step recurrence directly"},
+  "cleanup": {"temporary_source_removed": true, "temporary_olean_removed": true, "temporary_ilean_removed": true, "checkout_baseline_restored": true},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}

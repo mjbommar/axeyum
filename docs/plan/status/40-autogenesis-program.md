@@ -313,3 +313,4 @@
 | 2026-08-21 | (pending) | V6 advances to missing positive-product factor support; V7 freezes a primitive-induction replacement |
 | 2026-08-21 | `29c126c0e` | Target-owned positive-product right-factor proof is added without importing broader order theory |
 | 2026-08-21 | (pending) | V7 advances to multiplicative monotonicity; V8 freezes two target-owned order leaves |
+| 2026-08-21 | (pending) | Parity V4 exposes overloaded addition but stops at opaque `Nat.mod`; V5 freezes a direct definitional-equality test without the failing unfold |
