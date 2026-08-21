@@ -61,21 +61,21 @@ fn run() -> Result<(), String> {
         )?;
     }
 
-    let mut kernel = residual.kernel().clone();
+    let mut kernel = recurrence.kernel().clone();
     if optional_name(&kernel, TARGET)?.is_some() {
         return Err("exact target already exists before composition".to_owned());
     }
-    let recurrence_composition =
-        compose_checked_theorem_slice(recurrence.kernel(), &kernel, &[RECURRENCE])
-            .map_err(|error| format!("recurrence composition declined: {error:?}"))?;
+    let residual_composition =
+        compose_checked_theorem_slice(residual.kernel(), &kernel, &[RESIDUAL])
+            .map_err(|error| format!("residual composition declined: {error:?}"))?;
     verify_checked_theorem_composition(
-        recurrence.kernel(),
+        residual.kernel(),
         &kernel,
-        recurrence_composition.kernel(),
-        recurrence_composition.receipt(),
+        residual_composition.kernel(),
+        residual_composition.receipt(),
     )
-    .map_err(|error| format!("recurrence composition replay failed: {error:?}"))?;
-    kernel = recurrence_composition.kernel().clone();
+    .map_err(|error| format!("residual composition replay failed: {error:?}"))?;
+    kernel = residual_composition.kernel().clone();
 
     let cancellation_composition =
         compose_checked_theorem_slice(cancellation.kernel(), &kernel, &[CANCELLATION])
@@ -146,7 +146,7 @@ fn run() -> Result<(), String> {
                 "residual": RESIDUAL_SHA256,
             },
             "composition_receipts": {
-                "recurrence": recurrence_composition.receipt().receipt_sha256,
+                "residual": residual_composition.receipt().receipt_sha256,
                 "cancellation": cancellation_composition.receipt().receipt_sha256,
             },
             "specialization_receipt_sha256": specialized.receipt().receipt_sha256,
