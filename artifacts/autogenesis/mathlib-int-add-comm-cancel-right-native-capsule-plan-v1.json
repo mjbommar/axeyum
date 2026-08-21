@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-native-kernel-capsule-plan",
+  "state": "preregistered-before-driver-implementation",
+  "inputs": {
+    "commutativity_fact": "F:int-add-comm",
+    "right_cancellation_result": "artifacts/autogenesis/mathlib-int-add-neg-cancel-right-native-capsule-result-v1.json",
+    "constructor": "axeyum_lean_kernel::build_int_prelude"
+  },
+  "driver": "crates/axeyum-lean-import/examples/int_add_comm_cancel_right_capsule.rs",
+  "roots": [
+    "Int.add_comm",
+    "Int.add_neg_cancel_right"
+  ],
+  "method": "build one native axiom-free integer prelude, require both exact theorem roots to have empty footprints, root-export them together, then independently import the same capsule twice and compare canonical theorem evidence",
+  "strategic_role": "provide kernel-compatible algebra arguments for exact Int.fib_add_one specialization without importing official Mathlib algebra proofs",
+  "budget": {
+    "driver_implementations": 1,
+    "complete_invocations": 1,
+    "native_prelude_builds": 1,
+    "exports": 1,
+    "fresh_imports": 2,
+    "retries": 0,
+    "Fibonacci_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "both_roots_must_be_theorems": true,
+    "both_axiom_footprints_must_be_empty": true,
+    "two_fresh_imports_must_preserve_both_declaration_identities_dependencies_and_footprints": true,
+    "output_must_not_exist_before_execution": true
+  },
+  "output": "artifacts/autogenesis/mathlib-int-add-comm-cancel-right-native-capsule-result-v1.json",
+  "next_on_accept": "preregister exact Int.fib_add_one composition from admitted recurrence, this native pair, and the accepted parameterized residual",
+  "limitations": "This qualifies only two generic integer algebra theorems in one portable capsule. It grants no Fibonacci theorem or ledger authority."
+}
