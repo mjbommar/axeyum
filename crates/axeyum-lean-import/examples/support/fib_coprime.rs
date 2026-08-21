@@ -2,6 +2,7 @@
 
 use axeyum_lean_kernel::{BinderInfo, Declaration, ExprId, ExprNode, Kernel, LevelId, NameId};
 
+#[allow(dead_code)]
 pub(crate) fn admit(
     kernel: &mut Kernel,
     target: NameId,
