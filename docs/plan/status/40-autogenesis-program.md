@@ -2,11 +2,14 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd` and its newly ready child `Nat.fib_dvd` are both durably proved on the authoritative ledger. `Nat.fib_dvd` was constructed directly from the admitted GCD identity and five target-owned divisibility laws, reconstructed twice byte-identically, imported four fresh times, admitted through one crash-safe write, and reproduced in an isolated clean worktree. Its empty readiness delta is expected because it is a DAG leaf.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd` and `Nat.fib_dvd` remain durably proved. The next premise `Int.fib_neg` has now been measured from one root-selected v4.30 export: its official proof is assumption-bearing, with 26 direct dependencies and a footprint containing `Classical.choice`, `propext`, quotient primitives, and opaque/string support. It received no theorem or ledger credit.
 
-**Next:** qualify exact `Int.fib_neg`, the remaining open premise of `Int.gcd_fib`; measure whether its parity/sign branch can compose over the existing axiom-free Int and Fibonacci carriers, then preregister the smallest bounded proof before any target submission.
+**Next:** preregister one non-rendering classification pass over the exact 26 `Int.fib_neg` dependencies in the sealed stream, isolate the clean parity/sign and `Int.fib_neg_natCast` core, then preregister the smallest target-owned reconstruction before any target submission.
 
 <!-- plan-section: landed-changes -->
+
+| 2026-08-21 | `c4c6524ac` | Exact `Int.fib_neg` root audit is frozen against the pinned clean exporter environment with zero reconstruction or ledger authority |
+| 2026-08-21 | (pending) | One root export and non-rendering importer pass find 26 direct dependencies and an assumption-bearing official `Int.fib_neg` proof |
 
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |

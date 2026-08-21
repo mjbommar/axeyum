@@ -216,6 +216,9 @@ compounding, not automation theatre.
 | [Public gcd definition direct-reconstruction decline](117-public-gcd-def-direct-reconstruction-decline.md) | Why does direct reduction fail even for the zero constructor, and which target-side route remains? |
 | [Exact `Nat.fib_gcd` admission](189-exact-nat-fib-gcd-admission.md) | Did the exact reconstructed theorem survive crash-safe admission and clean replay, and which descendant actually became ready? |
 | [Exact `Nat.fib_dvd` construction and admission](190-exact-nat-fib-dvd-admission.md) | Can the newly ready Fibonacci divisibility theorem be derived constructively from `Nat.fib_gcd`, admitted crash-safely, and replayed as an honest leaf? |
+| [Exact `Int.fib_neg` root audit plan](191-int-fib-neg-root-audit-plan.md) | What are the exact dependencies and kernel footprint of the remaining premise of `Int.gcd_fib`, measured without exposing its proof? |
+| [Exact `Int.fib_neg` root audit result](192-int-fib-neg-root-audit-result.md) | Is the official theorem directly admissible, and which exact dependency frontier must replace it when it is not? |
+| [Exact `Int.fib_neg` dependency audit plan](193-int-fib-neg-dependency-audit-plan.md) | Which of the official proof's exact 26 direct dependencies are clean mathematical supports, and which carry the measured assumptions? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
