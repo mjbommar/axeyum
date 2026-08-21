@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-surface-plan-v1",
+  "state": "preregistered-proof-free-surface-audit-before-driver-change-or-stream-read",
+  "target": {
+    "fact_id": "F:ml430-nat-fib-gcd-d1d98407",
+    "name": "Nat.fib_gcd",
+    "statement": "∀ (m n : ℕ), Nat.fib (m.gcd n) = (Nat.fib m).gcd (Nat.fib n)",
+    "fact_file_sha256": "e678d6b3a3b3bb9d6d7915b14e0ed3deed6377583fc0a15e22ea2d9c191db25d",
+    "direct_unlocks": [
+      "F:ml430-int-gcd-fib-73bdafc2",
+      "F:ml430-nat-fib-dvd-f80f3de1"
+    ]
+  },
+  "accepted_inputs": [
+    {
+      "theorem": "Nat.gcd_greatest",
+      "admission_manifest": "artifacts/autogenesis/mathlib-nat-gcd-greatest-admission-v1.json",
+      "admission_manifest_sha256": "9ccef4a1b03b6fb65eb9a879f76f37b928fd105bb42bde23885f37e180919c42",
+      "capsule": "/nas3/data/axeyum/autogenesis/reference-packs/85b9d4243-target-native-gcd-greatest-v4/target-1.ndjson",
+      "capsule_sha256": "c233478948b4d4aedc01c839ef9013c3feb2ddb0009d8b57699d7efb755375e6"
+    },
+    {
+      "theorem": "Nat.gcd_fib_add_self",
+      "admission_manifest": "artifacts/autogenesis/mathlib-nat-gcd-fib-add-self-admission-v1.json",
+      "admission_manifest_sha256": "b7e508b5d81b139a30b62ebfe6960750a07f0392c23a54824c88298e6190a88c",
+      "capsule": "/nas3/data/axeyum/autogenesis/reference-packs/dfa79618c-target-native-exact-v3/target-1.ndjson",
+      "capsule_sha256": "279dc4db5daa6dc2f532f9876052500a7e278c54264b32ccbc9d4256907dfc24"
+    }
+  ],
+  "audit": {
+    "operation": "compose-two-root-selected-capsules-and-report-named-surface-v1",
+    "candidate_names": [
+      "Nat.gcd_greatest",
+      "Nat.gcd_fib_add_self",
+      "Nat.gcd.induction",
+      "Axeyum.Autogenesis.modQuotientWitnessV4",
+      "Nat.gcd_zero_left",
+      "Nat.gcd_succ",
+      "Nat.add_zero",
+      "Nat.zero_add",
+      "Nat.add_assoc",
+      "Nat.mul_succ",
+      "Nat.mul_comm",
+      "congrArg"
+    ],
+    "required_observations": [
+      "composition acceptance or exact named conflict",
+      "canonical declaration identity for every present candidate",
+      "kernel-derived axiom footprint for every present theorem",
+      "exact missing-name list",
+      "zero target theorem submissions"
+    ],
+    "proof_outline_if_surface_supports_it": [
+      "use Nat.gcd.induction on the exact target motive",
+      "prove an internal quotient-iteration lemma by Nat induction using Nat.gcd_fib_add_self",
+      "transport the Euclidean step through the accepted quotient/remainder witness and clean gcd commutativity",
+      "submit Nat.fib_gcd only after its exact goal identity and complete named dependency set are frozen"
+    ]
+  },
+  "budget": {
+    "driver_builds": 1,
+    "complete_audits": 1,
+    "capsule_reads": 2,
+    "fresh_imports": 2,
+    "proof_search_invocations": 0,
+    "helper_theorem_submissions": 0,
+    "target_theorem_submissions": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "both_admitted_roots_present": true,
+    "all_present_theorems_have_empty_axiom_footprints": true,
+    "output_is_non_authoritative_diagnostic_only": true,
+    "target_credit": 0
+  },
+  "next_on_accept": "freeze the smallest exact constructive route exposed by the audit before adding any helper or target proof",
+  "next_on_decline": "retain the exact missing or conflicting carrier and preregister one narrower composition or target-owned replacement",
+  "limitations": "This plan authorizes one non-rendering surface audit. It grants no authority to inspect proof bodies, construct or submit a theorem, change the fact ledger, or claim Nat.fib_gcd."
+}
