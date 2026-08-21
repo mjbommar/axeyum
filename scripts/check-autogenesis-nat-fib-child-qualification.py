@@ -66,15 +66,37 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
     candidates = manifest["candidates"]
     if not isinstance(candidates, list) or len(candidates) != 2:
         raise QualificationError("candidate population changed")
+    selected_fact_id = manifest["selection"]["fact_id"]
+    if selected_fact_id != candidates[0]["fact_id"]:
+        raise QualificationError("selected child changed")
     for candidate in candidates:
         fact = load(FACTS / (candidate["fact_id"].replace("F:", "F-") + ".json"))
-        if (
+        if fact.get("depends_on") != ["F:ml430-nat-fib-add-two-b86e0c82"]:
+            raise QualificationError("candidate dependency changed")
+        if candidate["fact_id"] == selected_fact_id:
+            status = fact.get("epistemic_status")
+            if status == "open":
+                if fact.get("evidence") != [] or any(
+                    key in fact for key in ("proof_route", "axiom_footprint")
+                ):
+                    raise QualificationError("open selected candidate carries admission fields")
+            elif (
+                status != "proved"
+                or fact.get("proof_route") != "kernel-lean"
+                or fact.get("axiom_footprint") != []
+                or not isinstance(fact.get("evidence"), list)
+                or not fact["evidence"]
+                or any(row.get("check_status") != "checked" for row in fact["evidence"])
+            ):
+                raise QualificationError(
+                    "settled selected candidate lacks checked axiom-free kernel evidence"
+                )
+        elif (
             fact.get("epistemic_status") != "open"
             or fact.get("evidence") != []
-            or fact.get("depends_on")
-            != ["F:ml430-nat-fib-add-two-b86e0c82"]
+            or any(key in fact for key in ("proof_route", "axiom_footprint"))
         ):
-            raise QualificationError("candidate ledger state changed")
+            raise QualificationError("deferred candidate ledger state changed")
         for unlock_id in candidate["direct_unlocks"]:
             unlock = load(FACTS / (unlock_id.replace("F:", "F-") + ".json"))
             if unlock.get("depends_on") != [candidate["fact_id"]]:
@@ -123,8 +145,6 @@ def validate(manifest: dict[str, Any] | None = None) -> dict[str, Any]:
         "ledger_writes": 0,
     }:
         raise QualificationError("qualification authority changed")
-    if manifest["selection"]["fact_id"] != candidates[0]["fact_id"]:
-        raise QualificationError("selected child changed")
     return manifest
 
 
