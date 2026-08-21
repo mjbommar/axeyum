@@ -1,0 +1,145 @@
+{
+  "authority": {
+    "balanced_bezout_reconstruction_allowed": false,
+    "coprime_cancellation_reconstruction_allowed": false,
+    "evaluation_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0,
+    "proof_bodies_readable_by_model": false,
+    "theorem_values_readable_by_model": false
+  },
+  "budget": {
+    "max_exact_fibonacci_target_submissions": 0,
+    "max_executor_invocations": 0,
+    "max_kernel_theorem_submissions": 2,
+    "max_public_support_theorem_declarations": 1,
+    "max_retries_after_kernel_decline": 0
+  },
+  "fixed_lift": {
+    "additional_statement_names_allowed": 0,
+    "case_split": "divisor zero versus successor",
+    "official_nat_div_add_mod_proof_allowed": false,
+    "positive_divisor_route": [
+      "Nat.zero_lt_succ",
+      "Nat.lt_succ_self",
+      "Nat.modCore_eq_mod",
+      "transparent Nat.div and Nat.modCore definitions",
+      "Axeyum.Autogenesis.divModGoReconstruct"
+    ],
+    "proof_search_allowed": false,
+    "source_path": "scripts/lean/autogenesis_div_add_mod_reconstruct.lean",
+    "upstream_proof_bodies_allowed": false,
+    "zero_divisor_route": [
+      "Nat.div_zero",
+      "Nat.mod_zero",
+      "Nat.zero_mul",
+      "Nat.zero_add"
+    ]
+  },
+  "gates": {
+    "authored_type_must_match_official_target": true,
+    "both_declaration_identities_must_match": true,
+    "direct_dependencies_must_be_enumerated": true,
+    "failed_or_partial_stream_must_not_publish_as_support": true,
+    "first_footprint_must_be_empty_before_second_run": true,
+    "private_invariant_before_public_lift": true
+  },
+  "inputs": {
+    "allowed_statements": [
+      {
+        "module": "Init.Data.Nat.Div.Basic",
+        "name": "Nat.div_add_mod",
+        "source_row_sha256": "27e257330698cbdccdeaf15707b11969451d36760885820c78461215b8c70bf5",
+        "type": "∀ (m n : ℕ), n * (m / n) + m % n = m",
+        "type_repr_sha256": "0a0c92fdac6e526a524d7883d9676e19dc679fca46ebb25ea049df56f0d4ccbb",
+        "type_sha256": "400e186d45e22fc5e595301292fec6ca7191ad435e6efa107af59334e6d942c6"
+      },
+      {
+        "module": "Init.Data.Nat.Div.Basic",
+        "name": "Nat.div_zero",
+        "source_row_sha256": "f6be6f5f5f598e5a7e2f0af7a52baa75012d8868cab4fcdecebbbe725bdf21da",
+        "type": "∀ (n : ℕ), n / 0 = 0",
+        "type_repr_sha256": "6bd6e2fd6957992a7cf37195cbfcb9b9820c53052fe549677b20c0bc168b992e",
+        "type_sha256": "4b8e9beb14e9b901e8190557b507faff5d268ff5dfc6565efa3ec73ca0120d2a"
+      },
+      {
+        "module": "Init.Prelude",
+        "name": "Nat.lt_succ_self",
+        "source_row_sha256": "8a5442c99dba6fa910d461b16312fc7e649234bf67a59916d14332431b115405",
+        "type": "∀ (n : ℕ), n < n.succ",
+        "type_repr_sha256": "6c67c97c27e870e9e4dad4ab7823280559abca01c2ac42cd78c9e16b35aecbeb",
+        "type_sha256": "538769be6fd67ab3a1c0c5ee198cd1189218fc7edf9478b92034725c1febee4d"
+      },
+      {
+        "module": "Init.Data.Nat.Div.Basic",
+        "name": "Nat.modCore_eq_mod",
+        "source_row_sha256": "6061f6a9a03184b47c2d85c39e1773a0c0c963a78bdeabd226777cdf26412c2e",
+        "type": "∀ (n m : ℕ), n.modCore m = n % m",
+        "type_repr_sha256": "7a4b30ebfaf730826e73e72935a2247edece9b5c7c2484d96695274627c41324",
+        "type_sha256": "37e4070b3b7e0145c35274fbf646a22e86e83f7feced60cf0beae608b3c7cf72"
+      },
+      {
+        "module": "Init.Data.Nat.Div.Basic",
+        "name": "Nat.mod_zero",
+        "source_row_sha256": "4ccf23f5cd3ebcaf8330b7c35d8af3c19e25e7066bb8f7319ce55929f3619e7d",
+        "type": "∀ (a : ℕ), a % 0 = a",
+        "type_repr_sha256": "617a74ae6de8991d5b5790d723c6331c7da21d5c933ed142a55d144f72021209",
+        "type_sha256": "9915e7980aa4d5093bc32c34b0c88d329445917f5e8760cc775b75a96cc0b8b1"
+      },
+      {
+        "module": "Init.Data.Nat.Basic",
+        "name": "Nat.zero_add",
+        "source_row_sha256": "3486779f602ade918271cdb80ed759be7e8bcd3ce8bd31f07511f4adc902e3ea",
+        "type": "∀ (n : ℕ), 0 + n = n",
+        "type_repr_sha256": "a85c1187b7b3599e75e93596d30e5fc51923425a5f3d576dfa76068362fdb5dc",
+        "type_sha256": "4f8e2def7159c5c51e258e2dad152bb0252f3e75c52234fdc7e5dd1f20404533"
+      },
+      {
+        "module": "Init.Prelude",
+        "name": "Nat.zero_lt_succ",
+        "source_row_sha256": "8381fbd3bc990e3d637d9422c178a0ac43d1ea9056babee76c4cc2909e819723",
+        "type": "∀ (n : ℕ), 0 < n.succ",
+        "type_repr_sha256": "25b3e5448c7c62bfe1659d40ded0e26df3b40e7ecf4a33a059ff73730acaa285",
+        "type_sha256": "4b217ba070786aa84800fce5f66004874b42de674acdb69823447eba53df801c"
+      },
+      {
+        "module": "Init.Data.Nat.Basic",
+        "name": "Nat.zero_mul",
+        "source_row_sha256": "cfadc9d1d18300bef54977ba966d2b5b6f75a2c6a5f86bed9a73fc2940cb674e",
+        "type": "∀ (n : ℕ), 0 * n = 0",
+        "type_repr_sha256": "bd56bb456799937aa46dbcaf8ffa68fa26b373e96e9910b9aca643b9a692d2f4",
+        "type_sha256": "0836216d29c1e95dfa260674309b36ad65c509bb66d5f3cb2856a37bd13f7138"
+      }
+    ],
+    "private_joint_invariant": {
+      "axiom_footprint": [],
+      "declaration_sha256": "f8d6592cd39d5f249acf0f695b1d77bd255dc9f630e3a588a0044fe62d3360a4",
+      "fresh_reconstructions": 2,
+      "path": "artifacts/autogenesis/euclidean-joint-div-mod-local-subtraction-replacement-result-v1.json",
+      "sha256": "3c181eb4c14a37cdb0046c915e3bf04e96f7c6f48f2688448a7a61a871c2dfb1",
+      "theorem_name": "Axeyum.Autogenesis.divModGoReconstruct"
+    },
+    "statement_inventory": {
+      "mode": "0444",
+      "path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-nat-int-statement-inventory-v2.ndjson",
+      "sha256": "4285e551680abf3b0cafb11709015f04b3aef3eb05ce23af2392b12cec31aecc"
+    }
+  },
+  "kind": "axeyum-autogenesis-euclidean-public-div-add-mod-lift-plan",
+  "limitations": "Even two accepted public-equation reconstructions do not establish balanced Bezout, coprime cancellation, the Fibonacci target, or ledger credit.",
+  "policy_version": "euclidean-public-div-add-mod-lift-v1",
+  "schema_version": 1,
+  "state": "preregistered-before-public-source-or-kernel-submission",
+  "target": {
+    "authored_name": "Axeyum.Autogenesis.divAddModReconstruct",
+    "fresh_reconstructions": 2,
+    "required_axiom_footprint": [],
+    "required_type_relation": "canonical-alpha-expression-identical",
+    "second_run_requires_first_run_acceptance": true,
+    "source_name": "Nat.div_add_mod",
+    "statement": "∀ (m n : ℕ), n * (m / n) + m % n = m",
+    "type_repr_sha256": "0a0c92fdac6e526a524d7883d9676e19dc679fca46ebb25ea049df56f0d4ccbb",
+    "type_sha256": "400e186d45e22fc5e595301292fec6ca7191ad435e6efa107af59334e6d942c6"
+  },
+  "verification": "python3 scripts/gen-autogenesis-euclidean-public-lift-plan.py --check"
+}
