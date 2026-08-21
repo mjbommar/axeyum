@@ -197,6 +197,7 @@ compounding, not automation theatre.
 | [Public Euclidean bounded-induction plan](98-public-euclidean-bounded-induction-plan.md) | Can primitive induction over an inclusive bound express the same recurrence without any generated well-founded theorem? |
 | [Public Euclidean bounded-induction decline](99-public-euclidean-bounded-induction-decline.md) | Did primitive bounded induction remove generated recursion, and where is the remaining footprint now exposed? |
 | [Bounded-induction dependency-footprint audit plan](100-bounded-induction-dependency-footprint-audit-plan.md) | Which exact direct theorem dependencies carry the primitive-induction proof's remaining `propext` footprint? |
+| [Bounded-induction dependency-footprint audit result](101-bounded-induction-dependency-footprint-audit-result.md) | Which two public computation equations carry the complete remaining footprint, and which 20 dependencies are clean? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

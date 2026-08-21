@@ -1,0 +1,250 @@
+{
+  "authority": {
+    "evaluation_credit": 0,
+    "exact_target_submissions": 0,
+    "executor_invocations": 0,
+    "fact_status_changes": 0,
+    "importer_runs": 1,
+    "ledger_writes": 0,
+    "new_authored_theorem_submissions": 0,
+    "proof_bearing_stream_reads": 1,
+    "proof_terms_rendered": 0,
+    "retries": 0,
+    "revised_proof_compilations": 0,
+    "support_theorem_credit": 0,
+    "theorem_values_rendered": 0
+  },
+  "input": {
+    "bytes": 715764,
+    "mode": "0444",
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/6fe0cd29e-public-euclidean-bounded-induction-decline-v1/bounded-induction.ndjson",
+    "sha256": "d71692e97b7bae7ab43043ed4490a79b2134650b4bfe4d8e20220693fe033844",
+    "stream_axioms": [
+      "propext"
+    ]
+  },
+  "kind": "axeyum-autogenesis-euclidean-bounded-induction-dependency-audit-result",
+  "limitations": "The audit localizes assumptions in the explicit primitive-induction proof closure. It does not prove a replacement route axiom-free or authorize source adaptation.",
+  "plan": {
+    "path": "artifacts/autogenesis/euclidean-bounded-induction-dependency-audit-plan-v1.json",
+    "sha256": "942e626f47bb3995e1c8f01181713d853ca2223b1274ec66bb577c87cae01846"
+  },
+  "rows": [
+    {
+      "axiom_footprint": [],
+      "class": "empty-footprint",
+      "declaration_sha256": "590d1380e385ae629d2442bb84672f1ccc82926a09588533d6815f4178d368ec",
+      "direct_theorem_dependencies": [],
+      "name": "And.left"
+    },
+    {
+      "axiom_footprint": [],
+      "class": "empty-footprint",
+      "declaration_sha256": "d416fdecad1433d5abb4bf5bc474bf3f3ff8a71e6dec5a4669d7e85ecd927113",
+      "direct_theorem_dependencies": [],
+      "name": "And.right"
+    },
+    {
+      "axiom_footprint": [],
+      "class": "empty-footprint",
+      "declaration_sha256": "fb271ec2ea3431e3c34737664fb7b6e308edb40ce00c7f038724eb0e4a08245f",
+      "direct_theorem_dependencies": [],
+      "name": "Eq.symm"
+    },
+    {
+      "axiom_footprint": [],
+      "class": "empty-footprint",
+      "declaration_sha256": "ad242b76c1ef7474e7511fab52189f8c0143857c23ab6be1fb5d28fe972bc145",
+      "direct_theorem_dependencies": [],
+      "name": "Nat.add_assoc"
+    },
+    {
+      "axiom_footprint": [],
+      "class": "empty-footprint",
+      "declaration_sha256": "4457a492f836549124e6f854cbde6f7687252088e361dfe961023803fc24cb22",
+      "direct_theorem_dependencies": [],
+      "name": "Nat.add_comm"
+    },
+    {
+      "axiom_footprint": [
+        "propext"
+      ],
+      "class": "propext-bearing",
+      "declaration_sha256": "52630f816cd199eb4d5cae34842093e7207b595725f4da27f7419ed5387191c1",
+      "direct_theorem_dependencies": [
+        "Eq.trans",
+        "Nat.div.go.eq_1",
+        "Nat.div_rec_fuel_lemma",
+        "Nat.lt_succ_self",
+        "_private.Init.Data.Nat.Div.Basic.0.Nat.div.go.fuel_congr",
+        "and_false",
+        "and_self",
+        "congr",
+        "congrArg",
+        "congrFun'",
+        "dif_neg",
+        "dif_pos",
+        "eq_false",
+        "eq_self",
+        "eq_true",
+        "false_and",
+        "ite_cond_eq_false",
+        "ite_cond_eq_true",
+        "ite_congr",
+        "of_eq_true"
+      ],
+      "name": "Nat.div_eq"
+    },
+    {
+      "axiom_footprint": [],
+      "class": "empty-footprint",
+      "declaration_sha256": "c61a1dfd6e36e7aee3ca320289d312ffaddbd7df0be0d127c66da6e80aea8cc6",
+      "direct_theorem_dependencies": [
+        "Nat.le_of_succ_le_succ"
+      ],
+      "name": "Nat.le_of_lt_succ"
+    },
+    {
+      "axiom_footprint": [],
+      "class": "empty-footprint",
+      "declaration_sha256": "f471851f5ce759a8f34840f3b400bf212db316811a9bdeff3e461903333934f1",
+      "direct_theorem_dependencies": [
+        "Nat.pred_le_pred"
+      ],
+      "name": "Nat.le_of_succ_le_succ"
+    },
+    {
+      "axiom_footprint": [],
+      "class": "empty-footprint",
+      "declaration_sha256": "1b16ee7ee71615c22d4c1215232422fe3692c9c6f74a6fdb5d804bfe8d9d0ee1",
+      "direct_theorem_dependencies": [
+        "Nat.le_of_succ_le_succ",
+        "Nat.lt_of_le_of_ne",
+        "Nat.succ_le_of_lt"
+      ],
+      "name": "Nat.le_or_eq_of_le_succ"
+    },
+    {
+      "axiom_footprint": [],
+      "class": "empty-footprint",
+      "declaration_sha256": "7db1cc8742421f6eed14639236492ff4af7ae66f354dfc03f17736d502ccd912",
+      "direct_theorem_dependencies": [],
+      "name": "Nat.le_refl"
+    },
+    {
+      "axiom_footprint": [],
+      "class": "empty-footprint",
+      "declaration_sha256": "5837732638ad59bdbb40c7435db26d47f60346012313bac4bf2532c75d020bb0",
+      "direct_theorem_dependencies": [
+        "Nat.le_trans"
+      ],
+      "name": "Nat.lt_of_lt_of_le"
+    },
+    {
+      "axiom_footprint": [
+        "propext"
+      ],
+      "class": "propext-bearing",
+      "declaration_sha256": "01ae2695ac79774b3421b20b2e7cd17c4291fb3e07b4b94211b90a6f4ca69454",
+      "direct_theorem_dependencies": [
+        "Eq.symm",
+        "Nat.modCore_eq",
+        "Nat.modCore_eq_mod",
+        "congrArg"
+      ],
+      "name": "Nat.mod_eq"
+    },
+    {
+      "axiom_footprint": [],
+      "class": "empty-footprint",
+      "declaration_sha256": "2210e36afc0c895a118db1fb5ff490606c3a08c499757818629cde2abe020fb5",
+      "direct_theorem_dependencies": [
+        "Nat.left_distrib"
+      ],
+      "name": "Nat.mul_add"
+    },
+    {
+      "axiom_footprint": [],
+      "class": "empty-footprint",
+      "declaration_sha256": "3a41ec1862904a8bc915b1083a94bb3072c625c051388c7fcd740792004942c0",
+      "direct_theorem_dependencies": [
+        "Nat.zero_add"
+      ],
+      "name": "Nat.mul_one"
+    },
+    {
+      "axiom_footprint": [],
+      "class": "empty-footprint",
+      "declaration_sha256": "dfc69b1b76819fa84840289a5d91869250e6615711bb445df0a372878d6c5b55",
+      "direct_theorem_dependencies": [],
+      "name": "Nat.not_succ_le_zero"
+    },
+    {
+      "axiom_footprint": [],
+      "class": "empty-footprint",
+      "declaration_sha256": "006e1f106f879322d5354a9057bb1d674f1b2093c77fe3d99adeeae25e24be16",
+      "direct_theorem_dependencies": [
+        "Eq.symm",
+        "Nat.lt_irrefl",
+        "Nat.lt_succ_of_le",
+        "Nat.sub_le",
+        "Nat.succ_sub_succ_eq_sub"
+      ],
+      "name": "Nat.sub_lt"
+    },
+    {
+      "axiom_footprint": [],
+      "class": "empty-footprint",
+      "declaration_sha256": "d240eaa3bf589cfae527b485c06355328c0a073ad0c550ee38f414403dbfed87",
+      "direct_theorem_dependencies": [
+        "congrArg"
+      ],
+      "name": "Nat.succ_sub_succ_eq_sub"
+    },
+    {
+      "axiom_footprint": [],
+      "class": "empty-footprint",
+      "declaration_sha256": "4a78e7643ebdd35c471d6dfa43410bd070d2c5cf6a2eb595cdedd1b56891f31d",
+      "direct_theorem_dependencies": [],
+      "name": "congr"
+    },
+    {
+      "axiom_footprint": [],
+      "class": "empty-footprint",
+      "declaration_sha256": "d39a34eb11556f4a80414b3cbda6ae21118baba14aa37ba6bff92265bf3a853b",
+      "direct_theorem_dependencies": [],
+      "name": "congrArg"
+    },
+    {
+      "axiom_footprint": [],
+      "class": "empty-footprint",
+      "declaration_sha256": "8e56cb8737c7c3c5b3314918f833cb7ff7885cc45a2f0e89ccd94d327e69f2db",
+      "direct_theorem_dependencies": [],
+      "name": "congrFun'"
+    },
+    {
+      "axiom_footprint": [],
+      "class": "empty-footprint",
+      "declaration_sha256": "068e017bcd7229152c54416b6de5922d6be3f3ca37cf8948f4ff01f8643715f7",
+      "direct_theorem_dependencies": [],
+      "name": "if_neg"
+    },
+    {
+      "axiom_footprint": [],
+      "class": "empty-footprint",
+      "declaration_sha256": "389c40b4ea4ac025ec31cf30ae1e601a6c9780952a08f1220a875db7fcf4e09a",
+      "direct_theorem_dependencies": [],
+      "name": "if_pos"
+    }
+  ],
+  "schema_version": 1,
+  "state": "explicit-direct-dependencies-classified-no-revised-proof-authority",
+  "summary": {
+    "class_counts": {
+      "empty-footprint": 20,
+      "other-assumption-bearing": 0,
+      "propext-bearing": 2
+    },
+    "population": 22
+  }
+}
