@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction includes an accepted generic official-gcd balanced-Bézout theorem. Its first dependency-bound closure attempt rebuilt the accepted gcd leaves but declined before final specialization: generic composition found different `WellFounded.fix` type shapes (`f45b2305…` versus `0c2e9552…`). The zero-retry ceiling stopped the second run; no closed theorem, partial kernel, compatibility override, cancellation, target, or ledger credit was issued.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction includes an accepted generic official-gcd balanced-Bézout theorem. Its first dependency-bound closure attempt declined at different `WellFounded.fix` type shapes (`f45b2305…` versus `0c2e9552…`). A proof-free two-run compatibility audit is now preregistered over the exact failed kernels and the union of their named dependency closures. It may emit only structural identities/classes and grants zero transport, reconstruction, closed-theorem, cancellation, target, or ledger authority.
 
-**Next:** preregister a proof-free compatibility audit of the source and target `WellFounded.fix` declarations and their representation closures. Determine whether the mismatch is translated definitional equality, a reconstructible target-side singleton, or a genuine incompatible dependency before authorizing any transport or retry. Preserve the failed mode as a regression control and retain zero closed/cancellation/Fibonacci/ledger authority.
+**Next:** implement only `--audit-balanced-bezout-fix` in the existing specialization example. Rebuild the exact failed kernels, classify `WellFounded.fix` and its closure without rendering proof/type/value material, and run twice. Use the byte-identical structural report to select one later repair; do not retry composition or submit a theorem in this increment.
 
 <!-- plan-section: landed-changes -->
 
@@ -114,4 +114,5 @@
 | 2026-08-21 | `99ea0b1e7` | Clean official-gcd balanced-Bézout induction is frozen with only two gcd computation leaves still explicit |
 | 2026-08-21 | `c8fae7455` | Generic official-gcd balanced-Bézout reconstructs twice with an empty footprint and preserves zero specialization authority |
 | 2026-08-21 | `0e23382f8` | Dependency-bound closure freezes exact accepted zero-left and successor gcd identities before implementation |
-| 2026-08-21 | (pending) | First closed specialization declines at an exact `WellFounded.fix` type-shape mismatch with zero retry or theorem credit |
+| 2026-08-21 | `496e916b8` | First closed specialization declines at an exact `WellFounded.fix` type-shape mismatch with zero retry or theorem credit |
+| 2026-08-21 | (pending) | Proof-free `WellFounded.fix` closure audit is frozen before code or stream access |

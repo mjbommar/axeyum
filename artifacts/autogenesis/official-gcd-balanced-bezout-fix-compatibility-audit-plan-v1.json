@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-gcd-balanced-bezout-fix-compatibility-audit-plan",
+  "state": "preregistered-proof-free-well-founded-fix-closure-audit-before-code-or-stream-read",
+  "inputs": {
+    "decline_result": {"path": "artifacts/autogenesis/official-gcd-balanced-bezout-closed-result-v1.json", "sha256": "dc00dca67dd4ff6962cfe6a78de560356352303c8e8ad938380c4fc555af2f1a"},
+    "decline_manifest": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/0e23382f8-official-gcd-balanced-bezout-closed-v1/manifest.json", "sha256": "c136a95253f6259e5faed9f10ffa9c0e475f5f5be85c7c3c7a57d5efcaa44d7a"},
+    "generic_stream": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/13038b3ff-official-gcd-balanced-bezout-clean-v1/official-gcd-balanced-bezout-clean.ndjson", "sha256": "c106a1e03a329535042f17f6a9d3cf408361e4b4691b5ea6bac4d1a71186bb56"},
+    "mod_invariant_stream": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/667201932-lean430-nat-mod-invariant-v1/nat-mod-invariant.ndjson", "sha256": "5d945b100f3e2939d6ea3ffa67e10b4d78ff9efb7782a56f3d67468aa167ebf9"},
+    "target_stream": {"path": "/nas3/data/axeyum/autogenesis/coverage/26fcc2c2f-mathlib-v4.30.0-reflexivity-train-development-v1/streams/r082.ndjson", "sha256": "6afa79d79481403d3e3273ea3eea26b4d1194762f9bd623ec019f8e821323cfd"},
+    "gcd_bridge_stream": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/f94489c74-lean430-nat-gcd-succ-bridge-v1/nat-gcd-bridge.ndjson", "sha256": "6e99d4ae83b3916f8ee36c541bac18fc91b9f922252ca0af1cf658578b4e20db"}
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/nat_gcd_succ_specialization.rs",
+    "new_mode": "--audit-balanced-bezout-fix",
+    "root": "WellFounded.fix",
+    "method": "rebuild the exact failed source and target kernels, then compare declaration identity, canonical type identity, alpha type identity, kernel type shape, checked translated definitional compatibility, and named dependency closures",
+    "rendered_fields": ["declaration names", "declaration kinds", "content hashes", "type hashes", "compatibility classes", "closure counts"],
+    "forbidden_rendered_fields": ["proof terms", "theorem types", "definition values", "theorem values"]
+  },
+  "acceptance": {
+    "fresh_complete_invocations": 2,
+    "outputs_must_be_byte_identical": true,
+    "root_source_type_shape_sha256": "f45b230503d6ddc03c61714008f6165dd055ff995d927507fc6d7aaffcf6afd6",
+    "root_target_type_shape_sha256": "0c2e9552a1056133fbd4e6a318344cfb1310468f7d2113efb37ebba0bf6ef32c",
+    "closure_union_must_be_name_sorted": true,
+    "every_shared_row_must_have_a_compatibility_class": true,
+    "proof_terms_types_or_values_may_be_rendered": false,
+    "transport_or_reconstruction_may_be_authorized": false
+  },
+  "budget": {"max_binary_builds": 1, "max_complete_invocations": 2, "max_input_stream_reads": 8, "max_intermediate_specialization_operations": 6, "max_closure_union_names": 512, "max_closed_theorem_submissions": 0, "max_retries": 0, "max_executor_invocations": 0},
+  "authority": {"compatibility_override_credit": 0, "translation_credit": 0, "target_reconstruction_credit": 0, "closed_gcd_balanced_bezout_credit": 0, "cancellation_credit": 0, "target_specialization_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_on_result": "Select exactly one bounded repair from the measured mismatch class; do not retry the closed specialization under this audit's authority.",
+  "output": "artifacts/autogenesis/official-gcd-balanced-bezout-fix-compatibility-audit-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-official-gcd-balanced-bezout-fix-compatibility-audit-plan.py",
+  "limitations": "This is a structural diagnostic only. It cannot authorize declaration transport, theorem reconstruction, closed specialization, cancellation, target work, or ledger mutation."
+}
