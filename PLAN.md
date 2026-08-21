@@ -744,6 +744,18 @@ normalized discrepancy still contains the identity-ray Haar increment itself.
 The polynomial-size reduction is therefore a precise direct target, not an
 averaging shortcut or a proof by small subgroup cardinality.
 
+A fail-closed correction to the finite E2-prime diagnostic is now recorded
+in gf2_hayes.rs: the dyadic product-discriminant phase vanishes on squareful
+inputs, so the all-fibre-point square-mass surplus is not the literal
+within-fibre off-diagonal correlation. The report now exposes the nonzero
+phase diagonal and the literal off-diagonal separately. Independent
+factorisation/inverse censuses at level 13 agree with the primary
+calculation and give positive literal off-diagonal values (30,144 odd and
+234,528 even), while the old all-points comparison remains negative only
+because of squareful-input slack. Thus this row is a finite slack-bound
+diagnostic, not a nonpositive four-point-counting theorem, and provides no
+endpoint credit.
+
 **Next:** prove `(REL)`, encode it as replayable evidence, remove the
 manuscript's fail-visible warning, and perform the final source audit.  The
 active geometric form is the complete signed lower Witt trace `(WITT-LOW)`,

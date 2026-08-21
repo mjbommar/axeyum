@@ -4459,6 +4459,13 @@ pub struct BinaryDyadicAutocorrelationFibreReport {
     pub fibre_count: usize,
     /// Total points across all fibres and nonzero shifts.
     pub total_fibre_points: u128,
+    /// Points whose product-discriminant dyadic character is nonzero.
+    ///
+    /// This is the diagonal mass in a literal expansion of
+    /// `sum_F c_F^2`: the character is zero when either polynomial is
+    /// squareful, so it is in general strictly smaller than
+    /// [`Self::total_fibre_points`].
+    pub nonzero_phase_points: u128,
     /// Largest affine-fibre dimension.
     pub max_fibre_dimension: usize,
     /// Fibres whose product-discriminant phase is at most quadratic modulo
@@ -4484,10 +4491,10 @@ pub struct BinaryDyadicAutocorrelationFibreReport {
     pub fibrewise_absolute_correlation: u128,
     /// Sum of squared signed correlations before combining exact fibres.
     ///
-    /// Subtracting `total_fibre_points` gives the exact within-fibre
-    /// off-diagonal dyadic correlation.  This is the nonnegative counting
-    /// half of the proposed connected square-root estimate; no sign or
-    /// asymptotic claim is attached to the finite value.
+    /// Its literal diagonal is [`Self::nonzero_phase_points`], not
+    /// [`Self::total_fibre_points`], because the dyadic character vanishes on
+    /// squareful inputs.  The weaker comparison with all fibre points is kept
+    /// separately as a finite candidate bound.
     pub fibre_correlation_square_sum: BigUint,
     /// Fibres with nonzero signed correlation.
     pub nonzero_fibre_correlation_count: usize,
@@ -4523,19 +4530,42 @@ impl BinaryDyadicAutocorrelationFibreReport {
     /// Exact within-fibre off-diagonal dyadic correlation.
     ///
     /// If `c_F=sum_(x in F) epsilon(x)`, then this returns
-    /// `sum_F c_F^2-sum_F #F`.  A nonpositive value is precisely the proposed
-    /// counting inequality `sum_F c_F^2<=total_fibre_points`.
+    /// `sum_F c_F^2-sum_F sum_(x in F) epsilon(x)^2`.  Here the latter sum is
+    /// [`Self::nonzero_phase_points`], not `sum_F #F`: `epsilon` is zero on
+    /// squareful inputs.
     #[must_use]
     pub fn within_fibre_off_diagonal_correlation(&self) -> BigInt {
+        BigInt::from(self.fibre_correlation_square_sum.clone())
+            - BigInt::from(self.nonzero_phase_points)
+    }
+
+    /// Square-mass surplus against every contributing fibre point.
+    ///
+    /// This is the slack-adjusted finite candidate
+    /// `sum_F c_F^2 <= total_fibre_points`; it is not a literal
+    /// within-fibre off-diagonal correlation when squareful inputs occur.
+    #[must_use]
+    pub fn square_mass_surplus_over_all_fibre_points(&self) -> BigInt {
         BigInt::from(self.fibre_correlation_square_sum.clone())
             - BigInt::from(self.total_fibre_points)
     }
 
-    /// Whether this finite row satisfies the proposed nonpositive
-    /// within-fibre off-diagonal correlation inequality.
+    /// Whether this finite row satisfies the slack-adjusted square-mass
+    /// candidate `sum_F c_F^2 <= total_fibre_points`.
+    #[must_use]
+    pub fn satisfies_square_mass_bound_by_all_fibre_points(&self) -> bool {
+        self.fibre_correlation_square_sum <= BigUint::from(self.total_fibre_points)
+    }
+
+    /// Legacy name for the slack-adjusted square-mass candidate.
+    ///
+    /// This does **not** test literal nonpositivity of
+    /// [`Self::within_fibre_off_diagonal_correlation`]: squareful inputs have
+    /// zero phase and contribute slack to the all-points comparison.  New code
+    /// should use [`Self::satisfies_square_mass_bound_by_all_fibre_points`].
     #[must_use]
     pub fn satisfies_nonpositive_within_fibre_correlation(&self) -> bool {
-        self.fibre_correlation_square_sum <= BigUint::from(self.total_fibre_points)
+        self.satisfies_square_mass_bound_by_all_fibre_points()
     }
 }
 
@@ -16540,6 +16570,22 @@ fn record_binary_dyadic_fibre_statistics(
         .total_fibre_points
         .checked_add(population)
         .ok_or_else(|| HayesError::InvalidParameter("dyadic fibre total overflow".to_owned()))?;
+    let nonzero_phase_points = phase
+        .residue_counts
+        .iter()
+        .enumerate()
+        .filter(|(residue, _)| residue % 2 == 1)
+        .try_fold(0_u128, |sum, (_, count)| {
+            sum.checked_add(*count).ok_or_else(|| {
+                HayesError::InvalidParameter("dyadic nonzero phase total overflow".to_owned())
+            })
+        })?;
+    report.nonzero_phase_points = report
+        .nonzero_phase_points
+        .checked_add(nonzero_phase_points)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("dyadic nonzero phase total overflow".to_owned())
+        })?;
     report.max_fibre_dimension = report.max_fibre_dimension.max(phase.dimension);
     report.at_most_quadratic_fibre_count += usize::from(phase.support_degree <= 2);
     if phase.support_degree <= 2 {
@@ -17294,6 +17340,7 @@ pub fn binary_dyadic_autocorrelation_fibre_report(
         nonzero_shift_count: shift_count - 1,
         fibre_count: 0,
         total_fibre_points: 0,
+        nonzero_phase_points: 0,
         max_fibre_dimension: 0,
         at_most_quadratic_fibre_count: 0,
         at_most_quadratic_fibre_points: 0,
@@ -23926,6 +23973,7 @@ mod tests {
         assert_eq!(report.nonzero_shift_count, 255);
         assert_eq!(report.fibre_count, 18_884);
         assert_eq!(report.total_fibre_points, 130_048);
+        assert_eq!(report.nonzero_phase_points, 57_660);
         assert_eq!(report.max_fibre_dimension, 8);
         assert_eq!(report.at_most_quadratic_fibre_count, 16_587);
         assert_eq!(
@@ -23950,10 +23998,14 @@ mod tests {
         assert_eq!(report.nonzero_fibre_correlation_count, 12_915);
         assert_eq!(report.power_of_two_magnitude_fibre_count, 12_456);
         assert_eq!(
-            report.within_fibre_off_diagonal_correlation(),
+            report.square_mass_surplus_over_all_fibre_points(),
             BigInt::from(-9_368)
         );
-        assert!(report.satisfies_nonpositive_within_fibre_correlation());
+        assert_eq!(
+            report.within_fibre_off_diagonal_correlation(),
+            BigInt::from(63_020)
+        );
+        assert!(report.satisfies_square_mass_bound_by_all_fibre_points());
         assert_eq!(report.shift_inverse_pair_count, 4_721);
         assert_eq!(report.shift_inverse_pairwise_absolute_correlation, 16_972);
         assert_eq!(report.normalized_parameter_count, 214);
@@ -24035,15 +24087,17 @@ mod tests {
         )
         .unwrap();
         eprintln!(
-            "ell={ell} d={d} offset={offset} k={degree} offdiag={} fibre_abs={} fibre_l2_square={} fibre_points={} within_fibre_offdiag={} nonzero_fibres={} power_two_fibres={} counting_candidate={} quadratic_l2_square={} quadratic_points={} nonquadratic_l2_square={} nonquadratic_points={} pair_abs={} normalized_abs={} valuation_abs={} gbent_fibres={} gbent_points={} witt_support={} witt_abs={} witt_m2={} witt_fourier_m2={} witt_fourier_m4={} phase_residues={:?} phase_comp_identity={} phase_comp_max_off={} phase_comp_square_sum={} additive_phases={:?} witt_conductors={:?} layers={:?}",
+            "ell={ell} d={d} offset={offset} k={degree} offdiag={} fibre_abs={} fibre_l2_square={} fibre_points={} nonzero_phase_points={} within_fibre_offdiag={} square_mass_surplus_over_all_points={} nonzero_fibres={} power_two_fibres={} counting_candidate={} quadratic_l2_square={} quadratic_points={} nonquadratic_l2_square={} nonquadratic_points={} pair_abs={} normalized_abs={} valuation_abs={} gbent_fibres={} gbent_points={} witt_support={} witt_abs={} witt_m2={} witt_fourier_m2={} witt_fourier_m4={} phase_residues={:?} phase_comp_identity={} phase_comp_max_off={} phase_comp_square_sum={} additive_phases={:?} witt_conductors={:?} layers={:?}",
             report.off_diagonal_signed_correlation,
             report.fibrewise_absolute_correlation,
             report.fibre_correlation_square_sum,
             report.total_fibre_points,
+            report.nonzero_phase_points,
             report.within_fibre_off_diagonal_correlation(),
+            report.square_mass_surplus_over_all_fibre_points(),
             report.nonzero_fibre_correlation_count,
             report.power_of_two_magnitude_fibre_count,
-            report.satisfies_nonpositive_within_fibre_correlation(),
+            report.satisfies_square_mass_bound_by_all_fibre_points(),
             report.at_most_quadratic_correlation_square_sum,
             report.at_most_quadratic_fibre_points,
             report.nonquadratic_correlation_square_sum,
