@@ -34,6 +34,10 @@ const COPRIME: &str = "Nat.fib_coprime_fib_succ";
 const COPRIME_GCD_SUCC_LEAF: &str = "Axeyum.Autogenesis.nat_gcd_succ";
 const COPRIME_GCD_SUCC_LEAF_SHA256: &str =
     "1a9cf6e4ef4dc54a298214571515e7682a6265d9db7008b7cf1f8b3c38d11f16";
+const GCD_ZERO_LEFT_GENERIC: &str = "Axeyum.Autogenesis.nat_gcd_zero_left";
+const GCD_ZERO_LEFT_CAPSULE: &str =
+    "824399899916c72329f201c0ea8c1b0fe25315ea013c4f392586668f67f606a0";
+const GCD_ZERO_LEFT_PUBLIC: &str = "Nat.gcd_zero_left";
 const COPRIME_CAPSULE: &str = "9106a3442d75a5fdaf51e35436e6fdbea78714d743e666bec27ffd9641160b11";
 const CLEAN_GCD_COMM: &str = "Axeyum.Autogenesis.gcdCommCleanV1";
 const OFFICIAL_EQ_ZERO: &str = "Axeyum.Autogenesis.eqZeroOfZeroDvdOfficialV1";
@@ -42,7 +46,7 @@ const OFFICIAL_MUL_LE_MUL_LEFT: &str = "Axeyum.Autogenesis.mulLeMulLeftOfficialV
 const OFFICIAL_LE_OF_DVD: &str = "Axeyum.Autogenesis.leOfDvdOfficialV1";
 const OFFICIAL_LE_ANTISYMM: &str = "Axeyum.Autogenesis.leAntisymmOfficialV1";
 const OFFICIAL_ANTISYMM: &str = "Axeyum.Autogenesis.dvdAntisymmOfficialV1";
-const USAGE: &str = "usage: nat_gcd_fib_add_self_exact <r091> <clean-order> <cancellation> <addition> <coprimality>";
+const USAGE: &str = "usage: nat_gcd_fib_add_self_exact <r091> <clean-order> <cancellation> <addition> <coprimality> <gcd-zero-left>";
 
 fn main() {
     if let Err(error) = run() {
@@ -69,6 +73,7 @@ fn run() -> Result<(), String> {
         (ADDITION, path(&mut args)?, ADDITION_CAPSULE),
         (COPRIME, path(&mut args)?, COPRIME_CAPSULE),
     ];
+    let gcd_zero_left_path = path(&mut args)?;
     if args.next().is_some() {
         return Err(USAGE.to_owned());
     }
@@ -77,6 +82,11 @@ fn run() -> Result<(), String> {
         return Err("r091 is not proof-isolated".to_owned());
     }
     let mut kernel = imported.kernel().clone();
+    let gcd_zero_left = import_bound(
+        &gcd_zero_left_path,
+        GCD_ZERO_LEFT_CAPSULE,
+        GCD_ZERO_LEFT_GENERIC,
+    )?;
     let mut receipts = Vec::new();
     for (root, source_path, expected_sha256) in capsules {
         let source = import_bound(&source_path, expected_sha256, root)?;
@@ -84,6 +94,45 @@ fn run() -> Result<(), String> {
             return Err(format!("{root} capsule is not proof-isolated"));
         }
         let completed = if root == COPRIME {
+            let zero_left_composed = compose_checked_theorem_slice(
+                gcd_zero_left.kernel(),
+                &kernel,
+                &[GCD_ZERO_LEFT_GENERIC],
+            )
+            .map_err(|error| format!("official gcd zero-left composition declined: {error:?}"))?;
+            verify_checked_theorem_composition(
+                gcd_zero_left.kernel(),
+                &kernel,
+                zero_left_composed.kernel(),
+                zero_left_composed.receipt(),
+            )
+            .map_err(|error| {
+                format!("official gcd zero-left composition did not replay: {error:?}")
+            })?;
+            kernel = zero_left_composed.kernel().clone();
+            receipts.push(json!({
+                "root": GCD_ZERO_LEFT_GENERIC,
+                "receipt_sha256": zero_left_composed.receipt().receipt_sha256,
+                "source_closure": zero_left_composed.receipt().source_closure.len(),
+                "added_theorems": zero_left_composed.receipt().added_theorems.len(),
+                "added_definitions": zero_left_composed.receipt().added_definitions.len(),
+                "added_singleton_inductives": zero_left_composed.receipt().added_singleton_inductives.len(),
+            }));
+            let public_zero_left = declare_public_gcd_zero_left(&mut kernel)?;
+            require_empty(&kernel, public_zero_left, GCD_ZERO_LEFT_PUBLIC)?;
+            let public_compatibility = checked_reused_declaration_compatibility(
+                source.kernel(),
+                &kernel,
+                GCD_ZERO_LEFT_PUBLIC,
+            )
+            .map_err(|error| {
+                format!("public gcd zero-left type compatibility declined: {error:?}")
+            })?;
+            if public_compatibility.compatibility != ReusedTypeCompatibility::KernelTypeShape {
+                return Err(
+                    "public gcd zero-left did not require checked type-shape reuse".to_owned(),
+                );
+            }
             let source_leaf = find_name(source.kernel(), COPRIME_GCD_SUCC_LEAF)?;
             let target_leaf = find_name(&kernel, COPRIME_GCD_SUCC_LEAF)?;
             let source_hash = canonical_declaration_sha256(source.kernel(), source_leaf)?;
@@ -97,7 +146,7 @@ fn run() -> Result<(), String> {
                 source.kernel(),
                 &kernel,
                 &[root],
-                &[COPRIME_GCD_SUCC_LEAF],
+                &[COPRIME_GCD_SUCC_LEAF, GCD_ZERO_LEFT_PUBLIC],
             )
             .map_err(|error| format!("{root} target-leaf composition declined: {error:?}"))?;
             verify_checked_theorem_composition_with_target_leaves(
@@ -1205,6 +1254,33 @@ fn declare_official_antisymm(kernel: &mut Kernel) -> Result<NameId, String> {
 }
 
 #[allow(clippy::similar_names)]
+fn declare_public_gcd_zero_left(kernel: &mut Kernel) -> Result<NameId, String> {
+    if optional_name(kernel, GCD_ZERO_LEFT_PUBLIC)?.is_some() {
+        return Err(format!(
+            "{GCD_ZERO_LEFT_PUBLIC} already exists before target-owned alias"
+        ));
+    }
+    let generic = find_name(kernel, GCD_ZERO_LEFT_GENERIC)?;
+    let ty = match kernel.environment().get(generic) {
+        Some(Declaration::Theorem { ty, .. }) => *ty,
+        _ => return Err(format!("{GCD_ZERO_LEFT_GENERIC} is not a theorem")),
+    };
+    let value = kernel.const_(generic, vec![]);
+    let target = {
+        let nat = find_name(kernel, "Nat")?;
+        kernel.name_str(nat, "gcd_zero_left")
+    };
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name: target,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .map_err(|error| format!("public gcd zero-left alias rejected: {error:?}"))?;
+    Ok(target)
+}
+
 fn declare_clean_gcd_comm(kernel: &mut Kernel) -> Result<NameId, String> {
     let target = nested_name(kernel, &["Axeyum", "Autogenesis", "gcdCommCleanV1"]);
     let mut d = Dev::new(kernel)?;
