@@ -1,0 +1,11 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-theorem-root-audit-plan",
+  "state": "preregistered-before-single-existing-stream-read",
+  "predecessor": {"path": "artifacts/autogenesis/mathlib-int-fib-parity-leaves-result-v5.json", "required_state": "two-step-recurrence-not-definitional"},
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-parity-leaves-v1/leaves.ndjson", "bytes": 685665, "sha256": "cda662ec943e7c8b5bd8131efdcb2a8e5b3e2c8c995e303e762bc04c750a9da5", "proof_bearing_render_forbidden": true},
+  "roots": ["Nat.mod_eq_sub_mod", "Nat.mod_lt"],
+  "reason": {"Nat.mod_eq_sub_mod": "explicitly proves the required two-step modulo recurrence after primitive subtraction normalization", "Nat.mod_lt": "bounds n % 2 so modCases can be built without the convenience theorem"},
+  "execution": {"tool": "theorem_root_audit", "max_importer_runs": 1, "max_stream_reads": 1, "max_retries": 0, "max_theorem_submissions": 0, "max_ledger_writes": 0},
+  "output": "artifacts/autogenesis/mathlib-int-fib-mod-primitive-audit-result-v1.json"
+}

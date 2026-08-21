@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-parity-leaves-result",
+  "state": "two-step-recurrence-not-definitional",
+  "plan_sha256": "e44055c073ebd539c0621ce5afacd97b87ebc430296ec6e2bede62f3c86209ca",
+  "source": {"path": "artifacts/autogenesis/sources/int-fib-parity-leaves-v5.lean", "sha256": "6196431035a3dfeaa3473e058f9a57e6f0821459143cc03bc8e5456778499a0d"},
+  "execution": {"compiler_invocations": 1, "compiler_exit_status": 1, "exporter_invocations": 0, "importer_runs": 0, "theorem_submissions": 0, "retries": 0, "ledger_writes": 0},
+  "diagnostic": {"failed_operation": "rfl", "cause": "k.succ.succ % 2 is not definitionally equal to k % 2", "next_boundary": "audit Nat.mod_eq_sub_mod and Nat.mod_lt before selecting explicit recurrence and range proofs"},
+  "cleanup": {"temporary_source_removed": true, "temporary_olean_removed": true, "temporary_ilean_removed": true, "checkout_baseline_restored": true},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}
