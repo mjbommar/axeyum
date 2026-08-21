@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-theorem-root-audit-result",
+  "state": "mod-eq-is-sole-direct-assumption-carrier",
+  "plan_sha256": "af842cb7c2c78abe5a43cf5ed2adc6562e5485b4e3822ef439df983e5613893d",
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/nat-mod-primitive-roots-v1/roots.ndjson", "bytes": 530110, "sha256": "e853f65e058893db16bf29c382fe7a9ed3bb737fb4577013f129602e9577d76f"},
+  "roots": [
+    {"name": "Eq.symm", "declaration_sha256": "fb271ec2ea3431e3c34737664fb7b6e308edb40ce00c7f038724eb0e4a08245f", "axiom_footprint": [], "direct_theorem_dependencies": []},
+    {"name": "Nat.eq_zero_or_pos", "declaration_sha256": "abadedb3e95cd4f91eeca9b63775cbed0e6ef6a0d05c976fc276fecafc821f01", "axiom_footprint": [], "direct_theorem_dependencies": ["Nat.succ_pos"]},
+    {"name": "Nat.mod_eq", "declaration_sha256": "01ae2695ac79774b3421b20b2e7cd17c4291fb3e07b4b94211b90a6f4ca69454", "axiom_footprint": ["propext"], "direct_theorem_dependencies": ["Eq.symm", "Nat.modCore_eq", "Nat.modCore_eq_mod", "congrArg"]},
+    {"name": "Nat.sub_zero", "declaration_sha256": "ef361b82e9ca5b15589c941c2d463be05f840bf13ec2a2ceb460b80f4e04d7db", "axiom_footprint": [], "direct_theorem_dependencies": []},
+    {"name": "if_pos", "declaration_sha256": "389c40b4ea4ac025ec31cf30ae1e601a6c9780952a08f1220a875db7fcf4e09a", "axiom_footprint": [], "direct_theorem_dependencies": []}
+  ],
+  "execution": {"importer_runs": 1, "stream_reads": 1, "retries": 0, "theorem_submissions": 0, "ledger_writes": 0},
+  "conclusion": {"sole_direct_assumption_carrier": "Nat.mod_eq", "clean_dependencies": ["Eq.symm", "Nat.eq_zero_or_pos", "Nat.sub_zero", "if_pos"], "next_boundary": "audit Nat.mod_eq's four direct dependencies"},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}

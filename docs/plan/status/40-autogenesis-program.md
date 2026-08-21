@@ -317,3 +317,4 @@
 | 2026-08-21 | (pending) | Parity V5 proves the two-step recurrence is not definitional; one non-rendering audit freezes the explicit recurrence and range primitives |
 | 2026-08-21 | (pending) | The old parity stream lacks `Nat.mod_lt`; a fresh exact-root export is frozen instead of treating incomplete coverage as evidence |
 | 2026-08-21 | (pending) | Exact modulo roots expose clean `Nat.mod_lt` and reject assumption-bearing `Nat.mod_eq_sub_mod`; its five-edge closure is frozen for localization |
+| 2026-08-21 | (pending) | Recurrence audit isolates `Nat.mod_eq` as the sole direct assumption carrier; its four-edge `modCore` boundary is frozen next |
