@@ -155,6 +155,29 @@ rows (§8).
 
 ## 4. Theory and operator coverage
 
+### 4.0 Measured, now that the binaries were found
+
+§10 originally recorded every cvc5 and Bitwuzla claim as source-derived because
+a `command -v` said the binaries were absent. They are not (see §10). The
+load-bearing cells were re-checked **by running them**, 2026-08-21, at the
+versions the parity ledger names:
+
+| claim | was | measured |
+|---|---|---|
+| Bitwuzla rejects `Int` | source | `[error] unsupported logic 'QF_LIA'` — a parser error, not a weakness |
+| Bitwuzla rejects strings | source | `[error] unsupported logic 'QF_S'` |
+| Bitwuzla decides BV | source | `sat` |
+| cvc5 FP is Float32/64 only without `--fp-exp` | source | `(_ FloatingPoint 5 3)` → `error "…is not supported, only Flo…"`; `Float32` → `sat` |
+| cvc5 has no optimization | source | `(maximize x)` → `Parse Error` |
+| **cvc5 emits a checkable Alethe proof** | source | **`unsat` followed by real Alethe steps** — `(assume a0 (! (> x 5) :named @p_1))` |
+| **Bitwuzla emits no proof** | source | **`unsupported command 'get-proof'`** |
+| Bitwuzla gained interpolation in 0.9.0 | source | `--produce-interpolants`, `--interpolants-algo mcmillan` present |
+
+The two in bold are the ones that decide §6.2's framing, and they now rest on
+output I read rather than on source I inferred from: **our checkable-evidence
+moat is real against Bitwuzla, which cannot emit a proof at all, and is not a
+moat against cvc5, which emits Alethe that Carcara reads.**
+
 ### 4.1 The matrix
 
 `✓` present, `~` present but bounded or partial, `✗` absent. For the reference
@@ -456,7 +479,7 @@ Ordered by *measured* cost, not by how large the hole feels.
 | 7 | **User triggers (`:pattern`, `:weight`)** | §5 | The one quantifier gap that is real vs Z3, now that the sat-direction is closed |
 | 8 | **Memory bound is inert** | §7 | Operational, and this box has already been OOM-killed once |
 | 9 | Transcendentals; nested arrays; parametric datatypes | §4.1, §4.3, sized below | **Sized 2026-08-21 and DEPRIORITISED — "each blocking a whole slice" is not true of anything we measure.** Across 2,200 files in the 11 pinned competition lists: transcendentals **0**, nested arrays **0**, parametric datatypes **0**. Across the 1,101-file committed corpus: 10, 0, 0. These are real capability zeros and they block approximately nothing in the population this document scores. The honest caveat is that the population is a CHOICE — `QF_UFNRAT` has no pinned list, so its 0 is partly "we do not measure that division" |
-| 4b | **`Int` is `i128` in the IR, and 13% of QF_UFLIA never reaches the solver** | measured below | 26 of the 200 QF_UFLIA competition files carry integer literals above 2^127 (78 digits — EVM 2^256 words, Certora benchmarks). Axeyum decides **0 of 26**: they are rejected before any solver work runs. **But the opportunity is 11, not 26** — z3 4.13.3 at 20 s decides only 11 of them, so 15 are hard for the reference too. Not a parser fix: `Value::Int(i128)` is the IR representation and every arithmetic route is built on it, so this is ADR-sized. `WideUint` already exists as the precedent for wide bit-vectors |
+| 4b | **`Int` is `i128` in the IR, and 13% of QF_UFLIA never reaches the solver** | measured below | 26 of the 200 QF_UFLIA competition files carry integer literals above 2^127 (78 digits — EVM 2^256 words). Axeyum decides **0 of 26**: rejected before any solver work. **The opportunity is 6, not 26 and not the 11 this row first claimed** — measured 2026-08-21 at 20 s, cvc5 (the actual parity reference) decides **6 of 26**, z3 decides 12. Not a parser fix: `Value::Int(i128)` is the IR representation and every arithmetic route is built on it, so it is ADR-sized. `WideUint` already exists as the precedent for wide bit-vectors |
 | 10 | **CAV-2024 bit-blasting abstraction** | sized below | **Sized 2026-08-21 and DEPRIORITISED for our position.** Bitwuzla has it on by default since 0.8.0 and cvc5 is adding it, in a division whose top three sit within 32 benchmarks of each other — but that is a contest between leaders, and it is not our contest. We are **187/194 on QF_BV**, so the entire addressable set is **7 files**, and only 4 of those 7 contain `bvmul` at all (1 has `bvudiv`). Against gap #1's measured +17 in a division at 52.2%, this is the wrong thing to build next |
 
 Deliberately **not** on this list: new theory columns. Most of what cvc5 has and
@@ -590,6 +613,24 @@ worthless — an external user hitting `(sin x)` gets a parse error today, and
 it does mean they should not be ranked against work that moves a division. The
 population a gap is scored against is a choice, and this row was being scored
 against one that does not contain it.
+
+**And the sizing itself was wrong, in the same way, one level down.** This row
+first read "26 files blocked". I corrected it to "~11" by measuring **z3**,
+because I believed cvc5 was not installed. cvc5 is installed, and it decides
+**6 of 26** where z3 decides 12 — twice as many. So:
+
+```
+as written        26 files
+sized with z3     ~11        (a proxy, chosen because the reference was
+                              wrongly believed absent)
+measured, cvc5      6        (5 sat, 1 unsat, 20 undecided at 20 s)
+```
+
+A 4.3x overstatement, and my own correction of it was still 1.8x over. The
+lesson is not "z3 is a bad proxy" — it is that **a proxy was used without ever
+being validated as one**, and the validation was cheap and available. §9 row 4's
+diagnosis measured the same disagreement independently and larger: z3 136/200
+against cvc5 76/200 on QF_NIA, with cvc5's decided set a strict subset of z3's.
 
 **Sized before it was chased.** The diagnosis note reports 26 QF_UFLIA files
 lost at the parser to oversized `Int` literals and observes that no solver work
