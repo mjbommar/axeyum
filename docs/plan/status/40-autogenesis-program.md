@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** `Nat.gcd_fib_add_self` now reconstructs twice from the target-owned divisibility, GCD, Fibonacci-addition, coprimality, and balanced-Bézout cancellation stack. Both exact submissions have empty footprints, export the same 1,031,934-byte capsule, and survive four independent imports. The theorem has durable target credit; `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open until its separately registered crash-safe ledger admission succeeds.
+**Status:** `Nat.gcd_fib_add_self` is durably admitted as `proved` on `kernel-lean`. Its exact target-owned theorem reconstructs twice, has an empty axiom footprint, survives four independent imports, passes the registered fact-operation replay, and reproduces the same execution, transaction, event, and readiness identities from an isolated clean worktree after a successful after-intent crash test. The admission performed exactly one authoritative ledger write and honestly unlocked no child because no ledger fact currently names this theorem in `depends_on`.
 
-**Next:** register and execute the crash-safe fact transaction for `F:ml430-nat-gcd-fib-add-self-5a92d5e3`, bind the exact capsule and empty footprint, then regenerate and measure the newly ready fact frontier before selecting the next autonomous child.
+**Next:** reuse the accepted target-owned GCD universal-property theorems to construct the exact ready Mathlib proposition `Nat.gcd_greatest`; this closes a general GCD interface before returning to the strategic `Nat.fib_gcd` chain.
 
 <!-- plan-section: landed-changes -->
 
@@ -15,6 +15,9 @@
 | 2026-08-21 | `527508a56` | Target-owned `gcd_dvd_left`, `gcd_dvd_right`, and `dvd_gcd` reconstruct twice with byte-identical empty-footprint evidence |
 | 2026-08-21 | `71ba9fb1c` | Consecutive-Fibonacci coprimality reconstructs target-natively without `Iff` or foreign GCD convenience theorems |
 | 2026-08-21 | `dfa79618c` | Exact `Nat.gcd_fib_add_self` reconstructs twice with byte-identical empty-footprint evidence over the target-owned stack |
+| 2026-08-21 | `a475f13dd` | Sealed-capsule operation registration binds the exact target identity and reviews every gate coupling before dispatch |
+| 2026-08-21 | `07b0794ae` | Crash-safe recovery admits `Nat.gcd_fib_add_self` with one authoritative write and an empty kernel footprint |
+| 2026-08-21 | `dbfd95dce` | Immutable primary archive and isolated clean replay seal the Fibonacci GCD-shift admission |
 
 | 2026-08-19 | `1afe65473` | Native/imported Nat prelude composition probe |
 | 2026-08-19 | `d1eb38a13` | Alpha-stable cross-kernel expression identity |
