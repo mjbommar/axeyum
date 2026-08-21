@@ -742,8 +742,7 @@ fn declare_official_mul_le_mul_left(kernel: &mut Kernel) -> Result<NameId, Strin
     let step = d.lam(step_bound_fv, step_bound_ty, step);
     let step = d.lam(step_value_fv, nat, step);
 
-    let zero = d.kernel.level_zero();
-    let rec = d.kernel.const_(le_rec, vec![zero]);
+    let rec = d.kernel.const_(le_rec, vec![]);
     let proof = d.apply(rec, &[left, motive, base, step, right, premise_proof]);
     let ty = mul_le_statement(&mut d, scale, left, right);
     let proof = d.lam(premise_fv, premise, proof);
