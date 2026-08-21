@@ -529,6 +529,12 @@ pub struct LocalContext {
     /// exactly the current declaration stack and is cleared by `push`/`pop`;
     /// the `u64` pins the environment revision the entries were computed at.
     whnf_cache: (u64, HashMap<ExprId, ExprId>),
+    /// **Full-δ** weak-head normal forms of expressions that mention free
+    /// variables — the context-scoped half of the `whnf_core` memo, and the
+    /// exact analogue of `whnf_cache` one layer up. Cleared by `push`/`pop`
+    /// with the other three, which is what scopes an entry to the declaration
+    /// stack that produced it.
+    whnf_core_cache: (u64, HashMap<ExprId, ExprId>),
     /// Definitional values for the subset of locals introduced by `let`.
     let_values: HashMap<u64, ExprId>,
     /// Lambda nodes in a scoped open skeleton whose bodies already refer to the
@@ -564,6 +570,7 @@ impl LocalContext {
         self.infer_cache.clear();
         self.def_eq_cache.clear();
         self.whnf_cache.1.clear();
+        self.whnf_core_cache.1.clear();
         self.decls.push(decl);
     }
 
@@ -584,6 +591,7 @@ impl LocalContext {
         self.infer_cache.clear();
         self.def_eq_cache.clear();
         self.whnf_cache.1.clear();
+        self.whnf_core_cache.1.clear();
         popped
     }
 
@@ -610,6 +618,28 @@ impl LocalContext {
             return None;
         }
         self.whnf_cache.1.get(&expression).copied()
+    }
+
+    /// The context-scoped half of the full-δ memo. Same shape as
+    /// [`LocalContext::whnf_result`]: a revision change makes every entry
+    /// unreachable before the first lookup at the new revision.
+    fn whnf_core_result(&mut self, revision: u64, expression: ExprId) -> Option<ExprId> {
+        if self.whnf_core_cache.0 != revision {
+            self.whnf_core_cache.0 = revision;
+            self.whnf_core_cache.1.clear();
+            return None;
+        }
+        self.whnf_core_cache.1.get(&expression).copied()
+    }
+
+    /// The revision check here is load-bearing rather than defensive; see
+    /// [`Kernel::remember_whnf_core`] for the measurement that says so.
+    fn remember_whnf_core(&mut self, revision: u64, expression: ExprId, normalized: ExprId) {
+        if self.whnf_core_cache.0 != revision {
+            self.whnf_core_cache.0 = revision;
+            self.whnf_core_cache.1.clear();
+        }
+        self.whnf_core_cache.1.insert(expression, normalized);
     }
 
     fn remember_whnf(&mut self, revision: u64, expression: ExprId, normalized: ExprId) {
@@ -950,15 +980,133 @@ impl Kernel {
     /// The context is what lets reduction see a free variable's *type*, which
     /// K-like reduction needs. Everything else about the two entry points is
     /// identical.
+    ///
+    /// # The memo
+    ///
+    /// The δ loop is memoised on `(environment revision, expression)` with the
+    /// same closed/open split, and for the same reason, as the δ-free memo in
+    /// [`Kernel::whnf_no_unfolding`] — read that first; the argument is not
+    /// repeated here. This is a **memo and nothing else**: the loop is a
+    /// deterministic function of the key, so a hit returns exactly what the walk
+    /// would have returned, and the set of terms the kernel identifies is
+    /// unchanged. Nothing here decides *whether* a reduction fires.
+    ///
+    /// Per-step memoisation is not enough, which is why this layer exists at
+    /// all. `whnf_no_unfolding` already caches one δ-free step, but a repeated
+    /// `whnf_core` still re-walks the entire δ chain a probe at a time, and
+    /// every link that δ-unfolds mints a **fresh** expression that no cache has
+    /// ever seen. Measured on `build_creal_prelude` (2026-08-20, this host):
+    /// 33.0 s without this memo, 13.0 s with it.
+    ///
+    /// The pinned reference carries both layers and we carried only one:
+    /// `type_checker.h:31-32` declares `m_whnf_core` *and* `m_whnf`, populated
+    /// at `type_checker.cpp:491/548` and `755/763-772` respectively. Our
+    /// `whnf_no_unfolding` is Lean's `whnf_core` and this is Lean's `whnf`, so
+    /// the missing cache was the second of that pair.
+    ///
+    /// The traffic that makes it matter is the literal-`Nat` acceleration.
+    /// [`Kernel::reduce_nat_binop`] runs `whnf_core` on **both** arguments of
+    /// every `Nat.add`/`Nat.mul`/`Nat.div`/`Nat.mod`/`Nat.gcd`/`Nat.beq`
+    /// application it meets — from *inside* the δ-free normaliser, so the δ
+    /// work that lazy-delta exists to avoid is done eagerly and speculatively.
+    /// In that build it fired 1.19 M times and produced a literal 575 times.
+    /// (It fires at all only since `502184d3f`: `Kernel::build_nat_binop_table`
+    /// requires `Bool`'s constructors in official Lean order, so while the
+    /// native `Bool` was `[true, false]` the whole table was `None` and every
+    /// probe returned immediately. Aligning `Bool` switched the acceleration on
+    /// and the prelude build went 8.7 s → 33.0 s.)
     pub(crate) fn whnf_core(&mut self, e: ExprId, ctx: &mut LocalContext) -> ExprId {
+        let revision = self.env.revision();
+        if let Some(normalized) = self.recall_whnf_core(revision, e, ctx) {
+            return normalized;
+        }
+        let reads_before = self.reduction_ctx_reads;
+        let entry_closed = !self.has_fvars(e);
+
+        // Every link of the δ chain has the SAME full-δ normal form as `e`:
+        // `whnf_core` is deterministic and the walk from a link is the tail of
+        // the walk from `e`. So the whole chain is memoised, not just its head.
+        // That is where the win is: each δ step *mints a fresh expression*, and
+        // those intermediates are exactly the ones nothing else ever caches.
+        let mut chain: Vec<ExprId> = Vec::new();
         let mut cursor = e;
-        loop {
+        let normalized = loop {
+            if cursor != e
+                && let Some(normalized) = self.recall_whnf_core(revision, cursor, ctx)
+            {
+                break normalized;
+            }
+            chain.push(cursor);
             let whnfd = self.whnf_no_unfolding(cursor, ctx);
             match self.unfold_def(whnfd) {
                 Some(next) => cursor = next,
-                None => return whnfd,
+                None => break whnfd,
             }
+        };
+
+        assert!(
+            !entry_closed || self.reduction_ctx_reads == reads_before,
+            "δ-normalizing a closed expression read the local context; the \
+             kernel-global whnf_core cache key has no context component and \
+             would be unsound"
+        );
+        for link in chain {
+            self.remember_whnf_core(revision, link, normalized, ctx);
         }
+        normalized
+    }
+
+    /// The memoised full-δ normal form of `e`, if one is recorded.
+    ///
+    /// Routed by `e`'s own closedness, exactly as [`Kernel::whnf_no_unfolding`]
+    /// routes its δ-free memo and for the same reason: the kernel-global key
+    /// has no local-context component, so only a closed expression — one whose
+    /// reduction provably cannot consult the context — may live there.
+    fn recall_whnf_core(
+        &mut self,
+        revision: u64,
+        e: ExprId,
+        ctx: &mut LocalContext,
+    ) -> Option<ExprId> {
+        if self.has_fvars(e) {
+            return ctx.whnf_core_result(revision, e);
+        }
+        if self.whnf_core_cache.0 != revision {
+            self.whnf_core_cache.0 = revision;
+            self.whnf_core_cache.1.clear();
+            return None;
+        }
+        self.whnf_core_cache.1.get(&e).copied()
+    }
+
+    /// Record `normalized` as the full-δ normal form of `e`, in whichever half
+    /// of the split memo `e`'s closedness selects.
+    ///
+    /// The revision check on the way *in* is not redundant with the one on the
+    /// way out, and I had it the other way round until an assertion said
+    /// otherwise. The argument for dropping it was that every link is recalled
+    /// at the same revision first, so the recall's stamp always precedes the
+    /// write. Replacing the branch with `debug_assert_eq!` and running the unit
+    /// sweep killed six tests: a **fresh** `LocalContext` whose first
+    /// `whnf_core` entry is *closed* is never stamped by a recall at all (the
+    /// recall goes to the kernel-global half), so the first open link written
+    /// into it arrives at an unstamped cache. It is this branch that stamps it.
+    fn remember_whnf_core(
+        &mut self,
+        revision: u64,
+        e: ExprId,
+        normalized: ExprId,
+        ctx: &mut LocalContext,
+    ) {
+        if self.has_fvars(e) {
+            ctx.remember_whnf_core(revision, e, normalized);
+            return;
+        }
+        if self.whnf_core_cache.0 != revision {
+            self.whnf_core_cache.0 = revision;
+            self.whnf_core_cache.1.clear();
+        }
+        self.whnf_core_cache.1.insert(e, normalized);
     }
 }
 

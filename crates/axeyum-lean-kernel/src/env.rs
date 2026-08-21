@@ -573,6 +573,8 @@ impl crate::Kernel {
         self.infer_closed_cache.clear();
         self.whnf_cache.0 = self.env.revision();
         self.whnf_cache.1.clear();
+        self.whnf_core_cache.0 = self.env.revision();
+        self.whnf_core_cache.1.clear();
     }
 }
 

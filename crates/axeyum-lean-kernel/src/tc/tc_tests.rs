@@ -165,6 +165,7 @@ fn whnf_cache_retains_only_the_current_environment_revision() {
     let first = k.app(first_lam, first_arg);
     assert_eq!(k.whnf(first), first_arg);
     assert!(k.whnf_cache.1.contains_key(&first));
+    assert!(k.whnf_core_cache.1.contains_key(&first));
 
     let axiom = k.name_str(anon, "cacheRevisionAxiom");
     k.add_declaration(Declaration::Axiom {
@@ -181,6 +182,104 @@ fn whnf_cache_retains_only_the_current_environment_revision() {
     assert_eq!(k.whnf_cache.0, k.env.revision());
     assert!(k.whnf_cache.1.contains_key(&second));
     assert!(!k.whnf_cache.1.contains_key(&first));
+    // The full-δ memo is keyed on the same revision and has to age out with it.
+    assert_eq!(k.whnf_core_cache.0, k.env.revision());
+    assert!(k.whnf_core_cache.1.contains_key(&second));
+    assert!(!k.whnf_core_cache.1.contains_key(&first));
+}
+
+/// A δ-normal form memoised **before** a declaration was admitted must not be
+/// answered **after** it.
+///
+/// The other revision test reaches its cache through a `whnf` that also
+/// *inserts*, so a memo whose insert path checks the revision looks correct
+/// even when its lookup path does not — and the two paths are separate code.
+/// This one only ever looks up: the same `ExprId` is a stuck `Const` before the
+/// definition exists and δ-unfolds to its value afterwards, with no intervening
+/// write to the entry. A memo that trusts a stale revision on the way *in*
+/// hands back the stuck form for a constant the environment now unfolds.
+#[test]
+fn a_normal_form_memoised_before_a_declaration_is_not_answered_after_it() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let name = k.name_str(anon, "revisionSensitiveDefinition");
+    let constant = k.const_(name, vec![]);
+
+    assert_eq!(
+        k.whnf(constant),
+        constant,
+        "an undeclared constant has nothing to unfold to"
+    );
+    assert!(k.whnf_core_cache.1.contains_key(&constant));
+
+    // `def revisionSensitiveDefinition : Type := Prop`.
+    let zero = k.level_zero();
+    let one = k.level_succ(zero);
+    let type_ = k.sort(one);
+    let prop = k.sort(zero);
+    k.add_declaration(Declaration::Definition {
+        name,
+        uparams: vec![],
+        ty: type_,
+        value: prop,
+        hint: crate::env::ReducibilityHint::Regular(0),
+    })
+    .expect("the definition admits");
+
+    assert_eq!(
+        k.whnf(constant),
+        prop,
+        "the constant now δ-unfolds; a stale memo would still call it stuck"
+    );
+}
+
+/// The **context-scoped** half of the full-δ memo ages out with the environment
+/// revision too, and nothing else in this suite was reaching that half.
+///
+/// The closed counterpart above cannot cover it: closed and open expressions go
+/// to two different caches with two separate revision checks, and dropping the
+/// open one leaves every closed test green. The probe is deliberately an
+/// application of an *undeclared* constant to a free variable, so it mentions a
+/// free variable (hence the context-scoped half), is stuck before the
+/// definition exists, and β-reduces to that variable afterwards — with the
+/// **same** `LocalContext` live across the admission, never pushed or popped,
+/// so `push`/`pop` clearing cannot be what saves it.
+#[test]
+fn a_context_scoped_normal_form_ages_out_with_the_environment_revision() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let prop = k.sort_zero();
+    let name = k.name_str(anon, "revisionSensitiveOpenDefinition");
+    let constant = k.const_(name, vec![]);
+    let variable = k.fvar(0);
+    let open = k.app(constant, variable);
+    assert!(k.has_fvars(open), "the probe must reach the context-scoped half");
+
+    let mut ctx = LocalContext::new();
+    assert_eq!(
+        k.whnf_core(open, &mut ctx),
+        open,
+        "an undeclared constant has nothing to unfold to"
+    );
+
+    // `def revisionSensitiveOpenDefinition : Prop -> Prop := fun (x : Prop) => x`.
+    let ty = k.pi(anon, prop, prop, BinderInfo::Default);
+    let body = k.bvar(0);
+    let value = k.lam(anon, prop, body, BinderInfo::Default);
+    k.add_declaration(Declaration::Definition {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+        hint: crate::env::ReducibilityHint::Regular(0),
+    })
+    .expect("the definition admits");
+
+    assert_eq!(
+        k.whnf_core(open, &mut ctx),
+        variable,
+        "the same context must not answer from before the declaration"
+    );
 }
 
 /// The kernel-global WHNF cache is keyed on `(environment revision, ExprId)`
@@ -239,12 +338,15 @@ fn rollback_clears_environment_sensitive_caches() {
     assert_eq!(k.whnf(c), c);
     assert!(!k.infer_closed_cache.is_empty());
     assert!(!k.whnf_cache.1.is_empty());
+    assert!(!k.whnf_core_cache.1.is_empty());
 
     k.rollback(checkpoint);
     assert!(!k.env.contains(name));
     assert!(k.infer_closed_cache.is_empty());
     assert!(k.whnf_cache.1.is_empty());
     assert_eq!(k.whnf_cache.0, k.env.revision());
+    assert!(k.whnf_core_cache.1.is_empty());
+    assert_eq!(k.whnf_core_cache.0, k.env.revision());
 }
 
 /// A `Let` whnfs to its instantiated body (zeta).
@@ -938,6 +1040,54 @@ fn context_scoped_whnf_entries_do_not_leak_between_contexts() {
     assert!(
         keys.iter().all(|&key| !k.has_fvars(key)),
         "every key in the context-free cache must be closed"
+    );
+    // The same two obligations for the full-δ memo one layer up, which has its
+    // own kernel-global half and therefore its own way to go wrong.
+    assert!(
+        !k.whnf_core_cache.1.contains_key(&probe),
+        "a context-dependent δ-normal form must never reach the kernel-global \
+         whnf_core cache"
+    );
+    let core_keys: Vec<ExprId> = k.whnf_core_cache.1.keys().copied().collect();
+    assert!(
+        core_keys.iter().all(|&key| !k.has_fvars(key)),
+        "every key in the context-free whnf_core cache must be closed"
+    );
+}
+
+/// **Pushing** a local declaration invalidates the memoised δ-normal form too,
+/// not just popping one.
+///
+/// The two directions fail differently and are not the same guard. `pop`
+/// removes the justification for a reduction that already fired; `push`
+/// *supplies* one, so a memo that survives it answers "stuck" for a term the
+/// context now reduces — a spurious rejection rather than a spurious
+/// acceptance, but a wrong answer from a cache either way, and the kind that
+/// disappears on a rerun.
+#[test]
+fn pushing_a_local_invalidates_a_memoised_stuck_reduction() {
+    let mut k = Kernel::new();
+    let (probe, minor, true_ty) = k_like_true_rec_probe(&mut k, 0);
+    let anon = k.anon();
+
+    let mut ctx = LocalContext::new();
+    let fvar = ctx.fresh_fvar();
+    assert_eq!(
+        k.whnf_core(probe, &mut ctx),
+        probe,
+        "with no local for the major, reduction cannot know it is a True"
+    );
+
+    ctx.push(LocalDecl {
+        fvar,
+        name: anon,
+        ty: true_ty,
+        info: BinderInfo::Default,
+    });
+    assert_eq!(
+        k.whnf_core(probe, &mut ctx),
+        minor,
+        "the pushed local justifies K-like reduction; a stale memo would say stuck"
     );
 }
 
