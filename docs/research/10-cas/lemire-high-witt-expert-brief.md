@@ -97,6 +97,32 @@ layer: it occurs only where that exact layer is empty.  A proof of `HWO` must
 control this difference of two nested sparse-coefficient imbalances, rather
 than exploit periodicity of the exposed coefficient.
 
+There is a useful normalized version of the same statement.  Put
+
+```text
+d_s = floor((j-1)/2^s),
+R_(j,s) = h_(j-1,s) / h_(j-1,s-1) = 2^(d_(s-1)-d_s).
+```
+
+For every nonempty layer, the exact character count is
+`#X_(j,s)=h_(j-1,s-1)(R_(j,s)-1)`, while the preceding display gives
+`T_(j,s)=h_(j-1,s-1)(R_(j,s)Delta_(j,s)-Delta_(j,s-1))`.  Thus `HWO` is
+**equivalent**, after cancelling a positive integer, to
+
+```text
+4 ell |R_(j,s) Delta_(j,s) - Delta_(j,s-1)|
+  <= (R_(j,s)-1)(j-1)2^ceil(n/2).                     (NSD)
+```
+
+This is the preferred direct theorem statement.  For the remaining orders,
+`2^s>Q` and maximality of `Q` give `2^s>ell/(3c)`.  Hence
+`d_s<3c` and the subgroup `2^s E_j` underlying `P_(j,s)` has only
+`2^d_s < 8ell^3` elements.  The remaining obstacle is therefore a uniform
+signed discrepancy among polynomially many, highly sparse ray classes; the
+polynomial cardinality alone is not a bound, but it is a meaningful reduction
+from an exponential family and should be the starting point for any direct
+counting or geometric construction.
+
 ## What is established, and what must not be silently reused
 
 - Wrapped characteristic-two inverse-additive energy is proved.  It supplies

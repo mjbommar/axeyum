@@ -733,6 +733,12 @@ periodicity shortcut: if `2^s` divides the conductor level then its
 exact-order layer is empty, so every nonempty high-Witt layer instead has a
 forced new coefficient and is a difference of two nested sparse-population
 imbalances.  There is no free `2^s | j` zero to spend in the endpoint ledger.
+Cancelling the exact character-count factor rewrites the remaining `HWO`
+obligation equivalently as one normalized difference of those two imbalances.
+For every charged order its underlying power subgroup has fewer than
+`8ell^3` classes, because `2^s>ell/(3ceil(log2 ell))`.  This is still an open
+uniform square-root-scale discrepancy theorem, but it identifies the exact
+polynomial-size sparse ray-class system a direct proof must control.
 
 **Next:** prove `(REL)`, encode it as replayable evidence, remove the
 manuscript's fail-visible warning, and perform the final source audit.  The
