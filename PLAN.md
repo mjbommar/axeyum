@@ -269,6 +269,8 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | V5 cancellation composition succeeds but eager unused `Iff` lookup stops before support submission; V6 freezes lazy resolution only |
 | 2026-08-21 | `f37c82184` | Shared proof builder resolves `Iff` only at its sole consumer |
 | 2026-08-21 | (pending) | V6 advances to missing positive-product factor support; V7 freezes a primitive-induction replacement |
+| 2026-08-21 | `29c126c0e` | Target-owned positive-product right-factor proof is added without importing broader order theory |
+| 2026-08-21 | (pending) | V7 advances to multiplicative monotonicity; V8 freezes two target-owned order leaves |
 | 2026-08-20 | `9eb81822f` | Isolate persistent pre-push worktree metadata from the caller lane and register the two-sided control |
 | 2026-08-20 | `24b16642e` | Confirm the repaired hook against a live Rust push with unchanged caller state and a clean exact-SHA gate checkout |
 | 2026-08-20 | (pending) | The string family's first re-derivable UNSAT artifact beyond word-clash/regex-emptiness: `Evidence::UnsatStringLength` abstracts every string term to an integer length keyed on its SOURCE NAME, names the five theory lemmas the argument uses, and closes with one nonnegative combination per case-split branch. The checker is two stages — bind each lemma to the conjunct that licenses it, then re-derive the arithmetic — and is arena-free, because a string script's flat view is the bounded packed-BV encoding rather than the query. 23 guards mutation-checked; two killed nothing and were fixed rather than kept (one was dead code the command allow-list already covered, one had no multi-`check-sat` fixture). Also: `diagnose_evidence` reported the ARENA front door for string files, i.e. a query nobody solves — it now reports the text front door too, and agreed with the dominance audit for the first time. |
@@ -1082,9 +1084,9 @@ budget guard to a real remaining-time attempt (this alone would move
 then `Fpa2Bv` certification, which is what both FP rows actually need for
 dominance.
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved`; its sole ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Exact official `Acc` and cancellation composition are accepted. V6 removed the unused eager `Iff` requirement and submitted only local zero-divisibility before stopping at absent `Nat.one_le_right_of_mul`; nothing was exported, run two was skipped, and support credit remains zero. V7 freezes a target-owned primitive-induction replacement over five already present empty-footprint leaves, with the downstream proof bodies otherwise unchanged.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains proved; its ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Official `Acc` and cancellation composition are accepted. V7 accepted local zero-divisibility and the new positive-product factor proof, then stopped at absent `Nat.mul_le_mul_left`; no export occurred, run two was skipped, and support credit remains zero. The accepted cancellation receipt also proves official `Nat.le_antisymm` absent, so V8 freezes exact target-owned replacements for both order leaves before another run.
 
-**Next:** implement V7 target-owned positive-product right-factor support, then execute two fresh official clean-order reconstructions and four imports. Do not submit `Nat.gcd_fib_add_self` until that support capsule is deterministic and empty-footprint.
+**Next:** implement V8 target-owned multiplicative monotonicity and order antisymmetry, then execute two fresh official clean-order reconstructions and four imports. Do not submit `Nat.gcd_fib_add_self` until that capsule is deterministic and empty-footprint.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement

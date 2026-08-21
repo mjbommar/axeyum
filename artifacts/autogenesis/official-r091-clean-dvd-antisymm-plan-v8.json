@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-r091-clean-dvd-antisymm-plan-v8",
+  "state": "preregistered-two-target-owned-order-leaves-before-code-or-rerun",
+  "predecessor": {"path": "artifacts/autogenesis/official-r091-clean-dvd-antisymm-result-v7.json"},
+  "new_supports": [
+    {
+      "name": "Axeyum.Autogenesis.mulLeMulLeftOfficialV1",
+      "statement": "forall c a b : Nat, a <= b -> c*a <= c*b",
+      "method": "eliminate the official Nat.le derivation; refl maps to Nat.le_refl and step appends c through Nat.le_add_right then Nat.le_trans",
+      "exact_required_leaves": ["Nat.le.rec", "Nat.le_refl", "Nat.le_add_right", "Nat.le_trans"]
+    },
+    {
+      "name": "Axeyum.Autogenesis.leAntisymmOfficialV1",
+      "statement": "forall a b : Nat, a <= b -> b <= a -> a = b",
+      "method": "primitive induction over both endpoints; mixed zero/successor branches eliminate Nat.not_succ_le_zero through False.rec, and successor/successor inverts both bounds then lifts the induction hypothesis through congrArg Nat.succ",
+      "exact_required_leaves": ["Nat.not_succ_le_zero", "Nat.le_of_succ_le_succ", "False", "False.rec", "congrArg"]
+    }
+  ],
+  "downstream_replacements": {"Nat.mul_le_mul_left": "Axeyum.Autogenesis.mulLeMulLeftOfficialV1", "Nat.le_antisymm": "Axeyum.Autogenesis.leAntisymmOfficialV1"},
+  "acceptance": {"fresh_complete_invocations": 2, "cancellation_compositions": 2, "support_submissions": 12, "exports": 2, "outputs_byte_identical": true, "fresh_imports_per_output": 2, "all_axiom_footprints": [], "exact_target_submissions": 0},
+  "budget": {"max_driver_builds": 1, "max_complete_invocations": 2, "max_support_submissions": 12, "max_exports": 2, "max_imports": 4, "max_exact_target_submissions": 0, "max_retries": 0},
+  "authority": {"support_credit_before_acceptance": 0, "target_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_on_accept": "Replace the portable clean-order input in the exact Fibonacci gcd-shift driver with the official-r091 capsule and preregister two exact-target runs.",
+  "output": "artifacts/autogenesis/official-r091-clean-dvd-antisymm-result-v8.json",
+  "verification": "python3 scripts/check-autogenesis-official-r091-clean-dvd-antisymm-v7-v8.py",
+  "limitations": "This authorizes two target-owned order leaves and official clean order only; it grants no Fibonacci target or ledger credit."
+}
