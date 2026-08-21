@@ -37,8 +37,9 @@
 | 2026-08-21 | `2a731be9b` | V2 freezes only explicit negative-constructor addition and hypothesis normalization before a new source exists |
 | 2026-08-21 | `aa9a3cfda` | V2 removes constructor-addition opacity but retains two explicit parity-branch sign identities with zero submission or retry |
 | 2026-08-21 | `1f40d30d7` | V3 freezes three named parity equalities and explicit conditional rewriting before its source exists |
-| 2026-08-21 | (pending) | V3 closes all parity and Fibonacci obligations and isolates exactly two additive-group normalization goals |
-| 2026-08-21 | (pending) | V4 freezes deterministic abelian normalization after all substantive recurrence reasoning |
+| 2026-08-21 | `4278c8f43` | V3 closes all parity and Fibonacci obligations and isolates exactly two additive-group normalization goals |
+| 2026-08-21 | `4278c8f43` | V4 freezes deterministic abelian normalization after all substantive recurrence reasoning |
+| 2026-08-21 | (pending) | V4 stops at the unavailable tactic before elaboration; V5 freezes only the narrow Abel import plus mandatory footprint audit |
 
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
