@@ -4,7 +4,7 @@
 
 **Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction now includes unconditional official balanced Bézout and official coprime-factor divisibility cancellation. For gcd extensionality, the first clean replacement run transferred its leaves but rejected before publication because native `NatPrelude` numeric handles were used in the independently imported r091 kernel. The second run was skipped and no support credit is due.
 
-**Next:** preregister a single-kernel reconstruction of both clean order supports, followed by checked named theorem transport into r091 with explicit target leaves. Never carry `NameId` or `ExprId` identities across kernels.
+**Next:** implement the preregistered V2 single-native-kernel construction of both clean order supports, then transport only their checked named closures into r091. Require two byte-identical empty-footprint results before support credit.
 
 <!-- plan-section: landed-changes -->
 
@@ -157,3 +157,4 @@
 | 2026-08-21 | (pending) | Clean native `le_of_dvd` duplication and target-owned divisibility antisymmetry are frozen before code or stream access |
 | 2026-08-21 | (pending) | Bounded clean divisibility-antisymmetry driver compiles without reading either proof-isolated input |
 | 2026-08-21 | (pending) | First clean antisymmetry run declines at a cross-kernel `NatPrelude` handle; no support publishes and the second run is skipped |
+| 2026-08-21 | (pending) | V2 freezes single-native-kernel support construction and checked named transport into r091 before code or stream access |
