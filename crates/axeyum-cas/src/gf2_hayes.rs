@@ -5338,6 +5338,9 @@ pub struct IdentityCylinderVarianceLevel {
     pub sibling_difference_square_sum: BigUint,
     /// Sum of squared sibling differences over every parent at this level.
     pub global_sibling_difference_square_sum: BigUint,
+    /// Sum of fourth powers of sibling differences over every parent at this
+    /// level.
+    pub global_sibling_difference_fourth_sum: BigUint,
     /// Whether the identity cylinder carries no more than its uniform share of
     /// the global sibling square sum.
     pub identity_share_at_most_uniform: bool,
@@ -5346,6 +5349,10 @@ pub struct IdentityCylinderVarianceLevel {
     pub identity_localization_multiplier_ceiling: BigUint,
     /// Whether that localization multiplier is at most `ell`.
     pub identity_share_within_linear_carleson: bool,
+    /// Whether the exact global fourth moment satisfies the weak kurtosis
+    /// condition `K_j<=2^coarse_level/(256 ell^4)` which, by Cauchy, implies
+    /// the polynomial identity-share premise on this level.
+    pub weak_kurtosis_implies_polynomial_share: bool,
     /// Contribution `2^(j-coarse_level-1) sum H_j(parent)^2` to
     /// `descendant_count * V_id`.
     pub conditional_variance_numerator_contribution: BigUint,
@@ -5487,6 +5494,37 @@ pub struct IdentityCylinderLinearCarlesonImplication {
 
 impl IdentityCylinderLinearCarlesonImplication {
     /// Whether the assumed local-Carleson estimate proves `(ICV)`, hence REL.
+    #[must_use]
+    pub fn proves_rel(&self) -> bool {
+        self.conditional_variance_numerator_bound <= self.quarter_scale_variance_target_numerator
+    }
+}
+
+/// Symbolic implication from polynomial delocalization of every retained
+/// identity-cylinder Haar layer.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IdentityCylinderPolynomialShareImplication {
+    /// Fine coefficient-prefix length.
+    pub ell: usize,
+    /// Lemire endpoint degree.
+    pub degree: usize,
+    /// Coarse quotient level `c_0`.
+    pub coarse_level: usize,
+    /// Number `R=2^(ell-c_0)` of descendants.
+    pub descendant_count: BigUint,
+    /// Assumed denominator in
+    /// `denominator F_j(1) <= F_j(global)`.
+    pub assumed_global_share_denominator: BigUint,
+    /// Proved upper bound for `R V_id` under the polynomial-share premise and
+    /// the individual-character Weil second moment.
+    pub conditional_variance_numerator_bound: BigUint,
+    /// Clean sufficient target `R 2^(2ell-2)`.
+    pub quarter_scale_variance_target_numerator: BigUint,
+}
+
+impl IdentityCylinderPolynomialShareImplication {
+    /// Whether the assumed polynomial-share estimate proves `(ICV)`, hence
+    /// `(REL)`.
     #[must_use]
     pub fn proves_rel(&self) -> bool {
         self.conditional_variance_numerator_bound <= self.quarter_scale_variance_target_numerator
@@ -6240,6 +6278,58 @@ pub fn identity_cylinder_linear_carleson_implication(
     if !report.proves_rel() {
         return Err(HayesError::Invariant(
             "linear identity-cylinder Carleson premise does not imply REL".to_owned(),
+        ));
+    }
+    Ok(report)
+}
+
+/// Price a polynomial identity-cylinder share bound against `(ICV)`.
+///
+/// With `F_j(1)` and `F_j(global)` as in
+/// [`identity_cylinder_linear_carleson_implication`], the premise is
+///
+/// ```text
+/// 16 ell^2 F_j(1) <= F_j(global)                      (PL2)
+/// ```
+///
+/// at every retained level.  The operation combines `(PL2)` with the proved
+/// exact-conductor envelope `F_j(global)<=(j-1)^2 2^degree`, rounds each
+/// integral local square sum down separately, and checks the exact Haar
+/// implication to `(ICV)`.  It proves only this arithmetic implication, not
+/// `(PL2)`.
+///
+/// # Errors
+///
+/// Rejects the same invalid endpoints as
+/// [`identity_cylinder_quarter_variance_implication`] and fails closed if the
+/// premise does not imply the clean variance target.
+pub fn identity_cylinder_polynomial_share_implication(
+    ell: usize,
+    degree: usize,
+) -> Result<IdentityCylinderPolynomialShareImplication, HayesError> {
+    let quarter = identity_cylinder_quarter_variance_implication(ell, degree)?;
+    let coarse_level = quarter.coarse_level;
+    let assumed_global_share_denominator = BigUint::from(16_u8) * BigUint::from(ell).pow(2);
+    let mut conditional_variance_numerator_bound = BigUint::from(0_u8);
+    for level in (coarse_level + 1)..=ell {
+        let global_weil_bound = BigUint::from(level - 1).pow(2) << degree;
+        let local_integral_bound = global_weil_bound / &assumed_global_share_denominator;
+        conditional_variance_numerator_bound += local_integral_bound << (level - coarse_level - 1);
+    }
+    let quarter_scale_variance_target_numerator =
+        &quarter.assumed_conditional_variance * &quarter.descendant_count;
+    let report = IdentityCylinderPolynomialShareImplication {
+        ell,
+        degree,
+        coarse_level,
+        descendant_count: quarter.descendant_count,
+        assumed_global_share_denominator,
+        conditional_variance_numerator_bound,
+        quarter_scale_variance_target_numerator,
+    };
+    if !report.proves_rel() {
+        return Err(HayesError::Invariant(
+            "polynomial identity-cylinder share premise does not imply REL".to_owned(),
         ));
     }
     Ok(report)
@@ -17299,6 +17389,12 @@ fn identity_cylinder_variance_levels(
             .fold(BigUint::from(0_u8), |sum, difference| {
                 sum + difference.magnitude().pow(2)
             });
+        let global_duplicated_fourth_sum = step
+            .signed_child_differences
+            .iter()
+            .fold(BigUint::from(0_u8), |sum, difference| {
+                sum + difference.magnitude().pow(4)
+            });
         let mut duplicated_square_sum = BigUint::from(0_u8);
         for (child, difference) in step.signed_child_differences.iter().enumerate() {
             if project_mixed_radix_index(child, &level_factors, coarse_factors)? == 0 {
@@ -17311,7 +17407,13 @@ fn identity_cylinder_variance_levels(
             )));
         }
         let sibling_difference_square_sum = duplicated_square_sum >> 1;
-        let global_sibling_difference_square_sum = global_duplicated_square_sum >> 1;
+        let global_sibling_difference_square_sum: BigUint = global_duplicated_square_sum >> 1;
+        if global_duplicated_fourth_sum.bit(0) {
+            return Err(HayesError::Invariant(format!(
+                "identity-cylinder level {level} has an odd duplicated fourth-power sum"
+            )));
+        }
+        let global_sibling_difference_fourth_sum: BigUint = global_duplicated_fourth_sum >> 1;
         let coarse_class_count = BigUint::from(1_u8) << coarse_level;
         let scaled_identity_share = &coarse_class_count * &sibling_difference_square_sum;
         let identity_share_at_most_uniform =
@@ -17332,6 +17434,14 @@ fn identity_cylinder_variance_levels(
         };
         let identity_share_within_linear_carleson =
             identity_localization_multiplier_ceiling <= BigUint::from(ell);
+        let global_parent_count = BigUint::from(1_u8) << (level - 1);
+        let weak_kurtosis_left = global_parent_count
+            * &global_sibling_difference_fourth_sum
+            * BigUint::from(256_u16)
+            * BigUint::from(ell).pow(4);
+        let weak_kurtosis_right =
+            (BigUint::from(1_u8) << coarse_level) * global_sibling_difference_square_sum.pow(2);
+        let weak_kurtosis_implies_polynomial_share = weak_kurtosis_left <= weak_kurtosis_right;
         let parent_exponent = level - coarse_level - 1;
         let parent_count = 1_usize
             .checked_shl(u32::try_from(parent_exponent).map_err(|_| {
@@ -17351,9 +17461,11 @@ fn identity_cylinder_variance_levels(
             parent_count,
             sibling_difference_square_sum,
             global_sibling_difference_square_sum,
+            global_sibling_difference_fourth_sum,
             identity_share_at_most_uniform,
             identity_localization_multiplier_ceiling,
             identity_share_within_linear_carleson,
+            weak_kurtosis_implies_polynomial_share,
             conditional_variance_numerator_contribution: contribution,
         });
     }
@@ -21687,6 +21799,24 @@ mod tests {
         assert!(
             report.maximum_localization_multiplier_for_quarter_variance
                 > (BigUint::from(1_u8) << 170)
+        );
+    }
+
+    #[test]
+    fn polynomial_identity_share_closes_rel() {
+        for ell in 200_usize..=1024 {
+            for degree in [2 * ell + 1, 2 * ell + 2] {
+                assert!(
+                    identity_cylinder_polynomial_share_implication(ell, degree)
+                        .unwrap()
+                        .proves_rel()
+                );
+            }
+        }
+        let report = identity_cylinder_polynomial_share_implication(200, 402).unwrap();
+        assert_eq!(
+            report.assumed_global_share_denominator,
+            BigUint::from(640_000_u32)
         );
     }
 

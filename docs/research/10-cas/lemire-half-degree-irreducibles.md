@@ -3685,6 +3685,72 @@ coarse-twist/Carleson estimate at the ramified modulus, not another global
 second moment.  ADR-0578 records this boundary and keeps (REL), rather than
 (ICV), as the paper's sole minimal lemma.
 
+There is now a weaker sufficient localization target.  For each retained
+level let
+
+```text
+F_j(1)      = sum_(p above 1 in E_(c_0)) H_j(p)^2,
+F_j(global) = sum_(all level-j parents p) H_j(p)^2.
+```
+
+Exact-conductor Parseval and individual-character Weil give
+`F_j(global)<=(j-1)^2 2^n`.  Therefore the levelwise polynomial-share estimate
+
+```text
+(PL2)  16 ell^2 F_j(1) <= F_j(global)
+       for every c_0<j<=ell
+```
+
+implies
+
+```text
+R V_id <= sum_(j=c_0+1)^ell 2^(j-c_0-1)
+          floor((j-1)^2 2^n/(16 ell^2)),
+```
+
+and the right side is below `R 2^(2ell-2)` for both endpoint parities at
+every `ell>=200`.  The implication is checked exactly through `ell=1024`.
+This requires only a quadratic saving over the trivial concentration bound.
+
+The stronger experimental inequality
+
+```text
+(LC2)  2^c_0 F_j(1) <= ell F_j(global)
+```
+
+also implies `(PL2)` with enormous asymptotic room.  At
+`(ell,n)=(200,401)`, the largest integral localization multiplier allowed by
+the clean variance target in the `(LC2)` normalization is
+`5007710127439295349009662031980010502580210696737863`, greater than
+`2^170`, whereas (LC2) assumes only `200`.
+
+The stronger uniform share `2^c_0 F_j(1)<=F_j(global)` fails on many exact
+rows.  By contrast (LC2) survives the exact rows checked so far, but that is
+still finite evidence and is much stronger than the selected `(PL2)`.
+The natural prospective proof is a characteristic-free `m=2` Hast--Matei
+short-interval variety sliced by the `c_0` fixed common leading
+coefficients, with the level-`j` sibling twist retained.  Hast--Matei's
+complete-intersection and singular-locus proof is characteristic-free for
+`m=2`; their published point-count theorem, however, averages over all
+centers and leaves degree-dependent constants.  An explicit bound for the
+fixed cylinder slice remains unproved.  ADR-0580 selects `(PL2)`, retains
+`(LC2)` only as a stronger diagnostic, and grants neither theorem credit.
+
+The same target has a deliberately weak global fourth-moment sufficient form.
+If `N_j=2^(j-1)`, `Q_j=sum_p H_j(p)^4`, and
+`K_j=N_j Q_j/F_j(global)^2`, then Cauchy on the
+`N_j/2^c_0` identity-cylinder parents proves `(PL2)` whenever
+
+```text
+K_j <= 2^c_0/(256 ell^4).                               (WK2)
+```
+
+Unlike the earlier Gaussian-scale proposals, `(WK2)` permits an exponentially
+growing normalized kurtosis.  This is the correct price for importing an
+`m=4` Hast--Matei-type estimate: an absolute constant is unnecessary, but the
+published degree-dependent constant is still not explicit enough to compare
+with `(WK2)`.
+
 The most direct zero-`2`-rank shortcut is now priced exactly and gives no
 endpoint information.  Deuring--Shafarevich gives `2`-rank zero at both
 Carlitz levels, hence also on the relative Jacobian quotient.  But the general

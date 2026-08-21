@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-hayes-identity-cylinder-polynomial-share",
+  "title": "Polynomial global share for binary Hayes identity-cylinder Haar layers",
+  "statement": "Let ell >= 200, let n be 2 ell + 1 or 2 ell + 2, put c_0=ell-ceil(log2 ell)-2, and for c_0 < j <= ell let F_j(1) be the squared level-j sibling-difference sum over parents above the identity in E_c0 and F_j(global) the corresponding sum over all parents. Then 16 ell^2 F_j(1) <= F_j(global).",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"bound\":\"16*ell^2*F_j(identity)<=F_j(global)\",\"degrees\":[\"2*ell+1\",\"2*ell+2\"],\"field_order\":2,\"format\":\"axeyum-gf2-hayes-identity-cylinder-polynomial-share\",\"level_min\":200,\"parameters\":{\"c0\":\"ell-ceil(log2(ell))-2\",\"j\":\"c0<j<=ell\"},\"version\":1}",
+    "fragment": "none",
+    "free_symbols": [
+      "ell",
+      "n",
+      "j"
+    ]
+  },
+  "epistemic_status": "conjectured",
+  "external_status": "unknown",
+  "depends_on": [],
+  "proof_route": "none",
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-20",
+    "established_by": "not established in this ledger",
+    "source": "Axeyum gf2-lemire lane; polynomial delocalization bridge to identity-cylinder variance"
+  },
+  "notes": "The native identity_cylinder_polynomial_share_implication operation proves that this statement plus exact-conductor Parseval and the individual-character Weil bound implies F:gf2-hayes-identity-cylinder-quarter-variance, hence REL and the Lemire endpoint, for every ell>=200. The exact finite report also computes the global sibling fourth moment and tests the sufficient normalized-kurtosis bound K_j<=2^c0/(256 ell^4). The stronger experimental estimate 2^c0 F_j(identity)<=ell F_j(global) has exponential surplus but is not required. The still stronger uniform-share bound is false on exact finite rows. Finite diagnostics are deliberately not attached as universal proof evidence, and no Autogenesis operation is registered because no uniform checker establishes the statement."
+}
