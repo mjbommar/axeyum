@@ -31,7 +31,8 @@ use std::time::{Duration, Instant};
 use axeyum_ir::{TermArena, TermId};
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{
-    Evidence, SolverConfig, produce_evidence, produce_evidence_smtlib, prove_unsat_to_lean_module,
+    Evidence, LraReconstructCtx, SolverConfig, produce_evidence, produce_evidence_smtlib,
+    prove_unsat_to_lean_module, scan_proof_fragment,
 };
 use serde_json::{Value as JsonValue, json};
 
@@ -80,22 +81,43 @@ struct AuditResult {
 struct AuditProgress {
     phase: &'static str,
     phase_started: Instant,
+    /// What the current phase is working ON, when the phase name alone does not
+    /// say. Today: the `ProofFragment` a lean reconstruction is attempting.
+    ///
+    /// Without it, a timeout in `lean-reconstruction` is unreadable. Measured
+    /// 2026-08-20, NINE of ten timing-out rows landed in that one phase, and
+    /// they were three unrelated failures: an exponential blowup, a CORRECT
+    /// decline arriving 35s late because `lra_ctx()` builds a `CReal` prelude
+    /// before the route knows it will decline, and a SUCCESS emitting a 2.4 GB
+    /// module. The fragment name separates all three at a glance and costs
+    /// microseconds -- `scan_proof_fragment` is the same classification the
+    /// reconstruction is about to do anyway.
+    detail: Option<String>,
 }
 
 fn mark_phase(progress: &Arc<Mutex<AuditProgress>>, phase: &'static str) {
     if let Ok(mut state) = progress.lock() {
         state.phase = phase;
         state.phase_started = Instant::now();
+        state.detail = None;
     }
 }
 
-fn progress_snapshot(progress: &Arc<Mutex<AuditProgress>>) -> (&'static str, f64) {
+/// Annotate the CURRENT phase without restarting its clock.
+fn mark_detail(progress: &Arc<Mutex<AuditProgress>>, detail: String) {
+    if let Ok(mut state) = progress.lock() {
+        state.detail = Some(detail);
+    }
+}
+
+fn progress_snapshot(progress: &Arc<Mutex<AuditProgress>>) -> (&'static str, f64, Option<String>) {
     match progress.lock() {
         Ok(state) => (
             state.phase,
             state.phase_started.elapsed().as_secs_f64() * 1000.0,
+            state.detail.clone(),
         ),
-        Err(_) => ("poisoned-progress", 0.0),
+        Err(_) => ("poisoned-progress", 0.0, None),
     }
 }
 
@@ -164,7 +186,12 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
         Evidence::UnsatIntQuadraticNegativeDiscriminant(_) => {
             "int-quadratic-negative-discriminant-unsat"
         }
+        Evidence::UnsatIntUnivariatePoly(_) => "int-univariate-poly-unsat",
         Evidence::UnsatNraEvenPower(_) => "nra-even-power-unsat",
+        Evidence::UnsatRealZeroProduct(_) => "real-zero-product-unsat",
+        Evidence::UnsatRealProduct(_) => "real-product-unsat",
+        Evidence::UnsatRealHandelman(_) => "real-handelman-unsat",
+        Evidence::UnsatMonomialBound(_) => "monomial-bound-unsat",
         Evidence::UnsatDiophantine { .. } => "diophantine-unsat",
         Evidence::UnsatBoundedIntBlast(_) => "bounded-int-blast-unsat",
         Evidence::UnsatFiniteDomainPigeonhole(_) => "finite-domain-pigeonhole-unsat",
@@ -192,6 +219,7 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
         Evidence::UnsatFifoBc04(_) => "fifo-bc04-unsat",
         Evidence::UnsatRegexEmptiness { .. } => "regex-emptiness-unsat",
         Evidence::UnsatWordClash(_) => "word-clash-unsat",
+        Evidence::UnsatStringLength { .. } => "string-length-unsat",
         Evidence::UnsatQuantInstanceSet(_) => "quant-instance-set-unsat",
         Evidence::Unknown(_) => "unknown",
     }
@@ -460,18 +488,30 @@ fn audit_instance(
     let mut lean_module_bytes = JsonValue::Null;
     let mut parse_lean_ms = JsonValue::Null;
     let mut lean_reconstruction_ms = JsonValue::Null;
-    // A string-script `unsat` that is the certified regex derivative-emptiness class carries a
-    // kernel-checked Lean `False` module that `check` re-derives from first principles; credit
-    // `lean_checked` only for that variant (and only when `evidence_checked` — the honest
-    // re-derivation — passed). Bare `Evidence::Unsat(None)` string unsats (word clash,
-    // concat/length) have no arena refutation and no Lean module, so they stay honestly false.
+    // A string script has no faithful arena view, so `prove_unsat_to_lean_module`
+    // is not the route: the two string classes that reconstruct carry (or
+    // re-derive) their own kernel-checked `False` module, and `check` re-derives
+    // it from first principles rather than reading the stored string back. Credit
+    // `lean_checked` only for those, and only when `evidence_checked` — the
+    // honest re-derivation — passed. Everything else stays honestly false: a
+    // word clash, a case-split length refutation, and a bare
+    // `Evidence::Unsat(None)` have no Lean module and do not pretend to.
     if is_string_script {
-        if let Evidence::UnsatRegexEmptiness { lean_module, .. } = &report.evidence
-            && evidence_checked
-        {
-            lean_fragment = json!("RegexEmptiness");
-            lean_module_bytes = json!(lean_module.len());
-            lean_checked = true;
+        match &report.evidence {
+            Evidence::UnsatRegexEmptiness { lean_module, .. } if evidence_checked => {
+                lean_fragment = json!("RegexEmptiness");
+                lean_module_bytes = json!(lean_module.len());
+                lean_checked = true;
+            }
+            Evidence::UnsatStringLength {
+                lean_module: Some(module),
+                ..
+            } if evidence_checked => {
+                lean_fragment = json!("StringLength");
+                lean_module_bytes = json!(module.len());
+                lean_checked = true;
+            }
+            _ => {}
         }
     } else if audit_outcome == Verdict::Unsat {
         mark_phase(progress, "parse-lean");
@@ -481,6 +521,15 @@ fn audit_instance(
                 parse_lean_ms = json!(ms(parse_lean_start.elapsed()));
                 let lean_assertions = lean_script.assertions.clone();
                 mark_phase(progress, "lean-reconstruction");
+                // Classify FIRST and record it, so a timeout row says which
+                // route was being attempted rather than only that one was.
+                mark_detail(
+                    progress,
+                    format!(
+                        "{:?}",
+                        scan_proof_fragment(&lean_script.arena, &lean_assertions)
+                    ),
+                );
                 let lean_start = Instant::now();
                 match prove_unsat_to_lean_module(&mut lean_script.arena, &lean_assertions) {
                     Ok((fragment, module)) => {
@@ -556,6 +605,7 @@ fn audit_instance_capped(path: PathBuf, baseline_outcome: Verdict, cap: Duration
     let wall_cap = cap.checked_add(Duration::from_secs(5)).unwrap_or(cap);
     let wall_start = Instant::now();
     let progress = Arc::new(Mutex::new(AuditProgress {
+        detail: None,
         phase: "queued",
         phase_started: Instant::now(),
     }));
@@ -572,7 +622,7 @@ fn audit_instance_capped(path: PathBuf, baseline_outcome: Verdict, cap: Duration
         })
         .expect("spawn dominance audit thread");
     rx.recv_timeout(wall_cap).unwrap_or_else(|_| {
-        let (phase, phase_elapsed_ms) = progress_snapshot(&progress);
+        let (phase, phase_elapsed_ms, phase_detail) = progress_snapshot(&progress);
         AuditResult {
             record: json!({
                 "file": display,
@@ -583,6 +633,8 @@ fn audit_instance_capped(path: PathBuf, baseline_outcome: Verdict, cap: Duration
                 "audit_phase": phase,
                 "timeout_phase": phase,
                 "timeout_phase_elapsed_ms": phase_elapsed_ms,
+                "timeout_phase_detail": phase_detail
+                    .map_or(JsonValue::Null, JsonValue::from),
                 "evidence_kind": JsonValue::Null,
                 "evidence_certified": false,
                 "evidence_checked": false,
@@ -711,6 +763,31 @@ fn main() {
         .and_then(|s| s.to_str())
         .unwrap_or("baseline");
 
+    // Warm the constructed-real prelude BEFORE the per-instance timer starts.
+    //
+    // Building it costs **31.9 s the first time in a process and 0.4 s every
+    // time after** — an 80x difference, measured by
+    // `axeyum-lean-kernel --example prelude_build_timing`. It is shared
+    // infrastructure, not per-instance work, but the audit made whichever
+    // instance happened to reach an LRA reconstruction FIRST pay all of it,
+    // inside a 15 s per-instance cap it cannot survive.
+    //
+    // That produced four rows recorded as `timeout` whose emitter had in fact
+    // returned the CORRECT decline — `cli__regress0__arith__div.01` reports the
+    // same `malformed la_generic step` message it always did, 35 s later, of
+    // which `build_creal_prelude` is 35.23 s. They were then scored as
+    // proof-production errors.
+    //
+    // Warming here does not make anything faster; it stops one instance being
+    // billed for the process. The cost is reported separately so it stays
+    // visible rather than disappearing into setup.
+    let warm_start = Instant::now();
+    let warmed = LraReconstructCtx::try_new_over_constructed_reals().is_ok();
+    let prelude_warm_ms = ms(warm_start.elapsed());
+    eprintln!(
+        "dominance audit: constructed-real prelude warmed in {prelude_warm_ms:.0} ms (ok={warmed})"
+    );
+
     let mut records = Vec::new();
     let mut audited_decided = 0usize;
     let mut baseline_decided = 0usize;
@@ -722,6 +799,17 @@ fn main() {
     let mut audited_unsat = 0usize;
     let mut timed_out = 0usize;
     let mut audit_errors = 0usize;
+    // How many baseline-UNDECIDED instances were re-probed, and how many of
+    // those the solver decides today. See the long comment at the skip site.
+    let mut newly_audited = 0usize;
+    let mut newly_decided = 0usize;
+    // Re-probing the undecided set is pure added cost on rows where nothing has
+    // changed, so it is capped independently of `limit`. A row with a zero
+    // baseline is exactly the case this must cover, and those rows are small.
+    let undecided_cap: usize = std::env::var("AXEYUM_AUDIT_UNDECIDED_CAP")
+        .ok()
+        .and_then(|raw| raw.parse().ok())
+        .unwrap_or(64);
 
     let instances_len: usize;
 
@@ -733,6 +821,40 @@ fn main() {
                 .and_then(JsonValue::as_str)
                 .map_or(Verdict::Unknown, Verdict::from_label);
             if !outcome.decided() {
+                // THE ZERO THAT COULD NOT MOVE. This branch used to `continue`,
+                // so an instance the baseline recorded as undecided was never
+                // re-run — and a row whose baseline decided NOTHING reported
+                // `audited_decided: 0` forever, no matter what the solver
+                // learned to do afterwards.
+                //
+                // That is not hypothetical. `quantified LIA` was recorded 0/12
+                // on 2026-06-24; measured through the shipped front door on
+                // 2026-08-21 it is **12/12**. The audit re-ran on 2026-08-21 and
+                // still emitted `instances: []`, because every instance was
+                // filtered out here. Three months of a capability the project
+                // had, published as a hole it did not, and the 2026-07-07 gap
+                // analysis named it "the biggest categorical hole" on the
+                // strength of this number.
+                //
+                // So the undecided ones are re-audited too, capped separately so
+                // this cannot blow up a large row's runtime, and counted as
+                // `newly_decided` — a gain the artifact can show rather than a
+                // zero it can only repeat.
+                if newly_audited < undecided_cap {
+                    newly_audited += 1;
+                    if let Some(file) = instance.get("file").and_then(JsonValue::as_str) {
+                        let probe = audit_instance_capped(PathBuf::from(file), outcome, cap);
+                        let probe_outcome = probe
+                            .record
+                            .get("audit_outcome")
+                            .and_then(JsonValue::as_str)
+                            .map_or(Verdict::Unknown, Verdict::from_label);
+                        if probe_outcome.decided() {
+                            newly_decided += 1;
+                            records.push(probe.record);
+                        }
+                    }
+                }
                 continue;
             }
             baseline_decided += 1;
@@ -841,7 +963,25 @@ fn main() {
         }
     }
 
-    let complete = audited_decided == baseline_decided;
+    // `>=`, not `==`. **Beating the baseline used to delete the logic from the
+    // report.**
+    //
+    // `complete_audit` means "this audit re-ran every instance the baseline
+    // decided", and `gen-proof-gap-matrix.py` skips any audit where it is false.
+    // With `==`, an audit that decides MORE than its baseline — an improvement —
+    // was scored incomplete and dropped entirely.
+    //
+    // Measured 2026-08-20: `qf-nra-synthetic-graduated` decided 31 against a
+    // baseline of 30 and vanished from the matrix. That single drop was the
+    // ENTIRE apparent decline in the day's numbers; counting it, dominance was
+    // flat at 261. A metric that punishes improvement by making it invisible is
+    // worse than one that merely lags.
+    //
+    // Deciding FEWER is still incomplete, which is the property the flag exists
+    // to carry: the audit could not reproduce the baseline's population, so its
+    // percentages are over a different denominator and must not be published as
+    // comparable.
+    let complete = audited_decided >= baseline_decided;
     let dominant_pct_audited = if audited_decided == 0 {
         0.0
     } else {
@@ -854,17 +994,22 @@ fn main() {
     };
 
     let artifact = json!({
-        "version": 2,
+        "version": 3,
+        "source_revision": source_revision(),
         "baseline": repo_rel(&baseline),
         "logic": logic,
         "slice": slice,
         "timeout_ms": timeout_ms,
+        "prelude_warm_ms": prelude_warm_ms,
+        "prelude_warmed": warmed,
         "limit": if limit == usize::MAX { JsonValue::Null } else { json!(limit) },
         "complete_audit": complete,
         "summary": {
             "instances": instances_len,
             "baseline_decided": baseline_decided,
             "audited_decided": audited_decided,
+            "baseline_undecided_reprobed": newly_audited,
+            "newly_decided": newly_decided,
             "audited_unsat": audited_unsat,
             "evidence_certified": evidence_certified,
             "evidence_checked": evidence_checked,
@@ -887,8 +1032,20 @@ fn main() {
         println!("{rendered}");
     }
 
+    // A row whose baseline decided nothing prints `0/0 audited decided (0.0%)`,
+    // which reads as "there is nothing here" — and that is precisely how a
+    // frozen zero stayed invisible for three months while the solver could
+    // decide 12 of those 12. If the re-probe found capability the baseline never
+    // recorded, say so on the line a human actually reads.
+    let newly = if newly_decided > 0 {
+        format!(
+            ", NEWLY DECIDED {newly_decided}/{newly_audited} the baseline recorded as undecided (the baseline is stale)"
+        )
+    } else {
+        String::new()
+    };
     eprintln!(
-        "dominance audit {logic}: {dominant_candidates}/{audited_decided} audited decided ({dominant_pct_audited:.1}%), Lean unsat {lean_checked_unsat}/{audited_unsat} ({lean_unsat_pct:.1}%), mismatches {baseline_mismatches}, audit errors {audit_errors}, timeouts {timed_out}"
+        "dominance audit {logic}: {dominant_candidates}/{audited_decided} audited decided ({dominant_pct_audited:.1}%), Lean unsat {lean_checked_unsat}/{audited_unsat} ({lean_unsat_pct:.1}%), mismatches {baseline_mismatches}, audit errors {audit_errors}, timeouts {timed_out}{newly}"
     );
 }
 
@@ -904,4 +1061,69 @@ mod tests {
         assert!(!evidence.is_certified());
         assert!(!independently_check_evidence(&evidence, &arena, &[], false));
     }
+}
+
+/// The source revision this audit actually ran against, and whether the tree was
+/// clean when it did.
+///
+/// A dominance audit recorded `logic`, `slice`, `timeout_ms` and a `version`
+/// integer — and nothing about the code that produced it. That is not a
+/// cosmetic omission. Measured 2026-08-20: `r0_QF_SLIA_replace-find-base` is
+/// recorded in a committed audit as `audit_outcome=unsat,
+/// baseline_matches_audit=true`, and building `8aff8d507` — the commit that
+/// last touched that audit — and running the byte-identical corpus file returns
+/// **`sat`**, a wrong answer on a query z3 decides unsat. The row disagrees
+/// with the tree it appears to belong to, because the file's commit date is the
+/// date of a SCHEMA MIGRATION ("refresh bare-route audits to v2"), not of the
+/// measurement. Nothing in the artifact let anyone notice, and the proof-gap
+/// matrix replays these rows into planning documents as current.
+///
+/// So every audit now carries the sha it ran against. `dirty` matters as much as
+/// the sha: an audit produced from a modified worktree describes a tree that has
+/// no name and cannot be rebuilt, and saying so is more useful than a sha that
+/// silently means something else.
+fn source_revision() -> JsonValue {
+    let rev = std::process::Command::new("git")
+        .args(["rev-parse", "HEAD"])
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
+        .filter(|s| !s.is_empty());
+    let dirty = std::process::Command::new("git")
+        .args(["status", "--porcelain", "--untracked-files=no"])
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| !String::from_utf8_lossy(&o.stdout).trim().is_empty());
+    if let Some(sha) = rev {
+        return json!({
+            "sha": sha,
+            "dirty": dirty.map_or(JsonValue::Null, JsonValue::from),
+            "source": "git",
+        });
+    }
+
+    // No git. That is the NORMAL case for the clean tree this audit most wants
+    // to run in: `scripts/lane-snapshot.sh` extracts `git archive <ref>`, which
+    // has no `.git` at all — so the recommended way to get an unmodified tree was
+    // also the only way to lose the sha. Measured here: a snapshot run stamped
+    // `sha: "unknown"` while the shared worktree, which DID have git, stamped
+    // `dirty: true` because other lanes had uncommitted files. Neither is the
+    // artifact anyone wants.
+    //
+    // `lane-snapshot.sh` already writes the ref it extracted to `.lane-ref`, so
+    // read that. A `git archive` of a commit is clean by construction — there is
+    // nowhere for a modification to have come from — which is why `dirty` is
+    // `false` here and not `null`.
+    if let Ok(text) = std::fs::read_to_string(".lane-ref") {
+        let sha = text.trim();
+        if !sha.is_empty() {
+            return json!({ "sha": sha, "dirty": false, "source": "lane-snapshot" });
+        }
+    }
+
+    // `unknown` rather than an omitted field: a missing key reads as an old
+    // schema, which is exactly the ambiguity this exists to remove.
+    json!({ "sha": "unknown", "dirty": JsonValue::Null, "source": "none" })
 }

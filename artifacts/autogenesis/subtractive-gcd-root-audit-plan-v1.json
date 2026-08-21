@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-subtractive-gcd-root-audit-plan",
+  "state": "preregistered-before-root-export-or-batch-import-no-bezout-authority",
+  "policy_version": "subtractive-gcd-foundation-root-audit-v1",
+  "inputs": {
+    "declined_target_shortcut": {
+      "path": "artifacts/autogenesis/coprime-target-cancellation-root-audit-result-v1.json",
+      "sha256": "40bdb03cc7319228187e94d9316537a662b017113cf30ab1ed29463dd09a96e5"
+    },
+    "public_equation_carrier_audit": {
+      "path": "artifacts/autogenesis/euclidean-public-equation-carrier-audit-result-v1.json",
+      "sha256": "544bde51a25e42f309ef7fecd1dae521527cf4efd2b1b01dccca9c0f07556edd"
+    },
+    "statement_inventory": {
+      "path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-nat-int-statement-inventory-v2.ndjson",
+      "sha256": "4285e551680abf3b0cafb11709015f04b3aef3eb05ce23af2392b12cec31aecc",
+      "mode": "0444"
+    }
+  },
+  "fixed_roots": [
+    {
+      "module": "Init.Data.Nat.Gcd",
+      "name": "Nat.gcd_one_left",
+      "source_row_sha256": "7c3c8d73fe0f7f04f00ff8705abc10bfa3dd772bb028fd90bb3848fca03d7777",
+      "type": "∀ (n : ℕ), Nat.gcd 1 n = 1",
+      "type_repr_sha256": "706655c9fae3a7f424f7e381f0a4ed6278da14a609dcdb9966b7b97422f13fe4"
+    },
+    {
+      "module": "Init.Data.Nat.Gcd",
+      "name": "Nat.gcd_one_right",
+      "source_row_sha256": "66d109c8120e37f8415a5629ae0b62f12eb807aede494719a453a7a8a0cb828b",
+      "type": "∀ (n : ℕ), n.gcd 1 = 1",
+      "type_repr_sha256": "334fbb1968b6bacc5435b131f32807b46d61450c6689823efa6d6b0148b5c635"
+    },
+    {
+      "module": "Init.Data.Nat.Gcd",
+      "name": "Nat.gcd_self",
+      "source_row_sha256": "87a3a25367a7e6aa4da35f48905692b46529b2f614facbe9c3e051bd1e0c3fd4",
+      "type": "∀ (n : ℕ), n.gcd n = n",
+      "type_repr_sha256": "75332177dd3bfc98c1b6cebe48dc9079c81a3e628f9afbb4647fc1a7a21c9789"
+    },
+    {
+      "module": "Init.Data.Nat.Gcd",
+      "name": "Nat.gcd_sub_self_left",
+      "source_row_sha256": "d8ed83e3e31f50a55d1645db4bb78af3cb6974eb2942a481507f0f86b8d9a082",
+      "type": "∀ {m n : ℕ}, m ≤ n → (n - m).gcd m = n.gcd m",
+      "type_repr_sha256": "6979aa0eb9cd98d1cc41de5f95baa00de5feb305625ad7c1055b486653f2cbc3"
+    },
+    {
+      "module": "Init.Data.Nat.Gcd",
+      "name": "Nat.gcd_sub_self_right",
+      "source_row_sha256": "fb159025792293a1d43ba401814b56ff20eb4db28b606701d639515d129bada8",
+      "type": "∀ {m n : ℕ}, m ≤ n → m.gcd (n - m) = m.gcd n",
+      "type_repr_sha256": "d099060d58c29e55c38c0a2d4894f46e5769ab6cc14467762fa2eef1edeee7fc"
+    },
+    {
+      "module": "Init.Data.Nat.Gcd",
+      "name": "Nat.gcd_zero_left",
+      "source_row_sha256": "7f68b11c27268f3002435df412e68417908f5848c4f58379ddde4d03877b6000",
+      "type": "∀ (y : ℕ), Nat.gcd 0 y = y",
+      "type_repr_sha256": "2c2db123b303f23fcdc70c6887c8e232ff357f9efe1999fbed6049130e1a2b1f"
+    },
+    {
+      "module": "Init.Data.Nat.Gcd",
+      "name": "Nat.gcd_zero_right",
+      "source_row_sha256": "03e45b1949d7fa1c11f74e62351418e65b071f7e8f9aaf95258445b5fd2bdd4c",
+      "type": "∀ (n : ℕ), n.gcd 0 = n",
+      "type_repr_sha256": "a7bf6047dc763222e98c076f8f5e837b1c2b3ada7eeca5b3cde7c62031d9024d"
+    }
+  ],
+  "fixed_measurement": {
+    "export_module": "Init",
+    "tool_path": "crates/axeyum-lean-import/examples/theorem_footprint_batch_audit.rs",
+    "tool_interface": "theorem_footprint_batch_audit <stream> <root>...",
+    "root_order_must_match_plan": true,
+    "proof_terms_or_values_may_be_rendered": false,
+    "all_roots_must_resolve_as_theorems": true,
+    "all_roots_must_have_empty_footprints_for_successor_bezout": true
+  },
+  "proposed_successor": {
+    "construction": "primitive induction on a + c using gcd-preserving subtraction and balanced natural coefficients",
+    "division_or_modulo_dependencies_allowed": false,
+    "successor_bezout_authorized_after_audit": false
+  },
+  "budget": {
+    "max_exporter_invocations": 1,
+    "max_batch_importer_runs": 1,
+    "max_retries": 0,
+    "max_bezout_source_compilations": 0,
+    "max_new_theorem_submissions": 0,
+    "max_exact_target_submissions": 0,
+    "max_executor_invocations": 0
+  },
+  "authority": {
+    "proof_bodies_readable_by_model": false,
+    "theorem_values_readable_by_model": false,
+    "subtractive_bezout_proof_allowed": false,
+    "support_theorem_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/subtractive-gcd-root-audit-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-subtractive-gcd-root-audit-plan.py",
+  "limitations": "The audit tests only whether the official gcd subtraction/base interface is an axiom-free foundation. It proves no Bezout or cancellation theorem."
+}

@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-gcd-succ-root-export-result",
+  "state": "official-representation-gcd-successor-reconstructed-twice-empty-footprint",
+  "plan": {
+    "path": "artifacts/autogenesis/official-gcd-succ-root-export-plan-v1.json",
+    "sha256": "3ca42bb288b35af77cbffb91f3262359b9192e49eddbd32a02369c1460d42714",
+    "commit": "fb1a3613e1026a80df6454fdd76bdc19a5939a94"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/dfcff00d1-official-gcd-succ-root-v1/manifest.json",
+    "sha256": "c1ebf421a26764d7796932c49ebbc6d1c3a889a665e6d4830a28a78b97f83a2a",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "execution": {
+    "source_copies": 1,
+    "compiler_invocations": 1,
+    "successful_compilations": 1,
+    "exporter_invocations": 1,
+    "importer_runs": 2,
+    "successful_importer_runs": 2,
+    "proof_bearing_stream_reads": 2,
+    "retries": 0
+  },
+  "stream": {
+    "bytes": 511748,
+    "maximum_bytes": 2000000,
+    "sha256": "2af40b2c7d89a0959bbe3018da60841ea1dc933ae2f40112ae84d95feab6044c",
+    "root_selected": true,
+    "representation": "official-mathlib-well-founded"
+  },
+  "theorem": {
+    "name": "Axeyum.Autogenesis.nat_gcd_succ",
+    "contract": "given mod_lt_succ, forall m n, Nat.gcd (Nat.succ m) n = Nat.gcd (n % Nat.succ m) (Nat.succ m)",
+    "declaration_sha256": "1a9cf6e4ef4dc54a298214571515e7682a6265d9db7008b7cf1f8b3c38d11f16",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": ["Axeyum.Autogenesis.gcdModel_succ"],
+    "audit_sha256": "99f03a2a0c958d348357c301e38d724923a6dcca9ffb6e89b557ff2963ff83af",
+    "fresh_reconstructions": 2,
+    "audits_byte_identical": true,
+    "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0}
+  },
+  "cleanup": {
+    "exact_temporary_paths_removed": 3,
+    "preexisting_status_entries_before": 3,
+    "preexisting_status_entries_after": 3,
+    "preexisting_baseline_unchanged": true
+  },
+  "next_boundary": {
+    "official_representation_gcd_leaves_completed": true,
+    "required_next_increment": "preregister composition of both accepted official-representation gcd leaves into the accepted generic balanced-Bezout kernel",
+    "closed_gcd_balanced_bezout_completed": false
+  },
+  "authority": {
+    "inherited_official_gcd_zero_left_credit": 1,
+    "new_official_gcd_succ_credit": 1,
+    "closed_gcd_balanced_bezout_credit": 0,
+    "cancellation_credit": 0,
+    "target_specialization_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "verification": "python3 scripts/check-autogenesis-official-gcd-succ-root-export-result.py",
+  "limitations": "This accepts the successor computation theorem only in the official Mathlib representation required for composition. It grants no closed balanced-Bezout theorem or downstream authority."
+}

@@ -1,5 +1,50 @@
 # Mathematics strand — August 2026
 
+## STATUS 2026-08-19 — the number-system ladder closed to ℂ
+
+Correcting the documents below rather than replacing them: their reasoning about
+decide-vs-certify, the library and reachability still holds; their inventory of
+what exists does not.
+
+**Every constructed prelude is at trusted surface 0, and ℝ and ℂ are among
+them.** Measured today — re-measure rather than quote:
+
+```text
+cargo run -q --release -p axeyum-lean-kernel \
+  --example nat_axiom_inventory -- --include-constructed
+complex 0 · creal 0 · integer 0 · logic 0 · nat 0 · rat 0 · string 0 · real 30
+```
+
+`real 30` is the *axiomatized* `Real` package, retained as the negative control
+for every axiom-freedom claim here (ADR-0509); no shipped route builds it.
+
+- **ℤ** — 0 axioms, **57** derived (`--example int_theorem_inventory`).
+- **ℚ** — a normalised structure, and an ordered **field** since
+  `Rat.mul_inv_cancel`. That last step was the real blocker on ℝ's inverse and
+  was on no plan: `Rat.inv` had existed all along as a definition with no law
+  about it.
+- **ℝ** — `CReal`, a Bishop setoid of regular ℚ-sequences whose equality is the
+  *defined* `CReal.Equiv` (**ADR-0512**). **94 declarations**
+  (`--example creal_setoid_witness`): 22 ordered-ring laws, `mul_congr`,
+  `Apart`, `PosBound`, a partial inverse (ADR-0510/0516), `max`/`min`/`abs`
+  (ADR-0519). The setoid is what sidesteps `Quot.sound` (a Cauchy quotient) and
+  `propext`+`funext` (Dedekind cuts).
+- **ℂ** — `Complex`, pairs of `CReal` under a defined `Complex.Equiv`
+  (**ADR-0521**). **39 declarations** (`--example complex_ring_witness`), all 9
+  commutative-ring laws, and `Complex.no_compatible_order`: a *theorem* that no
+  order satisfying the ordered-ring laws exists on ℂ, witness `I` via `I_sq`,
+  no classical step.
+
+**Still not built, and said plainly**: no completeness, no suprema, no `sqrt`,
+no cotransitivity of `lt`, no `apart_mul`, no ℂ inverse, no `Complex.abs`.
+Costings are in [`02`](02-the-library.md#what-to-do-first) and the lane notes it
+cites, not re-estimated.
+
+The ledger holds **340 facts, 120 of them settled** (`proved` 115, `refuted` 3,
+`computed` 2) across six proof routes, and the repository has **523 ADRs** — all
+four counts derived today from `artifacts/facts/` and
+`docs/research/09-decisions/`, all four move daily.
+
 ## STATUS 2026-08-15 — what this strand actually produced
 
 The numbered documents below were written before any of it and **do not mention
@@ -83,11 +128,14 @@ quantifiers → proof production. Measured on 2026-08-14:
 | **2. Certify to ourselves** | evidence our own checker re-derives | broad on the SAT/BV path: DRAT + an independent backward checker; instances re-checked clause by clause |
 | **3. Certify to a stranger** | a certificate an independent kernel accepts | **4 of 26 areas** name a kernel/Lean-checked proof in their evidence: `QF_LIA`, `QF_LRA`, `QF_NRA`, `quantifiers` |
 | **4. Prove with symbolic parameters** | a theorem about an infinite family | the `∀`-route proved `k=2` for symbolic `a` **and** `b` over unbounded ℤ; `k=3` is 1 of 3 cases |
-| **5. State it at all** | a library to say it in | `nat_prelude` **106 proved / 0 assumed**; `int` **0 / 3**; `arith` **0 / 3** |
+| **5. State it at all** | a library to say it in | *2026-08-14:* `nat_prelude` **106 proved / 0 assumed**; `int` **0 / 3**; `arith` **0 / 3**. *2026-08-19:* `nat` **139 / 0**, `int` **57 / 0**, and ℚ, ℝ, ℂ all constructed at **0** assumed — the rung moved further than any other in five days, and what now bounds it is analysis (completeness, `sqrt`), not axioms |
 
 Read the table downward and the shape of the problem is plain: **the system
 decides far more than it can certify, and certifies far more than it can
-state.** Rungs 1–2 are strong, rung 3 is narrow, rungs 4–5 are barely begun.
+state.** Rungs 1–2 are strong, rung 3 is narrow, rung 4 is barely begun — and
+rung 5, "barely begun" on 2026-08-14, is now a five-system constructed ladder
+whose limit is the *depth* of the mathematics on it rather than its trusted
+base.
 
 ## The finding that reframed this strand
 
@@ -118,14 +166,15 @@ path (CAD) that produces none. The cap looks like a performance knob and is
 actually the boundary between what we can prove to someone and what we can only
 tell them.
 
-## The four documents
+## The five documents
 
 1. [`01-decide-vs-certify.md`](01-decide-vs-certify.md) — the central gap, area
    by area. Where a verdict exists with no certificate, and what a certificate
    would have to be.
-2. [`02-the-library.md`](02-the-library.md) — ℕ → ℤ → ℚ → ℝ. What 106 proved Nat
-   theorems unlock, the construction order, and why the library is the rung
-   everything else waits on.
+2. [`02-the-library.md`](02-the-library.md) — ℕ → ℤ → ℚ → ℝ → ℂ. The
+   construction order, why the library is the rung everything else waits on,
+   and — corrected 2026-08-19 — what was actually built on each rung, against
+   what the document originally advised.
 3. [`03-symbolic-and-infinite.md`](03-symbolic-and-infinite.md) — values versus
    theorems. The campaign produced 20 new exact values and zero theorems; this
    is why, and what closes it.

@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-public-gcd-def-direct-reconstruction-result",
+  "state": "direct-reconstruction-declined-both-constructor-branches-opaque",
+  "plan": {
+    "path": "artifacts/autogenesis/public-gcd-def-direct-reconstruction-plan-v1.json",
+    "sha256": "c3f5ca6da437966dd53d3ba3e1b8f1bf287affe254db88601fa930cac66a12a6"
+  },
+  "source": {
+    "path": "scripts/lean/autogenesis_gcd_def_direct.lean",
+    "sha256": "a3b075724bcd132970279726883c91c2d8a7bd930115175315f2baefb885cd41"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/a3b075724-public-gcd-def-direct-decline-v1/manifest.json",
+    "sha256": "e53376f7beae3a29cfed9244434a7f4db2d94559a3c39fec27f70b4e68d68be1",
+    "mode": "0444"
+  },
+  "target": {
+    "name": "Nat.gcd_def",
+    "type": "∀ (x y : ℕ), x.gcd y = if x = 0 then y else (y % x).gcd x",
+    "type_sha256": "ef15d81bcf7761c4782f3e7e5626ae5c23840a467fb7a3443f4e184f787cb925"
+  },
+  "outcome": {
+    "source_compiled": false,
+    "compile_exit": 1,
+    "zero_branch_definitionally_equal": false,
+    "successor_branch_definitionally_equal": false,
+    "exported": false,
+    "kernel_imports": 0,
+    "public_gcd_equation_accepted": false,
+    "decline_reason": "Nat.gcd is opaque to direct definitional reduction in both constructor branches"
+  },
+  "budget": {
+    "source_compilations": 1,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "retries": 0,
+    "new_theorem_submissions": 0,
+    "exact_fibonacci_target_submissions": 0,
+    "executor_invocations": 0
+  },
+  "authority": {
+    "public_gcd_equation_credit": 0,
+    "balanced_bezout_reconstructions": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "End the direct official-gcd computation route. Audit the proof-free official extended-gcd identity Nat.gcd_eq_gcd_ab and its coefficient interfaces as a target-side balanced-Bezout route before designing a target-owned gcd that cannot by itself rewrite exact official statements.",
+  "limitations": "The failed direct proof shows that constructor case analysis does not expose Nat.gcd definitionally. It does not refute all independently authored official-gcd theorems or any target-owned gcd mathematics."
+}

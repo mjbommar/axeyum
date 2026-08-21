@@ -6,7 +6,56 @@ default:
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
 # This is the THOROUGH pre-merge/CI gate (whole workspace, ~tens of minutes).
 # While iterating, use `just check-scope` instead — it gates only what changed.
-check: fmt fmt-all facts facts-replay clippy gate-controls autogenesis-knowledge-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts aggregate-scope test frontier gate-liveness lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links
+
+# THE AXIOM-FREEDOM MEASUREMENTS, which nothing ran until 2026-08-18.
+#
+# `real: axiom=30` is this repository's whole remaining trusted surface, and the
+# claim that the shipped front door no longer reaches it rests on three
+# examples. Grepped across `scripts/*.sh`, `justfile` and `.github/workflows/`
+# on 2026-08-18: ZERO invocations. ADR-0509 and ADR-0515 both cite them as
+# evidence; they were lane-run commands that happened to have been run once.
+#
+# Each carries a `--require-*` flag that makes its EXIT STATUS depend on the
+# finding, which is the only reason putting them in a gate means anything:
+#
+#   front_door_carrier --require-axiom-free   the shipped `prove_unsat_to_lean_module`
+#                                             reconstructs over the CONSTRUCTED reals,
+#                                             carrier axioms 0/0/0 against the `Real`
+#                                             control's 12/17/8, and the module's
+#                                             `axiom` lines equal the kernel footprint
+#   ring_interface_pin --require-identical    the 30-binder interface telescope read off
+#                                             the axiomatized package and off the
+#                                             axiom-free integers is the SAME statements
+#   ordered_ring_refutation --require-empty   the generalized theorem's footprint is
+#                                             empty, with the non-generalized one printed
+#                                             beside it as a non-vacuity control
+#   ordered_ring_refutation --constructed-reals   the same fixtures over `CReal`
+#
+# `--release` deliberately: measured 282 + 118 + 69 + 40 = 509 s in release
+# against multiples of that in debug, and these build the whole constructed
+# N/Z/Q/setoid development.
+axiom-freedom:
+    cargo run --release -q -p axeyum-solver --features full --example front_door_carrier -- --require-axiom-free
+    cargo run --release -q -p axeyum-solver --features full --example ring_interface_pin -- --require-identical
+    cargo run --release -q -p axeyum-solver --features full --example ordered_ring_refutation -- --require-empty
+    cargo run --release -q -p axeyum-solver --features full --example ordered_ring_refutation -- --constructed-reals
+# ORDERING NOTE, 2026-08-19: `just` aborts the whole chain at the FIRST failing
+# dependency, so a gate that is red for real stretches of time silently prevents
+# every gate after it from running. Measured today: `aggregate-scope` was #18 of
+# 41 and red — inherited from main, which shipped 32 steps recorded in neither
+# `check.sh` nor the justfile — so `just check` died there and **23 gates never
+# ran**, including `test`, `frontier`, `lean-gate` and `doc`. `./scripts/check.sh`
+# does not abort (it accumulates `fail=1`), which made the no-`just` FALLBACK the
+# more complete gate.
+#
+# So the three gates whose red state is expected and slow to clear go LAST:
+# `aggregate-scope` (until main's 32 steps are recorded on both sides),
+# `adr-remote-collisions` (red whenever another checkout has claimed a number),
+# and `local-ci-freshness` (red when the battery record is >48 h old). This does
+# not hide any of them — the chain still fails — it stops them hiding everything
+# else. Note the earlier claim that `adr-remote-collisions` was already last was
+# wrong: it was #40 of 41, so `local-ci-freshness` sat behind it.
+check: fmt fmt-all facts facts-replay clippy gate-controls axiom-freedom autogenesis-knowledge-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness
 
 fmt:
     cargo fmt --all --check
@@ -164,6 +213,13 @@ facts:
     # dependency is a failure rather than an indistinguishable silence.
     python3 -m unittest scripts.tests.test_check_fact_depends_derived
     python3 scripts/check-fact-depends-derived.py --quiet
+    # The ledger's PROSE, re-derived rather than re-read: a number a fact states
+    # about its own `axiom_footprint` is compared to the array. It caught the
+    # instance it was built from -- a fact that said "the 30 axioms" for three
+    # days after its footprint was corrected to 26, with the `--expect-axioms`
+    # flag right beside it already correct.
+    python3 -m unittest scripts.tests.test_check_fact_derived_numbers
+    python3 scripts/check-fact-derived-numbers.py --quiet
     python3 -m unittest scripts.tests.test_create_autogenesis_chain_catalog
     python3 scripts/create-autogenesis-chain-catalog.py --check
     # The mathematics strand's primary metric, derived rather than read: how many
@@ -171,6 +227,40 @@ facts:
     # an oracle is not an external check and is tiered separately.
     python3 -m unittest scripts.tests.test_check_capability_assurance
     python3 scripts/check-capability-assurance.py --quiet
+    # Item A's minimum: the table NAMES the function behind each capability, and a
+    # row naming a route that no longer exists is its cheapest lie -- the
+    # capability reads as real and nothing notices the rename. 42 routes, 0 missing
+    # when this landed, so it is a ratchet rather than a repair.
+    python3 -m unittest scripts.tests.test_check_capability_routes
+    python3 scripts/check-capability-routes.py
+    # The layer under every other checker: a control that NO gate runs cannot
+    # fail, so it is not a control. Runners name modules one by one, so wiring a
+    # new one is a separate forgettable step -- measured 2026-08-17, 63 of 137
+    # control modules were executed by nothing, and 6 of them no longer import.
+    python3 -m unittest scripts.tests.test_check_control_tests_reachable
+    python3 scripts/check-control-tests-reachable.py
+    # The mutation harness itself. Every "exactly one test died" in this repository
+    # rests on the mutant having been BUILT and RUN, and until 2026-08-18 nothing
+    # checked either: a mutation that broke compilation, and a suite that executed
+    # zero tests, both arrived as "not clean" and were scored as coverage. The four
+    # outcomes are now distinct, and `self-demo` produces one of each from a real
+    # mutation -- so a harness that cannot tell them apart fails here rather than
+    # reporting a number nobody measured.
+    python3 -m unittest scripts.tests.test_mutation_controls
+    python3 scripts/tests/mutation_controls.py self-demo
+    python3 scripts/tests/mutation_controls.py --check-anchors
+    python3 scripts/gen-example-inventory.py --check
+    ./scripts/tests/test-gen-example-inventory.sh
+    # 44 controls that were already written and already correct, but which no
+    # gate ran. 257 tests, ~31s. The seven not adopted are listed in the script.
+    scripts/check-adopted-controls.sh
+    # How much code must be CORRECT for an admitted theorem to be true? Derived
+    # from the only call that makes a declaration exist -- Environment::insert_unchecked
+    # -- not from a list: 5,129 function-body lines across 9 files, forward
+    # closure from the four admission gates. It found that lean_export.rs, filed
+    # as "interop", owns `is_k_like_inductive` on the iota-reduction path.
+    python3 -m unittest scripts.tests.test_check_kernel_trusted_core
+    python3 scripts/check-kernel-trusted-core.py
     # The CLAIM ledger's structural pass, which `scripts/check.sh` has always run
     # and `just check` did not -- so the fallback gate checked something the
     # preferred one skipped, which is exactly the divergence
@@ -194,6 +284,21 @@ facts:
     # claiming something its evidence does not establish. Sub-second; three lanes
     # did this by hand before it was a gate.
     python3 scripts/check-geometry-fact-transcription.py
+    # THE WEAKEST LINK IN THE TRUST CHAIN, until this landed. A reconstructed
+    # UNSAT declares the query's constraints as the Lean module's OWN axioms and
+    # proves False from them -- and nothing checked that those axioms are what
+    # the `.smt2` said. A dropped negation would typecheck, report a clean axiom
+    # footprint, and be worthless
+    # (docs/prover-track/research/13-residual-trust-surface.md item 3).
+    #
+    # Binds every rendered `lra.hyp._N`/`int_hyp._N` back to an `(assert ...)`
+    # line, both sides parsed in Python so a bug in the renderer's normalizer
+    # cannot cancel out. 105 instances, 248 hypotheses, ~31s + the example build.
+    # Corrupts each hypothesis five ways on every run and requires the
+    # corruptions to be caught, because a checker that cannot fail is worse than
+    # none.
+    python3 -m unittest scripts.tests.test_check_lra_hypothesis_binding
+    python3 scripts/check-lra-hypothesis-binding.py
 
 # Re-run the evidence behind every settled fact, route-agnostically. `facts`
 # above checks the ledger is CONSISTENT; this checks it is still TRUE -- a fact
@@ -235,6 +340,84 @@ aggregate-scope:
 # build -- it runs against a throwaway one-crate workspace.
 gate-controls:
     scripts/tests/test-gate-scope-controls.sh
+    # Controls for the two gates that check other gates: the local-ci run
+    # recorder (a step exiting 0 with zero tests must record `vacuous` -- that
+    # guard was unreachable when written) and the fact scaffolder (a
+    # `checker_command` must be proved able to FAIL before the fact exists).
+    scripts/tests/test-local-ci-record.sh
+    # Controls for `local-ci-freshness` below: a stale / non-ancestor / FAIL /
+    # vacuous-step / unreadable-step / self-inconsistent record must each red
+    # it by name, and a fresh all-pass ancestor record must go green. Every
+    # guard was mutation-tested individually (delete one, exactly one control
+    # dies) -- see the header of scripts/check-local-ci-freshness.sh.
+    scripts/tests/test-check-local-ci-freshness.sh
+    # Controls for `parity-freshness` below. Twelve cases, every guard
+    # mutation-tested: a stale board, a board whose only fresh entry is VOIDED,
+    # an unrecognised `## ` header and a near-empty parse must each red it, and
+    # a fresh board -- including one whose freshest entry carries the trailing
+    # `— EVIDENCE MODE` label -- must go green. Two of the twelve run against
+    # the REAL committed ledger, because a parser never pointed at its subject
+    # returns the same empty answer as a strong negative result.
+    scripts/tests/test-check-parity-freshness.sh
+    scripts/tests/test-new-fact-controls.sh
+    scripts/tests/test-lane-commit.sh
+    # `--to <branch>`: the range, the cost estimate and the fast-forward check
+    # must follow the ref being PUSHED, not the current branch's remote copy.
+    # Against a stale `origin/<branch>` the same doc-only landing reads FULL
+    # BATTERY instead of FREE, and an estimate that errs expensive gets ignored.
+    scripts/tests/test-lane-push-target.sh
+    # The pre-push compile step must carry --all-targets: without it,
+    # examples/ and tests/ are never compiled and the hook's
+    # "pushed SHA compiles" line is false for half the tree.
+    scripts/tests/test-prepush-checks-all-targets.sh
+    scripts/tests/test-prepare-prepush-worktree.sh
+    scripts/tests/test-check-lean-golden-pins.sh
+    # ...and the ratchet that makes the two lines above impossible to forget.
+    # Both were written, both pass, and one was invoked by NOTHING for a day,
+    # because registering a control is a manual step separate from writing it.
+    # A control nobody runs cannot fail, so it is not a control.
+    scripts/check-control-registration.sh
+    # `grep -q` in a pipeline under pipefail, and `$?` read after a pipeline:
+    # both print a wrong answer while exiting 0, and both shipped here.
+    scripts/check-shell-antipatterns.sh
+    # DOMINANCE.md is generated; without a --check it sat six audits stale
+    # while reading as current.
+    python3 scripts/gen-dominance-scoreboard.py --check
+    # Lean-reconstruction unit tests, moved out of hooks/pre-push (268 tests,
+    # 294s, each building Lean preludes). They belong in a daily gate, not on
+    # every push -- and before this neither aggregate gate ran them.
+    cargo test -p axeyum-solver --lib --features full reconstruct::
+    # The one evidence test that builds Lean preludes: 292.973s of a 293.08s
+    # suite. Skipped in hooks/pre-push; this is where it runs.
+    cargo test -p axeyum-solver --features full --test evidence qf_nra_sos_certificate_wrapper_carries_lean_module
+
+# Is there a FRESH, PASSING, fully-measured `local-ci --record` for (an
+# ancestor of) HEAD? A green record proves nothing on its own -- see
+# scripts/check-local-ci-freshness.sh's header for what "fresh" means here and
+# why. ENFORCING as of 2026-08-19 (it was `--report-only` only while the sole
+# record in existence, a6ee37c6a-s4.json, was `verdict: FAIL`; 57af69142-s4
+# is all-pass, 5/5 steps, 7561 nextest + 179 doctests).
+#
+# If this reds and your change is unrelated, it is almost certainly STALE:
+# run `scripts/local-ci.sh --record` (~110 min, one lock across the box) and
+# commit the record. Do not re-add `--report-only`.
+local-ci-freshness:
+    scripts/check-local-ci-freshness.sh
+
+# Has the parity board been re-measured recently enough to still mean anything?
+# `bench-results/PARITY.md` is the declared headline -- external list pinned by
+# sha256 before each run, `DISAGREEMENTS > 0` voids an entry -- and the script
+# that writes it, `scripts/parity-run.sh`, was invoked by NO gate until
+# 2026-08-21. It froze on 2026-08-06 for fifteen days, through UF 32 -> 85 and
+# QF_RDL 10 -> 105, and nothing went red.
+#
+# Budget is 14 days PER LOGIC (warning at 10), so the remedy for a red is one
+# sweep -- `scripts/parity-run.sh <LOGIC>`, 1-3 h -- and not a board refresh.
+# See scripts/check-parity-freshness.py's header for why 14 and not a rounder
+# number. Do not soften it by editing the ledger: it is append-only so a number
+# going down stays visible.
+parity-freshness:
+    scripts/check-parity-freshness.py
 
 autogenesis-knowledge-controls:
     scripts/check-autogenesis-knowledge-controls.sh
@@ -282,15 +465,52 @@ frontier:
 gate-liveness:
     ./scripts/check-gate-liveness.sh
 
+# The golden-Lean-module gate. Every suite that pins a rendered module's bytes,
+# DISCOVERED rather than listed: membership is "calls
+# `lean_golden::assert_golden_module`", which is the same act as being a golden
+# pin, so a new golden cannot be added outside the gate. It also refuses a
+# hand-rolled whole-module `(len, fnv1a)` pin, which is how the banner got back
+# under the pins three times (`0fc7cc357`, `b760fd6ae`, `46724faec`).
+#
+# These are `tests/*.rs` integration targets and NOTHING ran them: `--lib` skips
+# integration targets, `hooks/pre-push` names six of the workspace's 465, and the
+# only sweep that covers them is local-ci, which had never completed until
+# 2026-08-18 -- when it found all four of them red.
+golden-lean-pins:
+    ./scripts/check-lean-golden-pins.sh
+
+# The kernel's suite partition: every `crates/axeyum-lean-kernel/tests/*.rs` must
+# be in EXACTLY ONE of {runs at push time, owned by `scripts/check-lean-gate.sh`}.
+# `hooks/pre-push` ran the crate wholesale, so the fifteen real-Lean suites ran
+# twice on every push -- 2,396 s of a ~900 s hook, measured 2026-08-19 -- and the
+# fix for that (run only the non-Lean half) is only safe while the other half is
+# provably owned. Membership is DISCOVERED from the source, never listed, so a
+# new suite cannot land outside both halves. `--list` asserts and prints the
+# split without building anything; the run itself belongs to the push gate.
+kernel-suite-partition:
+    python3 -m unittest scripts.tests.test_check_kernel_suites
+    ./scripts/check-kernel-suites.sh --list
+
 # The real-Lean gate: every suite that hands a generated module to an EXTERNAL
-# `lean` binary, with the toolchain DISCOVERED (`AXEYUM_LEAN_BIN`, `PATH`, then
-# `~/.elan/toolchains/*/bin/lean`) and `AXEYUM_REQUIRE_LEAN=1` set, so a missing
-# binary fails instead of printing a skip note and passing. It prints the number
-# of Lean invocations that actually happened and enforces a floor -- an exit
-# status cannot tell "checked 40 modules" from "checked none", and that is
-# precisely how a real Lean rejection of our exported modules stayed invisible
-# until 2026-08-14. On a machine with no Lean at all: AXEYUM_ALLOW_NO_LEAN=1.
+# `lean` binary, with the toolchain RESOLVED FROM THE PIN in `lean-toolchain`
+# (`AXEYUM_LEAN_BIN`, then the pinned toolchain's elan directory, then PATH or
+# any other elan toolchain ONLY IF its `--version` matches the pin) and
+# `AXEYUM_REQUIRE_LEAN=1` set, so a missing binary fails instead of printing a
+# skip note and passing. It prints the number of Lean invocations that actually
+# happened and enforces a floor -- an exit status cannot tell "checked 40
+# modules" from "checked none", and that is precisely how a real Lean rejection
+# of our exported modules stayed invisible until 2026-08-14. On a machine with
+# no Lean at all: AXEYUM_ALLOW_NO_LEAN=1.
+#
+# The policy controls run FIRST and are cheap (~30s): they point both entry
+# points at a non-pinned toolchain and require the refusal, and they check that
+# the shell gate and the Rust probe resolve the SAME binary. Until 2026-08-17
+# they did not -- the gate took PATH's lean (4.30.0) and the probe took the
+# newest installed name (4.34.0-rc1), under which 21 of 77 `lean_crosscheck`
+# families were rejected. A gate whose answer depends on an unstated fact about
+# the machine is this repository's signature defect.
 lean-gate:
+    ./scripts/tests/test-lean-toolchain-policy.sh
     ./scripts/check-lean-gate.sh
 
 # Same as `test`, but under a hard 64 GiB memory cap (scripts/mem-run.sh) so a
@@ -580,6 +800,27 @@ deny:
 links:
     ./scripts/check-links.sh
 
+# ADR numbers are a shared append point ACROSS CHECKOUTS: `gen-adr-index.py
+# --check` only ever reads this working tree, so two lanes in two clones can
+# each read "the highest number I can see", allocate the same one for two
+# different decisions, and merge clean (the filenames differ by slug, so git
+# never conflicts) -- measured 2026-08-18, `origin/main` and this branch had
+# claimed 0471-0474 twice AND (found live, by this gate) 0468-0470 a second
+# time. `--check-remote` diffs this tree's ADR numbers against
+# `origin/main`'s and fails on a real collision, naming it and the next free
+# number. Deliberately does NOT fail when `origin/main` is unresolvable (no
+# fetch, no `origin`, not a git checkout) -- see the docstring on
+# `check_remote` in gen-adr-index.py for why fail-open there is the right
+# side of the trade, and why a STALE fetch is handled differently again. Kept
+# LAST in `check`'s dependency list, unlike `adr-index` above (folded into
+# `generated-trackers`): `just` aborts a recipe chain at the first failing
+# dependency, and this one is expected to fail for real stretches of time
+# (fixing a live collision means renumbering every cross-reference to the
+# ADRs it names, which is its own task) -- putting it last means a collision
+# here does not hide whether fmt/clippy/tests/links/etc. passed.
+adr-remote-collisions:
+    python3 scripts/gen-adr-index.py --check-remote
+
 # The ADR-0380 claim-ledger gates: structural/referential/epistemic validation of
 # every artifacts/claims/**/claim.json, the negative fixtures that prove the
 # validator actually rejects bad claims, and the independent semantic re-check of
@@ -594,6 +835,17 @@ claims:
     python3 scripts/validate-claims.py
     python3 scripts/check-claim-negative-fixtures.py
     python3 scripts/check-claim-certificates.py --drat-checker references/drat-trim/drat-trim
+
+# The propositional Craig interpolant's certificate, checked by an OUTSIDE
+# implementation: the two DRAT refutations of the Craig conditions handed to
+# Marijn Heule's drat-trim rather than to our own `check_drat`.
+#
+# `AXEYUM_REQUIRE_DRAT_TRIM=1` turns a missing binary into a FAILURE. Without it
+# the suite skips the external half, which is the right default (drat-trim is a
+# gitignored clone, `just references`) but the wrong thing for a gate that exists
+# to prove a third party accepts our artifact -- a skip and a pass look identical.
+interpolant-certificate:
+    AXEYUM_REQUIRE_DRAT_TRIM=1 cargo test -p axeyum-cnf --test propositional_interpolant_certified
 
 # Run the committed micro corpus through the pure Rust BV backend.
 bench-micro:

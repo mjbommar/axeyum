@@ -7,23 +7,25 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
+      "decision_backend": "axeyum-sat-bv rustsat-batsat",
       "dominant_candidate": true,
-      "elapsed_ms": 5.523281,
+      "elapsed_ms": 0.958534,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "term-level-unsat",
       "file": "corpus/public-curated/non-incremental/QF_BVFP/bitwuzla-regress-clean/solver__fp__Float-no-simp1-main.smt2",
       "lean_checked": true,
       "lean_error": null,
       "lean_fragment": "TermLevelEnum",
-      "lean_module_bytes": 579,
+      "lean_module_bytes": 3161,
       "phase_timings_ms": {
-        "check_evidence": 0.028123000000000002,
-        "lean_reconstruction": 4.407037,
-        "parse_evidence": 0.27939600000000003,
-        "parse_lean": 0.099909,
-        "produce_evidence": 0.64768,
-        "read": 0.016582000000000003
+        "check_evidence": 0.003441,
+        "lean_reconstruction": 0.335069,
+        "parse_evidence": 0.134039,
+        "parse_lean": 0.041780000000000005,
+        "produce_evidence": 0.264413,
+        "read": 0.03625
       },
       "trust_holes": [],
       "trust_steps": [
@@ -38,23 +40,25 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
-      "dominant_candidate": true,
-      "elapsed_ms": 99.026979,
-      "evidence_certified": true,
-      "evidence_checked": true,
-      "evidence_kind": "bv-defined-enum-unsat",
+      "decision_backend": "auto-solve",
+      "dominant_candidate": false,
+      "elapsed_ms": 24.653696,
+      "evidence_certified": false,
+      "evidence_check_mode": "not-applicable-uncertified",
+      "evidence_checked": false,
+      "evidence_kind": "bare-unsat",
       "file": "corpus/public-curated/non-incremental/QF_BVFP/bitwuzla-regress-clean/solver__fp__Float-no-simp3-main.smt2",
-      "lean_checked": true,
-      "lean_error": null,
-      "lean_fragment": "BvDefinedEnum",
-      "lean_module_bytes": 579,
+      "lean_checked": false,
+      "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
+      "lean_fragment": null,
+      "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 22.098491000000003,
-        "lean_reconstruction": 48.180237,
-        "parse_evidence": 2.7349769999999998,
-        "parse_lean": 2.611237,
-        "produce_evidence": 23.220115,
-        "read": 0.023391
+        "check_evidence": 0.000115,
+        "lean_reconstruction": 1.7496079999999998,
+        "parse_evidence": 0.480043,
+        "parse_lean": 0.311762,
+        "produce_evidence": 20.63324,
+        "read": 0.033036
       },
       "trust_holes": [],
       "trust_steps": []
@@ -64,35 +68,54 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
-      "dominant_candidate": true,
-      "elapsed_ms": 96.22437000000001,
+      "decision_backend": "axeyum-sat-bv rustsat-batsat",
+      "dominant_candidate": false,
+      "elapsed_ms": 9.301586,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
-      "evidence_kind": "bv-defined-enum-unsat",
+      "evidence_kind": "drat-unsat",
       "file": "corpus/public-curated/non-incremental/QF_BVFP/bitwuzla-regress-clean/solver__fp__fp_fromsbv.smt2",
-      "lean_checked": true,
-      "lean_error": null,
-      "lean_fragment": "BvDefinedEnum",
-      "lean_module_bytes": 579,
+      "lean_checked": false,
+      "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
+      "lean_fragment": null,
+      "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 19.542454,
-        "lean_reconstruction": 42.588916999999995,
-        "parse_evidence": 7.552906,
-        "parse_lean": 7.545816,
-        "produce_evidence": 18.494305999999998,
-        "read": 0.024167
+        "check_evidence": 0.001713,
+        "lean_reconstruction": 2.302349,
+        "parse_evidence": 0.663782,
+        "parse_lean": 0.523679,
+        "produce_evidence": 3.897312,
+        "read": 0.028741000000000003
       },
-      "trust_holes": [],
-      "trust_steps": []
+      "trust_holes": [
+        "bit-blast"
+      ],
+      "trust_steps": [
+        {
+          "certified": false,
+          "id": "bit-blast"
+        },
+        {
+          "certified": true,
+          "id": "tseitin"
+        },
+        {
+          "certified": true,
+          "id": "sat-refutation"
+        }
+      ]
     },
     {
       "audit_outcome": "sat",
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
+      "decision_backend": "axeyum-sat-bv rustsat-batsat",
       "dominant_candidate": true,
-      "elapsed_ms": 1.688672,
+      "elapsed_ms": 0.178477,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "sat-model",
       "file": "corpus/public-curated/non-incremental/QF_BVFP/bitwuzla-regress-clean/solver__fp__fp_regr4.smt2",
@@ -101,12 +124,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.026833,
+        "check_evidence": 0.006353,
         "lean_reconstruction": null,
-        "parse_evidence": 0.433813,
+        "parse_evidence": 0.04418,
         "parse_lean": null,
-        "produce_evidence": 1.123612,
-        "read": 0.07930999999999999
+        "produce_evidence": 0.095521,
+        "read": 0.030374
       },
       "trust_holes": [],
       "trust_steps": []
@@ -116,9 +139,11 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
+      "decision_backend": "axeyum-sat-bv rustsat-batsat",
       "dominant_candidate": true,
-      "elapsed_ms": 1.057068,
+      "elapsed_ms": 0.24739,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "sat-model",
       "file": "corpus/public-curated/non-incremental/QF_BVFP/bitwuzla-regress-clean/solver__fp__fp_regr6.smt2",
@@ -127,12 +152,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.008431,
+        "check_evidence": 0.002438,
         "lean_reconstruction": null,
-        "parse_evidence": 0.176519,
+        "parse_evidence": 0.022633,
         "parse_lean": null,
-        "produce_evidence": 0.808781,
-        "read": 0.046625
+        "produce_evidence": 0.21048599999999998,
+        "read": 0.009995
       },
       "trust_holes": [],
       "trust_steps": []
@@ -142,9 +167,11 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
+      "decision_backend": "axeyum-sat-bv rustsat-batsat",
       "dominant_candidate": true,
-      "elapsed_ms": 167.405351,
+      "elapsed_ms": 13.746960000000001,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "sat-model",
       "file": "corpus/public-curated/non-incremental/QF_BVFP/bitwuzla-regress-clean/solver__fp__fp_regr7.smt2",
@@ -153,12 +180,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.8542200000000001,
+        "check_evidence": 0.131785,
         "lean_reconstruction": null,
-        "parse_evidence": 1.081964,
+        "parse_evidence": 0.201645,
         "parse_lean": null,
-        "produce_evidence": 165.417316,
-        "read": 0.03113
+        "produce_evidence": 13.394458,
+        "read": 0.014171
       },
       "trust_holes": [],
       "trust_steps": []
@@ -168,9 +195,11 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
+      "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 16.225351999999997,
+      "elapsed_ms": 2.9187190000000003,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "sat-model",
       "file": "corpus/public-curated/non-incremental/QF_BVFP/bitwuzla-regress-clean/solver__fp__fp_regr8.smt2",
@@ -179,35 +208,42 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.071473,
+        "check_evidence": 0.014562,
         "lean_reconstruction": null,
-        "parse_evidence": 0.398264,
+        "parse_evidence": 0.08691,
         "parse_lean": null,
-        "produce_evidence": 15.721071,
-        "read": 0.025983
+        "produce_evidence": 2.784523,
+        "read": 0.03044
       },
       "trust_holes": [],
       "trust_steps": []
     }
   ],
-  "limit": 8,
+  "limit": null,
   "logic": "QF_BVFP",
+  "prelude_warm_ms": 6502.975109999999,
+  "prelude_warmed": true,
   "slice": "qf-bvfp-bitwuzla-regress-clean-solver-vs-z3-10s.json",
+  "source_revision": {
+    "dirty": false,
+    "sha": "a3799dca2",
+    "source": "lane-snapshot"
+  },
   "summary": {
     "audit_errors": 0,
     "audited_decided": 7,
     "audited_unsat": 3,
     "baseline_decided": 7,
     "baseline_mismatches": 0,
-    "dominant_candidates": 7,
-    "dominant_pct_audited": 100.0,
-    "evidence_certified": 7,
-    "evidence_checked": 7,
+    "dominant_candidates": 5,
+    "dominant_pct_audited": 71.42857142857143,
+    "evidence_certified": 6,
+    "evidence_checked": 6,
     "instances": 8,
-    "lean_checked_unsat": 3,
-    "lean_unsat_pct": 100.0,
+    "lean_checked_unsat": 1,
+    "lean_unsat_pct": 33.333333333333336,
     "timeouts": 0
   },
-  "timeout_ms": 30000,
-  "version": 1
+  "timeout_ms": 10000,
+  "version": 3
 }

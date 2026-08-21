@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-euclidean-local-subtraction-replacement-plan",
+  "state": "preregistered-before-v2-source-or-reconstruction",
+  "policy_version": "euclidean-local-sub-add-cancel-replacement-v1",
+  "inputs": {
+    "proof_capsule": {
+      "path": "artifacts/autogenesis/euclidean-joint-div-mod-proof-capsule-v1.json",
+      "sha256": "17ef795517c8373a52889597f859cc1d5a75fa74b3a0c38bf334c4f523eb14f1"
+    },
+    "first_decline": {
+      "path": "artifacts/autogenesis/euclidean-joint-div-mod-proof-decline-v1.json",
+      "sha256": "70bcd809a42774c75956c7f9cf0a89db0f847a2d03be3fb309fcd8084e8798ce"
+    },
+    "dependency_audit": {
+      "path": "artifacts/autogenesis/euclidean-joint-div-mod-dependency-footprint-audit-result-v1.json",
+      "sha256": "9a27f06239e54fdd4979901c377f8f4675f6ff580d043244360d144aee7b29de",
+      "receipt_path": "/nas3/data/axeyum/autogenesis/reference-packs/ef209e897-euclidean-dependency-audit-v1/manifest.json",
+      "receipt_sha256": "fc6cffc7baec14790cc4f23461389c5ef229ccb5281ffea5c317efc91b7031f5"
+    }
+  },
+  "measured_blocker": {
+    "name": "Nat.sub_add_cancel",
+    "declaration_sha256": "756d178b67958fe684cb9e64c8d0b40ff557a375ed14ba122c070bfa7b3616a5",
+    "axiom_footprint": ["propext"],
+    "other_direct_dependencies_empty": 14
+  },
+  "fixed_replacement": {
+    "source_path": "scripts/lean/autogenesis_div_mod_go_reconstruct_v2.lean",
+    "original_source_must_remain_unchanged": true,
+    "replacement_scope": "replace only the Nat.sub_add_cancel call with a local primitive-recursive proof",
+    "local_proof_may_create_a_global_declaration": false,
+    "forbidden_theorem_dependencies": [
+      "Nat.sub_add_cancel",
+      "Nat.add_sub_of_le"
+    ],
+    "forbidden_axioms": ["propext"],
+    "proof_search_allowed": false,
+    "upstream_proof_bodies_allowed": false,
+    "alternative_proof_routes_allowed": false
+  },
+  "target": {
+    "theorem_name": "Axeyum.Autogenesis.divModGoReconstruct",
+    "statement": "forall y (hy : 0 < y) fuel x (hfuel : x < fuel), y * Nat.div.go y hy fuel x hfuel + Nat.modCore.go y hy fuel x hfuel = x",
+    "required_axiom_footprint": [],
+    "required_fresh_reconstructions": 2,
+    "second_run_requires_first_run_acceptance": true,
+    "both_declaration_identities_must_match": true,
+    "direct_dependencies_must_be_enumerated": true
+  },
+  "budget": {
+    "max_revised_source_paths": 1,
+    "max_new_support_theorem_declarations": 1,
+    "max_kernel_theorem_submissions": 2,
+    "max_exact_target_submissions": 0,
+    "max_executor_invocations": 0,
+    "max_retries_after_kernel_decline": 0
+  },
+  "authority": {
+    "public_euclidean_lift_allowed": false,
+    "balanced_bezout_reconstruction_allowed": false,
+    "proof_bodies_readable_by_model": false,
+    "theorem_values_readable_by_model": false,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "verification": "python3 scripts/check-autogenesis-euclidean-local-subtraction-replacement-plan.py",
+  "limitations": "This plan authorizes only a V2 reconstruction of the private joint invariant. Even two empty-footprint runs do not authorize the public Nat.div_add_mod lift or any Fibonacci target submission."
+}

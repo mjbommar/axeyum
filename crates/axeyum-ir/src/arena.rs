@@ -1,6 +1,6 @@
 //! The term arena: interned storage plus typed, sort-checked builders.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use crate::error::IrError;
 use crate::sort::{ArraySortKey, MAX_BV_WIDTH, Sort, SortId, mask};
@@ -43,6 +43,24 @@ pub struct TermArena {
     intern: HashMap<TermNode, TermId>,
     datatypes: Vec<DatatypeInfo>,
     constructors: Vec<ConstructorInfo>,
+    /// User-supplied instantiation triggers (SMT-LIB `:pattern`) for quantifier
+    /// terms, as **alternative multi-patterns**: the outer `Vec` is a list of
+    /// alternatives (any one of which may fire), each inner `Vec` a
+    /// multi-pattern whose terms must *all* match for that alternative to fire.
+    ///
+    /// This is a **hint channel and nothing else**. A trigger annotation does
+    /// not change what a quantifier denotes — `(! B :pattern (p))` and `B` are
+    /// the same formula — so nothing that computes meaning may read this map:
+    /// [`crate::eval`] ignores it, the interner does not key on it, and two
+    /// quantifiers that differ only in their triggers are still one term. It
+    /// exists so an instantiation loop can be told *which ground terms to
+    /// try*, never *why an instance is justified*; the justification is always
+    /// `∀x.B ⊨ B[x := t]`, which holds for every ground `t` and is therefore
+    /// independent of how `t` was chosen.
+    ///
+    /// A `BTreeMap` rather than a `HashMap` because consumers iterate it and
+    /// output order is a public promise.
+    quantifier_patterns: BTreeMap<TermId, Vec<Vec<TermId>>>,
 }
 
 /// Declaration of an uninterpreted function: a name, parameter sorts, and a
@@ -1181,12 +1199,23 @@ impl TermArena {
 
     /// `bvnego` — negation overflow: `a` is the signed minimum (`−2^(w−1)`).
     ///
+    /// The signed-minimum constant is built with [`crate::wide::WideUint`] above
+    /// 128 bits, exactly as [`TermArena::bv_umulo`] builds its all-ones constant.
+    /// `1u128 << (w - 1)` is **not** a usable spelling here: legal widths run to
+    /// [`MAX_BV_WIDTH`] (65536), and Rust masks a shift amount mod 128, so `w =
+    /// 129` produced `1` in release — a silently wrong term, not a panic — while
+    /// debug panicked. Fixed 2026-08-21.
+    ///
     /// # Errors
     ///
     /// Returns [`IrError`] from the builders.
     pub fn bv_nego(&mut self, a: TermId) -> Result<TermId, IrError> {
         let w = self.expect_bv(a)?;
-        let min = self.bv_const(w, 1u128 << (w - 1))?;
+        let min = if w > 128 {
+            self.wide_bv_const(crate::wide::WideUint::from_u128(1, w).shl(w - 1))
+        } else {
+            self.bv_const(w, 1u128 << (w - 1))?
+        };
         self.eq(a, min)
     }
 
@@ -2069,6 +2098,58 @@ impl TermArena {
         self.expect_bool(body)?;
         let _ = self.symbols[var.index()];
         Ok(self.app(Op::Forall(var), &[body], Sort::Bool))
+    }
+
+    /// Records user-supplied instantiation triggers for the quantifier term
+    /// `quantifier` (SMT-LIB `:pattern`), replacing any previous record.
+    ///
+    /// `groups` is a list of **alternatives**; each alternative is a
+    /// multi-pattern whose terms must all match together. An empty `groups`,
+    /// or one containing an empty alternative, records nothing — "no usable
+    /// annotation" and "no annotation" are deliberately the same state, so a
+    /// consumer that falls back to its own trigger selection cannot be made
+    /// *less* complete by an annotation it could not use.
+    ///
+    /// See the field documentation for why this cannot affect denotation.
+    ///
+    /// # Panics
+    ///
+    /// Panics unless `quantifier` is a `forall`/`exists` node. Triggers are
+    /// meaningful only for a binder, and silently accepting one for a
+    /// non-binder would produce a map entry no consumer can ever act on.
+    pub fn set_quantifier_patterns(&mut self, quantifier: TermId, groups: Vec<Vec<TermId>>) {
+        assert!(
+            matches!(
+                self.node(quantifier),
+                TermNode::App {
+                    op: Op::Forall(_) | Op::Exists(_),
+                    ..
+                }
+            ),
+            "quantifier patterns are only meaningful on a forall/exists node"
+        );
+        let groups: Vec<Vec<TermId>> = groups.into_iter().filter(|g| !g.is_empty()).collect();
+        if groups.is_empty() {
+            self.quantifier_patterns.remove(&quantifier);
+        } else {
+            self.quantifier_patterns.insert(quantifier, groups);
+        }
+    }
+
+    /// The user-supplied trigger alternatives recorded for `quantifier`, or
+    /// `None` when the quantifier carried no usable `:pattern` annotation.
+    #[must_use]
+    pub fn quantifier_patterns(&self, quantifier: TermId) -> Option<&[Vec<TermId>]> {
+        self.quantifier_patterns.get(&quantifier).map(Vec::as_slice)
+    }
+
+    /// Every quantifier term carrying a recorded trigger annotation, in term
+    /// order. Used by diagnostics and by transformations that need to carry
+    /// annotations across a rewrite.
+    pub fn annotated_quantifiers(&self) -> impl Iterator<Item = (TermId, &[Vec<TermId>])> {
+        self.quantifier_patterns
+            .iter()
+            .map(|(&term, groups)| (term, groups.as_slice()))
     }
 
     /// Existential quantifier `exists var. body`, binding the declared symbol

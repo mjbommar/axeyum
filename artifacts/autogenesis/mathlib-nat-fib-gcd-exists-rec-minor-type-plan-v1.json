@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-exists-rec-minor-type-plan-v1",
+  "state": "preregistered-expected-versus-actual-minor-types-before-code",
+  "input": {
+    "result": "artifacts/autogenesis/mathlib-nat-fib-gcd-exists-rec-prefix-diagnostic-result-v1.json",
+    "sha256": "41957d7d193ddb2f6cc168454f239caad71dddc6117b4e40e22da9a169caf0b4"
+  },
+  "implementation_prestate": {
+    "path": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+    "sha256": "b34429215d3b27926eed52d49559f844d76236b1e6ecfc88b6ba6a1315ff043e"
+  },
+  "diagnostic": {
+    "mode": "--target-native-fib-gcd-exists-rec-minor-type-diagnostic",
+    "render": [
+      "the inferred type of the closed Exists.rec prefix after motive",
+      "the inferred type of the independently closed minor"
+    ],
+    "proof_values_rendered": 0,
+    "theorem_statement_changes": 0,
+    "proof_route_changes": 0
+  },
+  "budget": {
+    "complete_diagnostics": 1,
+    "helper_theorem_submissions": 1,
+    "type_inferences": 2,
+    "target_theorem_submissions": 0,
+    "capsule_writes": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "next_on_accept": "preregister exactly one minor-shape repair derived from the rendered type difference",
+  "next_on_decline": "retain the proof-free inference failure and narrow only that type construction",
+  "limitations": "This renders theorem types only, never proof values, and grants no target authority."
+}

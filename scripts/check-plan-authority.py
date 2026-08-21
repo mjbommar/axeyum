@@ -37,40 +37,66 @@ def main() -> int:
 
     # PLAN.md is generated (scripts/gen-plan.py); the writing happens in
     # docs/plan/global/ and docs/plan/status/, so the no-journal-growth ceiling
-    # is measured there.  The number moved from 50,000 to 52,000 because the
-    # split itself costs bytes that are structure, not journal: at the moment
-    # of the split PLAN.md was 49,997 bytes and its sources 50,741 — +744 for
-    # nine lane headings and sixteen section markers.  `gen-plan.py --check`
-    # keeps PLAN.md equal to those sources, so this still bounds PLAN.md.
-    # `README.md` in each directory documents the format and is not emitted
-    # into PLAN.md, so it is not journal either.
-    sources = [
-        path
-        for directory in ("docs/plan/global", "docs/plan/status")
-        for path in sorted((ROOT / directory).glob("*.md"))
+    # is measured there.  `README.md` in each directory documents the format and
+    # is not emitted into PLAN.md, so it is not journal either.
+    #
+    # THE CEILING USED TO BE A FLAT 52,000 ACROSS ALL LANES, AND THAT IS WHY IT
+    # WAS RED FOR DAYS.  Its own comment records the growth as 0 -> 54,398 ->
+    # 98,180 -> 233,888 in two days; on 2026-08-18 it stood at 177,878, 3.4x
+    # over, and every lane had learned to scroll past it.  A budget shared by 25
+    # lanes is nobody's to fix: no single edit causes the failure, so no single
+    # edit repairs it.  That is the same shared-append-point defect the per-lane
+    # split was created to remove (CLAUDE.md: per-lane state belongs in per-lane
+    # paths, never in one file every lane writes) — reappearing one level up, in
+    # the BUDGET rather than the file.
+    #
+    # So the bound is now attributable:
+    #   * each lane file gets its own cap, and a violation names the lane;
+    #   * docs/plan/global/ keeps a total, because it genuinely is shared;
+    #   * the overall ceiling is DERIVED from those two, so adding a 27th lane
+    #     cannot red the gate on its own — which the flat number did.
+    # Detail that does not fit belongs in docs/plan/notes/<lane>.md, which
+    # gen-plan.py does not read and this gate does not count.
+    # `scripts/archive-plan-status.py` performs the move without losing a byte.
+    LANE_CAP = 3_000
+    GLOBAL_CAP = 32_000
+    lane_sources = [
+        path for path in sorted((ROOT / "docs/plan/status").glob("*.md"))
         if path.name != "README.md"
     ]
-    authored = sum(path.stat().st_size for path in sources)
-    if authored > 52_000:
-        # Report the SCOPE, not just the verdict. This gate used to emit one
-        # total and the instruction "move journal/detail to a result note",
-        # which does not say which of 54 files to move or how much is enough --
-        # so the number grew 0 -> 54,398 -> 98,180 -> 233,888 in two days
-        # without anyone being told where. Naming the largest sources and the
-        # global/status split makes the failure actionable, which is
-        # docs/refactor-2026-08/04-gates-and-truth.md T1 applied to this gate.
-        by_dir: dict[str, int] = {}
-        for path in sources:
-            by_dir[path.parent.name] = by_dir.get(path.parent.name, 0) + path.stat().st_size
-        worst = sorted(sources, key=lambda p: p.stat().st_size, reverse=True)[:5]
-        detail = "; ".join(
-            f"{p.relative_to(ROOT)} {p.stat().st_size}" for p in worst
-        )
-        split = ", ".join(f"{d}/ {n}" for d, n in sorted(by_dir.items()))
+    global_sources = [
+        path for path in sorted((ROOT / "docs/plan/global").glob("*.md"))
+        if path.name != "README.md"
+    ]
+    global_bytes = sum(path.stat().st_size for path in global_sources)
+    lane_bytes = sum(path.stat().st_size for path in lane_sources)
+    authored = global_bytes + lane_bytes
+    derived_ceiling = GLOBAL_CAP + LANE_CAP * len(lane_sources)
+
+    over = [
+        (path, path.stat().st_size)
+        for path in lane_sources
+        if path.stat().st_size > LANE_CAP
+    ]
+    for path, size in sorted(over, key=lambda pair: -pair[1]):
         errors.append(
-            f"PLAN.md sources total {authored} bytes (>52 KB) across "
-            f"{len(sources)} files ({split}); move journal/detail to a result "
-            f"note. Largest: {detail}"
+            f"{path.relative_to(ROOT)} is {size} bytes (> {LANE_CAP}); move the "
+            f"detail to docs/plan/notes/{path.name} — "
+            f"`python3 scripts/archive-plan-status.py --apply` does it without "
+            "losing anything, and skips files another lane has uncommitted"
+        )
+    if global_bytes > GLOBAL_CAP:
+        biggest = sorted(global_sources, key=lambda p: -p.stat().st_size)[:3]
+        detail = "; ".join(f"{p.name} {p.stat().st_size}" for p in biggest)
+        errors.append(
+            f"docs/plan/global/ totals {global_bytes} bytes (> {GLOBAL_CAP}); "
+            f"largest: {detail}"
+        )
+    if authored > derived_ceiling:
+        errors.append(
+            f"PLAN.md sources total {authored} bytes (> {derived_ceiling} = "
+            f"{GLOBAL_CAP} global + {LANE_CAP} x {len(lane_sources)} lanes); "
+            f"global/ {global_bytes}, status/ {lane_bytes}"
         )
     if status_path.stat().st_size > 1_500:
         errors.append("STATUS.md is no longer a compact compatibility pointer")

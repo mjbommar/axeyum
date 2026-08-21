@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": "F:qf-nia-univariate-unsat-is-certified",
+  "title": "QF_NIA single-variable polynomial UNSAT carries an independently re-derivable refutation",
+  "statement": "Every single-variable integer polynomial EQUALITY that axeyum decides unsat by a non-square discriminant, non-integral rational quadratic roots, or rational-root exhaustion emits a source-bound certificate carrying only integers, and that certificate re-validates against a FRESH PARSE of the original SMT-LIB text by an argument re-derived from the coefficients alone.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "(declare-fun x () Int)\n(assert (= (+ (* x x) x (- 1)) 0))",
+    "fragment": "QF_NIA",
+    "free_symbols": [
+      "x"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "smt-term-level",
+  "external_status": "unknown",
+  "depends_on": [],
+  "axiom_footprint": [
+    "smtlib2.int-semantics",
+    "axeyum-ir.int-term-collector",
+    "axeyum-solver.i128-guarded-arithmetic",
+    "rational-root-theorem-over-Z"
+  ],
+  "evidence": [
+    {
+      "id": "qf-nia-univariate-unsat-is-certified-1",
+      "kind": "unsat-certificate",
+      "supports": "One named refutation reaches `outcome=verified` end-to-end. Anchored on the row rather than on a test-count line: `test result: ok` is true of a suite that produced no certificate at all, and this pattern is false unless a certificate was produced AND re-derived.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -q -p axeyum-solver --features full --test certified_implies_revalidatable -- --nocapture 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'nia_non_square_discriminant .*kind=unsat-int-univariate-poly .*certified=1 outcome=verified'",
+      "notes": "Anchored on `certified=1 outcome=verified` in one row of `certified_implies_revalidatable`, which re-validates against a FRESH PARSE of the SMT-LIB text rather than the producing run's arena. That distinction is the whole point of the anchor: checking against the producer's own arena passes for any certificate, including one that merely copies the producer's conclusions. `UnsatQuantInstanceSet` shipped `certified=1` over a FAILED re-check on 2026-08-17 because its TermIds meant nothing in a second arena, and this suite exists because of it."
+    },
+    {
+      "id": "qf-nia-univariate-unsat-is-certified-2",
+      "kind": "unsat-certificate",
+      "supports": "The POPULATION, not one survivor. All three arguments -- non-square discriminant, non-integral rational roots, rational-root exhaustion -- must verify. A `grep -q` would still pass if two of the three regressed to `outcome=failed`, which is how a three-argument claim silently becomes a one-argument claim.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -q -p axeyum-solver --features full --test certified_implies_revalidatable -- --nocapture 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'kind=unsat-int-univariate-poly .*certified=1 outcome=verified')\" = 3",
+      "notes": "Count pinned at 3. Raising it is a new argument and must be deliberate; a fall is a regression. Verified discriminating by scripts/new-fact.py: the pattern matches the real output and fails on mutated output."
+    },
+    {
+      "id": "qf-nia-univariate-unsat-is-certified-3",
+      "kind": "unsat-certificate",
+      "supports": "The strand's PRIMARY METRIC moved, not just a test passing. `docs/mathematics-2026-08/01-decide-vs-certify.md` asks, per area, whether a verdict comes with an artifact a third party can check; `QF_NIA` answered no. It now ranks band 1, `artifact already built`.",
+      "check_status": "checked",
+      "checker_command": "out=$(python3 scripts/check-capability-assurance.py --rank --quiet 2>&1) && printf \"%s\\n\" \"$out\" | grep -A1 'band 1' | grep -qE 'QF_NIA'",
+      "notes": "The exit status depends on the FINDING: `grep -A1 'band 1'` fails when QF_NIA sits under any other band, and the same command asserted against `band 3` exits 1 today -- so this discriminates rather than merely running. Deliberately NOT a claim that an external checker reads the artifact: band 1 means one could be pointed at it, and `checked_by` stays `SelfChecker` until one is."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-08-20",
+    "established_by": "agent-capability-assurance",
+    "source": "crates/axeyum-solver/src/nia_univariate_cert.rs (producer + independent checker + 13 white-box tests); crates/axeyum-solver/tests/nia_univariate_cert.rs (6 black-box tests); crates/axeyum-solver/tests/certified_implies_revalidatable.rs (the general obligation); commit 119a91c53"
+  },
+  "notes": "WHAT THIS DOES NOT SAY. (1) It does not say QF_NIA is certified. It covers single-variable polynomial EQUALITIES only. Multivariate NIA, inequalities of degree >= 3, and |a0| past the checker's scan bound (2^20) stay DECIDED BUT NOT CERTIFIED -- and that bound is deliberate: the checker proves divisor-set completeness by scanning 1..=|a0| precisely so it does not reuse the producer's sqrt-with-cofactors enumeration, which is where a completeness bug would hide. Reusing it would raise coverage and lower what coverage means. (2) It does not say an external checker has read the artifact. The re-derivation is in-tree, so this is the self-checker tier, not the external-artifact tier; Lean reconstruction of these certificates is not done. (3) It does not say the certificate is minimal or canonical. (4) The negative-discriminant case is NOT covered here -- it keeps its own certificate, because an autogenesis operation is registered against that shape and redefining a pinned shape is not an upgrade. HOW HARD THE CHECKER WAS TESTED. Nine guards, each deleted in turn; all nine now kill exactly one test. The first run killed only five: four guards were removable with everything green, because another guard rejected the same forgery first. Isolating them needed certificates the producer would never emit -- notably a degree-2 argument over `x^3+x^2+x-3 = 0`, which is SATISFIABLE at x=1 and whose leading three coefficients give a genuine non-square 13 with a valid bracket, so every other guard passes and only the degree check prevents certifying a satisfiable query as unsat."
+}

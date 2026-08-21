@@ -47,6 +47,40 @@ print("  settled by route: " + ", ".join(f"{k} {v}" for k, v in route.most_commo
 PY
 python3 scripts/check-fact-dag.py --quiet 2>/dev/null | tail -1 | sed 's/^/  /'
 
+section "TRUSTED BASE — the headline metric, and it was not in this view"
+# CLAUDE.md: "The metric is the trusted base, not the output volume. Assumptions
+# remaining per prelude, and results the system established with nobody writing
+# the proof. A referee checks both in one command." This view showed the second
+# and not the first, so the one command did not exist.
+#
+# Read from the COMMITTED ledger, which derives every number from two kernel
+# measurements rather than authoring them (the previous revision hard-coded the
+# counts and kept publishing a trusted base 33 rows too large after the Int
+# development was proved down). The authority is
+# `python3 scripts/gen-lean-axiom-ledger.py --check`, which rebuilds the
+# isolated preludes; this is its pinned output.
+if [ -f docs/plan/generated/lean-axiom-ledger.md ]; then
+  # FIRST table only. The ledger has two whose header starts `| Prelude `, and
+  # a `sed` range prints both -- the second is 77 rows of per-axiom SHA-256,
+  # which buries the six-line summary this section exists to show.
+  awk '/^\| Prelude \| Axiom \|/{p=1} p{print} p&&/^$/{exit}' \
+    docs/plan/generated/lean-axiom-ledger.md | sed 's/^/  /'
+  grep -E '^- \*\*[0-9]+ total assumptions|^- \*\*[0-9]+ assumptions have been retired' \
+    docs/plan/generated/lean-axiom-ledger.md | sed 's/^/  /'
+  echo "  authority: python3 scripts/gen-lean-axiom-ledger.py --check   (rebuilds the preludes)"
+  # The constructed carriers ARE in the table above as of 2026-08-18: the
+  # ledger's coverage command now passes `--include-constructed`, and
+  # `EXPECTED_PRELUDES` lists `creal`/`complex` so dropping that flag is a gate
+  # failure rather than a quieter ledger. Before that they were absent, and
+  # grepping the inventory for them returned an empty answer to a question it
+  # was never asked -- which is how one brief concluded ℝ-as-constructed was
+  # axiom-free from evidence that did not exist.
+  echo "  every row above is pinned BY VALUE; a moved number fails --check with"
+  echo "  its direction (a rise is a regression, a fall is a result to publish)."
+else
+  echo "  (docs/plan/generated/lean-axiom-ledger.md absent — run scripts/gen-lean-axiom-ledger.py)"
+fi
+
 section "NEXT — what to work on (just next, or --unlocks for the full queue)"
 python3 scripts/fact-frontier.py 2>/dev/null | sed 's/^/  /'
 
@@ -57,6 +91,31 @@ if [ -f docs/plan/generated/proof-gap-matrix.md ]; then
 else
   echo "  (docs/plan/generated/proof-gap-matrix.md absent — run scripts/gen-proof-gap-matrix.py)"
 fi
+
+section "TRANSCRIPTION — does a rendered module say anything about its query?"
+# Read from the COMMITTED manifests, not by re-running: the gate takes ~35s and
+# this view must stay instant. `scripts/check-lra-hypothesis-binding.py` is the
+# authority; these files are its pinned output.
+#
+# Lean accepting a module proves `False` follows from the axioms the module
+# DECLARES. It says nothing about whether those axioms are the `.smt2` file's
+# `(assert ...)` lines. That is the link the residual-trust audit ranks as
+# WEAKER THAN THE KERNEL, and these verdicts are what measure it.
+for spec in "structural-instances:structural:equated terms are subterms of the query" \
+            "structural-anchored-instances:structural-anchored:both of the two below" \
+            "anchored-instances:anchored:the query FORCES the assumed disequality" \
+            "attestations:attested:transcribes NOTHING — the honest other half"; do
+  stem="${spec%%:*}"; rest="${spec#*:}"; label="${rest%%:*}"; gloss="${rest#*:}"
+  file="scripts/hypothesis-binding-$stem.txt"
+  n=$(grep -cvE '^[[:space:]]*#|^[[:space:]]*$' "$file" 2>/dev/null || echo '?')
+  printf '  %-20s %6s  %s\n' "$label" "$n" "$gloss"
+done
+printf '  %-20s %6s  %s\n' "bound" "(gate)" "every hypothesis binds back to an (assert ...) line"
+echo "  authority: python3 scripts/check-lra-hypothesis-binding.py  (~35s)"
+
+section "CERTIFICATE GAP — logics we decide but no external checker reads"
+python3 scripts/check-capability-assurance.py --rank --quiet 2>/dev/null \
+  | grep -v '^CAPABILITY_ASSURANCE|' | sed 's/^/  /'
 
 section "LEAN — how much of what Lean reads is REASONING, not attestation"
 echo "  A structural attestation is an axiom pair Lean cannot fail on the merits."

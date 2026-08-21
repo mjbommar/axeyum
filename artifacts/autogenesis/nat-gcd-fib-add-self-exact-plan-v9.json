@@ -1,0 +1,13 @@
+{
+  "schema_version":1,
+  "kind":"axeyum-autogenesis-nat-gcd-fib-add-self-exact-plan-v9",
+  "state":"preregistered-observed-definitional-compatibility-class-before-code-or-rerun",
+  "predecessor":{"path":"artifacts/autogenesis/nat-gcd-fib-add-self-exact-result-v8.json"},
+  "correction":{"receipt":"checked_reused_declaration_compatibility for Nat.gcd_zero_left","old_required":"kernel-type-shape","new_required":"translated-definitional-equality","alias_changed":false,"proof_route_changed":false,"other_source_changes_authorized":false},
+  "acceptance":{"one_driver_build":true,"fresh_complete_invocations":2,"capsule_compositions":8,"existing_zero_left_reuses":2,"translated_definitional_alias_reuses":2,"target_leaf_reuses":4,"zero_left_alias_submissions":2,"local_gcd_comm_submissions":2,"exact_target_submissions":2,"outputs_byte_identical":true,"target_axiom_footprint":[]},
+  "budget":{"max_driver_builds":1,"max_complete_invocations":2,"max_capsule_compositions":8,"max_exact_target_submissions":2,"max_retries":0},
+  "authority":{"target_credit_before_acceptance":0,"fact_status_changes":0,"evaluation_credit":0,"ledger_writes":0},
+  "next_on_accept":"Issue a dependency-bound theorem receipt, admit the exact fact through the crash-safe ledger transaction, and verify the newly unlocked frontier.",
+  "output":"artifacts/autogenesis/nat-gcd-fib-add-self-exact-result-v9.json",
+  "limitations":"This authorizes one compatibility-class policy correction only; no credit exists before two complete deterministic runs."
+}

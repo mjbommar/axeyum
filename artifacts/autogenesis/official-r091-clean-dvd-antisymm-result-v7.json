@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-r091-clean-dvd-antisymm-result-v7",
+  "state": "positive-factor-ready-first-run-declined-at-missing-multiplicative-monotonicity-second-skipped",
+  "plan": {"path": "artifacts/autogenesis/official-r091-clean-dvd-antisymm-plan-v7.json", "sha256": "80cabd917c7f711a732168fefd34435ac903ea9c3e11a25a5c01925835618ce9"},
+  "implementation_commit": "29c126c0e",
+  "evidence_pack": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/29c126c0e-official-r091-clean-dvd-antisymm-v7", "manifest_sha256": "0ec6fa6b0a5accddae6373c05da9a1ae2ec22aa7bb99a39fe027e3bdeecd1f6c", "directory_mode": "0555", "file_mode": "0444"},
+  "decline": {"stage": "official-le-of-dvd-handle-resolution-after-positive-factor-ready", "class": "MissingDeclaration", "name": "Nat.mul_le_mul_left", "partial_kernel_published": false},
+  "execution": {"complete_invocations": 1, "successful_cancellation_compositions": 1, "support_submissions": 2, "exports": 0, "imports": 0, "exact_target_submissions": 0, "retries": 0, "second_invocation_skipped": true},
+  "authority": {"support_credit": 0, "target_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_boundary": "Reconstruct target-owned multiplicative monotonicity from Nat.le.rec, and target-owned order antisymmetry from primitive endpoint induction because the accepted cancellation receipt proves both official names absent.",
+  "limitations": "Two local supports were unexported and receive no credit; no clean order or Fibonacci target was established."
+}

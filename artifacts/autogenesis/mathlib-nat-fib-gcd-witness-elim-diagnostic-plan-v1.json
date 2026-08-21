@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-witness-elim-diagnostic-plan-v1",
+  "state": "preregistered-successor-witness-stage-inference-before-code",
+  "input": {
+    "result": "artifacts/autogenesis/mathlib-nat-fib-gcd-step-branch-diagnostic-result-v1.json",
+    "sha256": "936814b19e7cf719fde2f1cf0b7345fec081ff1c31d3a12d77cb9c4b68b26ee7"
+  },
+  "implementation_prestate": {
+    "path": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+    "sha256": "d0200edd186038d85b72160664dcc4bda10b63228885e9b8ae628ed896f719f5"
+  },
+  "diagnostic": {
+    "mode": "--target-native-fib-gcd-witness-elim-diagnostic",
+    "permitted_refactor": "return named expressions from the unchanged fib_gcd_witness_elim body while production continues to consume only its final result",
+    "ordered_inferences": [
+      "induction hypothesis followed by gcd commutativity",
+      "reversed quotient-iteration transport",
+      "quotient equation congruence",
+      "combined equality chain",
+      "closed existential minor",
+      "final Exists.rec application"
+    ],
+    "proof_values_rendered": 0,
+    "theorem_statement_changes": 0,
+    "proof_route_changes": 0
+  },
+  "budget": {
+    "complete_diagnostics": 1,
+    "helper_theorem_submissions": 1,
+    "ordered_stage_inferences": 6,
+    "target_theorem_submissions": 0,
+    "capsule_writes": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "next_on_accept": "localize the mismatch to successor-branch binder assembly",
+  "next_on_decline": "retain the first failing named witness-elimination stage and preregister one repair there",
+  "limitations": "This diagnostic checks only closed forms of the six existing successor witness-elimination stages and grants no theorem credit."
+}

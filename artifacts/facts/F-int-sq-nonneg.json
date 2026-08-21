@@ -56,7 +56,7 @@
   "provenance": {
     "date": "2026-08-15",
     "established_by": "axeyum-lean-kernel build_int_prelude, lane real-keystone",
-    "source": "the one law of the axiomatized `Real` package (`Real.sq_nonneg`, the nonnegativity primitive each SOS square rests on) that had no `Int` counterpart; proving it completed ZZ as a model of all 30 Real axioms (ADR-0456)"
+    "source": "the one law of the axiomatized `AxReal` package (`AxReal.sq_nonneg`, the nonnegativity primitive each SOS square rests on) that had no `Int` counterpart; proving it completed ZZ as a model of all 30 AxReal axioms (ADR-0456)"
   },
   "notes": "The proof needs no sign analysis, and that is the content: `Int.mul` sends BOTH same-sign branches into `Int.ofNat` -- `ofNat m * ofNat m` is `ofNat (m*m)` and `negSucc m * negSucc m` is `ofNat (succ m * succ m)` -- and a square is always same-sign. So neither branch of the `Int.rec` split has a hypothesis to use or to refute, and both close with `Nat.zero_le` at the magnitude the branch produced. `formal.statement` is `Kernel::render_lean` of the admitted type, verbatim from `int_theorem_inventory`."
 }

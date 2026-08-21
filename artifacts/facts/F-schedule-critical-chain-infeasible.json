@@ -17,23 +17,23 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "axiom_footprint": [
-    "Real",
-    "Real.add",
-    "Real.add_assoc",
-    "Real.add_comm",
-    "Real.add_le_add",
-    "Real.add_neg",
-    "Real.add_zero",
-    "Real.le",
-    "Real.le_of_lt",
-    "Real.le_refl",
-    "Real.lt",
-    "Real.lt_irrefl",
-    "Real.lt_of_lt_of_le",
-    "Real.neg",
-    "Real.one",
-    "Real.zero",
-    "Real.zero_lt_one",
+    "AxReal",
+    "AxReal.add",
+    "AxReal.add_assoc",
+    "AxReal.add_comm",
+    "AxReal.add_le_add",
+    "AxReal.add_neg",
+    "AxReal.add_zero",
+    "AxReal.le",
+    "AxReal.le_of_lt",
+    "AxReal.le_refl",
+    "AxReal.lt",
+    "AxReal.lt_irrefl",
+    "AxReal.lt_of_lt_of_le",
+    "AxReal.neg",
+    "AxReal.one",
+    "AxReal.zero",
+    "AxReal.zero_lt_one",
     "axeyum.reconstruct.lra.hyp._2",
     "axeyum.reconstruct.lra.hyp._4",
     "axeyum.reconstruct.lra.hyp._6",
@@ -63,13 +63,13 @@
     {
       "id": "schedule-chain-module-shape",
       "kind": "instance-pin",
-      "supports": "axiom_footprint: the 30 axioms the kernel module actually rests on.",
+      "supports": "axiom_footprint: the 26 axioms the kernel module actually rests on.",
       "check_status": "checked",
       "checker_command": "cargo run --release -q -p axeyum-solver --features full --example infeasibility_farkas_lean -- artifacts/instances/infeasibility/schedule-deadline.smt2 --require-kernel --expect-axioms 26",
       "checkers": [
         "axeyum-lean-kernel-render-lean-module-declaration-count"
       ],
-      "notes": "The rendered module declares 30 axioms: 21 ordered-field prelude (the `Real` carrier, its operations, and the order/additive laws), 4 variable axioms (one abstract `Real` per start time), and 5 hypothesis axioms (one per core row, in the canonical `le L zero` form). This route IS NOT AXIOM-FREE and cannot presently be: `crates/axeyum-lean-kernel/src/arith_prelude.rs` declares `Real` and every field law through `declare_axiom`, with no theorems and no inductives, so `[]` here would be a lie the validator would have accepted (it only rejects `[]` off the kernel-lean route). CONTRAST WITH THE FACADE: `prove_unsat_to_lean_module` on the SAME five rows routes to `ProofFragment::LraDpll` and emits a 21-line STRUCTURAL SHIM -- `axiom prop : P`, `axiom hyp : Not P`, `theorem _ : False := hyp prop` -- which kernel-checks, is sorry-free, and contains no arithmetic whatsoever. Calling that 'the Farkas proof reached the kernel' would be false, so the example prints and labels both. SIZE: the real term is 5,099,060 bytes. The prelude has no numerals, so the constant 20 reconstructs as a 20-fold `Real.add Real.one` chain and every cancellation is an explicit Eq-rewrite; a 5-row explanation becomes a 5 MB proof term."
+      "notes": "The rendered module declares 26 axioms: 17 ordered-field prelude (the `AxReal` carrier, its operations, and the order/additive laws), 4 variable axioms (one abstract `AxReal` per start time), and 5 hypothesis axioms (one per core row, in the canonical `le L zero` form). This route IS NOT AXIOM-FREE and cannot presently be: `crates/axeyum-lean-kernel/src/arith_prelude.rs` declares `AxReal` and every field law through `declare_axiom`, with no theorems and no inductives, so `[]` here would be a lie the validator would have accepted (it only rejects `[]` off the kernel-lean route). WHAT THE FACADE DOES -- this paragraph is REPLACED, not renumbered. It used to read: `prove_unsat_to_lean_module` on the SAME five rows routes to `ProofFragment::LraDpll` and emits a 21-line STRUCTURAL SHIM (`axiom prop : P`, `axiom hyp : Not P`, `theorem _ : False := hyp prop`) with no arithmetic in it, so calling that 'the Farkas proof reached the kernel' would be false. That stopped being true when the facade dispatch was fixed on 2026-08-15. Measured 2026-08-18 on this same instance: the facade routes to `ProofFragment::Lra`, emits a 62-line module that CARRIES ordered-field content (it declares an `axeyum.reconstruct.lra.hyp._N : AxReal.le ...` hypothesis axiom), self-labels `theory-reconstruction`, and the strict front door `prove_unsat_to_lean_theory_module` ACCEPTS it as `Lra` instead of declining -- so `--require-kernel` is a live ratchet on the facade route too, not only on the direct one. The example still prints and labels both routes, and still cross-checks its structural scan against the module's self-label, because the scan was silently broken for as long as the facade emitted a shim. SIZE: the kernel proof term is 5,101,317 bytes and the rendered module 5,105,945 (measured 2026-08-18). This number DRIFTS with the prelude and nothing gates it -- the 5,099,060 recorded on 2026-08-14 was 2,257 bytes smaller -- so read it as ~5.1 MB with a date, not as a pin. The prelude has no numerals, so the constant 20 reconstructs as a 20-fold `AxReal.add AxReal.one` chain and every cancellation is an explicit Eq-rewrite; a 5-row explanation becomes a 5 MB proof term. RE-RUN 2026-08-19 after ADR-0522 renamed the axiomatized package `Real` -> `AxReal`: the same checker_command exits 0 with `kernel axioms 26 = 17 prelude + 4 variable + 5 hypothesis`, so the 17 prelude rows above are the same 17 declarations under their new spelling and no row was transcribed from the old run. The module grew to 6,010,498 bytes and the proof term to 6,004,703 -- the rename is +2 bytes per occurrence and the term is mostly occurrences; the size still DRIFTS and is still not pinned. That re-run also REPAIRED this evidence: the example's `carries ordered-field content` scan matched `ty.contains(\"Real.le\")`, which `CReal.le` satisfies, so it had been reporting the right verdict for the wrong carrier ever since the facade route moved to the constructed reals. It now names both carriers in full."
     }
   ],
   "provenance": {
@@ -77,5 +77,5 @@
     "established_by": "axeyum lane `infeasibility`, 2026-08-14: crates/axeyum-solver/examples/infeasibility_farkas_lean.rs",
     "source": "the measured irreducible core of an instance authored by this lane (scripts/gen-infeasibility-instances.py)"
   },
-  "notes": "WHAT A `theorem _ : False` MEANS HERE, since it reads alarmingly out of context. The module declares the five constraints as hypothesis axioms and derives `False` FROM THEM; that is a refutation of their conjunction, i.e. exactly the proposition in `formal.statement`, and the kernel environment is discarded with them. `formal.language` is `smtlib2` and not `lean4` for this reason: the rendered `theorem infeasible : False` carries no content without its hypothesis axioms, so quoting it as the formal statement would be uninformative at best. SCOPE: this is the largest linear-arithmetic reconstruction this repository has run. Measured: all fourteen call sites of `reconstruct_lra_proof` outside this lane's example live in crates/axeyum-solver/src/reconstruct/tests.rs and pass an assertion slice of length 1 (a negative test), 2, or 3. This is 5 constraints over 4 variables with non-unit integer constants, and it went through `try_general_farkas` unchanged.\n\nAxiom footprint corrected 30 -> 26 on 2026-08-15 (coordinator), measured rather than transcribed. The four dropped entries -- False, Eq, Eq.refl, Eq.rec -- are no longer asserted: the rendered module declares False and Eq as `inductive`, with Eq.refl its constructor and Eq.rec its recursor, and Not as a `def`. The module still references all four (False 3x, Eq 7x), so this is a real shrink of the trusted surface, not their removal. It went unnoticed because the checker exited 0 whatever the count was; it now carries `--expect-axioms 26` and fails on drift in either direction, including when the kernel route is never reached."
+  "notes": "WHAT A `theorem _ : False` MEANS HERE, since it reads alarmingly out of context. The module declares the five constraints as hypothesis axioms and derives `False` FROM THEM; that is a refutation of their conjunction, i.e. exactly the proposition in `formal.statement`, and the kernel environment is discarded with them. `formal.language` is `smtlib2` and not `lean4` for this reason: the rendered `theorem infeasible : False` carries no content without its hypothesis axioms, so quoting it as the formal statement would be uninformative at best. SCOPE: this is the largest linear-arithmetic reconstruction this repository has run. Measured: all fourteen call sites of `reconstruct_lra_proof` outside this lane's example live in crates/axeyum-solver/src/reconstruct/tests.rs and pass an assertion slice of length 1 (a negative test), 2, or 3. This is 5 constraints over 4 variables with non-unit integer constants, and it went through `try_general_farkas` unchanged.\n\nAxiom footprint corrected 30 -> 26 on 2026-08-15 (coordinator), measured rather than transcribed. The four dropped entries -- False, Eq, Eq.refl, Eq.rec -- are no longer asserted: the rendered module declares False and Eq as `inductive`, with Eq.refl its constructor and Eq.rec its recursor, and Not as a `def`. The module still references all four (False 3x, Eq 7x), so this is a real shrink of the trusted surface, not their removal. It went unnoticed because the checker exited 0 whatever the count was; it now carries `--expect-axioms 26` and fails on drift in either direction, including when the kernel route is never reached.\n\nProse-vs-footprint drift, found again 2026-08-18 (lane `agent-ledger-freshness`) and this time gated. The 30 -> 26 correction above changed `axiom_footprint` and the `--expect-axioms` flag but NOT the two English sentences next to them, so this evidence entry still said `the 30 axioms` and `21 ordered-field prelude` for three days. Re-measuring found a second, larger staleness in the same entry that no number check would have caught: the CONTRAST paragraph described a facade that emits a 21-line structural shim, and the facade has emitted a real 62-line `Lra` module since the dispatch fix of 2026-08-15. `scripts/check-fact-derived-numbers.py` now re-derives every count a fact asserts about its OWN `axiom_footprint` and fails on disagreement; it cannot see the prose claim, which is why that one survived three re-reads."
 }

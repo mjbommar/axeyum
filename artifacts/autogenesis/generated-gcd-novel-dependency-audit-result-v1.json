@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-generated-gcd-novel-dependency-audit-result",
+  "state": "generic-well-founded-fix-equation-is-sole-generated-gcd-assumption-carrier",
+  "plan": {
+    "path": "artifacts/autogenesis/generated-gcd-novel-dependency-audit-plan-v1.json",
+    "sha256": "729aa56b7a35db2545c276cd1619af5de25b8b369e6bbf88be6f870aaa3bee78"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/38e40236f-generated-gcd-novel-dependency-audit-v1/manifest.json",
+    "sha256": "911879361c1dabffde75aa997fefb58bd72d7f983c281faf1ca33cb9d955febd",
+    "mode": "0444"
+  },
+  "rows": [
+    {
+      "name": "WellFounded.Nat.fix_eq",
+      "declaration_sha256": "157535ba2596c465ee00f085e3c21bf5a9f407a4e60f81936ef86b7041455054",
+      "axiom_footprint": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound"],
+      "direct_theorem_dependencies": ["WellFounded.Nat.eager_eq", "WellFounded.Nat.fix._proof_1", "WellFounded.Nat.fix._proof_2", "WellFounded.Nat.fix.go._proof_1", "WellFounded.Nat.fix.go.congr_simp", "WellFounded.Nat.fix.go_congr", "congr", "congrArg", "funext"],
+      "class": "other-assumption-bearing"
+    },
+    {
+      "name": "_private.Init.Data.Nat.Gcd.0.Nat.gcd._unary._proof_1",
+      "declaration_sha256": "f5b69bfec4ab75069d50c68ffaaeb822b3f326db24e910f1d85fe98ef7a46606",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": ["Nat.mod_lt", "Nat.zero_lt_of_ne_zero"],
+      "class": "empty-footprint"
+    },
+    {
+      "name": "_private.Init.Data.Nat.Gcd.0.PSigma.casesOn._arg_pusher",
+      "declaration_sha256": "32e5469c76a9f8a7a90147912f73a3d2b5361cabeb6a0ac77bc56bc850682484",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": [],
+      "class": "empty-footprint"
+    }
+  ],
+  "summary": {
+    "population": 3,
+    "empty_footprint": 2,
+    "other_assumption_bearing": 1,
+    "sole_assumption_carrier": "WellFounded.Nat.fix_eq",
+    "private_termination_proof_empty": true,
+    "argument_pusher_empty": true,
+    "primitive_reconstruction_plan_authorized": true
+  },
+  "budget": {
+    "exporter_invocations": 0,
+    "batch_importer_runs": 1,
+    "proof_bearing_stream_reads": 1,
+    "retries": 0,
+    "reconstruction_source_compilations": 0,
+    "new_theorem_submissions": 0,
+    "exact_target_submissions": 0,
+    "executor_invocations": 0
+  },
+  "authority": {
+    "proof_terms_rendered": 0,
+    "theorem_types_rendered": 0,
+    "theorem_values_rendered": 0,
+    "support_theorem_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Preregister one primitive bounded reconstruction attempt for the official gcd equation that may use the empty private termination proof and argument pusher but must not depend on WellFounded.Nat.fix_eq or any quotient axiom.",
+  "limitations": "The result authorizes only a later bounded reconstruction plan. It does not establish that the official gcd equation is axiom-free or grant theorem, target, evaluation, fact, or ledger credit."
+}

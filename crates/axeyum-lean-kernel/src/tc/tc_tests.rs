@@ -165,6 +165,7 @@ fn whnf_cache_retains_only_the_current_environment_revision() {
     let first = k.app(first_lam, first_arg);
     assert_eq!(k.whnf(first), first_arg);
     assert!(k.whnf_cache.1.contains_key(&first));
+    assert!(k.whnf_core_cache.1.contains_key(&first));
 
     let axiom = k.name_str(anon, "cacheRevisionAxiom");
     k.add_declaration(Declaration::Axiom {
@@ -181,6 +182,107 @@ fn whnf_cache_retains_only_the_current_environment_revision() {
     assert_eq!(k.whnf_cache.0, k.env.revision());
     assert!(k.whnf_cache.1.contains_key(&second));
     assert!(!k.whnf_cache.1.contains_key(&first));
+    // The full-δ memo is keyed on the same revision and has to age out with it.
+    assert_eq!(k.whnf_core_cache.0, k.env.revision());
+    assert!(k.whnf_core_cache.1.contains_key(&second));
+    assert!(!k.whnf_core_cache.1.contains_key(&first));
+}
+
+/// A δ-normal form memoised **before** a declaration was admitted must not be
+/// answered **after** it.
+///
+/// The other revision test reaches its cache through a `whnf` that also
+/// *inserts*, so a memo whose insert path checks the revision looks correct
+/// even when its lookup path does not — and the two paths are separate code.
+/// This one only ever looks up: the same `ExprId` is a stuck `Const` before the
+/// definition exists and δ-unfolds to its value afterwards, with no intervening
+/// write to the entry. A memo that trusts a stale revision on the way *in*
+/// hands back the stuck form for a constant the environment now unfolds.
+#[test]
+fn a_normal_form_memoised_before_a_declaration_is_not_answered_after_it() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let name = k.name_str(anon, "revisionSensitiveDefinition");
+    let constant = k.const_(name, vec![]);
+
+    assert_eq!(
+        k.whnf(constant),
+        constant,
+        "an undeclared constant has nothing to unfold to"
+    );
+    assert!(k.whnf_core_cache.1.contains_key(&constant));
+
+    // `def revisionSensitiveDefinition : Type := Prop`.
+    let zero = k.level_zero();
+    let one = k.level_succ(zero);
+    let type_ = k.sort(one);
+    let prop = k.sort(zero);
+    k.add_declaration(Declaration::Definition {
+        name,
+        uparams: vec![],
+        ty: type_,
+        value: prop,
+        hint: crate::env::ReducibilityHint::Regular(0),
+    })
+    .expect("the definition admits");
+
+    assert_eq!(
+        k.whnf(constant),
+        prop,
+        "the constant now δ-unfolds; a stale memo would still call it stuck"
+    );
+}
+
+/// The **context-scoped** half of the full-δ memo ages out with the environment
+/// revision too, and nothing else in this suite was reaching that half.
+///
+/// The closed counterpart above cannot cover it: closed and open expressions go
+/// to two different caches with two separate revision checks, and dropping the
+/// open one leaves every closed test green. The probe is deliberately an
+/// application of an *undeclared* constant to a free variable, so it mentions a
+/// free variable (hence the context-scoped half), is stuck before the
+/// definition exists, and β-reduces to that variable afterwards — with the
+/// **same** `LocalContext` live across the admission, never pushed or popped,
+/// so `push`/`pop` clearing cannot be what saves it.
+#[test]
+fn a_context_scoped_normal_form_ages_out_with_the_environment_revision() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let prop = k.sort_zero();
+    let name = k.name_str(anon, "revisionSensitiveOpenDefinition");
+    let constant = k.const_(name, vec![]);
+    let variable = k.fvar(0);
+    let open = k.app(constant, variable);
+    assert!(
+        k.has_fvars(open),
+        "the probe must reach the context-scoped half"
+    );
+
+    let mut ctx = LocalContext::new();
+    assert_eq!(
+        k.whnf_core(open, &mut ctx),
+        open,
+        "an undeclared constant has nothing to unfold to"
+    );
+
+    // `def revisionSensitiveOpenDefinition : Prop -> Prop := fun (x : Prop) => x`.
+    let ty = k.pi(anon, prop, prop, BinderInfo::Default);
+    let body = k.bvar(0);
+    let value = k.lam(anon, prop, body, BinderInfo::Default);
+    k.add_declaration(Declaration::Definition {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+        hint: crate::env::ReducibilityHint::Regular(0),
+    })
+    .expect("the definition admits");
+
+    assert_eq!(
+        k.whnf_core(open, &mut ctx),
+        variable,
+        "the same context must not answer from before the declaration"
+    );
 }
 
 /// The kernel-global WHNF cache is keyed on `(environment revision, ExprId)`
@@ -239,12 +341,15 @@ fn rollback_clears_environment_sensitive_caches() {
     assert_eq!(k.whnf(c), c);
     assert!(!k.infer_closed_cache.is_empty());
     assert!(!k.whnf_cache.1.is_empty());
+    assert!(!k.whnf_core_cache.1.is_empty());
 
     k.rollback(checkpoint);
     assert!(!k.env.contains(name));
     assert!(k.infer_closed_cache.is_empty());
     assert!(k.whnf_cache.1.is_empty());
     assert_eq!(k.whnf_cache.0, k.env.revision());
+    assert!(k.whnf_core_cache.1.is_empty());
+    assert_eq!(k.whnf_core_cache.0, k.env.revision());
 }
 
 /// A `Let` whnfs to its instantiated body (zeta).
@@ -939,6 +1044,54 @@ fn context_scoped_whnf_entries_do_not_leak_between_contexts() {
         keys.iter().all(|&key| !k.has_fvars(key)),
         "every key in the context-free cache must be closed"
     );
+    // The same two obligations for the full-δ memo one layer up, which has its
+    // own kernel-global half and therefore its own way to go wrong.
+    assert!(
+        !k.whnf_core_cache.1.contains_key(&probe),
+        "a context-dependent δ-normal form must never reach the kernel-global \
+         whnf_core cache"
+    );
+    let core_keys: Vec<ExprId> = k.whnf_core_cache.1.keys().copied().collect();
+    assert!(
+        core_keys.iter().all(|&key| !k.has_fvars(key)),
+        "every key in the context-free whnf_core cache must be closed"
+    );
+}
+
+/// **Pushing** a local declaration invalidates the memoised δ-normal form too,
+/// not just popping one.
+///
+/// The two directions fail differently and are not the same guard. `pop`
+/// removes the justification for a reduction that already fired; `push`
+/// *supplies* one, so a memo that survives it answers "stuck" for a term the
+/// context now reduces — a spurious rejection rather than a spurious
+/// acceptance, but a wrong answer from a cache either way, and the kind that
+/// disappears on a rerun.
+#[test]
+fn pushing_a_local_invalidates_a_memoised_stuck_reduction() {
+    let mut k = Kernel::new();
+    let (probe, minor, true_ty) = k_like_true_rec_probe(&mut k, 0);
+    let anon = k.anon();
+
+    let mut ctx = LocalContext::new();
+    let fvar = ctx.fresh_fvar();
+    assert_eq!(
+        k.whnf_core(probe, &mut ctx),
+        probe,
+        "with no local for the major, reduction cannot know it is a True"
+    );
+
+    ctx.push(LocalDecl {
+        fvar,
+        name: anon,
+        ty: true_ty,
+        info: BinderInfo::Default,
+    });
+    assert_eq!(
+        k.whnf_core(probe, &mut ctx),
+        minor,
+        "the pushed local justifies K-like reduction; a stale memo would say stuck"
+    );
 }
 
 /// Popping the local declaration that justified a K-like reduction invalidates
@@ -970,17 +1123,15 @@ fn popping_the_local_that_justified_k_reduction_invalidates_the_entry() {
     );
 }
 
-/// The reconstruction preludes are **not** accelerated, and this is the
-/// mechanism rather than a hope.
+/// The reconstruction preludes use official Lean's Bool constructor order, so
+/// literal arithmetic acceleration and generated proof terms share one
+/// computational convention.
 ///
-/// `build_logic_prelude` declares `Bool` with its constructors in the order
-/// `[true, false]`. Lean's order is `[false, true]`, and `Bool.false` being
-/// constructor 0 is what `Nat.beq`'s accelerated result means. So the whole
-/// table is refused for any environment built by our preludes, every operation
-/// keeps computing by its own declared body, and nothing about the 119-theorem
-/// `nat` inventory or its empty axiom footprint can move because of this rule.
+/// `Bool.false` being constructor 0 is load-bearing: it is what the kernel's
+/// name-keyed `Nat.beq` accelerator means. The separate wrong-order fixture in
+/// `tests/nat_literal_arithmetic.rs` retains the fail-closed negative control.
 #[test]
-fn the_reconstruction_prelude_is_not_accelerated() {
+fn the_reconstruction_prelude_uses_leans_bool_order_and_acceleration() {
     let mut kernel = Kernel::new();
     let prelude = crate::build_nat_prelude(&mut kernel).expect("nat prelude must build");
 
@@ -999,17 +1150,15 @@ fn the_reconstruction_prelude_is_not_accelerated() {
     };
     assert_eq!(
         ctor_names.as_slice(),
-        [true_, false_],
-        "this test is about our prelude's constructor order; if it changed, the \
-         acceleration guard changed meaning with it"
+        [false_, true_],
+        "the reconstruction prelude must match official Lean's Bool order"
     );
 
     assert!(
-        kernel.nat_binop_table().is_none(),
-        "no literal arithmetic rule may fire in an environment whose `Bool` is \
-         not Lean's"
+        kernel.nat_binop_table().is_some(),
+        "the verified prelude shape must activate Lean-compatible Nat acceleration"
     );
-    // And the prelude's own `Nat.add` still computes, by its own definition.
+    // The prelude's own `Nat.add` agrees with the accelerated result.
     let add = kernel.const_(prelude.add, vec![]);
     let two = kernel.lit(crate::Lit::Nat(crate::NatLit::from(2_u8)));
     let three = kernel.lit(crate::Lit::Nat(crate::NatLit::from(3_u8)));
@@ -1117,5 +1266,120 @@ fn local_let_zeta_fires_in_whnf_core_and_only_a_hit_is_a_context_read() {
         reduced, expected,
         "ζ must re-apply the spine, as Lean's `whnf_core` does through its \
          `App` head"
+    );
+}
+
+/// An **open** entry can δ-unfold to a **closed** link, and that link is stored
+/// in the kernel-global half of the memo — the half whose key has no local
+/// context component at all.
+///
+/// This is the path the entry-gated tripwire could not see. `whnf_core` routes
+/// each chain link into the split memo by *its own* closedness, so a walk that
+/// starts open and closes partway through writes into both halves; asserting
+/// only `entry_closed` looks at neither of those writes. Measured 2026-08-20,
+/// one `build_creal_prelude` routes 6 links this way, so the per-link form of
+/// the tripwire is guarding live traffic rather than a hypothetical.
+///
+/// The probe uses a two-step δ chain (`openToClosedHead` → `closedTail` →
+/// `Prop`) so the closed link is a genuine minted intermediate: `closedTail` is
+/// produced by unfolding, appears nowhere in the entry, and is exactly the kind
+/// of expression the chain memo exists to catch. Deleting the chain loop, or
+/// routing links by the entry's closedness instead of their own, each leaves one
+/// of these assertions failing.
+#[test]
+fn an_open_entry_delta_unfolds_to_a_closed_link_stored_context_free() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let zero = k.level_zero();
+    let one = k.level_succ(zero);
+    let type_ = k.sort(one);
+    let prop = k.sort(zero);
+
+    // `def closedTail : Type := Prop`
+    let tail_name = k.name_str(anon, "closedTail");
+    k.add_declaration(Declaration::Definition {
+        name: tail_name,
+        uparams: vec![],
+        ty: type_,
+        value: prop,
+        hint: crate::env::ReducibilityHint::Regular(0),
+    })
+    .expect("the tail definition admits");
+    let tail = k.const_(tail_name, vec![]);
+
+    // `def openToClosedHead : Type := closedTail`
+    let head_name = k.name_str(anon, "openToClosedHead");
+    k.add_declaration(Declaration::Definition {
+        name: head_name,
+        uparams: vec![],
+        ty: type_,
+        value: tail,
+        hint: crate::env::ReducibilityHint::Regular(1),
+    })
+    .expect("the head definition admits");
+    let head = k.const_(head_name, vec![]);
+
+    // `(fun (_ : Prop) => openToClosedHead) x` — open, because of `x`.
+    let body = k.lam(anon, prop, head, BinderInfo::Default);
+    let mut ctx = LocalContext::new();
+    let fvar = ctx.fresh_fvar();
+    ctx.push(LocalDecl {
+        fvar,
+        name: anon,
+        ty: prop,
+        info: BinderInfo::Default,
+    });
+    let variable = k.fvar(fvar);
+    let entry = k.app(body, variable);
+    assert!(k.has_fvars(entry), "the entry must be open");
+    assert!(!k.has_fvars(tail), "the link must be closed");
+
+    assert_eq!(
+        k.whnf_core(entry, &mut ctx),
+        prop,
+        "the chain runs beta, then two delta steps, to `Prop`"
+    );
+
+    assert!(
+        ctx.whnf_core_cache.1.contains_key(&entry),
+        "the open entry belongs to the context-scoped half"
+    );
+    assert!(
+        !k.whnf_core_cache.1.contains_key(&entry),
+        "an open expression must never reach the context-free half"
+    );
+    assert_eq!(
+        k.whnf_core_cache.1.get(&tail).copied(),
+        Some(prop),
+        "the closed link minted by delta-unfolding the open entry is memoised \
+         context-free — this is the write the entry-gated tripwire never saw"
+    );
+
+    // What the context-free key claims, checked rather than argued: the stored
+    // normal form must be what an empty context computes.
+    let mut fresh = LocalContext::new();
+    let mut pristine = Kernel::new();
+    let pristine_anon = pristine.anon();
+    let pristine_name = pristine.name_str(pristine_anon, "closedTail");
+    let pristine_type = {
+        let z = pristine.level_zero();
+        let o = pristine.level_succ(z);
+        pristine.sort(o)
+    };
+    let pristine_prop = pristine.sort_zero();
+    pristine
+        .add_declaration(Declaration::Definition {
+            name: pristine_name,
+            uparams: vec![],
+            ty: pristine_type,
+            value: pristine_prop,
+            hint: crate::env::ReducibilityHint::Regular(0),
+        })
+        .expect("the tail definition admits");
+    let pristine_tail = pristine.const_(pristine_name, vec![]);
+    assert_eq!(
+        pristine.whnf_core(pristine_tail, &mut fresh),
+        pristine_prop,
+        "a closed expression normalises the same with no context at all"
     );
 }

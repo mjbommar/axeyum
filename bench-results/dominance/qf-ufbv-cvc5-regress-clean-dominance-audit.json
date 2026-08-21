@@ -4,11 +4,14 @@
   "instances": [
     {
       "audit_outcome": "sat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
+      "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 18.209393000000002,
+      "elapsed_ms": 1.155254,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "sat-model",
       "file": "corpus/public-curated/non-incremental/QF_UFBV/cvc5-regress-clean/cli__regress0__aufbv__issue3737.smt2",
@@ -16,33 +19,55 @@
       "lean_error": null,
       "lean_fragment": null,
       "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.01077,
+        "lean_reconstruction": null,
+        "parse_evidence": 0.184249,
+        "parse_lean": null,
+        "produce_evidence": 0.918242,
+        "read": 0.038827
+      },
       "trust_holes": [],
       "trust_steps": []
     },
     {
       "audit_outcome": "unsat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
+      "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 67.22347400000001,
+      "elapsed_ms": 1.106484,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "alethe-unsat",
       "file": "corpus/public-curated/non-incremental/QF_UFBV/cvc5-regress-clean/cli__regress0__bv__ackermann2.smt2",
       "lean_checked": true,
       "lean_error": null,
-      "lean_fragment": "QfUfBv",
-      "lean_module_bytes": 14142,
+      "lean_fragment": "BvUfLocal",
+      "lean_module_bytes": 3153,
+      "phase_timings_ms": {
+        "check_evidence": 0.021865000000000002,
+        "lean_reconstruction": 0.713188,
+        "parse_evidence": 0.046159000000000006,
+        "parse_lean": 0.030906,
+        "produce_evidence": 0.140061,
+        "read": 0.017796
+      },
       "trust_holes": [],
       "trust_steps": []
     },
     {
       "audit_outcome": "sat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
+      "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 14.240556999999999,
+      "elapsed_ms": 7.438841,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "sat-model",
       "file": "corpus/public-curated/non-incremental/QF_UFBV/cvc5-regress-clean/cli__regress1__bug520.smt2",
@@ -50,30 +75,56 @@
       "lean_error": null,
       "lean_fragment": null,
       "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.042512999999999995,
+        "lean_reconstruction": null,
+        "parse_evidence": 0.423009,
+        "parse_lean": null,
+        "produce_evidence": 6.954639,
+        "read": 0.016003
+      },
       "trust_holes": [],
       "trust_steps": []
     },
     {
       "audit_outcome": "unsat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
+      "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 4.8184830000000005,
+      "elapsed_ms": 1.371024,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "finite-domain-pigeonhole-unsat",
       "file": "corpus/public-curated/non-incremental/QF_UFBV/cvc5-regress-clean/cli__regress1__bug593.smt2",
       "lean_checked": true,
       "lean_error": null,
       "lean_fragment": "FiniteDomainPigeonhole",
-      "lean_module_bytes": 7835,
+      "lean_module_bytes": 7801,
+      "phase_timings_ms": {
+        "check_evidence": 0.000897,
+        "lean_reconstruction": 0.736241,
+        "parse_evidence": 0.050643,
+        "parse_lean": 0.036946,
+        "produce_evidence": 0.422982,
+        "read": 0.017445
+      },
       "trust_holes": [],
       "trust_steps": []
     }
   ],
-  "limit": 4,
+  "limit": 1000,
   "logic": "QF_UFBV",
+  "prelude_warm_ms": 16586.52281,
+  "prelude_warmed": true,
   "slice": "qf-ufbv-cvc5-regress-clean-solver-vs-z3-10s.json",
+  "source_revision": {
+    "dirty": false,
+    "sha": "496288979",
+    "source": "lane-snapshot"
+  },
   "summary": {
     "audit_errors": 0,
     "audited_decided": 4,
@@ -89,6 +140,6 @@
     "lean_unsat_pct": 100.0,
     "timeouts": 0
   },
-  "timeout_ms": 5000,
-  "version": 1
+  "timeout_ms": 10000,
+  "version": 3
 }

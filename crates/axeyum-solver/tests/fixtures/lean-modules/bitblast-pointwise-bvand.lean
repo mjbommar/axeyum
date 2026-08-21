@@ -7,6 +7,35 @@ set_option linter.unusedVariables false
 -- ("code generator does not support recursor `T.rec` yet"). The section
 -- suppresses codegen only; it does not weaken type checking.
 noncomputable section
+-- Scope-aware sharing (see `ScopeId`) binds repeated subterms with
+-- `let`, and a `let` chain is NESTED syntax: one binding per level.
+-- Measured 2026-08-18, the constructed-carrier module binds 2,897
+-- of them inside one distributivity lemma alone, and Lean 4.30.0
+-- rejected the file at that declaration with `maximum recursion
+-- depth has been reached` -- the default limit is 512. (No carrier
+-- name appears in this banner on purpose: a sibling guard asserts a
+-- module over the constructed carrier never spells the axiomatized
+-- package's name, and it reads the whole file as one string.) This
+-- raises the
+-- ELABORATOR's recursion counter and nothing else: the kernel still
+-- checks every term, and `#print axioms` is unaffected.
+set_option maxRecDepth 65536
+
+-- Lean's own compiler-internal constants, which `Init.Prelude` declares
+-- (`unsafe axiom lcErased : Type`) and `prelude` mode therefore omits.
+-- Lean 4.34 runs code generation over a Prop-valued inductive that
+-- carries data -- `Or`, `Exists`, `Nat.le` -- and its IR names these, so
+-- without them the module dies on `Unknown constant lcErased` before any
+-- proof is checked. Measured 2026-08-17: 21 of 77 crosscheck families were
+-- rejected by 4.34.0-rc1 and accepted by 4.30.0, which is why the gate's
+-- verdict depended on which toolchain happened to be installed.
+--
+-- They are compiler-only: no proof term mentions them, so they do NOT
+-- enter any `#print axioms` footprint. Asserted, not assumed, by
+-- `codegen_constants_are_declared_but_never_in_the_footprint`.
+unsafe axiom lcErased : Type
+unsafe axiom lcAny : Type
+unsafe axiom lcVoid : Type
 
 inductive False : Prop where
 inductive And (x0 : Prop) (x1 : Prop) : Prop where
@@ -24,7 +53,28 @@ axiom axeyum.reconstruct.em._2 : ((x0 : Prop) -> Or x0 (Not x0))
 axiom axeyum.reconstruct.hyp._3 : Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0
 axiom axeyum.reconstruct.hyp._4 : Not (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0)
 
+def axeyum_proof_share_0 :=
+  Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0
+
+def axeyum_proof_share_1 :=
+  Not axeyum_proof_share_0
+
+def axeyum_proof_share_2 :=
+  Or axeyum_proof_share_0
+
+def axeyum_proof_share_3 :=
+  axeyum_proof_share_2 axeyum_proof_share_1
+
+def axeyum_proof_share_4 :=
+  axeyum.reconstruct.em._2 axeyum_proof_share_0
+
+def axeyum_proof_share_5 :=
+  Or axeyum_proof_share_1
+
+def axeyum_proof_share_6 :=
+  axeyum_proof_share_5 axeyum_proof_share_0
+
 theorem axeyum_refutation : False :=
-  @False.rec.{0} (fun (x0 : False) => False) (@Or.rec (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0) (Not (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0)) (fun (x0 : Or (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0) (Not (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0))) => Not (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0)) (fun (x0 : Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0) => @False.rec.{0} (fun (x1 : False) => Not (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0)) (axeyum.reconstruct.hyp._4 x0)) (fun (x0 : Not (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0)) => x0) (@Or.rec (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0) (Not (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0)) (fun (x0 : Or (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0) (Not (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0))) => Or (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0) (Not (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0))) (fun (x0 : Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0) => @Or.inl (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0) (Not (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0)) x0) (fun (x0 : Not (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0)) => @Or.inr (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0) (Not (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0)) x0) (axeyum.reconstruct.em._2 (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0))) (@Or.rec (Not (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0)) (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0) (fun (x0 : Or (Not (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0)) (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0)) => Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0) (fun (x0 : Not (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0)) => @False.rec.{0} (fun (x1 : False) => Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0) (x0 axeyum.reconstruct.hyp._3)) (fun (x0 : Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0) => x0) (@Or.rec (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0) (Not (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0)) (fun (x0 : Or (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0) (Not (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0))) => Or (Not (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0)) (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0)) (fun (x0 : Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0) => @Or.inr (Not (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0)) (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0) x0) (fun (x0 : Not (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0)) => @Or.inl (Not (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0)) (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0) x0) (axeyum.reconstruct.em._2 (Iff (And axeyum.reconstruct.prop._0 axeyum.reconstruct.prop._1) axeyum.reconstruct.prop._0)))))
+  @False.rec.{0} (fun (x0 : False) => False) (@Or.rec axeyum_proof_share_0 axeyum_proof_share_1 (fun (x0 : axeyum_proof_share_3) => axeyum_proof_share_1) (fun (x0 : axeyum_proof_share_0) => @False.rec.{0} (fun (x1 : False) => axeyum_proof_share_1) (axeyum.reconstruct.hyp._4 x0)) (fun (x0 : axeyum_proof_share_1) => x0) (@Or.rec axeyum_proof_share_0 axeyum_proof_share_1 (fun (x0 : axeyum_proof_share_3) => axeyum_proof_share_3) (fun (x0 : axeyum_proof_share_0) => @Or.inl axeyum_proof_share_0 axeyum_proof_share_1 x0) (fun (x0 : axeyum_proof_share_1) => @Or.inr axeyum_proof_share_0 axeyum_proof_share_1 x0) axeyum_proof_share_4) (@Or.rec axeyum_proof_share_1 axeyum_proof_share_0 (fun (x0 : axeyum_proof_share_6) => axeyum_proof_share_0) (fun (x0 : axeyum_proof_share_1) => @False.rec.{0} (fun (x1 : False) => axeyum_proof_share_0) (x0 axeyum.reconstruct.hyp._3)) (fun (x0 : axeyum_proof_share_0) => x0) (@Or.rec axeyum_proof_share_0 axeyum_proof_share_1 (fun (x0 : axeyum_proof_share_3) => axeyum_proof_share_6) (fun (x0 : axeyum_proof_share_0) => @Or.inr axeyum_proof_share_1 axeyum_proof_share_0 x0) (fun (x0 : axeyum_proof_share_1) => @Or.inl axeyum_proof_share_1 axeyum_proof_share_0 x0) axeyum_proof_share_4)))
 
 #print axioms axeyum_refutation

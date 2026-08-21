@@ -7,9 +7,11 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
+      "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 2.712597,
+      "elapsed_ms": 1.117302,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "sat-model",
       "file": "corpus/public-curated/non-incremental/QF_UFBV/bitwuzla-regress-clean/solver__declsort1.smt2",
@@ -18,12 +20,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.051963999999999996,
+        "check_evidence": 0.0076359999999999996,
         "lean_reconstruction": null,
-        "parse_evidence": 0.349744,
+        "parse_evidence": 0.136102,
         "parse_lean": null,
-        "produce_evidence": 2.265793,
-        "read": 0.022809000000000003
+        "produce_evidence": 0.93448,
+        "read": 0.036037
       },
       "trust_holes": [],
       "trust_steps": []
@@ -33,31 +35,40 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
+      "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 3.602151,
+      "elapsed_ms": 0.593509,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "bool-uf-exhaustive-unsat",
       "file": "corpus/public-curated/non-incremental/QF_UFBV/bitwuzla-regress-clean/solver__fun__fun1.smt2",
       "lean_checked": true,
       "lean_error": null,
       "lean_fragment": "BoolUfExhaustive",
-      "lean_module_bytes": 579,
+      "lean_module_bytes": 3167,
       "phase_timings_ms": {
-        "check_evidence": 0.064597,
-        "lean_reconstruction": 3.1542749999999997,
-        "parse_evidence": 0.15098299999999998,
-        "parse_lean": 0.08495000000000001,
-        "produce_evidence": 0.11240599999999999,
-        "read": 0.013474
+        "check_evidence": 0.00294,
+        "lean_reconstruction": 0.42160400000000003,
+        "parse_evidence": 0.046862,
+        "parse_lean": 0.020927,
+        "produce_evidence": 0.025571999999999998,
+        "read": 0.020135
       },
       "trust_holes": [],
       "trust_steps": []
     }
   ],
-  "limit": 2,
+  "limit": 1000,
   "logic": "QF_UFBV",
+  "prelude_warm_ms": 14288.080480999999,
+  "prelude_warmed": true,
   "slice": "qf-ufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json",
+  "source_revision": {
+    "dirty": false,
+    "sha": "496288979",
+    "source": "lane-snapshot"
+  },
   "summary": {
     "audit_errors": 0,
     "audited_decided": 2,
@@ -73,6 +84,6 @@
     "lean_unsat_pct": 100.0,
     "timeouts": 0
   },
-  "timeout_ms": 30000,
-  "version": 1
+  "timeout_ms": 10000,
+  "version": 3
 }

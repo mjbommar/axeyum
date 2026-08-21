@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-admission-plan-v1",
+  "state": "preregistered-sealed-capsule-admission-before-operation-code-or-ledger-write",
+  "target": {
+    "fact_id": "F:ml430-nat-fib-gcd-d1d98407",
+    "fact_sha256": "e678d6b3a3b3bb9d6d7915b14e0ed3deed6377583fc0a15e22ea2d9c191db25d",
+    "name": "Nat.fib_gcd"
+  },
+  "evidence": {
+    "result_manifest": "artifacts/autogenesis/mathlib-nat-fib-gcd-construction-result-v3.json",
+    "result_manifest_sha256": "9b552aa8cf51a69d2b18f312a6ecf9f8126c45963b4ab139ce18218332cfc42c",
+    "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/749f30f65-nat-fib-gcd-v3/target-1.ndjson",
+    "capsule_sha256": "8ac3c35874540a10e5fa393c65f3ad313a6cf6a06303cec68fec3ec45d0f04cd",
+    "goal_sha256": "eb65db781afc310abd8a714f7f5b426c7a11daae78e737ea40a81612f23277d5",
+    "declaration_sha256": "2b5f52996fdc275c859364de7b99bf32ab4ba01e24fc14e10cf65bbd5724ea8d",
+    "axiom_footprint": []
+  },
+  "protocol": {
+    "register_exact_operation": true,
+    "derive_transaction_from_clean_commit": true,
+    "fault_injection_after_intent_exit": 75,
+    "require_fact_unchanged_before_recovery": true,
+    "authoritative_ledger_writes": 1,
+    "fixture_writes": 0,
+    "archive_primary_run": true,
+    "isolated_clean_replay": true
+  },
+  "budget": {
+    "max_operation_registrations": 1,
+    "max_fault_injection_executions": 1,
+    "max_authoritative_ledger_writes": 1,
+    "max_recovery_executions": 1,
+    "max_clean_replays": 1,
+    "max_search_invocations": 0,
+    "max_evaluations": 0
+  },
+  "expected_newly_ready": [
+    "F:ml430-int-gcd-fib-73bdafc2",
+    "F:ml430-nat-fib-dvd-f80f3de1"
+  ],
+  "next_on_accept": "select between the two newly ready descendants by checked boundary size and compounding leverage",
+  "limitations": "This authorizes only one exact fact transition from the named immutable capsule and grants no authority to close either descendant."
+}

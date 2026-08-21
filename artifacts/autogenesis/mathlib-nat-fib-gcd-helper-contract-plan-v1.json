@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-helper-contract-plan-v1",
+  "state": "preregistered-type-only-contract-audit-before-code-or-stream-read",
+  "input": {
+    "surface_result": "artifacts/autogenesis/mathlib-nat-fib-gcd-surface-result-v1.json",
+    "surface_result_sha256": "376520393fd1ec51146a8709994e2e1a03ea52c22d5e24ad61ef1a944f90f5fe",
+    "capsules": [
+      "/nas3/data/axeyum/autogenesis/reference-packs/85b9d4243-target-native-gcd-greatest-v4/target-1.ndjson",
+      "/nas3/data/axeyum/autogenesis/reference-packs/dfa79618c-target-native-exact-v3/target-1.ndjson"
+    ]
+  },
+  "contracts": [
+    "Nat.gcd.induction",
+    "Axeyum.Autogenesis.modQuotientWitnessV4",
+    "Nat.gcd_greatest",
+    "Nat.gcd_fib_add_self"
+  ],
+  "observation": {
+    "allowed": [
+      "rendered theorem type only",
+      "canonical type and declaration hashes",
+      "top-level binder count and binder metadata",
+      "kernel-derived axiom footprint"
+    ],
+    "forbidden": [
+      "theorem value or proof-body rendering",
+      "proof search",
+      "helper or target theorem submission",
+      "fact or ledger write"
+    ]
+  },
+  "budget": {
+    "driver_builds": 1,
+    "complete_audits": 1,
+    "capsule_reads": 2,
+    "fresh_imports": 2,
+    "rendered_theorem_types": 4,
+    "rendered_theorem_values": 0,
+    "theorem_submissions": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "next_on_accept": "freeze exact helper declarations and construct the smallest target-owned zero-side and quotient-iteration layer",
+  "limitations": "This authorizes one type-only contract observation. It grants no theorem, evaluation, or ledger credit."
+}

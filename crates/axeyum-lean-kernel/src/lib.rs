@@ -53,6 +53,10 @@
 
 mod arith_model;
 mod arith_prelude;
+mod characterization;
+mod complex;
+mod creal;
+mod creal_model;
 mod env;
 mod expr;
 mod inductive;
@@ -65,6 +69,7 @@ mod nat_prelude;
 mod prelude;
 pub mod prelude_cache;
 mod quotient;
+mod rat_prelude;
 mod string_prelude;
 mod tc;
 
@@ -74,7 +79,15 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 use std::ops::Index;
 
 pub use arith_model::{ArithModel, ArithModelLaw, build_int_model_of_arith};
-pub use arith_prelude::{ArithPrelude, build_arith_prelude};
+pub use arith_prelude::{ArithPrelude, arith_prelude_builds, build_arith_prelude};
+pub use characterization::{
+    Characterization, CharacterizationEntry, CharacterizationKind, IntCategoricity,
+    IntCharacterization, NatCharacterization, Weakening, build_characterization,
+    build_characterization_with,
+};
+pub use complex::{ComplexPrelude, build_complex_prelude};
+pub use creal::{CRealPrelude, build_creal_prelude};
+pub use creal_model::{CRealModel, CRealModelLaw, build_creal_model_of_arith};
 pub use env::{Declaration, Environment, QuotKind, RecRule, ReducibilityHint};
 pub use expr::{BinderInfo, ExprId, ExprNode, Lit, NatLit};
 pub use inductive::InductiveFamilySpec;
@@ -82,12 +95,19 @@ pub use int_prelude::{IntPrelude, build_int_prelude};
 pub use lean_export::{
     AutoParamTypeNormalizationReport, EXPORT_FORMAT_VERSION, ExportError, Lean4ExportMetadata,
 };
+pub use lean_pp::{
+    LeanPreludeModule, importing_module_banner, self_contained_module_banner,
+    shared_prelude_module_banner, split_module_banner,
+};
 pub use level::{LevelId, LevelNode};
 pub use name::{NameId, NameNode};
 pub use nat_prelude::{NatDev, NatOps, NatPrelude, NatState, build_nat_prelude};
 pub use prelude::{
     DatatypeFamily, DatatypeInductive, LogicPrelude, RecField, RecursiveDatatypeFamily,
     build_logic_prelude,
+};
+pub use rat_prelude::{
+    RatModel, RatModelLaw, RatPrelude, build_rat_model_of_arith, build_rat_prelude,
 };
 pub use string_prelude::{StringPrelude, build_string_prelude};
 pub use tc::{KernelError, LocalContext, LocalDecl};
@@ -103,6 +123,7 @@ pub(crate) enum PreludeKey {
     Nat,
     Int,
     Real,
+    CReal,
     String(u64),
 }
 
@@ -112,6 +133,9 @@ pub(crate) enum PreludeValue {
     Nat(Box<NatPrelude>),
     Int(Box<IntPrelude>),
     Real(ArithPrelude),
+    /// Boxed: `CRealPrelude` is by far the widest package here, and an unboxed
+    /// variant would set every other variant's footprint to its size.
+    CReal(Box<CRealPrelude>),
     String(StringPrelude),
 }
 
@@ -281,6 +305,23 @@ pub struct Kernel {
     /// Open expressions are memoised by the context that produced them. See
     /// `Kernel::whnf_no_unfolding` for the full argument.
     whnf_cache: (u64, HashMap<ExprId, ExprId>),
+    /// **Full-δ** weak-head normal forms of **closed** expressions, for exactly
+    /// one declaration-environment revision.
+    ///
+    /// `whnf_cache` above memoises one δ-free step; this memoises the whole
+    /// δ-unfolding loop on top of it. The two are not redundant: a repeated
+    /// `whnf_core` of the same expression re-walks its entire δ chain, paying a
+    /// cache probe per link, and every link that δ-unfolds mints a *fresh*
+    /// expression whose own δ-free reduction is then re-attempted. The
+    /// literal-`Nat` rules make that chain hot — `Kernel::reduce_nat_binop`
+    /// calls `whnf_core` on **both** arguments of every `Nat.add`/`Nat.mul`/
+    /// `Nat.div`/… application it meets, from inside the δ-free normaliser.
+    /// Measured on `build_creal_prelude` (2026-08-20): 1.19 M such calls, 575
+    /// of which produced a literal.
+    ///
+    /// Closed only, for exactly the reason spelled out on `whnf_cache`: the key
+    /// has no local-context component. See `Kernel::whnf_core`.
+    whnf_core_cache: (u64, HashMap<ExprId, ExprId>),
     /// How many times reduction has consulted a [`LocalContext`].
     ///
     /// A tripwire, not a statistic. `Kernel::whnf_no_unfolding` asserts this
@@ -308,6 +349,10 @@ pub struct Kernel {
     string_literal_cache: Option<(u64, tc::StringLiteralTable)>,
     /// One-way guard set after transient tables are released for serialization.
     export_only: bool,
+    /// Render `Declaration::Theorem` with the `def` keyword instead of
+    /// `theorem` (ADR-0518). **Off by default**: it changes nothing this
+    /// repository ships. See [`Kernel::set_render_proofs_as_def`].
+    render_proofs_as_def: bool,
 
     /// The global declaration environment (ADR-0036, slice 3). Declarations are
     /// admitted only through the type-checked [`Kernel::add_declaration`] gate.
@@ -370,12 +415,19 @@ impl Kernel {
             expr_intern,
             infer_closed_cache,
             whnf_cache,
+            whnf_core_cache,
             reduction_ctx_reads,
             nat_binop_cache,
             string_literal_cache,
             export_only,
             env,
             prelude_packages,
+            // Deliberately not a pristineness condition: it is a RENDERING
+            // preference, not kernel content, and nothing about it makes a
+            // prelude template unsafe to restore. `prelude_cache::try_restore`
+            // carries it across the restore rather than letting a template
+            // clone silently clear it.
+            render_proofs_as_def: _,
         } = self;
         names.is_empty()
             && name_intern.is_empty()
@@ -387,6 +439,8 @@ impl Kernel {
             && infer_closed_cache.is_empty()
             && whnf_cache.0 == 0
             && whnf_cache.1.is_empty()
+            && whnf_core_cache.0 == 0
+            && whnf_core_cache.1.is_empty()
             && *reduction_ctx_reads == 0
             && nat_binop_cache.is_none()
             && string_literal_cache.is_none()
@@ -438,6 +492,7 @@ impl Kernel {
         self.expr_intern = ExprInterner::default();
         self.infer_closed_cache = HashMap::new();
         self.whnf_cache = (self.env.revision(), HashMap::new());
+        self.whnf_core_cache = (self.env.revision(), HashMap::new());
         self.export_only = true;
     }
 

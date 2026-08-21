@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-gcd-balanced-bezout-clean-result",
+  "state": "generic-gcd-balanced-bezout-reconstructed-twice-empty-footprint",
+  "plan": {"path": "artifacts/autogenesis/official-gcd-balanced-bezout-clean-plan-v1.json", "sha256": "78c8bec030c38ca8ce10f32c735ef78c9699ccceedf63d98b2e6915575c1b58b", "commit": "99ea0b1e7f039d7959d617080d6aed96f015cf14"},
+  "evidence_pack": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/13038b3ff-official-gcd-balanced-bezout-clean-v1/manifest.json", "sha256": "e8d360d5b84d174e87b64e0d901ed28a7c626c98d85dd5d3c9067e959619527c", "directory_mode": "0555", "file_mode": "0444"},
+  "execution": {"source_copies": 6, "compiler_invocations": 6, "successful_compilations": 6, "exporter_invocations": 1, "importer_runs": 2, "proof_bearing_stream_reads": 2, "retries": 0},
+  "theorem": {
+    "name": "Axeyum.Autogenesis.officialGcdBalancedBezoutCleanV1",
+    "contract": "forall gcdZeroLeft gcdSucc m n, BalancedBezoutUpdateV2 m n (Nat.gcd m n)",
+    "declaration_sha256": "feb1c3e41dd2f745261002b3876ddab750db5777226956ddbb07d805b4abc9ec",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": ["Axeyum.Autogenesis.balancedBezoutEuclideanUpdateClosedV1", "Axeyum.Autogenesis.modQuotientWitnessV4", "Eq.symm", "Eq.trans", "Nat.gcd.induction", "Nat.not_lt_zero", "Nat.zero_add", "Nat.zero_lt_succ", "congrArg"],
+    "audit_sha256": "bd9aeb3b9e7146dd4e12da257eeaf95d98e95aeeba78dcd24030bc213887a95c",
+    "fresh_reconstructions": 2,
+    "audits_byte_identical": true,
+    "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0}
+  },
+  "cleanup": {"exact_temporary_paths_removed": 18, "preexisting_status_entries_before": 3, "preexisting_status_entries_after": 3, "preexisting_baseline_unchanged": true},
+  "next_boundary": {"generic_theorem_accepted": true, "required_next_increment": "preregister closed specialization to accepted gcdZeroLeft and gcdSucc leaves", "gcd_leaf_specialization_completed": false, "cancellation_authorized": false},
+  "authority": {"generic_balanced_bezout_credit": 1, "gcd_leaf_specialization_credit": 0, "cancellation_credit": 0, "target_specialization_credit": 0, "exact_fibonacci_target_submissions": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "verification": "python3 scripts/check-autogenesis-official-gcd-balanced-bezout-clean-result.py",
+  "limitations": "This accepts the generic theorem only under two explicit gcd computation equations. It grants no closed gcd specialization, cancellation, Fibonacci target, evaluation, fact, or ledger credit."
+}

@@ -70,9 +70,11 @@ This exact problem has been studied, recently, with downloadable data.
 - **KnowTeX: Visualizing Mathematical Dependencies** (arXiv:2601.15294).
 
 The scale context is worth stating plainly: Mathlib is **308,129 declarations**;
-`nat_prelude` is **106 proved theorems**. That is a factor of roughly 3,000. The
-useful response to that is not to race — it is to be precise about which
-*fragment* of the DAG we can carry evidence for, which nobody else measures.
+`nat_prelude` is **139 proved theorems** (re-measured 2026-08-19 with
+`--example nat_theorem_inventory`; 106 when this was written). That is a factor
+of roughly 3,000. The useful response to that is not to race — it is to be
+precise about which *fragment* of the DAG we can carry evidence for, which
+nobody else measures.
 
 ## The research programme — all of it parallelisable
 
@@ -119,7 +121,9 @@ coupling across namespaces — and the disagreements are exactly where a
 pedagogical DAG teaches something a formal one does not, or vice versa.
 
 This also gives the library track a **construction order validated against a
-library that exists**, rather than one we reasoned out ourselves.
+library that exists**, rather than one we reasoned out ourselves — though as of
+2026-08-19 the order was walked first (ℤ, ℚ, ℝ, ℂ, all constructed) and D3's
+job changed with it; see "What to do first" below.
 
 ### D4 — Use `epistemic_status` as the evidence work queue
 
@@ -161,8 +165,20 @@ was read by people.
    work queue; annotating outward from those is cheaper than annotating all
    1,567 cold.
 2. **D3's download and comparison** — cheap, external, and it validates or
-   refutes the construction order in [`02`](02-the-library.md) before anyone
-   spends months on ℚ and ℝ.
+   refutes the construction order in [`02`](02-the-library.md).
+
+   > **Reordered 2026-08-19.** This item was placed second because it was meant
+   > to be read *before* anyone spent months on ℚ and ℝ. Both were built first —
+   > ℚ on 2026-08-16, ℝ (ADR-0512) and ℂ (ADR-0521) by 2026-08-19 — and neither
+   > took months, so D3's value has changed rather than lapsed. It is no longer
+   > a *check on a plan*; it is now a **coverage measurement against a library
+   > that exists**: which of Mathlib's ℝ/ℂ development our 94 `CReal` + 39
+   > `Complex` declarations cover, and — the useful direction — which of its
+   > constructions are unavailable to us at all, since ours is a constructive
+   > setoid with no `Quot.sound`, no `propext` and no `funext`. That is a
+   > comparison nobody else can run on their own library, and it moves D3 from a
+   > pre-flight check to a standing metric. It stays second for the same reason:
+   > cheap, external, and it constrains what comes after.
 3. **D2 once D1 has a first pass** — the "one capability away" set is the
    highest-value output of this entire strand, because it converts a roadmap
    from opinion into a ranked consequence of the mathematics.

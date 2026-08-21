@@ -47,7 +47,16 @@ use super::{
 // base; the only added axioms are the input-constraint hypotheses.
 // ===========================================================================
 
-use axeyum_lean_kernel::{ArithPrelude, build_arith_prelude};
+use axeyum_lean_kernel::{build_arith_prelude, build_creal_prelude, build_int_prelude};
+
+pub(crate) mod control;
+pub(crate) mod monomial_bound;
+pub(crate) mod product_positivstellensatz;
+pub(crate) mod signature;
+pub(crate) mod string_length;
+pub(crate) mod zero_product;
+
+pub(crate) use signature::{RingEquality, RingSignature};
 
 // The LRA reconstruction items below are the public API surface a `lib.rs`
 // re-export will expose (mirroring the EUF `reconstruct_qf_uf_proof` re-export);
@@ -138,7 +147,15 @@ impl LinR {
 #[allow(dead_code)]
 pub struct LraReconstructCtx {
     kernel: Kernel,
-    arith: ArithPrelude,
+    /// The ordered-ring interface this context reconstructs over.
+    ///
+    /// A [`RingSignature`], not an
+    /// [`ArithPrelude`](axeyum_lean_kernel::ArithPrelude): the carrier is a
+    /// *parameter* of the route, and [`Self::new`] simply supplies the `Real`
+    /// package's instance of it. The field keeps its historical name so the 158
+    /// reads of it across this module, `ordered_ring` and
+    /// `ordered_ring::setoid` are unchanged.
+    arith: RingSignature,
     /// Dense variable index → its opaque `R`-typed constant `NameId`.
     vars: BTreeMap<usize, NameId>,
     /// Every hypothesis axiom minted by [`Self::hyp_axiom`], in mint order.
@@ -150,6 +167,38 @@ pub struct LraReconstructCtx {
     hyps: Vec<NameId>,
     /// Monotone counter for fresh, collision-free declaration names.
     next_id: u64,
+    /// Proofs [`Self::hyp_axiom`] hands back **instead of** minting an axiom,
+    /// keyed on the proposition.
+    ///
+    /// The Farkas engines take a system of `E ≤ 0` / `E < 0` atoms and assume
+    /// each one. That is right when the query states an inequality and wrong
+    /// when it states an EQUALITY: `E = 0` is strictly stronger than `E ≤ 0`, so
+    /// assuming the inequality assumes something the source does not say — and
+    /// the certificate's own fact table makes exactly this distinction, because
+    /// an equality is the only fact a negative multiplier may scale.
+    ///
+    /// A route that knows better registers, ahead of the fold, a proof of the
+    /// inequality *derived from* the equality it actually mints. Registering a
+    /// proposition the engine never asks for is not silent: the engine then
+    /// mints its own axiom too, and the caller's hypothesis count no longer
+    /// matches its fact count.
+    hyp_overrides: BTreeMap<ExprId, ExprId>,
+    /// The **equality slot** (ADR-0512 phase R3), once declared.
+    ///
+    /// `None` — the default — means ring equality is the kernel's own `Eq` at
+    /// `Real`, and every rewrite in a reconstructed proof is an `Eq.rec`
+    /// transport. `Some` means equality is a declared *parameter* with its own
+    /// reflexivity/symmetry/transitivity and five congruences, so the finished
+    /// proof term mentions `Eq` nowhere and can be λ-abstracted over a carrier
+    /// whose equality is a defined relation — which is what the constructed ℝ
+    /// (`CReal.Equiv`) is.
+    ///
+    /// The nine equality declarations and the nine restated laws are ordinary
+    /// axioms in this context's kernel, exactly like the variable and hypothesis
+    /// axioms: they exist to be abstracted back out, and
+    /// [`generalize_over_ordered_ring`](ordered_ring::generalize_over_ordered_ring)
+    /// refuses to return a refutation that still rests on one.
+    setoid: Option<ordered_ring::setoid::SetoidEq>,
 }
 
 impl core::fmt::Debug for LraReconstructCtx {
@@ -168,25 +217,267 @@ impl Default for LraReconstructCtx {
 
 #[allow(dead_code)]
 impl LraReconstructCtx {
-    /// Build a fresh LRA reconstruction context: a kernel with the arithmetic
-    /// prelude declared and an empty variable map.
+    /// Build a fresh LRA reconstruction context over the **`Real` package**: a
+    /// kernel with the arithmetic prelude declared, its 30 declarations as the
+    /// [`RingSignature`], and an empty variable map.
+    ///
+    /// This is the default carrier and the only one the shipped routes use
+    /// today. [`Self::with_ring_signature`] is the same context over any other
+    /// carrier that satisfies the interface.
     ///
     /// # Panics
     ///
-    /// Panics if the fixed real prelude is rejected in a fresh kernel. Input
-    /// terms are not consulted during this invariant-only initialization.
+    /// Panics if the fixed real prelude is rejected in a fresh kernel, or if the
+    /// package it just built fails [`RingSignature::validate_in`] — both are
+    /// invariant failures of this crate, not of any input, and input terms are
+    /// not consulted during this initialization. [`Self::try_new`] is the
+    /// non-panicking form.
     #[must_use]
     pub fn new() -> Self {
+        Self::try_new().expect("real prelude should build in a fresh reconstruction kernel")
+    }
+
+    /// [`Self::new`] without the panic: build the `Real` package into a fresh
+    /// kernel and validate it as an ordered-ring signature.
+    ///
+    /// # Errors
+    ///
+    /// [`ReconstructError::KernelRejected`] if the trusted gate declines one of
+    /// the prelude's 30 declarations, or if the package it built does not
+    /// satisfy the interface [`RingSignature::validate_in`] checks. The second
+    /// is the interesting one: it is this crate's independent restatement of
+    /// what the `Real` package is supposed to be, checked against what the
+    /// kernel actually declared.
+    pub fn try_new() -> Result<Self, ReconstructError> {
         let mut kernel = Kernel::new();
-        let arith = build_arith_prelude(&mut kernel)
-            .expect("real prelude should build in a fresh reconstruction kernel");
-        Self {
+        let arith =
+            build_arith_prelude(&mut kernel).map_err(|e| ReconstructError::KernelRejected {
+                rule: "arith_prelude".to_owned(),
+                detail: format!("the real prelude did not build in a fresh kernel: {e:?}"),
+            })?;
+        Self::with_ring_signature(kernel, RingSignature::from(arith))
+    }
+
+    /// Build a fresh LRA reconstruction context over the **constructed
+    /// integers**: `Int`, with the kernel's own `Eq` as ring equality.
+    ///
+    /// The axiom-free counterpart of [`Self::try_new`] that keeps kernel
+    /// equality. [`Self::try_new_over_constructed_reals`] is also axiom-free but
+    /// its equality is the defined relation `CReal.Equiv`, so a consumer that
+    /// wants `Eq` back has to go through the equality slot; here `Eq` *is* ring
+    /// equality, exactly as on the `Real` package, and the 30 declarations are
+    /// theorems rather than axioms.
+    ///
+    /// Use it wherever the route needs *an* ordered commutative ring with `1`
+    /// and is not specifically about ℝ — a Farkas combination uses ring
+    /// operations and order and never division, which is why the abstraction is
+    /// possible at all. `ℤ` is not ℝ (ADR-0456): a refutation instantiated here
+    /// is a theorem about the integers.
+    ///
+    /// # Errors
+    ///
+    /// [`ReconstructError::KernelRejected`] if the `Int` development does not
+    /// build in a fresh kernel, or if it does not satisfy the interface
+    /// [`RingSignature::validate_in`] checks.
+    pub fn try_new_over_integers() -> Result<Self, ReconstructError> {
+        let mut kernel = Kernel::new();
+        let int = build_int_prelude(&mut kernel).map_err(|e| ReconstructError::KernelRejected {
+            rule: "int_prelude".to_owned(),
+            detail: format!("the integer development did not build in a fresh kernel: {e:?}"),
+        })?;
+        Self::with_ring_signature(kernel, RingSignature::from(int))
+    }
+
+    /// Build a fresh LRA reconstruction context over the **constructed reals**:
+    /// `CReal`, the Bishop setoid over the constructed ℚ, with its equality slot
+    /// already adopted from `CRealPrelude`'s own theorems.
+    ///
+    /// This is [`Self::try_new`]'s axiom-free counterpart, and the difference is
+    /// the whole point of the seam. `Real` is 30 **axioms**; `CReal` is 30
+    /// declarations the kernel checked, so a refutation built here and abstracted
+    /// by
+    /// [`generalize_over_ordered_ring`](ordered_ring::generalize_over_ordered_ring)
+    /// with
+    /// [`RingTelescope::SetoidInterface`](ordered_ring::RingTelescope::SetoidInterface)
+    /// rests on **no carrier axiom at all** — measured, not assumed, by
+    /// `examples/ordered_ring_refutation.rs --constructed-reals`.
+    ///
+    /// The equality slot is filled by [`Self::adopt_setoid_equality`] rather
+    /// than [`Self::enable_setoid_equality`]: the carrier proves reflexivity,
+    /// symmetry, transitivity and the five congruences of `CReal.Equiv`, so the
+    /// slot costs zero declarations where the `Real` route declares eighteen
+    /// axioms for it. The returned
+    /// [`SetoidAdoption`](ordered_ring::setoid::SetoidAdoption) carries that
+    /// measurement; a caller that wants it should use
+    /// [`Self::try_new_over_constructed_reals_reporting`].
+    ///
+    /// # Cost
+    ///
+    /// The construction is expensive — measured 2026-08-18, 4.7 s in a release
+    /// build — but it is built **once per process** and cloned from a template
+    /// (ADR-0464, `PreludeKey::CReal`), so every later context costs 67 ms.
+    /// Without that template this constructor would be unusable on a front door.
+    ///
+    /// # Errors
+    ///
+    /// [`ReconstructError::KernelRejected`] if the constructed development does
+    /// not build, if it does not satisfy [`RingSignature::validate_in`], or if
+    /// one of the four adoption guards rejects the equality slot.
+    pub fn try_new_over_constructed_reals() -> Result<Self, ReconstructError> {
+        Self::try_new_over_constructed_reals_reporting().map(|(ctx, _)| ctx)
+    }
+
+    /// [`Self::try_new_over_constructed_reals`], returning the adoption report.
+    ///
+    /// [`SetoidAdoption::declarations_added`](ordered_ring::setoid::SetoidAdoption::declarations_added)
+    /// is the number that says the equality slot was free; it is `0` here and
+    /// `18` on the `Real` route.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::try_new_over_constructed_reals`].
+    pub fn try_new_over_constructed_reals_reporting()
+    -> Result<(Self, ordered_ring::setoid::SetoidAdoption), ReconstructError> {
+        let mut kernel = Kernel::new();
+        let creal =
+            build_creal_prelude(&mut kernel).map_err(|e| ReconstructError::KernelRejected {
+                rule: "creal_prelude".to_owned(),
+                detail: format!(
+                    "the constructed real development did not build in a fresh kernel: {e:?}"
+                ),
+            })?;
+        let mut ctx = Self::with_ring_signature(kernel, RingSignature::from(creal))?;
+        let report = ctx.adopt_setoid_equality(&ordered_ring::setoid::EqualitySlot::from(creal))?;
+        Ok((ctx, report))
+    }
+
+    /// Build a reconstruction context over an **arbitrary ordered-ring
+    /// signature** in an already-populated kernel.
+    ///
+    /// This is the seam that makes the carrier a parameter. `kernel` must
+    /// already contain the signature's 30 declarations and the propositional
+    /// prelude they are stated over; `ring` names them. Every subsequent step —
+    /// variable declaration, hypothesis minting, Farkas chaining, the
+    /// `ordered_ring` abstraction telescope — reads the carrier and the laws
+    /// out of `ring`, so nothing about the route is `Real`-specific.
+    ///
+    /// The signature is *checked* against `kernel`, not trusted:
+    /// [`RingSignature::validate_in`] runs first and its five guards are what
+    /// stand between a mistyped signature and a proof term built over the wrong
+    /// constants.
+    ///
+    /// Note the one thing this does **not** yet make parametric: the
+    /// reconstruction builds `Eq`, `Eq.refl` and `Eq.rec` at a fixed universe
+    /// `1`, so a carrier at any level other than `Sort 1` will be reported by
+    /// `RingSignatureReport::carrier_level` and then mis-elaborated. `Real`
+    /// and `CReal` are both `Sort 1`; anything else needs that generalization
+    /// first.
+    ///
+    /// # Errors
+    ///
+    /// [`ReconstructError::KernelRejected`] carrying the guard that the
+    /// signature failed and the declarations that failed it.
+    pub fn with_ring_signature(
+        mut kernel: Kernel,
+        ring: RingSignature,
+    ) -> Result<Self, ReconstructError> {
+        ring.validate_in(&mut kernel)?;
+        Ok(Self {
             kernel,
-            arith,
+            arith: ring,
             vars: BTreeMap::new(),
             hyps: Vec::new(),
             next_id: 0,
+            hyp_overrides: BTreeMap::new(),
+            setoid: None,
+        })
+    }
+
+    /// Declare the **equality slot** into this context and route every
+    /// subsequent equality step through it (ADR-0512 phase R3).
+    ///
+    /// Call before reconstructing. Afterwards, a proof built by
+    /// [`reconstruct_lra_proof`] or [`reconstruct_sos_proof`] contains no `Eq`,
+    /// no `Eq.refl` and no `Eq.rec` at the carrier: symmetry, transitivity and
+    /// the `add`/`mul`/`neg`/`le`/`lt` congruences are applications of declared
+    /// constants, and the nine laws stated with `Eq` are replaced by their
+    /// restatements through the parameter. Generalizing such a proof with
+    /// [`RingTelescope::SetoidInterface`](ordered_ring::RingTelescope::SetoidInterface)
+    /// binds 39 rather than 30.
+    ///
+    /// Idempotent: a second call is a no-op, so the eighteen axioms are declared
+    /// at most once per context.
+    ///
+    /// # Errors
+    ///
+    /// [`ReconstructError::KernelRejected`] if the trusted gate declines one of
+    /// the eighteen declarations, or if a `Real` law this module expects to be
+    /// stated with `Eq` no longer is.
+    pub fn enable_setoid_equality(&mut self) -> Result<(), ReconstructError> {
+        if self.setoid.is_some() {
+            return Ok(());
         }
+        let arith = self.arith;
+        let declared = ordered_ring::setoid::declare_setoid_equality(&mut self.kernel, &arith)?;
+        self.setoid = Some(declared);
+        Ok(())
+    }
+
+    /// Whether this context routes equality through the declared slot.
+    #[must_use]
+    pub fn setoid_equality_enabled(&self) -> bool {
+        self.setoid.is_some()
+    }
+
+    /// Fill the **equality slot** from the carrier's own lemmas, declaring
+    /// nothing (ADR-0512 phase R4).
+    ///
+    /// [`Self::enable_setoid_equality`] is the `Real` route: it *axiomatizes*
+    /// the slot, because the `Real` package's equality is the kernel's `Eq` and
+    /// there is nothing there to prove it from. A constructed carrier is the
+    /// opposite case — `CRealPrelude` proves `CReal.Equiv`'s reflexivity,
+    /// symmetry, transitivity and all five congruences with empty axiom
+    /// footprints — so this takes them instead of assuming them, and
+    /// [`SetoidAdoption::declarations_added`](ordered_ring::setoid::SetoidAdoption::declarations_added)
+    /// is the measurement that the slot cost nothing.
+    ///
+    /// Call before reconstructing, like [`Self::enable_setoid_equality`]; the
+    /// proof term this context then builds is the same shape either way, and
+    /// [`RingTelescope::SetoidInterface`](ordered_ring::RingTelescope::SetoidInterface)
+    /// generalizes it over 39 binders.
+    ///
+    /// # Errors
+    ///
+    /// [`ReconstructError::KernelRejected`] if this context already has an
+    /// equality slot — two slots would mean two relations playing equality in
+    /// one proof term — or if the supplied members fail one of the four
+    /// adoption guards.
+    pub fn adopt_setoid_equality(
+        &mut self,
+        slot: &ordered_ring::setoid::EqualitySlot,
+    ) -> Result<ordered_ring::setoid::SetoidAdoption, ReconstructError> {
+        if self.setoid.is_some() {
+            return Err(ReconstructError::KernelRejected {
+                rule: "adopt_setoid_equality".to_owned(),
+                detail: "this context already has an equality slot, so adopting a second one \
+                         would leave two relations playing equality in one proof term"
+                    .to_owned(),
+            });
+        }
+        let arith = self.arith;
+        let (adopted, report) =
+            ordered_ring::setoid::adopt_setoid_equality(&mut self.kernel, &arith, slot)?;
+        self.setoid = Some(adopted);
+        Ok(report)
+    }
+
+    /// `name arg₀ … argₙ` for a declared constant with no universe parameters.
+    fn apply_const(&mut self, name: NameId, args: &[ExprId]) -> ExprId {
+        let mut out = self.kernel.const_(name, vec![]);
+        for &arg in args {
+            out = self.kernel.app(out, arg);
+        }
+        out
     }
 
     /// A shared reference to the underlying kernel (e.g. to `infer`/`def_eq` an
@@ -201,10 +492,22 @@ impl LraReconstructCtx {
         &mut self.kernel
     }
 
-    /// The arithmetic prelude names (`R`, `le`, `lt`, `le_trans`, …).
+    /// The ordered-ring signature this context reconstructs over (`R`, `le`,
+    /// `lt`, `le_trans`, …).
+    ///
+    /// For a context built by [`Self::new`] these are the `Real` package's 30
+    /// declarations; for one built by [`Self::with_ring_signature`] they are
+    /// whatever carrier that signature named.
     #[must_use]
-    pub fn arith(&self) -> &ArithPrelude {
+    pub fn arith(&self) -> &RingSignature {
         &self.arith
+    }
+
+    /// The signature's [`RingEquality`] — which relation its nine `Eq`-shaped
+    /// laws are stated with.
+    #[must_use]
+    pub fn equality(&self) -> RingEquality {
+        self.arith.equality
     }
 
     /// Mint a fresh private name component under the anonymous root.
@@ -230,11 +533,23 @@ impl LraReconstructCtx {
     /// Get (declaring lazily) the opaque `R`-typed constant for variable `index`.
     /// Idempotent: the same index always maps to the same constant.
     fn var_const(&mut self, index: usize) -> NameId {
+        self.var_const_named(index, "x")
+    }
+
+    /// [`Self::var_const`] under a caller-chosen base name.
+    ///
+    /// Purely cosmetic, and only meaningful when called BEFORE the index is
+    /// first used: the map is idempotent, so a later `var_const` returns
+    /// whatever name got there first. It exists so a route whose variables
+    /// abstract something nameable — `(str.len yy)`, `(str.to_code x)` — can
+    /// render a module a referee can read against the source, instead of `x.3`.
+    /// `base` must be a valid Lean identifier component; callers sanitize.
+    fn var_const_named(&mut self, index: usize, base: &str) -> NameId {
         if let Some(&id) = self.vars.get(&index) {
             return id;
         }
         let r_ty = self.kernel.const_(self.arith.r, vec![]);
-        let decl_name = self.fresh_name("x");
+        let decl_name = self.fresh_name(base);
         self.kernel
             .add_declaration(Declaration::Axiom {
                 name: decl_name,
@@ -346,8 +661,23 @@ impl LraReconstructCtx {
         Ok(acc)
     }
 
-    /// Declare a fresh hypothesis axiom `h : prop` and return its `Const` proof.
+    /// Register a proof to hand back in place of the hypothesis axiom for
+    /// `prop`. See [`Self::hyp_overrides`].
+    fn register_hyp_override(&mut self, prop: ExprId, proof: ExprId) {
+        self.hyp_overrides.insert(prop, proof);
+    }
+
+    /// How many hypothesis axioms this context has minted.
+    fn minted_hypothesis_count(&self) -> usize {
+        self.hyps.len()
+    }
+
+    /// Declare a fresh hypothesis axiom `h : prop` and return its `Const` proof,
+    /// unless a route registered a derivation of `prop` first.
     fn hyp_axiom(&mut self, prop: ExprId) -> Result<ExprId, ReconstructError> {
+        if let Some(&proof) = self.hyp_overrides.get(&prop) {
+            return Ok(proof);
+        }
         let name = self.fresh_name("hyp");
         self.kernel
             .add_declaration(Declaration::Axiom {
@@ -380,6 +710,9 @@ impl LraReconstructCtx {
 
     /// `Eq R x y` (the carrier-level equality proposition).
     fn mk_eq_r(&mut self, x: ExprId, y: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            return self.apply_const(s.eq, &[x, y]);
+        }
         let one_lvl = {
             let z = self.kernel.level_zero();
             self.kernel.level_succ(z)
@@ -393,6 +726,9 @@ impl LraReconstructCtx {
 
     /// `Eq.refl R a : Eq R a a`.
     fn eq_refl_r(&mut self, a: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            return self.apply_const(s.eq_refl, &[a]);
+        }
         let one_lvl = {
             let z = self.kernel.level_zero();
             self.kernel.level_succ(z)
@@ -432,6 +768,9 @@ impl LraReconstructCtx {
     ///
     /// `Eq.rec R a (fun x _ => Eq R x a) (Eq.refl R a) b h`.
     fn eq_symm_r(&mut self, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            return self.apply_const(s.eq_symm, &[a, b, h]);
+        }
         let motive = {
             let x1 = self.kernel.bvar(1);
             let eq_x_a = self.mk_eq_r(x1, a);
@@ -450,6 +789,9 @@ impl LraReconstructCtx {
     ///
     /// `Eq.rec R b (fun x _ => Eq R a x) h1 c h2`.
     fn eq_trans_r(&mut self, a: ExprId, b: ExprId, c: ExprId, h1: ExprId, h2: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            return self.apply_const(s.eq_trans, &[a, b, c, h1, h2]);
+        }
         let motive = {
             let x1 = self.kernel.bvar(1);
             let eq_a_x = self.mk_eq_r(a, x1);
@@ -466,6 +808,12 @@ impl LraReconstructCtx {
     /// Congruence on the *left* argument of `add`: given `h : Eq R a a'`, build
     /// `Eq R (add a b) (add a' b)`.
     fn congr_add_left(&mut self, a: ExprId, ap: ExprId, b: ExprId, h: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            // One-sided congruence is the two-sided law with reflexivity on the
+            // argument that does not move.
+            let rb = self.apply_const(s.eq_refl, &[b]);
+            return self.apply_const(s.add_congr, &[a, ap, b, b, h, rb]);
+        }
         // motive := fun (x : R) (_ : Eq R a x) => Eq R (add a b) (add x b).
         let motive = {
             let a_b = self.mk_add(a, b);
@@ -489,6 +837,10 @@ impl LraReconstructCtx {
     /// Congruence on the *right* argument of `add`: given `h : Eq R b b'`, build
     /// `Eq R (add a b) (add a b')`.
     fn congr_add_right(&mut self, a: ExprId, b: ExprId, bp: ExprId, h: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            let ra = self.apply_const(s.eq_refl, &[a]);
+            return self.apply_const(s.add_congr, &[a, a, b, bp, ra, h]);
+        }
         // motive := fun (x : R) (_ : Eq R b x) => Eq R (add a b) (add a x).
         let motive = {
             let a_b = self.mk_add(a, b);
@@ -511,6 +863,9 @@ impl LraReconstructCtx {
 
     /// `add_assoc a b c : Eq R (add (add a b) c) (add a (add b c))`.
     fn add_assoc_eq(&mut self, a: ExprId, b: ExprId, c: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            return self.apply_const(s.add_assoc, &[a, b, c]);
+        }
         let ax = self.kernel.const_(self.arith.add_assoc, vec![]);
         let e = self.kernel.app(ax, a);
         let e = self.kernel.app(e, b);
@@ -519,6 +874,9 @@ impl LraReconstructCtx {
 
     /// `add_comm a b : Eq R (add a b) (add b a)`.
     fn add_comm_eq(&mut self, a: ExprId, b: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            return self.apply_const(s.add_comm, &[a, b]);
+        }
         let ax = self.kernel.const_(self.arith.add_comm, vec![]);
         let e = self.kernel.app(ax, a);
         self.kernel.app(e, b)
@@ -526,12 +884,18 @@ impl LraReconstructCtx {
 
     /// `add_zero a : Eq R (add a zero) a`.
     fn add_zero_eq(&mut self, a: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            return self.apply_const(s.add_zero, &[a]);
+        }
         let ax = self.kernel.const_(self.arith.add_zero, vec![]);
         self.kernel.app(ax, a)
     }
 
     /// `add_neg a : Eq R (add a (neg a)) zero`.
     fn add_neg_eq(&mut self, a: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            return self.apply_const(s.add_neg, &[a]);
+        }
         let ax = self.kernel.const_(self.arith.add_neg, vec![]);
         self.kernel.app(ax, a)
     }
@@ -552,6 +916,9 @@ impl LraReconstructCtx {
 
     /// `mul_comm a b : Eq R (mul a b) (mul b a)`.
     fn mul_comm_eq(&mut self, a: ExprId, b: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            return self.apply_const(s.mul_comm, &[a, b]);
+        }
         let ax = self.kernel.const_(self.arith.mul_comm, vec![]);
         let e = self.kernel.app(ax, a);
         self.kernel.app(e, b)
@@ -559,12 +926,18 @@ impl LraReconstructCtx {
 
     /// `mul_zero a : Eq R (mul a zero) zero`.
     fn mul_zero_eq(&mut self, a: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            return self.apply_const(s.mul_zero, &[a]);
+        }
         let ax = self.kernel.const_(self.arith.mul_zero, vec![]);
         self.kernel.app(ax, a)
     }
 
     /// `left_distrib a b c : Eq R (mul a (add b c)) (add (mul a b) (mul a c))`.
     fn left_distrib_eq(&mut self, a: ExprId, b: ExprId, c: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            return self.apply_const(s.left_distrib, &[a, b, c]);
+        }
         let ax = self.kernel.const_(self.arith.left_distrib, vec![]);
         let e = self.kernel.app(ax, a);
         let e = self.kernel.app(e, b);
@@ -574,6 +947,10 @@ impl LraReconstructCtx {
     /// Congruence on the *left* argument of `mul`: given `h : Eq R a a'`, build
     /// `Eq R (mul a b) (mul a' b)`.
     fn congr_mul_left(&mut self, a: ExprId, ap: ExprId, b: ExprId, h: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            let rb = self.apply_const(s.eq_refl, &[b]);
+            return self.apply_const(s.mul_congr, &[a, ap, b, b, h, rb]);
+        }
         // motive := fun (x : R) (_ : Eq R a x) => Eq R (mul a b) (mul x b).
         let motive = {
             let a_b = self.mk_mul(a, b);
@@ -597,6 +974,10 @@ impl LraReconstructCtx {
     /// Congruence on the *right* argument of `mul`: given `h : Eq R b b'`, build
     /// `Eq R (mul a b) (mul a b')`.
     fn congr_mul_right(&mut self, a: ExprId, b: ExprId, bp: ExprId, h: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            let ra = self.apply_const(s.eq_refl, &[a]);
+            return self.apply_const(s.mul_congr, &[a, a, b, bp, ra, h]);
+        }
         // motive := fun (x : R) (_ : Eq R b x) => Eq R (mul a b) (mul a x).
         let motive = {
             let a_b = self.mk_mul(a, b);
@@ -751,6 +1132,9 @@ impl LraReconstructCtx {
 
     /// Congruence under `neg`: given `h : Eq R a a'`, build `Eq R (neg a) (neg a')`.
     fn congr_neg(&mut self, a: ExprId, ap: ExprId, h: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            return self.apply_const(s.neg_congr, &[a, ap, h]);
+        }
         // motive := fun (x : R) (_ : Eq R a x) => Eq R (neg a) (neg x).
         let motive = {
             let neg_a = self.mk_neg(a);
@@ -1783,6 +2167,9 @@ impl LraReconstructCtx {
 
     /// `mul_one a : Eq R (mul a one) a`.
     fn mul_one_eq(&mut self, a: ExprId) -> ExprId {
+        if let Some(s) = self.setoid {
+            return self.apply_const(s.mul_one, &[a]);
+        }
         let ax = self.kernel.const_(self.arith.mul_one, vec![]);
         self.kernel.app(ax, a)
     }
@@ -1923,6 +2310,10 @@ impl LraReconstructCtx {
         h_le: ExprId,
         h_eq: ExprId,
     ) -> ExprId {
+        if let Some(s) = self.setoid {
+            let rl = self.apply_const(s.eq_refl, &[l]);
+            return self.apply_const(s.le_congr, &[l, l, r, rp, rl, h_eq, h_le]);
+        }
         // motive := fun (x : R) (_ : Eq R r x) => le l x.
         let motive = {
             let x1 = self.kernel.bvar(1);
@@ -1947,6 +2338,10 @@ impl LraReconstructCtx {
         h_le: ExprId,
         h_eq: ExprId,
     ) -> ExprId {
+        if let Some(s) = self.setoid {
+            let rr = self.apply_const(s.eq_refl, &[r]);
+            return self.apply_const(s.le_congr, &[l, lp, r, r, h_eq, rr, h_le]);
+        }
         // motive := fun (x : R) (_ : Eq R l x) => le x r.
         let motive = {
             let x1 = self.kernel.bvar(1);
@@ -2035,6 +2430,10 @@ impl LraReconstructCtx {
         h_lt: ExprId,
         h_eq: ExprId,
     ) -> ExprId {
+        if let Some(s) = self.setoid {
+            let rr = self.apply_const(s.eq_refl, &[r]);
+            return self.apply_const(s.lt_congr, &[l, lp, r, r, h_eq, rr, h_lt]);
+        }
         let motive = {
             let x1 = self.kernel.bvar(1);
             let lt_x_r = self.mk_lt(x1, r);
@@ -2127,6 +2526,10 @@ impl LraReconstructCtx {
         h_lt: ExprId,
         h_eq: ExprId,
     ) -> ExprId {
+        if let Some(s) = self.setoid {
+            let rl = self.apply_const(s.eq_refl, &[l]);
+            return self.apply_const(s.lt_congr, &[l, l, r, rp, rl, h_eq, h_lt]);
+        }
         let motive = {
             let x1 = self.kernel.bvar(1);
             let lt_l_x = self.mk_lt(l, x1);
@@ -3132,26 +3535,44 @@ fn checked_lcm(a: i128, b: i128) -> Option<i128> {
     (a / g).checked_mul(b)
 }
 
-/// Build the [`RExpr`] for an INTEGER-coefficient linear form `ℓ⁺ = Σⱼ cⱼ·xⱼ` from
-/// signed coefficients `cⱼ` (any nonzero integer, not just ±1): a left-nested `add`
-/// over `|cⱼ|` repeated copies of `xⱼ` (or `neg xⱼ` when `cⱼ < 0`). E.g.
-/// `2x₀ − x₁` ⇒ `add (add x₀ x₀) (neg x₁)`. `None` (decline) on an empty list or any
+/// Build the [`RExpr`] for an INTEGER-coefficient **affine** form
+/// `ℓ⁺ = Σⱼ cⱼ·xⱼ + c₀` from signed coefficients over the certificate's
+/// homogenized index space: index `j < n_vars` is the variable `xⱼ`, and the
+/// out-of-range index `j == n_vars` is the homogenizing coordinate — the ring's
+/// `one` — exactly as [`SosCertificate::rational_affine_squares`] emits it.
+///
+/// This is the ONLY thing the homogeneous (`zero affine row`) restriction ever
+/// was: `p(x) = vᵀ M v` over `v = [x; 1]`, so the `LDLᵀ` linear forms are affine
+/// in general, and the reconstructor previously had no way to emit their constant
+/// term. `RExpr::One` is a first-class generator of the degree-2 ring normalizer
+/// (`Mono::Const`), so nothing downstream needs to change.
+///
+/// Coefficients are expanded into `|cⱼ|` repeated unit copies and folded into a
+/// left-nested `add`, so `2x₀ − x₁ + 1` ⇒ `add (add (add x₀ x₀) (neg x₁)) one`.
+/// `None` (decline) on an empty list, an index above `n_vars`, or any
 /// `|cⱼ| > SOS_RATIONAL_MAX`.
-fn int_lin_to_rexpr(coeffs: &[(usize, i128)]) -> Option<RExpr> {
+fn int_affine_lin_to_rexpr(coeffs: &[(usize, i128)], n_vars: usize) -> Option<RExpr> {
     let mut atoms: Vec<RExpr> = Vec::new();
     for &(idx, c) in coeffs {
         if c == 0 {
             continue;
         }
+        if idx > n_vars {
+            return None; // outside the homogenized index space — decline
+        }
         if c.unsigned_abs() > SOS_RATIONAL_MAX as u128 {
             return None; // coefficient too large to expand into unit copies
         }
-        let count = c.unsigned_abs();
-        for _ in 0..count {
+        let base = if idx == n_vars {
+            RExpr::One
+        } else {
+            RExpr::Var(idx)
+        };
+        for _ in 0..c.unsigned_abs() {
             let atom = if c < 0 {
-                RExpr::Neg(Box::new(RExpr::Var(idx)))
+                RExpr::Neg(Box::new(base.clone()))
             } else {
-                RExpr::Var(idx)
+                base.clone()
             };
             atoms.push(atom);
         }
@@ -3290,7 +3711,7 @@ fn reconstruct_sos_rational_weight(
     if !cert.strict_lt() {
         return Ok(None);
     }
-    let Some(rat_squares) = cert.rational_squares() else {
+    let Some(rat_squares) = cert.rational_affine_squares() else {
         return Ok(None);
     };
     let n_vars = cert.n_vars();
@@ -3312,7 +3733,7 @@ fn reconstruct_sos_rational_weight(
     let mut ell_rexprs: Vec<RExpr> = Vec::new();
     let mut sq_rexprs: Vec<RExpr> = Vec::new();
     for (weight, int_coeffs) in &cleared {
-        let Some(ell) = int_lin_to_rexpr(int_coeffs) else {
+        let Some(ell) = int_affine_lin_to_rexpr(int_coeffs, n_vars) else {
             return Ok(None);
         };
         for _ in 0..*weight {
@@ -3507,7 +3928,7 @@ fn reconstruct_sos_rational_weight_gt(
     if cert.strict_lt() {
         return Ok(None);
     }
-    let Some(rat_squares) = cert.rational_squares() else {
+    let Some(rat_squares) = cert.rational_affine_squares() else {
         return Ok(None);
     };
     let n_vars = cert.n_vars();
@@ -3529,7 +3950,7 @@ fn reconstruct_sos_rational_weight_gt(
     let mut ell_rexprs: Vec<RExpr> = Vec::new();
     let mut sq_rexprs: Vec<RExpr> = Vec::new();
     for (weight, int_coeffs) in &cleared {
-        let Some(ell) = int_lin_to_rexpr(int_coeffs) else {
+        let Some(ell) = int_affine_lin_to_rexpr(int_coeffs, n_vars) else {
             return Ok(None);
         };
         for _ in 0..*weight {
@@ -3720,10 +4141,25 @@ pub(super) fn try_general_farkas(
     ctx: &mut LraReconstructCtx,
     certificate: &crate::FarkasCertificate,
 ) -> Result<Option<ExprId>, ReconstructError> {
+    try_general_farkas_atoms(ctx, &certificate.atoms, &certificate.multipliers)
+}
+
+/// [`try_general_farkas`] over a bare atom/multiplier system.
+///
+/// The engine never reads a [`crate::FarkasCertificate`]'s `origins` or `vars`,
+/// so a route whose atoms come from somewhere other than the LRA collector — the
+/// string length/code-point abstraction, whose variables are source NAMES and
+/// not [`crate::SymbolId`]s — can use it without fabricating those two fields.
+#[allow(clippy::too_many_lines)]
+pub(super) fn try_general_farkas_atoms(
+    ctx: &mut LraReconstructCtx,
+    atoms: &[crate::FarkasAtom],
+    multipliers: &[Rational],
+) -> Result<Option<ExprId>, ReconstructError> {
     // Used atoms (positive multiplier) with their LinR forms; reject strict /
     // non-integer atoms by falling through.
     let mut used: Vec<(LinR, Rational)> = Vec::new();
-    for (atom, m) in certificate.atoms.iter().zip(&certificate.multipliers) {
+    for (atom, m) in atoms.iter().zip(multipliers) {
         if m.is_zero() {
             continue;
         }
@@ -3922,11 +4358,22 @@ pub(super) fn try_mixed_farkas(
     ctx: &mut LraReconstructCtx,
     certificate: &crate::FarkasCertificate,
 ) -> Result<Option<ExprId>, ReconstructError> {
+    try_mixed_farkas_atoms(ctx, &certificate.atoms, &certificate.multipliers)
+}
+
+/// [`try_mixed_farkas`] over a bare atom/multiplier system; see
+/// [`try_general_farkas_atoms`] for why the slice form exists.
+#[allow(clippy::too_many_lines)]
+pub(super) fn try_mixed_farkas_atoms(
+    ctx: &mut LraReconstructCtx,
+    atoms: &[crate::FarkasAtom],
+    multipliers: &[Rational],
+) -> Result<Option<ExprId>, ReconstructError> {
     // Used atoms (positive multiplier) with their LinR + strictness; reject
     // non-integer atoms by falling through.
     let mut used: Vec<(LinR, Rational, bool)> = Vec::new();
     let mut any_strict = false;
-    for (atom, m) in certificate.atoms.iter().zip(&certificate.multipliers) {
+    for (atom, m) in atoms.iter().zip(multipliers) {
         if m.is_zero() {
             continue;
         }

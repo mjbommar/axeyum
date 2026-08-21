@@ -1,7 +1,7 @@
 # 19 -- P1-ADR diary: the promotion ADR and the kernel theorem pages
 
 Agent P1-ADR, render strand P1, 2026-08-21. Two deliverables: the decision
-record P1 owes (`docs/research/09-decisions/adr-0509-render-doc-ir-public-evidence-format.md`,
+record P1 owes (`docs/research/09-decisions/adr-0540-render-doc-ir-public-evidence-format.md`,
 status **proposed** -- the owner accepts ADRs, agents do not), and a third
 producer family, `render/producers-kernel/`, which is what makes the ADR's
 boundary argument something other than an assertion.
@@ -185,7 +185,7 @@ and, more importantly, make the tools' own exit statuses load-bearing:
    a `#[test]` that runs the example with today's expectations would fail
    instead of aging.
 
-**(c) The kernel inventory snapshot is now a public format** (ADR-0509 (b)) and
+**(c) The kernel inventory snapshot is now a public format** (ADR-0540 (b)) and
 has no validator of its own. `validate-docir.py` does not look at it, and
 `KernelInventory` deserializes it without `deny_unknown_fields`. A snapshot with
 a typo'd key silently becomes a snapshot with fewer fields. Worth a

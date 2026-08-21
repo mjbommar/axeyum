@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-clean-dvd-antisymm-plan",
+  "state": "preregistered-single-kernel-zero-divisibility-leaf-and-antisymmetry-before-code-or-stream-access",
+  "predecessor": {
+    "path": "artifacts/autogenesis/nat-gcd-fib-add-self-clean-dvd-antisymm-result-v2.json",
+    "sha256": "e1116c442fa9d9a7d8bf17fc9fab3978dadee2ded27506c632edc6cb8d37edf7",
+    "finding": "the V2 native kernel lacks Nat.eq_zero_of_zero_dvd before antisymmetry submission"
+  },
+  "input": {
+    "path": "/nas3/data/axeyum/autogenesis/coverage/26fcc2c2f-mathlib-v4.30.0-reflexivity-train-development-v1/streams/r091.ndjson",
+    "sha256": "fc1117679c743009e8548a25d1f73f71f6cd42555ea77b3efce07844673670b2",
+    "root": "Axeyum.Autogenesis.Coverage.r091"
+  },
+  "construction": {
+    "kernel_identity_rule": "construct every proof and handle in one native kernel, then transport only the three checked named closures into r091",
+    "clean_zero_dvd": {
+      "name": "Axeyum.Autogenesis.eqZeroOfZeroDvdCleanV1",
+      "contract": "forall n, Nat.dvd 0 n -> n = 0",
+      "method": "eliminate the divisibility witness n = 0*q and close with Nat.zero_mul",
+      "required_direct_dependencies": ["Nat.zero_mul"],
+      "axiom_footprint": []
+    },
+    "clean_le_of_dvd": {
+      "name": "Axeyum.Autogenesis.leOfDvdCleanV1",
+      "required_direct_dependencies": ["Nat.mul_le_mul_left", "Nat.mul_one", "Nat.one_le_right_of_mul"],
+      "axiom_footprint": []
+    },
+    "clean_dvd_antisymm": {
+      "name": "Axeyum.Autogenesis.dvdAntisymmCleanV3",
+      "required_direct_dependencies": ["Axeyum.Autogenesis.eqZeroOfZeroDvdCleanV1", "Axeyum.Autogenesis.leOfDvdCleanV1", "Nat.le_antisymm", "Nat.succ_pos"],
+      "axiom_footprint": []
+    },
+    "transport_roots": ["Axeyum.Autogenesis.eqZeroOfZeroDvdCleanV1", "Axeyum.Autogenesis.leOfDvdCleanV1", "Axeyum.Autogenesis.dvdAntisymmCleanV3"]
+  },
+  "acceptance": {
+    "fresh_complete_invocations": 2,
+    "outputs_must_be_byte_identical": true,
+    "source_and_target_theorem_evidence_must_match": true,
+    "checked_named_composition_must_replay": true,
+    "final_target_axiom_footprints": [],
+    "proof_terms_types_or_values_may_be_rendered": false
+  },
+  "budget": {
+    "max_binary_builds": 1,
+    "max_complete_invocations": 2,
+    "max_input_stream_reads": 2,
+    "max_composition_operations": 2,
+    "max_new_support_theorem_submissions": 6,
+    "max_exact_target_submissions": 0,
+    "max_retries": 0
+  },
+  "authority": {
+    "support_credit": 0,
+    "exact_target_submissions": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_on_accept": "Preregister the exact Nat.gcd_fib_add_self construction using Fibonacci addition, official cancellation, and clean divisibility antisymmetry.",
+  "output": "artifacts/autogenesis/nat-gcd-fib-add-self-clean-dvd-antisymm-result-v3.json",
+  "verification": "python3 scripts/check-autogenesis-nat-gcd-fib-add-self-clean-dvd-antisymm-plan-v3.py",
+  "limitations": "This plan may establish only three reusable supports in r091. It grants no exact target, fact, evaluation, or ledger credit."
+}

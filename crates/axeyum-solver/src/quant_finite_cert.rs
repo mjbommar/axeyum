@@ -1313,14 +1313,35 @@ fn int_literal(arena: &TermArena, term: TermId) -> Option<i128> {
 }
 
 /// Whether `term` contains any quantifier operator.
+///
+/// **The `seen` set is not an optimisation, it is the difference between this
+/// terminating and not.** A `TermArena` is a DAG with structural sharing, and the
+/// naive recursion walks it as a TREE — so a shared subterm is re-entered once
+/// per path to it, which is exponential in the sharing depth.
+///
+/// Measured 2026-08-20 on `solver__fp__Float-no-simp3-main.smt2`, whose arena
+/// holds 2,971 nodes and never grows: **9,810,000,000+ calls**, still climbing
+/// when the run was killed at 60s. It was scanning a QUANTIFIER-FREE query for
+/// quantifiers, exponentially, in order to conclude there were none.
+///
+/// Found by a dominance-audit refresh, not by a test: the instance was recorded
+/// as decided in a committed audit that nothing had re-run for two months.
 fn contains_quantifier(arena: &TermArena, term: TermId) -> bool {
-    match arena.node(term) {
-        TermNode::App { op, args } => {
-            matches!(op, Op::Forall(_) | Op::Exists(_))
-                || args.iter().any(|&a| contains_quantifier(arena, a))
+    fn walk(arena: &TermArena, term: TermId, seen: &mut std::collections::HashSet<TermId>) -> bool {
+        if !seen.insert(term) {
+            // Already visited on another path: it had no quantifier then and the
+            // arena is immutable here, so it has none now.
+            return false;
         }
-        _ => false,
+        match arena.node(term) {
+            TermNode::App { op, args } => {
+                matches!(op, Op::Forall(_) | Op::Exists(_))
+                    || args.iter().any(|&a| walk(arena, a, seen))
+            }
+            _ => false,
+        }
     }
+    walk(arena, term, &mut std::collections::HashSet::new())
 }
 
 /// Splices the `lia_generic` ground tail onto the quantifier layer: each tail

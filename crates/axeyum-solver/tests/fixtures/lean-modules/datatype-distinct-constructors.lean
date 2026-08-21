@@ -7,6 +7,35 @@ set_option linter.unusedVariables false
 -- ("code generator does not support recursor `T.rec` yet"). The section
 -- suppresses codegen only; it does not weaken type checking.
 noncomputable section
+-- Scope-aware sharing (see `ScopeId`) binds repeated subterms with
+-- `let`, and a `let` chain is NESTED syntax: one binding per level.
+-- Measured 2026-08-18, the constructed-carrier module binds 2,897
+-- of them inside one distributivity lemma alone, and Lean 4.30.0
+-- rejected the file at that declaration with `maximum recursion
+-- depth has been reached` -- the default limit is 512. (No carrier
+-- name appears in this banner on purpose: a sibling guard asserts a
+-- module over the constructed carrier never spells the axiomatized
+-- package's name, and it reads the whole file as one string.) This
+-- raises the
+-- ELABORATOR's recursion counter and nothing else: the kernel still
+-- checks every term, and `#print axioms` is unaffected.
+set_option maxRecDepth 65536
+
+-- Lean's own compiler-internal constants, which `Init.Prelude` declares
+-- (`unsafe axiom lcErased : Type`) and `prelude` mode therefore omits.
+-- Lean 4.34 runs code generation over a Prop-valued inductive that
+-- carries data -- `Or`, `Exists`, `Nat.le` -- and its IR names these, so
+-- without them the module dies on `Unknown constant lcErased` before any
+-- proof is checked. Measured 2026-08-17: 21 of 77 crosscheck families were
+-- rejected by 4.34.0-rc1 and accepted by 4.30.0, which is why the gate's
+-- verdict depended on which toolchain happened to be installed.
+--
+-- They are compiler-only: no proof term mentions them, so they do NOT
+-- enter any `#print axioms` footprint. Asserted, not assumed, by
+-- `codegen_constants_are_declared_but_never_in_the_footprint`.
+unsafe axiom lcErased : Type
+unsafe axiom lcAny : Type
+unsafe axiom lcVoid : Type
 
 inductive True : Prop where
   | intro : True
@@ -14,8 +43,8 @@ inductive False : Prop where
 inductive Eq.{u} (x0 : Sort (u)) (x1 : x0) : ((x2 : x0) -> Prop) where
   | refl : Eq x0 x1 x1
 inductive Bool : Sort (1) where
-  | true : Bool
   | false : Bool
+  | true : Bool
 axiom α : Sort (1)
 inductive axeyum.reconstruct.dtfam._0 : Sort (1) where
   | c0 : ((x0 : α) -> axeyum.reconstruct.dtfam._0)
@@ -25,6 +54,6 @@ axiom axeyum.reconstruct.fld_0._2 : α
 axiom axeyum.reconstruct.hyp._3 : Eq.{1} axeyum.reconstruct.dtfam._0 (@axeyum.reconstruct.dtfam._0.c0 axeyum.reconstruct.fld_0._1) (@axeyum.reconstruct.dtfam._0.c1 axeyum.reconstruct.fld_0._2)
 
 theorem axeyum_refutation : False :=
-  @Eq.rec.{0, 1} Bool ((fun (x0 : axeyum.reconstruct.dtfam._0) => @axeyum.reconstruct.dtfam._0.rec.{1} (fun (x1 : axeyum.reconstruct.dtfam._0) => Bool) (fun (x1 : α) => @Bool.false) (fun (x1 : α) => @Bool.true) x0) (@axeyum.reconstruct.dtfam._0.c0 axeyum.reconstruct.fld_0._1)) (fun (x0 : Bool) => fun (x1 : Eq.{1} Bool ((fun (x1 : axeyum.reconstruct.dtfam._0) => @axeyum.reconstruct.dtfam._0.rec.{1} (fun (x2 : axeyum.reconstruct.dtfam._0) => Bool) (fun (x2 : α) => @Bool.false) (fun (x2 : α) => @Bool.true) x1) (@axeyum.reconstruct.dtfam._0.c0 axeyum.reconstruct.fld_0._1)) x0) => (fun (x2 : Bool) => @Bool.rec.{1} (fun (x3 : Bool) => Prop) False True x2) x0) @True.intro @Bool.true (@Eq.rec.{0, 1} axeyum.reconstruct.dtfam._0 (@axeyum.reconstruct.dtfam._0.c0 axeyum.reconstruct.fld_0._1) (fun (x0 : axeyum.reconstruct.dtfam._0) => fun (x1 : Eq.{1} axeyum.reconstruct.dtfam._0 (@axeyum.reconstruct.dtfam._0.c0 axeyum.reconstruct.fld_0._1) x0) => Eq.{1} Bool ((fun (x2 : axeyum.reconstruct.dtfam._0) => @axeyum.reconstruct.dtfam._0.rec.{1} (fun (x3 : axeyum.reconstruct.dtfam._0) => Bool) (fun (x3 : α) => @Bool.false) (fun (x3 : α) => @Bool.true) x2) (@axeyum.reconstruct.dtfam._0.c0 axeyum.reconstruct.fld_0._1)) ((fun (x2 : axeyum.reconstruct.dtfam._0) => @axeyum.reconstruct.dtfam._0.rec.{1} (fun (x3 : axeyum.reconstruct.dtfam._0) => Bool) (fun (x3 : α) => @Bool.false) (fun (x3 : α) => @Bool.true) x2) x0)) (@Eq.refl.{1} Bool ((fun (x0 : axeyum.reconstruct.dtfam._0) => @axeyum.reconstruct.dtfam._0.rec.{1} (fun (x1 : axeyum.reconstruct.dtfam._0) => Bool) (fun (x1 : α) => @Bool.false) (fun (x1 : α) => @Bool.true) x0) (@axeyum.reconstruct.dtfam._0.c0 axeyum.reconstruct.fld_0._1))) (@axeyum.reconstruct.dtfam._0.c1 axeyum.reconstruct.fld_0._2) axeyum.reconstruct.hyp._3)
+  @Eq.rec.{0, 1} Bool ((fun (x0 : axeyum.reconstruct.dtfam._0) => @axeyum.reconstruct.dtfam._0.rec.{1} (fun (x1 : axeyum.reconstruct.dtfam._0) => Bool) (fun (x1 : α) => @Bool.false) (fun (x1 : α) => @Bool.true) x0) (@axeyum.reconstruct.dtfam._0.c0 axeyum.reconstruct.fld_0._1)) (fun (x0 : Bool) => fun (x1 : Eq.{1} Bool ((fun (x1 : axeyum.reconstruct.dtfam._0) => @axeyum.reconstruct.dtfam._0.rec.{1} (fun (x2 : axeyum.reconstruct.dtfam._0) => Bool) (fun (x2 : α) => @Bool.false) (fun (x2 : α) => @Bool.true) x1) (@axeyum.reconstruct.dtfam._0.c0 axeyum.reconstruct.fld_0._1)) x0) => (fun (x2 : Bool) => @Bool.rec.{1} (fun (x3 : Bool) => Prop) True False x2) x0) @True.intro @Bool.true (@Eq.rec.{0, 1} axeyum.reconstruct.dtfam._0 (@axeyum.reconstruct.dtfam._0.c0 axeyum.reconstruct.fld_0._1) (fun (x0 : axeyum.reconstruct.dtfam._0) => fun (x1 : Eq.{1} axeyum.reconstruct.dtfam._0 (@axeyum.reconstruct.dtfam._0.c0 axeyum.reconstruct.fld_0._1) x0) => Eq.{1} Bool ((fun (x2 : axeyum.reconstruct.dtfam._0) => @axeyum.reconstruct.dtfam._0.rec.{1} (fun (x3 : axeyum.reconstruct.dtfam._0) => Bool) (fun (x3 : α) => @Bool.false) (fun (x3 : α) => @Bool.true) x2) (@axeyum.reconstruct.dtfam._0.c0 axeyum.reconstruct.fld_0._1)) ((fun (x2 : axeyum.reconstruct.dtfam._0) => @axeyum.reconstruct.dtfam._0.rec.{1} (fun (x3 : axeyum.reconstruct.dtfam._0) => Bool) (fun (x3 : α) => @Bool.false) (fun (x3 : α) => @Bool.true) x2) x0)) (@Eq.refl.{1} Bool ((fun (x0 : axeyum.reconstruct.dtfam._0) => @axeyum.reconstruct.dtfam._0.rec.{1} (fun (x1 : axeyum.reconstruct.dtfam._0) => Bool) (fun (x1 : α) => @Bool.false) (fun (x1 : α) => @Bool.true) x0) (@axeyum.reconstruct.dtfam._0.c0 axeyum.reconstruct.fld_0._1))) (@axeyum.reconstruct.dtfam._0.c1 axeyum.reconstruct.fld_0._2) axeyum.reconstruct.hyp._3)
 
 #print axioms axeyum_refutation

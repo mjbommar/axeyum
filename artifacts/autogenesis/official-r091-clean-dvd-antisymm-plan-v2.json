@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-r091-clean-dvd-antisymm-plan-v2",
+  "state": "preregistered-official-arithmetic-base-before-clean-order-reconstruction",
+  "predecessor": {"path": "artifacts/autogenesis/official-r091-clean-dvd-antisymm-result-v1.json", "sha256": "875a900a11d64b9042389f2add8c03bd48321fff242fda443505868a377aa709"},
+  "sequencing_change": ["import pristine r091", "compose and replay the official cancellation capsule, thereby establishing its exact Nat.mul and arithmetic closure", "resolve every proof handle inside that completed official kernel", "submit clean zero-divisibility, divisor order, and antisymmetry", "require all footprints empty", "root-export antisymmetry and independently import twice before write"],
+  "unchanged_proof_terms": ["eqZeroOfZeroDvdOfficialV1", "leOfDvdOfficialV1", "dvdAntisymmOfficialV1"],
+  "acceptance": {"fresh_complete_invocations": 2, "official_cancellation_compositions": 2, "support_submissions": 6, "outputs_byte_identical": true, "each_output_imports": 2, "all_axiom_footprints": [], "exact_target_submissions": 0},
+  "budget": {"max_driver_builds": 1, "max_complete_invocations": 2, "max_capsule_compositions": 2, "max_support_submissions": 6, "max_exports": 2, "max_imports": 4, "max_exact_target_submissions": 0, "max_retries": 0},
+  "authority": {"support_credit_before_acceptance": 0, "target_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "limitations": "V2 changes composition order only. It does not authorize the exact GCD-shift target."
+}

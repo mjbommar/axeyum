@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-gcd-balanced-bezout-generic-base-result",
+  "state": "first-invocation-declined-at-exact-Nat-mod-lt-reuse-no-retry",
+  "plan": {"path": "artifacts/autogenesis/official-gcd-balanced-bezout-generic-base-plan-v1.json", "sha256": "c412cff4cc767c8e676bb09ac623db07f3121f64e9ed0e55a676a4076fd3dc51", "commit": "2d62fc4a7b87dccdb7a050129942d403831a0665"},
+  "evidence_pack": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/47343f64f-official-gcd-balanced-bezout-generic-base-v1/manifest.json", "sha256": "c7335778428d520e5872637371ebbe1a9a89fc3742d4e82ea512283e440efb6b", "directory_mode": "0555", "file_mode": "0444"},
+  "implementation": {"path": "crates/axeyum-lean-import/examples/official_gcd_balanced_bezout_composition.rs", "sha256": "61a1df4c50fd269183d75a0aceeb11dd4f231ea1d077b74f9f526f360b657d8e", "commit": "c4bf44f90f1752a307cc8d7dd625a9a7f793bf78"},
+  "execution": {"binary_builds": 1, "complete_invocations": 1, "input_stream_reads": 5, "successful_composition_operations": 0, "failed_composition_operations": 1, "successful_specialization_operations": 0, "closed_balanced_bezout_submissions": 0, "retries": 0, "second_invocation_skipped_after_first_decline": true},
+  "decline": {"operation": "compose Nat.mod_lt from r082 into the accepted generic balanced-Bezout kernel", "class": "no-additions", "first_rejected": "Nat.mod_lt", "interpretation": "the exact theorem is already present in the generic kernel and must be reused under an explicit identity check rather than composed", "proof_material_rendered": false, "partial_kernel_published": false},
+  "next_boundary": {"required_next_increment": "preregister exact Nat.mod_lt reuse across the two pinned kernels, then compose only modLtSucc and the two gcd leaves into the generic base", "exact_reuse_selected": true, "closed_gcd_balanced_bezout_completed": false},
+  "authority": {"inherited_official_gcd_zero_left_credit": 1, "inherited_official_gcd_succ_credit": 1, "closed_gcd_balanced_bezout_credit": 0, "cancellation_credit": 0, "target_specialization_credit": 0, "exact_fibonacci_target_submissions": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "verification": "python3 scripts/check-autogenesis-official-gcd-balanced-bezout-generic-base-result.py",
+  "limitations": "No theorem was submitted. This result authorizes only exact checked reuse of the already-present Nat.mod_lt declaration under a new preregistration."
+}

@@ -4,14 +4,24 @@ Date: 2026-08-19
 
 ## Result
 
-The proof shape is now bounded, but execution is blocked before proof search by
-an architectural seam: Axeyum's axiom-free Nat theorem library cannot yet be
-composed into an imported Mathlib environment.
+The proof shape is bounded, and the first composition seam is now closed through
+the public theorem-rooted API. Axeyum's axiom-free `Nat.zero_add`, `Nat.succ_add`,
+and `Nat.add_comm` proofs compose into the imported Mathlib environment with a
+replayable receipt. Translated definitional equality resolves the first
+order-wrapper differences, atomic singleton composition reconstructs the
+absent `Exists` package, and checked definition composition admits exact
+`Nat.mul` and `Nat.dvd` definitions plus eight axiom-free theorems. The larger
+`Nat.dvd_gcd` control now passes the exact official-order Bool package and
+the general, definitionally compatible `Nat.mod_lt`, reconstructs the exact
+canonical `Acc` package, and reaches a semantic representation mismatch in the
+native `Nat.div_mod_exec` proof. The full 92-declaration control shows that the
+actual missing direct consumer is `Nat.dvd_mod_iff`.
 
 The exact `r082` train stream imports 261 declarations and 52 theorems with no
 axioms. It contains `Nat.rec`, but none of the seven native lemmas required by
-the bounded proof. Calling `build_nat_prelude` on that kernel rejects at the
-first overlapping logic declaration, `True`, with `DeclarationExists`.
+the bounded proof. Calling `build_nat_prelude` wholesale still rejects at the
+first overlapping logic declaration, `True`, with `DeclarationExists`; selected
+theorem-rooted composition avoids granting that rejected bulk operation authority.
 
 ## Bounded proof shape
 
@@ -29,7 +39,7 @@ items are axiom-free native library theorems.
 
 ## Actual blocker and sequence
 
-The next implementation should proceed in this order:
+The completed first increment followed this order:
 
 1. Recover typed prelude handles from existing imported logic and Nat
    declarations.
@@ -37,8 +47,25 @@ The next implementation should proceed in this order:
    recursor, or universe mismatch.
 3. Add only missing native theorems, transactionally, so a failed composition
    cannot leave a half-extended environment.
-4. Replay the seven-lemma surface in `r082` before authorizing any target proof
-   submission.
+4. Reproduce the selected three-theorem slice through a public completed-clone
+   API and bind its exact receipt.
+
+The definition increment rebuilds demanded types, values, universe parameters,
+and reducibility exactly in the private target, submits them through the
+ordinary target gate, and binds both source and target identities. Opaque,
+conflicting, and unsupported declaration kinds still decline. The Bool
+increment aligned the native package to official Lean's `false`, `true` order,
+migrated every branch-sensitive consumer, and retained independent replay. The
+next increment generalized native `Nat.mod_lt` to Lean's positive-denominator
+contract and proved it in the native kernel. A read-only named compatibility
+check crosses wrapper differences by target-kernel definitional equality. The
+canonical `Acc` package is now reconstructed atomically with exact source and
+target identities. Semantic admission diagnostics then isolate official
+`Nat.mod (Nat.succ n)` versus the native Bool-rollover remainder inside
+`Nat.div_mod_exec`; they do not weaken the target kernel's equality check.
+Official Lean 4.30 `Nat.dvd_mod_iff` and `Nat.mod_add_div` both carry `propext`,
+so neither proof is admissible support for this axiom-free path. The next
+increment is a target-side axiom-free `Nat.dvd_mod_iff` bridge.
 
 This is the holistic point: theorem search cannot use the library until the
 library and imported target share one checked environment. Solving this seam
@@ -47,12 +74,47 @@ also benefits every later Mathlib target that needs native arithmetic facts.
 ## Evidence
 
 The current read-only observation is
-`/nas3/data/axeyum/autogenesis/probes/d1eb38a13-fib-coprime-prelude-compatibility-v2/observation.json`.
-It extends the original rejection receipt with a fail-closed overlap census;
-the interpretation and next boundary are recorded in
-[the alpha-stable compatibility result](54-alpha-stable-prelude-compatibility.md).
+`/nas3/data/axeyum/autogenesis/probes/f099a4a37-nat-div-mod-exec-mismatch-v15/observation.json`.
+It binds the public API, exact source closure, reused declaration identities,
+added theorem identities, environment transition, and composition receipt. The
+history is recorded in
+[the first checked native-library composition](57-first-native-nat-composition.md),
+the promoted boundary in
+[public checked theorem composition](58-public-checked-theorem-composition.md),
+and the next compatibility result in
+[translated definitional reuse](59-translated-definitional-reuse.md), followed
+by [atomic singleton-inductive composition](60-atomic-singleton-inductive-composition.md),
+[checked definition composition](61-checked-definition-composition.md), and
+[official Bool order](62-official-bool-order.md), followed by
+[general Nat.mod_lt compatibility](63-general-nat-mod-lt-compatibility.md),
+[canonical Acc composition](64-canonical-acc-composition.md), and the
+[Nat division composition mismatch](65-nat-division-composition-mismatch.md),
+followed by the
+[axiom-free Nat.mod equation pack](66-axiom-free-nat-mod-equation-pack.md).
 Verify the tracked plan and its authority boundary with:
 
 ```sh
 python3 scripts/check-autogenesis-nat-fib-coprime-premise-plan.py
 ```
+
+## Current frontier
+
+Subsequent increments built the constructive target `Nat.dvd_mod_iff`, added
+checked target-owned theorem leaves, and moved the imported-to-official route
+to `Nat.gcd_succ`. Its official proof reaches `Quot.sound`. Rather than import
+that assumption, dependency-ordered mixed composition moved the exact
+`Nat.fib` definition and the admitted recurrence into the native gcd-capable
+kernel.
+
+The induction above is now a twice-reconstructed, axiom-free native theorem
+with exactly the eight planned direct theorem dependencies. See
+[constructive Nat.mod invariant specialization](67-constructive-nat-mod-invariant-specialization.md),
+[the Nat.gcd target-leaf frontier](68-target-owned-theorem-leaves-and-nat-gcd-frontier.md),
+[native Fibonacci composition](69-native-fibonacci-composition.md), and
+[native Fibonacci coprimality](70-native-fibonacci-coprimality.md).
+
+The Mathlib fact remains open at a narrower semantic boundary: r082's
+`Nat.Coprime` closes over official `Nat.gcd`, while the accepted theorem closes
+over native `Nat.gcd`. The next operation must check an explicit bridge between
+those definition closures; same-name compatibility alone receives no theorem
+or ledger credit.

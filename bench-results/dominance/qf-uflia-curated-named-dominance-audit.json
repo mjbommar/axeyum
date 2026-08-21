@@ -7,23 +7,25 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
+      "decision_backend": "arith-dpll-exact-theory-enumeration",
       "dominant_candidate": true,
-      "elapsed_ms": 12.95367,
+      "elapsed_ms": 10.236042000000001,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "arith-dpll-unsat",
       "file": "corpus/public-curated/named/cvc5__named-expr-use.smt2",
       "lean_checked": true,
       "lean_error": null,
       "lean_fragment": "ArithDpll",
-      "lean_module_bytes": 579,
+      "lean_module_bytes": 3151,
       "phase_timings_ms": {
-        "check_evidence": 1.5396400000000001,
-        "lean_reconstruction": 8.48903,
-        "parse_evidence": 0.25985400000000003,
-        "parse_lean": 0.113404,
-        "produce_evidence": 2.510465,
-        "read": 0.013297
+        "check_evidence": 0.113077,
+        "lean_reconstruction": 2.937131,
+        "parse_evidence": 0.105998,
+        "parse_lean": 0.025363,
+        "produce_evidence": 0.68015,
+        "read": 0.034341
       },
       "trust_holes": [],
       "trust_steps": []
@@ -33,31 +35,40 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
+      "decision_backend": "arith-dpll-exact-theory-enumeration",
       "dominant_candidate": true,
-      "elapsed_ms": 538.829966,
+      "elapsed_ms": 67.421926,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "arith-dpll-unsat",
       "file": "corpus/public-curated/named/cvc5__use-name-in-same-command.smt2",
       "lean_checked": true,
       "lean_error": null,
       "lean_fragment": "ArithDpll",
-      "lean_module_bytes": 579,
+      "lean_module_bytes": 3151,
       "phase_timings_ms": {
-        "check_evidence": 104.383604,
-        "lean_reconstruction": 324.100228,
-        "parse_evidence": 0.269644,
-        "parse_lean": 0.18841999999999998,
-        "produce_evidence": 109.85584399999999,
-        "read": 0.009883
+        "check_evidence": 9.789086000000001,
+        "lean_reconstruction": 30.504572,
+        "parse_evidence": 0.12837800000000002,
+        "parse_lean": 0.086365,
+        "produce_evidence": 16.393967,
+        "read": 0.036474
       },
       "trust_holes": [],
       "trust_steps": []
     }
   ],
-  "limit": 2,
+  "limit": 1000,
   "logic": "QF_UFLIA",
+  "prelude_warm_ms": 13041.367683,
+  "prelude_warmed": true,
   "slice": "qf-uflia-curated-named-solver-vs-z3-10s.json",
+  "source_revision": {
+    "dirty": false,
+    "sha": "496288979",
+    "source": "lane-snapshot"
+  },
   "summary": {
     "audit_errors": 0,
     "audited_decided": 2,
@@ -73,6 +84,6 @@
     "lean_unsat_pct": 100.0,
     "timeouts": 0
   },
-  "timeout_ms": 30000,
-  "version": 1
+  "timeout_ms": 10000,
+  "version": 3
 }

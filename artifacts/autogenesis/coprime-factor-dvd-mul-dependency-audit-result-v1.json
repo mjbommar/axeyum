@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-coprime-factor-dvd-mul-dependency-audit-result",
+  "state": "Nat-mul-assoc-is-direct-propext-carrier",
+  "plan": {"path": "artifacts/autogenesis/coprime-factor-dvd-mul-dependency-audit-plan-v1.json", "sha256": "dc86514f571f08dc925b32958bc2f01903e76f9244e460eeb249373a1e20b5e4", "commit": "352a9c12a"},
+  "evidence": {"pack": "/nas3/data/axeyum/autogenesis/reference-packs/352a9c12a-coprime-factor-dvd-mul-dependency-audit-v1", "manifest_sha256": "ec3957b48ceb2e00af8dde6a9272ab3f5e887acd4a1e257934e4d103365ede55", "audit_sha256": "7c49db561750e69f50b47ef2d737cebe99e65ff10736007d4554dc1d5f4807f0"},
+  "execution": {"importer_runs": 1, "proof_bearing_stream_reads": 1, "theorem_submissions": 0, "retries": 0},
+  "classification": {"clean_roots": ["Eq.trans", "congrArg"], "propext_root": "Nat.mul_assoc", "propext_root_declaration_sha256": "9cc915af2d8f3e3f41c767a1f5fa28dd61bc5dc97015abb764535e64d5c55295", "propext_root_direct_theorem_dependencies": []},
+  "authority": {"dependency_audit_credit": 1, "dvd_mul_leaf_credit": 0, "residual_cancellation_credit": 0, "official_cancellation_credit": 0, "exact_fibonacci_target_submissions": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_boundary": {"required_next_increment": "parameterize residual cancellation over the accepted clean multiplication-associativity leaf"},
+  "verification": "python3 scripts/check-autogenesis-coprime-factor-dvd-mul-dependency-audit-result.py",
+  "limitations": "This classification grants no theorem or downstream credit."
+}

@@ -1,4 +1,4 @@
-# 02 — The library: ℕ → ℤ → ℚ → ℝ
+# 02 — The library: ℕ → ℤ → ℚ → ℝ → ℂ
 
 > **This rung is owned by another lane.** `crates/axeyum-lean-kernel/` is being
 > worked continuously by a second session — 69 commits in 24 hours, 49 of them
@@ -11,6 +11,65 @@
 > What *is* ours is the receiver: an UNSAT evidence route for `Int`/`Real`
 > (engineering `01` K2), so that results about ℤ can carry a negative control
 > the moment ℤ exists. Today `axeyum-scenarios` `unreachable!()`s on both sorts.
+
+> **STATUS 2026-08-19 — the ladder is built to ℂ, and this document's advice
+> about ℝ was overtaken.** ℝ and ℂ both exist, constructed, and every prelude
+> below has a trusted surface of **0**. Measured today, and this is the number
+> to re-measure rather than to quote:
+>
+> ```text
+> cargo run -q --release -p axeyum-lean-kernel \
+>   --example nat_axiom_inventory -- --include-constructed
+> complex 0 · creal 0 · integer 0 · logic 0 · nat 0 · rat 0 · string 0 · real 30
+> ```
+>
+> `real 30` is the *axiomatized* `Real` package and is now the only nonzero row.
+> It is deliberately retained as the negative control every axiom-freedom
+> measurement here is checked against — delete it and no such claim can fail
+> ([ADR-0509](../research/09-decisions/adr-0509-the-trusted-surface-is-measured-as-reached-not-only-declared.md),
+> [`status/64-retire-real.md`](../plan/status/64-retire-real.md)) — and no
+> shipped route builds it.
+>
+> **ℝ is `CReal`** ([ADR-0512](../research/09-decisions/adr-0512-real-is-constructed-as-a-setoid-over-the-rationals.md)):
+> a Bishop setoid of regular ℚ-sequences whose equality is the *defined*
+> relation `CReal.Equiv`, not the kernel's `Eq`. That is the whole trick. A
+> Cauchy **quotient** needs `Quot.sound`; Dedekind cuts need `propext` and
+> `funext`; a setoid over a defined equality needs neither, so ℝ costs nothing
+> trusted. **94 declarations**, re-measured today with
+> `--example creal_setoid_witness`: the 22 ordered-commutative-ring laws,
+> `mul_congr`, `Apart`, `PosBound`, the partial multiplicative inverse
+> ([ADR-0510](../research/09-decisions/adr-0510-the-real-inverse-is-partial-and-its-modulus-is-data.md),
+> [ADR-0516](../research/09-decisions/adr-0516-the-real-inverse-is-well-defined-by-uniqueness-not-by-estimate.md)),
+> and `max`/`min`/`abs`
+> ([ADR-0519](../research/09-decisions/adr-0519-the-real-lattice-is-defined-on-the-representation-and-is-one-lipschitz.md)).
+>
+> **ℂ is `Complex`** ([ADR-0521](../research/09-decisions/adr-0521-complex-is-a-pair-setoid-over-creal-and-carries-no-order.md)):
+> pairs of `CReal` under a componentwise defined `Complex.Equiv`, **39
+> declarations** (`--example complex_ring_witness`), all 9 commutative-ring laws,
+> trusted surface 0. The 13 order laws of the `Real` package are **refuted, not
+> skipped**: `Complex.no_compatible_order` derives `False` from any `le`/`lt`
+> satisfying seven of them, witness `I` through `I_sq`, with no classical step.
+>
+> **Two findings that change what "hard" means on this rung**, and neither was
+> on any plan:
+>
+> - **What must be data is the MODULUS, not the proof.** A function may *take* a
+>   `Prop` and return a `Type`; it may not *branch* on one. So
+>   `inv : (x : CReal) → Apart x zero → CReal` is **not** definable — `Apart` is
+>   an `Or` — while
+>   `inv : (x : CReal) → (k : Nat) → PosBound x k → CReal` **is**, because the
+>   representative depends on `k` alone and the proof is only ever consumed
+>   inside `CReal.mk`'s `Prop`-valued regularity field.
+> - **ℚ was not a field.** `Rat.inv` had existed since the rational prelude was
+>   written — as a definition with *no law about it*. The development had 22
+>   ordered-**ring** laws and an operation named `inv`, and the gap between those
+>   two is exactly the gap between a ring and a field. That was the real first
+>   blocker on ℝ's inverse, and it was one level down from where anyone was
+>   looking. `Rat.mul_inv_cancel` closed it
+>   ([`notes/creal-field.md`](../plan/notes/creal-field.md)).
+>
+> What is **not** built is in "What to do first", below, with costings from the
+> lanes that built the pieces rather than fresh estimates.
 
 > **STATUS 2026-08-16 — ℤ is done (0 axioms), and ℚ is scoped. The construction
 > named below is not the one to build.**
@@ -179,13 +238,28 @@
 > applies to gates, applied to a proof term. `Nat.coprime_of_bezout_one` landed
 > on top of it: `∀ a b, bezout a b 1 → gcd a b = 1`, axiom-free.
 
-**The state.** One number system is proved. The rest are assumed or absent.
+**The state, as this document found it (2026-08-15).** One number system was
+proved; the rest were assumed or absent.
 
 ```
 nat_prelude     106 proved theorems      0 axioms
 int_prelude       0 proved               3 axioms
 arith_prelude     0 proved               3 axioms
 string_prelude    0 proved               1 axiom
+```
+
+**Re-measured 2026-08-19**, and every row moved. Counts are from the inventory
+examples, not from source text — `.theorem(name, …)` takes an interned `NameId`,
+so grepping the source returns zero:
+
+```text
+nat      139 theorems      0 trusted   # --example nat_theorem_inventory
+integer   57 derived       0 trusted   # --example int_theorem_inventory, "0 still asserted"
+rat        —               0 trusted   # an ordered FIELD since Rat.mul_inv_cancel
+creal     94 declarations  0 trusted   # --example creal_setoid_witness
+complex   39 declarations  0 trusted   # --example complex_ring_witness
+string     —               0 trusted   # append is constructed, ADR-0513
+real       —              30 trusted   # the axiomatized package, kept as a control
 ```
 
 `nat_prelude.rs` went **3,856 → 9,969 lines in 60 commits during a single
@@ -226,7 +300,8 @@ Standard, and each step is a genuine mathematical obligation, not a port:
 |---|---|---|
 | **ℤ** | quotient of ℕ×ℕ by `(a,b) ~ (c,d) ⟺ a+d = c+b` | ℕ addition, its cancellation law, and a quotient former |
 | **ℚ** | quotient of ℤ×ℤ≠0 by cross-multiplication | ℤ ring structure; ℕ gcd for normal forms |
-| **ℝ** | Cauchy sequences or Dedekind cuts over ℚ | ℚ ordered-field structure; completeness is the real work |
+| **ℝ** | ~~Cauchy sequences or Dedekind cuts over ℚ~~ — **a Bishop setoid of regular ℚ-sequences under a *defined* `CReal.Equiv`** (ADR-0512) | ℚ ordered-field structure. Completeness turned out **not** to be the entry price: the 22 ordered-ring laws, the lattice and a partial inverse are all reachable without it, and completeness is still unbuilt |
+| **ℂ** | pairs of `CReal` under a componentwise defined `Complex.Equiv` (ADR-0521) | ℝ's ring structure and nothing else — ℂ was the **cheapest** rung on this table, 39 declarations |
 
 **ℤ is reachable now.** `add_left_cancel` and `add_right_cancel` are proved;
 well-founded recursion is proved; the kernel has quotient support
@@ -238,14 +313,33 @@ stops resting on them.
 **ℚ is the interesting one for us**, because `gcd` and its universal property
 just landed — normal forms for rationals are exactly what that unlocks.
 
-**ℝ is a different order of effort** and should be scoped, not attempted. Note
-what depends on it: the curriculum marks `reals` as `status = "covered"`, and
-the corpus audit found it is the one `covered` node our fragment cannot support.
+**ℝ was built, 2026-08-17/19, under ADR-0512** — and this document said *"ℝ is
+a different order of effort and should be scoped, not attempted"*, which is worth
+leaving on the page next to why it was wrong. The reasoning behind it was that ℝ
+means completeness and completeness is a different kind of obligation. That part
+is still true: **completeness is not built**, and nothing that needs it (`sqrt`,
+suprema, ℂ's `abs`) is either. What the reasoning missed is that the *ordered
+field* structure does not wait on completeness. The 22 ordered-ring laws,
+`max`/`min`/`abs` and a partial inverse are all reachable over a setoid of
+regular sequences, and the choice of construction — setoid rather than quotient
+or cuts — is what kept the trusted surface at 0.
+
+The curriculum's `reals` node was still `status = "covered"` when this was
+written, and the corpus audit found it the one `covered` node our fragment could
+not support. That residue is now about the *map*, not the prelude:
+[`04`](04-reachability.md) measures 40 of 40 `reals` instances as `QF_LRA`
+against a node advertising NRA, and 65 negative-control instances over
+`Int`/`Real`-sorted symbols that the earlier "not even expressible" claim said
+could not exist.
 
 ## The metric
 
-**Assumptions remaining, per prelude, per release.** Today: `int` 3, `arith` 3,
-`string` 1, `nat` 0.
+**Assumptions remaining, per prelude, per release.** When this was written:
+`int` 3, `arith` 3, `string` 1, `nat` 0. Measured 2026-08-19 with
+`nat_axiom_inventory --include-constructed`: **`complex` 0, `creal` 0, `integer`
+0, `logic` 0, `nat` 0, `rat` 0, `string` 0, and `real` 30** — the last being the
+axiomatized package retained as a control (ADR-0509), not a debt on the
+constructed ladder. Read it from the kernel, never from this paragraph.
 
 It is a good metric for three reasons. A referee can check it in one command. A
 competitor cannot fake it. And it moves monotonically in the direction the
@@ -276,12 +370,41 @@ terms are consumed by a kernel whose cost is linear in their size.
 
 ## What to do first
 
-1. **ℤ from proved ℕ.** Discharge the three `int_prelude` assumptions. Bounded,
-   countable, and it is the keystone both strands identified independently.
-2. **Then `arith_prelude`'s three**, which likely fall out of ℤ.
-3. **Fix the two hazards above** before the module doubles again.
-4. **Scope ℚ** once ℤ lands — `gcd` and its universal property make normal forms
-   tractable, and ℚ is the last rung before the effort profile changes shape.
-5. **Do not start ℝ** without an explicit decision. Scope it, cost it, and
-   decide deliberately — and until then, correct the curriculum's `reals` node
-   rather than leaving it marked `covered`.
+The original list, with what happened to each:
+
+1. ~~**ℤ from proved ℕ.**~~ **Done 2026-08-16** — `int_prelude` is 0 axioms, 57
+   derived, `Int.euclidean_decomposition` being the last assumption discharged.
+2. ~~**Then `arith_prelude`'s three.**~~ Superseded: the `Real` package's 30 are
+   what `arith_prelude` became, and they are *modelled* rather than discharged —
+   `F:real-axioms-modelled-by-constructed-setoid` interprets all 22 laws at
+   `CReal` with empty footprints, and no shipped route builds the package
+   (ADR-0509).
+3. **Fix the two hazards above** — still open; nothing here has retired them.
+4. ~~**Scope ℚ.**~~ **Done 2026-08-16**, and it became an ordered *field* on
+   2026-08-18 (`Rat.mul_inv_cancel`), which was the actual prerequisite for ℝ's
+   inverse.
+5. ~~**Do not start ℝ** without an explicit decision.~~ The decision was taken
+   and written down: **ADR-0512**, with ADR-0510/0516 for the inverse, ADR-0519
+   for the lattice, and ADR-0521 for ℂ. The instruction was followed, not
+   ignored — it was scoped, costed and then built.
+
+**What is actually next**, with costings from the lanes that built the pieces
+([`notes/creal-field.md`](../plan/notes/creal-field.md),
+[`notes/creal-inv.md`](../plan/notes/creal-inv.md),
+[`notes/creal-lattice.md`](../plan/notes/creal-lattice.md)) rather than
+re-estimated here:
+
+| not built | cost | note |
+|---|---|---|
+| **cotransitivity of `lt`** (`x < y → ∀ z, x < z ∨ z < y`) | ~400 lines | the most valuable next rung; it is what makes `Apart` usable for case analysis. Constructively provable: from the gap `q` take `r` with `8r < q` and compare on `Rat.le_or_lt` |
+| **`apart_mul`** (`x # 0 → y # 0 → x·y # 0`) | ~300 lines | `CReal.mul_pos` is one of its four sign cases; the other three want `lt x zero ↔ lt zero (neg x)` and `(−x)·(−y) ≈ x·y`, neither of which exists |
+| **`CReal.neg_neg`, `neg_le_neg`** | small | the cheapest missing piece of the ordered-group toolkit; `min` was built pointwise precisely to avoid needing them |
+| **inverse for `x < 0`, and `CReal.div`** | small, blocked | `Rat.mul_inv_cancel` assumes `0 < q`; the general `x # 0` case cannot branch on the disjunction, so it needs `inv (neg x)` under its own hypothesis or a caller who picks the sign |
+| **completeness, suprema, `sqrt`** | each its own ADR | uncosted, and the real "different order of effort" this document was reaching for. ℂ's `abs` needs `sqrt` needs completeness, so ADR-0521's gap is downstream of this one |
+| **ℂ inverse, `Complex.abs`** | — | `conj`, `normSq` and `mul_conj` exist; the inverse wants ℝ's general (non-positive) inverse and `abs` wants `sqrt` |
+
+Two things are deliberately **not** on that list, and both are load-bearing:
+**Markov's principle in any disguise** (`¬(x ≈ 0) → x # 0` is not proved, not
+assumed, not used) and any *decision* on the sign of a real
+(`Equiv (abs x) x ∨ Equiv (abs x) (neg x)` is not available — that is a
+constructive limit, not an omission).

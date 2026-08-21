@@ -23,35 +23,71 @@ pub(super) fn declare_executable_gcd(
     let p = *p;
     let nat = d.nat_ty();
 
-    // mod_lt : ∀ k n, mod n (succ k) < succ k
+    // mod_lt : ∀ x y, 0 < y → mod x y < y
+    // Induct on y. The zero branch eliminates the impossible positivity
+    // witness; the successor branch projects the checked remainder bound from
+    // div_mod_exec and does not need the induction hypothesis.
     d.theorem(p.mod_lt, 2, &|d, values| {
-        let (divisor_predecessor, dividend) = (values[0], values[1]);
-        let divisor = d.succ(divisor_predecessor);
-        let quotient = d.div(dividend, divisor);
-        let remainder = d.modulo(dividend, divisor);
-        let equation_ty = {
-            let product = d.mul(divisor, quotient);
-            let reconstructed = d.add(product, remainder);
-            d.eq(dividend, reconstructed)
+        let (dividend, divisor) = (values[0], values[1]);
+        let zero = d.zero();
+        let motive = |d: &mut NatDev<'_>, candidate: ExprId| {
+            let positive = d.lt(zero, candidate);
+            let remainder = d.modulo(dividend, candidate);
+            let bound = d.lt(remainder, candidate);
+            d.arrow(positive, bound)
         };
-        let bound_ty = d.lt(remainder, divisor);
-        let relation_ty = d.const_app(p.logic.and, &[equation_ty, bound_ty]);
-        let relation = d.lemma(p.div_mod_exec, &[divisor_predecessor, dividend]);
-        let motive = {
-            let relation_fv = d.fresh_fvar();
-            d.lam_fv(relation_fv, relation_ty, bound_ty)
+        let base = |d: &mut NatDev<'_>| {
+            let positive = d.lt(zero, zero);
+            let remainder = d.modulo(dividend, zero);
+            let bound = d.lt(remainder, zero);
+            let positive_fv = d.fresh_fvar();
+            let positive_proof = d.kernel().fvar(positive_fv);
+            let impossible = d.lemma(p.not_succ_le_zero, &[zero, positive_proof]);
+            let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+            let anon = d.kernel().anon();
+            let false_motive = d
+                .kernel()
+                .lam(anon, false_ty, bound, crate::BinderInfo::Default);
+            let level_zero = d.kernel().level_zero();
+            let false_rec = d.kernel().const_(p.logic.false_rec, vec![level_zero]);
+            let proof = d.apply(false_rec, &[false_motive, impossible]);
+            d.lam_fv(positive_fv, positive, proof)
         };
-        let minor = {
-            let equation_fv = d.fresh_fvar();
-            let bound_fv = d.fresh_fvar();
-            let bound = d.kernel().fvar(bound_fv);
-            let with_bound = d.lam_fv(bound_fv, bound_ty, bound);
-            d.lam_fv(equation_fv, equation_ty, with_bound)
+        let step = |d: &mut NatDev<'_>, predecessor: ExprId, _ih: ExprId| {
+            let successor = d.succ(predecessor);
+            let positive = d.lt(zero, successor);
+            let quotient = d.div(dividend, successor);
+            let remainder = d.modulo(dividend, successor);
+            let equation_ty = {
+                let product = d.mul(successor, quotient);
+                let reconstructed = d.add(product, remainder);
+                d.eq(dividend, reconstructed)
+            };
+            let bound_ty = d.lt(remainder, successor);
+            let relation_ty = d.const_app(p.logic.and, &[equation_ty, bound_ty]);
+            let relation = d.lemma(p.div_mod_exec, &[predecessor, dividend]);
+            let relation_motive = {
+                let relation_fv = d.fresh_fvar();
+                d.lam_fv(relation_fv, relation_ty, bound_ty)
+            };
+            let minor = {
+                let equation_fv = d.fresh_fvar();
+                let bound_fv = d.fresh_fvar();
+                let bound = d.kernel().fvar(bound_fv);
+                let with_bound = d.lam_fv(bound_fv, bound_ty, bound);
+                d.lam_fv(equation_fv, equation_ty, with_bound)
+            };
+            let level_zero = d.kernel().level_zero();
+            let and_rec = d.kernel().const_(p.logic.and_rec, vec![level_zero]);
+            let bound = d.apply(
+                and_rec,
+                &[equation_ty, bound_ty, relation_motive, minor, relation],
+            );
+            let positive_fv = d.fresh_fvar();
+            d.lam_fv(positive_fv, positive, bound)
         };
-        let zero = d.kernel().level_zero();
-        let and_rec = d.kernel().const_(p.logic.and_rec, vec![zero]);
-        let proof = d.apply(and_rec, &[equation_ty, bound_ty, motive, minor, relation]);
-        (bound_ty, proof)
+        let proof = d.induct(&motive, &base, &step, divisor);
+        (motive(d, divisor), proof)
     })?;
 
     // gcd m n := WellFounded.fix lt_well_founded step m n, where the
@@ -194,7 +230,8 @@ pub(super) fn declare_gcd_semantics(d: &mut NatDev<'_>, p: &NatPrelude) -> Resul
         let n_fv = d.fresh_fvar();
         let n = d.kernel().fvar(n_fv);
         let remainder = d.modulo(n, divisor);
-        let decrease = d.lemma(p.mod_lt, &[predecessor, n]);
+        let positive = d.zero_lt_succ(predecessor);
+        let decrease = d.lemma(p.mod_lt, &[n, divisor, positive]);
         let at_remainder = d.apply(recursive, &[remainder, decrease]);
         let recursive_pair = d.apply(at_remainder, &[divisor]);
         let recursive_common = d.gcd(remainder, divisor);
@@ -354,7 +391,8 @@ fn gcd_fix_parts(d: &mut NatDev<'_>, p: &NatPrelude) -> (ExprId, ExprId, ExprId,
         let value_fv = d.fresh_fvar();
         let value = d.kernel().fvar(value_fv);
         let remainder = d.modulo(value, divisor);
-        let decrease = d.lemma(p.mod_lt, &[predecessor, value]);
+        let positive = d.zero_lt_succ(predecessor);
+        let decrease = d.lemma(p.mod_lt, &[value, divisor, positive]);
         let recursive_gcd = d.apply(recursive, &[remainder, decrease]);
         let body = d.apply(recursive_gcd, &[divisor]);
         let with_value = d.lam_fv(value_fv, nat, body);
@@ -481,7 +519,8 @@ fn declare_dvd_gcd_semantics(
         let dividend_to_remainder =
             iff_reverse(d, divides_remainder_ty, divides_n_ty, remainder_iff);
         let divides_remainder = d.apply(dividend_to_remainder, &[divides_n]);
-        let decrease = d.lemma(p.mod_lt, &[predecessor, n]);
+        let positive = d.zero_lt_succ(predecessor);
+        let decrease = d.lemma(p.mod_lt, &[n, divisor, positive]);
         let at_remainder = d.apply(recursive, &[remainder, decrease]);
         let at_divisor = d.apply(at_remainder, &[divisor]);
         let at_k = d.apply(at_divisor, &[k]);

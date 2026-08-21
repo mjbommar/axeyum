@@ -1220,38 +1220,17 @@ fn literal_code_points(e: &SExpr) -> Option<Vec<u32>> {
         return None;
     }
     let inner = a[1..a.len() - 1].replace("\"\"", "\"");
-    let chars: Vec<char> = inner.chars().collect();
+    // DELEGATE to the one decoder of this grammar. This function used to expand
+    // `\u{…}` itself with NO limit on the hex-digit count, while the string
+    // route enforces SMT-LIB's 1-5. The same literal was therefore two different
+    // strings inside one solver, which is a wrong verdict in both directions --
+    // measured 2026-08-21 against z3 4.13.3.
     let mut out: Vec<u32> = Vec::new();
-    let mut i = 0;
-    while i < chars.len() {
-        if chars[i] == '\\' && chars.get(i + 1) == Some(&'u') {
-            let after = i + 2;
-            let code = if chars.get(after) == Some(&'{') {
-                let close = chars[after + 1..].iter().position(|&c| c == '}')?;
-                let hex: String = chars[after + 1..after + 1 + close].iter().collect();
-                let v = u32::from_str_radix(&hex, 16).ok()?;
-                i = after + 1 + close + 1;
-                v
-            } else if after + 4 <= chars.len() {
-                let hex: String = chars[after..after + 4].iter().collect();
-                let v = u32::from_str_radix(&hex, 16).ok()?;
-                i = after + 4;
-                v
-            } else {
-                return None;
-            };
-            if code > ALPHABET_MAX {
-                return None;
-            }
-            out.push(code);
-        } else {
-            let cp = chars[i] as u32;
-            if cp > ALPHABET_MAX {
-                return None;
-            }
-            out.push(cp);
-            i += 1;
+    for code in crate::parse::decode_string_code_points(&inner)? {
+        if code > ALPHABET_MAX {
+            return None;
         }
+        out.push(code);
     }
     Some(out)
 }

@@ -2262,7 +2262,7 @@ fn build_bool_true_ne_false(ctx: &mut ReconstructCtx, lhs: ExprId, h: ExprId) ->
     let false_const = ctx.kernel.const_(ctx.prelude.false_, vec![]);
 
     // discr := λ (b : Bool), Bool.rec.{1} (motive := λ _ => Prop) False True b.
-    //   minor for Bool.true  = False ;  minor for Bool.false = True.
+    //   minor for Bool.false = True ;  minor for Bool.true  = False.
     // The motive `λ _ => Prop` maps `Bool → Sort 1` (since `Prop : Sort 1`), so the
     // (large) elimination universe is `1`.
     let z = ctx.kernel.level_zero();
@@ -2271,8 +2271,8 @@ fn build_bool_true_ne_false(ctx: &mut ReconstructCtx, lhs: ExprId, h: ExprId) ->
     let motive = ctx.kernel.lam(anon, bool_const, prop, BinderInfo::Default);
     let discr = {
         let e = ctx.kernel.app(rec, motive);
-        let e = ctx.kernel.app(e, false_const); // minor for Bool.true
         let e = ctx.kernel.app(e, true_const); // minor for Bool.false
+        let e = ctx.kernel.app(e, false_const); // minor for Bool.true
         let b = ctx.kernel.bvar(0);
         let body = ctx.kernel.app(e, b);
         ctx.kernel.lam(anon, bool_const, body, BinderInfo::Default)

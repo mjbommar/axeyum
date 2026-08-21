@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-induction-argument-diagnostic-result-v1",
+  "state": "base-infers-step-internal-type-mismatch-no-target-submission",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-nat-fib-gcd-induction-argument-diagnostic-plan-v1.json",
+    "sha256": "5a24063ddfaa56193da025bff677c21e05a8782cc754395cbd7b3d2c90ea3b88"
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+    "sha256": "896c10c49c33ec1fd69576be4b74482bc2aa0a138eff76c8e67f6605171540af"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/audits/184640ff1-nat-fib-gcd-induction-argument-diagnostic-v1",
+    "index_sha256": "665b11fcab6a3431efa4465ea731aaeedf968265adaeddd1833e3a0529a7eb25",
+    "observation_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "ab1e5ff2a44aa89e7413f2662a0a13f47d3e535af8b6596619558cd1215c55e4",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "observation": {
+    "base_proof_inference_succeeded": true,
+    "step_proof_inference_succeeded": false,
+    "error": "step proof inference failed: TypeMismatch { expected: ExprId(111766), got: ExprId(111990) }",
+    "process_local_expression_ids_are_not_semantic_evidence": true,
+    "proof_values_rendered": 0,
+    "target_constructed": false,
+    "target_submitted": false
+  },
+  "execution": {
+    "complete_diagnostics": 0,
+    "helper_theorem_submissions": 1,
+    "base_proof_inferences": 1,
+    "step_proof_inferences": 1,
+    "target_proof_inferences": 0,
+    "target_theorem_submissions": 0,
+    "proof_values_rendered": 0,
+    "capsule_writes": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "helper_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "preregister one no-target diagnostic that constructs and infers the zero and successor branches of fib_gcd_step_by_cases independently",
+  "limitations": "The base proof inferred successfully, but the step failed internally before its type could be rendered. This does not yet distinguish the zero and successor step branches and grants no theorem credit."
+}

@@ -21,6 +21,17 @@ def addressed(value, field):
 
 
 class StatementReflexivityAdmissionResultTests(unittest.TestCase):
+    def test_sealed_kernel_capsule_admission_archive_is_accepted(self):
+        manifest = (
+            Path(__file__).parents[2]
+            / "artifacts/autogenesis/mathlib-nat-gcd-fib-add-self-admission-v1.json"
+        )
+        result = MODULE.validate(manifest)
+        self.assertEqual(
+            result["kind"],
+            "axeyum-autogenesis-mathlib-sealed-kernel-capsule-admission",
+        )
+
     def inputs(self):
         fact_id = "F:ml430-nat-ascfactorial-zero-fd183202"
         operation_id = "authoritative-mathlib-statement-reflexivity-v1"
@@ -256,6 +267,21 @@ class StatementReflexivityAdmissionResultTests(unittest.TestCase):
         manifest["clean_replay"]["replay_sha256"] = report["replay_sha256"]
         with self.assertRaisesRegex(MODULE.AdmissionResultError, "incomplete"):
             MODULE.validate_replay_objects(manifest, report, fresh, retained)
+
+    def test_dependency_theorem_admission_archive_is_accepted(self):
+        manifest = MODULE.validate(
+            MODULE.ROOT
+            / "artifacts/autogenesis/mathlib-nat-fib-coprime-admission-v1.json"
+        )
+        self.assertEqual(
+            manifest["kind"],
+            "axeyum-autogenesis-mathlib-dependency-theorem-receipt-admission",
+        )
+        self.assertEqual(len(manifest["result"]["theorem_dependencies"]), 8)
+        self.assertEqual(
+            manifest["result"]["newly_ready"],
+            ["F:ml430-nat-gcd-fib-add-self-5a92d5e3"],
+        )
 
 
 if __name__ == "__main__":

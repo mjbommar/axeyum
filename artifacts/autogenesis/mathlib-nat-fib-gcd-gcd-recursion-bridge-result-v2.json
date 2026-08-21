@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-gcd-recursion-bridge-result-v2",
+  "state": "official-closed-successor-bridge-selected-empty-footprint",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-nat-fib-gcd-gcd-recursion-bridge-plan-v2.json",
+    "sha256": "9cdb4509ae256a77e1f30ee3d96e0f435326ac1bb66f050117a3aad47a2b2eb2"
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+    "sha256": "68aca29b638276580a7bd8667ca771e9558ffb7c5763131a5a8f6fbaa43c1539"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/audits/33b89bb2f-nat-fib-gcd-gcd-recursion-bridge-v2",
+    "index_sha256": "bba434c85a22836fbcd8501a28923f7d6825eb4201692d8a2a471d67dc9dd6ac",
+    "observation_sha256": "e8a2ef053e9c10a032065ae9254ce560624b206394024f36f31387416ef769bd",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "selection": {
+    "name": "Axeyum.Autogenesis.officialNatGcdSuccClosedV1",
+    "type_sha256": "0e1748a886e462666401fcd3776f653857a49a4d9563e9cc43444537be027301",
+    "definitionally_equal": true,
+    "axiom_footprint_count": 0
+  },
+  "rejected_alternative": {
+    "name": "Axeyum.Autogenesis.nat_gcd_succ",
+    "present": true,
+    "definitionally_equal": false,
+    "axiom_footprint_count": 0
+  },
+  "execution": {
+    "complete_audits": 1,
+    "kernel_submissions": 0,
+    "proof_values_rendered": 0,
+    "capsule_writes": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "bridge_selection_credit": 1,
+    "target_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "preregister one explicit congruence from the selected successor-GCD equality and prepend it to the existing induction-hypothesis equality chain",
+  "limitations": "This selects an existing checked theorem for one repair. It does not establish the repaired target until a fresh target proof inference and construction are separately authorized and accepted."
+}

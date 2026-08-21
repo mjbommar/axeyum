@@ -7,17 +7,38 @@ This matrix separates solver outcomes from evidence production, independent
 checking, declared trust, and Lean reconstruction. Counts cover baseline UNSAT
 instances only; SAT model replay is outside this report.
 
+## These numbers are AS OF the audits below, not as of HEAD
+
+Every figure here is replayed from committed `bench-results/dominance/*.json`,
+and a dominance audit records nothing about the code that produced it. So the
+table is only as current as the audits, and the audits are refreshed by hand.
+
+Measured 2026-08-20: all 35 committed audits predate the newest solver-source
+commit, the oldest by **55 days**. 20 of the 31 string-family paths recorded
+here as `bare-unsat` are certified today, as is
+`cli__regress0__nl__very-simple-unsat`.
+
+And the file date is not the measurement date. `r0_QF_SLIA_replace-find-base`
+is recorded `audit_outcome=unsat ... baseline_matches_audit=true`; building the
+audit's own commit `8aff8d507` and running the byte-identical corpus file
+returns **`sat`** — a wrong answer on a query z3 decides unsat, since fixed
+(today: `unknown`, which is sound). An audit row can therefore disagree with
+the tree it is filed against, so the numbers below have no reliable age at all.
+
+Before quoting any number below, check the dates in **Audit provenance** at the
+end of this file against `git log -1 crates/axeyum-solver/src`.
+
 ## Pipeline snapshot
 
 | Stage | Instances | Retained from baseline UNSAT |
 |---|---:|---:|
-| Baseline UNSAT | 327 | 100.0% |
-| Evidence audit reproduced UNSAT | 325 | 99.4% |
-| Evidence marked certified | 267 | 81.7% |
-| Evidence independently checked | 267 | 81.7% |
-| Audit UNSAT with no declared trust hole | 325 | 99.4% |
-| Lean reconstruction checked | 260 | 79.5% |
-| All dominance conditions | 259 | 79.2% |
+| Baseline UNSAT | 326 | 100.0% |
+| Evidence audit reproduced UNSAT | 323 | 99.1% |
+| Evidence marked certified | 281 | 86.2% |
+| Evidence independently checked | 281 | 86.2% |
+| Audit UNSAT with no declared trust hole | 321 | 98.5% |
+| Lean reconstruction checked | 269 | 82.5% |
+| All dominance conditions | 269 | 82.5% |
 
 The stages are not assumed to be a monotone funnel; the final row is the
 explicit conjunction of certification, independent checking, zero declared
@@ -31,14 +52,14 @@ normalizes uncertified outcomes to independently unchecked.
 
 | Category | Instances | Meaning |
 |---|---:|---|
-| `proof-production-error` | 2 | Evidence production did not reproduce UNSAT. |
-| `uncertified-and-unchecked` | 58 | The UNSAT route is neither certified nor independently checked. |
+| `proof-production-error` | 3 | Evidence production did not reproduce UNSAT. |
+| `uncertified-and-unchecked` | 42 | The UNSAT route is neither certified nor independently checked. |
 | `uncertified-but-checked` | 0 | Reserved invalid combination; normalized into uncertified-and-unchecked. |
 | `evidence-check-gap` | 0 | Certified evidence exists but did not pass its independent checker. |
-| `trust-hole-and-lean-gap` | 0 | Checked evidence retains a trust hole and has no Lean reconstruction. |
+| `trust-hole-and-lean-gap` | 2 | Checked evidence retains a trust hole and has no Lean reconstruction. |
 | `trust-hole` | 0 | Lean reconstruction exists, but a declared trust hole remains. |
-| `lean-reconstruction-gap` | 8 | Certified, checked, trust-free evidence lacks Lean reconstruction. |
-| `dominant` | 259 | Certified, checked, trust-free, and Lean-reconstructed UNSAT. |
+| `lean-reconstruction-gap` | 10 | Certified, checked, trust-free evidence lacks Lean reconstruction. |
+| `dominant` | 269 | Certified, checked, trust-free, and Lean-reconstructed UNSAT. |
 
 ## Evidence-kind gaps
 
@@ -47,27 +68,28 @@ mechanisms that should drive reconstruction work.
 
 | Evidence kind | Baseline UNSAT | Certified | Checked | Lean | Trust holes | Dominant | Gap |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| `bare-unsat` | 58 | 0 | 0 | 1 | 0 | 0 | 58 |
-| `alethe-unsat` | 12 | 12 | 12 | 9 | 0 | 9 | 3 |
-| `(none)` | 2 | 0 | 0 | 0 | 0 | 0 | 2 |
-| `bv-alternation-counterexample-unsat` | 2 | 2 | 2 | 0 | 0 | 0 | 2 |
-| `closed-universal-counterexample-unsat` | 2 | 2 | 2 | 1 | 0 | 1 | 1 |
-| `bv-conjunctive-universal-instance-unsat` | 1 | 1 | 1 | 0 | 0 | 0 | 1 |
-| `bv-paired-existential-transfer-unsat` | 1 | 1 | 1 | 0 | 0 | 0 | 1 |
-| `array-axiom-unsat` | 86 | 86 | 86 | 86 | 0 | 86 | 0 |
+| `bare-unsat` | 42 | 0 | 0 | 0 | 0 | 0 | 42 |
+| `alethe-unsat` | 14 | 14 | 14 | 11 | 0 | 11 | 3 |
+| `(none)` | 3 | 0 | 0 | 0 | 3 | 0 | 3 |
+| `real-handelman-unsat` | 3 | 3 | 3 | 0 | 0 | 0 | 3 |
+| `monomial-bound-unsat` | 3 | 3 | 3 | 1 | 0 | 1 | 2 |
+| `drat-unsat` | 2 | 2 | 2 | 0 | 2 | 0 | 2 |
+| `string-length-unsat` | 3 | 3 | 3 | 2 | 0 | 2 | 1 |
+| `real-zero-product-unsat` | 2 | 2 | 2 | 1 | 0 | 1 | 1 |
+| `array-axiom-unsat` | 85 | 85 | 85 | 85 | 0 | 85 | 0 |
 | `bounded-int-blast-unsat` | 20 | 20 | 20 | 20 | 0 | 20 | 0 |
-| `term-level-unsat` | 14 | 14 | 14 | 14 | 0 | 14 | 0 |
-| `regex-emptiness-unsat` | 10 | 10 | 10 | 10 | 0 | 10 | 0 |
-| `nra-even-power-unsat` | 9 | 9 | 9 | 9 | 0 | 9 | 0 |
-| `arith-dpll-unsat` | 8 | 8 | 8 | 8 | 0 | 8 | 0 |
-| `bv-defined-enum-unsat` | 8 | 8 | 8 | 8 | 0 | 8 | 0 |
-| `bool-euf-exhaustive-unsat` | 7 | 7 | 7 | 7 | 0 | 7 | 0 |
+| `term-level-unsat` | 16 | 16 | 16 | 16 | 0 | 16 | 0 |
+| `regex-emptiness-unsat` | 11 | 11 | 11 | 11 | 0 | 11 | 0 |
+| `nra-even-power-unsat` | 10 | 10 | 10 | 10 | 0 | 10 | 0 |
+| `sos-unsat` | 10 | 10 | 10 | 10 | 0 | 10 | 0 |
+| `arith-dpll-unsat` | 7 | 7 | 7 | 7 | 0 | 7 | 0 |
 | `bool-uf-exhaustive-unsat` | 7 | 7 | 7 | 7 | 0 | 7 | 0 |
-| `bv-uf-local-unsat` | 7 | 7 | 7 | 7 | 0 | 7 | 0 |
-| `sos-unsat` | 7 | 7 | 7 | 7 | 0 | 7 | 0 |
+| `bool-euf-exhaustive-unsat` | 6 | 6 | 6 | 6 | 0 | 6 | 0 |
 | `bv-forall-nonconstant-unsat` | 6 | 6 | 6 | 6 | 0 | 6 | 0 |
-| `term-identity-unsat` | 6 | 6 | 6 | 6 | 0 | 6 | 0 |
+| `bv-uf-local-unsat` | 6 | 6 | 6 | 6 | 0 | 6 | 0 |
+| `bv-defined-enum-unsat` | 5 | 5 | 5 | 5 | 0 | 5 | 0 |
 | `finite-domain-enum-unsat` | 5 | 5 | 5 | 5 | 0 | 5 | 0 |
+| `bool-simplification-unsat` | 4 | 4 | 4 | 4 | 0 | 4 | 0 |
 | `bv-abstraction-unsat` | 4 | 4 | 4 | 4 | 0 | 4 | 0 |
 | `finite-array-extensionality-unsat` | 4 | 4 | 4 | 4 | 0 | 4 | 0 |
 | `set-cardinality-unsat` | 4 | 4 | 4 | 4 | 0 | 4 | 0 |
@@ -76,15 +98,19 @@ mechanisms that should drive reconstruction work.
 | `datatype-structural-unsat` | 3 | 3 | 3 | 3 | 0 | 3 | 0 |
 | `finite-domain-pigeonhole-unsat` | 3 | 3 | 3 | 3 | 0 | 3 | 0 |
 | `negated-existential-witness-unsat` | 3 | 3 | 3 | 3 | 0 | 3 | 0 |
-| `bool-simplification-unsat` | 2 | 2 | 2 | 2 | 0 | 2 | 0 |
+| `term-identity-unsat` | 3 | 3 | 3 | 3 | 0 | 3 | 0 |
+| `closed-universal-counterexample-unsat` | 2 | 2 | 2 | 2 | 0 | 2 | 0 |
 | `cross-store-array-disequality-unsat` | 2 | 2 | 2 | 2 | 0 | 2 | 0 |
 | `diophantine-unsat` | 2 | 2 | 2 | 2 | 0 | 2 | 0 |
 | `lra-dpll-unsat` | 2 | 2 | 2 | 2 | 0 | 2 | 0 |
+| `real-product-unsat` | 2 | 2 | 2 | 2 | 0 | 2 | 0 |
 | `aligned-write-chain-unsat` | 1 | 1 | 1 | 1 | 0 | 1 | 0 |
 | `binary-search16-unsat` | 1 | 1 | 1 | 1 | 0 | 1 | 0 |
 | `bool-array-read-collapse-unsat` | 1 | 1 | 1 | 1 | 0 | 1 | 0 |
+| `bv-paired-existential-transfer-unsat` | 1 | 1 | 1 | 1 | 0 | 1 | 0 |
 | `bv-positive-universal-instance-set-unsat` | 1 | 1 | 1 | 1 | 0 | 1 | 0 |
 | `const-array-default-mismatch-unsat` | 1 | 1 | 1 | 1 | 0 | 1 | 0 |
+| `farkas-unsat` | 1 | 1 | 1 | 1 | 0 | 1 | 0 |
 | `fifo-bc04-unsat` | 1 | 1 | 1 | 1 | 0 | 1 | 0 |
 | `store-chain-readback-unsat` | 1 | 1 | 1 | 1 | 0 | 1 | 0 |
 | `two-byte-memcpy-unsat` | 1 | 1 | 1 | 1 | 0 | 1 | 0 |
@@ -98,8 +124,8 @@ mechanisms that should drive reconstruction work.
 
 | Logic | Slice | Baseline UNSAT | Audit UNSAT | Certified | Checked | Lean | Trust holes | Dominant | Proof errors | Leading blockers |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| BV | `bv-bitwuzla-regress-clean-quantified-solver-vs-z3-10s.json` | 4 | 4 | 4 | 4 | 3 | 0 | 3 | 0 | `lean-reconstruction-gap`=1 |
-| BV | `bv-cvc5-regress-clean-quantified-solver-vs-z3-10s.json` | 18 | 18 | 18 | 18 | 14 | 0 | 14 | 0 | `lean-reconstruction-gap`=4 |
+| BV | `bv-bitwuzla-regress-clean-quantified-solver-vs-z3-10s.json` | 4 | 4 | 4 | 4 | 4 | 0 | 4 | 0 | - |
+| BV | `bv-cvc5-regress-clean-quantified-solver-vs-z3-10s.json` | 18 | 15 | 15 | 15 | 15 | 3 | 15 | 3 | `proof-production-error`=3 |
 | LIA | `lia-cvc5-regress-clean-quantified-solver-vs-z3-10s.json` | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | - |
 | QF_ABV | `qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json` | 85 | 85 | 85 | 85 | 85 | 0 | 85 | 0 | - |
 | QF_ALIA | `qf-alia-cvc5-regress-clean-solver-vs-z3-10s.json` | 5 | 5 | 5 | 5 | 5 | 0 | 5 | 0 | - |
@@ -108,20 +134,20 @@ mechanisms that should drive reconstruction work.
 | QF_AUFLIA | `qf-auflia-cvc5-regress-clean-solver-vs-z3-10s.json` | 2 | 2 | 0 | 0 | 0 | 0 | 0 | 0 | `uncertified-and-unchecked`=2 |
 | QF_AX | `qf-ax-cvc5-regress-clean-solver-vs-z3-10s.json` | 5 | 5 | 5 | 5 | 5 | 0 | 5 | 0 | - |
 | QF_BV | `qf-bv-curated-bvred-solver-vs-z3-10s.json` | 2 | 2 | 2 | 2 | 2 | 0 | 2 | 0 | - |
-| QF_BVFP | `qf-bvfp-bitwuzla-regress-clean-solver-vs-z3-10s.json` | 3 | 3 | 3 | 3 | 3 | 0 | 3 | 0 | - |
+| QF_BVFP | `qf-bvfp-bitwuzla-regress-clean-solver-vs-z3-10s.json` | 3 | 3 | 2 | 2 | 1 | 1 | 1 | 0 | `trust-hole-and-lean-gap`=1, `uncertified-and-unchecked`=1 |
 | QF_DT | `qf-dt-cvc5-regress-clean-solver-vs-z3-10s.json` | 3 | 3 | 3 | 3 | 3 | 0 | 3 | 0 | - |
 | QF_FF | `qf-ff-cvc5-regress-clean-solver-vs-z3-10s.json` | 10 | 10 | 10 | 10 | 10 | 0 | 10 | 0 | - |
-| QF_FP | `qf-fp-bitwuzla-regress-clean-solver-vs-z3-10s.json` | 7 | 7 | 7 | 7 | 7 | 0 | 7 | 0 | - |
+| QF_FP | `qf-fp-bitwuzla-regress-clean-solver-vs-z3-10s.json` | 7 | 7 | 7 | 7 | 6 | 1 | 6 | 0 | `trust-hole-and-lean-gap`=1 |
 | QF_LIA | `qf-lia-cvc5-regress-clean-solver-vs-z3-10s.json` | 4 | 4 | 4 | 4 | 4 | 0 | 4 | 0 | - |
 | QF_LRA | `qf-lra-cvc5-regress-clean-solver-vs-z3-10s.json` | 3 | 3 | 3 | 3 | 3 | 0 | 3 | 0 | - |
 | QF_NIA | `qf-nia-curated-iand-solver-vs-z3-10s.json` | 2 | 2 | 2 | 2 | 2 | 0 | 2 | 0 | - |
-| QF_NIA | `qf-nia-cvc5-regress-clean-solver-vs-z3-10s.json` | 15 | 13 | 5 | 5 | 2 | 0 | 2 | 2 | `uncertified-and-unchecked`=8, `lean-reconstruction-gap`=3, `proof-production-error`=2 |
+| QF_NIA | `qf-nia-cvc5-regress-clean-solver-vs-z3-10s.json` | 15 | 15 | 5 | 5 | 2 | 0 | 2 | 0 | `uncertified-and-unchecked`=10, `lean-reconstruction-gap`=3 |
 | QF_NIA | `qf-nia-synthetic-graduated-vs-z3.json` | 16 | 16 | 16 | 16 | 16 | 0 | 16 | 0 | - |
-| QF_NRA | `qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json` | 14 | 14 | 1 | 1 | 2 | 0 | 1 | 0 | `uncertified-and-unchecked`=13 |
-| QF_NRA | `qf-nra-synthetic-graduated-vs-z3.json` | 16 | 16 | 16 | 16 | 16 | 0 | 16 | 0 | - |
-| QF_S | `qf-s-cvc5-regress-clean-solver-vs-z3-10s.json` | 28 | 28 | 8 | 8 | 8 | 0 | 8 | 0 | `uncertified-and-unchecked`=20 |
-| QF_SEQ | `qf-seq-cvc5-regress-clean-solver-vs-z3-10s.json` | 5 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | `uncertified-and-unchecked`=5 |
-| QF_SLIA | `qf-slia-cvc5-regress-clean-solver-vs-z3-10s.json` | 8 | 8 | 2 | 2 | 2 | 0 | 2 | 0 | `uncertified-and-unchecked`=6 |
+| QF_NRA | `qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json` | 14 | 14 | 12 | 12 | 6 | 0 | 6 | 0 | `lean-reconstruction-gap`=6, `uncertified-and-unchecked`=2 |
+| QF_NRA | `qf-nra-synthetic-graduated-vs-z3.json` | 19 | 19 | 19 | 19 | 19 | 0 | 19 | 0 | - |
+| QF_S | `qf-s-cvc5-regress-clean-solver-vs-z3-10s.json` | 26 | 26 | 12 | 12 | 11 | 0 | 11 | 0 | `uncertified-and-unchecked`=14, `lean-reconstruction-gap`=1 |
+| QF_SEQ | `qf-seq-cvc5-regress-clean-solver-vs-z3-10s.json` | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | `uncertified-and-unchecked`=1 |
+| QF_SLIA | `qf-slia-cvc5-regress-clean-solver-vs-z3-10s.json` | 10 | 10 | 2 | 2 | 2 | 0 | 2 | 0 | `uncertified-and-unchecked`=8 |
 | QF_UF | `qf-uf-cvc5-regress-clean-bounded-solver-vs-z3-10s.json` | 15 | 15 | 15 | 15 | 15 | 0 | 15 | 0 | - |
 | QF_UF | `qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json` | 15 | 15 | 15 | 15 | 15 | 0 | 15 | 0 | - |
 | QF_UF | `qf-uf-cvc5-regress-clean-overbound-uninterp-sorts-solver-vs-z3-10s.json` | 3 | 3 | 3 | 3 | 3 | 0 | 3 | 0 | - |
@@ -136,14 +162,18 @@ mechanisms that should drive reconstruction work.
 
 ## Declared trust holes
 
-None.
+| Trust hole | Instances |
+|---|---:|
+| `timeout` | 3 |
+| `bit-blast` | 2 |
 
 ## Proof-production errors
 
 | Logic | File | Phase | Error |
 |---|---|---|---|
-| QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-2.smt2` | `produce-evidence` | backend failure: int-blast failed: integer bit-blast does not support operator IntPow2 |
-| QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-7.smt2` | `produce-evidence` | backend failure: int-blast failed: integer bit-blast does not support operator IntPow2 |
+| BV | `corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__cond-var-elim-binary.smt2` | `lean-reconstruction` | unknown |
+| BV | `corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__bug802.smt2` | `lean-reconstruction` | unknown |
+| BV | `corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__small-pipeline-fixpoint-3.smt2` | `lean-reconstruction` | unknown |
 
 ## Lean reconstruction gaps
 
@@ -153,22 +183,70 @@ correctness or certificate-production queue.
 
 | Logic | File | Evidence kind | Reconstruction error |
 |---|---|---|---|
-| BV | `corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__bug802.smt2` | `bv-alternation-counterexample-unsat` | malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment |
-| BV | `corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__small-pipeline-fixpoint-3.smt2` | `bv-alternation-counterexample-unsat` | malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment |
-| BV | `corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__cond-var-elim-binary.smt2` | `bv-conjunctive-universal-instance-unsat` | malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment |
-| BV | `corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__nested9_true-unreach-call.i_575.smt2` | `bv-paired-existential-transfer-unsat` | malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment |
-| BV | `corpus/public-curated/quantified/BV/bitwuzla-regress-clean/solver__quant__regsmtparselet.smt2` | `closed-universal-counterexample-unsat` | malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment |
 | QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__arith__div.01.smt2` | `alethe-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint |
 | QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__arith__div.08.smt2` | `alethe-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint |
 | QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__minimal_unsat_core.smt2` | `alethe-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint |
+| QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__arith__mult.01.smt2` | `monomial-bound-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: real disequality (needs DPLL(T)) |
+| QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__simple-mono-unsat.smt2` | `monomial-bound-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint |
+| QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__approx-sqrt-unsat.smt2` | `real-handelman-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: nonlinear real multiplication |
+| QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__coeff-unsat.smt2` | `real-handelman-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: nonlinear real multiplication |
+| QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__combine.smt2` | `real-handelman-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: nonlinear real multiplication |
+| QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__subs0-unsat-confirm.smt2` | `real-zero-product-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint |
+| QF_S | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-2.smt2` | `string-length-unsat` | unknown |
 
 ## Evidence-driven priority
 
-1. Replace the 58 uncertified audit-row occurrences with serialized, certified evidence and independently check every route. Use the [deduplicated shape census](proof-gap-shape-census.md) for mechanism prevalence.
-2. Add Lean reconstruction for the 8 already certified, checked, trust-free instances.
-3. Eliminate the 0 declared trust-hole instances rather than counting Lean module acceptance alone.
-4. Fix the 2 proof-production errors and rerun their exact committed rows.
+1. Replace the 42 uncertified audit-row occurrences with serialized, certified evidence and independently check every route. Use the [deduplicated shape census](proof-gap-shape-census.md) for mechanism prevalence.
+2. Add Lean reconstruction for the 10 already certified, checked, trust-free instances.
+3. Eliminate the 2 declared trust-hole instances rather than counting Lean module acceptance alone.
+4. Fix the 3 proof-production errors and rerun their exact committed rows.
 
 These priorities are prevalence-ranked within the committed audits. They do
 not authorize a mechanism until an exact residual-shape census identifies a
 shared implementation boundary.
+
+## Audit provenance
+
+The commit that last touched each audit this report replays. Compare the
+newest of these against `git log -1 crates/axeyum-solver/src`: anything
+older means the corresponding rows describe a solver that no longer exists,
+in either direction — newly certified instances still counted as bare, and
+regressions to `unknown` still counted as decided.
+
+| Audit | Revision | Provenance |
+|---|---|---|
+| `bench-results/dominance/bv-bitwuzla-regress-clean-quantified-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/bv-cvc5-regress-clean-quantified-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/lia-cvc5-regress-clean-quantified-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-alia-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-aufbv-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-auflia-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-ax-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-bv-curated-bvred-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-bvfp-bitwuzla-regress-clean-dominance-audit.json` | `a3799dca2` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-dt-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-ff-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-fp-bitwuzla-regress-clean-dominance-audit.json` | `a3799dca2` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-lia-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-lra-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-nia-curated-iand-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-nia-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-nia-synthetic-graduated-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-nra-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-s-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-seq-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-slia-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-uf-cvc5-regress-clean-overbound-uninterp-sorts-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-ufbv-bitwuzla-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-ufbv-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-ufff-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-uflia-curated-named-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-uflia-cvc5-regress-clean-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts-dominance-audit.json` | `496288979` | stamped via lane-snapshot |
+| `bench-results/dominance/uf-cvc5-regress-clean-quantified-dominance-audit.json` | `496288979` | stamped via lane-snapshot |

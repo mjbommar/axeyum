@@ -41,7 +41,9 @@
 #![cfg(feature = "full")]
 
 use axeyum_smtlib::parse_script;
-use axeyum_solver::{EvidenceCheck, SolverConfig, produce_evidence};
+use axeyum_solver::{
+    EvidenceCheck, SolverConfig, produce_evidence, produce_evidence_smtlib_with_script,
+};
 
 /// `(name, smtlib2)`. Each must be `unsat`; a `sat` or `unknown` query would
 /// make the invariant vacuous for that row.
@@ -100,6 +102,168 @@ const QUERIES: &[(&str, &str)] = &[
          (assert (not (= (+ (f 5) (f 7) (g 9) (g 11)) 2)))\n\
          (check-sat)",
     ),
+    // QF_NIA single-variable polynomial equalities. Added with the certificate
+    // itself: this suite is the general obligation a new variant must meet, and
+    // meeting it only inside the variant's own suite is how
+    // `UnsatQuantInstanceSet` shipped `certified=1` over a FAILED re-check.
+    // All three carry `TermId`-free certificates, which is exactly what the
+    // fresh-parse re-validation below is able to distinguish.
+    (
+        "nia_non_square_discriminant",
+        "(set-logic QF_NIA)\n\
+         (declare-fun x () Int)\n\
+         (assert (= (+ (* x x) x (- 1)) 0))\n\
+         (check-sat)",
+    ),
+    (
+        "nia_non_integral_rational_roots",
+        "(set-logic QF_NIA)\n\
+         (declare-fun x () Int)\n\
+         (assert (= (+ (* 4 x x) (- 1)) 0))\n\
+         (check-sat)",
+    ),
+    (
+        "nia_rational_root_exhausted",
+        "(set-logic QF_NIA)\n\
+         (declare-fun x () Int)\n\
+         (assert (= (+ (* x x x) x 1) 0))\n\
+         (check-sat)",
+    ),
+    // QF_NRA monomial divisibility. Unlike the QF_NIA rows above, these two
+    // shapes are taken verbatim from committed corpus files
+    // (`cli__regress1__nl__zero-subset`, `cli__regress0__nl__subs0-unsat-confirm`),
+    // which shipped as bare `Evidence::Unsat(None)` until 2026-08-20.
+    (
+        "nra_zero_product_divides",
+        "(set-logic QF_NRA)\n\
+         (declare-fun a () Real)(declare-fun b () Real)(declare-fun c () Real)\n\
+         (declare-fun d () Real)(declare-fun e () Real)\n\
+         (assert (= (* a b c d) 0))\n\
+         (assert (not (= (* a b c d e) 0)))\n\
+         (check-sat)",
+    ),
+    (
+        "nra_zero_product_case_split",
+        "(set-logic QF_NRA)\n\
+         (declare-fun v1 () Real)(declare-fun v2 () Real)(declare-fun v3 () Real)\n\
+         (declare-fun v4 () Real)(declare-fun v5 () Real)\n\
+         (assert (or (= v1 0) (= v2 0)))\n\
+         (assert (not (= (* v1 v2 v3 v4 v5) 0)))\n\
+         (check-sat)",
+    ),
+    // QF_NRA degree-2 Positivstellensatz: two asserted lower bounds whose
+    // product is exactly the polynomial a third assertion calls negative. Both
+    // shapes are verbatim from committed corpus files
+    // (`cli__regress1__nl__coeff-unsat-base`, `cli__regress1__nl__simple-mono`).
+    (
+        "nra_product_nonstrict_factor",
+        "(set-logic QF_NRA)\n\
+         (declare-fun a () Real)(declare-fun b () Real)\n\
+         (assert (> a 0))(assert (> b 0))(assert (>= a (* 3 b)))\n\
+         (assert (< (* a a) (* 3 a b)))\n\
+         (check-sat)",
+    ),
+    (
+        "nra_product_strict_factors",
+        "(set-logic QF_NRA)\n\
+         (declare-fun x () Real)(declare-fun y () Real)(declare-fun z () Real)\n\
+         (assert (> z 0))(assert (> x y))(assert (< (* x z) (* y z)))\n\
+         (check-sat)",
+    ),
+    // QF_NRA monomial bounds: per-variable bounds multiplying into a bound on a
+    // monomial. All three shapes are verbatim from committed corpus files
+    // (`ones`, `mult.01`, `simple-mono-unsat`), and the third has a factor with
+    // NO bound at all -- `d^2 >= 0` holds regardless.
+    (
+        "nra_monomial_lower_bound",
+        "(set-logic QF_NRA)\n\
+         (declare-fun a () Real)(declare-fun b () Real)\n\
+         (declare-fun c () Real)(declare-fun d () Real)\n\
+         (assert (>= a 1))(assert (>= b 1))(assert (>= c 1))(assert (>= d 1))\n\
+         (assert (< (* a b c d) 1))\n\
+         (check-sat)",
+    ),
+    (
+        "nra_monomial_pinned_exact",
+        "(set-logic QF_NRA)\n\
+         (declare-fun n () Real)(declare-fun x () Real)\n\
+         (assert (>= n 1))(assert (<= n 1))(assert (<= x 1))(assert (>= x 1))\n\
+         (assert (not (= (* x n) 1)))\n\
+         (check-sat)",
+    ),
+    (
+        "nra_monomial_even_exponent_wildcard",
+        "(set-logic QF_NRA)\n\
+         (declare-fun a () Real)(declare-fun b () Real)\n\
+         (declare-fun c () Real)(declare-fun d () Real)\n\
+         (assert (or (= a 4) (= a 3)))(assert (> b 0))(assert (> c 0))\n\
+         (assert (< (* a b c d d) 0))\n\
+         (check-sat)",
+    ),
+    // QF_S / QF_SLIA length and code-point abstraction. Verbatim from committed
+    // corpus files (`r0_QF_SLIA_str004`, `r0_QF_S_str005`,
+    // `r1_QF_SLIA_str-code-unsat-2`), all bare `Evidence::Unsat(None)` until
+    // 2026-08-20. These rows take the STRING front door (see `measure`): a string
+    // script's flat arena view is the bounded packed-BV encoding, so
+    // `produce_evidence` over it is not the route that ships.
+    (
+        "string_length_concat_congruence",
+        "(set-logic QF_SLIA)\n\
+         (declare-fun xx () String)(declare-fun yy () String)\n\
+         (assert (> (str.len yy) (str.len xx)))\n\
+         (assert (= xx (str.++ xx yy)))\n\
+         (check-sat)",
+    ),
+    (
+        "string_length_zero_nonempty",
+        "(set-logic QF_S)\n\
+         (declare-fun yy () String)\n\
+         (assert (= (str.len yy) 0))\n\
+         (assert (not (= yy \"\")))\n\
+         (check-sat)",
+    ),
+    (
+        "string_code_point_case_split",
+        "(set-logic QF_SLIA)\n\
+         (declare-fun x () String)\n\
+         (assert (= (str.len x) 1))\n\
+         (assert (or (< (str.to_code x) 0) (> (str.to_code x) 10000000000000000000000000000)))\n\
+         (check-sat)",
+    ),
+    // QF_NRA multi-term Handelman / Positivstellensatz. All three shapes are
+    // verbatim from committed corpus files (`cli__regress1__nl__coeff-unsat`,
+    // `cli__regress1__nl__combine`, `cli__regress1__nl__approx-sqrt-unsat`),
+    // which shipped as bare `Evidence::Unsat(None)` until 2026-08-20. The third
+    // is a THREE-WAY case split whose certificate carries one combination per
+    // disjunct, and the row exists because a split certificate has more ways to
+    // describe the producing run rather than the query than a conjunctive one.
+    (
+        "nra_handelman_multi_product",
+        "(set-logic QF_NRA)\n\
+         (declare-fun a () Real)(declare-fun b () Real)\n\
+         (assert (> a 0))(assert (> b 0))(assert (>= a (* 3 b)))\n\
+         (assert (< (* a a) (* 8 b b)))\n\
+         (check-sat)",
+    ),
+    (
+        "nra_handelman_product_plus_linear",
+        "(set-logic QF_NRA)\n\
+         (declare-fun a () Real)(declare-fun b () Real)(declare-fun c () Real)\n\
+         (assert (> c 1))(assert (> (* a b) 1))(assert (< (* a b c) 1))\n\
+         (check-sat)",
+    ),
+    (
+        "nra_handelman_case_split_with_equality",
+        "(set-logic QF_NRA)\n\
+         (declare-fun x () Real)\n\
+         (assert (= (* x x) 2))(assert (> x 0))\n\
+         (assert (or \n\
+           (> (+ (* x x) (* (- 2.8) x)) (- 1.95))\n\
+           (> (+ (* x x) (* (- 2.8284271247) x)) (- 1.999999))\n\
+           (> (+ (* x x) (* (- 2.82842712475) x)) \
+              (- 2.0000000000000000000000000001))))\n\
+         (check-sat)",
+    ),
     (
         "skolemised_existential",
         "(set-logic UF)\n\
@@ -126,8 +290,18 @@ fn measure() -> Vec<Row> {
             // Produce on one arena...
             let mut produced = parse_script(text).expect("query parses");
             let assertions = produced.assertions.clone();
-            let report = produce_evidence(&mut produced.arena, &assertions, &config)
-                .expect("evidence production runs");
+            // ...except for a STRING script, whose flat arena view is the
+            // ADR-0029 bounded packed-BV encoding rather than the query. The
+            // route that ships for those is the text front door, so measuring
+            // `produce_evidence` here would grade a query nobody solves.
+            let report = if produced.uses_bounded_strings || produced.word_only_fallback.is_some() {
+                produce_evidence_smtlib_with_script(text, &config)
+                    .expect("string evidence production runs")
+                    .report
+            } else {
+                produce_evidence(&mut produced.arena, &assertions, &config)
+                    .expect("evidence production runs")
+            };
 
             // ...and re-validate on an arena that shares nothing with it.
             let fresh = parse_script(text).expect("query re-parses");

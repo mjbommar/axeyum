@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-gcd-zero-left-reconstruction-result",
+  "state": "source-compiled-unbounded-export-hit-import-record-limit-no-theorem-credit",
+  "plan": {"path": "artifacts/autogenesis/official-gcd-zero-left-reconstruction-plan-v1.json", "sha256": "b28fa0765c6868f2a3b855b9f3681de0ee5dc63f716b3174696099af22175b97", "commit": "3e6373de5"},
+  "evidence_pack": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/96a6a4c34-official-gcd-zero-left-v1/manifest.json", "sha256": "a1f0baf855dfd7c4956693fa002f075263cce4b841997da7b519070440b74d04", "directory_mode": "0555", "file_mode": "0444"},
+  "execution": {"source_copies": 1, "compiler_invocations": 1, "successful_compilations": 1, "exporter_invocations": 1, "importer_runs": 1, "successful_importer_runs": 0, "proof_bearing_stream_reads": 1, "retries": 0, "second_import_skipped_after_first_failure": true},
+  "decline": {"operation": "independently import the complete-module export", "class": "resource-limit", "error": "RecordLimit", "limit": 2000000, "stream_bytes": 340033933, "root_selection_used": false, "theorem_submitted": false, "partial_kernel_published": false},
+  "cleanup": {"exact_temporary_paths_removed": 3, "preexisting_status_entries_before": 3, "preexisting_status_entries_after": 3, "preexisting_baseline_unchanged": true},
+  "next_boundary": {"required_next_increment": "preregister the same compiled source under exact theorem-root lean4export selection, retaining the importer limit and zero retries", "importer_limit_increase_authorized": false, "source_proof_change_authorized": false, "official_gcd_zero_left_completed": false},
+  "authority": {"official_gcd_zero_left_credit": 0, "official_gcd_succ_credit": 0, "closed_gcd_balanced_bezout_credit": 0, "cancellation_credit": 0, "target_specialization_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "verification": "python3 scripts/check-autogenesis-official-gcd-zero-left-reconstruction-result.py",
+  "limitations": "Lean accepted the source, but no independent kernel result exists. The complete-module export exceeded the unchanged two-million-record importer ceiling, so this grants no theorem or downstream credit."
+}

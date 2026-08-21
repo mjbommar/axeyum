@@ -39,8 +39,16 @@
 //! names, levels or expressions, no declarations, no registered packages, not
 //! finalized for export. A kernel carrying any prior content keeps the ordinary
 //! build path. This is why the check happens *before* the dependency build (a
-//! `Real` build interns `Logic` first, which would itself make the kernel
+//! `AxReal` build interns `Logic` first, which would itself make the kernel
 //! non-pristine).
+//!
+//! `CReal` — the constructed reals — is the slot this mechanism exists for
+//! rather than an afterthought: measured 2026-08-18 on a debug build, one
+//! `build_creal_prelude` costs **44 s** against `AxReal`'s 5.6 ms and `Logic`'s
+//! 0.2 ms, and every consumer of the constructed carrier builds its own. It is
+//! also the largest template, so the reuse cost is a `Kernel` clone rather than
+//! the near-free clone the small preludes get; both numbers are reported by the
+//! `prelude_build_timing` example.
 //!
 //! `String` preludes deliberately have no template: they require a caller-held
 //! [`LogicPrelude`](crate::LogicPrelude) and therefore never start from a
@@ -109,6 +117,7 @@ static LOGIC: Slot = OnceLock::new();
 static NAT: Slot = OnceLock::new();
 static INT: Slot = OnceLock::new();
 static REAL: Slot = OnceLock::new();
+static CREAL: Slot = OnceLock::new();
 
 fn slot(key: PreludeKey) -> Option<&'static Slot> {
     match key {
@@ -116,6 +125,7 @@ fn slot(key: PreludeKey) -> Option<&'static Slot> {
         PreludeKey::Nat => Some(&NAT),
         PreludeKey::Int => Some(&INT),
         PreludeKey::Real => Some(&REAL),
+        PreludeKey::CReal => Some(&CREAL),
         // Requires a caller-held `LogicPrelude`, so never starts pristine.
         PreludeKey::String(_) => None,
     }
@@ -134,6 +144,7 @@ fn template(key: PreludeKey) -> Option<&'static Kernel> {
             PreludeKey::Real => {
                 crate::arith_prelude::build_arith_prelude_uncached(&mut kernel).is_ok()
             }
+            PreludeKey::CReal => crate::creal::build_creal_prelude_uncached(&mut kernel).is_ok(),
             PreludeKey::String(_) => false,
         };
         built.then_some(kernel)
@@ -148,6 +159,18 @@ fn template(key: PreludeKey) -> Option<&'static Kernel> {
 /// build failed. In every such case the caller must take its ordinary build
 /// path, which reproduces the same result (including the same error).
 pub(crate) fn try_restore(kernel: &mut Kernel, key: PreludeKey) -> Option<PreludeValue> {
+    // A template is a whole-kernel snapshot, so assigning one over `kernel`
+    // would reset every field — including the caller's rendering preference,
+    // which is not kernel content and which a cache hit must not change. Carry
+    // it across explicitly; a silently-cleared flag would make a measurement
+    // run render the default bytes while believing it rendered the other.
+    let render_proofs_as_def = kernel.render_proofs_as_def();
+    let restored = try_restore_inner(kernel, key);
+    kernel.set_render_proofs_as_def(render_proofs_as_def);
+    restored
+}
+
+fn try_restore_inner(kernel: &mut Kernel, key: PreludeKey) -> Option<PreludeValue> {
     if !enabled() || !kernel.is_pristine() {
         MISSES.fetch_add(1, Ordering::Relaxed);
         return None;

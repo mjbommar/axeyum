@@ -58,4 +58,21 @@ for url in "${repos[@]}"; do
   fi
 done
 
+# drat-trim is not just a reading reference — `scripts/check-claim-certificates.py
+# --drat-checker references/drat-trim/drat-trim` runs the binary, so a clone alone
+# is not enough. Its Makefile compiles with `-std=c99`, which hides the POSIX
+# `getc_unlocked` it calls, and on this toolchain (gcc 15) the upstream target
+# fails outright:
+#
+#   drat-trim.c:986:10: error: implicit declaration of function 'getc_unlocked'
+#   make: *** [Makefile:6: drat-trim] Error 1
+#
+# `-D_GNU_SOURCE` exposes it without changing the standard's semantics. Built
+# here so the checker is present rather than discovered missing by a gate.
+if [ -d drat-trim ] && [ ! -x drat-trim/drat-trim ]; then
+  echo "build drat-trim"
+  ( cd drat-trim && gcc -std=c99 -D_GNU_SOURCE -DLONGTYPE -O2 -o drat-trim drat-trim.c ) \
+    || echo "FAILED: building drat-trim"
+fi
+
 echo "done"

@@ -1,0 +1,97 @@
+# Instances whose rendered Lean module transcribes NOTHING from the query.
+#
+# This is not coverage. It is the honest other half of the denominator, pinned so
+# that it stays measured and visible.
+#
+# Each module here is an OPAQUE-SKELETON ATTESTATION: its entire vocabulary is
+#
+#     α   atom._N   prop._N   func._N   Eq.{1}   Not   And
+#
+# with no numeral, no `Int.*`/`Real.*` constructor, and no carrier of any bound
+# route. Lean checks that `False` follows from those axioms, and it would follow
+# just as well if the `.smt2` file said something else entirely -- the module's
+# trusted base is a FRESH vocabulary with no declared relationship to any symbol
+# in the query. The correspondence to the query lives in the Rust certificate
+# and is checked there, not here.
+#
+# So there is nothing to bind, and binding them would be a check that cannot
+# fail. What IS checked, on every run, is that each module really is that shape:
+# one smuggled `Int.one`, one undeclared opaque name, one truncated type, or one
+# extra axiom takes a module out of the class and fails the run -- AND that the
+# structural binder CANNOT relate it to the query. That second requirement is
+# new on 2026-08-18 and is what stops this class absorbing modules that do
+# transcribe: a module whose rendered terms are subterms of the `.smt2` file
+# fails here and belongs in `hypothesis-binding-structural-instances.txt`.
+#
+# 2026-08-18: this list was 124, then 28, then 19, then 9, and is now 5. 95 of the 124
+# moved to the structural manifest -- 89 `ArrayAxiom` because the emitter stopped
+# collapsing each whole term into one opaque constant, and 6 `QfAbv`/`QfUf` that
+# were structural all along and were misfiled by a check that read VOCABULARY
+# rather than SHAPE. The 124th was self-refuting and its route now declines. The
+# 9 `Sos` rows left after that moved to the BOUND manifest later the same day:
+# the route now reconstructs them (see below), so they transcribe the query and
+# are checked against it. Ten of the 13 bare-leaf rows then moved to
+# `hypothesis-binding-anchored-instances.txt`.
+#
+# WHAT IS LEFT, and why each really does transcribe nothing. Measured, not
+# assumed: every one of the 5 was run through BOTH the structural binder and the
+# anchoring check, and refused by both.
+#
+#    3  BARE SIDES THE QUERY DOES NOT PIN. The module says two of this file's
+#       terms are equal and not equal without saying WHICH two, and unlike the 10
+#       that moved, the file does not force exactly one such disequality:
+#       `solver__array__ext27.btor.smt2` forces FOUR (`i0≠i1`, `v5≠v6`, `i0≠i2`,
+#       `i1≠i2`) and an anchor that picks one of four is not an anchor; the two
+#       `unsat__replace_all__not-first-only` rows force NONE, their single
+#       assertion being a forced-TRUE equality whose sides the arena
+#       constant-folded, which puts them in the rewrite class below.
+#       (The 4 `FiniteArrayExtensionality` rows that used to sit here left on
+#       2026-08-18 and are now in `hypothesis-binding-structural-instances.txt`.
+#       They were `Not (And (Eq α a b) (Eq α c d))` over bare constants, and the
+#       reason was the emitter, not the certificate: the reads ARE the query's
+#       own `TermId`s and `reconstruct_finite_array_extensionality_to_lean_module`
+#       collapsed each `(select a i)` into one `atom._N`. It now renders them
+#       structurally, exactly as `ProofFragment::ArrayAxiom` was made to do
+#       earlier the same day, and all four bind: 360 matched term nodes, and
+#       every one of the four corruptions of each is caught. They do not anchor
+#       -- a negated conjunction is not a fact about either conjunct -- so
+#       `structural` is their verdict and the anchored pin would be refused.)
+#    2  THE RENDERED TERM IS THE OUTPUT OF A REWRITE, not of the source text.
+#       `cvc5__redand-eliminate.smt2` asserts `(bvredand x)`; the certificate is
+#       about `bvcomp x (bvnot #b000000)`, which the rewriter produced and which
+#       the file does not contain. `solver__array__ext10.btor.smt2` asserts
+#       `(ite (= a0 a0) #b1 #b0)`; the arena folds `(= a0 a0)` to `true` at
+#       construction, and `true` is not in the file either. These two are the
+#       precise, small residue of the general problem: to bind them one would
+#       have to certify the REWRITE as well as the transcription, which is a
+#       different object (a rewrite-step certificate) and a different check.
+#       Anchoring reaches neither: `redand-eliminate` forces exactly one
+#       disequality, but between two APPLICATIONS a bare constant cannot stand
+#       for, and `ext10` forces only `¬(a0 = a0)`, which no injective renaming of
+#       two distinct module names admits.
+corpus/public-curated/bvred/cvc5__redand-eliminate.smt2
+corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext10.btor.smt2
+corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext27.btor.smt2
+corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__replace_all__not-first-only.smt2
+corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__replace_all__not-first-only.smt2
+
+# THE `Sos` ROUTE, 2026-08-18. The nine rows that used to sit here were the
+# degree-2 SOS certificates whose `LDLᵀ` linear forms have a NONZERO AFFINE ROW
+# --- `Σ xᵢ² + 1 < 0`, `(x−1)² + (y−2)² + 1 < 0`. The reconstructor's
+# rational-weight fold already handled everything else, and declined these for
+# one reason: `SosCertificate::rational_squares` refused any square whose
+# constant term was nonzero, because the linear-form builder could only emit
+# variables. The Gram matrix is over the homogenized `v = [x; 1]`, so those
+# forms are affine in general and the restriction was never mathematical.
+# `rational_affine_squares` returns the affine entry under the index `n_vars`,
+# `int_affine_lin_to_rexpr` maps that index to the ring's `one`, and the
+# degree-2 ring normalizer -- which has had `Mono::Const` all along -- proves
+# the identity. Nine attestations and one declined row became ten bound ones.
+#
+# DECLINED instances USED to be listed here, and the words were "deliberately not
+# pinned anywhere ... They are NOT checked." That list is now a manifest of its
+# own -- `scripts/hypothesis-binding-declined-instances.txt` -- and it is checked
+# two-sided: each must render a module and FAIL all four verdicts. Its first run
+# as a check evicted two of its own members (the `bug593` rows bind structurally)
+# and the class that had been hiding a self-refuting module lost it, because the
+# emitter now declines to render one.

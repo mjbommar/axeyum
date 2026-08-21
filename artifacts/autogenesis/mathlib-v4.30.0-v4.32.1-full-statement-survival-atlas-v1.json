@@ -1,0 +1,2073 @@
+{
+  "authority": {
+    "evaluation_credit": 0,
+    "executor_invocations": 0,
+    "fact_status_changes": 0,
+    "full_structural_comparisons": 1,
+    "inventory_extractions": 0,
+    "kernel_theorem_submissions": 0,
+    "ledger_writes": 0,
+    "mathlib_source_proof_bodies_read": 0,
+    "proof_search_invocations": 0,
+    "retries": 0,
+    "theorem_values_read": 0
+  },
+  "baseline": {
+    "inventory_records": 9729,
+    "inventory_sha256": "4285e551680abf3b0cafb11709015f04b3aef3eb05ce23af2392b12cec31aecc",
+    "mathlib_tag": "v4.30.0"
+  },
+  "comparison": {
+    "inventory_records": 9822,
+    "inventory_sha256": "22246f40ae5a9b7f44a914313a5a212104b541d48974df4bf439da4006e61e5e",
+    "mathlib_tag": "v4.32.1"
+  },
+  "external_delta": {
+    "bytes": 7263057,
+    "mode": "0444",
+    "path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-v4.32.1-nat-int-statement-delta-v1.ndjson",
+    "records": 9839,
+    "sha256": "718b06f2665b0539076ff4c1b598850b0a0a213e7fc6fa1281ee02e56cf50c44"
+  },
+  "kind": "axeyum-autogenesis-full-statement-survival-atlas",
+  "limitations": "The atlas measures statement-name and type metadata across two releases. It does not establish proof portability, kernel compatibility, or theorem credit.",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-full-statement-survival-atlas-plan-v1.json",
+    "sha256": "8c7a4db05ed7dd2898e80c44cccd13aac297ec725c536de86d2c3b98aea2582b"
+  },
+  "schema_version": 1,
+  "state": "full-statement-surface-classified-no-proof-credit",
+  "summary": {
+    "added_names": [
+      "Int.abs_modEq_two",
+      "Int.abs_modEq_two._simp_1",
+      "Int.ceil_nonpos",
+      "Int.floor_lt_zero",
+      "Int.gcd_right_comm",
+      "Int.instConditionallyCompleteLinearOrder._proof_1",
+      "Int.instConditionallyCompleteLinearOrder._proof_10",
+      "Int.instConditionallyCompleteLinearOrder._proof_11",
+      "Int.instConditionallyCompleteLinearOrder._proof_12",
+      "Int.instConditionallyCompleteLinearOrder._proof_13",
+      "Int.instConditionallyCompleteLinearOrder._proof_2",
+      "Int.instConditionallyCompleteLinearOrder._proof_3",
+      "Int.instConditionallyCompleteLinearOrder._proof_4",
+      "Int.instConditionallyCompleteLinearOrder._proof_5",
+      "Int.instConditionallyCompleteLinearOrder._proof_6",
+      "Int.instConditionallyCompleteLinearOrder._proof_7",
+      "Int.instConditionallyCompleteLinearOrder._proof_8",
+      "Int.instConditionallyCompleteLinearOrder._proof_9",
+      "Int.instStrongNormalizedGCDMonoid._proof_1",
+      "Int.instStrongNormalizedGCDMonoid._proof_2",
+      "Int.strongNormalizationMonoid._proof_1",
+      "Int.strongNormalizationMonoid._proof_2",
+      "Int.strongNormalizationMonoid._proof_3",
+      "Int.strongNormalizationMonoid._proof_4",
+      "Int.strongNormalizationMonoid._proof_5",
+      "Int.strongNormalizationMonoid._proof_6",
+      "Int.zmultiples_inf",
+      "Int.zmultiples_sup",
+      "Nat.Abundant.pos",
+      "Nat.Coprime.stdSymm",
+      "Nat.Deficient.pos",
+      "Nat.IsAlmostPrime.eq_1",
+      "Nat.IsAlmostPrime.isAtMost",
+      "Nat.IsAlmostPrime.mul",
+      "Nat.IsAtMostAlmostPrime.mul",
+      "Nat.IsStrongDvdSequence.const",
+      "Nat.IsStrongDvdSequence.eq_1",
+      "Nat.IsStrongDvdSequence.id",
+      "Nat.IsStrongDvdSequence.isDvdSequence",
+      "Nat.Partition.partitionWithPartEquiv._proof_1",
+      "Nat.Partition.partitionWithPartEquiv._proof_10",
+      "Nat.Partition.partitionWithPartEquiv._proof_11",
+      "Nat.Partition.partitionWithPartEquiv._proof_12",
+      "Nat.Partition.partitionWithPartEquiv._proof_13",
+      "Nat.Partition.partitionWithPartEquiv._proof_14",
+      "Nat.Partition.partitionWithPartEquiv._proof_3",
+      "Nat.Partition.partitionWithPartEquiv._proof_4",
+      "Nat.Partition.partitionWithPartEquiv._proof_5",
+      "Nat.Partition.partitionWithPartEquiv._proof_6",
+      "Nat.Partition.partitionWithPartEquiv._proof_7",
+      "Nat.Partition.partitionWithPartEquiv._proof_8",
+      "Nat.Partition.partitionWithPartEquiv._proof_9",
+      "Nat.Partition.partitionWithPartEquiv_apply_parts",
+      "Nat.Partition.partitionWithPartEquiv_symm_apply_parts",
+      "Nat.Prime.isAlmostPrime_one",
+      "Nat.Prime.mul_isAlmostPrime_two",
+      "Nat.Prime.sq_isAlmostPrime_two",
+      "Nat.Weird.pos",
+      "Nat.addCommute_cast",
+      "Nat.addCommute_cast_one",
+      "Nat.allLTTR_eq_true",
+      "Nat.anyLTTR_eq_true",
+      "Nat.ascFactorial_le",
+      "Nat.ascFactorial_le_factorial_mul_pow",
+      "Nat.bell_eq_sum_erase",
+      "Nat.bell_eq_sum_partition",
+      "Nat.cast_add_comm",
+      "Nat.cast_add_one_comm",
+      "Nat.cast_one_add",
+      "Nat.centralBinom_strictMono",
+      "Nat.choose_add_le_add_one_pow",
+      "Nat.choose_le_sub_pow",
+      "Nat.decidableBallLT_eq_decidableBallLTTR",
+      "Nat.decidableExistsLT'_eq_decidableExistsLT'TR",
+      "Nat.decidableExistsLT_eq_decidableExistsLTTR",
+      "Nat.dvd_pow_self_iff",
+      "Nat.dvd_prod_primeFactors_pow_self",
+      "Nat.dvd_radical_pow_self",
+      "Nat.eq_or_lt_of_le",
+      "Nat.equivProdNatFactoredNumbers._proof_10",
+      "Nat.exists_dvd_pow_iff",
+      "Nat.gcdA.eq_1",
+      "Nat.gcdB.eq_1",
+      "Nat.gcd_right_comm",
+      "Nat.instNeZeroCardOfNonemptyOfFinite",
+      "Nat.isAlmostPrime_one_iff",
+      "Nat.isAlmostPrime_one_iff._simp_1",
+      "Nat.isAlmostPrime_zero_iff",
+      "Nat.isAlmostPrime_zero_iff._simp_1",
+      "Nat.isDvdSequence_fib",
+      "Nat.isStrongDvdSequence_fib",
+      "Nat.lt_mul_div_self_add",
+      "Nat.mul_sub_mod",
+      "Nat.not_deficient_zero",
+      "Nat.not_weird_zero",
+      "Nat.or_two_pow_eq_add_of_lt",
+      "Nat.padicValNat_le_self",
+      "Nat.padicValNat_lt_self",
+      "Nat.primeFactors_prod_primeFactors",
+      "Nat.primeFactors_radical",
+      "Nat.primesBelow_eq_filter_Ioo_one",
+      "Nat.primesBelow_eq_filter_Ioo_zero",
+      "Nat.primesLE_eq_filter_Ioc_one",
+      "Nat.primesLE_eq_filter_Ioc_zero",
+      "Nat.prod_primeFactors_coe_pow_factorization",
+      "Nat.prod_primeFactors_dvd_iff",
+      "Nat.prod_primeFactors_pow_factorization",
+      "Nat.radical_dvd_iff",
+      "Nat.self_sub_floor_lt_one",
+      "Nat.zero_le_self_sub_floor"
+    ],
+    "class_counts": {
+      "added-by-v4.32.1": 110,
+      "module-only-drift": 31,
+      "pretty-type-only-drift": 4,
+      "removed-after-v4.30.0": 17,
+      "structural-type-drift": 720,
+      "structurally-identical": 8957
+    },
+    "domain_class_counts": {
+      "Int": {
+        "added-by-v4.32.1": 28,
+        "module-only-drift": 0,
+        "pretty-type-only-drift": 0,
+        "removed-after-v4.30.0": 8,
+        "structural-type-drift": 179,
+        "structurally-identical": 3534
+      },
+      "Nat": {
+        "added-by-v4.32.1": 82,
+        "module-only-drift": 31,
+        "pretty-type-only-drift": 4,
+        "removed-after-v4.30.0": 9,
+        "structural-type-drift": 541,
+        "structurally-identical": 5423
+      }
+    },
+    "module_transitions": [
+      {
+        "baseline_module": "Batteries.Data.Int",
+        "count": 7,
+        "current_module": "Batteries.Data.Int"
+      },
+      {
+        "baseline_module": "Batteries.Data.Nat.Basic",
+        "count": 5,
+        "current_module": "Batteries.Data.Nat.Basic"
+      },
+      {
+        "baseline_module": "Batteries.Data.Nat.Basic",
+        "count": 2,
+        "current_module": "Init.Data.Nat.Sqrt.Basic"
+      },
+      {
+        "baseline_module": "Batteries.Data.Nat.Bisect",
+        "count": 24,
+        "current_module": "Batteries.Data.Nat.Bisect"
+      },
+      {
+        "baseline_module": "Batteries.Data.Nat.Bitwise.Lemmas",
+        "count": 26,
+        "current_module": "Batteries.Data.Nat.Bitwise.Lemmas"
+      },
+      {
+        "baseline_module": "Batteries.Data.Nat.Gcd",
+        "count": 1,
+        "current_module": "Batteries.Data.Nat.Gcd"
+      },
+      {
+        "baseline_module": "Batteries.Data.Nat.Lemmas",
+        "count": 38,
+        "current_module": "Batteries.Data.Nat.Lemmas"
+      },
+      {
+        "baseline_module": "Init.Core",
+        "count": 3,
+        "current_module": "Init.Core"
+      },
+      {
+        "baseline_module": "Init.Data.Dyadic.Basic",
+        "count": 22,
+        "current_module": "Init.Data.Dyadic.Basic"
+      },
+      {
+        "baseline_module": "Init.Data.Int.Basic",
+        "count": 22,
+        "current_module": "Init.Data.Int.Basic"
+      },
+      {
+        "baseline_module": "Init.Data.Int.Bitwise.Lemmas",
+        "count": 38,
+        "current_module": "Init.Data.Int.Bitwise.Lemmas"
+      },
+      {
+        "baseline_module": "Init.Data.Int.Compare",
+        "count": 12,
+        "current_module": "Init.Data.Int.Compare"
+      },
+      {
+        "baseline_module": "Init.Data.Int.Cooper",
+        "count": 16,
+        "current_module": "Init.Data.Int.Cooper"
+      },
+      {
+        "baseline_module": "Init.Data.Int.DivMod.Basic",
+        "count": 17,
+        "current_module": "Init.Data.Int.DivMod.Basic"
+      },
+      {
+        "baseline_module": "Init.Data.Int.DivMod.Bootstrap",
+        "count": 84,
+        "current_module": "Init.Data.Int.DivMod.Bootstrap"
+      },
+      {
+        "baseline_module": "Init.Data.Int.DivMod.Lemmas",
+        "count": 574,
+        "current_module": "Init.Data.Int.DivMod.Lemmas"
+      },
+      {
+        "baseline_module": "Init.Data.Int.Gcd",
+        "count": 206,
+        "current_module": "Init.Data.Int.Gcd"
+      },
+      {
+        "baseline_module": "Init.Data.Int.Lemmas",
+        "count": 170,
+        "current_module": "Init.Data.Int.Lemmas"
+      },
+      {
+        "baseline_module": "Init.Data.Int.LemmasAux",
+        "count": 74,
+        "current_module": "Init.Data.Int.LemmasAux"
+      },
+      {
+        "baseline_module": "Init.Data.Int.Linear",
+        "count": 347,
+        "current_module": "Init.Data.Int.Linear"
+      },
+      {
+        "baseline_module": "Init.Data.Int.OfNat",
+        "count": 27,
+        "current_module": "Init.Data.Int.OfNat"
+      },
+      {
+        "baseline_module": "Init.Data.Int.Order",
+        "count": 433,
+        "current_module": "Init.Data.Int.Order"
+      },
+      {
+        "baseline_module": "Init.Data.Int.Pow",
+        "count": 26,
+        "current_module": "Init.Data.Int.Pow"
+      },
+      {
+        "baseline_module": "Init.Data.Int.ToString",
+        "count": 2,
+        "current_module": "Init.Data.Int.ToString"
+      },
+      {
+        "baseline_module": "Init.Data.Nat.Basic",
+        "count": 332,
+        "current_module": "Init.Data.Nat.Basic"
+      },
+      {
+        "baseline_module": "Init.Data.Nat.Bitwise.Basic",
+        "count": 14,
+        "current_module": "Init.Data.Nat.Bitwise.Basic"
+      },
+      {
+        "baseline_module": "Init.Data.Nat.Bitwise.Lemmas",
+        "count": 127,
+        "current_module": "Init.Data.Nat.Bitwise.Lemmas"
+      },
+      {
+        "baseline_module": "Init.Data.Nat.Compare",
+        "count": 11,
+        "current_module": "Init.Data.Nat.Compare"
+      },
+      {
+        "baseline_module": "Init.Data.Nat.Coprime",
+        "count": 48,
+        "current_module": "Init.Data.Nat.Coprime"
+      },
+      {
+        "baseline_module": "Init.Data.Nat.Div.Basic",
+        "count": 74,
+        "current_module": "Init.Data.Nat.Div.Basic"
+      },
+      {
+        "baseline_module": "Init.Data.Nat.Div.Lemmas",
+        "count": 38,
+        "current_module": "Init.Data.Nat.Div.Lemmas"
+      },
+      {
+        "baseline_module": "Init.Data.Nat.Dvd",
+        "count": 43,
+        "current_module": "Init.Data.Nat.Dvd"
+      },
+      {
+        "baseline_module": "Init.Data.Nat.Fold",
+        "count": 59,
+        "current_module": "Init.Data.Nat.Fold"
+      },
+      {
+        "baseline_module": "Init.Data.Nat.Gcd",
+        "count": 110,
+        "current_module": "Init.Data.Nat.Gcd"
+      },
+      {
+        "baseline_module": "Init.Data.Nat.Lcm",
+        "count": 69,
+        "current_module": "Init.Data.Nat.Lcm"
+      },
+      {
+        "baseline_module": "Init.Data.Nat.Lemmas",
+        "count": 472,
+        "current_module": "Init.Data.Nat.Lemmas"
+      },
+      {
+        "baseline_module": "Init.Data.Nat.Linear",
+        "count": 96,
+        "current_module": "Init.Data.Nat.Linear"
+      },
+      {
+        "baseline_module": "Init.Data.Nat.Log2",
+        "count": 4,
+        "current_module": "Init.Data.Nat.Log2"
+      },
+      {
+        "baseline_module": "Init.Data.Nat.MinMax",
+        "count": 32,
+        "current_module": "Init.Data.Nat.MinMax"
+      },
+      {
+        "baseline_module": "Init.Data.Nat.Mod",
+        "count": 17,
+        "current_module": "Init.Data.Nat.Mod"
+      },
+      {
+        "baseline_module": "Init.Data.Nat.Order",
+        "count": 4,
+        "current_module": "Init.Data.Nat.Order"
+      },
+      {
+        "baseline_module": "Init.Data.Nat.Power2.Basic",
+        "count": 5,
+        "current_module": "Init.Data.Nat.Power2.Basic"
+      },
+      {
+        "baseline_module": "Init.Data.Nat.Power2.Lemmas",
+        "count": 4,
+        "current_module": "Init.Data.Nat.Power2.Lemmas"
+      },
+      {
+        "baseline_module": "Init.Data.Nat.SOM",
+        "count": 22,
+        "current_module": "Init.Data.Nat.SOM"
+      },
+      {
+        "baseline_module": "Init.Data.Nat.Simproc",
+        "count": 20,
+        "current_module": "Init.Data.Nat.Simproc"
+      },
+      {
+        "baseline_module": "Init.Data.Nat.ToString",
+        "count": 106,
+        "current_module": "Init.Data.Nat.ToString"
+      },
+      {
+        "baseline_module": "Init.Data.Order.Ord",
+        "count": 4,
+        "current_module": "Init.Data.Order.Ord"
+      },
+      {
+        "baseline_module": "Init.Data.Range.Polymorphic.IntLemmas",
+        "count": 333,
+        "current_module": "Init.Data.Range.Polymorphic.IntLemmas"
+      },
+      {
+        "baseline_module": "Init.Data.Range.Polymorphic.NatLemmas",
+        "count": 510,
+        "current_module": "Init.Data.Range.Polymorphic.NatLemmas"
+      },
+      {
+        "baseline_module": "Init.Data.Rat.Basic",
+        "count": 1,
+        "current_module": "Init.Data.Rat.Basic"
+      },
+      {
+        "baseline_module": "Init.Data.String.Basic",
+        "count": 3,
+        "current_module": "Init.Data.String.Length"
+      },
+      {
+        "baseline_module": "Init.Data.String.Pattern.Basic",
+        "count": 1,
+        "current_module": "Init.Data.String.Pattern.Basic"
+      },
+      {
+        "baseline_module": "Init.Data.UInt.Lemmas",
+        "count": 5,
+        "current_module": "Init.Data.UInt.Lemmas"
+      },
+      {
+        "baseline_module": "Init.Grind.Norm",
+        "count": 2,
+        "current_module": "Init.Grind.Norm"
+      },
+      {
+        "baseline_module": "Init.GrindInstances.Ring.Fin",
+        "count": 1,
+        "current_module": "Init.GrindInstances.Ring.Fin"
+      },
+      {
+        "baseline_module": "Init.Omega.IntList",
+        "count": 1,
+        "current_module": "Init.Omega.IntList"
+      },
+      {
+        "baseline_module": "Init.Prelude",
+        "count": 48,
+        "current_module": "Init.Prelude"
+      },
+      {
+        "baseline_module": "Init.SimpLemmas",
+        "count": 1,
+        "current_module": "Init.SimpLemmas"
+      },
+      {
+        "baseline_module": "Init.WF",
+        "count": 1,
+        "current_module": "Init.WF"
+      },
+      {
+        "baseline_module": "Lean.Meta.Tactic.Simp.BuiltinSimprocs.Nat",
+        "count": 9,
+        "current_module": "Lean.Meta.Tactic.Simp.BuiltinSimprocs.Nat"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.BigOperators.Finprod",
+        "count": 10,
+        "current_module": "Mathlib.Algebra.BigOperators.Finprod"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.BigOperators.Finsupp.Basic",
+        "count": 1,
+        "current_module": "Mathlib.Algebra.BigOperators.Finsupp.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.BigOperators.Group.Finset.Basic",
+        "count": 1,
+        "current_module": "Mathlib.Algebra.BigOperators.Group.Finset.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.BigOperators.ModEq",
+        "count": 40,
+        "current_module": "Mathlib.Algebra.BigOperators.ModEq"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.BigOperators.Ring.Finset",
+        "count": 18,
+        "current_module": "Mathlib.Algebra.BigOperators.Ring.Finset"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.CharP.Basic",
+        "count": 2,
+        "current_module": "Mathlib.Algebra.CharP.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.CharP.Lemmas",
+        "count": 1,
+        "current_module": "Mathlib.Algebra.CharP.Lemmas"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.CharZero.Defs",
+        "count": 12,
+        "current_module": "Mathlib.Algebra.CharZero.Defs"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.EuclideanDomain.Int",
+        "count": 6,
+        "current_module": "Mathlib.Algebra.EuclideanDomain.Int"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Field.NegOnePow",
+        "count": 1,
+        "current_module": "Mathlib.Algebra.Field.NegOnePow"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Field.Periodic",
+        "count": 1,
+        "current_module": "Mathlib.Algebra.Field.Periodic"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.GCDMonoid.Nat",
+        "count": 22,
+        "current_module": "Mathlib.Algebra.GCDMonoid.Nat"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Group.Action.Pointwise.Finset",
+        "count": 1,
+        "current_module": "Mathlib.Algebra.Group.Action.Pointwise.Finset"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Group.Int.Defs",
+        "count": 8,
+        "current_module": "Mathlib.Algebra.Group.Int.Defs"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Group.Int.Even",
+        "count": 32,
+        "current_module": "Mathlib.Algebra.Group.Int.Even"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Group.Int.TypeTags",
+        "count": 3,
+        "current_module": "Mathlib.Algebra.Group.Int.TypeTags"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Group.Int.Units",
+        "count": 19,
+        "current_module": "Mathlib.Algebra.Group.Int.Units"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Group.Nat.Defs",
+        "count": 5,
+        "current_module": "Mathlib.Algebra.Group.Nat.Defs"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Group.Nat.Even",
+        "count": 29,
+        "current_module": "Mathlib.Algebra.Group.Nat.Even"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Group.Nat.TypeTags",
+        "count": 2,
+        "current_module": "Mathlib.Algebra.Group.Nat.TypeTags"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Group.Nat.Units",
+        "count": 4,
+        "current_module": "Mathlib.Algebra.Group.Nat.Units"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Group.NatPowAssoc",
+        "count": 4,
+        "current_module": "Mathlib.Algebra.Group.NatPowAssoc"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Group.Subgroup.ZPowers.Basic",
+        "count": 4,
+        "current_module": "Mathlib.Algebra.Group.Subgroup.ZPowers.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Group.Subgroup.ZPowers.Lemmas",
+        "count": 3,
+        "current_module": "Mathlib.Algebra.Group.Subgroup.ZPowers.Lemmas"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Group.Submonoid.Membership",
+        "count": 2,
+        "current_module": "Mathlib.Algebra.Group.Submonoid.Membership"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.GroupWithZero.Nat",
+        "count": 2,
+        "current_module": "Mathlib.Algebra.GroupWithZero.Nat"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.IsPrimePow",
+        "count": 1,
+        "current_module": "Mathlib.Algebra.IsPrimePow"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Module.NatInt",
+        "count": 4,
+        "current_module": "Mathlib.Algebra.Module.NatInt"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Order.Antidiag.Nat",
+        "count": 16,
+        "current_module": "Mathlib.Algebra.Order.Antidiag.Nat"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Order.Disjointed",
+        "count": 4,
+        "current_module": "Mathlib.Algebra.Order.Disjointed"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Order.Field.Power",
+        "count": 2,
+        "current_module": "Mathlib.Algebra.Order.Field.Power"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Order.Floor.Defs",
+        "count": 33,
+        "current_module": "Mathlib.Algebra.Order.Floor.Defs"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Order.Floor.Div",
+        "count": 7,
+        "current_module": "Mathlib.Algebra.Order.Floor.Div"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Order.Floor.Ring",
+        "count": 4,
+        "current_module": "Mathlib.Algebra.Order.Floor.Defs"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Order.Floor.Ring",
+        "count": 171,
+        "current_module": "Mathlib.Algebra.Order.Floor.Ring"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Order.Floor.Semifield",
+        "count": 9,
+        "current_module": "Mathlib.Algebra.Order.Floor.Semifield"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Order.Floor.Semiring",
+        "count": 88,
+        "current_module": "Mathlib.Algebra.Order.Floor.Semiring"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Order.Group.Int",
+        "count": 1,
+        "current_module": "Mathlib.Algebra.Order.Group.Int"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Order.Group.Nat",
+        "count": 5,
+        "current_module": "Mathlib.Algebra.Order.Group.Nat"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Order.Group.Unbundled.Int",
+        "count": 26,
+        "current_module": "Mathlib.Algebra.Order.Group.Unbundled.Int"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Order.Monoid.Unbundled.Basic",
+        "count": 2,
+        "current_module": "Mathlib.Algebra.Order.Monoid.Unbundled.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Order.Ring.Abs",
+        "count": 1,
+        "current_module": "Mathlib.Algebra.Order.Ring.Abs"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Order.Ring.Cast",
+        "count": 27,
+        "current_module": "Mathlib.Algebra.Order.Ring.Cast"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Order.Ring.Finset",
+        "count": 6,
+        "current_module": "Mathlib.Algebra.Order.Ring.Finset"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Order.Ring.GeomSum",
+        "count": 4,
+        "current_module": "Mathlib.Algebra.Order.Ring.GeomSum"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Order.Ring.Int",
+        "count": 6,
+        "current_module": "Mathlib.Algebra.Order.Ring.Int"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Order.Ring.Nat",
+        "count": 3,
+        "current_module": "Mathlib.Algebra.Order.Ring.Nat"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Order.Round",
+        "count": 1,
+        "current_module": "Mathlib.Algebra.Order.Round"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Order.Star.Basic",
+        "count": 1,
+        "current_module": "Mathlib.Algebra.Order.Star.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Order.ZeroLEOne",
+        "count": 2,
+        "current_module": "Mathlib.Algebra.Order.ZeroLEOne"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Ring.CharZero",
+        "count": 3,
+        "current_module": "Mathlib.Algebra.Ring.CharZero"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Ring.GeomSum",
+        "count": 5,
+        "current_module": "Mathlib.Algebra.Ring.GeomSum"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Ring.Int.Defs",
+        "count": 20,
+        "current_module": "Mathlib.Algebra.Ring.Int.Defs"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Ring.Int.Field",
+        "count": 1,
+        "current_module": "Mathlib.Algebra.Ring.Int.Field"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Ring.Int.Parity",
+        "count": 54,
+        "current_module": "Mathlib.Algebra.Ring.Int.Parity"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Ring.Int.Units",
+        "count": 2,
+        "current_module": "Mathlib.Algebra.Ring.Int.Units"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Ring.Nat",
+        "count": 15,
+        "current_module": "Mathlib.Algebra.Ring.Nat"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Ring.NegOnePow",
+        "count": 20,
+        "current_module": "Mathlib.Algebra.Ring.NegOnePow"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Ring.Parity",
+        "count": 42,
+        "current_module": "Mathlib.Algebra.Ring.Parity"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Ring.SumsOfSquares",
+        "count": 2,
+        "current_module": "Mathlib.Algebra.Ring.SumsOfSquares"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Squarefree.Basic",
+        "count": 4,
+        "current_module": "Mathlib.Algebra.Squarefree.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Algebra.Star.Basic",
+        "count": 2,
+        "current_module": "Mathlib.Algebra.Star.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Analysis.Analytic.Order",
+        "count": 1,
+        "current_module": "Mathlib.Analysis.Analytic.Order"
+      },
+      {
+        "baseline_module": "Mathlib.Analysis.Complex.Asymptotics",
+        "count": 1,
+        "current_module": "Mathlib.Analysis.Complex.Asymptotics"
+      },
+      {
+        "baseline_module": "Mathlib.Analysis.Normed.Group.Int",
+        "count": 5,
+        "current_module": "Mathlib.Analysis.Normed.Group.Int"
+      },
+      {
+        "baseline_module": "Mathlib.Analysis.Normed.Group.Rat",
+        "count": 1,
+        "current_module": "Mathlib.Analysis.Normed.Group.Rat"
+      },
+      {
+        "baseline_module": "Mathlib.Analysis.Normed.Order.Lattice",
+        "count": 1,
+        "current_module": "Mathlib.Analysis.Normed.Order.Lattice"
+      },
+      {
+        "baseline_module": "Mathlib.Analysis.Normed.Ring.Basic",
+        "count": 1,
+        "current_module": "Mathlib.Analysis.Normed.Ring.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Analysis.Normed.Ring.Int",
+        "count": 6,
+        "current_module": "Mathlib.Analysis.Normed.Ring.Int"
+      },
+      {
+        "baseline_module": "Mathlib.Analysis.Normed.Ring.Lemmas",
+        "count": 3,
+        "current_module": "Mathlib.Analysis.Normed.Ring.Lemmas"
+      },
+      {
+        "baseline_module": "Mathlib.Analysis.SpecialFunctions.Log.Basic",
+        "count": 2,
+        "current_module": "Mathlib.Analysis.SpecialFunctions.Log.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Analysis.SpecialFunctions.Pow.NthRootLemmas",
+        "count": 23,
+        "current_module": "Mathlib.Analysis.SpecialFunctions.Pow.NthRootLemmas"
+      },
+      {
+        "baseline_module": "Mathlib.Analysis.SpecificLimits.Basic",
+        "count": 1,
+        "current_module": "Mathlib.Analysis.SpecificLimits.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Analysis.SumOverResidueClass",
+        "count": 2,
+        "current_module": "Mathlib.Analysis.SumOverResidueClass"
+      },
+      {
+        "baseline_module": "Mathlib.Combinatorics.Additive.ErdosGinzburgZiv",
+        "count": 2,
+        "current_module": "Mathlib.Combinatorics.Additive.ErdosGinzburgZiv"
+      },
+      {
+        "baseline_module": "Mathlib.Combinatorics.Enumerative.Bell",
+        "count": 17,
+        "current_module": "Mathlib.Combinatorics.Enumerative.Bell"
+      },
+      {
+        "baseline_module": "Mathlib.Combinatorics.Enumerative.Partition.Basic",
+        "count": 48,
+        "current_module": "Mathlib.Combinatorics.Enumerative.Partition.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Combinatorics.Enumerative.Partition.GenFun",
+        "count": 7,
+        "current_module": "Mathlib.Combinatorics.Enumerative.Partition.GenFun"
+      },
+      {
+        "baseline_module": "Mathlib.Combinatorics.Enumerative.Partition.Glaisher",
+        "count": 14,
+        "current_module": "Mathlib.Combinatorics.Enumerative.Partition.Glaisher"
+      },
+      {
+        "baseline_module": "Mathlib.Combinatorics.Enumerative.Schroder",
+        "count": 20,
+        "current_module": "Mathlib.Combinatorics.Enumerative.Schroder"
+      },
+      {
+        "baseline_module": "Mathlib.Combinatorics.Enumerative.Stirling",
+        "count": 30,
+        "current_module": "Mathlib.Combinatorics.Enumerative.Stirling"
+      },
+      {
+        "baseline_module": "Mathlib.Combinatorics.Pigeonhole",
+        "count": 1,
+        "current_module": "Mathlib.Combinatorics.Pigeonhole"
+      },
+      {
+        "baseline_module": "Mathlib.Computability.Ackermann",
+        "count": 9,
+        "current_module": "Mathlib.Computability.Ackermann"
+      },
+      {
+        "baseline_module": "Mathlib.Computability.Partrec",
+        "count": 29,
+        "current_module": "Mathlib.Computability.Partrec"
+      },
+      {
+        "baseline_module": "Mathlib.Computability.PartrecBasis",
+        "count": 21,
+        "current_module": "Mathlib.Computability.PartrecBasis"
+      },
+      {
+        "baseline_module": "Mathlib.Computability.PartrecCode",
+        "count": 115,
+        "current_module": "Mathlib.Computability.PartrecCode"
+      },
+      {
+        "baseline_module": "Mathlib.Computability.Primrec.Basic",
+        "count": 14,
+        "current_module": "Mathlib.Computability.Primrec.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Computability.Primrec.List",
+        "count": 28,
+        "current_module": "Mathlib.Computability.Primrec.List"
+      },
+      {
+        "baseline_module": "Mathlib.Computability.RE",
+        "count": 1,
+        "current_module": "Mathlib.Computability.RE"
+      },
+      {
+        "baseline_module": "Mathlib.Computability.RecursiveIn",
+        "count": 7,
+        "current_module": "Mathlib.Computability.RecursiveIn"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Fin.Basic",
+        "count": 2,
+        "current_module": "Mathlib.Data.Fin.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Finite.Card",
+        "count": 1,
+        "current_module": "Mathlib.SetTheory.Cardinal.NatCard"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Finite.Perm",
+        "count": 1,
+        "current_module": "Mathlib.Data.Finite.Perm"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Finset.NatDivisors",
+        "count": 5,
+        "current_module": "Mathlib.Data.Finset.NatDivisors"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Finsupp.Basic",
+        "count": 8,
+        "current_module": "Mathlib.Data.Finsupp.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Fintype.EquivFin",
+        "count": 1,
+        "current_module": "Mathlib.Data.Fintype.EquivFin"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Fintype.Units",
+        "count": 2,
+        "current_module": "Mathlib.Algebra.GroupWithZero.Units.Fintype"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Int.Associated",
+        "count": 1,
+        "current_module": "Mathlib.Data.Int.Associated"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Int.Basic",
+        "count": 18,
+        "current_module": "Mathlib.Data.Int.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Int.Bitwise",
+        "count": 73,
+        "current_module": "Mathlib.Data.Int.Bitwise"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Int.CardIntervalMod",
+        "count": 14,
+        "current_module": "Mathlib.Data.Int.CardIntervalMod"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Int.Cast.Basic",
+        "count": 24,
+        "current_module": "Mathlib.Data.Int.Cast.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Int.Cast.Field",
+        "count": 3,
+        "current_module": "Mathlib.Data.Int.Cast.Field"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Int.Cast.Lemmas",
+        "count": 20,
+        "current_module": "Mathlib.Data.Int.Cast.Lemmas"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Int.CharZero",
+        "count": 4,
+        "current_module": "Mathlib.Data.Int.CharZero"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Int.ConditionallyCompleteOrder",
+        "count": 12,
+        "current_module": "Mathlib.Data.Int.ConditionallyCompleteOrder"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Int.DivMod",
+        "count": 3,
+        "current_module": "Mathlib.Data.Int.DivMod"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Int.Fib.Basic",
+        "count": 26,
+        "current_module": "Mathlib.Data.Int.Fib.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Int.Fib.Lemmas",
+        "count": 2,
+        "current_module": "Mathlib.Data.Int.Fib.Lemmas"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Int.GCD",
+        "count": 31,
+        "current_module": "Mathlib.Data.Int.GCD"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Int.Init",
+        "count": 87,
+        "current_module": "Mathlib.Data.Int.Init"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Int.Interval",
+        "count": 25,
+        "current_module": "Mathlib.Data.Int.Interval"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Int.LeastGreatest",
+        "count": 16,
+        "current_module": "Mathlib.Data.Int.LeastGreatest"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Int.Lemmas",
+        "count": 17,
+        "current_module": "Mathlib.Data.Int.Lemmas"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Int.Log",
+        "count": 47,
+        "current_module": "Mathlib.Data.Int.Log"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Int.ModEq",
+        "count": 113,
+        "current_module": "Mathlib.Data.Int.ModEq"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Int.NatAbs",
+        "count": 3,
+        "current_module": "Mathlib.Data.Int.NatAbs"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Int.NatPrime",
+        "count": 3,
+        "current_module": "Mathlib.Data.Int.NatPrime"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Int.Order.Basic",
+        "count": 16,
+        "current_module": "Mathlib.Data.Int.Order.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Int.Order.Lemmas",
+        "count": 5,
+        "current_module": "Mathlib.Data.Int.Order.Lemmas"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Int.Order.Units",
+        "count": 12,
+        "current_module": "Mathlib.Data.Int.Order.Units"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Int.Range",
+        "count": 4,
+        "current_module": "Mathlib.Data.Int.Range"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Int.Sqrt",
+        "count": 6,
+        "current_module": "Mathlib.Data.Int.Sqrt"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Int.Star",
+        "count": 3,
+        "current_module": "Mathlib.Data.Int.Star"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Int.SuccPred",
+        "count": 14,
+        "current_module": "Mathlib.Data.Int.SuccPred"
+      },
+      {
+        "baseline_module": "Mathlib.Data.List.Iterate",
+        "count": 3,
+        "current_module": "Mathlib.Data.List.Iterate"
+      },
+      {
+        "baseline_module": "Mathlib.Data.List.Permutation",
+        "count": 3,
+        "current_module": "Mathlib.Data.List.Permutation"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Basic",
+        "count": 20,
+        "current_module": "Mathlib.Data.Nat.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.BinaryRec",
+        "count": 46,
+        "current_module": "Mathlib.Data.Nat.BinaryRec"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.BitIndices",
+        "count": 22,
+        "current_module": "Mathlib.Data.Nat.BitIndices"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Bits",
+        "count": 54,
+        "current_module": "Mathlib.Data.Nat.Bits"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Bitwise",
+        "count": 41,
+        "current_module": "Mathlib.Data.Nat.Bitwise"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Cast.Basic",
+        "count": 13,
+        "current_module": "Mathlib.Data.Nat.Cast.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Cast.Commute",
+        "count": 3,
+        "current_module": "Mathlib.Data.Nat.Cast.Commute"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Cast.Defs",
+        "count": 19,
+        "current_module": "Mathlib.Data.Nat.Cast.Defs"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Cast.Field",
+        "count": 4,
+        "current_module": "Mathlib.Data.Nat.Cast.Field"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Cast.Order.Basic",
+        "count": 43,
+        "current_module": "Mathlib.Data.Nat.Cast.Order.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Cast.Order.Field",
+        "count": 11,
+        "current_module": "Mathlib.Data.Nat.Cast.Order.Field"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Cast.Order.Ring",
+        "count": 22,
+        "current_module": "Mathlib.Data.Nat.Cast.Order.Ring"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Cast.SetInterval",
+        "count": 10,
+        "current_module": "Mathlib.Data.Nat.Cast.SetInterval"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Cast.WithTop",
+        "count": 2,
+        "current_module": "Mathlib.Data.Nat.Cast.WithTop"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.ChineseRemainder",
+        "count": 34,
+        "current_module": "Mathlib.Data.Nat.ChineseRemainder"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Choose.Basic",
+        "count": 71,
+        "current_module": "Mathlib.Data.Nat.Choose.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Choose.Bounds",
+        "count": 11,
+        "current_module": "Mathlib.Data.Nat.Choose.Bounds"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Choose.Cast",
+        "count": 3,
+        "current_module": "Mathlib.Data.Nat.Choose.Cast"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Choose.Central",
+        "count": 15,
+        "current_module": "Mathlib.Data.Nat.Choose.Central"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Choose.Dvd",
+        "count": 4,
+        "current_module": "Mathlib.Data.Nat.Choose.Dvd"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Choose.Factorization",
+        "count": 23,
+        "current_module": "Mathlib.Data.Nat.Choose.Factorization"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Choose.Multinomial",
+        "count": 21,
+        "current_module": "Mathlib.Data.Nat.Choose.Multinomial"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Choose.Sum",
+        "count": 11,
+        "current_module": "Mathlib.Data.Nat.Choose.Sum"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Choose.Vandermonde",
+        "count": 2,
+        "current_module": "Mathlib.Data.Nat.Choose.Vandermonde"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Count",
+        "count": 33,
+        "current_module": "Mathlib.Data.Nat.Count"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Digits.Defs",
+        "count": 78,
+        "current_module": "Mathlib.Data.Nat.Digits.Defs"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Digits.Div",
+        "count": 9,
+        "current_module": "Mathlib.Data.Nat.Digits.Div"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Digits.Lemmas",
+        "count": 44,
+        "current_module": "Mathlib.Data.Nat.Digits.Lemmas"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Dist",
+        "count": 22,
+        "current_module": "Mathlib.Data.Nat.Dist"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.EvenOddRec",
+        "count": 8,
+        "current_module": "Mathlib.Data.Nat.EvenOddRec"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Factorial.Basic",
+        "count": 89,
+        "current_module": "Mathlib.Data.Nat.Factorial.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Factorial.BigOperators",
+        "count": 7,
+        "current_module": "Mathlib.Data.Nat.Factorial.BigOperators"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Factorial.Cast",
+        "count": 1,
+        "current_module": "Mathlib.Data.Nat.Factorial.Cast"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Factorial.DoubleFactorial",
+        "count": 12,
+        "current_module": "Mathlib.Data.Nat.Factorial.DoubleFactorial"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Factorial.NatCast",
+        "count": 1,
+        "current_module": "Mathlib.Data.Nat.Factorial.NatCast"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Factorial.SuperFactorial",
+        "count": 12,
+        "current_module": "Mathlib.Data.Nat.Factorial.SuperFactorial"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Factorization.Basic",
+        "count": 74,
+        "current_module": "Mathlib.Data.Nat.Factorization.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Factorization.Defs",
+        "count": 44,
+        "current_module": "Mathlib.Data.Nat.Factorization.Defs"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Factorization.Divisors",
+        "count": 8,
+        "current_module": "Mathlib.Data.Nat.Factorization.Divisors"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Factorization.Induction",
+        "count": 13,
+        "current_module": "Mathlib.Data.Nat.Factorization.Induction"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Factorization.LCM",
+        "count": 12,
+        "current_module": "Mathlib.Data.Nat.Factorization.LCM"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Factorization.PrimePow",
+        "count": 15,
+        "current_module": "Mathlib.Data.Nat.Factorization.PrimePow"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Factorization.Root",
+        "count": 26,
+        "current_module": "Mathlib.Data.Nat.Factorization.Root"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Factors",
+        "count": 45,
+        "current_module": "Mathlib.Data.Nat.Factors"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Fib.Basic",
+        "count": 41,
+        "current_module": "Mathlib.Data.Nat.Fib.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Fib.Zeckendorf",
+        "count": 28,
+        "current_module": "Mathlib.Data.Nat.Fib.Zeckendorf"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Find",
+        "count": 49,
+        "current_module": "Mathlib.Data.Nat.Find"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.GCD.Basic",
+        "count": 69,
+        "current_module": "Mathlib.Data.Nat.GCD.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.GCD.BigOperators",
+        "count": 10,
+        "current_module": "Mathlib.Data.Nat.GCD.BigOperators"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.GCD.Prime",
+        "count": 3,
+        "current_module": "Mathlib.Data.Nat.GCD.Prime"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Init",
+        "count": 81,
+        "current_module": "Mathlib.Data.Nat.Init"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Lattice",
+        "count": 32,
+        "current_module": "Mathlib.Order.Lattice.Nat"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Log",
+        "count": 89,
+        "current_module": "Mathlib.Data.Nat.Log"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.MaxPowDiv",
+        "count": 47,
+        "current_module": "Mathlib.Data.Nat.MaxPowDiv"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.ModEq",
+        "count": 133,
+        "current_module": "Mathlib.Data.Nat.ModEq"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Multiplicity",
+        "count": 21,
+        "current_module": "Mathlib.Data.Nat.Multiplicity"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Nth",
+        "count": 78,
+        "current_module": "Mathlib.Data.Nat.Nth"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Order.Lemmas",
+        "count": 9,
+        "current_module": "Mathlib.Data.Nat.Order.Lemmas"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.PSub",
+        "count": 20,
+        "current_module": "Mathlib.Data.Nat.PSub"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Pairing",
+        "count": 23,
+        "current_module": "Mathlib.Data.Nat.Pairing"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Periodic",
+        "count": 5,
+        "current_module": "Mathlib.Data.Nat.Periodic"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Prime.Basic",
+        "count": 53,
+        "current_module": "Mathlib.Data.Nat.Prime.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Prime.Defs",
+        "count": 71,
+        "current_module": "Mathlib.Data.Nat.Prime.Defs"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Prime.Factorial",
+        "count": 4,
+        "current_module": "Mathlib.Data.Nat.Prime.Factorial"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Prime.Infinite",
+        "count": 2,
+        "current_module": "Mathlib.Data.Nat.Prime.Infinite"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Prime.Int",
+        "count": 7,
+        "current_module": "Mathlib.Data.Nat.Prime.Int"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Prime.Nth",
+        "count": 5,
+        "current_module": "Mathlib.Data.Nat.Prime.Nth"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Prime.Pow",
+        "count": 2,
+        "current_module": "Mathlib.Data.Nat.Prime.Pow"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.PrimeFin",
+        "count": 33,
+        "current_module": "Mathlib.Data.Nat.PrimeFin"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Set",
+        "count": 5,
+        "current_module": "Mathlib.Data.Nat.Set"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Size",
+        "count": 19,
+        "current_module": "Mathlib.Data.Nat.Size"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Sqrt",
+        "count": 3,
+        "current_module": "Init.Data.Nat.Sqrt.Lemmas"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Sqrt",
+        "count": 34,
+        "current_module": "Mathlib.Data.Nat.Sqrt"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Squarefree",
+        "count": 44,
+        "current_module": "Mathlib.Data.Nat.Squarefree"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.SuccPred",
+        "count": 14,
+        "current_module": "Mathlib.Data.Nat.SuccPred"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Totient",
+        "count": 45,
+        "current_module": "Mathlib.Data.Nat.Totient"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.Upto",
+        "count": 3,
+        "current_module": "Mathlib.Data.Nat.Upto"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Nat.WithBot",
+        "count": 11,
+        "current_module": "Mathlib.Data.Nat.WithBot"
+      },
+      {
+        "baseline_module": "Mathlib.Data.PNat.Basic",
+        "count": 9,
+        "current_module": "Mathlib.Data.PNat.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Data.PNat.Defs",
+        "count": 6,
+        "current_module": "Mathlib.Data.PNat.Defs"
+      },
+      {
+        "baseline_module": "Mathlib.Data.PNat.Factors",
+        "count": 1,
+        "current_module": "Mathlib.Data.PNat.Factors"
+      },
+      {
+        "baseline_module": "Mathlib.Data.PNat.Prime",
+        "count": 5,
+        "current_module": "Mathlib.Data.PNat.Prime"
+      },
+      {
+        "baseline_module": "Mathlib.Data.PNat.Xgcd",
+        "count": 1,
+        "current_module": "Mathlib.Data.PNat.Xgcd"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Rat.Floor",
+        "count": 2,
+        "current_module": "Mathlib.Data.Rat.Floor"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Rat.NatSqrt.Defs",
+        "count": 3,
+        "current_module": "Mathlib.Data.Rat.NatSqrt.Defs"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Rat.NatSqrt.Real",
+        "count": 4,
+        "current_module": "Mathlib.Analysis.Rat.NatSqrt.Real"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Set.Card",
+        "count": 1,
+        "current_module": "Mathlib.Data.Set.Card"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Set.Image",
+        "count": 1,
+        "current_module": "Mathlib.Data.Set.Image"
+      },
+      {
+        "baseline_module": "Mathlib.Data.Sign.Defs",
+        "count": 1,
+        "current_module": "Mathlib.Data.Sign.Defs"
+      },
+      {
+        "baseline_module": "Mathlib.Data.ZMod.Basic",
+        "count": 3,
+        "current_module": "Mathlib.Data.ZMod.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Data.ZMod.QuotientGroup",
+        "count": 7,
+        "current_module": "Mathlib.Data.ZMod.QuotientGroup"
+      },
+      {
+        "baseline_module": "Mathlib.Data.ZMod.QuotientRing",
+        "count": 11,
+        "current_module": "Mathlib.Data.ZMod.QuotientRing"
+      },
+      {
+        "baseline_module": "Mathlib.FieldTheory.Finite.Basic",
+        "count": 10,
+        "current_module": "Mathlib.FieldTheory.Finite.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.GroupTheory.Archimedean",
+        "count": 1,
+        "current_module": "Mathlib.GroupTheory.Archimedean"
+      },
+      {
+        "baseline_module": "Mathlib.GroupTheory.ArchimedeanDensely",
+        "count": 4,
+        "current_module": "Mathlib.GroupTheory.ArchimedeanDensely"
+      },
+      {
+        "baseline_module": "Mathlib.GroupTheory.Exponent",
+        "count": 2,
+        "current_module": "Mathlib.GroupTheory.Exponent"
+      },
+      {
+        "baseline_module": "Mathlib.GroupTheory.OrderOfElement",
+        "count": 7,
+        "current_module": "Mathlib.GroupTheory.OrderOfElement"
+      },
+      {
+        "baseline_module": "Mathlib.GroupTheory.Perm.Cycle.Basic",
+        "count": 2,
+        "current_module": "Mathlib.GroupTheory.Perm.Cycle.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.LinearAlgebra.FreeModule.Int",
+        "count": 3,
+        "current_module": "Mathlib.LinearAlgebra.FreeModule.Int"
+      },
+      {
+        "baseline_module": "Mathlib.LinearAlgebra.Matrix.Determinant.Basic",
+        "count": 2,
+        "current_module": "Mathlib.LinearAlgebra.Matrix.Determinant.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Logic.Denumerable",
+        "count": 16,
+        "current_module": "Mathlib.Logic.Denumerable"
+      },
+      {
+        "baseline_module": "Mathlib.Logic.Encodable.Basic",
+        "count": 1,
+        "current_module": "Mathlib.Logic.Encodable.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Logic.Equiv.Fin.Basic",
+        "count": 8,
+        "current_module": "Mathlib.Logic.Equiv.Fin.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Logic.Godel.GodelBetaFunction",
+        "count": 9,
+        "current_module": "Mathlib.Logic.Godel.GodelBetaFunction"
+      },
+      {
+        "baseline_module": "Mathlib.MeasureTheory.Constructions.BorelSpace.Basic",
+        "count": 2,
+        "current_module": "Mathlib.MeasureTheory.Constructions.BorelSpace.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.MeasureTheory.Function.Floor",
+        "count": 4,
+        "current_module": "Mathlib.MeasureTheory.Function.Floor"
+      },
+      {
+        "baseline_module": "Mathlib.MeasureTheory.MeasurableSpace.Instances",
+        "count": 2,
+        "current_module": "Mathlib.MeasureTheory.MeasurableSpace.Instances"
+      },
+      {
+        "baseline_module": "Mathlib.ModelTheory.Arithmetic.Presburger.Semilinear.Basic",
+        "count": 2,
+        "current_module": "Mathlib.ModelTheory.Arithmetic.Presburger.Semilinear.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.ModelTheory.Arithmetic.Presburger.Semilinear.Defs",
+        "count": 1,
+        "current_module": "Mathlib.ModelTheory.Arithmetic.Presburger.Semilinear.Defs"
+      },
+      {
+        "baseline_module": "Mathlib.NumberTheory.ArithmeticFunction.Misc",
+        "count": 6,
+        "current_module": "Mathlib.NumberTheory.ArithmeticFunction.Misc"
+      },
+      {
+        "baseline_module": "Mathlib.NumberTheory.Bertrand",
+        "count": 4,
+        "current_module": "Mathlib.NumberTheory.Bertrand"
+      },
+      {
+        "baseline_module": "Mathlib.NumberTheory.Chebyshev",
+        "count": 10,
+        "current_module": "Mathlib.NumberTheory.Chebyshev"
+      },
+      {
+        "baseline_module": "Mathlib.NumberTheory.Divisors",
+        "count": 157,
+        "current_module": "Mathlib.NumberTheory.Divisors"
+      },
+      {
+        "baseline_module": "Mathlib.NumberTheory.EulerProduct.Basic",
+        "count": 1,
+        "current_module": "Mathlib.NumberTheory.EulerProduct.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.NumberTheory.FLT.Four",
+        "count": 2,
+        "current_module": "Mathlib.NumberTheory.FLT.Four"
+      },
+      {
+        "baseline_module": "Mathlib.NumberTheory.FactorisationProperties",
+        "count": 34,
+        "current_module": "Mathlib.NumberTheory.FactorisationProperties"
+      },
+      {
+        "baseline_module": "Mathlib.NumberTheory.Fermat",
+        "count": 25,
+        "current_module": "Mathlib.NumberTheory.Fermat"
+      },
+      {
+        "baseline_module": "Mathlib.NumberTheory.FermatPsp",
+        "count": 7,
+        "current_module": "Mathlib.NumberTheory.FermatPsp"
+      },
+      {
+        "baseline_module": "Mathlib.NumberTheory.FrobeniusNumber",
+        "count": 17,
+        "current_module": "Mathlib.NumberTheory.FrobeniusNumber"
+      },
+      {
+        "baseline_module": "Mathlib.NumberTheory.LSeries.PrimesInAP",
+        "count": 6,
+        "current_module": "Mathlib.NumberTheory.LSeries.PrimesInAP"
+      },
+      {
+        "baseline_module": "Mathlib.NumberTheory.LucasLehmer",
+        "count": 1,
+        "current_module": "Mathlib.NumberTheory.LucasLehmer"
+      },
+      {
+        "baseline_module": "Mathlib.NumberTheory.MaricaSchoenheim",
+        "count": 1,
+        "current_module": "Mathlib.NumberTheory.MaricaSchoenheim"
+      },
+      {
+        "baseline_module": "Mathlib.NumberTheory.Multiplicity",
+        "count": 12,
+        "current_module": "Mathlib.NumberTheory.Multiplicity"
+      },
+      {
+        "baseline_module": "Mathlib.NumberTheory.Padics.PadicNumbers",
+        "count": 7,
+        "current_module": "Mathlib.NumberTheory.Padics.PadicNumbers"
+      },
+      {
+        "baseline_module": "Mathlib.NumberTheory.Padics.PadicVal.Basic",
+        "count": 2,
+        "current_module": "Mathlib.NumberTheory.Padics.PadicVal.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.NumberTheory.Padics.PadicVal.Defs",
+        "count": 1,
+        "current_module": "Mathlib.NumberTheory.Padics.PadicVal.Defs"
+      },
+      {
+        "baseline_module": "Mathlib.NumberTheory.PowModTotient",
+        "count": 4,
+        "current_module": "Mathlib.NumberTheory.PowModTotient"
+      },
+      {
+        "baseline_module": "Mathlib.NumberTheory.PrimeCounting",
+        "count": 56,
+        "current_module": "Mathlib.NumberTheory.PrimeCounting"
+      },
+      {
+        "baseline_module": "Mathlib.NumberTheory.PrimesCongruentOne",
+        "count": 3,
+        "current_module": "Mathlib.NumberTheory.PrimesCongruentOne"
+      },
+      {
+        "baseline_module": "Mathlib.NumberTheory.Primorial",
+        "count": 2,
+        "current_module": "Mathlib.NumberTheory.Primorial"
+      },
+      {
+        "baseline_module": "Mathlib.NumberTheory.PythagoreanTriples",
+        "count": 1,
+        "current_module": "Mathlib.NumberTheory.PythagoreanTriples"
+      },
+      {
+        "baseline_module": "Mathlib.NumberTheory.Real.Irrational",
+        "count": 5,
+        "current_module": "Mathlib.NumberTheory.Real.Irrational"
+      },
+      {
+        "baseline_module": "Mathlib.NumberTheory.SiegelsLemma",
+        "count": 3,
+        "current_module": "Mathlib.NumberTheory.SiegelsLemma"
+      },
+      {
+        "baseline_module": "Mathlib.NumberTheory.SmoothNumbers",
+        "count": 56,
+        "current_module": "Mathlib.NumberTheory.SmoothNumbers"
+      },
+      {
+        "baseline_module": "Mathlib.NumberTheory.SumFourSquares",
+        "count": 6,
+        "current_module": "Mathlib.NumberTheory.SumFourSquares"
+      },
+      {
+        "baseline_module": "Mathlib.NumberTheory.SumPrimeReciprocals",
+        "count": 3,
+        "current_module": "Mathlib.NumberTheory.SumPrimeReciprocals"
+      },
+      {
+        "baseline_module": "Mathlib.NumberTheory.SumTwoSquares",
+        "count": 6,
+        "current_module": "Mathlib.NumberTheory.SumTwoSquares"
+      },
+      {
+        "baseline_module": "Mathlib.NumberTheory.Wilson",
+        "count": 2,
+        "current_module": "Mathlib.NumberTheory.Wilson"
+      },
+      {
+        "baseline_module": "Mathlib.Order.Bounds.Basic",
+        "count": 2,
+        "current_module": "Mathlib.Order.Bounds.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Order.Circular.ZMod",
+        "count": 2,
+        "current_module": "Mathlib.Order.Circular.ZMod"
+      },
+      {
+        "baseline_module": "Mathlib.Order.Filter.AtTopBot.Archimedean",
+        "count": 3,
+        "current_module": "Mathlib.Order.Filter.AtTopBot.Archimedean"
+      },
+      {
+        "baseline_module": "Mathlib.Order.Filter.AtTopBot.Basic",
+        "count": 1,
+        "current_module": "Mathlib.Order.Filter.AtTopBot.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Order.Filter.AtTopBot.Finite",
+        "count": 2,
+        "current_module": "Mathlib.Order.Filter.AtTopBot.Finite"
+      },
+      {
+        "baseline_module": "Mathlib.Order.Filter.AtTopBot.ModEq",
+        "count": 4,
+        "current_module": "Mathlib.Order.Filter.AtTopBot.ModEq"
+      },
+      {
+        "baseline_module": "Mathlib.Order.Filter.Cofinite",
+        "count": 3,
+        "current_module": "Mathlib.Order.Filter.Cofinite"
+      },
+      {
+        "baseline_module": "Mathlib.Order.Filter.Ultrafilter.Basic",
+        "count": 1,
+        "current_module": "Mathlib.Order.Filter.Ultrafilter.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Order.GaloisConnection.Basic",
+        "count": 1,
+        "current_module": "Mathlib.Order.GaloisConnection.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Order.Interval.Finset.Box",
+        "count": 4,
+        "current_module": "Mathlib.Order.Interval.Finset.Box"
+      },
+      {
+        "baseline_module": "Mathlib.Order.Interval.Finset.Nat",
+        "count": 48,
+        "current_module": "Mathlib.Order.Interval.Finset.Nat"
+      },
+      {
+        "baseline_module": "Mathlib.Order.Monotone.Basic",
+        "count": 18,
+        "current_module": "Mathlib.Order.Monotone.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.Order.Nat",
+        "count": 3,
+        "current_module": "Mathlib.Order.Nat"
+      },
+      {
+        "baseline_module": "Mathlib.Order.OrderIsoNat",
+        "count": 10,
+        "current_module": "Mathlib.Order.OrderIsoNat"
+      },
+      {
+        "baseline_module": "Mathlib.Order.Partition.Equipartition",
+        "count": 1,
+        "current_module": "Mathlib.Order.Partition.Equipartition"
+      },
+      {
+        "baseline_module": "Mathlib.RingTheory.Binomial",
+        "count": 3,
+        "current_module": "Mathlib.RingTheory.Binomial"
+      },
+      {
+        "baseline_module": "Mathlib.RingTheory.Coprime.Basic",
+        "count": 2,
+        "current_module": "Mathlib.RingTheory.Coprime.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.RingTheory.Coprime.Lemmas",
+        "count": 7,
+        "current_module": "Mathlib.RingTheory.Coprime.Lemmas"
+      },
+      {
+        "baseline_module": "Mathlib.RingTheory.FractionalIdeal.Basic",
+        "count": 3,
+        "current_module": "Mathlib.RingTheory.FractionalIdeal.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.RingTheory.GradedAlgebra.HomogeneousLocalization",
+        "count": 2,
+        "current_module": "Mathlib.RingTheory.GradedAlgebra.HomogeneousLocalization"
+      },
+      {
+        "baseline_module": "Mathlib.RingTheory.Ideal.Int",
+        "count": 9,
+        "current_module": "Mathlib.RingTheory.Ideal.Int"
+      },
+      {
+        "baseline_module": "Mathlib.RingTheory.Ideal.NatInt",
+        "count": 5,
+        "current_module": "Mathlib.RingTheory.Ideal.NatInt"
+      },
+      {
+        "baseline_module": "Mathlib.RingTheory.Ideal.Norm.AbsNorm",
+        "count": 3,
+        "current_module": "Mathlib.RingTheory.Ideal.Norm.AbsNorm"
+      },
+      {
+        "baseline_module": "Mathlib.RingTheory.Int.Basic",
+        "count": 21,
+        "current_module": "Mathlib.RingTheory.Int.Basic"
+      },
+      {
+        "baseline_module": "Mathlib.RingTheory.Multiplicity",
+        "count": 7,
+        "current_module": "Mathlib.RingTheory.Multiplicity"
+      },
+      {
+        "baseline_module": "Mathlib.RingTheory.MvPolynomial.Symmetric.Defs",
+        "count": 1,
+        "current_module": "Mathlib.RingTheory.MvPolynomial.Symmetric.Defs"
+      },
+      {
+        "baseline_module": "Mathlib.RingTheory.Polynomial.Pochhammer",
+        "count": 5,
+        "current_module": "Mathlib.RingTheory.Polynomial.Pochhammer"
+      },
+      {
+        "baseline_module": "Mathlib.RingTheory.Radical.NatInt",
+        "count": 26,
+        "current_module": "Mathlib.RingTheory.Radical.NatInt"
+      },
+      {
+        "baseline_module": "Mathlib.RingTheory.UniqueFactorizationDomain.Moebius",
+        "count": 1,
+        "current_module": "Mathlib.RingTheory.UniqueFactorizationDomain.Moebius"
+      },
+      {
+        "baseline_module": "Mathlib.RingTheory.UniqueFactorizationDomain.Nat",
+        "count": 4,
+        "current_module": "Mathlib.RingTheory.UniqueFactorizationDomain.Nat"
+      },
+      {
+        "baseline_module": "Mathlib.RingTheory.WittVector.IsPoly",
+        "count": 1,
+        "current_module": "Mathlib.RingTheory.WittVector.IsPoly"
+      },
+      {
+        "baseline_module": "Mathlib.SetTheory.Cardinal.Finite",
+        "count": 50,
+        "current_module": "Mathlib.SetTheory.Cardinal.Finite"
+      },
+      {
+        "baseline_module": "Mathlib.SetTheory.Cardinal.NatCount",
+        "count": 3,
+        "current_module": "Mathlib.SetTheory.Cardinal.NatCount"
+      },
+      {
+        "baseline_module": "Mathlib.Tactic.IntervalCases",
+        "count": 2,
+        "current_module": "Mathlib.Tactic.IntervalCases"
+      },
+      {
+        "baseline_module": "Mathlib.Tactic.NormNum.PowMod",
+        "count": 1,
+        "current_module": "Mathlib.Tactic.NormNum.PowMod"
+      },
+      {
+        "baseline_module": "Mathlib.Tactic.NormNum.Result",
+        "count": 2,
+        "current_module": "Mathlib.Tactic.NormNum.Result"
+      },
+      {
+        "baseline_module": "Mathlib.Tactic.Zify",
+        "count": 4,
+        "current_module": "Mathlib.Tactic.Zify"
+      },
+      {
+        "baseline_module": "Mathlib.Topology.Instances.Int",
+        "count": 14,
+        "current_module": "Mathlib.Topology.Instances.Int"
+      },
+      {
+        "baseline_module": "Mathlib.Topology.Instances.Nat",
+        "count": 12,
+        "current_module": "Mathlib.Topology.Instances.Nat"
+      },
+      {
+        "baseline_module": "Mathlib.Topology.Instances.Rat",
+        "count": 6,
+        "current_module": "Mathlib.Topology.Instances.Rat"
+      },
+      {
+        "baseline_module": "Mathlib.Topology.Instances.ZMultiples",
+        "count": 3,
+        "current_module": "Mathlib.Topology.Instances.ZMultiples"
+      },
+      {
+        "baseline_module": "Mathlib.Topology.MetricSpace.Gluing",
+        "count": 1,
+        "current_module": "Mathlib.Topology.MetricSpace.Gluing"
+      },
+      {
+        "baseline_module": "Mathlib.Topology.Order",
+        "count": 2,
+        "current_module": "Mathlib.Topology.Order"
+      },
+      {
+        "baseline_module": "Mathlib.Topology.Order.LiminfLimsup",
+        "count": 1,
+        "current_module": "Mathlib.Topology.Order.LiminfLimsup"
+      },
+      {
+        "baseline_module": "Mathlib.Util.CompileInductive",
+        "count": 3,
+        "current_module": "Mathlib.Util.CompileInductive"
+      },
+      {
+        "baseline_module": "Std.Data.DTreeMap.Internal.Queries",
+        "count": 3,
+        "current_module": "Std.Data.DTreeMap.Internal.Queries"
+      },
+      {
+        "baseline_module": "Std.Data.String.ToInt",
+        "count": 7,
+        "current_module": "Std.Data.String.ToInt"
+      },
+      {
+        "baseline_module": "Std.Data.String.ToNat",
+        "count": 5,
+        "current_module": "Std.Data.String.ToNat"
+      }
+    ],
+    "removed_names": [
+      "Int.instNeZeroOfNat_mathlib",
+      "Int.instNontrivial_1",
+      "Int.instNormalizedGCDMonoid._proof_1",
+      "Int.instNormalizedGCDMonoid._proof_2",
+      "Int.normalizationMonoid._proof_1",
+      "Int.normalizationMonoid._proof_2",
+      "Int.normalizationMonoid._proof_3",
+      "Int.normalizationMonoid._proof_4",
+      "Nat.equivProdNatFactoredNumbers._proof_6",
+      "Nat.instDecidableCoprime._proof_1",
+      "Nat.instDecidableCoprime._proof_2",
+      "Nat.instNeZeroOfNat_mathlib",
+      "Nat.instNontrivial_1",
+      "Nat.sqrt.iter.eq_1",
+      "Nat.sqrt.iter_sq_le",
+      "Nat.sqrt.lt_iter_succ_sq",
+      "Nat.sqrt.lt_iter_succ_sq._unary"
+    ],
+    "selected_240_projection": {
+      "exact_match": true,
+      "records": 240,
+      "selected_comparison_sha256": "9174c2fa642a60c59bb48df5a4741103d7e98e599c13922756ba077975d0ad28"
+    },
+    "shared_names": 9712,
+    "union_names": 9839
+  }
+}

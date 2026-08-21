@@ -144,6 +144,21 @@ pub enum ExportError {
         /// The rendered root name when one is available in this kernel's name arena.
         name: String,
     },
+    /// An explicit theorem-leaf set repeats one declaration.
+    DuplicateTheoremLeaf {
+        /// Repeated rendered theorem name.
+        name: String,
+    },
+    /// An explicit dependency leaf is not a checked theorem.
+    LeafIsNotTheorem {
+        /// Rendered non-theorem declaration name.
+        name: String,
+    },
+    /// An explicit theorem leaf is not reachable from the selected roots.
+    UnreachableTheoremLeaf {
+        /// Rendered unreachable theorem name.
+        name: String,
+    },
     /// A selected declaration references a constant absent from the environment.
     MissingDependency {
         /// The selected declaration containing the reference.
@@ -192,6 +207,18 @@ impl fmt::Display for ExportError {
             Self::EmptyRoots => write!(f, "root-selected export requires at least one root"),
             Self::MissingRoot { name } => {
                 write!(f, "root-selected export has no declaration named {name}")
+            }
+            Self::DuplicateTheoremLeaf { name } => {
+                write!(f, "target theorem leaf is repeated: {name}")
+            }
+            Self::LeafIsNotTheorem { name } => {
+                write!(f, "target dependency leaf is not a theorem: {name}")
+            }
+            Self::UnreachableTheoremLeaf { name } => {
+                write!(
+                    f,
+                    "target theorem leaf is unreachable from the roots: {name}"
+                )
             }
             Self::MissingDependency {
                 declaration,
@@ -368,6 +395,59 @@ impl Kernel {
         let units = self.select_root_units(self.export_units()?, roots, &normalization)?;
         let order = self.order_units(units, &normalization)?;
         Ok(order.into_iter().flat_map(|unit| unit.members()).collect())
+    }
+
+    /// Return an atomic root closure that stops at explicit checked theorem
+    /// leaves while retaining every declaration referenced by each leaf's type.
+    ///
+    /// This is the source-side graph primitive for target-owned theorem reuse:
+    /// a caller may recheck a same-name target theorem's type and then avoid
+    /// transporting the unrelated source proof behind it. Leaves must be
+    /// unique checked theorems and reachable from `roots`; an unused proposed
+    /// cut is rejected rather than recorded as if it changed the closure.
+    ///
+    /// # Errors
+    ///
+    /// Returns the ordinary root/package/dependency errors plus a typed decline
+    /// for a duplicate, missing, non-theorem, or unreachable leaf.
+    pub fn root_declaration_closure_with_theorem_leaves(
+        &self,
+        roots: &[NameId],
+        theorem_leaves: &[NameId],
+    ) -> Result<Vec<NameId>, ExportError> {
+        let mut leaves = BTreeSet::new();
+        for &leaf in theorem_leaves {
+            let rendered = self.display_name(leaf).to_string();
+            let Some(declaration) = self.environment().get(leaf) else {
+                return Err(ExportError::MissingRoot { name: rendered });
+            };
+            if !matches!(declaration, Declaration::Theorem { .. }) {
+                return Err(ExportError::LeafIsNotTheorem { name: rendered });
+            }
+            if !leaves.insert(leaf) {
+                return Err(ExportError::DuplicateTheoremLeaf { name: rendered });
+            }
+        }
+        let normalization = TransportNormalization::default();
+        let units = self.select_root_units_with_theorem_leaves(
+            self.export_units()?,
+            roots,
+            &normalization,
+            &leaves,
+        )?;
+        let order = self.order_units_with_theorem_leaves(units, &normalization, &leaves)?;
+        let closure = order
+            .into_iter()
+            .flat_map(|unit| unit.members())
+            .collect::<Vec<_>>();
+        for &leaf in &leaves {
+            if !closure.contains(&leaf) {
+                return Err(ExportError::UnreachableTheoremLeaf {
+                    name: self.display_name(leaf).to_string(),
+                });
+            }
+        }
+        Ok(closure)
     }
 
     /// Return the atomic root closure after checked removal of canonical,
@@ -965,6 +1045,16 @@ impl Kernel {
         roots: &[NameId],
         normalization: &TransportNormalization,
     ) -> Result<Vec<Unit>, ExportError> {
+        self.select_root_units_with_theorem_leaves(units, roots, normalization, &BTreeSet::new())
+    }
+
+    fn select_root_units_with_theorem_leaves(
+        &self,
+        units: Vec<Unit>,
+        roots: &[NameId],
+        normalization: &TransportNormalization,
+        theorem_leaves: &BTreeSet<NameId>,
+    ) -> Result<Vec<Unit>, ExportError> {
         if roots.is_empty() {
             return Err(ExportError::EmptyRoots);
         }
@@ -988,7 +1078,9 @@ impl Kernel {
         }
         while let Some(index) = work.pop() {
             for member in units[index].members() {
-                for dependency in self.member_constants(member, normalization) {
+                for dependency in
+                    self.member_constants_with_theorem_leaves(member, normalization, theorem_leaves)
+                {
                     if let Some(&dependency_index) = owner.get(&dependency)
                         && selected.insert(dependency_index)
                     {
@@ -1157,6 +1249,15 @@ impl Kernel {
         units: Vec<Unit>,
         normalization: &TransportNormalization,
     ) -> Result<Vec<Unit>, ExportError> {
+        self.order_units_with_theorem_leaves(units, normalization, &BTreeSet::new())
+    }
+
+    fn order_units_with_theorem_leaves(
+        &self,
+        units: Vec<Unit>,
+        normalization: &TransportNormalization,
+        theorem_leaves: &BTreeSet<NameId>,
+    ) -> Result<Vec<Unit>, ExportError> {
         let mut owner: BTreeMap<NameId, usize> = BTreeMap::new();
         for (index, unit) in units.iter().enumerate() {
             for member in unit.members() {
@@ -1169,7 +1270,11 @@ impl Kernel {
             .map(|(index, unit)| -> Result<Vec<usize>, ExportError> {
                 let mut referenced = BTreeSet::new();
                 for member in unit.members() {
-                    for constant in self.member_constants(member, normalization) {
+                    for constant in self.member_constants_with_theorem_leaves(
+                        member,
+                        normalization,
+                        theorem_leaves,
+                    ) {
                         let Some(&other) = owner.get(&constant) else {
                             return Err(ExportError::MissingDependency {
                                 declaration: self.display_name(member).to_string(),
@@ -1255,6 +1360,65 @@ impl Kernel {
             }));
             constants.extend(rec_rules.iter().map(|rule| rule.ctor_name));
         }
+        let mut visited = BTreeSet::new();
+        while let Some(expression) = roots.pop() {
+            if !visited.insert(expression) {
+                continue;
+            }
+            match self.expr_node(expression) {
+                ExprNode::Const(name, _) => {
+                    constants.insert(*name);
+                }
+                ExprNode::Proj(type_name, _, structure) => {
+                    constants.insert(*type_name);
+                    roots.push(*structure);
+                }
+                ExprNode::App(function, argument) => {
+                    roots.push(*function);
+                    roots.push(*argument);
+                }
+                ExprNode::Lam(_, ty, body, _) | ExprNode::Pi(_, ty, body, _) => {
+                    roots.push(*ty);
+                    roots.push(*body);
+                }
+                ExprNode::Let(_, ty, value, body) => {
+                    roots.push(*ty);
+                    roots.push(*value);
+                    roots.push(*body);
+                }
+                ExprNode::Lit(Lit::Str(_)) => {
+                    constants.extend(self.string_literal_dependency_names());
+                }
+                ExprNode::BVar(_)
+                | ExprNode::FVar(_)
+                | ExprNode::Sort(_)
+                | ExprNode::Lit(Lit::Nat(_)) => {}
+            }
+        }
+        constants
+    }
+
+    fn member_constants_with_theorem_leaves(
+        &self,
+        member: NameId,
+        normalization: &TransportNormalization,
+        theorem_leaves: &BTreeSet<NameId>,
+    ) -> BTreeSet<NameId> {
+        if !theorem_leaves.contains(&member) {
+            return self.member_constants(member, normalization);
+        }
+        let Some(Declaration::Theorem { ty, .. }) = self.environment().get(member) else {
+            return BTreeSet::new();
+        };
+        let ty = normalization
+            .types
+            .get(&member)
+            .map_or(*ty, |normalized| normalized.expression);
+        self.expression_constants(vec![ty])
+    }
+
+    fn expression_constants(&self, mut roots: Vec<ExprId>) -> BTreeSet<NameId> {
+        let mut constants = BTreeSet::new();
         let mut visited = BTreeSet::new();
         while let Some(expression) = roots.pop() {
             if !visited.insert(expression) {
@@ -1381,7 +1545,15 @@ impl Kernel {
     /// whose only arguments are the family's parameters. The kernel does not
     /// store the flag, so it is derived; the round-trip suite checks the
     /// derivation against every official v4.30 fixture.
-    pub(crate) fn is_k_like_inductive(&self, family: NameId) -> bool {
+    ///
+    /// Public because an *importer* has to check the flag too, and there is
+    /// exactly one right answer to check against. Believing a family is K-like
+    /// licenses reducing a recursor application whose major premise is not a
+    /// constructor, so an import that accepted the wire's `k` on trust would be
+    /// taking a soundness-critical decision from the stream. Reading it here
+    /// instead of reimplementing the predicate is the point of exposing it.
+    #[must_use]
+    pub fn is_k_like_inductive(&self, family: NameId) -> bool {
         let Some(Declaration::Inductive { ty, ctor_names, .. }) = self.environment().get(family)
         else {
             return false;
@@ -2466,6 +2638,65 @@ mod tests {
             kernel
                 .render_lean4export_ndjson_roots(&Lean4ExportMetadata::axeyum("4.30.0"), &[root],),
             Err(ExportError::MissingDependency { .. })
+        ));
+    }
+
+    #[test]
+    fn explicit_theorem_leaf_cuts_only_its_proof_dependencies() {
+        let mut kernel = kernel_with_logic();
+        let logic = build_logic_prelude(&mut kernel).expect("logic prelude is cached");
+        let anonymous = kernel.anon();
+        let true_ty = kernel.const_(logic.true_, vec![]);
+        let true_intro = kernel.const_(logic.true_intro, vec![]);
+        let theorem = |kernel: &mut Kernel, label: &str, proof: ExprId| {
+            let name = kernel.name_str(anonymous, label);
+            kernel
+                .add_declaration(Declaration::Theorem {
+                    name,
+                    uparams: vec![],
+                    ty: true_ty,
+                    value: proof,
+                })
+                .expect("the theorem control checks");
+            name
+        };
+        let hidden = theorem(&mut kernel, "LeafControl.hidden", true_intro);
+        let hidden_const = kernel.const_(hidden, vec![]);
+        let leaf = theorem(&mut kernel, "LeafControl.leaf", hidden_const);
+        let leaf_const = kernel.const_(leaf, vec![]);
+        let root = theorem(&mut kernel, "LeafControl.root", leaf_const);
+        let other = theorem(&mut kernel, "LeafControl.unreachable", true_intro);
+
+        let full = kernel
+            .root_declaration_closure(&[root])
+            .expect("the full proof closure exists");
+        assert!(full.contains(&hidden));
+        let cut = kernel
+            .root_declaration_closure_with_theorem_leaves(&[root], &[leaf])
+            .expect("the explicit reachable theorem leaf cuts its proof");
+        assert!(cut.contains(&root));
+        assert!(cut.contains(&leaf));
+        assert!(!cut.contains(&hidden));
+        let leaf_at = cut.iter().position(|name| *name == leaf).unwrap();
+        let root_at = cut.iter().position(|name| *name == root).unwrap();
+        assert!(leaf_at < root_at);
+
+        assert!(matches!(
+            kernel.root_declaration_closure_with_theorem_leaves(&[root], &[leaf, leaf]),
+            Err(ExportError::DuplicateTheoremLeaf { .. })
+        ));
+        assert!(matches!(
+            kernel.root_declaration_closure_with_theorem_leaves(&[root], &[logic.true_]),
+            Err(ExportError::LeafIsNotTheorem { .. })
+        ));
+        assert!(matches!(
+            kernel.root_declaration_closure_with_theorem_leaves(&[root], &[other]),
+            Err(ExportError::UnreachableTheoremLeaf { .. })
+        ));
+        let missing = kernel.name_str(anonymous, "LeafControl.missing");
+        assert!(matches!(
+            kernel.root_declaration_closure_with_theorem_leaves(&[root], &[missing]),
+            Err(ExportError::MissingRoot { .. })
         ));
     }
 }

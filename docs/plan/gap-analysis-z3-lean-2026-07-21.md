@@ -1,5 +1,11 @@
 # Scoped Z3 and Lean gap analysis — 2026-07-21
 
+> **Scope note (added 2026-08-21).** This is the **evidence** map — proof
+> denominators, dominance audits, trust holes — and remains current for that.
+> The **capability** map (what axeyum can decide, against Z3/cvc5/Bitwuzla) is
+> [gap-analysis-smt-solvers-2026-08-21.md](gap-analysis-smt-solvers-2026-08-21.md).
+
+
 Status: **current evidence map and research queue**
 
 This document replaces monolithic “Z3 + Lean parity” as an operational status
@@ -48,28 +54,107 @@ The division scoreboard contains 35 rows across 24 logic labels:
   on the bounded encoding, which is why `compared` falls while `decided` rises —
   see [`strings-remeasurement-2026-07-29.md`](strings-remeasurement-2026-07-29.md).)
 - **25 / 35 rows** meet the scoreboard's `>= 80%` decide-strong threshold.
-- All 35 dominance audits are complete. **23 / 35 audited rows** are fully
-  dominant under the registered row definition; **594 / 753 decisions** are
+- All 35 dominance audits are complete. **20 / 35 audited rows** are fully
+  dominant under the registered row definition; **603 / 765 decisions** are
   dominant candidates.
-- The rows contain **327 baseline `unsat` decisions**. The evidence audit
-  reproduces **325 evidence-audit `unsat` outcomes**; **267 certified outcomes**
-  have **267 independently checked outcomes**, and Lean reconstruction checks
-  **260 Lean-checked outcomes**. The affected v1 rows historically contained 28
+  (Two of those 20 audited *zero* decisions — `LIA`/`UF` quantified — so the
+  ratio does not separate "fully dominant" from "decided nothing".)
+- **The fully-dominant count fell from 23, and only two of the four losses are
+  losses.** Named, because a bare `23 → 20` invites the wrong reading:
+  - `QF_FP/solver__fp__fp_misc.smt2` was `unsat`, certified, checked and
+    Lean-reconstructed in July; it now **times out** in the evidence audit. A
+    real regression, and the one worth chasing.
+  - `QF_BVFP/solver__fp__Float-no-simp3-main.smt2` still decides `unsat` but no
+    longer produces a certificate at all. Also a real loss.
+  - `QF_BVFP/solver__fp__fp_fromsbv.smt2` is unchanged in what it computes; it
+    now carries an explicit `bit-blast` **trust hole** where it previously
+    counted as Lean-checked. The audit got stricter.
+  - `QF_UF .../cli__regress0__seq__seq-ex1.smt2` (both bounded rows) is
+    unchanged in what it computes; `evidence_checked` was redefined to mean
+    *re-derives* rather than *is portable*, and this instance does not re-derive.
+    The audit got stricter.
+  - Against those, `BV/bitwuzla quantified` **gained** full dominance (80% → 100%).
+  A criterion that tightens under you moves this number in the same direction as
+  a capability regression, so the two have to be reported apart.
+- **Refreshed 2026-08-21: all 35 audits re-run at `496288979`, and exactly four
+  rows moved.** The committed artifacts were stamped between `2e207eba5` and
+  `562b65f13` — every one of them before today's reconstruction work landed — so
+  five of the fifteen "certified and checked but not Lean-reconstructed"
+  instances were stale records rather than gaps. The other 31 rows are identical
+  in every summary field, which is also the evidence that this run is comparable
+  to the previous one. **Of the +7 dominant outcomes, +5 are capability and +2
+  are the instrument.**
+  - *Capability — QF_NRA `qf-nra-cvc5-regress-clean`*: 21/32 → 24/32 dominant,
+    Lean unsat 3/14 → 6/14. `cli__regress1__nl__coeff-unsat-base.smt2` and
+    `cli__regress1__nl__simple-mono.smt2` now reconstruct as `RealProduct`
+    (`71f1c29a0`), and `cli__regress1__nl__ones.smt2` as `MonomialBound`
+    (`77c70d3e0`).
+  - *Capability — QF_S `qf-s-cvc5-regress-clean`*: 9/93 → 11/93 dominant, Lean
+    unsat 9/26 → 11/26. `r0_QF_SLIA_str004.smt2` and `r0_QF_S_str005.smt2`
+    gained a kernel-checked `StringLength` module (`b495a396e`).
+  - *Instrument — QF_NRA `qf-nra-synthetic-graduated`*: 31 → 33 audited
+    decisions, all dominant, and the only movement in the baseline denominator
+    (324 → 326). Nothing about those two instances changed. `nra-neg-square-d01`
+    and `nra-sos-strict-unsat-d01` were being billed for the process-wide ~32 s
+    `CReal` prelude build inside a 10 s per-instance cap; `562b65f13` moved that
+    build outside the timer. Measured as an A/B on one box, corpus and cap
+    fixed, warm suppressed through a local patch:
+
+    | tree | prelude warm | audited | the two `d01` instances |
+    |---|---|---:|---|
+    | `1fff66825` (as committed) | absent | 31 | both missing |
+    | `cfc5f8078` | absent | 31 | both missing |
+    | `71f1c29a0` | warmed | 33 | both present |
+    | `71f1c29a0` | suppressed | 31 | both missing |
+    | `496288979` (HEAD) | warmed | 33 | both present |
+    | `496288979` (HEAD) | suppressed | 33 | both present |
+
+    The last row is why the effect is invisible today: `0887ab652` memoised
+    `whnf_core`, the prelude fell from ~32 s to ~13 s, and an instance can now
+    pay for it inside the cap. A number that moves because the instrument
+    stopped mis-billing is not a capability gain, and it moves in the same
+    direction as one.
+  - *Neither — QF_SEQ `qf-seq-cvc5-regress-clean`*: `issue5542-strings-seq-mix`
+    went from `parse-error` to `sat` and certified. The row's single UNSAT is
+    unchanged, so no dominance figure moves.
+- **A directory-backed row silently DROPS an instance it fails to decide**,
+  which is how those two went missing without ever appearing as timeouts: the
+  audit's directory branch `continue`s past an instance whose audit outcome is
+  undecided, leaving no record, so numerator and denominator shrink together and
+  `timeouts 0` stays true while meaning nothing. The instances-array branch
+  records such a row instead. Only the two synthetic rows
+  (`qf-nia-synthetic-graduated`, `qf-nra-synthetic-graduated`) take the
+  directory branch, and they are exactly the two rows whose denominator is not
+  independently pinned by a committed instance list.
+- The rows contain **326 baseline `unsat` decisions**. The evidence audit
+  reproduces **323 evidence-audit `unsat` outcomes**; **281 certified outcomes**
+  have **281 independently checked outcomes**, and Lean reconstruction checks
+  **269 Lean-checked outcomes**. The affected v1 rows historically contained 28
   structurally accepted but uncertified checks; the v2 refresh now records
   **0 vacuous `bare-unsat` check results** and gates checking on certification.
-  The two-case 327→325 difference is explicit:
-  QF_NIA proof production rejects `IntPow2` before producing evidence. Coverage
-  is substantial but uneven, not 260 fully audited outcomes out of 327:
+  The three-case 326→323 difference is explicit, and it is **not** a proof
+  production *rejection* — all three are evidence-audit **timeouts**:
+  `BV/.../cli__regress0__quantifiers__cond-var-elim-binary.smt2`,
+  `BV/.../cli__regress1__quantifiers__bug802.smt2`, and
+  `BV/.../cli__regress1__quantifiers__small-pipeline-fixpoint-3.smt2`. All three
+  are the known `BvAlternationCounterexample` rows, where the 64 MiB module cap
+  bounds what is *returned* and not what is *constructed*.
+  `QF_FP/.../solver__fp__fp_misc.smt2` was a fourth until `4032bd660`: it was
+  not a budget at all but an unmemoized DAG walk in the *classifier*
+  (`array_bv_abs::abstract_term`), which did not finish in 125 s and now
+  completes the whole row in 314 ms. It is certified and checked here, and still
+  not dominant — see the `Fpa2Bv` note below. Coverage
+  is substantial but uneven, not 269 fully audited outcomes out of 326:
   selected QF_ABV/AUFBV/LIA/LRA/UF rows are complete while general nonlinear,
   strings/sequences, AUFLIA, and some UFLIA rows retain large proof gaps.
 - The generated [proof-gap matrix](generated/proof-gap-matrix.md) applies the
   full conjunction rather than treating Lean acceptance as sufficient:
-  **259 / 327 baseline UNSATs** are certified, independently checked,
-  trust-hole-free, and Lean-reconstructed. The residual is 58 uncertified
-  audit-row occurrences, eight trust-free Lean-reconstruction gaps, zero
-  declared trust holes, and two proof-production errors. The 58
-  occurrences reduce to **56 paths / 51 unique exact contents** after
-  provenance deduplication.
+  **269 / 326 baseline UNSATs** are certified, independently checked,
+  trust-hole-free, and Lean-reconstructed. The residual is 42 uncertified
+  audit-row occurrences, 10 trust-free Lean-reconstruction gaps, two
+  trust-hole-and-Lean-gap rows, and three proof-production errors (all three
+  timeouts). Categories are exclusive, so those five figures partition the
+  326 exactly.
 - Its 33 file-backed baseline rows contain **927 file-backed occurrences** but
   only **837 unique normalized benchmark paths**: **90 repeated occurrences**
   come from overlapping row variants. The two synthetic rows contribute
@@ -78,6 +163,44 @@ The division scoreboard contains 35 rows across 24 logic labels:
 
 These denominators are measurements of the committed slices, not estimates of
 the entire SMT-LIB population and not proof of universal soundness.
+
+### The 10 remaining Lean-reconstruction gaps, one line each
+
+Measured 2026-08-21 at `496288979`. Six are QF_NRA, three are QF_NIA
+`alethe-unsat`, one is QF_S `string-length-unsat`.
+
+**Read the audit's `lean_error` for these rows as a fallback message, not as the
+reason.** `scan_proof_fragment` classifies all six QF_NRA rows as `Lra`, so the
+query-only facade falls through to the generic LRA route and records *its*
+complaint — `malformed la_generic step: … QF_LRA: nonlinear real
+multiplication`, or `… real disequality (needs DPLL(T))`. That message names a
+limit of a route these queries were never going to take. The reasons below come
+from calling the fragment entry points directly
+(`reconstruct_monomial_bound_to_lean_module`,
+`reconstruct_real_zero_product_to_lean_module`), which return the module's own
+decline.
+
+| Instance | Kind | Verdict | Reason returned by the fragment |
+|---|---|---|---|
+| `cli__regress1__nl__simple-mono-unsat.smt2` | `monomial-bound-unsat` | **principled decline** | "the query states no lower-bound atom for `a`; the certificate's bound comes from a disjunction hull, and minting it would assume a proposition no assertion carries (it needs `Or.rec` case analysis)" — `(or (= a 4) (= a 3))` only *entails* `a ≥ 3`. |
+| `cli__regress0__nl__subs0-unsat-confirm.smt2` | `real-zero-product-unsat` | **principled decline** | "zero-product reconstruction handles the direct form (one zeroing case); this certificate has 2 cases, which needs kernel case analysis" — `(or (= v1 0) (= v2 0))`, the same entailed-versus-stated boundary. |
+| `cli__regress0__arith__mult.01.smt2` | `monomial-bound-unsat` | **unimplemented** (scoped, not unsound) | "an `Exactly` bound refutes `M != k` and needs the upper bounds plus an equality transport through the product; this slice reconstructs the lower-bound form only". |
+| `cli__regress1__nl__approx-sqrt-unsat.smt2` | `real-handelman-unsat` | **unimplemented** | No Lean reconstruction exists for the Handelman fragment at all. |
+| `cli__regress1__nl__coeff-unsat.smt2` | `real-handelman-unsat` | **unimplemented** | As above. |
+| `cli__regress1__nl__combine.smt2` | `real-handelman-unsat` | **unimplemented** | As above. |
+| `cli__regress0__arith__div.01.smt2` | `alethe-unsat` | open | QF_NIA Alethe route. |
+| `cli__regress1__arith__div.08.smt2` | `alethe-unsat` | open | QF_NIA Alethe route. |
+| `cli__regress1__minimal_unsat_core.smt2` | `alethe-unsat` | open | QF_NIA Alethe route. |
+| `r1_QF_SLIA_str-code-unsat-2.smt2` | `string-length-unsat` | open | The third of the three string-length instances; `b495a396e` reconstructed two and recorded that this one declines twice. |
+
+The distinction is load-bearing. The first two are the *correct* behaviour: the
+certificate is right to carry a hull-derived bound and its checker is right to
+accept it, but the reconstruction mints each hypothesis into the kernel, and
+minting one would put a proposition in the Lean module that no `(assert …)` line
+states. Closing them honestly means kernel case analysis, not a looser mint. The
+third is ordinary missing machinery on a shape nothing unsound depends on, and
+the three Handelman rows are a fragment with no reconstruction yet — the largest
+single QF_NRA item on this list.
 
 ### Harder partial public inventory
 
@@ -284,11 +407,11 @@ an adversarial differential gate; rejected mechanisms remain documented.
 
 ### G5 — Make proof coverage a first-class denominator
 
-The dominance audits provide five necessary denominators: 327 baseline UNSAT
-decisions, 325 evidence-audit UNSAT outcomes, 267 certified and independently
-checked outcomes, and 260 Lean-checked outcomes. The v1 audit's historical 28
+The dominance audits provide five necessary denominators: 326 baseline UNSAT
+decisions, 323 evidence-audit UNSAT outcomes, 281 certified and independently
+checked outcomes, and 269 Lean-checked outcomes. The v1 audit's historical 28
 vacuous bare-UNSAT check results are now corrected to zero in the refreshed
-artifacts; the two QF_NIA proof-production errors remain visible rather than
+artifacts; the three evidence-audit timeouts remain visible rather than
 being folded into nominal audit denominators. Remaining holes cluster by
 reduction and theory.
 

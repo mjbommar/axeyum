@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-clean-dvd-antisymm-result",
+  "state": "first-invocation-declined-at-cross-kernel-native-prelude-handle-no-retry",
+  "plan": {"path": "artifacts/autogenesis/nat-gcd-fib-add-self-clean-dvd-antisymm-plan-v1.json", "sha256": "b966022098c76324dae1736ff01bcfe9b9dd3cdcee80342354de502f827e6c72", "commit": "57f03bf1e"},
+  "evidence_pack": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/53242139f-clean-dvd-antisymm-v1/manifest.json", "sha256": "5a99581d6a321f9f9c0951b1fa68e2946b75f953c1d68493e600ea567d8b1567", "directory_mode": "0555", "file_mode": "0444"},
+  "implementation": {"path": "crates/axeyum-lean-import/examples/clean_dvd_antisymm.rs", "source_sha256": "461c58974a03f11d17f8349d3e6ea1e7d87f97990c90b5decbf73583d9cb1854", "binary_sha256": "9b7ce19f90b6e3e5b6b1984dcdf0892e6ea7f7124fefbbca7d9972c82d579a6d", "commit": "53242139f"},
+  "execution": {"binary_builds": 1, "complete_invocations": 1, "input_stream_reads": 2, "successful_composition_operations_before_decline": 2, "clean_le_of_dvd_private_submissions": 1, "clean_dvd_antisymm_rejected_submissions": 1, "published_support_theorems": 0, "exact_target_submissions": 0, "retries": 0, "second_invocation_skipped": true},
+  "decline": {"operation": "declare clean divisibility antisymmetry in the imported r091 kernel using NatPrelude handles created in a distinct native kernel", "class": "UnknownConst", "diagnostic": "UnknownConst { name: NameId(4) }", "interpretation": "kernel-local numeric identities cannot be transported as a NatPrelude value across independently built environments", "partial_kernel_published": false},
+  "authority": {"support_credit": 0, "exact_target_submissions": 0, "target_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_boundary": {"required_next_increment": "preregister construction of both support theorems wholly in one native kernel, then transport only checked named theorem closures into r091 with explicit compatible target leaves"},
+  "verification": "python3 scripts/check-autogenesis-nat-gcd-fib-add-self-clean-dvd-antisymm-result.py",
+  "limitations": "No support theorem or partial kernel was published. This result authorizes only a separately preregistered single-kernel construction and checked named transport."
+}

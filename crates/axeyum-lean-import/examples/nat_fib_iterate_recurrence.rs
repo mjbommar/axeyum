@@ -7,11 +7,13 @@ use std::path::PathBuf;
 
 use axeyum_lean_import::{
     CHECKED_SEMANTIC_THEOREM_RECEIPT_VERSION, CheckedTheoremAuthority, ImportLimits,
-    canonical_declaration_sha256, canonical_expression_sha256, import_ndjson,
-    issue_checked_semantic_theorem_receipt, verify_checked_semantic_theorem_receipt,
+    canonical_declaration_sha256, canonical_expression_sha256, compose_checked_theorem_slice,
+    import_ndjson, issue_checked_semantic_theorem_receipt, verify_checked_semantic_theorem_receipt,
+    verify_checked_theorem_composition,
 };
 use axeyum_lean_kernel::{
     BinderInfo, Declaration, ExprId, ExprNode, Kernel, KernelError, LevelId, NameId,
+    build_nat_prelude,
 };
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -72,6 +74,12 @@ fn run() -> Result<(), String> {
             .as_ref()
             .ok_or("receipt mode requires --output")?;
         return run_checked_receipt(&stream, candidate, output);
+    }
+    if arguments.native_composition {
+        return run_native_composition(&stream);
+    }
+    if arguments.native_coprime_control {
+        return run_native_coprime_control(&stream);
     }
     let completed = import_ndjson(Cursor::new(&stream), ImportLimits::default())
         .map_err(|error| format!("source import failed: {error:?}"))?;
@@ -182,6 +190,380 @@ fn run() -> Result<(), String> {
         search.plan_rank, search.submissions
     );
     Ok(())
+}
+
+fn run_native_composition(stream: &[u8]) -> Result<(), String> {
+    let (source, theorem) = reconstruct_fixed_candidate(stream)?;
+    let theorem_name = source.display_name(theorem).to_string();
+    let fib = exact_name(&source, "Nat.fib")?;
+    let fib_declaration_sha256 = canonical_declaration_sha256(&source, fib)?;
+    let mut native = Kernel::new();
+    build_nat_prelude(&mut native)
+        .map_err(|error| format!("native Nat prelude failed to build: {error:?}"))?;
+    let caller_declarations = native.environment().len();
+    let completed = compose_checked_theorem_slice(&source, &native, &[&theorem_name])
+        .map_err(|error| format!("native theorem composition declined: {error:?}"))?;
+    verify_checked_theorem_composition(&source, &native, completed.kernel(), completed.receipt())
+        .map_err(|error| format!("native theorem composition did not replay: {error:?}"))?;
+    if native.environment().len() != caller_declarations {
+        return Err("native theorem composition mutated its caller".to_owned());
+    }
+    let names = completed
+        .kernel()
+        .environment()
+        .iter()
+        .map(|(&name, _)| completed.kernel().display_name(name).to_string())
+        .collect::<Vec<_>>();
+    if !names.iter().any(|name| name == "Nat.fib")
+        || !names.iter().any(|name| name == &theorem_name)
+        || completed
+            .receipt()
+            .added_theorems
+            .iter()
+            .any(|row| !row.axiom_footprint.is_empty())
+    {
+        return Err("native theorem composition assurance failed".to_owned());
+    }
+    let completed_theorem = exact_name(completed.kernel(), &theorem_name)?;
+    let footprint = rendered_names(
+        completed.kernel(),
+        &completed.kernel().axiom_footprint(completed_theorem),
+    );
+    let theorem_dependencies = rendered_names(
+        completed.kernel(),
+        &completed.kernel().theorem_dependencies(completed_theorem),
+    );
+    if !footprint.is_empty() || !theorem_dependencies.is_empty() {
+        return Err("native theorem dependency audit failed".to_owned());
+    }
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "schema_version": 1,
+            "kind": "axeyum-nat-fib-recurrence-native-composition",
+            "source_stream_sha256": STREAM_SHA256,
+            "nat_fib_declaration_sha256": fib_declaration_sha256,
+            "root": theorem_name,
+            "source_closure": completed.receipt().source_closure.len(),
+            "reused_declarations": completed.receipt().reused_declarations.len(),
+            "added_definitions": completed.receipt().added_definitions.iter().map(|row| &row.name).collect::<Vec<_>>(),
+            "added_singleton_inductives": completed.receipt().added_singleton_inductives.iter().map(|row| &row.family).collect::<Vec<_>>(),
+            "added_theorems": completed.receipt().added_theorems.iter().map(|row| &row.name).collect::<Vec<_>>(),
+            "target_theorem_axiom_footprint": footprint,
+            "target_theorem_dependencies": theorem_dependencies,
+            "caller_declarations_before": caller_declarations,
+            "caller_declarations_after": native.environment().len(),
+            "completed_declarations": completed.kernel().environment().len(),
+            "receipt_sha256": completed.receipt().receipt_sha256,
+            "proof_search_invocations": 0,
+            "ledger_writes": 0,
+        }))
+        .map_err(|error| error.to_string())?
+    );
+    Ok(())
+}
+
+fn run_native_coprime_control(stream: &[u8]) -> Result<(), String> {
+    let (source, theorem) = reconstruct_fixed_candidate(stream)?;
+    let theorem_name = source.display_name(theorem).to_string();
+    let mut native = Kernel::new();
+    build_nat_prelude(&mut native)
+        .map_err(|error| format!("native Nat prelude failed to build: {error:?}"))?;
+    let completed = compose_checked_theorem_slice(&source, &native, &[&theorem_name])
+        .map_err(|error| format!("native theorem composition declined: {error:?}"))?;
+    verify_checked_theorem_composition(&source, &native, completed.kernel(), completed.receipt())
+        .map_err(|error| format!("native theorem composition did not replay: {error:?}"))?;
+    let mut kernel = completed.kernel().clone();
+    let (target, goal, proof) = admit_native_fib_coprime(&mut kernel, &theorem_name)?;
+    let footprint = rendered_names(&kernel, &kernel.axiom_footprint(target));
+    let dependencies = rendered_names(&kernel, &kernel.theorem_dependencies(target));
+    let expected_dependencies = [
+        "Axeyum.Autogenesis.NatFibAddTwo",
+        "Nat.add_comm",
+        "Nat.dvd_add_iff_right",
+        "Nat.dvd_gcd",
+        "Nat.eq_one_of_dvd_one",
+        "Nat.gcd_dvd_left",
+        "Nat.gcd_dvd_right",
+        "Nat.gcd_zero_left",
+    ];
+    if !footprint.is_empty()
+        || dependencies
+            != expected_dependencies
+                .into_iter()
+                .map(str::to_owned)
+                .collect::<Vec<_>>()
+    {
+        return Err(format!(
+            "native Fibonacci coprimality dependency audit failed: footprint={footprint:?}; dependencies={dependencies:?}"
+        ));
+    }
+    let goal_sha256 = canonical_expression_sha256(&kernel, goal)?;
+    let proof_sha256 = canonical_expression_sha256(&kernel, proof)?;
+    let theorem_declaration_sha256 = canonical_declaration_sha256(&kernel, target)?;
+    let mut replay = completed.kernel().clone();
+    let (replay_target, replay_goal, replay_proof) =
+        admit_native_fib_coprime(&mut replay, &theorem_name)?;
+    if canonical_expression_sha256(&replay, replay_goal)? != goal_sha256
+        || canonical_expression_sha256(&replay, replay_proof)? != proof_sha256
+        || canonical_declaration_sha256(&replay, replay_target)? != theorem_declaration_sha256
+        || replay.axiom_footprint(replay_target) != kernel.axiom_footprint(target)
+        || rendered_names(&replay, &replay.theorem_dependencies(replay_target)) != dependencies
+    {
+        return Err("native Fibonacci coprimality replay changed".to_owned());
+    }
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "schema_version": 1,
+            "kind": "axeyum-native-fibonacci-coprimality-control",
+            "source_stream_sha256": STREAM_SHA256,
+            "composition_receipt_sha256": completed.receipt().receipt_sha256,
+            "target": "Axeyum.Autogenesis.NatFibCoprimeSucc",
+            "goal_sha256": goal_sha256,
+            "proof_sha256": proof_sha256,
+            "theorem_declaration_sha256": theorem_declaration_sha256,
+            "axiom_footprint": footprint,
+            "direct_theorem_dependencies": dependencies,
+            "fresh_reconstructions": 2,
+            "kernel_submissions": 2,
+            "proof_search_invocations": 0,
+            "ledger_writes": 0,
+        }))
+        .map_err(|error| error.to_string())?
+    );
+    Ok(())
+}
+
+fn admit_native_fib_coprime(
+    kernel: &mut Kernel,
+    recurrence_name: &str,
+) -> Result<(NameId, ExprId, ExprId), String> {
+    let goal = native_fib_coprime_goal(kernel)?;
+    let proof = native_fib_coprime_proof(kernel, goal, recurrence_name)?;
+    require_inferred_type(kernel, proof, goal, "native Fibonacci coprimality")?;
+    let target = nested_name(kernel, &["Axeyum", "Autogenesis", "NatFibCoprimeSucc"]);
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name: target,
+            uparams: vec![],
+            ty: goal,
+            value: proof,
+        })
+        .map_err(|error| format!("native Fibonacci coprimality rejected: {error:?}"))?;
+    Ok((target, goal, proof))
+}
+
+fn native_fib_coprime_goal(kernel: &mut Kernel) -> Result<ExprId, String> {
+    let nat = constant(kernel, "Nat")?;
+    let fib = constant(kernel, "Nat.fib")?;
+    let successor = constant(kernel, "Nat.succ")?;
+    let gcd = constant(kernel, "Nat.gcd")?;
+    let zero = constant(kernel, "Nat.zero")?;
+    let one = kernel.app(successor, zero);
+    let n_id = u64::MAX - 92_001;
+    let n = kernel.fvar(n_id);
+    let fib_n = kernel.app(fib, n);
+    let successor_n = kernel.app(successor, n);
+    let fib_successor_n = kernel.app(fib, successor_n);
+    let gcd_neighbors = apply(kernel, gcd, &[fib_n, fib_successor_n]);
+    let body = equality(kernel, nat, gcd_neighbors, one)?;
+    Ok(close_pi(kernel, n_id, "n", nat, body))
+}
+
+#[allow(clippy::too_many_lines)]
+fn native_fib_coprime_proof(
+    kernel: &mut Kernel,
+    goal: ExprId,
+    recurrence_name: &str,
+) -> Result<ExprId, String> {
+    let ExprNode::Pi(name, nat, body, info) = kernel.expr_node(goal).clone() else {
+        return Err("native coprimality goal has no Nat binder".to_owned());
+    };
+    let fib = constant(kernel, "Nat.fib")?;
+    let successor = constant(kernel, "Nat.succ")?;
+    let add = constant(kernel, "Nat.add")?;
+    let gcd = constant(kernel, "Nat.gcd")?;
+    let dvd = constant(kernel, "Nat.dvd")?;
+    let zero = constant(kernel, "Nat.zero")?;
+    let one = kernel.app(successor, zero);
+
+    let motive_id = u64::MAX - 92_010;
+    let motive_n = kernel.fvar(motive_id);
+    let motive_body = kernel.instantiate(body, &[motive_n]);
+    let motive = close_lam(kernel, motive_id, "n", nat, motive_body);
+
+    let fib_one = kernel.app(fib, one);
+    let base = apply_named(kernel, "Nat.gcd_zero_left", &[fib_one])?;
+    let base_goal = kernel.instantiate(body, &[zero]);
+    let base_type = kernel
+        .infer(base)
+        .map_err(|error| format!("native coprimality base inference failed: {error:?}"))?;
+    if !kernel.def_eq(base_type, base_goal) {
+        return Err(format!(
+            "native coprimality base mismatch: expected {}; inferred {}",
+            kernel.render_lean(base_goal),
+            kernel.render_lean(base_type)
+        ));
+    }
+
+    let n_id = u64::MAX - 92_020;
+    let ih_id = u64::MAX - 92_021;
+    let n = kernel.fvar(n_id);
+    let successor_n = kernel.app(successor, n);
+    let successor_successor_n = kernel.app(successor, successor_n);
+    let induction_hypothesis_type = kernel.instantiate(body, &[n]);
+    let induction_hypothesis = kernel.fvar(ih_id);
+    let a = kernel.app(fib, n);
+    let b = kernel.app(fib, successor_n);
+    let c = kernel.app(fib, successor_successor_n);
+    let sum_ab = apply(kernel, add, &[a, b]);
+    let sum_ba = apply(kernel, add, &[b, a]);
+
+    let recurrence = apply_named(kernel, recurrence_name, &[n])?;
+    let commutativity = apply_named(kernel, "Nat.add_comm", &[a, b])?;
+    let c_eq_sum_ba = equality_trans(kernel, nat, c, sum_ab, sum_ba, recurrence, commutativity)?;
+    let argument_id = u64::MAX - 92_022;
+    let argument = kernel.fvar(argument_id);
+    let gcd_at_b = apply(kernel, gcd, &[b, argument]);
+    let gcd_function = close_lam(kernel, argument_id, "x", nat, gcd_at_b);
+    let gcd_b_c = apply(kernel, gcd, &[b, c]);
+    let common = apply(kernel, gcd, &[b, sum_ba]);
+    let gcd_bridge = congr_arg(kernel, nat, nat, gcd_function, c, sum_ba, c_eq_sum_ba)?;
+
+    let common_divides_b = apply_named(kernel, "Nat.gcd_dvd_left", &[b, sum_ba])?;
+    let common_divides_sum = apply_named(kernel, "Nat.gcd_dvd_right", &[b, sum_ba])?;
+    let common_divides_a_type = apply(kernel, dvd, &[common, a]);
+    let common_divides_sum_type = apply(kernel, dvd, &[common, sum_ba]);
+    let add_characterization = apply_named(
+        kernel,
+        "Nat.dvd_add_iff_right",
+        &[common, b, a, common_divides_b],
+    )?;
+    let sum_to_a = iff_reverse(
+        kernel,
+        common_divides_a_type,
+        common_divides_sum_type,
+        add_characterization,
+    )?;
+    let common_divides_a = kernel.app(sum_to_a, common_divides_sum);
+    let common_divides_previous_gcd = apply_named(
+        kernel,
+        "Nat.dvd_gcd",
+        &[common, a, b, common_divides_a, common_divides_b],
+    )?;
+    let previous_gcd = apply(kernel, gcd, &[a, b]);
+    let divides_predicate_id = u64::MAX - 92_023;
+    let candidate = kernel.fvar(divides_predicate_id);
+    let divides_candidate = apply(kernel, dvd, &[common, candidate]);
+    let divides_predicate = close_lam(kernel, divides_predicate_id, "x", nat, divides_candidate);
+    let common_divides_one = transport_equality(
+        kernel,
+        nat,
+        previous_gcd,
+        one,
+        induction_hypothesis,
+        divides_predicate,
+        common_divides_previous_gcd,
+    )?;
+    let common_is_one = apply_named(
+        kernel,
+        "Nat.eq_one_of_dvd_one",
+        &[common, common_divides_one],
+    )?;
+    let step_body = equality_trans(kernel, nat, gcd_b_c, common, one, gcd_bridge, common_is_one)?;
+    let step_body = close_lam(kernel, ih_id, "ih", induction_hypothesis_type, step_body);
+    let step = close_lam(kernel, n_id, "n", nat, step_body);
+
+    let zero_level = kernel.level_zero();
+    let mut induction = kernel.const_(exact_name(kernel, "Nat.rec")?, vec![zero_level]);
+    for argument in [motive, base, step] {
+        induction = kernel.app(induction, argument);
+    }
+    let inferred = kernel
+        .infer(induction)
+        .map_err(|error| format!("native coprimality induction inference failed: {error:?}"))?;
+    if !kernel.def_eq(inferred, goal) {
+        return Err(format!(
+            "native coprimality induction mismatch: expected {}; inferred {}",
+            kernel.render_lean(goal),
+            kernel.render_lean(inferred)
+        ));
+    }
+    let _ = (name, info);
+    Ok(induction)
+}
+
+fn constant(kernel: &mut Kernel, name: &str) -> Result<ExprId, String> {
+    Ok(kernel.const_(exact_name(kernel, name)?, vec![]))
+}
+
+fn apply(kernel: &mut Kernel, mut function: ExprId, arguments: &[ExprId]) -> ExprId {
+    for &argument in arguments {
+        function = kernel.app(function, argument);
+    }
+    function
+}
+
+fn apply_named(kernel: &mut Kernel, name: &str, arguments: &[ExprId]) -> Result<ExprId, String> {
+    let function = constant(kernel, name)?;
+    Ok(apply(kernel, function, arguments))
+}
+
+fn iff_reverse(
+    kernel: &mut Kernel,
+    left: ExprId,
+    right: ExprId,
+    proof: ExprId,
+) -> Result<ExprId, String> {
+    let iff = apply_named(kernel, "Iff", &[left, right])?;
+    let anonymous = kernel.anon();
+    let target = kernel.pi(anonymous, right, left, BinderInfo::Default);
+    let proof_id = u64::MAX - 93_001;
+    let motive = close_lam(kernel, proof_id, "h", iff, target);
+    let forward_type = kernel.pi(anonymous, left, right, BinderInfo::Default);
+    let forward_id = u64::MAX - 93_002;
+    let reverse_id = u64::MAX - 93_003;
+    let reverse = kernel.fvar(reverse_id);
+    let minor = close_lam(kernel, reverse_id, "reverse", target, reverse);
+    let minor = close_lam(kernel, forward_id, "forward", forward_type, minor);
+    let zero = kernel.level_zero();
+    let recursor = kernel.const_(exact_name(kernel, "Iff.rec")?, vec![zero]);
+    Ok(apply(
+        kernel,
+        recursor,
+        &[left, right, motive, minor, proof],
+    ))
+}
+
+#[allow(clippy::too_many_arguments)]
+fn transport_equality(
+    kernel: &mut Kernel,
+    carrier: ExprId,
+    left: ExprId,
+    right: ExprId,
+    equality_proof: ExprId,
+    predicate: ExprId,
+    base: ExprId,
+) -> Result<ExprId, String> {
+    let candidate_id = u64::MAX - 94_001;
+    let proof_id = u64::MAX - 94_002;
+    let candidate = kernel.fvar(candidate_id);
+    let premise = equality(kernel, carrier, left, candidate)?;
+    let conclusion = kernel.app(predicate, candidate);
+    let motive = close_lam(kernel, proof_id, "h", premise, conclusion);
+    let motive = close_lam(kernel, candidate_id, "x", carrier, motive);
+    let carrier_level = sort_level(kernel, carrier)?;
+    let motive_level = kernel.level_zero();
+    let recursor = kernel.const_(
+        exact_name(kernel, "Eq.rec")?,
+        vec![motive_level, carrier_level],
+    );
+    Ok(apply(
+        kernel,
+        recursor,
+        &[carrier, left, motive, base, right, equality_proof],
+    ))
 }
 
 #[allow(clippy::too_many_lines)]
@@ -1149,6 +1531,7 @@ fn rendered_names(kernel: &Kernel, names: &[NameId]) -> Vec<String> {
     rendered
 }
 
+#[allow(clippy::struct_excessive_bools)]
 struct Arguments {
     stream: PathBuf,
     output: Option<PathBuf>,
@@ -1156,6 +1539,8 @@ struct Arguments {
     composition_control: bool,
     stage_control: bool,
     receipt_candidate: Option<PathBuf>,
+    native_composition: bool,
+    native_coprime_control: bool,
 }
 
 fn parse_arguments() -> Result<Arguments, String> {
@@ -1165,6 +1550,8 @@ fn parse_arguments() -> Result<Arguments, String> {
     let mut composition_control = false;
     let mut stage_control = false;
     let mut receipt_candidate = None;
+    let mut native_composition = false;
+    let mut native_coprime_control = false;
     let mut arguments = env::args().skip(1);
     while let Some(flag) = arguments.next() {
         if flag == "--preflight" {
@@ -1197,6 +1584,20 @@ fn parse_arguments() -> Result<Arguments, String> {
             }
             continue;
         }
+        if flag == "--native-composition" {
+            if native_composition {
+                return Err("duplicate --native-composition".to_owned());
+            }
+            native_composition = true;
+            continue;
+        }
+        if flag == "--native-coprime-control" {
+            if native_coprime_control {
+                return Err("duplicate --native-coprime-control".to_owned());
+            }
+            native_coprime_control = true;
+            continue;
+        }
         let value = arguments
             .next()
             .ok_or_else(|| format!("{flag} requires a value"))?;
@@ -1213,6 +1614,8 @@ fn parse_arguments() -> Result<Arguments, String> {
         + usize::from(composition_control)
         + usize::from(stage_control)
         + usize::from(receipt_candidate.is_some())
+        + usize::from(native_composition)
+        + usize::from(native_coprime_control)
         > 1
     {
         return Err("preflight modes are mutually exclusive".to_owned());
@@ -1224,6 +1627,8 @@ fn parse_arguments() -> Result<Arguments, String> {
         composition_control,
         stage_control,
         receipt_candidate,
+        native_composition,
+        native_coprime_control,
     })
 }
 

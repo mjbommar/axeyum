@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-peano-categoricity",
+  "title": "The constructed Nat is THE natural numbers, up to unique isomorphism",
+  "statement": "The constructed `Nat` satisfies the Peano axioms (zero is not a successor, successor is injective, and induction holds), and CONVERSELY every structure (N, z, s) satisfying those three axioms is in structure-preserving bijection with it: the iterator `Nat.Peano.iter N z s` sends zero to z and successor to s, and is injective and surjective. It is moreover the unique such map. The statement is universe-polymorphic, so it quantifies over Peano structures in every universe, not one chosen one.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.Peano.categorical.{u} : ((x0 : Sort (u)) -> ((x1 : x0) -> ((x2 : ((x2 : x0) -> x0)) -> ((x3 : ((x3 : x0) -> Not (Eq.{u} x0 x1 (x2 x3)))) -> ((x4 : ((x4 : x0) -> ((x5 : x0) -> ((x6 : Eq.{u} x0 (x2 x4) (x2 x5)) -> Eq.{u} x0 x4 x5)))) -> ((x5 : ((x5 : ((x5 : x0) -> Prop)) -> ((x6 : x5 x1) -> ((x7 : ((x7 : x0) -> ((x8 : x5 x7) -> x5 (x2 x7)))) -> ((x8 : x0) -> x5 x8))))) -> And (And (Eq.{u} x0 (AxNat.Peano.iter.{u} x0 x1 x2 AxNat.zero) x1) (((x6 : AxNat) -> Eq.{u} x0 (AxNat.Peano.iter.{u} x0 x1 x2 (AxNat.succ x6)) (x2 (AxNat.Peano.iter.{u} x0 x1 x2 x6))))) (And (((x6 : AxNat) -> ((x7 : AxNat) -> ((x8 : Eq.{u} x0 (AxNat.Peano.iter.{u} x0 x1 x2 x6) (AxNat.Peano.iter.{u} x0 x1 x2 x7)) -> Eq.{1} AxNat x6 x7)))) (((x6 : x0) -> Exists.{1} AxNat (fun (x7 : AxNat) => Eq.{u} x0 (AxNat.Peano.iter.{u} x0 x1 x2 x7) x6))))))))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.Peano.categorical",
+      "kind": "kernel-term",
+      "supports": "Every Peano structure is in structure-preserving bijection with the constructed Nat, and the axiom footprint of the witness is empty.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^nat-categoricity[[:space:]]+Nat[.]Peano[.]categorical[[:space:]]+\\[\\][[:space:]]'",
+      "notes": "The grep is anchored on the declaration name AND on an EMPTY footprint column, so neither a renamed theorem nor one that grew a dependency on a trusted declaration can satisfy it. The `&&` is load-bearing: `characterization_status` is itself a checker that exits non-zero when any entry is not a `Declaration::Theorem`, when any footprint is non-empty, when the population changes, or when any injected `Weakening` is ACCEPTED by the kernel -- so this command fails both on a missing row and on a package whose hypotheses stopped being load-bearing. Verified 2026-08-17: the command exits 0, and the same command with a non-existent declaration name exits 1."
+    },
+    {
+      "id": "kernel-Nat.Peano.zero_ne_succ",
+      "kind": "kernel-term",
+      "supports": "Peano 1: zero is not a successor. Proved by a Prop-valued Nat.rec discriminator, not assumed.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^peano-axiom[[:space:]]+Nat[.]Peano[.]zero_ne_succ[[:space:]]+\\[\\][[:space:]]'",
+      "notes": "This was the one Peano axiom the Nat prelude did not carry -- its module docs said `n != succ n`-style discrimination was absent -- so it is the row that actually moved. `Nat.Peano.succ_injective` and `Nat.Peano.induction` restate the other two in this module and are discharged by `Nat.succ_injective` and the kernel-generated `Nat.rec`, so a prelude statement that drifts becomes a kernel rejection here rather than a silently different axiom."
+    },
+    {
+      "id": "kernel-Nat.Peano.iter_unique",
+      "kind": "kernel-term",
+      "supports": "The comparison map is the UNIQUE structure-preserving map out of Nat, which is what makes the isomorphism canonical rather than merely existent.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^nat-universal-property[[:space:]]+Nat[.]Peano[.]iter_unique[[:space:]]+\\[\\][[:space:]]'",
+      "notes": "Existence is `Nat.Peano.iter` (a definition by `Nat.rec`) with `iter_zero`/`iter_succ` holding definitionally; uniqueness is this theorem. Together they are the universal property of Nat as the initial iteration algebra."
+    },
+    {
+      "id": "nat-trusted-surface-empty",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's whole trusted surface is empty, which bounds every individual footprint by [].",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat --require-axiom-free logic",
+      "notes": "Enumerates the built Nat environment over the FULL trusted surface (Axiom/Opaque/Quotient), not `Declaration::Axiom` alone, and exits non-zero on any member. Measured 2026-08-17: logic=0, nat=0."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:peano-axioms",
+      "relation": "instance-of",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:natural-numbers",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-17",
+    "established_by": "axeyum-lean-kernel characterization module (agent-characterization lane)",
+    "source": "hand-built foundational library; the statement is the standard second-order categoricity of Peano arithmetic, authored here rather than imported"
+  },
+  "notes": "WHY THIS FACT EXISTS. `nat_axiom_inventory` reporting `nat: axiom=0` says nothing about whether the object is the natural numbers: an inductive type named `Nat` with a subtly wrong order would report the same zero and typecheck the same modules. Rendered Lean modules make the gap concrete -- they run in `prelude` mode and RE-DECLARE their own `Nat`, `Eq` and `False`, so official Lean accepting one certifies `this proof typechecks against THESE definitions`, not that they are the standard ones. This fact closes that by proof rather than by inspection, and it is stronger than a bridge lemma to one other definition of the naturals because it quantifies over every structure satisfying the axioms. NOT VACUOUS: `characterization_tests::categoricity_is_not_vacuous_it_instantiates_at_nat_itself` instantiates the theorem at (Nat, zero, succ) with the three Peano theorems as its hypotheses and pushes the result back through the trusted gate -- a categoricity theorem whose premises nothing satisfies would be axiom-free and worthless. LOAD-BEARING: six injected `Weakening` variants replace one hypothesis of these theorems with `True` and the kernel must refuse each ONE AT THE DECLARATION IT WAS AIMED AT; a guard-mutation check (disabling one injection) killed exactly one test."
+}

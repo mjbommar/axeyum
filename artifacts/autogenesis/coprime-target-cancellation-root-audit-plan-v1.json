@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-coprime-target-cancellation-root-audit-plan",
+  "state": "preregistered-before-root-export-or-import-no-support-authority",
+  "policy_version": "target-coprime-cancellation-root-audit-v1",
+  "inputs": {
+    "native_support_result": {
+      "path": "artifacts/autogenesis/mathlib-nat-gcd-fib-add-self-support-result-v2.json",
+      "sha256": "62aaba46d9aadaa378c0f0efdc847030d5f801794d926d67432a626d44e2b3e2"
+    },
+    "public_equation_carrier_audit": {
+      "path": "artifacts/autogenesis/euclidean-public-equation-carrier-audit-result-v1.json",
+      "sha256": "544bde51a25e42f309ef7fecd1dae521527cf4efd2b1b01dccca9c0f07556edd"
+    },
+    "statement_inventory": {
+      "path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-nat-int-statement-inventory-v2.ndjson",
+      "sha256": "4285e551680abf3b0cafb11709015f04b3aef3eb05ce23af2392b12cec31aecc",
+      "mode": "0444"
+    }
+  },
+  "fixed_roots": [
+    {
+      "module": "Init.Data.Nat.Coprime",
+      "name": "Nat.Coprime.coprime_dvd_left",
+      "source_row_sha256": "3df84c53be0c4723a047074c1860ce46b15fc574cfa98d2497927ca24392d9d2",
+      "type": "∀ {m k n : ℕ}, m ∣ k → k.Coprime n → m.Coprime n",
+      "type_repr_sha256": "ab0b0b90aa508815d15a8443701236ae7b1d954e8dc63af5156799cb42121084",
+      "type_sha256": "47075c8f1f33ce1923b5a9017316e2afa50af85fbf65960449c669575d0ad853"
+    },
+    {
+      "module": "Init.Data.Nat.Coprime",
+      "name": "Nat.Coprime.dvd_of_dvd_mul_left",
+      "source_row_sha256": "318a569935df27ca20e1da4485def25166be94943be3668d2c41c56e40c371e8",
+      "type": "∀ {k m n : ℕ}, k.Coprime m → k ∣ m * n → k ∣ n",
+      "type_repr_sha256": "9a4858a66d75f7170beabf9cee5790f015e541f3b84c459e3a24628e8416010d",
+      "type_sha256": "399b0787d63bff0ce03eadbdb57c4e07f0ab67d87bb24c6debf50dfc8a2271eb"
+    },
+    {
+      "module": "Init.Data.Nat.Coprime",
+      "name": "Nat.Coprime.eq_1",
+      "source_row_sha256": "be068e5324285477718ebbf268cde2aa24033a472bd47d2da7474c5646b21366",
+      "type": "∀ (m n : ℕ), m.Coprime n = (m.gcd n = 1)",
+      "type_repr_sha256": "4972696017f7b7461dbbd922daaec966f422725a4e2bf262492226a786d3f840",
+      "type_sha256": "39688ba677ca0ddea074c0b3b21058ad0ea2e29e4b850b6b11b2876cec372a35"
+    }
+  ],
+  "fixed_measurement": {
+    "export_module": "Init",
+    "tool_path": "crates/axeyum-lean-import/examples/coprime_target_support_audit.rs",
+    "per_declaration_fields": [
+      "name",
+      "declaration_sha256",
+      "axiom_footprint",
+      "direct_theorem_dependencies"
+    ],
+    "proof_terms_or_values_may_be_rendered": false,
+    "all_roots_must_resolve_as_theorems": true,
+    "all_roots_must_have_empty_footprints_for_successor_proof": true
+  },
+  "proposed_target_route": {
+    "goal": "forall a c b d, gcd a c = 1 -> d divides a -> d divides (c * b) -> d divides b",
+    "steps": [
+      "interpret gcd a c = 1 as a.Coprime c without proposition equality if definitionally available",
+      "inherit d.Coprime c from d divides a",
+      "cancel c from d divides c * b"
+    ],
+    "selected_over": "balanced Bezout through the still-opaque public division wrapper",
+    "proof_authorized_after_audit": false
+  },
+  "budget": {
+    "max_exporter_invocations": 1,
+    "max_importer_runs": 1,
+    "max_retries": 0,
+    "max_authored_support_compilations": 0,
+    "max_new_theorem_submissions": 0,
+    "max_exact_target_submissions": 0,
+    "max_executor_invocations": 0
+  },
+  "authority": {
+    "proof_bodies_readable_by_model": false,
+    "theorem_values_readable_by_model": false,
+    "target_cancellation_proof_allowed": false,
+    "support_theorem_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/coprime-target-cancellation-root-audit-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-coprime-target-cancellation-root-audit-plan.py",
+  "limitations": "This is a top-down target-side root audit. It neither abandons the bottom-up public Euclidean repair nor authorizes importing an assumption-bearing convenience theorem."
+}

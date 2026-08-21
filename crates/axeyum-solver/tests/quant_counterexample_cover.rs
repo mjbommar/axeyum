@@ -12,6 +12,12 @@ use axeyum_solver::{
     reconstruct_quantified_counterexample_cover_to_lean_module, solve,
 };
 
+// The golden pin covers the module BODY; the shared banner is pinned once, in
+// `axeyum-lean-kernel --test module_banner_pin`. Header text under many pins is
+// what made this suite red three times -- see the helper's module note.
+#[path = "../../axeyum-lean-kernel/tests/support/lean_golden.rs"]
+mod lean_golden;
+
 const CBQI_ITE: &str = include_str!(
     "../../../corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__006-cbqi-ite.smt2"
 );
@@ -100,17 +106,24 @@ fn small_cover_generated_module_is_byte_stable() {
         &certificate,
     )
     .expect("checked small cover should reconstruct");
-    let fnv1a = module
-        .bytes()
-        .fold(0xcbf2_9ce4_8422_2325_u64, |hash, byte| {
-            (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3)
-        });
     // Re-pinned 2026-08-14 (was `7_814` / `0xeda4_bd52_aab5_6790`): `a5975725f` made
     // every reachable inductive a real Lean `inductive` instead of an opaque `axiom`.
     // Checked, not merely stable — Lean 4.30.0 accepts this module and `#print axioms`
     // reports only the query hypotheses, with no `sorryAx`.
-    assert_eq!(module.len(), 15_394);
-    assert_eq!(fnv1a, 0xdb29_9664_bafe_0fe7);
+    // The +1_640 of HEADER text that made this pin red on 2026-08-18 -- `b760fd6ae`
+    // (+863, Lean's codegen constants) and `46724faec` (+777, `maxRecDepth`), the
+    // third recurrence of one mechanism -- can no longer reach it: the pin below
+    // covers the module BODY, and the banner is pinned once in
+    // `axeyum-lean-kernel --test module_banner_pin`. If this moves, PROOF text
+    // moved. See `crates/axeyum-lean-kernel/tests/support/lean_golden.rs`.
+    // Re-pinned 2026-08-20 at the same 14_912-byte length: the native Bool
+    // package now uses official Lean constructor order `[false, true]`, so the
+    // checked `Bool.rec` proof writes its false minor before its true minor.
+    lean_golden::assert_golden_module(
+        "counterexample-cover",
+        &module,
+        (14_912, 0xe36b_bf15_f4d4_f75e),
+    );
 }
 
 #[test]

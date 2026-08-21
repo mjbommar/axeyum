@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": "F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
+  "title": "The ordered-ring interface telescope is byte-identical over Real and over the axiom-free Int development",
+  "statement": "The 30 binder types of the ordered-ring interface telescope, computed by abstracting each declaration's type over the earlier telescope entries, render byte-identically whether they are read off the axiomatized Real package (30 axioms, this repository's whole remaining trusted surface) or off the constructed Int development (30 theorems, measured trusted surface 0). So the axiom ledger's 30 SHA-256 type pins can be carried by a development that assumes nothing.",
+  "formal": {
+    "language": "lean4",
+    "statement": "For the ordered-ring signature S over an environment E, let T(S) be the 30-entry sequence T(S)[i] = abstract_consts(ty_E(S.decl[i]), S.decl[0..i]), i.e. each declaration's type with every earlier interface entry replaced by its de Bruijn binder. Claim: render_lean(T(RingSignature.of Real)[i]) = render_lean(T(RingSignature.of Int)[i]) as UTF-8 byte strings, for all i < 30, where Real is build_arith_prelude (30 Declaration::Axiom) and Int is build_int_prelude (30 proved declarations, trusted surface 0).",
+    "fragment": "kernel-metatheory",
+    "free_symbols": [
+      "build_arith_prelude",
+      "build_int_prelude",
+      "ring_interface_telescope",
+      "Kernel::render_lean"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:int-sq-nonneg",
+    "F:int-add-comm"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "ordered-ring-interface-is-the-same-over-the-axiom-free-integers-1",
+      "kind": "kernel-term",
+      "supports": "The finding itself: all 30 binder types agree, and none differ. The example's exit status depends on it (`--require-identical` exits 1 on any difference), so this row cannot pass on a run that found a difference.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run --release -q -p axeyum-solver --features full --example ring_interface_pin -- --require-identical 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'ring interface telescope: 30 binders, 30 identical, 0 differing'",
+      "notes": "Anchored on the count line the example computes from the comparison, not on prose. Mutated output (any binder differing) changes '30 identical, 0 differing' and the pattern stops matching; the command also exits nonzero. Verified discriminating by scripts/new-fact.py."
+    },
+    {
+      "id": "ordered-ring-interface-is-the-same-over-the-axiom-free-integers-2",
+      "kind": "kernel-term",
+      "supports": "Coverage of the `Real` side: 30 rows were actually emitted from the axiomatized package, so 'identical' is not the identity of an empty comparison.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run --release -q -p axeyum-solver --features full --example ring_interface_pin -- --require-identical 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^real\\s')\" = 30",
+      "notes": "Anchored on the row population of the `real` source column. This is a POPULATION check, declared as such (--allow-population-only): it catches the `Real` telescope disappearing from the comparison, not a value changing inside a row that is still there. Row 1 is what catches the values."
+    },
+    {
+      "id": "ordered-ring-interface-is-the-same-over-the-axiom-free-integers-3",
+      "kind": "kernel-term",
+      "supports": "Coverage of the `Int` side, symmetrically \u2014 and the two together are what make the zero above a comparison of two populated telescopes rather than of one against itself.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run --release -q -p axeyum-solver --features full --example ring_interface_pin -- --require-identical 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^int\\s')\" = 30",
+      "notes": "As row 2, for the `int` source column."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-08-18",
+    "established_by": "agent-shrink-control",
+    "source": "ADR-0515; crates/axeyum-solver/examples/ring_interface_pin.rs, crates/axeyum-solver/src/reconstruct/arithmetic/ordered_ring.rs (ring_interface_telescope)"
+  },
+  "notes": "WHAT THIS DOES NOT SAY. (1) It does not say `real: axiom=30` moved; it did not. The ledger still pins the axiom declarations, and moving the pin onto the telescope is a separate change (ADR-0515, 'What this ADR does not do'). (2) It does not say \u2124 is \u211d. The interface has no inverse, no completeness and no Archimedean axiom, so both developments satisfy it; ADR-0456's caveat stands. (3) It compares RENDERED types, which is what the ledger digests \u2014 not definitional equality, and not the proofs. That the `Int` side's 30 are proved rather than assumed is the separate measurement `integer: axiom=0` in nat_axiom_inventory. (4) The comparison is positional: it pairs binder i with binder i, so it would not notice two interface slots being swapped in BOTH signatures at once. It does notice a swap in one of them \u2014 measured, transposing `le_refl`/`le_trans` in `From<IntPrelude>` gives '28 identical, 2 differing' and exit 1, which is the transposition an earlier lane found no test could see."
+}

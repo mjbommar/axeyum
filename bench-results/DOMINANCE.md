@@ -12,10 +12,10 @@ The current benchmark JSONs record decide-rate, disagreement, and PAR-2, but the
 
 ## Headline
 
-- 35 measured division rows, 992 files, 753 decided, 680 oracle-compared.
+- 35 measured division rows, 992 files, 762 decided, 674 oracle-compared.
 - 35/35 rows have DISAGREE = 0; any nonzero row must preempt dominance work.
 - 25 rows are decide-strong (Decide% >= 80). 21 have a current Lean route worth auditing now; the others need proof-route work before dominance measurement is meaningful.
-- Complete committed dominance audits with exact audited `dominant%(D)`: 35. Remaining rows are readiness or partial-audit entries.
+- Complete committed dominance audits with exact audited `dominant%(D)`: 34. Remaining rows are readiness or partial-audit entries.
 
 ## Audit Harness
 
@@ -33,8 +33,8 @@ Complete audit rows have one audit record for every baseline-decided instance in
 
 | Division | Slice | Decided | Dominant% | Lean unsat | Gaps | Artifact |
 | --- | --- | ---: | ---: | ---: | --- | --- |
-| BV | `bv-bitwuzla-regress-clean-quantified` | 5 | 80% (4/5) | 75% (3/4) | Lean unsat 3/4 | `bench-results/dominance/bv-bitwuzla-regress-clean-quantified-dominance-audit.json` |
-| BV | `bv-cvc5-regress-clean-quantified` | 54 | 93% (50/54) | 78% (14/18) | Lean unsat 14/18 | `bench-results/dominance/bv-cvc5-regress-clean-quantified-dominance-audit.json` |
+| BV | `bv-bitwuzla-regress-clean-quantified` | 5 | 100% (5/5) | 100% (4/4) | none | `bench-results/dominance/bv-bitwuzla-regress-clean-quantified-dominance-audit.json` |
+| BV | `bv-cvc5-regress-clean-quantified` | 54 | 94% (51/54) | 83% (15/18) | timeouts 3, Lean unsat 15/18, evidence certified 51/54, evidence checked 51/54, trust holes timeout, timeout phases lean-reconstruction 3 | `bench-results/dominance/bv-cvc5-regress-clean-quantified-dominance-audit.json` |
 | LIA | `lia-cvc5-regress-clean-quantified` | 0 | 0% (0/0) | 100% (0/0) | none | `bench-results/dominance/lia-cvc5-regress-clean-quantified-dominance-audit.json` |
 | QF_ABV | `qf-abv-cvc5-bitwuzla-regress-clean` | 169 | 100% (169/169) | 100% (85/85) | none | `bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json` |
 | QF_ALIA | `qf-alia-cvc5-regress-clean` | 6 | 100% (6/6) | 100% (5/5) | none | `bench-results/dominance/qf-alia-cvc5-regress-clean-dominance-audit.json` |
@@ -43,23 +43,22 @@ Complete audit rows have one audit record for every baseline-decided instance in
 | QF_AUFLIA | `qf-auflia-cvc5-regress-clean` | 5 | 60% (3/5) | 0% (0/2) | Lean unsat 0/2, evidence certified 3/5, evidence checked 3/5 | `bench-results/dominance/qf-auflia-cvc5-regress-clean-dominance-audit.json` |
 | QF_AX | `qf-ax-cvc5-regress-clean` | 8 | 100% (8/8) | 100% (5/5) | none | `bench-results/dominance/qf-ax-cvc5-regress-clean-dominance-audit.json` |
 | QF_BV | `qf-bv-curated-bvred` | 6 | 100% (6/6) | 100% (2/2) | none | `bench-results/dominance/qf-bv-curated-bvred-dominance-audit.json` |
-| QF_BVFP | `qf-bvfp-bitwuzla-regress-clean` | 7 | 100% (7/7) | 100% (3/3) | none | `bench-results/dominance/qf-bvfp-bitwuzla-regress-clean-dominance-audit.json` |
+| QF_BVFP | `qf-bvfp-bitwuzla-regress-clean` | 7 | 71% (5/7) | 33% (1/3) | Lean unsat 1/3, evidence certified 6/7, evidence checked 6/7, trust holes bit-blast | `bench-results/dominance/qf-bvfp-bitwuzla-regress-clean-dominance-audit.json` |
 | QF_DT | `qf-dt-cvc5-regress-clean` | 3 | 100% (3/3) | 100% (3/3) | none | `bench-results/dominance/qf-dt-cvc5-regress-clean-dominance-audit.json` |
 | QF_FF | `qf-ff-cvc5-regress-clean` | 24 | 100% (24/24) | 100% (10/10) | none | `bench-results/dominance/qf-ff-cvc5-regress-clean-dominance-audit.json` |
-| QF_FP | `qf-fp-bitwuzla-regress-clean` | 16 | 100% (16/16) | 100% (7/7) | none | `bench-results/dominance/qf-fp-bitwuzla-regress-clean-dominance-audit.json` |
+| QF_FP | `qf-fp-bitwuzla-regress-clean` | 16 | 94% (15/16) | 86% (6/7) | Lean unsat 6/7, trust holes bit-blast | `bench-results/dominance/qf-fp-bitwuzla-regress-clean-dominance-audit.json` |
 | QF_LIA | `qf-lia-cvc5-regress-clean` | 10 | 100% (10/10) | 100% (4/4) | none | `bench-results/dominance/qf-lia-cvc5-regress-clean-dominance-audit.json` |
 | QF_LRA | `qf-lra-cvc5-regress-clean` | 9 | 100% (9/9) | 100% (3/3) | none | `bench-results/dominance/qf-lra-cvc5-regress-clean-dominance-audit.json` |
 | QF_NIA | `qf-nia-curated-iand` | 3 | 100% (3/3) | 100% (2/2) | none | `bench-results/dominance/qf-nia-curated-iand-dominance-audit.json` |
 | QF_NIA | `qf-nia-synthetic-graduated` | 32 | 100% (32/32) | 100% (16/16) | none | `bench-results/dominance/qf-nia-synthetic-graduated-dominance-audit.json` |
-| QF_NIA | `qf-nia-cvc5-regress-clean` | 33 | 61% (20/33) | 13% (2/15) | errors 2, Lean unsat 2/15, evidence certified 23/33, evidence checked 23/33 | `bench-results/dominance/qf-nia-cvc5-regress-clean-dominance-audit.json` |
-| QF_NRA | `qf-nra-synthetic-graduated` | 30 | 100% (30/30) | 100% (16/16) | none | `bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json` |
-| QF_NRA | `qf-nra-cvc5-regress-clean` | 32 | 56% (18/32) | 14% (2/14) | Lean unsat 2/14, evidence certified 19/32, evidence checked 18/32 | `bench-results/dominance/qf-nra-cvc5-regress-clean-dominance-audit.json` |
-| QF_S | `qf-s-cvc5-regress-clean` | 87 | 9% (8/87) | 29% (8/28) | Lean unsat 8/28, evidence certified 67/87, evidence checked 8/87 | `bench-results/dominance/qf-s-cvc5-regress-clean-dominance-audit.json` |
-| QF_SEQ | `qf-seq-cvc5-regress-clean` | 26 | 0% (0/26) | 0% (0/5) | Lean unsat 0/5, evidence certified 21/26, evidence checked 0/26 | `bench-results/dominance/qf-seq-cvc5-regress-clean-dominance-audit.json` |
-| QF_SLIA | `qf-slia-cvc5-regress-clean` | 18 | 11% (2/18) | 25% (2/8) | Lean unsat 2/8, evidence certified 12/18, evidence checked 2/18 | `bench-results/dominance/qf-slia-cvc5-regress-clean-dominance-audit.json` |
+| QF_NIA | `qf-nia-cvc5-regress-clean` | 33 | 61% (20/33) | 13% (2/15) | Lean unsat 2/15, evidence certified 23/33, evidence checked 23/33 | `bench-results/dominance/qf-nia-cvc5-regress-clean-dominance-audit.json` |
+| QF_NRA | `qf-nra-cvc5-regress-clean` | 32 | 75% (24/32) | 43% (6/14) | Lean unsat 6/14, evidence certified 30/32, evidence checked 30/32 | `bench-results/dominance/qf-nra-cvc5-regress-clean-dominance-audit.json` |
+| QF_S | `qf-s-cvc5-regress-clean` | 93 | 12% (11/93) | 42% (11/26) | Lean unsat 11/26, evidence certified 79/93, evidence checked 12/93 | `bench-results/dominance/qf-s-cvc5-regress-clean-dominance-audit.json` |
+| QF_SEQ | `qf-seq-cvc5-regress-clean` | 22 | 0% (0/22) | 0% (0/1) | Lean unsat 0/1, evidence certified 21/22, evidence checked 0/22 | `bench-results/dominance/qf-seq-cvc5-regress-clean-dominance-audit.json` |
+| QF_SLIA | `qf-slia-cvc5-regress-clean` | 25 | 8% (2/25) | 20% (2/10) | Lean unsat 2/10, evidence certified 17/25, evidence checked 2/25 | `bench-results/dominance/qf-slia-cvc5-regress-clean-dominance-audit.json` |
 | QF_UF | `qf-uf-cvc5-regress-clean-overbound-uninterp-sorts` | 4 | 100% (4/4) | 100% (3/3) | none | `bench-results/dominance/qf-uf-cvc5-regress-clean-overbound-uninterp-sorts-dominance-audit.json` |
-| QF_UF | `qf-uf-cvc5-regress-clean-bounded` | 44 | 100% (44/44) | 100% (15/15) | none | `bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-dominance-audit.json` |
-| QF_UF | `qf-uf-cvc5-regress-clean-bounded-uninterp-sorts` | 44 | 100% (44/44) | 100% (15/15) | none | `bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json` |
+| QF_UF | `qf-uf-cvc5-regress-clean-bounded` | 44 | 98% (43/44) | 100% (15/15) | evidence checked 43/44 | `bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-dominance-audit.json` |
+| QF_UF | `qf-uf-cvc5-regress-clean-bounded-uninterp-sorts` | 44 | 98% (43/44) | 100% (15/15) | evidence checked 43/44 | `bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json` |
 | QF_UFBV | `qf-ufbv-bitwuzla-regress-clean` | 2 | 100% (2/2) | 100% (1/1) | none | `bench-results/dominance/qf-ufbv-bitwuzla-regress-clean-dominance-audit.json` |
 | QF_UFBV | `qf-ufbv-cvc5-regress-clean` | 4 | 100% (4/4) | 100% (2/2) | none | `bench-results/dominance/qf-ufbv-cvc5-regress-clean-dominance-audit.json` |
 | QF_UFFF | `qf-ufff-cvc5-regress-clean` | 8 | 100% (8/8) | 100% (6/6) | none | `bench-results/dominance/qf-ufff-cvc5-regress-clean-dominance-audit.json` |
@@ -75,7 +74,7 @@ These rows are the best immediate candidates: they are already decide-strong and
 
 | Division | Slice | Files | Decide% | DISAGREE | PAR-2 (s) | Lean route | Audit task |
 | --- | --- | ---: | ---: | ---: | ---: | --- | --- |
-| - | - | 0 | - | - | - | - | - |
+| QF_NRA | `qf-nra-synthetic-graduated` | 33 | 91% | 0 | 5.455 | degree-2 SOS to Lean only | measure SOS-covered unsats separately from general nonlinear search |
 
 ## All Rows
 
@@ -83,8 +82,8 @@ These rows are the best immediate candidates: they are already decide-strong and
 
 | Division | Slice | Files | Decided | Decide% | Band | DISAGREE | Audit | Dominant% | Lean unsat | Dominance action | Next action |
 | --- | --- | ---: | ---: | ---: | --- | ---: | --- | ---: | ---: | --- | --- |
-| BV | `bv-bitwuzla-regress-clean-quantified` | 5 | 5 | 100% | strong | 0 | complete | 80% (4/5) | 75% (3/4) | close Lean unsat gaps | audit quantified-BV rows with per-instance Lean reconstruction |
-| BV | `bv-cvc5-regress-clean-quantified` | 54 | 54 | 100% | strong | 0 | complete | 93% (50/54) | 78% (14/18) | close Lean unsat gaps | audit quantified-BV rows with per-instance Lean reconstruction |
+| BV | `bv-bitwuzla-regress-clean-quantified` | 5 | 5 | 100% | strong | 0 | complete | 100% (5/5) | 100% (4/4) | dominant on audited row | audit quantified-BV rows with per-instance Lean reconstruction |
+| BV | `bv-cvc5-regress-clean-quantified` | 54 | 54 | 100% | strong | 0 | complete | 94% (51/54) | 83% (15/18) | fix audit timeouts | audit quantified-BV rows with per-instance Lean reconstruction |
 | LIA | `lia-cvc5-regress-clean-quantified` | 12 | 0 | 0% | weak | 0 | complete | 0% (0/0) | 100% (0/0) | dominant on audited row | separate guarded finite-Int unsats from unsupported infinite-domain cases |
 | QF_ABV | `qf-abv-cvc5-bitwuzla-regress-clean` | 193 | 169 | 88% | strong | 0 | complete | 100% (169/169) | 100% (85/85) | dominant on audited row | classify array unsats by ROW/congruence vs general ArrayElim |
 | QF_ALIA | `qf-alia-cvc5-regress-clean` | 6 | 6 | 100% | strong | 0 | complete | 100% (6/6) | 100% (5/5) | dominant on audited row | move solve frontier to AUFLIA scalar search depth |
@@ -93,23 +92,23 @@ These rows are the best immediate candidates: they are already decide-strong and
 | QF_AUFLIA | `qf-auflia-cvc5-regress-clean` | 7 | 5 | 71% | mid | 0 | complete | 60% (3/5) | 0% (0/2) | close Lean unsat gaps | finish decide frontier before spending cert budget beyond narrow refuters |
 | QF_AX | `qf-ax-cvc5-regress-clean` | 8 | 8 | 100% | strong | 0 | complete | 100% (8/8) | 100% (5/5) | dominant on audited row | broaden beyond this small cvc5 slice with neutral QF_AX arrays |
 | QF_BV | `qf-bv-curated-bvred` | 6 | 6 | 100% | strong | 0 | complete | 100% (6/6) | 100% (2/2) | dominant on audited row | add per-instance BV operator classifier; close mul/rem/shift Lean gap |
-| QF_BVFP | `qf-bvfp-bitwuzla-regress-clean` | 8 | 7 | 88% | strong | 0 | complete | 100% (7/7) | 100% (3/3) | dominant on audited row | separate pure-BV certs from FP-to-BV trust-hole cases |
+| QF_BVFP | `qf-bvfp-bitwuzla-regress-clean` | 8 | 7 | 88% | strong | 0 | complete | 71% (5/7) | 33% (1/3) | close Lean unsat gaps | separate pure-BV certs from FP-to-BV trust-hole cases |
 | QF_DT | `qf-dt-cvc5-regress-clean` | 3 | 3 | 100% | strong | 0 | complete | 100% (3/3) | 100% (3/3) | dominant on audited row | witness the general DatatypeElim dispatch end to end |
 | QF_FF | `qf-ff-cvc5-regress-clean` | 30 | 24 | 80% | strong | 0 | complete | 100% (24/24) | 100% (10/10) | dominant on audited row | broaden finite-field audits beyond the cvc5 slice and grow algebraic certificates |
-| QF_FP | `qf-fp-bitwuzla-regress-clean` | 16 | 16 | 100% | strong | 0 | complete | 100% (16/16) | 100% (7/7) | dominant on audited row | keep FP as measured-competitive, not Lean-dominant, until Fpa2Bv certs grow |
+| QF_FP | `qf-fp-bitwuzla-regress-clean` | 16 | 16 | 100% | strong | 0 | complete | 94% (15/16) | 86% (6/7) | close Lean unsat gaps | keep FP as measured-competitive, not Lean-dominant, until Fpa2Bv certs grow |
 | QF_LIA | `qf-lia-cvc5-regress-clean` | 11 | 10 | 91% | strong | 0 | complete | 100% (10/10) | 100% (4/4) | dominant on audited row | audit unsats by Diophantine/IntInequality/general LIA route |
 | QF_LRA | `qf-lra-cvc5-regress-clean` | 11 | 9 | 82% | strong | 0 | complete | 100% (9/9) | 100% (3/3) | dominant on audited row | run per-instance Lean reconstruction over the committed LRA slice |
 | QF_NIA | `qf-nia-curated-iand` | 3 | 3 | 100% | strong | 0 | complete | 100% (3/3) | 100% (2/2) | dominant on audited row | separate Diophantine/interval unsats from bit-blasted bounded boxes |
 | QF_NIA | `qf-nia-synthetic-graduated` | 32 | 32 | 100% | strong | 0 | complete | 100% (32/32) | 100% (16/16) | dominant on audited row | separate Diophantine/interval unsats from bit-blasted bounded boxes |
-| QF_NIA | `qf-nia-cvc5-regress-clean` | 39 | 33 | 85% | strong | 0 | complete | 61% (20/33) | 13% (2/15) | fix audit errors | separate Diophantine/interval unsats from bit-blasted bounded boxes |
-| QF_NRA | `qf-nra-synthetic-graduated` | 33 | 30 | 91% | strong | 0 | complete | 100% (30/30) | 100% (16/16) | dominant on audited row | measure SOS-covered unsats separately from general nonlinear search |
-| QF_NRA | `qf-nra-cvc5-regress-clean` | 38 | 32 | 84% | strong | 0 | complete | 56% (18/32) | 14% (2/14) | close Lean unsat gaps | measure SOS-covered unsats separately from general nonlinear search |
-| QF_S | `qf-s-cvc5-regress-clean` | 134 | 87 | 65% | mid | 0 | complete | 9% (8/87) | 29% (8/28) | close Lean unsat gaps | decider/front-end work first; proof lane later |
-| QF_SEQ | `qf-seq-cvc5-regress-clean` | 33 | 26 | 79% | mid | 0 | complete | 0% (0/26) | 0% (0/5) | close Lean unsat gaps | decider/front-end work first; proof lane later |
-| QF_SLIA | `qf-slia-cvc5-regress-clean` | 50 | 18 | 36% | weak | 0 | complete | 11% (2/18) | 25% (2/8) | close Lean unsat gaps | migrate strings to solver StrTerm API before proof investment |
+| QF_NIA | `qf-nia-cvc5-regress-clean` | 39 | 33 | 85% | strong | 0 | complete | 61% (20/33) | 13% (2/15) | close Lean unsat gaps | separate Diophantine/interval unsats from bit-blasted bounded boxes |
+| QF_NRA | `qf-nra-synthetic-graduated` | 33 | 30 | 91% | strong | 0 | partial 33/30 | 100% (33/33) audited | 100% (19/19) | audit now | measure SOS-covered unsats separately from general nonlinear search |
+| QF_NRA | `qf-nra-cvc5-regress-clean` | 38 | 32 | 84% | strong | 0 | complete | 75% (24/32) | 43% (6/14) | close Lean unsat gaps | measure SOS-covered unsats separately from general nonlinear search |
+| QF_S | `qf-s-cvc5-regress-clean` | 134 | 93 | 69% | mid | 0 | complete | 12% (11/93) | 42% (11/26) | close Lean unsat gaps | decider/front-end work first; proof lane later |
+| QF_SEQ | `qf-seq-cvc5-regress-clean` | 33 | 22 | 67% | mid | 0 | complete | 0% (0/22) | 0% (0/1) | close Lean unsat gaps | decider/front-end work first; proof lane later |
+| QF_SLIA | `qf-slia-cvc5-regress-clean` | 50 | 25 | 50% | mid | 0 | complete | 8% (2/25) | 20% (2/10) | close Lean unsat gaps | migrate strings to solver StrTerm API before proof investment |
 | QF_UF | `qf-uf-cvc5-regress-clean-overbound-uninterp-sorts` | 6 | 4 | 67% | mid | 0 | complete | 100% (4/4) | 100% (3/3) | dominant on audited row | remeasure after first-class uninterpreted sorts, then run Lean audit |
-| QF_UF | `qf-uf-cvc5-regress-clean-bounded` | 82 | 44 | 54% | mid | 0 | complete | 100% (44/44) | 100% (15/15) | dominant on audited row | remeasure after first-class uninterpreted sorts, then run Lean audit |
-| QF_UF | `qf-uf-cvc5-regress-clean-bounded-uninterp-sorts` | 82 | 44 | 54% | mid | 0 | complete | 100% (44/44) | 100% (15/15) | dominant on audited row | remeasure after first-class uninterpreted sorts, then run Lean audit |
+| QF_UF | `qf-uf-cvc5-regress-clean-bounded` | 82 | 44 | 54% | mid | 0 | complete | 98% (43/44) | 100% (15/15) | certify remaining decided instances | remeasure after first-class uninterpreted sorts, then run Lean audit |
+| QF_UF | `qf-uf-cvc5-regress-clean-bounded-uninterp-sorts` | 82 | 44 | 54% | mid | 0 | complete | 98% (43/44) | 100% (15/15) | certify remaining decided instances | remeasure after first-class uninterpreted sorts, then run Lean audit |
 | QF_UFBV | `qf-ufbv-bitwuzla-regress-clean` | 2 | 2 | 100% | strong | 0 | complete | 100% (2/2) | 100% (1/1) | dominant on audited row | audit whether measured unsats avoid BV mul/rem/shift holes |
 | QF_UFBV | `qf-ufbv-cvc5-regress-clean` | 4 | 4 | 100% | strong | 0 | complete | 100% (4/4) | 100% (2/2) | dominant on audited row | audit whether measured unsats avoid BV mul/rem/shift holes |
 | QF_UFFF | `qf-ufff-cvc5-regress-clean` | 8 | 8 | 100% | strong | 0 | complete | 100% (8/8) | 100% (6/6) | dominant on audited row | broaden UFFF audits beyond the cvc5 finite-field+UF slice |
@@ -127,7 +126,7 @@ These rows are the best immediate candidates: they are already decide-strong and
 
 ## Next Generator Step
 
-The first `audit now` queue is clear. The next dominance movement comes from reducing the concrete proof/evidence gaps reported above, then regenerating the affected exact audit artifacts.
+Run and commit more `bench-results/dominance/*.json` audit artifacts for the remaining `audit now` rows. Each complete artifact automatically promotes its row from readiness status to exact audited `dominant%(D)`.
 
 ## Provenance
 

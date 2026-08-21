@@ -33,7 +33,7 @@ fn all_preludes_compose_repeat_exactly_and_check_a_mixed_nat_int_proof() {
     let logic = build_logic_prelude(&mut kernel).expect("logic prelude must build");
     let nat = build_nat_prelude(&mut kernel).expect("Nat prelude must compose");
     let int = build_int_prelude(&mut kernel).expect("Int prelude must compose");
-    let real = build_arith_prelude(&mut kernel).expect("Real prelude must compose");
+    let real = build_arith_prelude(&mut kernel).expect("AxReal prelude must compose");
     let string2 = build_string_prelude(&mut kernel, logic, 2).expect("string prelude must compose");
     let string3 = build_string_prelude(&mut kernel, logic, 3)
         .expect("a distinct string alphabet must compose");
@@ -41,8 +41,8 @@ fn all_preludes_compose_repeat_exactly_and_check_a_mixed_nat_int_proof() {
     assert_eq!(kernel.display_name(nat.add).to_string(), "Nat.add");
     assert_eq!(kernel.display_name(int.z).to_string(), "Int");
     assert_eq!(kernel.display_name(int.add).to_string(), "Int.add");
-    assert_eq!(kernel.display_name(real.r).to_string(), "Real");
-    assert_eq!(kernel.display_name(real.add).to_string(), "Real.add");
+    assert_eq!(kernel.display_name(real.r).to_string(), "AxReal");
+    assert_eq!(kernel.display_name(real.add).to_string(), "AxReal.add");
     assert_ne!(string2.char_ind, string3.char_ind);
 
     let nat_type = kernel.const_(nat.logic.nat, vec![]);
@@ -69,7 +69,7 @@ fn all_preludes_compose_repeat_exactly_and_check_a_mixed_nat_int_proof() {
     let real_sum = apply2(&mut kernel, real_add, real_zero, real_zero);
     let inferred_real = kernel
         .infer(real_sum)
-        .expect("Real.add application must infer");
+        .expect("AxReal.add application must infer");
     assert!(kernel.def_eq(inferred_real, real_type));
 
     let level_one = {
@@ -106,7 +106,7 @@ fn all_preludes_compose_repeat_exactly_and_check_a_mixed_nat_int_proof() {
         int
     );
     assert_eq!(
-        build_arith_prelude(&mut kernel).expect("Real repeat must validate"),
+        build_arith_prelude(&mut kernel).expect("AxReal repeat must validate"),
         real
     );
     assert_eq!(

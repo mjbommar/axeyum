@@ -2,11 +2,234 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Fib prelude compatibility separates exact identity from alpha-stable type shape; direct graft remains unauthorized.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd` and its newly ready child `Nat.fib_dvd` are both durably proved on the authoritative ledger. `Nat.fib_dvd` was constructed directly from the admitted GCD identity and five target-owned divisibility laws, reconstructed twice byte-identically, imported four fresh times, admitted through one crash-safe write, and reproduced in an isolated clean worktree. Its empty readiness delta is expected because it is a DAG leaf.
 
-**Next:** add a binder-info-insensitive kernel-type compatibility check and recheck the r082 overlaps before proof transport.
+**Next:** qualify exact `Int.fib_neg`, the remaining open premise of `Int.gcd_fib`; measure whether its parity/sign branch can compose over the existing axiom-free Int and Fibonacci carriers, then preregister the smallest bounded proof before any target submission.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
+| 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
+| 2026-08-21 | `a9610560c` | The durable construction checker binds the separately stored target goal identity without weakening capsule checks |
+| 2026-08-21 | `d357b3307` | A registered sealed-capsule operation makes the frontier select exactly `Nat.fib_gcd` |
+| 2026-08-21 | `e242b72b3` | Crash-safe recovery admits exact `Nat.fib_gcd` with one authoritative write and unlocks `Nat.fib_dvd` |
+| 2026-08-21 | (pending) | Immutable primary evidence and isolated clean replay seal the exact `Nat.fib_gcd` admission |
+| 2026-08-21 | `fa143f3ec` | Exact `Nat.fib_dvd` reconstructs twice byte-identically from `Nat.fib_gcd` and five target-owned divisibility laws |
+| 2026-08-21 | `e8861458e` | A sealed-capsule operation makes the frontier select exactly the newly ready Fibonacci divisibility fact |
+| 2026-08-21 | `733126c0f` | Crash-safe recovery admits exact `Nat.fib_dvd` with one authoritative write and an honest empty unlock set |
+| 2026-08-21 | (pending) | Immutable primary evidence and isolated clean replay seal the exact `Nat.fib_dvd` leaf admission |
+
+| 2026-08-21 | `9ff54f11c` | Six clean order/divisibility supports reconstruct twice over r091 with empty footprints and byte-identical capsules |
+| 2026-08-21 | `dfc8874ca` | Target-owned divisibility addition and divisor-of-one supports reconstruct reproducibly without importing `Iff` |
+| 2026-08-21 | `5cdd964ba` | Divisibility reflexivity and multiplication utilities reconstruct twice and bind sealed evidence |
+| 2026-08-21 | `30d2c89b6` | Nonrendering parameter audit selects the official-representation successor GCD equation and typechecks all seven explicit inputs |
+| 2026-08-21 | `527508a56` | Target-owned `gcd_dvd_left`, `gcd_dvd_right`, and `dvd_gcd` reconstruct twice with byte-identical empty-footprint evidence |
+| 2026-08-21 | `71ba9fb1c` | Consecutive-Fibonacci coprimality reconstructs target-natively without `Iff` or foreign GCD convenience theorems |
+| 2026-08-21 | `dfa79618c` | Exact `Nat.gcd_fib_add_self` reconstructs twice with byte-identical empty-footprint evidence over the target-owned stack |
+| 2026-08-21 | `a475f13dd` | Sealed-capsule operation registration binds the exact target identity and reviews every gate coupling before dispatch |
+| 2026-08-21 | `07b0794ae` | Crash-safe recovery admits `Nat.gcd_fib_add_self` with one authoritative write and an empty kernel footprint |
+| 2026-08-21 | `dbfd95dce` | Immutable primary archive and isolated clean replay seal the Fibonacci GCD-shift admission |
+| 2026-08-21 | `916f32dbf` | Exact `Nat.gcd_greatest` reconstructs twice from four named premises with byte-identical empty-footprint evidence |
+| 2026-08-21 | `6e112b4bc` | The generic sealed-capsule operation driver registers the exact GCD universal-property theorem |
+| 2026-08-21 | `0b7f23e9b` | Crash-safe recovery admits `Nat.gcd_greatest` with one authoritative write and an empty kernel footprint |
+
 | 2026-08-19 | `1afe65473` | Native/imported Nat prelude composition probe |
 | 2026-08-19 | `d1eb38a13` | Alpha-stable cross-kernel expression identity |
+| 2026-08-20 | `b5c4bb48b` | Binder-info-insensitive kernel type-shape identity with adversarial controls |
+| 2026-08-20 | `24b16642e` | r082 overlap probe classifies kernel-compatible and structurally different types |
+| 2026-08-20 | `8dbd18c82` | Required Nat theorem closure census isolates a structurally unblocked first replay slice |
+| 2026-08-20 | `9caac0bf5` | First probe-local checked native Nat theorem slice composes over the imported r082 kernel |
+| 2026-08-20 | `b7573a525` | ADR-0523 fixes theorem-only identity-gated completed-clone composition as the public V1 boundary |
+| 2026-08-20 | `bdc9bf1c9` | Public checked theorem-slice composition API publishes only a fully admitted owned clone and replayable receipt |
+| 2026-08-20 | `75aa21d1a` | Composition boundary controls cover unsupported kinds, type mismatch, binder metadata, free variables, partial staging, and receipt mutation |
+| 2026-08-20 | `0bcbe935d` | The r082 public-API probe exposes the exact source closure and canonical composition receipt identity |
+| 2026-08-20 | `c17b7e65b` | Receipt V2 records translated definitional equality as attempt-only reuse authority and moves the r082 blocker to missing `Exists` |
+| 2026-08-20 | `fced2b166` | Receipt V3 atomically reconstructs a demanded singleton inductive and advances the r082 root to missing definition `Nat.mul` |
+| 2026-08-20 | `acade2a45` | Receipt V4 target-checks exact demanded definitions and advances the r082 root to the `Bool.rec` branch-order seam |
+| 2026-08-20 | `502184d3f` | Native Bool adopts official Lean constructor order with kernel-prelude consumers migrated |
+| 2026-08-20 | `012c6b4f6` | Solver reconstruction preserves semantic false/true branches under the official order |
+| 2026-08-20 | `866add778` | Official-order fixtures and golden reconstruction bodies pass the authoritative pre-push gate |
+| 2026-08-20 | `a5a111498` | Native `Nat.mod_lt` proves Lean's general positive-denominator contract and migrates GCD/Bezout consumers |
+| 2026-08-20 | `ac33a0a2d` | Named compatibility diagnostics bind `Nat.mod_lt` translated definitional equality and expose `Acc` next |
+| 2026-08-20 | `3d466b45c` | Receipt V5 reconstructs only canonical native `Acc` exactly and exposes `Nat.div_mod_exec` target type mismatch |
+| 2026-08-20 | `f099a4a37` | Semantic admission diagnostics isolate the 92-declaration division mismatch and the missing `Nat.dvd_mod_iff` consumer |
+| 2026-08-20 | `a12d44858` | Lean export audit reports canonical theorem identities, direct dependencies, and kernel-derived axiom footprints |
+| 2026-08-20 | `dd79317c5` | Proof-isolated theorem-pack composition replays two axiom-free official `Nat.mod` computation equations into r082 |
+| 2026-08-20 | `667201932` | Receipt-backed checked specialization admits constructive target `Nat.dvd_mod_iff` with an empty footprint and native type shape |
+| 2026-08-20 | `7e6e28c1f` | Explicit target-owned theorem leaves cut only compatible axiom-free source proofs and replay from a distinct receipt |
+| 2026-08-20 | `5fb817301` | Real r082 leaf probe removes `Nat.div_mod_exec` with two cuts and exposes assumption-bearing `Nat.gcd_succ` next |
+| 2026-08-20 | `91d7df736` | Dependency-ordered mixed composition moves exact `Nat.fib` and the established recurrence into the axiom-free native gcd kernel |
+| 2026-08-20 | `8403e6f65` | Twice-reconstructed native Fibonacci coprimality theorem closes with the exact planned dependency set and exposes the official/native gcd semantic bridge |
+| 2026-08-20 | `f94489c74` | Pointwise well-founded fuel congruence reconstructs axiom-free official `Nat.gcd_succ` and advances the checked target through `Nat.dvd_gcd` |
+| 2026-08-20 | `9e83ab67a` | All seven planned Fibonacci gcd/divisibility support roots compose and replay together in the official r082 target |
+| 2026-08-20 | `d12736b63` | Exact official Fibonacci coprimality reconstructs four times with an empty footprint and sealed deterministic evidence |
+| 2026-08-20 | `b44bf0ecb` | Dependency-bound theorem receipts require exact sorted premise names and canonical declaration identities |
+| 2026-08-20 | `b55bc977e` | Two fresh full audits preregister the exact eight-premise authority for the official Fibonacci receipt |
+| 2026-08-20 | `169aab71b` | Two fresh official reconstructions issue and replay one exact dependency-bound Fibonacci theorem receipt |
+| 2026-08-20 | `d5aed52ff` | Distinct registered admission preserves exact direct and transitive dependency identities without weakening isolated receipts |
+| 2026-08-20 | `3f96b5463` | Crash-safe exact Fibonacci coprimality admission makes one descendant ready and reproduces from a clean worktree |
+| 2026-08-20 | `e06115972` | Sealed admission evidence binds the exact post-recovery fact and frontier state |
+| 2026-08-20 | `6902efad7` | Historical child qualification accepts only the selected axiom-free settled child while retaining its deferred sibling open |
+| 2026-08-20 | `eca29a441` | Proof-free r091 qualification isolates Fibonacci addition, coprime-factor cancellation, and gcd extensionality obligations |
+| 2026-08-20 | `989e6242e` | One support-first construction and six-submission, zero-retry ceiling are frozen before implementation |
+| 2026-08-20 | `f8c7febc6` | Paired native induction reconstructs Fibonacci successor addition twice and composes it into the exact r091 target kernel |
+| 2026-08-20 | `1f9f01b3a` | Immutable first-support observation and mutation-tested checker preserve the empty-footprint, zero-target-credit boundary |
+| 2026-08-20 | `3acb61ef5` | Balanced-Bézout coprime-factor cancellation reconstructs twice and fails closed at the exact official/native Euclidean seam |
+| 2026-08-20 | `a29b99e15` | Immutable second-support evidence and mutation controls retain the typed composition decline without target credit |
+| 2026-08-20 | `62858ff72` | Support-only bridge plan freezes a constructive official Euclidean and balanced-Bézout route with zero target authority |
+| 2026-08-20 | `c4f133a00` | Official quotient and remainder computation roots import with stable identities and empty footprints |
+| 2026-08-20 | `a21f42b06` | Generated proof-isolated capsule exposes only the exact Euclidean statements and audited identities needed by a fresh context |
+| 2026-08-20 | `cf1a203d1` | Current-stable comparison plan corrects the target to Mathlib/Lean v4.32.1 and freezes one proof-free extraction |
+| 2026-08-20 | `f91670cd9` | Stable comparison classifies all 240 selected statements, with 234 structurally identical and six exact drifts |
+| 2026-08-21 | `fc191b3e5` | Full stable statement-survival atlas is preregistered before the one authorized comparison pass |
+| 2026-08-21 | `7edebb579` | Full Nat/Int atlas classifies all 9,839 v4.30/v4.32.1 union names and isolates representation-wide drift |
+| 2026-08-21 | `030d82adb` | First proof-isolated joint quotient/remainder reconstruction fails closed with a measured `propext` footprint |
+| 2026-08-21 | `ed3a69efb` | Direct-dependency footprint audit is frozen before its one importer pass |
+| 2026-08-21 | `2ae095f07` | The joint invariant's sole assumption carrier is localized to `Nat.sub_add_cancel` |
+| 2026-08-21 | `d204ddd51` | Local primitive-recursive subtraction restoration is selected as the exact replacement |
+| 2026-08-21 | `94b62795d` | The one missing primitive subtraction equation is bound proof-free |
+| 2026-08-21 | `7c7bb1f54` | The private joint Euclidean invariant reconstructs twice with an empty footprint |
+| 2026-08-21 | `bc529aab9` | Transparent public wrapper lift is preregistered before source execution |
+| 2026-08-21 | `aded65e22` | Wrapper lift fails closed at opaque official division before kernel submission |
+| 2026-08-21 | `47322738b` | Synchronized public quotient/remainder recursion is preregistered |
+| 2026-08-21 | `653cd1518` | Exact public recursion compiles but fails its first kernel gate through generated `_unary` |
+| 2026-08-21 | `54cdc1375` | Primitive bounded induction is frozen as the generated-recursion replacement |
+| 2026-08-21 | `cf41dba10` | Primitive induction removes generated recursion but retains one explicit `propext` footprint |
+| 2026-08-21 | `75c7668c2` | The complete 22-dependency footprint audit is preregistered before execution |
+| 2026-08-21 | `6e5779f0f` | One importer pass localizes the public proof footprint to `Nat.div_eq` and `Nat.mod_eq` |
+| 2026-08-21 | `5599832dd` | Public equation closure shows quotient fuel congruence clean and proposition/remainder wrappers contaminated |
+| 2026-08-21 | `c108486b4` | Target coprime shortcut declines through quotient and proposition axioms |
+| 2026-08-21 | `8e78f75e9` | Reusable ordered batch auditor reports identities, dependencies, and kernel footprints without proof rendering |
+| 2026-08-21 | `7e20d5288` | Seven subtractive gcd convenience roots all decline and expose an exact 17-name dependency union |
+| 2026-08-21 | `15398b7a9` | Fourteen-root descent splits seven clean helpers from seven gcd/proposition carriers |
+| 2026-08-21 | `327e4952c` | Pruned gcd route exposes the generated private recursion equation carrier |
+| 2026-08-21 | `748a3457b` | Generated gcd equation carrier narrows to three previously unmeasured dependencies |
+| 2026-08-21 | `656538cf9` | `WellFounded.Nat.fix_eq` is isolated as the sole generated gcd assumption carrier |
+| 2026-08-21 | `a3bc37896` | One direct public `Nat.gcd_def` compilation declines in both opaque constructor branches |
+| 2026-08-21 | `a87967970` | Exact Mathlib 4.30 extended-gcd root audit is bound to the clean `s5` export environment |
+| 2026-08-21 | `2fd42c900` | Official `Nat.gcd_eq_gcd_ab` declines with a measured Quotient-plus-`propext` footprint |
+| 2026-08-21 | `f611d3ffb` | All twelve direct extended-gcd theorem dependencies are frozen before rereading the sealed stream |
+| 2026-08-21 | `550badedf` | Eight clean helpers split from three contaminated xgcd coefficient roots and `eq_self` |
+| 2026-08-21 | `70eff2366` | Seventeen novel xgcd dependencies are preregistered while identity-matched clean `Eq.symm` is reused |
+| 2026-08-21 | `17cf9888b` | Imported xgcd projection routes close while empty-footprint `Nat.gcd.induction` remains available |
+| 2026-08-21 | `9485270f6` | One direct `rfl` reconstruction of public `Nat.xgcd_val` is frozen before source execution |
+| 2026-08-21 | `9f135d4f0` | The first execution ends before elaboration at Lean's package-root boundary without retry |
+| 2026-08-21 | `7f0f25baa` | Corrected rooted execution binds exact temporary paths and two-sided checkout cleanliness |
+| 2026-08-21 | `1e74d4601` | Full-status preflight preserves three pre-existing untracked sources and performs zero execution |
+| 2026-08-21 | `3cf835d15` | The exact three-file `s5` baseline is bound before the baseline-preserving projection run |
+| 2026-08-21 | `de5264b64` | A twice-imported `rfl` theorem still reaches `propext`, closing the public xgcd coefficient surface |
+| 2026-08-21 | (pending) | Generic official-gcd balanced Bézout bypasses public quotient and binds clean gcd leaves as specialization parameters before execution |
+| 2026-08-21 | (pending) | First generic balanced-Bézout source stops at three compiler diagnostics with zero export/import and exact baseline cleanup |
+| 2026-08-21 | (pending) | Corrected generic balanced-Bézout source binds direct Nat.mod equations and coefficient-scoped transport before execution |
+| 2026-08-21 | (pending) | V2 stops at dependent-conditional and definitional-shape diagnostics with zero export/import and exact cleanup |
+| 2026-08-21 | (pending) | V3 binds positivity reduction, normalized congrArg types, and induction-hypothesis change before execution |
+| 2026-08-21 | (pending) | V3 compiles but first audit localizes Quotient axioms to funext/conditional rewriting and propext to ring normalization |
+| 2026-08-21 | (pending) | Pointwise V4 quotient witness forbids binder rewriting, function equality, public division, and ring before execution |
+| 2026-08-21 | (pending) | Pointwise V4 quotient witness reconstructs twice with byte-identical empty footprints and seals exact evidence |
+| 2026-08-21 | (pending) | Explicit four-Nat balanced-Bézout Euclidean update is frozen before its one authorized compilation |
+| 2026-08-21 | (pending) | Explicit update compiles but its first audit retains one `propext`; exact nine-dependency descent replaces source guessing |
+| 2026-08-21 | (pending) | Exact nine-root dependency-local audit is frozen before one non-rendering sealed-stream read |
+| 2026-08-21 | (pending) | One sealed-stream read localizes the V1 footprint exactly to `Nat.mul_assoc` and `Nat.right_distrib` |
+| 2026-08-21 | (pending) | V2 injects exactly two clean leaf contracts while retaining the explicit balanced-Bézout update chain |
+| 2026-08-21 | (pending) | Parameterized V2 Euclidean update reconstructs twice with byte-identical empty footprints and no contaminated leaves |
+| 2026-08-21 | (pending) | Primitive-induction target-owned replacements for the two contaminated multiplication leaves are frozen before execution |
+| 2026-08-21 | (pending) | Both target-owned multiplication leaves reconstruct twice with empty footprints, closing the V2 parameter gap |
+| 2026-08-21 | (pending) | Exact three-theorem wrapper is frozen to close the balanced-Bézout Euclidean update before gcd induction |
+| 2026-08-21 | (pending) | Closed Euclidean update reconstructs twice empty-footprint with exactly the accepted update and two leaf dependencies |
+| 2026-08-21 | `99ea0b1e7` | Clean official-gcd balanced-Bézout induction is frozen with only two gcd computation leaves still explicit |
+| 2026-08-21 | `c8fae7455` | Generic official-gcd balanced-Bézout reconstructs twice with an empty footprint and preserves zero specialization authority |
+| 2026-08-21 | `0e23382f8` | Dependency-bound closure freezes exact accepted zero-left and successor gcd identities before implementation |
+| 2026-08-21 | `496e916b8` | First closed specialization declines at an exact `WellFounded.fix` type-shape mismatch with zero retry or theorem credit |
+| 2026-08-21 | `7550b31c4` | Proof-free `WellFounded.fix` closure audit is frozen before code or stream access |
+| 2026-08-21 | `96a6a4c34` | Twice-reproduced audit selects official-kernel gcd-leaf reconstruction over native representation transport |
+| 2026-08-21 | `3e6373de5` | Pointwise official-representation gcd zero-left reconstruction is frozen before compilation |
+| 2026-08-21 | `0a73f8458` | Source compiles but unbounded 340 MB export hits the unchanged two-million-record importer ceiling |
+| 2026-08-21 | `b866b31ee` | Exact theorem-root exporter retry is frozen with unchanged proof and importer limit |
+| 2026-08-21 | `dfcff00d1` | Root-selected zero-left gcd reconstructs twice with an empty footprint and only its local model dependency |
+| 2026-08-21 | `fb1a3613e` | Official-representation successor gcd root export is frozen without double-counting the native-support theorem |
+| 2026-08-21 | `9ec4bcfa1` | Official-representation successor gcd reconstructs twice empty-footprint, completing the leaf pair for composition |
+| 2026-08-21 | `1d03f09b3` | Five-stream official-kernel balanced-Bézout composition is frozen before implementation |
+| 2026-08-21 | `f1e0edb57` | Dedicated official-kernel driver compiles Clippy-clean and passes the full importer test suite without stream execution |
+| 2026-08-21 | `47343f64f` | First official-kernel invocation declines at missing recursive `Acc`; reverse composition base is selected with zero theorem credit |
+| 2026-08-21 | `2d62fc4a7` | Generic-kernel-base reversal is frozen with the same five streams and zero downstream authority |
+| 2026-08-21 | `c4bf44f90` | Reverse-direction driver compiles Clippy-clean with generic composition removed and no execution |
+| 2026-08-21 | (pending) | First generic-base run finds `Nat.mod_lt` already present; exact reuse replaces a zero-addition composition |
+| 2026-08-21 | `7e4af7cde` | Exact `Nat.mod_lt` identity reuse and the remaining three-root composition are frozen before code or stream access |
+| 2026-08-21 | `384826f41` | Exact-reuse driver compiles Clippy-clean, passes the full importer suite, and clears both full remote push gates without stream execution |
+| 2026-08-21 | (pending) | Exact `Nat.mod_lt` reuse closes official-representation balanced Bézout twice with byte-identical empty-footprint evidence |
+| 2026-08-21 | `3c2a2b29e` | Generic coprime-factor cancellation is frozen over an explicit balanced-Bézout parameter before source construction |
+| 2026-08-21 | (pending) | First generic cancellation source stops before elaboration at an unbound local module and restores the exact baseline |
+| 2026-08-21 | `cce486823` | Self-contained cancellation V2 freezes the same proof with only its four-natural certificate definition inlined |
+| 2026-08-21 | (pending) | Self-contained cancellation reconstructs twice deterministically but localizes its rejected footprint to `propext` |
+| 2026-08-21 | `efe97708a` | All seventeen direct cancellation dependencies are frozen before one non-rendering sealed-stream audit |
+| 2026-08-21 | (pending) | One exact audit splits eleven clean cancellation dependencies from six `propext` carriers |
+| 2026-08-21 | `4c81f2ce2` | Residual cancellation freezes direct witness replacements and leaves exactly three explicit theorem parameters |
+| 2026-08-21 | (pending) | Residual replay accepts the additive witness but retains one unexpected multiplicative-witness `propext` edge |
+| 2026-08-21 | `352a9c12a` | The multiplicative witness's exact three theorem dependencies are frozen before one same-stream audit |
+| 2026-08-21 | (pending) | Same-stream audit identifies `Nat.mul_assoc` as the witness's sole direct assumption carrier |
+| 2026-08-21 | `1d51489c7` | Residual V2 freezes exact multiplication-associativity parameterization before source construction |
+| 2026-08-21 | (pending) | Residual V2 reconstructs both witness leaves and four-parameter cancellation twice empty-footprint |
+| 2026-08-21 | `c9379241e` | All-Nat additive cancellation adapter is frozen as zero-divisor witness elimination plus positive successor delegation |
+| 2026-08-21 | (pending) | The all-Nat adapter reconstructs twice empty-footprint with only positive-divisor cancellation explicit |
+| 2026-08-21 | `dd15493b6` | Official cancellation composition is frozen across eight streams and one native positive-divisor leaf before code |
+| 2026-08-21 | (pending) | Eight-stream cancellation driver compiles Clippy-clean and passes the full importer suite without stream execution |
+| 2026-08-21 | (pending) | First official-cancellation run finds both multiplication leaves already present; checked exact reuse replaces the zero-addition composition |
+| 2026-08-21 | (pending) | Exact identity and kernel-type-shape reuse for both multiplication leaves is frozen before code or stream access |
+| 2026-08-21 | (pending) | Revised cancellation driver reuses both exact leaves without composition and passes the focused importer gate without stream execution |
+| 2026-08-21 | (pending) | Official coprime-factor divisibility cancellation reconstructs twice byte-identically with an empty footprint and exact five-theorem dependency set |
+| 2026-08-21 | (pending) | Five direct dependencies beneath assumption-bearing `Nat.dvd_antisymm` are frozen for one nonrendering audit before the gcd-shift target |
+| 2026-08-21 | (pending) | One exact audit localizes `Nat.dvd_antisymm`'s sole `propext` carrier to `Nat.le_of_dvd`; four direct dependencies are clean |
+| 2026-08-21 | (pending) | Clean native `le_of_dvd` duplication and target-owned divisibility antisymmetry are frozen before code or stream access |
+| 2026-08-21 | (pending) | Bounded clean divisibility-antisymmetry driver compiles without reading either proof-isolated input |
+| 2026-08-21 | (pending) | First clean antisymmetry run declines at a cross-kernel `NatPrelude` handle; no support publishes and the second run is skipped |
+| 2026-08-21 | (pending) | V2 freezes single-native-kernel support construction and checked named transport into r091 before code or stream access |
+| 2026-08-21 | (pending) | V2 clean order driver compiles Clippy-clean with all kernel-local handles confined to their native construction environment |
+| 2026-08-21 | (pending) | First V2 replay stops before antisymmetry submission because the native prelude lacks `Nat.eq_zero_of_zero_dvd`; the second is skipped and no support publishes |
+| 2026-08-21 | (pending) | V3 freezes an existential-witness proof of zero divisibility equality in the same native kernel before rebuilding or transporting antisymmetry |
+| 2026-08-21 | (pending) | V3 clean order driver closes the missing zero-divisibility leaf and passes Clippy plus the full importer suite without reading r091 |
+| 2026-08-21 | (pending) | First V3 replay accepts both prerequisite supports, then stops at absent convenience theorem `Nat.succ_pos`; the second is skipped and nothing publishes |
+| 2026-08-21 | (pending) | V4 freezes successor positivity as an inline native `zero_le` plus `le_succ_succ` proof before rebuilding antisymmetry |
+| 2026-08-21 | (pending) | V4 clean order driver replaces the absent convenience theorem with native order primitives and passes focused compile, Clippy, and importer tests |
+| 2026-08-21 | (pending) | First V4 replay reaches the trusted gate and rejects an unspecialized inner-induction hypothesis; the second is skipped and nothing publishes |
+| 2026-08-21 | (pending) | V5 freezes the complete antisymmetry proposition as the inner induction motive so each branch binds already-specialized divisibility hypotheses |
+| 2026-08-21 | (pending) | V5 clean order driver moves both divisibility binders inside the specialized induction branches and passes focused gates without reading r091 |
+| 2026-08-21 | (pending) | V5 clean zero-divisibility, divisor-bound, and divisibility-antisymmetry supports transport twice into r091 with byte-identical empty-footprint evidence |
+| 2026-08-21 | (pending) | Four portable root-selected support capsules are frozen before code or export so the exact target no longer depends on one monolithic reconstruction process |
+| 2026-08-21 | (pending) | Clean-order driver adds an explicit fail-if-present capsule path and two fresh independent imports before any proof-bearing stream write |
+| 2026-08-21 | (pending) | Clean divisibility antisymmetry exports twice as the same 158,285-byte root-selected capsule and independently reimports four times with unchanged empty-footprint evidence |
+| 2026-08-21 | (pending) | Official cancellation driver adds the same explicit capsule path, root selection, and two-import evidence check before writing |
+| 2026-08-21 | (pending) | Official cancellation exports twice as the same 888,104-byte root-selected capsule and independently reimports four times with unchanged empty-footprint evidence |
+| 2026-08-21 | (pending) | Dedicated Fibonacci-addition capsule driver reconstructs from the pinned recurrence and requires two independent imports before its fail-if-present write |
+| 2026-08-21 | `975bf5b47` | Exact Fibonacci coprimality gains a root-selected fail-if-present capsule boundary with two independent imports before write |
+| 2026-08-21 | (pending) | Four portable support roots export twice byte-identically, reimport sixteen raw times, and seal with unchanged identities and empty footprints |
+| 2026-08-21 | (pending) | Exact Fibonacci GCD-shift construction freezes induction, clean commutativity, mutual divisibility, and two zero-retry submissions before code |
+| 2026-08-21 | (pending) | First exact-target source build stops before execution at bounded naming and borrow diagnostics with zero stream reads or submissions |
+| 2026-08-21 | (pending) | V2 freezes only compiler-level corrections while preserving the exact proof route and zero-retry trusted-gate budget |
+| 2026-08-21 | (pending) | V2 clears all original diagnostics but stops before execution at one 103-line Clippy threshold with zero stream reads |
+| 2026-08-21 | (pending) | V3 freezes exactly one scoped line-count allowance with the proof body and target authority unchanged |
+| 2026-08-21 | (pending) | V3 exact-target driver compiles Clippy-clean over r091 plus four sealed roots without reading proof-bearing inputs |
+| 2026-08-21 | (pending) | First exact-target run declines before target submission at incompatible native and official `Nat.mul_zero` shapes; second run is skipped |
+| 2026-08-21 | (pending) | Official-r091 clean order freezes three target-owned proofs and requires cancellation compatibility before capsule export |
+| 2026-08-21 | (pending) | Official-r091 clean-order mode compiles Clippy-clean with cancellation compatibility checked before any capsule write |
+| 2026-08-21 | (pending) | First official-r091 support run stops before submission because pristine r091 lacks named `Nat.mul`; second run is skipped |
+| 2026-08-21 | (pending) | V2 freezes official cancellation composition before all clean-order handle resolution and proof construction |
+| 2026-08-21 | (pending) | V2 composes official cancellation before resolving clean-order proof handles and passes focused Clippy without stream access |
+| 2026-08-21 | (pending) | Cancellation-first V2 stops before support submission at missing recursive `Acc`; second run is skipped |
+| 2026-08-21 | (pending) | V3 freezes same-capsule `Nat.mod_lt` bootstrap before full cancellation composition and clean-order construction |
+| 2026-08-21 | (pending) | V3 composes and replays same-capsule `Nat.mod_lt` before cancellation and passes focused Clippy without stream access |
+| 2026-08-21 | (pending) | V3 bootstrap returns `NoAdditions`, confirming r091 already has `Nat.mod_lt`; second run is skipped before support submission |
+| 2026-08-21 | (pending) | V4 freezes exact checked reuse of existing r091 `Nat.mod_lt` as cancellation's sole target theorem leaf |
+| 2026-08-21 | (pending) | V4 verifies `Nat.mod_lt` identity and type shape and composes cancellation through the explicit target-leaf API without stream access |
+| 2026-08-21 | (pending) | V4 accepts `Nat.mod_lt` reuse but still finds another transitive path to missing `Acc`; run 2 is skipped before support submission |
+| 2026-08-21 | (pending) | One nonrendering closure audit freezes the official cancellation-to-`Acc` path and nearest compatible carriers before more bootstrap code |
+| 2026-08-21 | `7d931d9d3` | Non-rendering declaration-path auditor reports nearest carriers and target compatibility |
+| 2026-08-21 | `fe47460bd` | Fourteen autogenesis checker suites become gate-reachable; expired SMT negative control is replaced |
+| 2026-08-21 | (pending) | Single-read cancellation audit localizes the exact missing `Acc` package and freezes declaration-exact reconstruction |
+| 2026-08-21 | `b26edf6aa` | Exact official `Acc` package authorization retains atomic reconstruction and mutation controls |
+| 2026-08-21 | (pending) | Official cancellation composes twice over r091 with exact `Acc`, byte-identical receipts, and an empty footprint |
+| 2026-08-21 | (pending) | V5 freezes official clean-order reconstruction after exact `Acc` and cancellation acceptance |
+| 2026-08-21 | (pending) | V5 cancellation composition succeeds but eager unused `Iff` lookup stops before support submission; V6 freezes lazy resolution only |
+| 2026-08-21 | `f37c82184` | Shared proof builder resolves `Iff` only at its sole consumer |
+| 2026-08-21 | (pending) | V6 advances to missing positive-product factor support; V7 freezes a primitive-induction replacement |
+| 2026-08-21 | `29c126c0e` | Target-owned positive-product right-factor proof is added without importing broader order theory |
+| 2026-08-21 | (pending) | V7 advances to multiplicative monotonicity; V8 freezes two target-owned order leaves |

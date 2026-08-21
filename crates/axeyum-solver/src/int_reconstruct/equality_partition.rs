@@ -1013,8 +1013,8 @@ fn prove_partition_for_arbitrary(
             let zero = ctx.kernel.level_zero();
             let rec = ctx.kernel.const_(ctx.int.logic.bool_rec, vec![zero]);
             let rec = ctx.kernel.app(rec, motive);
-            let rec = ctx.kernel.app(rec, true_proof.proof);
             let rec = ctx.kernel.app(rec, false_proof.proof);
+            let rec = ctx.kernel.app(rec, true_proof.proof);
             let proof = ctx.kernel.app(rec, witness);
             Ok(PartitionSignedProof {
                 truth: desired,

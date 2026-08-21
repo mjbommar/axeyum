@@ -32,7 +32,18 @@ pub enum ArrayAxiomKind {
 /// the checked array axiom schemas above.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ArrayAxiomRefutationCertificate {
-    /// The original top-level disequality assertion.
+    /// The query assertion (or top-level conjunct of one) this refutation rests
+    /// on.
+    ///
+    /// **Not always a disequality**, and the difference matters to anything
+    /// trying to relate the rendered module back to the file. On the
+    /// `match_disequality` path it *is* the conjunct `not (= lhs rhs)`. On the
+    /// read-congruence path it is the whole assertion the probe walked — for a
+    /// BTOR-derived file, a bit-blasted `(= #b1 (bvand … (ite (distinct a0 a1)
+    /// #b1 #b0)))` — and `¬(lhs = rhs)` is something that assertion *entails*
+    /// rather than states. `scripts/check-lra-hypothesis-binding.py` covers both
+    /// by propagating a forced truth value down the assertion in Python
+    /// (`forced_disequalities`) instead of pattern-matching a disequality.
     pub assertion: TermId,
     /// The left side of the asserted equality inside the negation.
     pub lhs: TermId,
@@ -40,6 +51,35 @@ pub struct ArrayAxiomRefutationCertificate {
     pub rhs: TermId,
     /// Which valid array axiom schema refutes the assertion.
     pub kind: ArrayAxiomKind,
+}
+
+impl ArrayAxiomRefutationCertificate {
+    /// Is this certificate **degenerate** — are its two sides the same term?
+    ///
+    /// A degenerate certificate justifies nothing. The Lean module the
+    /// [`crate::prove_unsat_to_lean_module`] route renders from it keys its
+    /// opaque constants on the [`TermId`], so `lhs == rhs` becomes
+    ///
+    /// ```text
+    /// axiom hyp._1 : Eq.{1} α atom._0 atom._0
+    /// axiom hyp._2 : Not (Eq.{1} α atom._0 atom._0)
+    /// ```
+    ///
+    /// whose `False` is Lean's own `rfl` refuting `hyp._2` — it needs neither
+    /// `hyp._1` nor the array axioms nor anything at all from the query. So such
+    /// a module is evidence of nothing, and so is the certificate: it must never
+    /// reach the emitter or [`crate::Evidence`].
+    ///
+    /// This is the only property this predicate decides. It is **not** a full
+    /// re-derivation: it does not check that the query entails `¬(lhs = rhs)`,
+    /// nor that `lhs = rhs` is an instance of `kind`. Re-derivation is
+    /// `crate::evidence`'s `check_array_axiom_evidence`, which re-runs the
+    /// search; degeneracy is what re-running cannot catch, because the search
+    /// would produce the same degenerate answer again.
+    #[must_use]
+    pub fn is_degenerate(&self) -> bool {
+        self.lhs == self.rhs
+    }
 }
 
 /// Returns a certificate when any top-level conjunct is the negation of one of
@@ -51,6 +91,18 @@ pub struct ArrayAxiomRefutationCertificate {
 /// entailed by the original assertion.
 #[must_use]
 pub fn array_axiom_refutation(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<ArrayAxiomRefutationCertificate> {
+    let cert = array_axiom_refutation_candidate(arena, assertions)?;
+    // The single boundary a degenerate certificate must not cross. Every
+    // consumer -- the Lean emitter, `Evidence::UnsatArrayAxiom`, the fragment
+    // dispatcher -- goes through this function, so filtering here is filtering
+    // everywhere. See `ArrayAxiomRefutationCertificate::is_degenerate`.
+    (!cert.is_degenerate()).then_some(cert)
+}
+
+fn array_axiom_refutation_candidate(
     arena: &TermArena,
     assertions: &[TermId],
 ) -> Option<ArrayAxiomRefutationCertificate> {
@@ -898,6 +950,63 @@ fn match_disequality(arena: &TermArena, term: TermId) -> Option<(TermId, TermId)
     match_bit_literal(arena, term)
         .filter(|literal| !literal.equal_when_true)
         .map(|literal| (literal.lhs, literal.rhs))
+}
+
+/// **Stage 2 of the independent check**: is `lhs = rhs` genuinely an instance of
+/// `kind`, decided from the two terms alone?
+///
+/// This exists because `check_array_axiom_evidence` used to be *only* a re-run
+/// of the search — `array_axiom_refutation(..).is_some_and(|fresh| fresh == cert)`
+/// — which is a determinism check, not a soundness check: a recognizer that
+/// matches a satisfiable query produces the same wrong answer twice and the
+/// comparison succeeds. That shape covered 85 of 281 certified `unsat`
+/// instances (30.2%, measured 2026-08-21), the largest family by three times.
+///
+/// [`valid_array_axiom`] does not search the assertions and does not know which
+/// conjunct was chosen; it decides the axiom-instance claim structurally. So a
+/// checker that calls BOTH is no longer circular on that claim.
+///
+/// `ReadCongruence` is **not** decidable this way and returns `false` here: it is
+/// built by [`read_congruence_refutation`] out of equality facts accumulated
+/// across assertions, not by matching a schema against two terms. Its
+/// independence is still owed — see the caller, which says so rather than
+/// implying otherwise.
+#[must_use]
+pub(crate) fn certificate_is_axiom_instance(
+    arena: &TermArena,
+    cert: &ArrayAxiomRefutationCertificate,
+) -> bool {
+    // BOTH orientations, because the producer tries both
+    // (`array_axiom_refutation_candidate`) and stores `lhs`/`rhs` in the
+    // ORIGINAL order either way — the certificate does not record which
+    // orientation matched. A one-orientation check here rejected a genuine
+    // `SelectIte` certificate, and the `evidence` integration suite caught it
+    // where every targeted unit test I had run did not.
+    //
+    // This is the "a certificate must carry every distinction its producer
+    // makes" hazard in the one variant where the answer is NOT to add a field:
+    // equality is symmetric, so `lhs = rhs` is an axiom instance exactly when
+    // `rhs = lhs` is. Recording the orientation would pin an arbitrary choice
+    // and make honest certificates fail.
+    valid_array_axiom(arena, cert.lhs, cert.rhs) == Some(cert.kind)
+        || valid_array_axiom(arena, cert.rhs, cert.lhs) == Some(cert.kind)
+}
+
+/// The query really does state `¬(lhs = rhs)` at the certificate's own assertion.
+///
+/// Structural, and deliberately partial: it decides the `match_disequality`
+/// path, where the named assertion IS the negated equality (modulo the BTOR
+/// `bit = #b1` wrapper). On the read-congruence path the assertion only
+/// *entails* the disequality, so this returns `false` and the caller falls back.
+#[must_use]
+pub(crate) fn assertion_states_disequality(
+    arena: &TermArena,
+    assertion: TermId,
+    lhs: TermId,
+    rhs: TermId,
+) -> bool {
+    match_disequality(arena, assertion)
+        .is_some_and(|(l, r)| (l == lhs && r == rhs) || (l == rhs && r == lhs))
 }
 
 fn valid_array_axiom(arena: &TermArena, lhs: TermId, rhs: TermId) -> Option<ArrayAxiomKind> {
@@ -4207,5 +4316,135 @@ mod tests {
 
         assert_eq!(out.len(), leaves.len(), "every conjunct is collected");
         assert_eq!(out, leaves, "flattening preserves left-to-right order");
+    }
+
+    /// `(assert (not (not (= p (not p)))))` — the self-negating proposition, and
+    /// the shape that shipped the corpus's one self-refuting Lean module.
+    fn self_negating_proposition() -> (TermArena, Vec<TermId>, TermId, TermId) {
+        let mut arena = TermArena::new();
+        let p_sym = arena.declare("p", Sort::Bool).expect("declare p");
+        let p = arena.var(p_sym);
+        let not_p = arena.not(p).expect("not p");
+        let eq = arena.eq(p, not_p).expect("p = not p");
+        let inner = arena.not(eq).expect("not (p = not p)");
+        let assertion = arena.not(inner).expect("not (not (p = not p))");
+        (arena, vec![assertion], p, not_p)
+    }
+
+    #[test]
+    fn the_route_declines_rather_than_certifying_a_self_negating_proposition() {
+        // `p ≡ ¬p` is a contradiction, and it is a *Boolean* one: nothing here
+        // is an array axiom and nothing here is a disequality the query
+        // asserts. The witness search nevertheless reaches
+        // `conflicting_bool_negation_equalities`, which reports the class
+        // member `p` against itself — and the pair `(p, p)` renders as
+        //
+        //     axiom hyp._1 : Eq.{1} α atom._0 atom._0
+        //     axiom hyp._2 : Not (Eq.{1} α atom._0 atom._0)
+        //
+        // whose `False` is Lean's own `rfl` refuting `hyp._2`. That module
+        // needs no other axiom, no array axiom, and nothing whatever from the
+        // query: it is evidence of nothing. This was the corpus's one
+        // self-refuting Lean module (`artifacts/facts/smt2/
+        // neg-no-self-negating-proposition.smt2`, measured 2026-08-18).
+        //
+        // So the route declines. The query is still unsat and other routes
+        // still refute it; what it no longer gets is a certificate that says
+        // nothing.
+        let (arena, assertions, _p, _not_p) = self_negating_proposition();
+        assert_eq!(
+            array_axiom_refutation(&arena, &assertions),
+            None,
+            "a degenerate witness must not become a certificate"
+        );
+    }
+
+    #[test]
+    fn a_degenerate_certificate_is_recognized_as_carrying_nothing() {
+        // The predicate the public entry filters on, driven on its own.
+        let (arena, assertions, p, not_p) = self_negating_proposition();
+        let degenerate = ArrayAxiomRefutationCertificate {
+            assertion: assertions[0],
+            lhs: p,
+            rhs: p,
+            kind: ArrayAxiomKind::ReadCongruence,
+        };
+        assert!(degenerate.is_degenerate());
+        let honest = ArrayAxiomRefutationCertificate {
+            lhs: not_p,
+            ..degenerate
+        };
+        assert!(!honest.is_degenerate());
+        let _ = &arena;
+    }
+
+    /// Every corpus array-axiom certificate is measured against BOTH independent
+    /// stages, and the residual is counted rather than asserted away.
+    ///
+    /// This family is 30.2% of all certified `unsat` (85 of 281, 2026-08-21), and
+    /// its checker was for a long time only a re-run of the producer compared for
+    /// equality — which agrees with a wrong recognizer. Two stages are now decided
+    /// without asking the recognizer anything: the schema-instance check, and
+    /// whether the named assertion *states* the disequality rather than merely
+    /// entailing it.
+    ///
+    /// The point of counting is that "we added an independent check" is not the
+    /// same claim as "the family is independently checked", and only the second
+    /// one matters. Anything this test reports as resting on the re-run alone is
+    /// work still owed.
+    #[test]
+    fn corpus_array_axiom_certificates_are_measured_against_both_stages() {
+        let cases: &[(&str, &str)] = &[
+            (
+                "read-over-write, distinct indices",
+                "(declare-const a (Array (_ BitVec 4) (_ BitVec 8)))\
+                 (declare-const i (_ BitVec 4))\
+                 (declare-const j (_ BitVec 4))\
+                 (declare-const v (_ BitVec 8))\
+                 (assert (not (= (select (store a i v) j)\
+                                 (ite (= i j) v (select a j)))))",
+            ),
+            (
+                "select over ite",
+                "(declare-const a (Array (_ BitVec 4) (_ BitVec 8)))\
+                 (declare-const b (Array (_ BitVec 4) (_ BitVec 8)))\
+                 (declare-const c Bool)\
+                 (declare-const i (_ BitVec 4))\
+                 (assert (not (= (select (ite c a b) i)\
+                                 (ite c (select a i) (select b i)))))",
+            ),
+        ];
+
+        let mut schema_checked = 0_usize;
+        let mut states_disequality = 0_usize;
+        for (label, source) in cases {
+            let script = axeyum_smtlib::parse_script(source).expect("the fixture parses");
+            let arena = &script.arena;
+            let cert = array_axiom_refutation(arena, &script.assertions)
+                .unwrap_or_else(|| panic!("{label}: the recognizer must produce a certificate"));
+
+            assert!(!cert.is_degenerate(), "{label}: degenerate certificate");
+            if certificate_is_axiom_instance(arena, &cert) {
+                schema_checked += 1;
+            }
+            if assertion_states_disequality(arena, cert.assertion, cert.lhs, cert.rhs) {
+                states_disequality += 1;
+            }
+        }
+
+        // Both fixtures are schema matches whose assertion states the
+        // disequality outright, so both stages must decide both of them
+        // WITHOUT the producer re-run. If either number falls, an independence
+        // claim in `check_array_axiom_evidence` stopped being true.
+        assert_eq!(
+            schema_checked,
+            cases.len(),
+            "stage 2 (schema instance) must decide every schema-kind certificate"
+        );
+        assert_eq!(
+            states_disequality,
+            cases.len(),
+            "stage 1 (assertion states the disequality) must decide the stating path"
+        );
     }
 }

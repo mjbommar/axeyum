@@ -26,6 +26,12 @@ and [240-row candidate view](../../artifacts/autogenesis/mathlib-nat-int-candida
 
 ## Version decision
 
+> **2026-08-20 correction:** current official release metadata identifies
+> Mathlib v4.32.1 as stable and v4.33.0-rc1 as prerelease. The earlier
+> v4.33.0-stable observation below was incorrect. The planned separate stable
+> comparison therefore targets v4.32.1; see the
+> [measured comparison result](85-current-stable-mathlib-statement-comparison-result.md).
+
 v4.30.0 is not the newest upstream release. As observed on 2026-08-18, the
 official [Lean release page](https://github.com/leanprover/lean4/releases) and
 [Mathlib release page](https://github.com/leanprover-community/mathlib4/releases)
@@ -40,7 +46,7 @@ match v4.30.0, so it remains a coherent baseline. The economical sequence is:
 1. select and review the small v4.30 statement population;
 2. extract only the metadata needed to form dependency components;
 3. re-export the final small slices at the exact baseline pin;
-4. generate a separate v4.33 statement inventory and compare selected type
+4. generate a separate current-stable statement inventory and compare selected type
    identities; and
 5. treat survival across versions as measured generalization, not silently mix
    revisions inside one population.

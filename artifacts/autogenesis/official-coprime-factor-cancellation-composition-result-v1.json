@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-coprime-factor-cancellation-composition-result",
+  "state": "first-run-declined-at-already-present-clean-mul-leaves-no-retry",
+  "plan": {"path": "artifacts/autogenesis/official-coprime-factor-cancellation-composition-plan-v1.json", "sha256": "8ffb90ee24e5ae9e30a34ab07b422feb69167227444c319566ed6224334b0632", "commit": "dd15493b6"},
+  "evidence_pack": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/dd15493b6-official-coprime-factor-cancellation-v1/manifest.json", "sha256": "6c10af58550827c1f2ae9c7b50c4124128a941ab82e2f83b66a4c38ee15f7b5d", "directory_mode": "0555", "file_mode": "0444"},
+  "implementation": {"wrapper_path": "crates/axeyum-lean-import/examples/official_coprime_factor_cancellation_composition.rs", "wrapper_sha256": "f61420c2a83c61ef83e780216273639b77c0cb9286e846964972bdcb7cdf285a", "body_path": "crates/axeyum-lean-import/examples/official_gcd_balanced_bezout_composition.rs", "body_sha256": "4c193eed8a110c08127bdbecb494a946d1050aceff5de4f431b824a1127bfa66", "binary_sha256": "1a831800d521fc07b1427cc56dd5bb822826e9d73fb8163d09164b696907c0c0", "commit": "ff264a8a7"},
+  "execution": {"complete_invocations": 1, "input_stream_reads": 8, "successful_composition_operations": 3, "successful_specialization_operations": 3, "final_theorem_submissions": 0, "retries": 0, "second_invocation_skipped": true},
+  "decline": {"operation": "compose both clean multiplication leaves into the closed generic kernel", "class": "NoAdditions", "interpretation": "both exact declarations are already present and require explicit checked reuse", "partial_kernel_published": false},
+  "next_boundary": {"required_next_increment": "preregister exact identity and compatibility reuse for both multiplication leaves, then compose only residual cancellation, all-Nat adapter, and native positive cancellation"},
+  "authority": {"official_cancellation_credit": 0, "target_specialization_credit": 0, "exact_fibonacci_target_submissions": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "verification": "python3 scripts/check-autogenesis-official-coprime-factor-cancellation-composition-result.py",
+  "limitations": "No final cancellation theorem was submitted. This result authorizes only a separately preregistered exact-reuse increment for the two already-present multiplication leaves."
+}

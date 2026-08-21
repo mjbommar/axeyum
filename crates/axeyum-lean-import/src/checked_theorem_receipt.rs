@@ -279,6 +279,325 @@ pub fn verify_checked_semantic_theorem_receipt(
     Ok(())
 }
 
+/// Schema for checked theorem receipts whose direct library premises are
+/// explicitly preregistered by name and canonical declaration identity.
+pub const CHECKED_DEPENDENCY_THEOREM_RECEIPT_VERSION: &str =
+    "axeyum-checked-dependency-theorem-receipt-v1";
+
+/// One exact direct theorem premise authorized for a dependency-bound receipt.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CheckedTheoremDependency {
+    /// Stable rendered theorem name.
+    pub name: String,
+    /// Canonical declaration identity, which recursively binds its dependencies.
+    pub content_sha256: String,
+}
+
+/// Frozen authority for a checked theorem with explicit library premises.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CheckedDependencyTheoremAuthority {
+    /// Exact source, candidate, operation, and budget authority.
+    pub theorem: CheckedTheoremAuthority,
+    /// Complete sorted direct theorem premise set.
+    pub expected_direct_theorem_dependencies: Vec<CheckedTheoremDependency>,
+}
+
+/// Replayable evidence for an exact theorem and its preregistered direct premises.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CheckedDependencyTheoremReceipt {
+    /// Stable receipt schema.
+    pub schema_version: &'static str,
+    /// Frozen authority reproduced by the theorem and dependency set.
+    pub authority: CheckedDependencyTheoremAuthority,
+    /// Exact admitted theorem name.
+    pub theorem_name: String,
+    /// Canonical theorem declaration identity.
+    pub theorem_content_sha256: String,
+    /// Canonical theorem type identity.
+    pub theorem_type_sha256: String,
+    /// Canonical proof identity.
+    pub proof_sha256: String,
+    /// Must remain empty across the complete declaration closure.
+    pub axiom_footprint: Vec<String>,
+    /// Exact direct theorem premises and their canonical declaration identities.
+    pub direct_theorem_dependencies: Vec<CheckedTheoremDependency>,
+    /// Complete transitive theorem inventory, bound by replay but not premise authority.
+    pub transitive_theorem_dependencies: Vec<CheckedTheoremDependency>,
+    /// Canonical digest of all preceding fields.
+    pub receipt_sha256: String,
+}
+
+impl CheckedDependencyTheoremReceipt {
+    /// Recompute and verify the receipt digest.
+    #[must_use]
+    pub fn has_valid_digest(&self) -> bool {
+        serde_json::to_vec(&self.json_value(false))
+            .is_ok_and(|payload| hex_sha256(&payload) == self.receipt_sha256)
+    }
+
+    /// Render stable pretty JSON for durable storage.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error only if JSON serialization fails.
+    pub fn to_pretty_json(&self) -> Result<String, serde_json::Error> {
+        serde_json::to_string_pretty(&self.json_value(true)).map(|mut rendered| {
+            rendered.push('\n');
+            rendered
+        })
+    }
+
+    fn json_value(&self, include_digest: bool) -> Value {
+        let dependency_json = |rows: &[CheckedTheoremDependency]| {
+            rows.iter()
+                .map(|row| {
+                    json!({
+                        "name": row.name,
+                        "content_sha256": row.content_sha256,
+                    })
+                })
+                .collect::<Vec<_>>()
+        };
+        let base = &self.authority.theorem;
+        let mut value = json!({
+            "schema_version": self.schema_version,
+            "authority": {
+                "policy_version": base.policy_version,
+                "source_artifact_sha256": base.source_artifact_sha256,
+                "target_definition": base.target_definition,
+                "fact_id": base.fact_id,
+                "goal_sha256": base.goal_sha256,
+                "candidate_observation_sha256": base.candidate_observation_sha256,
+                "expected_proof_sha256": base.expected_proof_sha256,
+                "expected_theorem_content_sha256": base.expected_theorem_content_sha256,
+                "operation": base.operation,
+                "budget": {
+                    "max_plan_templates": base.max_plan_templates,
+                    "max_kernel_submissions": base.max_kernel_submissions,
+                    "max_executor_invocations": base.max_executor_invocations,
+                    "max_retries": base.max_retries,
+                },
+                "expected_direct_theorem_dependencies":
+                    dependency_json(&self.authority.expected_direct_theorem_dependencies),
+            },
+            "theorem": {
+                "name": self.theorem_name,
+                "content_sha256": self.theorem_content_sha256,
+                "type_sha256": self.theorem_type_sha256,
+                "proof_sha256": self.proof_sha256,
+            },
+            "axiom_footprint": self.axiom_footprint,
+            "dependencies": {
+                "direct_theorems": dependency_json(&self.direct_theorem_dependencies),
+                "transitive_theorems": dependency_json(&self.transitive_theorem_dependencies),
+            },
+        });
+        if include_digest {
+            value
+                .as_object_mut()
+                .expect("receipt JSON root is an object")
+                .insert(
+                    "receipt_sha256".to_owned(),
+                    Value::String(self.receipt_sha256.clone()),
+                );
+        }
+        value
+    }
+}
+
+/// A dependency-bound checked theorem receipt could not be issued or replayed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CheckedDependencyTheoremReceiptError {
+    /// Base authority or the expected dependency set is malformed.
+    InvalidAuthority,
+    /// The target was absent or was not a theorem.
+    WrongTargetKind,
+    /// The theorem did not reproduce the frozen candidate identities.
+    CandidateMismatch,
+    /// The theorem's complete closure retained axioms.
+    AxiomFootprint {
+        /// Stable sorted rendered axiom names.
+        names: Vec<String>,
+    },
+    /// The observed direct premise set differed from preregistered authority.
+    DependencyMismatch {
+        /// Complete preregistered rows.
+        expected: Vec<CheckedTheoremDependency>,
+        /// Complete kernel-observed rows.
+        observed: Vec<CheckedTheoremDependency>,
+    },
+    /// Canonical identity construction failed.
+    Identity(String),
+    /// A transported receipt was stale or mutated.
+    ReceiptMismatch,
+}
+
+impl fmt::Display for CheckedDependencyTheoremReceiptError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidAuthority => {
+                write!(formatter, "checked dependency theorem authority is invalid")
+            }
+            Self::WrongTargetKind => write!(formatter, "checked theorem target is not a theorem"),
+            Self::CandidateMismatch => write!(formatter, "theorem differs from sealed candidate"),
+            Self::AxiomFootprint { names } => {
+                write!(
+                    formatter,
+                    "checked theorem retains axioms: {}",
+                    names.join(",")
+                )
+            }
+            Self::DependencyMismatch { expected, observed } => write!(
+                formatter,
+                "checked theorem dependencies differ: expected {expected:?}; observed {observed:?}"
+            ),
+            Self::Identity(error) => write!(formatter, "checked theorem identity failed: {error}"),
+            Self::ReceiptMismatch => write!(formatter, "checked theorem receipt changed"),
+        }
+    }
+}
+
+impl std::error::Error for CheckedDependencyTheoremReceiptError {}
+
+/// Issue an exact receipt for an independently admitted theorem whose direct
+/// theorem premises have all been preregistered.
+///
+/// # Errors
+///
+/// Fails closed on malformed authority, candidate identity drift, a non-theorem
+/// target, any reached axiom, direct dependency drift, or identity failure.
+pub fn issue_checked_dependency_theorem_receipt(
+    kernel: &mut Kernel,
+    theorem_name: NameId,
+    authority: &CheckedDependencyTheoremAuthority,
+) -> Result<CheckedDependencyTheoremReceipt, CheckedDependencyTheoremReceiptError> {
+    validate_dependency_authority(authority)?;
+    let Some(Declaration::Theorem { ty, value, .. }) = kernel.environment().get(theorem_name)
+    else {
+        return Err(CheckedDependencyTheoremReceiptError::WrongTargetKind);
+    };
+    let (ty, value) = (*ty, *value);
+    let theorem_type_sha256 = canonical_expression_sha256(kernel, ty)
+        .map_err(CheckedDependencyTheoremReceiptError::Identity)?;
+    let proof_sha256 = canonical_expression_sha256(kernel, value)
+        .map_err(CheckedDependencyTheoremReceiptError::Identity)?;
+    let theorem_content_sha256 = canonical_declaration_sha256(kernel, theorem_name)
+        .map_err(CheckedDependencyTheoremReceiptError::Identity)?;
+    let base = &authority.theorem;
+    if theorem_type_sha256 != base.goal_sha256
+        || proof_sha256 != base.expected_proof_sha256
+        || theorem_content_sha256 != base.expected_theorem_content_sha256
+    {
+        return Err(CheckedDependencyTheoremReceiptError::CandidateMismatch);
+    }
+    let axiom_footprint = rendered_names(kernel, &kernel.axiom_footprint(theorem_name));
+    if !axiom_footprint.is_empty() {
+        return Err(CheckedDependencyTheoremReceiptError::AxiomFootprint {
+            names: axiom_footprint,
+        });
+    }
+    let direct_theorem_dependencies =
+        dependency_rows(kernel, &kernel.theorem_dependencies(theorem_name))?;
+    if direct_theorem_dependencies != authority.expected_direct_theorem_dependencies {
+        return Err(CheckedDependencyTheoremReceiptError::DependencyMismatch {
+            expected: authority.expected_direct_theorem_dependencies.clone(),
+            observed: direct_theorem_dependencies,
+        });
+    }
+    let transitive_names = kernel
+        .declaration_dependency_closure(theorem_name)
+        .into_iter()
+        .filter(|name| {
+            *name != theorem_name
+                && matches!(
+                    kernel.environment().get(*name),
+                    Some(Declaration::Theorem { .. })
+                )
+        })
+        .collect::<Vec<_>>();
+    let transitive_theorem_dependencies = dependency_rows(kernel, &transitive_names)?;
+    let mut receipt = CheckedDependencyTheoremReceipt {
+        schema_version: CHECKED_DEPENDENCY_THEOREM_RECEIPT_VERSION,
+        authority: authority.clone(),
+        theorem_name: kernel.display_name(theorem_name).to_string(),
+        theorem_content_sha256,
+        theorem_type_sha256,
+        proof_sha256,
+        axiom_footprint,
+        direct_theorem_dependencies: authority.expected_direct_theorem_dependencies.clone(),
+        transitive_theorem_dependencies,
+        receipt_sha256: String::new(),
+    };
+    let payload = serde_json::to_vec(&receipt.json_value(false))
+        .map_err(|error| CheckedDependencyTheoremReceiptError::Identity(error.to_string()))?;
+    receipt.receipt_sha256 = hex_sha256(&payload);
+    Ok(receipt)
+}
+
+/// Reissue and compare a dependency-bound checked theorem receipt exactly.
+///
+/// # Errors
+///
+/// Returns the issue-time error or `ReceiptMismatch` for stale or mutated evidence.
+pub fn verify_checked_dependency_theorem_receipt(
+    receipt: &CheckedDependencyTheoremReceipt,
+    kernel: &mut Kernel,
+    theorem_name: NameId,
+    authority: &CheckedDependencyTheoremAuthority,
+) -> Result<(), CheckedDependencyTheoremReceiptError> {
+    if !receipt.has_valid_digest() {
+        return Err(CheckedDependencyTheoremReceiptError::ReceiptMismatch);
+    }
+    let reissued = issue_checked_dependency_theorem_receipt(kernel, theorem_name, authority)?;
+    if &reissued != receipt {
+        return Err(CheckedDependencyTheoremReceiptError::ReceiptMismatch);
+    }
+    Ok(())
+}
+
+fn validate_dependency_authority(
+    authority: &CheckedDependencyTheoremAuthority,
+) -> Result<(), CheckedDependencyTheoremReceiptError> {
+    validate_authority(&authority.theorem)
+        .map_err(|_| CheckedDependencyTheoremReceiptError::InvalidAuthority)?;
+    let dependencies = &authority.expected_direct_theorem_dependencies;
+    if dependencies.is_empty()
+        || dependencies
+            .windows(2)
+            .any(|rows| rows[0].name >= rows[1].name)
+        || dependencies
+            .iter()
+            .any(|row| row.name.is_empty() || !is_sha256(&row.content_sha256))
+    {
+        return Err(CheckedDependencyTheoremReceiptError::InvalidAuthority);
+    }
+    Ok(())
+}
+
+fn dependency_rows(
+    kernel: &mut Kernel,
+    names: &[NameId],
+) -> Result<Vec<CheckedTheoremDependency>, CheckedDependencyTheoremReceiptError> {
+    let mut rows = names
+        .iter()
+        .map(|&name| {
+            canonical_declaration_sha256(kernel, name)
+                .map(|content_sha256| CheckedTheoremDependency {
+                    name: kernel.display_name(name).to_string(),
+                    content_sha256,
+                })
+                .map_err(CheckedDependencyTheoremReceiptError::Identity)
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    rows.sort_by(|left, right| left.name.cmp(&right.name));
+    if rows.windows(2).any(|pair| pair[0].name == pair[1].name) {
+        return Err(CheckedDependencyTheoremReceiptError::Identity(
+            "duplicate rendered theorem dependency name".to_owned(),
+        ));
+    }
+    Ok(rows)
+}
+
 fn validate_authority(
     authority: &CheckedTheoremAuthority,
 ) -> Result<(), CheckedSemanticTheoremReceiptError> {

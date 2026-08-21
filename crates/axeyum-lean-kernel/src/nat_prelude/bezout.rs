@@ -796,7 +796,8 @@ pub(super) fn declare_gcd_bezout(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
         let n = d.kernel().fvar(n_fv);
         let remainder = d.modulo(n, divisor);
         let quotient = d.div(n, divisor);
-        let decrease = d.lemma(p.mod_lt, &[predecessor, n]);
+        let positive = d.zero_lt_succ(predecessor);
+        let decrease = d.lemma(p.mod_lt, &[n, divisor, positive]);
         let recursive_row = d.apply(recursive, &[remainder, decrease]);
         let recursive_proof = d.apply(recursive_row, &[divisor]);
         let recursive_common = d.gcd(remainder, divisor);

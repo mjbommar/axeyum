@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-gcd-fib-add-self-euclidean-bridge-plan",
+  "state": "preregistered-bridge-no-execution-or-target-credit",
+  "policy_version": "nat-gcd-fib-add-self-euclidean-bridge-v1",
+  "inputs": {
+    "support_result": {
+      "path": "artifacts/autogenesis/mathlib-nat-gcd-fib-add-self-support-result-v2.json",
+      "sha256": "62aaba46d9aadaa378c0f0efdc847030d5f801794d926d67432a626d44e2b3e2"
+    },
+    "target_fact": {
+      "path": "artifacts/facts/F-ml430-nat-gcd-fib-add-self-5a92d5e3.json",
+      "sha256_at_plan": "f5752e5060191ff58837f9f3a5f589dd0174827ba2a836bfdb2fbb775aaa733a"
+    },
+    "statement_inventory": {
+      "path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-nat-int-statement-inventory-v2.ndjson",
+      "sha256": "4285e551680abf3b0cafb11709015f04b3aef3eb05ce23af2392b12cec31aecc",
+      "mode": "0444"
+    },
+    "mod_equation_pack": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/dd79317c5-lean430-nat-mod-equations-v1/manifest.json",
+      "sha256": "a41348a8fed7ebf1a877e5a48d86287c25a3216291da6c586909884f5f28c658",
+      "mode": "0444"
+    },
+    "division_support_audit": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-audits/a12d44858-lean430-nat-division-support-v1/manifest.json",
+      "sha256": "c462b234b64342bd4a43cf844c6aaaa05c9c13cc3ce3f2cc4a7a049d435f4c7f",
+      "mode": "0444"
+    }
+  },
+  "target": {
+    "fact_id": "F:ml430-nat-gcd-fib-add-self-5a92d5e3",
+    "source_name": "Nat.gcd_fib_add_self",
+    "target_definition": "Axeyum.Autogenesis.Coverage.r091",
+    "stream_sha256": "fc1117679c743009e8548a25d1f73f71f6cd42555ea77b3efce07844673670b2",
+    "exact_target_submissions_reserved": 2
+  },
+  "decision": {
+    "selected_route": "constructive-official-euclidean-and-balanced-bezout",
+    "rejected_shortcut": "import-or-graft-official-or-native-same-name-theorems",
+    "reason": "The broad route repairs a reusable official Euclidean foundation without importing the propext-bearing Nat.div_add_mod proof or transporting the incompatible native Nat.div_mod_exec declaration."
+  },
+  "fixed_stages": [
+    {
+      "id": "official-division-equation-root-audit-v1",
+      "kind": "footprint-census",
+      "roots": [
+        "Nat.div.go.eq_1",
+        "Nat.modCore.go.eq_1",
+        "Nat.mod.eq_2"
+      ],
+      "required_footprint": [],
+      "decline_if_any_root_is_assumption_bearing": true
+    },
+    {
+      "id": "joint-div-mod-fuel-invariant-v1",
+      "kind": "reusable-library-support",
+      "statement": "for positive y and shared fuel, y * div.go y fuel x + modCore.go y fuel x = x",
+      "construction": "induction on shared fuel using only the three audited computation roots and explicit subtraction restoration",
+      "fresh_reconstructions": 2
+    },
+    {
+      "id": "constructive-official-div-add-mod-v1",
+      "kind": "reusable-library-support",
+      "statement": "forall m n, n * (m / n) + m % n = m",
+      "construction": "lift the joint invariant through transparent official wrappers, handling the zero divisor separately",
+      "required_type_shape": "Nat.div_add_mod",
+      "fresh_reconstructions": 2
+    },
+    {
+      "id": "target-balanced-gcd-bezout-v1",
+      "kind": "reusable-library-support",
+      "statement": "the official target gcd has a balanced-natural Bezout certificate",
+      "construction": "re-author Euclidean descent over official gcd using the constructive div-add-mod bridge and target Nat.mod_lt",
+      "fresh_reconstructions": 2
+    },
+    {
+      "id": "target-coprime-factor-cancellation-v1",
+      "kind": "reusable-library-support",
+      "statement": "forall a c b d, gcd a c = 1 -> d divides a -> d divides (c * b) -> d divides b",
+      "construction": "replay the accepted cancellation algebra over the target-balanced Bezout theorem",
+      "required_type_shape": "Axeyum.Autogenesis.NatCoprimeFactorDivisibilityCancellation",
+      "fresh_reconstructions": 2
+    }
+  ],
+  "budget": {
+    "max_equation_root_audits": 1,
+    "max_new_support_theorem_declarations": 4,
+    "fresh_reconstructions_per_declaration": 2,
+    "max_new_kernel_theorem_submissions": 8,
+    "max_exact_source_target_submissions": 0,
+    "max_executor_invocations": 0,
+    "max_retries": 0
+  },
+  "gates": {
+    "equation_roots_before_authored_proofs": true,
+    "all_new_theorem_footprints_must_be_empty": true,
+    "public_equation_type_must_match_official_target": true,
+    "cancellation_type_must_match_accepted_native_support": true,
+    "direct_dependencies_must_be_enumerated": true,
+    "failed_or_partial_private_kernels_must_not_publish": true
+  },
+  "authority": {
+    "proof_bodies_allowed": false,
+    "same_name_transport_allowed": false,
+    "official_assumption_bearing_proof_import_allowed": false,
+    "exact_target_submission_allowed": false,
+    "executor_invocation_allowed": false,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "verification": "python3 scripts/check-autogenesis-nat-gcd-fib-add-self-euclidean-bridge-plan.py",
+  "limitations": "This plan authorizes only a bounded constructive bridge investigation. It does not alter the original target budget, submit Nat.gcd_fib_add_self, issue a semantic receipt, or establish that the audited division root is axiom-free before the audit runs."
+}

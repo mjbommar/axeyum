@@ -7,22 +7,51 @@ set_option linter.unusedVariables false
 -- ("code generator does not support recursor `T.rec` yet"). The section
 -- suppresses codegen only; it does not weaken type checking.
 noncomputable section
+-- Scope-aware sharing (see `ScopeId`) binds repeated subterms with
+-- `let`, and a `let` chain is NESTED syntax: one binding per level.
+-- Measured 2026-08-18, the constructed-carrier module binds 2,897
+-- of them inside one distributivity lemma alone, and Lean 4.30.0
+-- rejected the file at that declaration with `maximum recursion
+-- depth has been reached` -- the default limit is 512. (No carrier
+-- name appears in this banner on purpose: a sibling guard asserts a
+-- module over the constructed carrier never spells the axiomatized
+-- package's name, and it reads the whole file as one string.) This
+-- raises the
+-- ELABORATOR's recursion counter and nothing else: the kernel still
+-- checks every term, and `#print axioms` is unaffected.
+set_option maxRecDepth 65536
+
+-- Lean's own compiler-internal constants, which `Init.Prelude` declares
+-- (`unsafe axiom lcErased : Type`) and `prelude` mode therefore omits.
+-- Lean 4.34 runs code generation over a Prop-valued inductive that
+-- carries data -- `Or`, `Exists`, `Nat.le` -- and its IR names these, so
+-- without them the module dies on `Unknown constant lcErased` before any
+-- proof is checked. Measured 2026-08-17: 21 of 77 crosscheck families were
+-- rejected by 4.34.0-rc1 and accepted by 4.30.0, which is why the gate's
+-- verdict depended on which toolchain happened to be installed.
+--
+-- They are compiler-only: no proof term mentions them, so they do NOT
+-- enter any `#print axioms` footprint. Asserted, not assumed, by
+-- `codegen_constants_are_declared_but_never_in_the_footprint`.
+unsafe axiom lcErased : Type
+unsafe axiom lcAny : Type
+unsafe axiom lcVoid : Type
 
 inductive False : Prop where
 def Not : ((x0 : Prop) -> Prop) :=
   fun (x0 : Prop) => ((x1 : x0) -> False)
-axiom Real : Sort (1)
-axiom Real.mul : ((x0 : Real) -> ((x1 : Real) -> Real))
-axiom Real.zero : Real
-axiom Real.le : ((x0 : Real) -> ((x1 : Real) -> Prop))
-axiom Real.lt : ((x0 : Real) -> ((x1 : Real) -> Prop))
-axiom Real.lt_irrefl : ((x0 : Real) -> Not (Real.lt x0 x0))
-axiom Real.lt_of_le_of_lt : ((x0 : Real) -> ((x1 : Real) -> ((x2 : Real) -> ((x3 : Real.le x0 x1) -> ((x4 : Real.lt x1 x2) -> Real.lt x0 x2)))))
-axiom Real.sq_nonneg : ((x0 : Real) -> Real.le Real.zero (Real.mul x0 x0))
-axiom axeyum.reconstruct.lra.x._0 : Real
-axiom axeyum.reconstruct.lra.hyp._1 : Real.lt (Real.mul axeyum.reconstruct.lra.x._0 axeyum.reconstruct.lra.x._0) Real.zero
+axiom AxReal : Sort (1)
+axiom AxReal.mul : ((x0 : AxReal) -> ((x1 : AxReal) -> AxReal))
+axiom AxReal.zero : AxReal
+axiom AxReal.le : ((x0 : AxReal) -> ((x1 : AxReal) -> Prop))
+axiom AxReal.lt : ((x0 : AxReal) -> ((x1 : AxReal) -> Prop))
+axiom AxReal.lt_irrefl : ((x0 : AxReal) -> Not (AxReal.lt x0 x0))
+axiom AxReal.lt_of_le_of_lt : ((x0 : AxReal) -> ((x1 : AxReal) -> ((x2 : AxReal) -> ((x3 : AxReal.le x0 x1) -> ((x4 : AxReal.lt x1 x2) -> AxReal.lt x0 x2)))))
+axiom AxReal.sq_nonneg : ((x0 : AxReal) -> AxReal.le AxReal.zero (AxReal.mul x0 x0))
+axiom axeyum.reconstruct.lra.x._0 : AxReal
+axiom axeyum.reconstruct.lra.hyp._1 : AxReal.lt (AxReal.mul axeyum.reconstruct.lra.x._0 axeyum.reconstruct.lra.x._0) AxReal.zero
 
 theorem axeyum_refutation : False :=
-  Real.lt_irrefl Real.zero (Real.lt_of_le_of_lt Real.zero (Real.mul axeyum.reconstruct.lra.x._0 axeyum.reconstruct.lra.x._0) Real.zero (Real.sq_nonneg axeyum.reconstruct.lra.x._0) axeyum.reconstruct.lra.hyp._1)
+  AxReal.lt_irrefl AxReal.zero (AxReal.lt_of_le_of_lt AxReal.zero (AxReal.mul axeyum.reconstruct.lra.x._0 axeyum.reconstruct.lra.x._0) AxReal.zero (AxReal.sq_nonneg axeyum.reconstruct.lra.x._0) axeyum.reconstruct.lra.hyp._1)
 
 #print axioms axeyum_refutation

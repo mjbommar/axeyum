@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-generated-gcd-carrier-audit-result",
+  "state": "generated-gcd-carrier-localized-to-three-novel-dependencies",
+  "plan": {
+    "path": "artifacts/autogenesis/generated-gcd-carrier-audit-plan-v1.json",
+    "sha256": "e4afafd9b9f792fc3d5799dc9fa9c21e26b4191c09f79ae78948e4756838cbcf"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/38e40236f-generated-gcd-carrier-audit-v1/manifest.json",
+    "sha256": "9f18edbf8cc990e0f4e62910e9b06e836fc2809d4501ea2d3e07e3b3495d994b",
+    "mode": "0444"
+  },
+  "carrier": {
+    "name": "_private.Init.Data.Nat.Gcd.0.Nat.gcd._unary.eq_def",
+    "declaration_sha256": "94a501550fc670028fd1adbe2a12b714a575c38a1d5be02c84593d0b02c83f2b",
+    "axiom_footprint": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound"],
+    "direct_theorem_dependencies": [
+      "Eq.trans",
+      "WellFounded.Nat.fix_eq",
+      "_private.Init.Data.Nat.Gcd.0.Nat.gcd._unary._proof_1",
+      "_private.Init.Data.Nat.Gcd.0.PSigma.casesOn._arg_pusher",
+      "congrArg",
+      "congrFun'"
+    ],
+    "class": "other-assumption-bearing"
+  },
+  "already_measured_clean_dependencies": ["Eq.trans", "congrArg", "congrFun'"],
+  "novel_dependency_frontier": [
+    "WellFounded.Nat.fix_eq",
+    "_private.Init.Data.Nat.Gcd.0.Nat.gcd._unary._proof_1",
+    "_private.Init.Data.Nat.Gcd.0.PSigma.casesOn._arg_pusher"
+  ],
+  "summary": {
+    "population": 1,
+    "empty_footprint": 0,
+    "direct_dependency_population": 6,
+    "already_measured_clean_population": 3,
+    "novel_dependency_population": 3,
+    "primitive_reconstruction_authorized": false
+  },
+  "budget": {
+    "exporter_invocations": 0,
+    "batch_importer_runs": 1,
+    "proof_bearing_stream_reads": 1,
+    "retries": 0,
+    "reconstruction_source_compilations": 0,
+    "new_theorem_submissions": 0,
+    "exact_target_submissions": 0,
+    "executor_invocations": 0
+  },
+  "authority": {
+    "proof_terms_rendered": 0,
+    "theorem_types_rendered": 0,
+    "theorem_values_rendered": 0,
+    "support_theorem_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Audit the exact three-name novel frontier. If only WellFounded.Nat.fix_eq is assumption-bearing, preregister a primitive bounded reconstruction of the official gcd equation while retaining the private termination proof and argument pusher.",
+  "limitations": "The result localizes one generated carrier but does not classify its three novel dependencies or authorize any reconstruction, theorem, target, evaluation, fact, or ledger credit."
+}

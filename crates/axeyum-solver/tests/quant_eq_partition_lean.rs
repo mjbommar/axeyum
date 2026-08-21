@@ -9,6 +9,12 @@ use axeyum_solver::{
     reconstruct_single_pivot_equality_partition_to_lean_module, scan_proof_fragment,
 };
 
+// The golden pin covers the module BODY; the shared banner is pinned once, in
+// `axeyum-lean-kernel --test module_banner_pin`. Header text under many pins is
+// what made this suite red three times -- see the helper's module note.
+#[path = "../../axeyum-lean-kernel/tests/support/lean_golden.rs"]
+mod lean_golden;
+
 const SDLX: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../../corpus/public-curated/quantified/LIA/cvc5-regress-clean/",
@@ -41,11 +47,6 @@ fn sdlx_reconstructs_genuine_nested_quantifiers_and_routes() {
         &certificate,
     )
     .expect("sdlx reconstructs");
-    let fnv1a = source
-        .bytes()
-        .fold(0xcbf2_9ce4_8422_2325_u64, |hash, byte| {
-            (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3)
-        });
     // Re-pinned 2026-08-15 (was `(51_989, 0x33c9_7d4b_0b70_5040)`): `0fc7cc357`
     // discharged five of the six remaining integer axioms (`integer: axiom=6 → 1`),
     // so the integer laws this refutation reaches are theorems whose proof terms are
@@ -59,7 +60,20 @@ fn sdlx_reconstructs_genuine_nested_quantifiers_and_routes() {
     // `scripts/check-lean-gate.sh`. Accepted; `#print axioms axeyum_refutation`
     // reports `[axeyum.reconstruct.dio.hyp._97]` — the query hypothesis alone, no
     // ledger axiom — and there is no `sorryAx`.
-    assert_eq!((source.len(), fnv1a), (112_303, 0x285c_ec74_0c3f_95f2));
+    // The +1_640 of HEADER text that made this pin red on 2026-08-18 -- `b760fd6ae`
+    // (+863, Lean's codegen constants) and `46724faec` (+777, `maxRecDepth`), the
+    // third recurrence of one mechanism -- can no longer reach it: the pin below
+    // covers the module BODY, and the banner is pinned once in
+    // `axeyum-lean-kernel --test module_banner_pin`. If this moves, PROOF text
+    // moved. See `crates/axeyum-lean-kernel/tests/support/lean_golden.rs`.
+    // Re-pinned 2026-08-20 at the same 111_821-byte length: the native Bool
+    // package now follows official Lean order `[false, true]`, and the checked
+    // partition eliminator therefore writes the false cell before the true cell.
+    lean_golden::assert_golden_module(
+        "equality-partition",
+        &source,
+        (111_821, 0xdd44_2b73_bd9c_3779),
+    );
     assert!(source.contains("theorem axeyum_refutation : False"));
     assert!(source.contains("eq_em"));
     assert!(!source.contains("sorryAx"));

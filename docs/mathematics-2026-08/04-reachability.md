@@ -326,8 +326,9 @@ school-and-olympiad corpus — it is adversarial along the *shape* axis, not the
 A/C boundary in both corpora is a judgment call; the census file says so, and
 the B column with its `fragment` values is the part built to be argued with.
 
-**R4 — ~~Close the ordered-field hole so reachability can grow at all.~~ ℝ is the
-only ordered-field hole left, and it now blocks nothing.**
+**R4 — ~~Close the ordered-field hole so reachability can grow at all.~~
+~~ℝ is the only ordered-field hole left, and it now blocks nothing.~~
+CLOSED 2026-08-19: ℝ and ℂ are both constructed, at zero trusted declarations.**
 
 The original item read: *"Until `Sort::Int`/`Sort::Real` can carry evidence
 ([`02`](02-the-library.md), engineering strand `01`), every node above ℕ is
@@ -349,11 +350,24 @@ ones that left.
 | `nat` | 0 | 0 | |
 | `logic` | 0 | 0 | |
 | `integer` | 0 | 0 | 34 rows retired 2026-08-15 |
-| `string` | 1 | 1 | one `primitive-interface` constant |
+| `rat` | 0 | 0 | not in the ledger when this table was written |
+| `creal` | 0 | 0 | the **constructed** ℝ, ADR-0512 |
+| `complex` | 0 | 0 | ADR-0521 |
+| `string` | ~~1~~ **0** | ~~1~~ **0** | `append` retired 2026-08-17: it is a checked `Definition` by structural recursion, ADR-0513 |
 | `real` | 30 | 30 | 8 primitive-interface · 19 external-assumption · 3 derivable-theorem |
 
-**Total: 31, of which 30 are ℝ.** The one non-real row is
-`axeyum.string.2.append`. Two independent cross-checks from the fact ledger,
+**Total: ~~31~~ 30, and all 30 are ℝ** — re-derived 2026-08-19 from the ledger's
+rows *and* from the kernel, which this lane could run where the previous one
+could not:
+
+```text
+cargo run -q --release -p axeyum-lean-kernel \
+  --example nat_axiom_inventory -- --include-constructed
+complex 0 · creal 0 · integer 0 · logic 0 · nat 0 · rat 0 · string 0 · real 30
+```
+
+The non-real row this table recorded, `axeyum.string.2.append`, is now in
+`retired_entries`. Two independent cross-checks from the fact ledger,
 which is written by different people at different times than the axiom ledger:
 `F:int-euclidean-decomposition`'s footprint evidence records the integer surface
 "down from 34", matching the 34 retired rows exactly; and
@@ -361,10 +375,16 @@ which is written by different people at different times than the axiom ledger:
 states its generalisation is "quantified over all 30 interface components",
 matching the 30 live real rows exactly.
 
-*Not verified here:* the ledger's two `measurement` commands are cargo examples
-(`prelude_axiom_inventory`, `nat_axiom_inventory`) and this lane could not run
-cargo. Everything above is re-derived from the artifact's rows and corroborated
-against the fact ledger; the kernel itself was not re-interrogated.
+*Not verified when this was written:* the ledger's two `measurement` commands are
+cargo examples (`prelude_axiom_inventory`, `nat_axiom_inventory`) and that lane
+could not run cargo, so everything above was re-derived from the artifact's rows
+and corroborated against the fact ledger. **Both were run on 2026-08-19** and
+agree with the corrected table: `prelude_axiom_inventory` emits 30 rows, all
+`real`; `nat_axiom_inventory --include-constructed` reports every other prelude
+at `axiom=0 opaque=0 quotient=0 total_trusted=0`. The `--include-constructed`
+flag is what makes `creal` and `complex` appear at all — without it the tool
+answers a question about a different population, which is this repository's
+standing trap.
 
 ### What "can carry evidence" means operationally — there are two routes, not one
 
@@ -462,11 +482,25 @@ Three bounded steps, in order, each independently checkable:
    the application, so the machinery exists; what is missing is applying it to the
    schedule fact. Afterwards **no fact in the ledger has a `Real.*` axiom
    footprint**, and ℝ's entire trusted surface is unreferenced.
-3. **Then take the decision `02` step 5 asks for, which becomes cheap.** With
-   nothing depending on it, the remaining rows are either published as a declared
-   *interface* — the classification the ledger already gives 8 of them — or ℝ is
-   built over the ℚ that now exists. Do not build ℝ to close a hole; by then there
-   is no hole, only a choice.
+3. ~~**Then take the decision `02` step 5 asks for, which becomes cheap.**~~
+   **Taken, 2026-08-17/19, and it went the second way.** ℝ *is* built over the ℚ
+   that now exists — `CReal`, a Bishop setoid of regular ℚ-sequences under a
+   defined equality (**ADR-0512**), 94 declarations at trusted surface 0 — and ℂ
+   with it (**ADR-0521**, 39 declarations). This section's advice held up
+   exactly as written: nothing was waiting on ℝ, so it was built as a choice and
+   not to close a hole, and the 30 rows did not move because they are a
+   *different object* from the constructed carrier.
+
+   What the 30 are for is now settled rather than open. They stay as the
+   axiomatized interface the constructed carriers are checked *against*, and as
+   the negative control for every axiom-freedom claim here — **ADR-0509**,
+   "the trusted surface is measured as reached, not only declared". The measured
+   version of that: the shipped front door reconstructs over `CReal` with **0
+   carrier axioms** where the same three refutations over the `Real` package
+   carry 12, 17 and 8, and `arith_prelude_builds()` counts **0** on every
+   arithmetic arm of `prove_unsat_to_lean_module`. Delete the 30 and no such
+   control exists. Step 1 above (30 → 27) is therefore also no longer obviously
+   worth doing: shrinking a control makes it weaker.
 
 **The residue this measurement did surface is about the map, not the prelude.**
 The `reals` node advertises `axeyum_fragments = ["LRA / NRA (real-closed
@@ -512,12 +546,25 @@ comments.
 ## The frontier, stated plainly
 
 axeyum today is a **bounded** reasoner with a strong finite core, an
-independently-checkable proof route on four areas, **two number systems
+independently-checkable proof route on four areas, ~~two number systems
 constructed axiom-free (ℕ and ℤ) with ℚ normalised over them, and one still
-axiomatised (ℝ, 30 rows, 13 of them referenced by nothing — R4)**, and a routing
-table covering 1.5% of the adjacent concept graph.
+axiomatised (ℝ, 30 rows, 13 of them referenced by nothing — R4)~~ — **re-measured
+2026-08-19: five number systems constructed axiom-free (ℕ, ℤ, ℚ, ℝ, ℂ), the
+whole ladder at trusted surface 0, with the axiomatized `Real` package's 30 rows
+retained as the negative control rather than as an unfinished rung (ADR-0509,
+ADR-0512, ADR-0521)** — and a routing table covering 1.5% of the adjacent
+concept graph.
 
 That is a defensible position and a much better one than the field average — the
 finite core is genuinely strong, and Lean's own kernel accepts its output. But
 the ceiling is not set by the solver. It is set by what can be *stated*, and
 that is the least-developed rung of the ladder.
+
+> **What still bounds "what can be stated", 2026-08-19.** The carriers exist;
+> the *analysis* over them does not. No completeness, no suprema, no `sqrt`, no
+> cotransitivity of `lt` (~400 lines), no `apart_mul` (~300), no ℂ inverse and
+> no `Complex.abs` — the last two because `abs` needs `sqrt` needs completeness.
+> Costings and what each unblocks are in
+> [`02`](02-the-library.md#what-to-do-first) and the lane notes it cites. The
+> rung is no longer least-developed because it is *axiomatized*; it is
+> least-developed because it stops at the ordered-field-and-lattice level.

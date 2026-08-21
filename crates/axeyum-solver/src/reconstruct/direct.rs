@@ -267,8 +267,8 @@ fn finite_domain_bool_rec(
     let zero = ctx.kernel.level_zero();
     let rec = ctx.kernel.const_(ctx.prelude.bool_rec, vec![zero]);
     let e = ctx.kernel.app(rec, motive);
-    let e = ctx.kernel.app(e, true_case);
-    ctx.kernel.app(e, false_case)
+    let e = ctx.kernel.app(e, false_case);
+    ctx.kernel.app(e, true_case)
 }
 
 fn finite_domain_refl_f(ctx: &mut ReconstructCtx, f: ExprId, value: bool) -> ExprId {
@@ -437,8 +437,25 @@ fn reconstruct_term_identity_to_lean_module(
         })?;
 
     let mut ctx = ReconstructCtx::new();
-    let lhs = term_identity_term_expr(&mut ctx, cert.lhs);
-    let rhs = term_identity_term_expr(&mut ctx, cert.rhs);
+    // Render the certificate's two sides as the query's own terms, on the same
+    // budgeted rule the array-axiom route uses. `cert.assertion` IS the query
+    // conjunct `not (= lhs rhs)`, so the rendered `Not (Eq α lhs rhs)` is a
+    // transcription of an `(assert ...)` line and not a fresh vocabulary --
+    // which is what lets `scripts/check-lra-hypothesis-binding.py` relate it to
+    // the file and, crucially, FAIL when it does not match.
+    let structural = query_term_nodes(arena, &[cert.lhs, cert.rhs])
+        .is_some_and(|nodes| nodes <= ARRAY_AXIOM_MAX_RENDERED_NODES);
+    let (lhs, rhs) = if structural {
+        (
+            query_term_expr(&mut ctx, arena, cert.lhs),
+            query_term_expr(&mut ctx, arena, cert.rhs),
+        )
+    } else {
+        (
+            term_identity_term_expr(&mut ctx, cert.lhs),
+            term_identity_term_expr(&mut ctx, cert.rhs),
+        )
+    };
     let eq_prop = ctx.mk_eq(lhs, rhs);
     let eq_proof = fresh_axiom(&mut ctx, eq_prop, "term_identity")?;
     let diseq_prop = ctx.mk_not(eq_prop);
@@ -448,6 +465,9 @@ fn reconstruct_term_identity_to_lean_module(
     Ok(render_ctx_module(&mut ctx, proof))
 }
 
+/// One opaque constant for a whole term: the over-budget fallback, matching
+/// [`array_axiom_term_expr`]. A module built from these says nothing about the
+/// query.
 fn term_identity_term_expr(ctx: &mut ReconstructCtx, term: TermId) -> ExprId {
     let name = ctx.atom_const(&format!("term_identity_term_{}", term.index()));
     ctx.kernel.const_(name, vec![])
@@ -900,8 +920,25 @@ fn reconstruct_array_axiom_to_lean_module(
     })?;
 
     let mut ctx = ReconstructCtx::new();
-    let lhs = array_axiom_term_expr(&mut ctx, cert.lhs);
-    let rhs = array_axiom_term_expr(&mut ctx, cert.rhs);
+    // Render the certificate's two sides as the query's own terms when they fit
+    // the budget, and as one opaque constant per side when they do not. Both
+    // sides take the same decision, so a module never mixes the two: a reader
+    // (and `scripts/check-lra-hypothesis-binding.py`) sees either a structure it
+    // can match against the `.smt2` file or a skeleton that says nothing, never
+    // a structure with one side hollowed out.
+    let structural = query_term_nodes(arena, &[cert.lhs, cert.rhs])
+        .is_some_and(|nodes| nodes <= ARRAY_AXIOM_MAX_RENDERED_NODES);
+    let (lhs, rhs) = if structural {
+        (
+            query_term_expr(&mut ctx, arena, cert.lhs),
+            query_term_expr(&mut ctx, arena, cert.rhs),
+        )
+    } else {
+        (
+            array_axiom_term_expr(&mut ctx, cert.lhs),
+            array_axiom_term_expr(&mut ctx, cert.rhs),
+        )
+    };
     let eq_prop = ctx.mk_eq(lhs, rhs);
     let eq_proof = fresh_axiom(&mut ctx, eq_prop, "array_axiom")?;
     let diseq_prop = ctx.mk_not(eq_prop);
@@ -911,6 +948,122 @@ fn reconstruct_array_axiom_to_lean_module(
     Ok(render_ctx_module(&mut ctx, proof))
 }
 
+/// How many term nodes the array-axiom route will spell out in a rendered type.
+///
+/// The rendered form is a **tree**, so a shared DAG is duplicated at every use.
+/// Measured 2026-08-18 over the whole committed corpus: the 105 queries this
+/// route certifies have a combined `lhs`/`rhs` tree of 10 nodes at the median
+/// and 156 at the maximum, so no committed instance takes the opaque path.
+///
+/// The cap is not only about readability. Nothing in the recognizer bounds the
+/// term it matches, and while [`query_term_expr`] is iterative, the kernel's
+/// inference and the module renderer that run over the result are not:
+/// measured, a store chain about 2050 deep overflows the stack of a debug test
+/// thread. Depth is at most the node count, so 512 keeps that recursion three
+/// times inside the observed limit while leaving the corpus three times of
+/// headroom — and going over is a graceful fall back to the opaque rendering,
+/// never a lost certificate.
+const ARRAY_AXIOM_MAX_RENDERED_NODES: u64 = 512;
+
+/// Size of `terms` as the **tree** a rendered type would spell out, or `None` on
+/// overflow. Counts nodes, so sharing is *not* credited — that is the point.
+fn query_term_nodes(arena: &TermArena, terms: &[TermId]) -> Option<u64> {
+    let mut total: u64 = 0;
+    // Explicit stack: a generated benchmark controls the depth here.
+    let mut stack: Vec<TermId> = terms.to_vec();
+    while let Some(term) = stack.pop() {
+        total = total.checked_add(1)?;
+        if total > ARRAY_AXIOM_MAX_RENDERED_NODES {
+            return Some(total);
+        }
+        if let IrTermNode::App { args, .. } = arena.node(term) {
+            stack.extend(args.iter().copied());
+        }
+    }
+    Some(total)
+}
+
+/// Render a query term structurally into the EUF carrier `α`.
+///
+/// Leaves (symbols and literals) become opaque constants of `α`; applications
+/// become applications of an opaque `α → … → α` function. The *keys* below are
+/// internal to [`ReconstructCtx`] and never appear in the module — the emitted
+/// names are the usual `axeyum.reconstruct.atom._N` / `func._N`. What they buy
+/// is that the mapping is a **function of the query's syntax**: one query symbol
+/// is one constant wherever it occurs, two different symbols are two constants,
+/// and one operator at one arity is one function. That is what makes the
+/// rendered type a transcription rather than a fresh vocabulary, and what makes
+/// an independent structural match against the `.smt2` file able to *fail*.
+///
+/// This is a faithful encoding of the *shape*, not of the theory: `α` is
+/// uninterpreted, so the constant standing for `bvadd` is an opaque binary
+/// function and nothing in the module says it adds. The array axiom itself is
+/// still an assumed hypothesis. Both facts are stated in the trust-surface note.
+///
+/// Iterative (explicit stack, post-order, memoized per [`TermId`]) because the
+/// depth here is a *query's* nesting depth and nothing bounds it: the recursive
+/// form overflowed the stack on a 2048-deep store chain, which a generated
+/// benchmark can hand us.
+fn query_term_expr(ctx: &mut ReconstructCtx, arena: &TermArena, root: TermId) -> ExprId {
+    let mut memo: BTreeMap<TermId, ExprId> = BTreeMap::new();
+    let mut stack: Vec<(TermId, bool)> = vec![(root, false)];
+    while let Some((term, children_done)) = stack.pop() {
+        if memo.contains_key(&term) {
+            continue;
+        }
+        if !children_done {
+            stack.push((term, true));
+            if let IrTermNode::App { args, .. } = arena.node(term) {
+                for &arg in args.iter().rev() {
+                    stack.push((arg, false));
+                }
+            }
+            continue;
+        }
+        let expr = match arena.node(term) {
+            IrTermNode::App { op, args } => {
+                let key = match op {
+                    IrOp::Apply(func) => format!("q.fn.{}", arena.function(*func).0),
+                    other => format!("q.op.{other:?}"),
+                };
+                let rendered: Vec<ExprId> = args
+                    .iter()
+                    .map(|arg| *memo.get(arg).expect("post-order visits children first"))
+                    .collect();
+                let f = ctx.func_const(&key, rendered.len());
+                ctx.apply_func(f, &rendered)
+            }
+            leaf => {
+                let name = ctx.atom_const(&query_leaf_key(arena, leaf));
+                ctx.kernel.const_(name, vec![])
+            }
+        };
+        memo.insert(term, expr);
+    }
+    *memo.get(&root).expect("the root is rendered last")
+}
+
+/// The [`ReconstructCtx`] key for a query leaf. Distinct leaves get distinct
+/// keys — including across sorts, so the integer `1` and the one-bit vector `1`
+/// are two constants.
+fn query_leaf_key(arena: &TermArena, leaf: &IrTermNode) -> String {
+    match leaf {
+        IrTermNode::Symbol(symbol) => {
+            let (name, _sort) = arena.symbol(*symbol);
+            format!("q.sym.{name}")
+        }
+        IrTermNode::BoolConst(value) => format!("q.bool.{value}"),
+        IrTermNode::BvConst { width, value } => format!("q.bv.{width}.{value}"),
+        IrTermNode::WideBvConst(value) => format!("q.wbv.{value:?}"),
+        IrTermNode::IntConst(value) => format!("q.int.{value}"),
+        IrTermNode::RealConst(value) => format!("q.real.{value}"),
+        IrTermNode::App { .. } => unreachable!("applications are rendered structurally"),
+    }
+}
+
+/// One opaque constant for a whole term: the pre-2026-08-18 rendering, kept for
+/// the over-budget path above. A module built from these says nothing about the
+/// query — its vocabulary has no declared relationship to any query symbol.
 fn array_axiom_term_expr(ctx: &mut ReconstructCtx, term: TermId) -> ExprId {
     let name = ctx.atom_const(&format!("array_axiom_term_{}", term.index()));
     ctx.kernel.const_(name, vec![])
@@ -1277,11 +1430,41 @@ fn reconstruct_finite_array_extensionality_to_lean_module(
     }
 
     let mut ctx = ReconstructCtx::new();
+    // Render every read as the query's own term when the whole module fits the
+    // budget, and as one opaque constant per read when it does not. The decision
+    // is taken ONCE for all of them, so a module never mixes the two: a reader
+    // (and `scripts/check-lra-hypothesis-binding.py`) sees either a structure it
+    // can match against the `.smt2` file or a skeleton that says nothing, never
+    // a structure with some reads hollowed out.
+    //
+    // Collapsing each `(select a i)` into a bare `atom._N` was how this route
+    // was written, and nothing about the certificate required it -- the reads
+    // are the query's own `TermId`s. The cost was measurable: all four committed
+    // `FiniteArrayExtensionality` instances were pinned as transcribing NOTHING
+    // in `scripts/hypothesis-binding-attestations.txt`, for the same reason and
+    // by the same mechanism as the 89 `ArrayAxiom` rows that left that list
+    // earlier on 2026-08-18.
+    let reads: Vec<TermId> = cert
+        .read_equalities
+        .iter()
+        .flat_map(|read| [read.lhs_read, read.rhs_read])
+        .collect();
+    let structural = query_term_nodes(arena, &reads)
+        .is_some_and(|nodes| nodes <= ARRAY_AXIOM_MAX_RENDERED_NODES);
     let mut props = Vec::with_capacity(cert.read_equalities.len());
     let mut witnesses = Vec::with_capacity(cert.read_equalities.len());
     for read in &cert.read_equalities {
-        let lhs = finite_array_read_expr(&mut ctx, read.lhs_read);
-        let rhs = finite_array_read_expr(&mut ctx, read.rhs_read);
+        let (lhs, rhs) = if structural {
+            (
+                query_term_expr(&mut ctx, arena, read.lhs_read),
+                query_term_expr(&mut ctx, arena, read.rhs_read),
+            )
+        } else {
+            (
+                finite_array_read_expr(&mut ctx, read.lhs_read),
+                finite_array_read_expr(&mut ctx, read.rhs_read),
+            )
+        };
         let prop = ctx.mk_eq(lhs, rhs);
         let witness = fresh_axiom(&mut ctx, prop, "assume")?;
         props.push(prop);

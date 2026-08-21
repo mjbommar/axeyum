@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-coprime-carrier-audit-result-v2",
+  "state": "well-founded-fix-path-has-no-exact-parent-zero-left-selected-for-target-native-reconstruction",
+  "plan": {"path": "artifacts/autogenesis/nat-gcd-fib-add-self-coprime-carrier-audit-plan-v2.json", "sha256": "1a03c85729a6525004b2689e36259abbc20f0be09e02be05de5e032e22586154"},
+  "implementation_commit": "f042f87ac",
+  "evidence_pack": {"path": "/nas3/data/axeyum/autogenesis/audits/f042f87ac-gcd-fib-coprime-well-founded-fix-audit-v2", "manifest_sha256": "5adefb5d464d24130b4750a6d232616b4669a19b126ffc86ac52916f87956bf1", "directory_mode": "0555", "file_mode": "0444"},
+  "measurement": {"root_closure_size": 343, "carrier_count": 7, "blocked_dependency": "WellFounded.fix", "blocked_source_declaration_sha256": "dd6f46cd53977e814f49ea76b263f9b558d91aff5e7c76e20a793c497452f77c", "blocked_target_declaration_sha256": "eaeda80d6b539a753ce90af4fd3481e0490eea1ec7eb60aeeebe96a39a11c2bf", "introducing_capsule": "Axeyum.Autogenesis.officialCoprimeFactorDivisibilityCancellationV1"},
+  "path": [{"name": "WellFounded.fix_eq", "target_present": false, "source_axiom_footprint": []}, {"name": "Nat.gcd_zero_left", "target_present": false, "source_declaration_sha256": "f81aee8a1d8528ddf8b7be6007efbee190f2208cdef3dcfda9fa03a1f200175d", "source_axiom_footprint": []}],
+  "selection": "Compose accepted Axeyum.Autogenesis.nat_gcd_zero_left, submit a target-owned Nat.gcd_zero_left alias only after checked type compatibility, then prune the coprimality closure at that public theorem.",
+  "execution": {"complete_audits": 1, "kernel_submissions": 0, "exports": 0, "retries": 0, "rendered_proof_terms": 0, "rendered_theorem_types": 0, "rendered_theorem_values": 0},
+  "authority": {"support_credit": 0, "target_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "limitations": "This selects a reconstruction boundary but establishes no theorem or ledger credit."
+}

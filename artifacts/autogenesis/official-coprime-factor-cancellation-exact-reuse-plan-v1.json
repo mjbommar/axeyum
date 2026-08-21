@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-coprime-factor-cancellation-exact-reuse-plan",
+  "state": "preregistered-two-leaf-exact-reuse-before-code-or-stream-access",
+  "predecessor": {"path": "artifacts/autogenesis/official-coprime-factor-cancellation-composition-result-v1.json", "sha256": "7f8cc75f0813c4026d2ee259c62b6c6cc5a529fa8ec9ca83679f67ab9f6b5588", "finding": "both clean multiplication leaf compositions declined with NoAdditions because the declarations are already present"},
+  "accepted_inputs": {
+    "official_balanced_bezout": {"path": "artifacts/autogenesis/official-gcd-balanced-bezout-exact-reuse-result-v1.json", "sha256": "218edbd1a0569db0d94f953d74adb38af79c1a43e5797dfe883face31f73a0c1"},
+    "clean_mul_leaves": {"path": "artifacts/autogenesis/balanced-bezout-clean-mul-leaves-result-v1.json", "sha256": "f4f0ce40c469d65e24639cfef76edd4ec1ce9ce7d6a0d865e7b95d9d71c1700c"},
+    "residual_cancellation": {"path": "artifacts/autogenesis/coprime-factor-cancellation-residual-v2-result-v1.json", "sha256": "08d74429b7d7ec0d40a0e8cf22049c8487fcefaa88eaf9cf21680b903f651702"},
+    "all_nat_adapter": {"path": "artifacts/autogenesis/dvd-add-cancel-all-nat-adapter-result-v1.json", "sha256": "c9ce2a90e3167f8c71e1c813ec2ce9f3dae13b791549d9aac43396dec6b33e7b"}
+  },
+  "implementation": {"path": "crates/axeyum-lean-import/examples/official_gcd_balanced_bezout_composition.rs", "required_change": "check canonical declaration equality and kernel-type-shape compatibility for both clean multiplication leaves, reuse them without composition, and compose only the residual theorem, all-Nat adapter, and native positive cancellation after replaying official balanced Bezout", "proof_terms_types_or_values_may_be_rendered": false},
+  "acceptance": {
+    "fresh_complete_invocations": 2,
+    "outputs_must_be_byte_identical": true,
+    "all_input_streams_must_be_axiom_free": true,
+    "reused_roots": ["Axeyum.Autogenesis.balancedBezoutMulAssocLeafV1", "Axeyum.Autogenesis.balancedBezoutRightDistribLeafV1"],
+    "each_reused_root_source_and_target_declaration_sha256_must_match": true,
+    "each_reused_root_checked_compatibility_must_be_kernel_type_shape": true,
+    "new_cancellation_composed_roots": ["Axeyum.Autogenesis.coprimeFactorDivisibilityCancellationResidualV2", "Axeyum.Autogenesis.dvdAddCancelAllNatAdapterV1", "Nat.dvd_add_right_cancel_of_pos"],
+    "total_composition_operations_per_invocation": 6,
+    "total_specialization_operations_per_invocation": 5,
+    "every_composition_and_specialization_must_replay": true,
+    "final_theorem": "Axeyum.Autogenesis.officialCoprimeFactorDivisibilityCancellationV1",
+    "final_axiom_footprint": [],
+    "required_final_direct_dependencies": ["Axeyum.Autogenesis.balancedBezoutMulAssocLeafV1", "Axeyum.Autogenesis.balancedBezoutRightDistribLeafV1", "Axeyum.Autogenesis.coprimeFactorDivisibilityCancellationResidualV2", "Axeyum.Autogenesis.dvdAddCancelAllNatClosedV1", "Axeyum.Autogenesis.officialGcdBalancedBezoutClosedOfficialKernelV1"],
+    "forbidden_dependencies": ["funext", "propext"]
+  },
+  "budget": {"max_binary_builds": 1, "max_complete_invocations": 2, "max_input_stream_reads": 16, "max_composition_operations": 12, "max_specialization_operations": 10, "max_final_theorem_submissions": 2, "max_retries": 0, "max_exact_fibonacci_target_submissions": 0},
+  "execution": {"evidence_pack": "/nas3/data/axeyum/autogenesis/reference-packs/d8fae64fe-official-coprime-factor-cancellation-exact-reuse-v1", "retain_exact_executed_rust_source": true},
+  "authority": {"official_cancellation_credit": 0, "target_specialization_credit": 0, "exact_fibonacci_target_submissions": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_on_accept": "Use official cancellation with the admitted Fibonacci recurrence and coprimality receipt to reconstruct Nat.gcd_fib_add_self.",
+  "output": "artifacts/autogenesis/official-coprime-factor-cancellation-exact-reuse-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-official-coprime-factor-cancellation-exact-reuse-plan.py",
+  "limitations": "This plan may close only general official coprime-factor cancellation. It grants no Fibonacci target, fact, evaluation, or ledger authority before accepted replay evidence."
+}

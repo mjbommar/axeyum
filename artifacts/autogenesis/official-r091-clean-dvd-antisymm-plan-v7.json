@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-r091-clean-dvd-antisymm-plan-v7",
+  "state": "preregistered-target-owned-positive-product-factor-before-code-or-rerun",
+  "predecessor": {
+    "path": "artifacts/autogenesis/official-r091-clean-dvd-antisymm-result-v6.json"
+  },
+  "new_support": {
+    "name": "Axeyum.Autogenesis.oneLeRightOfMulOfficialV1",
+    "statement": "forall g q : Nat, 1 <= g * q -> 1 <= q",
+    "method": "primitive induction on q; q=0 rewrites g*0 to 0 and eliminates 1<=0 through Nat.not_succ_le_zero and False.rec; q=succ j closes from Nat.zero_le and Nat.le_succ_succ",
+    "exact_required_theorem_leaves": [
+      "Nat.mul_zero",
+      "Nat.not_succ_le_zero",
+      "Nat.zero_le",
+      "Nat.le_succ_succ"
+    ],
+    "required_inductive_leaves": ["False", "False.rec"]
+  },
+  "downstream": "replace only the missing Nat.one_le_right_of_mul handle in leOfDvdOfficialV1 with the new target-owned theorem; eq-zero, le-of-dvd, and antisymmetry proof bodies otherwise remain unchanged",
+  "acceptance": {
+    "fresh_complete_invocations": 2,
+    "cancellation_compositions": 2,
+    "support_submissions": 8,
+    "exports": 2,
+    "outputs_byte_identical": true,
+    "fresh_imports_per_output": 2,
+    "all_axiom_footprints": [],
+    "exact_target_submissions": 0
+  },
+  "budget": {
+    "max_driver_builds": 1,
+    "max_complete_invocations": 2,
+    "max_support_submissions": 8,
+    "max_exports": 2,
+    "max_imports": 4,
+    "max_exact_target_submissions": 0,
+    "max_retries": 0
+  },
+  "authority": {
+    "support_credit_before_acceptance": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_on_accept": "Replace the portable clean-order input in the exact Fibonacci gcd-shift driver with the official-r091 capsule and preregister two exact-target runs.",
+  "output": "artifacts/autogenesis/official-r091-clean-dvd-antisymm-result-v7.json",
+  "verification": "python3 scripts/check-autogenesis-official-r091-clean-dvd-antisymm-v6-v7.py",
+  "limitations": "This authorizes one target-owned arithmetic support and official clean order only; it grants no Fibonacci target or ledger credit."
+}

@@ -7,23 +7,25 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
+      "decision_backend": "lia-diophantine-certificate",
       "dominant_candidate": true,
-      "elapsed_ms": 69.515941,
+      "elapsed_ms": 20.258992,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "diophantine-unsat",
       "file": "corpus/public-curated/non-incremental/QF_LIA/cvc5-regress-clean-bounded/cli__regress0__bug365.smt2",
       "lean_checked": true,
       "lean_error": null,
       "lean_fragment": "Diophantine",
-      "lean_module_bytes": 50133,
+      "lean_module_bytes": 131578,
       "phase_timings_ms": {
-        "check_evidence": 22.118202,
-        "lean_reconstruction": 22.076036000000002,
-        "parse_evidence": 0.204614,
-        "parse_lean": 0.06744,
-        "produce_evidence": 24.998807000000003,
-        "read": 0.014277999999999999
+        "check_evidence": 5.2699549999999995,
+        "lean_reconstruction": 5.09361,
+        "parse_evidence": 0.102576,
+        "parse_lean": 0.031187,
+        "produce_evidence": 9.554881,
+        "read": 0.035205
       },
       "trust_holes": [],
       "trust_steps": [
@@ -38,9 +40,11 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
+      "decision_backend": "arith-dpll-exact-theory-enumeration",
       "dominant_candidate": true,
-      "elapsed_ms": 0.8219380000000001,
+      "elapsed_ms": 0.296551,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "sat-model",
       "file": "corpus/public-curated/non-incremental/QF_LIA/cvc5-regress-clean-bounded/cli__regress0__bug383.smt2",
@@ -49,12 +53,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.026522,
+        "check_evidence": 0.0038789999999999996,
         "lean_reconstruction": null,
-        "parse_evidence": 0.11467300000000001,
+        "parse_evidence": 0.033077999999999996,
         "parse_lean": null,
-        "produce_evidence": 0.653494,
-        "read": 0.017881
+        "produce_evidence": 0.19422699999999998,
+        "read": 0.06362999999999999
       },
       "trust_holes": [],
       "trust_steps": []
@@ -64,49 +68,58 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
+      "decision_backend": "dl-online-negative-cycle-farkas",
       "dominant_candidate": true,
-      "elapsed_ms": 3.467747,
+      "elapsed_ms": 14.710719000000001,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
-      "evidence_kind": "arith-dpll-unsat",
+      "evidence_kind": "farkas-unsat",
       "file": "corpus/public-curated/non-incremental/QF_LIA/cvc5-regress-clean-bounded/cli__regress0__dump-unsat-core-full.smt2",
       "lean_checked": true,
       "lean_error": null,
-      "lean_fragment": "ArithDpll",
-      "lean_module_bytes": 579,
+      "lean_fragment": "IntFarkas",
+      "lean_module_bytes": 93677,
       "phase_timings_ms": {
-        "check_evidence": 0.115593,
-        "lean_reconstruction": 2.6916610000000003,
-        "parse_evidence": 0.10054300000000001,
-        "parse_lean": 0.050735999999999996,
-        "produce_evidence": 0.484166,
-        "read": 0.014071
+        "check_evidence": 0.00094,
+        "lean_reconstruction": 8.61398,
+        "parse_evidence": 0.025884,
+        "parse_lean": 0.012298,
+        "produce_evidence": 0.013946,
+        "read": 0.016
       },
       "trust_holes": [],
-      "trust_steps": []
+      "trust_steps": [
+        {
+          "certified": true,
+          "id": "farkas"
+        }
+      ]
     },
     {
       "audit_outcome": "unsat",
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
+      "decision_backend": "arith-dpll-exact-theory-enumeration",
       "dominant_candidate": true,
-      "elapsed_ms": 7.293992,
+      "elapsed_ms": 4.764125,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "arith-dpll-unsat",
       "file": "corpus/public-curated/non-incremental/QF_LIA/cvc5-regress-clean-bounded/cli__regress0__named-expr-use.smt2",
       "lean_checked": true,
       "lean_error": null,
       "lean_fragment": "ArithDpll",
-      "lean_module_bytes": 579,
+      "lean_module_bytes": 3151,
       "phase_timings_ms": {
-        "check_evidence": 1.382217,
-        "lean_reconstruction": 3.7911,
-        "parse_evidence": 0.132408,
-        "parse_lean": 0.087766,
-        "produce_evidence": 1.8772039999999999,
-        "read": 0.012414
+        "check_evidence": 0.112805,
+        "lean_reconstruction": 2.139263,
+        "parse_evidence": 0.050306000000000003,
+        "parse_lean": 0.024803,
+        "produce_evidence": 0.40377,
+        "read": 0.032803
       },
       "trust_holes": [],
       "trust_steps": []
@@ -116,9 +129,11 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
+      "decision_backend": "arith-dpll-exact-theory-enumeration",
       "dominant_candidate": true,
-      "elapsed_ms": 0.266372,
+      "elapsed_ms": 0.195498,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "sat-model",
       "file": "corpus/public-curated/non-incremental/QF_LIA/cvc5-regress-clean-bounded/cli__regress0__opt-abd-no-use.smt2",
@@ -127,12 +142,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.0073869999999999995,
+        "check_evidence": 0.004198,
         "lean_reconstruction": null,
-        "parse_evidence": 0.076837,
+        "parse_evidence": 0.032499999999999994,
         "parse_lean": null,
-        "produce_evidence": 0.161941,
-        "read": 0.012305
+        "produce_evidence": 0.12056499999999999,
+        "read": 0.035288
       },
       "trust_holes": [],
       "trust_steps": []
@@ -142,23 +157,25 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
+      "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 3.736211,
+      "elapsed_ms": 0.535276,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "bool-simplification-unsat",
       "file": "corpus/public-curated/non-incremental/QF_LIA/cvc5-regress-clean-bounded/cli__regress0__proofs__RF-11-aci-norm-ndet.smt2",
       "lean_checked": true,
       "lean_error": null,
       "lean_fragment": "BoolSimplification",
-      "lean_module_bytes": 579,
+      "lean_module_bytes": 3169,
       "phase_timings_ms": {
-        "check_evidence": 0.088116,
-        "lean_reconstruction": 2.381025,
-        "parse_evidence": 0.526805,
-        "parse_lean": 0.486964,
-        "produce_evidence": 0.22548100000000001,
-        "read": 0.013505
+        "check_evidence": 0.007383000000000001,
+        "lean_reconstruction": 0.23815,
+        "parse_evidence": 0.09573000000000001,
+        "parse_lean": 0.076329,
+        "produce_evidence": 0.07522999999999999,
+        "read": 0.015091
       },
       "trust_holes": [],
       "trust_steps": []
@@ -168,9 +185,11 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
+      "decision_backend": "arith-dpll-exact-theory-enumeration",
       "dominant_candidate": true,
-      "elapsed_ms": 0.523188,
+      "elapsed_ms": 0.224181,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "sat-model",
       "file": "corpus/public-curated/non-incremental/QF_LIA/cvc5-regress-clean-bounded/cli__regress0__simple-dump-model.smt2",
@@ -179,12 +198,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.016437,
+        "check_evidence": 0.003519,
         "lean_reconstruction": null,
-        "parse_evidence": 0.106654,
+        "parse_evidence": 0.029176999999999998,
         "parse_lean": null,
-        "produce_evidence": 0.379508,
-        "read": 0.012826
+        "produce_evidence": 0.171013,
+        "read": 0.018416000000000002
       },
       "trust_holes": [],
       "trust_steps": []
@@ -194,9 +213,11 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
+      "decision_backend": "arith-dpll-exact-theory-enumeration",
       "dominant_candidate": true,
-      "elapsed_ms": 0.295009,
+      "elapsed_ms": 0.11438300000000001,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "sat-model",
       "file": "corpus/public-curated/non-incremental/QF_LIA/cvc5-regress-clean-bounded/cli__regress0__unconstrained__mult1.smt2",
@@ -205,12 +226,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.010931999999999999,
+        "check_evidence": 0.002225,
         "lean_reconstruction": null,
-        "parse_evidence": 0.090596,
+        "parse_evidence": 0.022223,
         "parse_lean": null,
-        "produce_evidence": 0.173211,
-        "read": 0.012325
+        "produce_evidence": 0.074323,
+        "read": 0.013589
       },
       "trust_holes": [],
       "trust_steps": []
@@ -220,9 +241,11 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
+      "decision_backend": "arith-dpll-exact-theory-enumeration",
       "dominant_candidate": true,
-      "elapsed_ms": 2.891639,
+      "elapsed_ms": 1.029385,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "sat-model",
       "file": "corpus/public-curated/non-incremental/QF_LIA/cvc5-regress-clean-bounded/cli__regress1__arith__issue789.smt2",
@@ -231,12 +254,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.136773,
+        "check_evidence": 0.026254999999999997,
         "lean_reconstruction": null,
-        "parse_evidence": 1.297336,
+        "parse_evidence": 0.22441,
         "parse_lean": null,
-        "produce_evidence": 1.433422,
-        "read": 0.017439
+        "produce_evidence": 0.764416,
+        "read": 0.012401
       },
       "trust_holes": [],
       "trust_steps": []
@@ -246,9 +269,11 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
+      "decision_backend": "arith-dpll-exact-theory-enumeration",
       "dominant_candidate": true,
-      "elapsed_ms": 74.597094,
+      "elapsed_ms": 20.975454000000003,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "sat-model",
       "file": "corpus/public-curated/non-incremental/QF_LIA/cvc5-regress-clean-bounded/cli__regress1__sym__sym4.smt2",
@@ -257,20 +282,27 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.348207,
+        "check_evidence": 0.045842,
         "lean_reconstruction": null,
-        "parse_evidence": 0.6736500000000001,
+        "parse_evidence": 0.212875,
         "parse_lean": null,
-        "produce_evidence": 73.491039,
-        "read": 0.077283
+        "produce_evidence": 20.696194000000002,
+        "read": 0.018234
       },
       "trust_holes": [],
       "trust_steps": []
     }
   ],
-  "limit": 10,
+  "limit": 1000,
   "logic": "QF_LIA",
+  "prelude_warm_ms": 13431.607658,
+  "prelude_warmed": true,
   "slice": "qf-lia-cvc5-regress-clean-solver-vs-z3-10s.json",
+  "source_revision": {
+    "dirty": false,
+    "sha": "496288979",
+    "source": "lane-snapshot"
+  },
   "summary": {
     "audit_errors": 0,
     "audited_decided": 10,
@@ -286,6 +318,6 @@
     "lean_unsat_pct": 100.0,
     "timeouts": 0
   },
-  "timeout_ms": 30000,
-  "version": 1
+  "timeout_ms": 10000,
+  "version": 3
 }

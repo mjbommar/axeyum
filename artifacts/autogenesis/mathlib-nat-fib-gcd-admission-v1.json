@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-sealed-kernel-capsule-admission",
+  "state": "durably-admitted-archived-and-clean-replayed",
+  "fact_id": "F:ml430-nat-fib-gcd-d1d98407",
+  "operation_id": "authoritative-mathlib-nat-fib-gcd-kernel-capsule-v1",
+  "registration_commit": "d357b330705c8b1817260bfb3e14618d52de9643",
+  "external_root": "/nas3/data/axeyum/autogenesis/admissions/d357b3307-mathlib-nat-fib-gcd-v1",
+  "external_index_sha256": "5aa7226c8a3f81d430ca52b8a5161105a17e9aa25a917c9ab1dbab8831da6c1c",
+  "source_bundle_sha256": "6ae9e84f74fc038cbc34da89b04ccb10c66bcac8654b0da51a7921e083f52e00",
+  "identities": {
+    "frontier_before_sha256": "86c2413efccd6e5c0f43e2cf57299ce114fcd641b8eee8c7e55d28330e94a0aa",
+    "execution_sha256": "7b8858fe4b664345f2b600f8528b4bbf80f04dc1584911211a8f46eda00a1d49",
+    "transaction_sha256": "55f8ea8d67b03d36b2f7d1345a801c798ff9af8e4818a085540af5a551a71d39",
+    "admission_event_sha256": "25fa3ff173975871fca0633a71db276a5bf6208f0558095c37e318856bff1f7a",
+    "frontier_after_sha256": "1e7f7626c911d53212e344e36cd766aea46c3d21de448d1dc6f5232a97476926",
+    "readiness_delta_sha256": "1759e8cb6b431e0e292e026499d5bf82da12f2ba45bba8c8cdd60886062b3963",
+    "before_fact_sha256": "e3f39bdf6ff0e16f2a56c7ac53e492bf81cef7dccba0414cc929b29b9f56c566",
+    "after_fact_sha256": "4110d7215072b2c6053bb1ca996653e4f87f60830b2d8f0e1ff83206bd03df2f"
+  },
+  "external_files": {
+    "frontier-before.json": "8c5fe4be8c60fcb62d296a5fce26cb5fce7f9f58c70e3188c7d4b072cd7ba544",
+    "execution.json": "6edbfae0e423dd8fd89e7622c8a160528217ddf85e69a883ecb5f78a0d5e8ed8",
+    "transaction.json": "60952c808339c36dac41d1656c1a2c8baf6037201584d5541e62f1e64810b509",
+    "admission-event.json": "3eda6ab424ace3d920c67cc1b21cd25b07d9c3638e1a8f21151060583a5645f4",
+    "frontier-after.json": "e3339c6cac0dbac78452dbd5a72e26aa4c6ab332b7ceaddcb268ca86f1ccd8fa",
+    "readiness.json": "56686c65e0d032869e97a120d616160fef9472026c747177ef9e40724d6180a4",
+    "before-fact.json": "e678d6b3a3b3bb9d6d7915b14e0ed3deed6377583fc0a15e22ea2d9c191db25d",
+    "after-fact.json": "6c6ed24ea4f5c7ffef1fe4ad14fdce2335ba0e46d789b7d40eec83a3d2ba22cc"
+  },
+  "fault_injection": {
+    "boundary": "after-intent",
+    "exit_status": 75,
+    "fact_unchanged_before_recovery": true
+  },
+  "result": {
+    "authoritative_ledger_writes": 1,
+    "fixture_writes": 0,
+    "newly_ready": [
+      "F:ml430-nat-fib-dvd-f80f3de1"
+    ],
+    "axiom_footprint": [],
+    "theorem_dependencies": [
+      "Axeyum.Autogenesis.fibGcdQuotientIterationV1",
+      "Axeyum.Autogenesis.gcdCommCleanV1",
+      "Axeyum.Autogenesis.modQuotientWitnessV4",
+      "Axeyum.Autogenesis.officialNatGcdSuccClosedV1",
+      "Nat.gcd.induction"
+    ],
+    "target_dependency": null
+  },
+  "clean_replay": {
+    "source_commit": "e242b72b303884ed192243df8ed19895848976a8",
+    "external_root": "/nas3/data/axeyum/autogenesis/replays/e242b72b3-nat-fib-gcd-v1",
+    "external_index_sha256": "d2f03d97591d3291cd6e08a2f3e87ab633dc8382b6de47ad60d9b623a4bdf4fb",
+    "replay_file_sha256": "340aedbe8ec4c5d7f0e31c5b1d878efba7ee3057f30dd9f1663c1351e9957b3c",
+    "replay_sha256": "b376dc0d2143d276516ac0506845ef254e60bac6579170a76c837326359f4043",
+    "fresh_execution_sha256": "b2e3718b554b13e3d68e60a8a625e69f315a778b18db14d8a799722ea7dfe3af",
+    "fresh_transaction_sha256": "f6ef581a90c6f13cc4710a55b91b6546edf52e02cfaef05ccc11ab08aa8c8ebd",
+    "fresh_event_sha256": "5edb5d3c0e22ef67494f72d109f46d32bb29aa890174188f6be92a304a8cc503",
+    "fresh_readiness_delta_sha256": "bf715113f53301baaa13c29795f7a0f73d216aa0cd9e6cf46d4155bc918c648e"
+  },
+  "reproduction": "python3 scripts/check-autogenesis-statement-reflexivity-admission.py --manifest artifacts/autogenesis/mathlib-nat-fib-gcd-admission-v1.json",
+  "limitations": "This admits one exact Mathlib v4.30 theorem from a fixed target-native capsule. It grants no held-out evaluation credit, no authority to transport same-name declarations, and no credit beyond the named theorem and its empty kernel axiom footprint. The preregistration predicted two direct unlocks, but the authoritative DAG delta produced only Nat.fib_dvd because Int.gcd_fib still also requires the open Int.fib_neg premise."
+}

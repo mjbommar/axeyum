@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-dvd-add-cancel-all-nat-adapter-plan",
+  "state": "preregistered-zero-successor-adapter-before-source",
+  "predecessor": {"path": "artifacts/autogenesis/coprime-factor-cancellation-residual-v2-result-v1.json", "sha256": "08d74429b7d7ec0d40a0e8cf22049c8487fcefaa88eaf9cf21680b903f651702", "remaining_parameter": "dvdAddCancel"},
+  "source": {"path": "scripts/lean/autogenesis_dvd_add_cancel_all_nat_adapter_v1.lean", "module": "AxeyumAutogenesisDvdAddCancelAllNatAdapterV1", "target": "Axeyum.Autogenesis.dvdAddCancelAllNatAdapterV1", "only_import": "Mathlib.Data.Int.GCD", "proof_search_allowed": false, "proof_terms_types_or_values_may_be_rendered": false},
+  "contract": "(forall d e b, 1 <= d -> d divides e -> d divides e+b -> d divides b) -> forall d e b, d divides e -> d divides e+b -> d divides b",
+  "construction": {"zero_divisor": "eliminate both explicit divisibility witnesses and derive b=0", "successor_divisor": "supply primitive positivity to the positive-divisor parameter"},
+  "acceptance": {"source_must_compile": true, "root_selected_stream_max_bytes": 2000000, "fresh_kernel_imports_required": 2, "audits_must_be_byte_identical": true, "axiom_footprint_must_be_empty": true, "positive_cancellation_must_remain_an_explicit_parameter": true},
+  "budget": {"max_source_copies": 1, "max_compiler_invocations": 1, "max_exporter_invocations": 1, "max_importer_runs": 2, "max_proof_bearing_stream_reads": 2, "max_retries": 0, "max_adapter_submissions": 1, "max_positive_leaf_submissions": 0, "max_official_cancellation_submissions": 0, "max_exact_fibonacci_target_submissions": 0},
+  "authority": {"all_nat_adapter_credit": 0, "positive_leaf_credit": 0, "official_cancellation_credit": 0, "exact_fibonacci_target_submissions": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_on_accept": "Compose the native clean positive-divisor cancellation theorem and specialize this adapter, then use it to close residual cancellation.",
+  "output": "artifacts/autogenesis/dvd-add-cancel-all-nat-adapter-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-dvd-add-cancel-all-nat-adapter-plan.py",
+  "limitations": "The adapter grants no all-Nat cancellation credit while the positive-divisor theorem remains a parameter."
+}

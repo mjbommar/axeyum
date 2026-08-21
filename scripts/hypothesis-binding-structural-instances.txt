@@ -1,0 +1,130 @@
+# Instances whose rendered Lean module transcribes the query's own TERMS.
+#
+# Weaker than the `bound` manifest and sharper than the `attested` one. A Farkas
+# hypothesis IS one of the query's constraints, so it binds to an `(assert …)`
+# line. An array/EUF hypothesis is the CONCLUSION of a congruence derivation --
+# for 89 of the 105 queries `ArrayAxiom` certifies, no assertion says
+# `¬(lhs = rhs)` at all -- so binding it to an assert line is not a hard check,
+# it is a check with no true instance. What holds instead, and is required here:
+#
+#     every term the module equates is a SUBTERM of the `.smt2` file, under one
+#     injective correspondence between the module's opaque names and the file's
+#     own symbols, literals and operators.
+#
+# Swap two arguments, drop a `store`, point an atom at the wrong symbol, or reuse
+# one Lean name for two query symbols, and no correspondence exists.
+#
+# These 95 were 95 of the 124 `attested` before 2026-08-18. The modules changed,
+# not the classification: `ProofFragment::ArrayAxiom` rendered ONE opaque
+# constant per whole term, so `select(store(a,i,v),j)` and every other term
+# reached Lean as `atom._0`. Nothing about the certificate required that -- its
+# `lhs`/`rhs` are the query's own `TermId`s, and their combined rendered tree is
+# 10 nodes at the median and 156 at the maximum over the whole corpus. It was how
+# the emitter was written. `QfAbv` and `QfUf` were ALREADY structural and were
+# misfiled as content-free by a check that read vocabulary rather than shape.
+#
+# Measured 2026-08-18: 95 instances, 2982 matched term nodes.
+#
+# 2026-08-18, LATER THE SAME DAY: this list is 32, not 95. The other 63 moved to
+# `hypothesis-binding-structural-anchored-instances.txt`, which is not a demotion
+# -- they earned a SECOND verdict. Their query asserts the disequality outright,
+# so anchoring holds of them as well, and recording only the structural half was
+# recording the weaker of two true statements.
+#
+# WHAT IS LEFT HERE IS THE CASE THIS VERDICT WAS CREATED FOR, and now it is the
+# only case in it: 32 instances whose hypothesis is a CONGRUENCE CONCLUSION, so
+# no assertion of the file says `¬(lhs = rhs)` and nothing anchors. 26
+# `ArrayAxiom`, 5 `QfAbv`, 1 `QfUf`. That the class is no longer a mixture is
+# what makes its own floor mean something: a drop here is a renderer that stopped
+# transcribing, not an instance that drifted between two verdicts.
+#
+# The pin is now two-sided. A row here must bind structurally AND must NOT
+# anchor; if a query starts forcing the disequality its module assumes, this
+# gate fails rather than going on recording the weaker statement.
+#
+# 2026-08-18, LATER STILL: 36, not 32. The 4 `FiniteArrayExtensionality` rows
+# joined from `hypothesis-binding-attestations.txt`. Nothing about the
+# certificate changed -- its reads are the query's own `TermId`s and always
+# were; the emitter collapsed each `(select a i)` into one opaque `atom._N`, so
+# a module that had every term of the file in it reached Lean saying nothing.
+# The same defect, and the same fix, as the 89 `ArrayAxiom` rows earlier the
+# same day. Their refutation is `¬(r₁ ∧ … ∧ rₙ)` rather than one equality and
+# its negation, which is why they bind structurally and do NOT anchor: a negated
+# conjunction is not a fact about either conjunct.
+#
+# Measured 2026-08-18: 36 instances, 1204 matched term nodes.
+corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw32.btor.smt2
+corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond11.btor.smt2
+corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond18.btor.smt2
+corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond3.btor.smt2
+corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond5.btor.smt2
+corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond6.btor.smt2
+corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond7.btor.smt2
+corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond8.btor.smt2
+corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext11.btor.smt2
+corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read1.btor.smt2
+corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read2.btor.smt2
+corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read4.btor.smt2
+corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read8.btor.smt2
+corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read9.btor.smt2
+corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write14.btor.smt2
+corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write2.btor.smt2
+corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write4.btor.smt2
+corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write7.btor.smt2
+corpus/public-curated/non-incremental/QF_ABV/cvc5-regress-clean/cli__regress0__arrays__issue9041.smt2
+corpus/public-curated/non-incremental/QF_ABV/cvc5-regress-clean/cli__regress0__bv__issue9519.smt2
+corpus/public-curated/non-incremental/QF_ABV/cvc5-regress-clean/cli__regress0__bv__proj-issue321.smt2
+corpus/public-curated/non-incremental/QF_ALIA/cvc5-regress-clean/cli__regress0__arith__integers__ackermann4.smt2
+corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtextarrayaxiom1.smt2
+corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtextarrayaxiom1uf.smt2
+corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtextarrayaxiom2.smt2
+corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtextarrayaxiom2uf.smt2
+corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtextarrayaxiom3.smt2
+corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtextarrayaxiom3uf.smt2
+corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtextarrayaxiom4.smt2
+corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__smtextarrayaxiom4uf.smt2
+corpus/regression/cvc5/qf_abv/cvc5__cli__regress0__arrays__issue9041.smt2
+corpus/regression/cvc5/qf_abv/cvc5__cli__regress0__bv__issue10057.smt2
+corpus/regression/cvc5/qf_abv/cvc5__cli__regress0__bv__issue9519.smt2
+corpus/regression/cvc5/qf_abv/cvc5__cli__regress0__bv__proj-issue321.smt2
+corpus/regression/cvc5/qf_bv/cvc5__cli__regress0__bv__bvproof3.smt2
+docs/rules-as-code/examples/category-equivalence-v0/smt2/implementation-equivalence-qf-uf-conflict.smt2
+
+# 2026-08-18, `FiniteDomainPigeonhole`: the two `bug593` rows, and READ THIS
+# BEFORE BELIEVING THE VERDICT FOR THEM.
+#
+# They arrived here from the DECLINED list on the first run after that list
+# became a check — which is what a two-sided pin is for. Their match is real: 24
+# term nodes, all four corruptions of each caught, none accepted. It is also
+# SHALLOW, and the measurement is worth more than the row.
+#
+# The query is `¬(f (g x) = f (g y)) ∧ ¬(f (g x) = f (g z)) ∧ ¬(f (g y) = f (g z))`.
+# The module renders `¬(fd_fun_0 fd_arg_1 = fd_fun_0 fd_arg_4)` and its two
+# siblings: the emitter collapses each argument `(g x)` into ONE opaque
+# `fd_arg_N : Bool`, so every rendered side is a 2-node application. The only
+# 2-node applications in this file are `(g x)`, `(g y)`, `(g z)` — so the
+# injective correspondence the binder finds is
+#
+#     fd_fun_0 -> g        fd_arg_1 -> x    fd_arg_4 -> y    fd_arg_9 -> z
+#
+# NOT the intended `fd_fun_0 -> f`, `fd_arg_1 -> (g x)`, which no injective
+# renaming can express because a rendered LEAF may only stand for a query LEAF.
+# Under the accepted renaming the module reads `¬(g x = g y)`, and this file does
+# not say that.
+#
+# That is not a defect in the pin and it is not unsoundness: `structural` claims
+# only that every rendered term is a subterm of the query under one injective
+# renaming, and that claim is TRUE here. The docstring is explicit that what the
+# module ASSERTS about those terms is the anchor's question. But it is the first
+# measured case of the class being earned by a renaming that is not the intended
+# one, so the honest reading of `structural` is "the module names terms this file
+# contains", not "the module says what this file says". The two coincide for the
+# `ArrayAxiom` rows, where the module's equality relates the same two subterms the
+# query's `(assert …)` does; they do not coincide here.
+#
+# The move out is the same one that took 89 `ArrayAxiom` rows from content-free
+# to structural on 2026-08-18: render the argument's structure instead of
+# collapsing it. `reconstruct_finite_domain_pigeonhole_to_lean_module` would then
+# emit `fd_fun_g (atom_x)` and the intended correspondence would be the only one.
+corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress1__bug593.smt2
+corpus/public-curated/non-incremental/QF_UFBV/cvc5-regress-clean/cli__regress1__bug593.smt2

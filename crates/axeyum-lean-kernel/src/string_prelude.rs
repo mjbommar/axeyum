@@ -1,8 +1,9 @@
 //! The **free-monoid (string) prelude** (P3.7 strings fragment): the word-clash
 //! reconstruction's kernel foundation, declared into a [`Kernel`]'s environment
 //! through the trusted `add_inductive` / `add_recursive_datatype_family` /
-//! `add_declaration` gates. The inductives compute in the kernel; `append` is
-//! one explicit opaque kernel axiom and is tracked in the prelude-axiom ledger.
+//! `add_declaration` gates. Everything computes in the kernel and **nothing is
+//! assumed**: as of 2026-08-17 this prelude admits no `Declaration::Axiom`,
+//! `Opaque`, or `Quotient`, so its row in the prelude-axiom ledger is empty.
 //!
 //! # Design — strings as `List` over a finite code-point alphabet
 //!
@@ -26,23 +27,29 @@
 //!   and `tail` selectors, so a concrete constant block `"abc"` is the closed term
 //!   `cons c_a (cons c_b (cons c_c nil))`, and projecting position `k` of it is a
 //!   fixed `head ∘ tailᵏ` recursor application that ι-reduces to a concrete `Char`.
-//! - **`append : Str → Str → Str`** — declared as an **opaque** constant (an
-//!   `Axiom` of that function type). The word-clash reconstruction never reduces
-//!   `append`: the equality-joining chain that connects two clashing members is a
-//!   pure `Eq`-congruence over whole (opaque) terms, so `str.++` needs only to be a
-//!   binary function symbol, never a computed one. (Length/cancellation reasoning —
-//!   which *would* need `append`'s recursive definition and monoid lemmas — is the
-//!   deferred follow-up; see the solver-side `word_reconstruct` module.)
+//! - **`append : Str → Str → Str`** — a **checked definition** by structural
+//!   recursion on its first argument over `Str.rec`, so `append nil b ≡ b` and
+//!   `append (cons h t) b ≡ cons h (append t b)` hold by ι-computation. Its four
+//!   free-monoid laws (`nil_append`, `cons_append`, `append_nil`, `append_assoc`)
+//!   are `Declaration::Theorem`s with proof terms the kernel re-checks on
+//!   admission — see the `monoid` submodule.
+//!
+//!   Until 2026-08-17 this was instead an `Axiom` of that function type, and it
+//!   was the **last** assumption outside the `real` prelude. The reason it
+//!   survived was scope, not necessity: the word-clash reconstruction never
+//!   reduces `append` (its equality-joining chain is a pure `Eq`-congruence over
+//!   whole terms, so `str.++` need only be a binary function symbol), so the
+//!   cheapest thing that worked was to assume one. Length and cancellation
+//!   reasoning does need the equations, and `Str` was already the recursive
+//!   inductive whose recursor supplies them, so the assumption was pure debt.
 //!
 //! Every declaration is admitted through the **trusted** gates, which type-check
-//! it; a malformed prelude would be rejected there (a green build proves only
-//! well-formedness, not the truth of the opaque `append` assumption). The same
-//! `infer` / `whnf` / `def_eq` machinery then checks the reconstructed proof term
-//! relative to that explicit assumption, so a wrong reconstruction is rejected
-//! by the kernel rather than silently trusted.
+//! it; a malformed prelude or a wrong proof term is rejected there. The same
+//! `infer` / `whnf` / `def_eq` machinery then checks the reconstructed proof
+//! term, so a wrong reconstruction is rejected by the kernel rather than
+//! silently trusted.
 #![allow(clippy::similar_names, clippy::many_single_char_names)]
 
-use crate::env::Declaration;
 use crate::expr::ExprId;
 use crate::level::LevelId;
 use crate::name::NameId;
@@ -50,9 +57,9 @@ use crate::prelude::{LogicPrelude, RecField};
 use crate::{BinderInfo, Kernel, KernelError, PreludeKey, PreludeValue};
 
 /// The interned names produced by [`build_string_prelude`]: the `Char` alphabet
-/// enum, the recursive `Str = List Char` inductive, and the opaque `append`
-/// constant, plus the shared [`LogicPrelude`] used to build the `Bool`
-/// discriminators and `Eq` transports.
+/// enum, the recursive `Str = List Char` inductive, the defined `append` and its
+/// four proved monoid laws, plus the shared [`LogicPrelude`] used to build the
+/// `Bool` discriminators and `Eq` transports.
 ///
 /// Handles belong to the kernel they were built in; do not mix them across
 /// kernels. All fields are public so callers can build `Const` terms.
@@ -78,8 +85,24 @@ pub struct StringPrelude {
     /// `Str.rec` — the list eliminator (used to build `head` / `tail`).
     pub str_rec: NameId,
 
-    /// `append : Str → Str → Str` — the opaque monoid multiplication.
+    /// `append : Str → Str → Str` — the monoid multiplication, a **checked
+    /// definition** by structural recursion on its first argument (not an
+    /// axiom): `append nil b ≡ b` and `append (cons h t) b ≡ cons h (append t b)`
+    /// hold by kernel ι-computation.
     pub append: NameId,
+    /// `nil_append : ∀ (b : Str), Eq Str (append nil b) b` — the left identity
+    /// (definitional; the theorem makes it citable).
+    pub nil_append: NameId,
+    /// `cons_append : ∀ (h : Char) (t b : Str),
+    /// Eq Str (append (cons h t) b) (cons h (append t b))` — the step equation.
+    pub cons_append: NameId,
+    /// `append_nil : ∀ (a : Str), Eq Str (append a nil) a` — the right identity,
+    /// proved by `Str.rec` induction.
+    pub append_nil: NameId,
+    /// `append_assoc : ∀ (a b c : Str),
+    /// Eq Str (append (append a b) c) (append a (append b c))` — associativity,
+    /// proved by `Str.rec` induction.
+    pub append_assoc: NameId,
 
     /// The universe level `1` (so `Char`/`Str : Sort 1 = Type`).
     one: LevelId,
@@ -161,18 +184,31 @@ pub fn build_string_prelude(
         };
         let str_rec = family.rec;
 
-        // --- append : Str → Str → Str (opaque) -------------------------------
+        // --- append : Str → Str → Str, and the free-monoid laws --------------
+        // A checked structural recursion over `Str.rec`, plus four theorems the
+        // kernel re-checks on admission. See `monoid.rs` for the terms.
         let append = kernel.name_str(namespace, "append");
-        {
-            let str_const = kernel.const_(str_ind, vec![]);
-            let inner = kernel.pi(anon, str_const, str_const, BinderInfo::Default);
-            let append_ty = kernel.pi(anon, str_const, inner, BinderInfo::Default);
-            kernel.add_declaration(Declaration::Axiom {
-                name: append,
-                uparams: vec![],
-                ty: append_ty,
-            })?;
-        }
+        let nil_append = kernel.name_str(namespace, "nil_append");
+        let cons_append = kernel.name_str(namespace, "cons_append");
+        let append_nil = kernel.name_str(namespace, "append_nil");
+        let append_assoc = kernel.name_str(namespace, "append_assoc");
+        monoid::declare_append_and_laws(
+            kernel,
+            monoid::MonoidNames {
+                logic,
+                char_ind,
+                str_ind,
+                str_nil,
+                str_cons,
+                str_rec,
+                append,
+                nil_append,
+                cons_append,
+                append_nil,
+                append_assoc,
+            },
+            one,
+        )?;
 
         Ok(StringPrelude {
             logic,
@@ -184,6 +220,10 @@ pub fn build_string_prelude(
             str_cons,
             str_rec,
             append,
+            nil_append,
+            cons_append,
+            append_nil,
+            append_assoc,
             one,
         })
     })();
@@ -236,7 +276,7 @@ impl StringPrelude {
         kernel.const_(self.char_ctors[idx], vec![])
     }
 
-    /// `append a b` (opaque).
+    /// `append a b`.
     #[must_use]
     pub fn append_app(&self, kernel: &mut Kernel, a: ExprId, b: ExprId) -> ExprId {
         let f = kernel.const_(self.append, vec![]);
@@ -402,8 +442,8 @@ impl StringPrelude {
         let motive = kernel.lam(anon, bool_const, bool_const, BinderInfo::Default);
         let rec = kernel.const_(self.logic.bool_rec, vec![self.one]);
         let e0 = kernel.app(rec, motive);
-        let e0 = kernel.app(e0, t); // minor for Bool.true
         let e0 = kernel.app(e0, e); // minor for Bool.false
+        let e0 = kernel.app(e0, t); // minor for Bool.true
         kernel.app(e0, c)
     }
 
@@ -506,6 +546,8 @@ impl StringPrelude {
         kernel.lam(anon, str_const, body, BinderInfo::Default)
     }
 }
+
+mod monoid;
 
 #[cfg(test)]
 mod tests;

@@ -7,9 +7,11 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
+      "decision_backend": "axeyum-sat-bv rustsat-batsat",
       "dominant_candidate": true,
-      "elapsed_ms": 0.6788350000000001,
+      "elapsed_ms": 0.34683,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "sat-model",
       "file": "corpus/public-curated/bvred/bitwuzla__redor3.smt2",
@@ -18,12 +20,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.012373,
+        "check_evidence": 0.004233,
         "lean_reconstruction": null,
-        "parse_evidence": 0.191233,
+        "parse_evidence": 0.102471,
         "parse_lean": null,
-        "produce_evidence": 0.438313,
-        "read": 0.016008
+        "produce_evidence": 0.21505,
+        "read": 0.021948000000000002
       },
       "trust_holes": [],
       "trust_steps": []
@@ -33,9 +35,11 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
+      "decision_backend": "axeyum-sat-bv rustsat-batsat",
       "dominant_candidate": true,
-      "elapsed_ms": 0.792529,
+      "elapsed_ms": 0.292048,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "sat-model",
       "file": "corpus/public-curated/bvred/bitwuzla__redxor-substitute5.smt2",
@@ -44,12 +48,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.045211,
+        "check_evidence": 0.004329,
         "lean_reconstruction": null,
-        "parse_evidence": 0.15853699999999998,
+        "parse_evidence": 0.03627300000000001,
         "parse_lean": null,
-        "produce_evidence": 0.558415,
-        "read": 0.013873000000000002
+        "produce_evidence": 0.239179,
+        "read": 0.010022
       },
       "trust_holes": [],
       "trust_steps": []
@@ -59,23 +63,25 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
+      "decision_backend": "axeyum-sat-bv rustsat-batsat",
       "dominant_candidate": true,
-      "elapsed_ms": 5.459991,
+      "elapsed_ms": 1.099668,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "term-level-unsat",
       "file": "corpus/public-curated/bvred/cvc5__redand-eliminate.smt2",
       "lean_checked": true,
       "lean_error": null,
       "lean_fragment": "ArrayAxiom",
-      "lean_module_bytes": 790,
+      "lean_module_bytes": 3186,
       "phase_timings_ms": {
-        "check_evidence": 0.936295,
-        "lean_reconstruction": 3.200846,
-        "parse_evidence": 0.115559,
-        "parse_lean": 0.056766,
-        "produce_evidence": 1.1128900000000002,
-        "read": 0.015400000000000002
+        "check_evidence": 0.07816400000000001,
+        "lean_reconstruction": 0.580338,
+        "parse_evidence": 0.031382,
+        "parse_lean": 0.02189,
+        "produce_evidence": 0.226219,
+        "read": 0.016161
       },
       "trust_holes": [],
       "trust_steps": [
@@ -90,9 +96,11 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
+      "decision_backend": "axeyum-sat-bv rustsat-batsat",
       "dominant_candidate": true,
-      "elapsed_ms": 0.45527799999999996,
+      "elapsed_ms": 0.122663,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "sat-model",
       "file": "corpus/public-curated/bvred/cvc5__redand.smt2",
@@ -101,12 +109,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.019338,
+        "check_evidence": 0.003528,
         "lean_reconstruction": null,
-        "parse_evidence": 0.108732,
+        "parse_evidence": 0.026125000000000002,
         "parse_lean": null,
-        "produce_evidence": 0.306453,
-        "read": 0.012218000000000001
+        "produce_evidence": 0.07810800000000001,
+        "read": 0.012763
       },
       "trust_holes": [],
       "trust_steps": []
@@ -116,23 +124,25 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
+      "decision_backend": "axeyum-sat-bv rustsat-batsat",
       "dominant_candidate": true,
-      "elapsed_ms": 3.2820319999999996,
+      "elapsed_ms": 0.313281,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "term-level-unsat",
       "file": "corpus/public-curated/bvred/cvc5__redor-eliminate.smt2",
       "lean_checked": true,
       "lean_error": null,
-      "lean_fragment": "ReflexiveDisequality",
-      "lean_module_bytes": 746,
+      "lean_fragment": "BoolSimplification",
+      "lean_module_bytes": 3169,
       "phase_timings_ms": {
-        "check_evidence": 0.662222,
-        "lean_reconstruction": 1.6298739999999998,
-        "parse_evidence": 0.101136,
-        "parse_lean": 0.054383,
-        "produce_evidence": 0.798932,
-        "read": 0.012166
+        "check_evidence": 0.001084,
+        "lean_reconstruction": 0.219578,
+        "parse_evidence": 0.026013,
+        "parse_lean": 0.018340000000000002,
+        "produce_evidence": 0.024895,
+        "read": 0.011959000000000001
       },
       "trust_holes": [],
       "trust_steps": [
@@ -147,9 +157,11 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
+      "decision_backend": "axeyum-sat-bv rustsat-batsat",
       "dominant_candidate": true,
-      "elapsed_ms": 0.422809,
+      "elapsed_ms": 0.098827,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "sat-model",
       "file": "corpus/public-curated/bvred/cvc5__redor.smt2",
@@ -158,20 +170,27 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.025570000000000002,
+        "check_evidence": 0.0032229999999999997,
         "lean_reconstruction": null,
-        "parse_evidence": 0.105941,
+        "parse_evidence": 0.025245,
         "parse_lean": null,
-        "produce_evidence": 0.27082700000000004,
-        "read": 0.012723
+        "produce_evidence": 0.05931,
+        "read": 0.009094
       },
       "trust_holes": [],
       "trust_steps": []
     }
   ],
-  "limit": 6,
+  "limit": 1000,
   "logic": "QF_BV",
+  "prelude_warm_ms": 13930.302637,
+  "prelude_warmed": true,
   "slice": "qf-bv-curated-bvred-solver-vs-z3-10s.json",
+  "source_revision": {
+    "dirty": false,
+    "sha": "496288979",
+    "source": "lane-snapshot"
+  },
   "summary": {
     "audit_errors": 0,
     "audited_decided": 6,
@@ -187,6 +206,6 @@
     "lean_unsat_pct": 100.0,
     "timeouts": 0
   },
-  "timeout_ms": 30000,
-  "version": 1
+  "timeout_ms": 10000,
+  "version": 3
 }

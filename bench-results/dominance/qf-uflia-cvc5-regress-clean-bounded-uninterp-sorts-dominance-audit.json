@@ -7,23 +7,25 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
+      "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 26.371734,
+      "elapsed_ms": 4.107084,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "uf-arith-congruence-unsat",
       "file": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-bounded/cli__regress0__bug303.smt2",
       "lean_checked": true,
       "lean_error": null,
       "lean_fragment": "UfArithCongruence",
-      "lean_module_bytes": 579,
+      "lean_module_bytes": 3169,
       "phase_timings_ms": {
-        "check_evidence": 7.297411,
-        "lean_reconstruction": 10.674383,
-        "parse_evidence": 0.33894300000000005,
-        "parse_lean": 0.158073,
-        "produce_evidence": 7.862279999999999,
-        "read": 0.015045000000000001
+        "check_evidence": 0.7023189999999999,
+        "lean_reconstruction": 1.239689,
+        "parse_evidence": 0.126576,
+        "parse_lean": 0.037628,
+        "produce_evidence": 1.144001,
+        "read": 0.038612999999999995
       },
       "trust_holes": [],
       "trust_steps": []
@@ -33,23 +35,25 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
+      "decision_backend": "arith-dpll-exact-theory-enumeration",
       "dominant_candidate": true,
-      "elapsed_ms": 525.311191,
+      "elapsed_ms": 62.517641,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "arith-dpll-unsat",
       "file": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-bounded/cli__regress0__parser__use-name-in-same-command.smt2",
       "lean_checked": true,
       "lean_error": null,
       "lean_fragment": "ArithDpll",
-      "lean_module_bytes": 579,
+      "lean_module_bytes": 3151,
       "phase_timings_ms": {
-        "check_evidence": 101.616953,
-        "lean_reconstruction": 311.387341,
-        "parse_evidence": 0.423941,
-        "parse_lean": 0.238311,
-        "produce_evidence": 111.605291,
-        "read": 0.013179
+        "check_evidence": 9.495455,
+        "lean_reconstruction": 31.458462,
+        "parse_evidence": 0.131809,
+        "parse_lean": 0.086689,
+        "produce_evidence": 10.847845,
+        "read": 0.029485
       },
       "trust_holes": [],
       "trust_steps": []
@@ -59,9 +63,11 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
+      "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 1.603453,
+      "elapsed_ms": 0.595169,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "sat-model",
       "file": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-bounded/cli__regress0__use_approx__error0_approx.smt2",
@@ -70,12 +76,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.009904999999999999,
+        "check_evidence": 0.004056,
         "lean_reconstruction": null,
-        "parse_evidence": 0.157328,
+        "parse_evidence": 0.033968,
         "parse_lean": null,
-        "produce_evidence": 1.408266,
-        "read": 0.018653
+        "produce_evidence": 0.526122,
+        "read": 0.028748
       },
       "trust_holes": [],
       "trust_steps": []
@@ -85,9 +91,11 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
+      "decision_backend": "arith-dpll-exact-theory-enumeration",
       "dominant_candidate": true,
-      "elapsed_ms": 0.501142,
+      "elapsed_ms": 0.134008,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "sat-model",
       "file": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-bounded/cli__regress0__use_approx__issue2429_approx.smt2",
@@ -96,12 +104,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.013777999999999999,
+        "check_evidence": 0.0026060000000000002,
         "lean_reconstruction": null,
-        "parse_evidence": 0.12606499999999998,
+        "parse_evidence": 0.025545,
         "parse_lean": null,
-        "produce_evidence": 0.338008,
-        "read": 0.01528
+        "produce_evidence": 0.085959,
+        "read": 0.017956
       },
       "trust_holes": [],
       "trust_steps": []
@@ -111,9 +119,11 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
+      "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 2.3639870000000003,
+      "elapsed_ms": 0.658484,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "sat-model",
       "file": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-bounded/cli__regress1__sym__qf-function.smt2",
@@ -122,12 +132,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.019321,
+        "check_evidence": 0.003627,
         "lean_reconstruction": null,
-        "parse_evidence": 0.11757000000000001,
+        "parse_evidence": 0.029133,
         "parse_lean": null,
-        "produce_evidence": 2.207382,
-        "read": 0.011539
+        "produce_evidence": 0.611552,
+        "read": 0.012316
       },
       "trust_holes": [],
       "trust_steps": []
@@ -137,9 +147,11 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
+      "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 2.443676,
+      "elapsed_ms": 0.665181,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "sat-model",
       "file": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-bounded/cli__regress1__sym__sb-wrong.smt2",
@@ -148,20 +160,27 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.019157,
+        "check_evidence": 0.002964,
         "lean_reconstruction": null,
-        "parse_evidence": 0.108697,
+        "parse_evidence": 0.03515,
         "parse_lean": null,
-        "produce_evidence": 2.29421,
-        "read": 0.013285
+        "produce_evidence": 0.608955,
+        "read": 0.015984
       },
       "trust_holes": [],
       "trust_steps": []
     }
   ],
-  "limit": 6,
+  "limit": 1000,
   "logic": "QF_UFLIA",
+  "prelude_warm_ms": 13371.737635000001,
+  "prelude_warmed": true,
   "slice": "qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json",
+  "source_revision": {
+    "dirty": false,
+    "sha": "496288979",
+    "source": "lane-snapshot"
+  },
   "summary": {
     "audit_errors": 0,
     "audited_decided": 6,
@@ -177,6 +196,6 @@
     "lean_unsat_pct": 100.0,
     "timeouts": 0
   },
-  "timeout_ms": 30000,
-  "version": 1
+  "timeout_ms": 10000,
+  "version": 3
 }

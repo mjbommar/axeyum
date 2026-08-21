@@ -1,5 +1,214 @@
 # 01 — ℤ and ℝ are one hole through every layer
 
+> **STATUS 2026-08-18 (latest) — ADR-0512 phase R2 is COMPLETE: all 22
+> ordered-commutative-ring laws hold over the constructed ℝ, at trusted surface
+> 0. The costing that made `mul` the keystone blocker was wrong in the direction
+> that mattered.** That costing — repeated in this document and in two agent
+> briefs — said the blocker was a canonical bound on a representative, "which
+> Mathlib takes from `CauSeq`'s *existential* modulus and a fixed modulus does
+> not supply." Measured: with a **fixed** modulus, regularity at `n = 0` bounds
+> every sample by `|x_0| + 2` outright. There is nothing to extract, and
+> `CReal.bound x := natAbs (num (seq x 0)) + 1` is a projection. What a fixed
+> modulus genuinely lacks is the ℕ-valued `K`, and the bridge is two `Int` facts
+> about `Int.natAbs` that *compute* — `Int.le` is a four-case definition, so
+> `Int.le (negSucc m) (ofNat (succ m))` reduces to `True`.
+>
+> `CReal.mul` samples at `(c+1)·n + c` with `c := bound x + bound y + 1`, written
+> as a successor so `c + 1` **is** `Kx + Ky` and ℕ-subtraction never appears. Its
+> own regularity estimate closes **exactly**, with no weakening step, because
+> `natDivSucc_scale` reads `(c+1)/((c+1)·n + c + 1)` as `1/(n+1)`. **`Rat.natDivSucc`
+> antitone in its index — the ~250-line lemma now dodged four times — is still
+> not built and still not needed.**
+>
+> The other four laws (`mul_assoc`, `left_distrib`, `mul_le_mul_of_nonneg_left`)
+> and `mul_congr` were **one** problem, not four: each compares two products
+> whose *sampling indices differ*, so the exact estimate is unavailable and the
+> naive bound is `C/(n+1)` for a `C > 2`. Two pieces make that enough.
+> `CReal.Equiv.of_bounded` — **`Equiv` only needs the difference to be `O(1/n)`;
+> the constant is free** — is `Equiv.trans`'s argument with one term deleted,
+> closing on `Rat.le_of_le_add_natDivSucc`, whose numerator is a `Nat`
+> *parameter*, so a symbolic constant built from the factors' bounds is as
+> acceptable as a literal. And `Rat.nat_index_compose` says Bishop's sampling
+> indices are **closed under composition**, with the additive shift `2n+1` as
+> the `c = 1` case, so every nested index reads back at `n` through one lemma.
+> `mul_le_mul_of_nonneg_left` then needed no estimate at all: it is
+> `left_distrib` + `mul_nonneg` + `mul_congr`.
+>
+> **58 declarations, trusted surface 0**, every footprint empty:
+> `cargo run -q -p axeyum-lean-kernel --example creal_setoid_witness`. The count
+> is read out of the kernel, not asserted here — `CRealPrelude::ordered_ring_laws`
+> must name 22 *distinct* footprint-empty theorems matching `RatPrelude::ring_laws`
+> position by position, and the example's exit status depends on it (verified by
+> deleting `mul_assoc`). Two further vacuity guards for the product, because
+> `mul_zero`, `mul_comm` and `sq_nonneg` all hold footprint-free of
+> `fun _ _ => zero`: `CReal.ofRat_mul` pins the *operation* on the whole embedded
+> ℚ, and `CReal.not_equiv_mul_one_one_zero` refuses the constant-zero product by
+> computation.
+>
+> **What this does not do is move `real: 30`.** Nine of the 22 mention `Eq` in
+> the `Real` package and are stated over `CReal.Equiv` here, because `Eq CReal`
+> is not the equality of real numbers. Making that substitution good is phase
+> R4 — instantiating R3's generalized telescope at this carrier — and only after
+> R4 do the 30 retire *by deletion*. The remaining ℝ work (completeness, `inv`,
+> `√`) is separate ADRs and none of it is one of the 22.
+
+> **STATUS 2026-08-18 (latest) — ℝ MODELS the axiom package, at zero trusted
+> declarations. `real: axiom=30` is still 30.** Both halves, again, and this time
+> the gap between them is the whole finding.
+>
+> ADR-0512 phases R2 and R4 are complete. All **22 ordered-commutative-ring laws**
+> hold over the constructed ℝ (58 declarations, trusted surface 0), and
+> `build_creal_model_of_arith` admits `Real.CRealModel.<law>` for each, with the
+> obligation **computed from the axiom as it stands in the environment** rather
+> than written by hand. Measured: `22/22 footprint-empty, 22/22 syntactically the
+> CReal law, 9/22 restated over CReal.Equiv, 7/7 discrimination witnesses`.
+>
+> **ADR-0456's caveat is discharged.** The carrier modelling the `Real` package is
+> no longer `Int` — "Int is not ℝ" was the honest limit of the earlier relative
+> consistency result, and it no longer applies. The ladder is ℤ, ℚ, ℝ and they do
+> not dominate each other: ℤ and ℚ keep the kernel's `Eq` as ring equality and are
+> not ℝ; `CReal` is ℝ and cannot.
+>
+> **And the 30 axioms remain, because everything is written against them.** The
+> deletion survey, in counts rather than impressions: **57 files** name the
+> symbols and 7 more die transitively; **13 Rust files are rewrite-required
+> consumers**; `LraReconstructCtx` + `ordered_ring` + `setoid` touch **all 30
+> `ArithPrelude` fields across 158 accesses**, with `arith` held by value and
+> `new()` panicking if the package is absent; `arith.logic` is the only route to
+> `LogicPrelude`, so deletion also re-plumbs `build_logic_prelude`. Three
+> committed Lean goldens carry 413/24/0 `Real.*` occurrences. A fact
+> (`F-schedule-critical-chain-infeasible`) pins a 26-entry footprint of which 17
+> are `Real.*`, with `--expect-axioms 26`. And the axiom ledger is **30 of 30
+> real**, so deleting the package zeroes this repository's entire recorded
+> trusted surface — invalidating 30 SHA-256 type bindings, 4 gate scripts, 2
+> Python suites and ~45 documentation sites that assert `real: axiom=30`.
+>
+> R3's setoid interface is a *deeper* dependency, not an escape:
+> `enable_setoid_equality` computes its nine axiom types by reading the nine
+> `Eq`-shaped `Real` laws out of the environment and rewriting `Eq Real`, and
+> hard-errors if the rewrite does not fire.
+>
+> So the achievement is precise and worth stating precisely: **the axioms are now
+> known to be satisfiable by a constructed object, which is not the same as being
+> unnecessary.** Retiring them is a migration, not a deletion, and nobody should
+> plan it as one.
+
+> **STATUS 2026-08-18 (later) — R3 landed, and the distance to `real: 0` is
+> longer than ADR-0512's end-state paragraph reads.** That paragraph says the 30
+> retire by deletion because "once R3 lands, no consumer references the `Real`
+> package, and `build_arith_prelude` can be retired." Measured after R3 landed:
+> **18 files still reference `build_arith_prelude`/`ArithPrelude`**, and the
+> load-bearing one is `LraReconstructCtx`, whose own doc comment says *"the
+> trusted base is `build_arith_prelude`'s axioms"*. Every LRA refutation is still
+> stated over the axiomatized `Real`.
+>
+> R3 is necessary and it is not sufficient. What it removed is the OBSTACLE: the
+> proof term no longer mentions `Eq`, `Eq.refl` or `Eq.rec` (gated by
+> `residual_eq_constants`), so nothing in it is beyond what a *defined* relation
+> can interpret, and the 39-binder form provably specializes back to today's
+> statement. What it did not do is change the carrier.
+>
+> So the real chain to `real: axiom=0` is: **the 15 remaining `CReal` laws → R4
+> instantiation → then deletion.** Eight of those need `mul` and seven need `lt`,
+> and both were costed as new mathematics rather than transcription. Anyone
+> planning against "R3 lands, then delete" should plan against that instead.
+
+> **STATUS 2026-08-18 — ℝ is CONSTRUCTED, and `real: 30` has still not moved.**
+> Both halves of that sentence are load-bearing. `crates/axeyum-lean-kernel/src/creal.rs`
+> is a Bishop setoid of regular ℚ-sequences over the constructed ℚ: **31
+> declarations, trusted surface 0**, `Equiv` reflexive/symmetric/transitive, and
+> **7 of the 22 ordered-ring laws** — the additive group in `Equiv` form
+> (`add_comm`, `add_neg`, `add_zero`, `add_assoc`) and three order laws verbatim
+> (`le_refl`, `le_trans`, `add_le_add`).
+>
+> The 30 axioms do **not** retire by exhibiting this model. They retire by
+> *deletion*, when no consumer references the `Real` package — ADR-0512 phase R3,
+> which binds equality as a telescope parameter (`RING_BINDER_NAMES` 30 → 39) so
+> a generalized refutation can be instantiated at a carrier whose equality is
+> `CReal.Equiv` rather than `Eq`. Until that lands, "ℝ is constructed" and
+> "`real: axiom=30`" are both true at once, and reading the first as the second
+> is the error this note exists to prevent.
+>
+> Three costings were corrected by building rather than estimating. The
+> Archimedean property of ℚ came in at about a third of its ~750-line estimate.
+> `add_zero`/`add_assoc` were costed behind a missing `natDivSucc`-antitone
+> lemma that turned out **not to be needed** — read at a common denominator the
+> bound is `3/(2n+2) ≤ 4/(2n+2)`. And this document's own claim that "the 13
+> order laws restate verbatim" was optimistic: only **3 of 13** were reachable
+> without `mul` or `lt`.
+>
+> What remains is honestly harder than transcription. Eight laws need `mul`,
+> whose bound Mathlib derives from `CauSeq`'s *existential* modulus — a fixed
+> modulus does not supply it, so that is invention rather than porting. Seven
+> need `lt`, and the naive `∃ n, y_n − x_n > 2/(n+1)` does not give `lt_trans`:
+> two regularity round trips consume the margin exactly. `lt := Not (le y x)` is
+> a dead end, because `le_of_lt` is then not constructive and there is no
+> `le_total` over ℝ to recover it from.
+>
+> The vacuity risk here is severe and axiom footprints cannot see it: every law
+> is a statement about inhabitants of `CReal`, so an uninhabited carrier or a
+> total `Equiv` would make all of them hold, footprint-free, of nothing.
+> `creal_setoid_witness` therefore reports `carrier inhabited`, `Equiv
+> discriminates` and `le discriminates`, and its exit status depends on all
+> three — verified by mutation, not asserted.
+
+> **STATUS 2026-08-17 — the trusted surface is now `real` ALONE.** Measured by
+> `cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory`, with
+> `scripts/gen-lean-axiom-ledger.py --check` green:
+>
+> ```text
+> logic:   axiom=0  opaque=0  quotient=0
+> nat:     axiom=0  opaque=0  quotient=0
+> integer: axiom=0  opaque=0  quotient=0
+> string:  axiom=0  opaque=0  quotient=0   <- was 1
+> real:    axiom=30 opaque=0  quotient=0   <- the whole remaining hole
+> ```
+>
+> `string` closed the same day: `append` was an axiom for scope, not necessity —
+> `Str` is a recursive inductive whose recursor supports exactly the structural
+> definition `Nat.add` uses, so it became a definition with a proved monoid. So
+> **every trusted declaration this project has is now in this file's subject**,
+> which is what makes the ℝ route above the last foundational item rather than
+> one of several.
+>
+> Two things this does NOT mean, recorded because the number invites them.
+> Zero axioms is not zero trust: the kernel that admits these declarations is
+> `5,148` function-body lines (derived, gated, `scripts/check-kernel-trusted-core.py`),
+> and an adversarial differential against official Lean found a real soundness
+> defect in it the first time it ran — a lambda binder domain checked only for
+> `def_eq` rather than for being a type, so an ill-typed domain that
+> beta-reduced away was never checked (`8428331c8`). And the definitions must
+> still say what they claim: `Nat`/`Int` are now pinned by characterization
+> theorems (Peano categoricity for ℕ; discreteness, generation and no-junk for
+> ℤ), but the SMT-LIB → rendered-statement transcription is still unchecked and
+> is the weakest link in the chain
+> ([13-residual-trust-surface.md](../prover-track/research/13-residual-trust-surface.md)).
+
+
+> **STATUS 2026-08-17 — the ℝ half has a route, and it is free.**
+> [ADR-0512](../research/09-decisions/adr-0512-real-is-constructed-as-a-setoid-over-the-rationals.md)
+> decides **a Bishop setoid of regular ℚ-sequences**: a one-constructor carrier
+> with no quotient, and equality carried by a *defined* `CReal.Equiv` rather
+> than by `Eq`. ADR-0456's two rejections below are both correct — a Cauchy
+> quotient needs the `Quot.sound` this kernel does not have, Dedekind cuts need
+> `propext` + `funext` — but the conclusion "therefore ℝ is deferred" does not
+> follow, because **equality does not have to be `Eq`**. That third option was
+> missing from the accounting.
+>
+> Measured, not argued: `creal_shape_probe` admits the carrier, its recursor,
+> the representative projection (large elimination) and the setoid relation over
+> the *constructed* `Rat` with a **trusted surface of 0**, against a `funext`
+> negative control in a second kernel that comes back non-empty — so the zero
+> discriminates. The price is counted too: **9 of the 30 `Real` declarations
+> mention `Eq`**, so 13 of the 22 laws are discharged verbatim and 9 only in
+> `Equiv` form. The order fragment a Farkas refutation actually invokes is
+> untouched.
+>
+> One claim below is now superseded rather than merely dated: "a Cauchy-sequence
+> ℝ is *inexpressible*" is true of a Cauchy ℝ **with `Eq`**, and false of one
+> with a defined equivalence. And the ℚ trigger fired early — `rat_prelude.rs`
+> landed ℚ as an ordered field on 2026-08-17, so R1 is unblocked.
+
 > **STATUS 2026-08-16 — the integer half is DONE. `int_prelude` has 0 axioms.**
 > `Int.euclidean_decomposition` — the last assumption, and the only member that
 > was not a ring or order law — is now a theorem with an empty axiom footprint.

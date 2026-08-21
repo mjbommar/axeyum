@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-coprime-carrier-audit-plan-v1",
+  "state": "preregistered-single-nonrendering-in-memory-carrier-audit-before-code-or-input-read",
+  "predecessor": {"path": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-result-v5.json"},
+  "inputs": {"inherit_exactly_from": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-plan-v4.json", "source_root": "Nat.fib_coprime_fib_succ", "blocked_dependency": "Axeyum.Autogenesis.gcdModel_succ", "target_kernel": "r091 followed by official clean order, official cancellation, and Fibonacci addition in the accepted V5 order"},
+  "audit": {"report": ["source root closure size", "every declaration on a path from the root to blocked dependency", "declaration kind", "canonical source and target declaration hashes", "target presence and checked compatibility", "source axiom footprint for theorem carriers", "which of the first three capsules introduced each incompatible target declaration"], "proof_terms_types_or_values_may_be_rendered": false, "kernel_submissions": 0, "exports": 0},
+  "budget": {"max_audit_driver_builds": 1, "max_complete_audits": 1, "max_reads_per_input": 1, "max_retries": 0, "max_exact_target_submissions": 0},
+  "authority": {"support_credit": 0, "target_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "selection_rule": "Prefer a composition reorder only if every conflicting carrier is absent before its introducing capsule and the reordered sequence is declaration-compatible; otherwise reconstruct the coprimality theorem over the composed target using the nearest exact compatible carrier package.",
+  "output": "artifacts/autogenesis/nat-gcd-fib-add-self-coprime-carrier-audit-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-nat-gcd-fib-add-self-coprime-carrier-audit-plan.py",
+  "limitations": "This audit grants no theorem, support, target, fact, evaluation, or ledger credit and may not render proof-bearing material."
+}

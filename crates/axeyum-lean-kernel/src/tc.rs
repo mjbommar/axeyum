@@ -319,6 +319,20 @@ pub enum KernelError {
         /// Family whose generated recursor contract disagreed.
         family: crate::name::NameId,
     },
+    /// A declaration's type or value mentioned a universe parameter that the
+    /// declaration does not bind.
+    ///
+    /// Lean's kernel calls this an `invalid reference to undefined universe
+    /// level parameter`. It is not a hygiene rule: `Const(c, us)` substitutes
+    /// `us` positionally for `c`'s DECLARED parameters, so a parameter that is
+    /// not declared is never substituted at any instantiation site and leaks
+    /// into every use as a universe nobody chose.
+    UndeclaredUniverseParam {
+        /// The declaration that mentioned it.
+        declaration: crate::name::NameId,
+        /// The universe parameter that is free in the declaration.
+        param: crate::name::NameId,
+    },
     /// A declaration's type did not infer/WHNF to a `Sort` (every declaration's
     /// type must itself be a type).
     DeclarationTypeNotASort {
@@ -515,6 +529,12 @@ pub struct LocalContext {
     /// exactly the current declaration stack and is cleared by `push`/`pop`;
     /// the `u64` pins the environment revision the entries were computed at.
     whnf_cache: (u64, HashMap<ExprId, ExprId>),
+    /// **Full-δ** weak-head normal forms of expressions that mention free
+    /// variables — the context-scoped half of the `whnf_core` memo, and the
+    /// exact analogue of `whnf_cache` one layer up. Cleared by `push`/`pop`
+    /// with the other three, which is what scopes an entry to the declaration
+    /// stack that produced it.
+    whnf_core_cache: (u64, HashMap<ExprId, ExprId>),
     /// Definitional values for the subset of locals introduced by `let`.
     let_values: HashMap<u64, ExprId>,
     /// Lambda nodes in a scoped open skeleton whose bodies already refer to the
@@ -550,6 +570,7 @@ impl LocalContext {
         self.infer_cache.clear();
         self.def_eq_cache.clear();
         self.whnf_cache.1.clear();
+        self.whnf_core_cache.1.clear();
         self.decls.push(decl);
     }
 
@@ -570,6 +591,7 @@ impl LocalContext {
         self.infer_cache.clear();
         self.def_eq_cache.clear();
         self.whnf_cache.1.clear();
+        self.whnf_core_cache.1.clear();
         popped
     }
 
@@ -596,6 +618,28 @@ impl LocalContext {
             return None;
         }
         self.whnf_cache.1.get(&expression).copied()
+    }
+
+    /// The context-scoped half of the full-δ memo. Same shape as
+    /// [`LocalContext::whnf_result`]: a revision change makes every entry
+    /// unreachable before the first lookup at the new revision.
+    fn whnf_core_result(&mut self, revision: u64, expression: ExprId) -> Option<ExprId> {
+        if self.whnf_core_cache.0 != revision {
+            self.whnf_core_cache.0 = revision;
+            self.whnf_core_cache.1.clear();
+            return None;
+        }
+        self.whnf_core_cache.1.get(&expression).copied()
+    }
+
+    /// The revision check here is load-bearing rather than defensive; see
+    /// [`Kernel::remember_whnf_core`] for the measurement that says so.
+    fn remember_whnf_core(&mut self, revision: u64, expression: ExprId, normalized: ExprId) {
+        if self.whnf_core_cache.0 != revision {
+            self.whnf_core_cache.0 = revision;
+            self.whnf_core_cache.1.clear();
+        }
+        self.whnf_core_cache.1.insert(expression, normalized);
     }
 
     fn remember_whnf(&mut self, revision: u64, expression: ExprId, normalized: ExprId) {
@@ -800,9 +844,22 @@ impl Kernel {
                         cursor = reduced;
                     } else if let Some(reduced) = self.reduce_nat_succ(cursor, ctx) {
                         cursor = reduced;
-                    } else if let Some(reduced) = self.reduce_nat_binop(cursor, ctx) {
-                        cursor = reduced;
                     } else {
+                        // The **binary** `Nat` acceleration is deliberately not
+                        // here. Lean's `reduce_nat` is called from `whnf`
+                        // (`type_checker.cpp:670`) and from
+                        // `lazy_delta_reduction` (`:978`), never from
+                        // `whnf_core` — and this function *is* Lean's
+                        // `whnf_core`. See `Kernel::whnf_core` and
+                        // `Kernel::lazy_delta_step` for the two sites, and
+                        // ADR-0536 for why the placement is a decision rather
+                        // than a refactor.
+                        //
+                        // `reduce_nat_succ` stays because it is guarded by an
+                        // interned-name comparison against `Nat.succ` before it
+                        // reduces anything, so a failing probe costs a compare;
+                        // the binary rule's failing probe δ-normalises two
+                        // arguments.
                         return cursor;
                     }
                 }
@@ -936,15 +993,179 @@ impl Kernel {
     /// The context is what lets reduction see a free variable's *type*, which
     /// K-like reduction needs. Everything else about the two entry points is
     /// identical.
+    ///
+    /// # The memo
+    ///
+    /// The δ loop is memoised on `(environment revision, expression)` with the
+    /// same closed/open split, and for the same reason, as the δ-free memo in
+    /// [`Kernel::whnf_no_unfolding`] — read that first; the argument is not
+    /// repeated here. This is a **memo and nothing else**: the loop is a
+    /// deterministic function of the key, so a hit returns exactly what the walk
+    /// would have returned, and the set of terms the kernel identifies is
+    /// unchanged. Nothing here decides *whether* a reduction fires.
+    ///
+    /// Per-step memoisation is not enough, which is why this layer exists at
+    /// all. `whnf_no_unfolding` already caches one δ-free step, but a repeated
+    /// `whnf_core` still re-walks the entire δ chain a probe at a time, and
+    /// every link that δ-unfolds mints a **fresh** expression that no cache has
+    /// ever seen. Measured on `build_creal_prelude` (2026-08-20, this host):
+    /// 33.0 s without this memo, 13.0 s with it.
+    ///
+    /// The pinned reference carries both layers and we carried only one:
+    /// `type_checker.h:31-32` declares `m_whnf_core` *and* `m_whnf`, populated
+    /// at `type_checker.cpp:491/548` and `755/763-772` respectively. Our
+    /// `whnf_no_unfolding` is Lean's `whnf_core` and this is Lean's `whnf`, so
+    /// the missing cache was the second of that pair.
+    ///
+    /// The traffic that makes it matter is the literal-`Nat` acceleration.
+    /// [`Kernel::reduce_nat_binop`] runs `whnf_core` on **both** arguments of
+    /// every `Nat.add`/`Nat.mul`/`Nat.div`/`Nat.mod`/`Nat.gcd`/`Nat.beq`
+    /// application it meets — from *inside* the δ-free normaliser, so the δ
+    /// work that lazy-delta exists to avoid is done eagerly and speculatively.
+    /// In that build it fired 1.19 M times and produced a literal 575 times.
+    /// (It fires at all only since `502184d3f`: `Kernel::build_nat_binop_table`
+    /// requires `Bool`'s constructors in official Lean order, so while the
+    /// native `Bool` was `[true, false]` the whole table was `None` and every
+    /// probe returned immediately. Aligning `Bool` switched the acceleration on
+    /// and the prelude build went 8.7 s → 33.0 s.)
     pub(crate) fn whnf_core(&mut self, e: ExprId, ctx: &mut LocalContext) -> ExprId {
+        let revision = self.env.revision();
+        if let Some(normalized) = self.recall_whnf_core(revision, e, ctx) {
+            return normalized;
+        }
+        let reads_before = self.reduction_ctx_reads;
+        let entry_closed = !self.has_fvars(e);
+
+        // Every link of the δ chain has the SAME full-δ normal form as `e`:
+        // `whnf_core` is deterministic and the walk from a link is the tail of
+        // the walk from `e`. So the whole chain is memoised, not just its head.
+        // That is where the win is: each δ step *mints a fresh expression*, and
+        // those intermediates are exactly the ones nothing else ever caches.
+        let mut chain: Vec<(ExprId, u64)> = Vec::new();
         let mut cursor = e;
-        loop {
+        let normalized = loop {
+            if cursor != e
+                && let Some(normalized) = self.recall_whnf_core(revision, cursor, ctx)
+            {
+                break normalized;
+            }
+            chain.push((cursor, self.reduction_ctx_reads));
             let whnfd = self.whnf_no_unfolding(cursor, ctx);
+            // Lean's `whnf`: `reduce_nat` is tried on the `whnf_core` result,
+            // **before** δ (`type_checker.cpp:670`), so a literal `Nat`
+            // operation is evaluated instead of unfolding its recursive
+            // definition. The `has_fvars` guard is Lean's own
+            // (`type_checker.cpp:978`) but Lean applies it only at the
+            // lazy-delta site; carrying it here too is strictly more
+            // conservative than Lean and is the decision recorded in ADR-0536.
+            //
+            // The head of a two-argument `Nat` application is a closed `Const`,
+            // so `!has_fvars(whnfd)` is exactly "neither argument mentions a
+            // free variable" — the condition under which the two `whnf_core`
+            // calls inside the rule can still land on literals.
+            if !self.has_fvars(whnfd)
+                && let Some(reduced) = self.reduce_nat_binop(whnfd, ctx)
+            {
+                cursor = reduced;
+                continue;
+            }
             match self.unfold_def(whnfd) {
                 Some(next) => cursor = next,
-                None => return whnfd,
+                None => break whnfd,
             }
+        };
+
+        // Every link is routed into the split memo by *its own* closedness, so
+        // the tripwire has to be per-link too. `entry_closed` alone does not
+        // cover it: an OPEN entry can δ-unfold to a CLOSED link, which is then
+        // written to the kernel-global half — the half whose key has no context
+        // component at all. That is not hypothetical and not rare enough to
+        // argue away: measured 2026-08-20, one `build_creal_prelude` routes 6
+        // such links, and the entry-gated form of this assertion looked at none
+        // of them.
+        //
+        // `reads_at_link` is snapshotted when the link is pushed, before
+        // anything reduces it, so the comparison is exactly "did the walk from
+        // HERE onward consult the context".
+        //
+        // Stated plainly, because a guard that cannot fail is worse than none:
+        // **neutering this assertion kills no test**, and no test can be written
+        // that makes it fire, because "a closed term's reduction cannot reach a
+        // context lookup" is a theorem about `has_fvars`, not a condition some
+        // input violates. Its sibling on `entry_closed` is the same. What it
+        // buys is that the theorem is re-checked at runtime, in release, on
+        // every link actually routed — and what keeps it from being decoration
+        // is `an_open_entry_delta_unfolds_to_a_closed_link_stored_context_free`,
+        // which fails if the chain stops producing the links this looks at.
+        for &(link, reads_at_link) in &chain {
+            assert!(
+                self.has_fvars(link) || self.reduction_ctx_reads == reads_at_link,
+                "δ-normalizing a closed expression read the local context; the \
+                 kernel-global whnf_core cache key has no context component and \
+                 would be unsound"
+            );
         }
+        debug_assert!(
+            !entry_closed || self.reduction_ctx_reads == reads_before,
+            "the per-link tripwire must subsume the entry-closed case"
+        );
+        for (link, _) in chain {
+            self.remember_whnf_core(revision, link, normalized, ctx);
+        }
+        normalized
+    }
+
+    /// The memoised full-δ normal form of `e`, if one is recorded.
+    ///
+    /// Routed by `e`'s own closedness, exactly as [`Kernel::whnf_no_unfolding`]
+    /// routes its δ-free memo and for the same reason: the kernel-global key
+    /// has no local-context component, so only a closed expression — one whose
+    /// reduction provably cannot consult the context — may live there.
+    fn recall_whnf_core(
+        &mut self,
+        revision: u64,
+        e: ExprId,
+        ctx: &mut LocalContext,
+    ) -> Option<ExprId> {
+        if self.has_fvars(e) {
+            return ctx.whnf_core_result(revision, e);
+        }
+        if self.whnf_core_cache.0 != revision {
+            self.whnf_core_cache.0 = revision;
+            self.whnf_core_cache.1.clear();
+            return None;
+        }
+        self.whnf_core_cache.1.get(&e).copied()
+    }
+
+    /// Record `normalized` as the full-δ normal form of `e`, in whichever half
+    /// of the split memo `e`'s closedness selects.
+    ///
+    /// The revision check on the way *in* is not redundant with the one on the
+    /// way out, and I had it the other way round until an assertion said
+    /// otherwise. The argument for dropping it was that every link is recalled
+    /// at the same revision first, so the recall's stamp always precedes the
+    /// write. Replacing the branch with `debug_assert_eq!` and running the unit
+    /// sweep killed six tests: a **fresh** `LocalContext` whose first
+    /// `whnf_core` entry is *closed* is never stamped by a recall at all (the
+    /// recall goes to the kernel-global half), so the first open link written
+    /// into it arrives at an unstamped cache. It is this branch that stamps it.
+    fn remember_whnf_core(
+        &mut self,
+        revision: u64,
+        e: ExprId,
+        normalized: ExprId,
+        ctx: &mut LocalContext,
+    ) {
+        if self.has_fvars(e) {
+            ctx.remember_whnf_core(revision, e, normalized);
+            return;
+        }
+        if self.whnf_core_cache.0 != revision {
+            self.whnf_core_cache.0 = revision;
+            self.whnf_core_cache.1.clear();
+        }
+        self.whnf_core_cache.1.insert(e, normalized);
     }
 }
 
@@ -1045,6 +1266,8 @@ impl Kernel {
     /// # Errors
     ///
     /// Returns [`KernelError::DeclarationExists`] for a duplicate name,
+    /// [`KernelError::UndeclaredUniverseParam`] if the type or value mentions a
+    /// universe parameter the declaration does not bind,
     /// [`KernelError::DeclarationTypeNotASort`] if the type is not a type,
     /// [`KernelError::DeclarationValueMismatch`] if a value's type does not
     /// match the declared type, or any [`KernelError`] surfaced while inferring
@@ -1067,6 +1290,24 @@ impl Kernel {
     /// Check one declaration's ordinary type/value contract without inserting
     /// it. Privileged package gates use this after their own shape validation.
     pub(crate) fn check_declaration(&mut self, decl: &Declaration) -> Result<(), KernelError> {
+        // (1b) Universe closure: every `Param` the type or the value mentions
+        // must be one this declaration binds.
+        //
+        // This has to come first and has to be its own check, because the two
+        // that follow are *relative*: inference and def-eq treat an unbound
+        // `Param` exactly like a bound one, so they hold just as well with a
+        // free `u` on both sides. Nothing else in the kernel ever compares the
+        // parameters occurring in a term against the parameters the
+        // declaration declares, which left the binding list decorative.
+        for expr in [Some(decl.ty()), decl.value()].into_iter().flatten() {
+            if let Some(param) = self.undeclared_universe_param(expr, decl.uparams()) {
+                return Err(KernelError::UndeclaredUniverseParam {
+                    declaration: decl.name(),
+                    param,
+                });
+            }
+        }
+
         // (2) The declared type must itself be a type (infer to a `Sort`).
         let ty = decl.ty();
         let mut ctx = LocalContext::new();
@@ -1089,6 +1330,85 @@ impl Kernel {
         }
 
         Ok(())
+    }
+
+    /// The first universe parameter `e` mentions that is not in `bound`, if any.
+    ///
+    /// Not `pub(crate)`, for two reasons that are the same reason. The inductive
+    /// gate does its own type checking and never routes through
+    /// `Kernel::check_declaration` (private, hence unlinked), so it has to run
+    /// this check itself or
+    /// inductives are the one declaration kind whose universe parameters stay
+    /// decorative. And a *recursor* record on an import stream is checked by
+    /// comparison against the recursor this kernel generated, never admitted —
+    /// so the kernel never sees the exported binding list at all, and the
+    /// importer needs this walk to check it. Both callers are checking a
+    /// binding list against the parameters a term actually mentions, which is
+    /// the one question nothing else in the kernel asks.
+    ///
+    /// Expressions are interned DAGs, so the walk memoizes on `ExprId`; without
+    /// that a shared subterm is revisited once per reference and a large
+    /// prelude declaration is exponential.
+    #[must_use]
+    pub fn undeclared_universe_param(&self, e: ExprId, bound: &[NameId]) -> Option<NameId> {
+        let mut seen = std::collections::HashSet::new();
+        let mut stack = vec![e];
+        while let Some(current) = stack.pop() {
+            if !seen.insert(current) {
+                continue;
+            }
+            match self.expr_node(current) {
+                ExprNode::BVar(_) | ExprNode::FVar(_) | ExprNode::Lit(_) => {}
+                ExprNode::Sort(level) => {
+                    if let Some(stray) = self.undeclared_level_param(*level, bound) {
+                        return Some(stray);
+                    }
+                }
+                ExprNode::Const(_, levels) => {
+                    for &level in levels {
+                        if let Some(stray) = self.undeclared_level_param(level, bound) {
+                            return Some(stray);
+                        }
+                    }
+                }
+                ExprNode::Proj(_, _, structure) => stack.push(*structure),
+                ExprNode::App(function, argument) => {
+                    stack.push(*function);
+                    stack.push(*argument);
+                }
+                ExprNode::Lam(_, ty, body, _) | ExprNode::Pi(_, ty, body, _) => {
+                    stack.push(*ty);
+                    stack.push(*body);
+                }
+                ExprNode::Let(_, ty, value, body) => {
+                    stack.push(*ty);
+                    stack.push(*value);
+                    stack.push(*body);
+                }
+            }
+        }
+        None
+    }
+
+    /// The first universe parameter in `level` that is not in `bound`, if any.
+    fn undeclared_level_param(&self, level: LevelId, bound: &[NameId]) -> Option<NameId> {
+        let mut stack = vec![level];
+        while let Some(current) = stack.pop() {
+            match self.level_node(current) {
+                LevelNode::Zero => {}
+                LevelNode::Succ(inner) => stack.push(*inner),
+                LevelNode::Max(left, right) | LevelNode::IMax(left, right) => {
+                    stack.push(*left);
+                    stack.push(*right);
+                }
+                LevelNode::Param(name) => {
+                    if !bound.contains(name) {
+                        return Some(*name);
+                    }
+                }
+            }
+        }
+        None
     }
 }
 
@@ -1463,6 +1783,26 @@ impl Kernel {
         loop {
             if let Some(result) = self.def_eq_nat_offset(x, y, ctx) {
                 return DeltaResult::FoundEqResult(result);
+            }
+            // Lean's `lazy_delta_reduction` (`type_checker.cpp:971-984`): after
+            // offset equality and **before** the δ step, try the literal-`Nat`
+            // acceleration on either side — but only when *neither* side
+            // mentions a free variable. That guard is verbatim Lean's
+            // `(!has_fvar(t_n) && !has_fvar(s_n))` at `:978`; Lean's `m_eager_reduce`
+            // disjunct is an elaborator-only mode this kernel does not have.
+            //
+            // Without this site the rule would be unreachable from the route
+            // that matters: `def_eq_core_uncached` normalises both sides with
+            // `whnf_no_unfolding` (Lean's `whnf_core`, which carries no `Nat`
+            // rule) and then comes straight here, so `Nat.add 2 3 =?= 5` would
+            // grind through `Nat.add`'s recursive definition — exactly the
+            // pathology ADR-0459 exists to remove.
+            if !self.has_fvars(x) && !self.has_fvars(y) {
+                if let Some(reduced) = self.reduce_nat_binop(x, ctx) {
+                    return DeltaResult::FoundEqResult(self.def_eq_core(reduced, y, ctx));
+                } else if let Some(reduced) = self.reduce_nat_binop(y, ctx) {
+                    return DeltaResult::FoundEqResult(self.def_eq_core(x, reduced, ctx));
+                }
             }
             let r1 = self.get_applied_def(x);
             let r2 = self.get_applied_def(y);
@@ -2461,6 +2801,25 @@ impl Kernel {
             && let ExprNode::Pi(_, expected_domain, expected_body, _) =
                 self.expr_node(expected).clone()
         {
+            // The binder domain must be a TYPE, not merely def-eq to the
+            // expected one. Omitting this was a real divergence from the real
+            // Lean kernel, found by
+            // `axeyum-lean-import/tests/real_lean_wire_differential.rs`: an
+            // ill-typed domain that BETA-REDUCES to the expected domain is
+            // erased by `def_eq_core`'s whnf and was never checked at all.
+            // Minimal case, accepted here and rejected by Lean 4.30.0's
+            // `addDeclCore`:
+            //
+            //     h : (True -> True) -> True
+            //     theorem t : True := h (fun (_ : (fun (x : Sort 1) => True) trivial) => trivial)
+            //
+            // `(fun (x : Sort 1) => True) trivial` is ill typed (`trivial :
+            // True`, the binder wants `Sort 1`) and reduces to `True`.
+            // `infer_lambda` has always checked this; this fast path bypassed
+            // `infer_lambda` entirely, so the check has to be repeated here.
+            // Lean's kernel has no such path: it infers and then `isDefEq`s,
+            // and `inferLambda` calls `ensureSortCore` on the domain.
+            self.infer_sort_of(domain, ctx)?;
             if !self.def_eq_core(domain, expected_domain, ctx) {
                 return Err(KernelError::TypeMismatch {
                     expected: expected_domain,

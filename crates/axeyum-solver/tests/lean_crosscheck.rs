@@ -26,7 +26,8 @@ use axeyum_ir::{Rational, Sort, TermArena};
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{
     LeanModuleContent, ProofFragment, prove_unsat_to_lean_module,
-    reconstruct_lex_clash_to_lean_module,
+    reconstruct_lex_clash_to_lean_module, reconstruct_string_length_to_lean_module,
+    string_length_refutation,
 };
 use axeyum_strings::{LexAtom, LexFormula, LexProblem, Seg};
 
@@ -104,6 +105,9 @@ const FAMILY_BUILDERS: &[FamilyBuilder] = &[
     qf_fp_bv_defined_enum_rows_check_in_real_lean,
     qf_dt_cvc5_slice_checks_in_real_lean,
     lra_refutation_checks_in_real_lean,
+    qf_rdl_difference_refutation_checks_in_real_lean,
+    qf_lia_int_farkas_refutation_checks_in_real_lean,
+    qf_idl_int_farkas_refutation_checks_in_real_lean,
     qf_lra_ite_true_identity_checks_in_real_lean,
     qf_lra_dpll_audit_rows_check_in_real_lean,
     qf_lia_arith_dpll_audit_rows_check_in_real_lean,
@@ -163,6 +167,7 @@ const FAMILY_BUILDERS: &[FamilyBuilder] = &[
     certified_uflia_interpolant_both_integer_certs_checked_by_real_lean,
     qf_s_word_clash_refutations_check_in_real_lean,
     qf_s_lex_clash_refutations_check_in_real_lean,
+    qf_s_string_length_refutations_check_in_real_lean,
 ];
 
 /// Collect the Lean modules a builder produces (running its Rust-side structural
@@ -481,7 +486,7 @@ fn lean_crosscheck_full() {
 /// route that reconstructs to `axiom P; axiom ¬P` raises it and fails here.
 /// That is the point — a new refuter must not be able to add itself to the Lean
 /// headline without adding any Lean-checkable reasoning.
-const STRUCTURAL_ATTESTATION_FAMILY_BASELINE: usize = 41;
+const STRUCTURAL_ATTESTATION_FAMILY_BASELINE: usize = 40;
 
 /// **Floor.** The other side of the same split: families whose representative
 /// module really is reconstructed from the query. May only go UP.
@@ -496,16 +501,16 @@ const STRUCTURAL_ATTESTATION_FAMILY_BASELINE: usize = 41;
 /// deleting the marker from `structural_attestation_banner`: reconstruction
 /// then fails with `ModuleContentMismatch { declared: "structural-attestation",
 /// rendered: "theory-reconstruction" }` instead of quietly reclassifying.
-const THEORY_RECONSTRUCTION_FAMILY_FLOOR: usize = 33;
+const THEORY_RECONSTRUCTION_FAMILY_FLOOR: usize = 37;
 
 /// The same ratchet at module granularity: every module the exhaustive
 /// `lean_crosscheck_full` sweep would hand to Lean, not just the representative
 /// one per family. Measured 2026-08-17: 72 of 167 modules.
-const STRUCTURAL_ATTESTATION_MODULE_BASELINE: usize = 72;
+const STRUCTURAL_ATTESTATION_MODULE_BASELINE: usize = 71;
 
 /// Module-granularity floor; the counterpart of the constant above.
 /// Measured 2026-08-17: 95 of 167 modules.
-const THEORY_RECONSTRUCTION_MODULE_FLOOR: usize = 96;
+const THEORY_RECONSTRUCTION_MODULE_FLOOR: usize = 100;
 
 /// The gate's population, split by what the modules actually contain.
 struct ContentSplit {
@@ -823,6 +828,59 @@ fn qf_s_lex_clash_refutations_check_in_real_lean() {
         let source = reconstruct_lex_clash_to_lean_module(&problem)
             .expect("lex strict second-char clash reconstructs");
         lean_accepts("qf_s_lex_strict_second_char_clash", &source);
+    }
+}
+
+/// `QF_S` / `QF_SLIA`: the two committed corpus files whose refutation is a
+/// LENGTH / code-point abstraction, reconstructed over the constructed integers.
+///
+/// A separate family from the word clash and the lex clash above, and reached by
+/// a different route: those two are refutations *about strings*, while this one
+/// abstracts every string term to an integer and hands the residue to the
+/// ordered-ring Farkas fold. Two modules, deliberately, because they take
+/// different engines — `str004`'s combination has a strict fact and `str005`'s
+/// does not — and the representative slice only checks the first of a family.
+///
+/// The assertion that matters is the carrier. `try_new_over_integers` builds
+/// `build_int_prelude`, whose 30 ordered-ring declarations are theorems, so what
+/// real Lean reads here is a theorem about `Int` that assumes nothing but the
+/// query's own facts. An `AxReal.` in this source would mean the route reached
+/// the 30-axiom package.
+fn qf_s_string_length_refutations_check_in_real_lean() {
+    // Both files verbatim; the certificate reads SOURCE s-expressions, because a
+    // string script's flat arena view is the bounded packed-BV encoding and not
+    // the query (ADR-0061).
+    let cases: &[(&str, &str)] = &[
+        (
+            "qf_s_string_length_str004",
+            "(set-logic QF_SLIA)\n(set-info :status unsat)\n\
+             (declare-fun xx () String)\n(declare-fun yy () String)\n\
+             (assert (> (str.len yy) (str.len xx)))\n\
+             (assert (= xx (str.++ xx yy)))\n(check-sat)",
+        ),
+        (
+            "qf_s_string_length_str005",
+            "(set-logic QF_S)\n(set-info :status unsat)\n\
+             (declare-fun yy () String)\n\
+             (assert (= (str.len yy) 0))\n(assert (not (= yy \"\")))\n(check-sat)",
+        ),
+    ];
+    for (tag, text) in cases {
+        let commands = axeyum_smtlib::read_all(text).expect("the script reads");
+        let certificate = string_length_refutation(&commands).expect("a length certificate");
+        let source = reconstruct_string_length_to_lean_module(&certificate)
+            .expect("the conjunctive length refutation reconstructs");
+        assert_eq!(
+            LeanModuleContent::of_module_source(&source),
+            LeanModuleContent::TheoryReconstruction,
+            "[{tag}] the length module became a structural attestation"
+        );
+        assert!(
+            !source.contains("AxReal."),
+            "[{tag}] the length route must not reach the 30-axiom AxReal package"
+        );
+        assert!(!source.contains("sorryAx"), "[{tag}] leans on sorryAx");
+        lean_accepts(tag, &source);
     }
 }
 
@@ -1234,6 +1292,124 @@ fn lra_refutation_checks_in_real_lean() {
     lean_accepts("lra", &source);
 }
 
+/// `QF_RDL`: `x - y < 1 ∧ y - x < -2` — real difference logic.
+///
+/// Registered because the representative slice is one module per *family*, and
+/// difference logic scans into the `Lra` family: the `lra` representative above
+/// is built from `real_lt`/`real_le` directly, so until now no module from the
+/// `QF_RDL` *logic* was ever handed to `lean`. That is the whole reason `QF_RDL` sat
+/// in the certificate gap — `scripts/check-capability-assurance.py --rank` band
+/// 1, "artifact already built" — despite official Lean 4.30.0 accepting its
+/// reconstruction in 0.20s when handed one by hand on 2026-08-17, and rejecting
+/// two mutations of it.
+///
+/// The content class is asserted here rather than trusted: a family that renders
+/// the `axiom P` / `axiom ¬P` shim would still be "accepted by Lean" while
+/// containing none of the reasoning, which is exactly the confusion the
+/// theory/attestation split exists to prevent.
+fn qf_rdl_difference_refutation_checks_in_real_lean() {
+    let mut parsed = parse_script(
+        "(set-logic QF_RDL)\n\
+         (declare-fun x () Real)\n\
+         (declare-fun y () Real)\n\
+         (assert (< (- x y) 1.0))\n\
+         (assert (< (- y x) (- 2.0)))\n\
+         (check-sat)",
+    )
+    .expect("QF_RDL query parses");
+    let assertions = parsed.assertions.clone();
+    let (fragment, source) = prove_unsat_to_lean_module(&mut parsed.arena, &assertions)
+        .expect("QF_RDL difference refutation reconstructs");
+    assert_eq!(
+        fragment,
+        ProofFragment::Lra,
+        "QF_RDL stopped routing through the `Lra` fragment; it is that shared route \
+         that makes this module a real reconstruction"
+    );
+    assert_eq!(
+        LeanModuleContent::of_module_source(&source),
+        LeanModuleContent::TheoryReconstruction,
+        "the QF_RDL module became a structural attestation; handing that to `lean` \
+         would grow the family count without adding any checkable reasoning"
+    );
+    lean_accepts("qf_rdl_difference", &source);
+}
+
+/// `QF_LIA`: `x > 5 ∧ x < 3` over the INTEGERS — a Farkas refutation carried
+/// into `ℤ`.
+///
+/// Registered because this query rendered a structural attestation until
+/// 2026-08-17: it routed to `ArithDpll`, which has no theory reconstruction,
+/// even though an ordinary Farkas combination refutes it. `ProofFragment::IntFarkas`
+/// finds that combination on the rational relaxation, abstracts it over the 22
+/// ordered-commutative-ring laws (axiom-free, since Farkas uses ring operations
+/// and order but never division), and instantiates at `ℤ`, which models all 22
+/// with empty witness footprints.
+///
+/// Nothing about the claim is relaxed: the combination is carried out in the
+/// integers themselves, so what Lean reads is a theorem about `Int`.
+fn qf_lia_int_farkas_refutation_checks_in_real_lean() {
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").expect("int variable");
+    let five = arena.int_const(5);
+    let three = arena.int_const(3);
+    let a1 = arena.int_lt(five, x).expect("5 < x");
+    let a2 = arena.int_lt(x, three).expect("x < 3");
+
+    let (fragment, source) =
+        prove_unsat_to_lean_module(&mut arena, &[a1, a2]).expect("integer Farkas reconstructs");
+    assert_eq!(
+        fragment,
+        ProofFragment::IntFarkas,
+        "the integer query stopped routing to the Farkas-over-ℤ reconstructor; if it fell back to \
+         a lazy-SMT route it would attest instead of reason"
+    );
+    assert_eq!(
+        LeanModuleContent::of_module_source(&source),
+        LeanModuleContent::TheoryReconstruction,
+        "the integer module became a structural attestation — the exact shim this route replaced"
+    );
+    assert!(
+        !source.contains("sorryAx"),
+        "the integer module leans on sorryAx"
+    );
+    lean_accepts("qf_lia_int_farkas", &source);
+}
+
+/// `QF_IDL`: `x - y ≤ 1 ∧ y - x ≤ -3` over the INTEGERS.
+///
+/// A separate family from the `QF_LIA` one above, deliberately. The
+/// representative slice checks one module per FAMILY, so a logic with no module
+/// of its own is not covered by the gate even when it routes through the same
+/// reconstructor — that is precisely why `QF_RDL` counted as externally
+/// unchecked while official Lean would have accepted it. Integer difference
+/// logic gets its own row rather than inheriting `QF_LIA`'s.
+fn qf_idl_int_farkas_refutation_checks_in_real_lean() {
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").expect("int variable");
+    let y = arena.int_var("y").expect("int variable");
+    let one = arena.int_const(1);
+    let minus_three = arena.int_const(-3);
+    let x_minus_y = arena.int_sub(x, y).expect("x - y");
+    let y_minus_x = arena.int_sub(y, x).expect("y - x");
+    let a1 = arena.int_le(x_minus_y, one).expect("x - y <= 1");
+    let a2 = arena.int_le(y_minus_x, minus_three).expect("y - x <= -3");
+
+    let (fragment, source) = prove_unsat_to_lean_module(&mut arena, &[a1, a2])
+        .expect("integer difference logic reconstructs");
+    assert_eq!(
+        fragment,
+        ProofFragment::IntFarkas,
+        "QF_IDL stopped routing to the Farkas-over-ℤ reconstructor"
+    );
+    assert_eq!(
+        LeanModuleContent::of_module_source(&source),
+        LeanModuleContent::TheoryReconstruction,
+        "integer difference logic is attesting again"
+    );
+    lean_accepts("qf_idl_int_farkas", &source);
+}
+
 /// `QF_LRA`: the cvc5 `ite_arith` row is `not (= x (ite true x y))`.
 /// The checked term-identity route recognizes `ite true x y = x` and exports a
 /// Lean proof of the contradiction without invoking the bit-blast or DPLL proof
@@ -1308,7 +1484,19 @@ fn qf_lia_arith_dpll_audit_rows_check_in_real_lean() {
         let assertions = script.assertions.clone();
         let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
             .expect("arithmetic DPLL row reconstructs");
-        assert_eq!(fragment, ProofFragment::ArithDpll);
+        // Either lazy-SMT (an attestation) or the integer Farkas route (real
+        // reasoning). On 2026-08-17 one of these committed QF_LIA rows moved from
+        // the former to the latter when `ProofFragment::IntFarkas` landed, which
+        // is the improvement that route exists to make — so this pins the pair
+        // rather than the old value, and the split ratchet below is what stops
+        // the movement going the WRONG way.
+        assert!(
+            matches!(
+                fragment,
+                ProofFragment::ArithDpll | ProofFragment::IntFarkas
+            ),
+            "{tag}: routed to {fragment:?}, neither lazy-SMT arithmetic nor integer Farkas"
+        );
         assert!(
             !source.contains("sorryAx"),
             "arithmetic DPLL module must not use sorryAx:\n{source}"
@@ -3173,9 +3361,30 @@ fn conjunctive_lra_still_reconstructs_unchanged() {
          reconstructor that emits arithmetic"
     );
     assert!(!source.contains("sorryAx"));
+    // `CReal`, not `AxReal`. The shipped front door reconstructs over the
+    // CONSTRUCTED reals (`a6ee37c6a`), so the emitted module names `CReal.*`.
+    //
+    // This assertion read `AxReal.lt_irrefl` and FAILED. It was written as
+    // `Real.lt_irrefl` and mechanically rewritten by the `Real` -> `AxReal`
+    // rename (`c26e492b1`, ADR-0522), which renamed the string without asking
+    // whether this route still used that carrier — it had already stopped. The
+    // rename was correct everywhere it applied and wrong here, and nothing
+    // caught it because `lean_crosscheck` takes ~370s and the push hook skips
+    // it. Same shape as the ledger row that said `real 30` about rows named
+    // `AxReal.*`: a rename is not landed until every place that PUBLISHES the
+    // name has been re-read, not just re-spelled.
+    //
+    // Asserting the carrier by name is the point of the test — an `AxReal`
+    // module here would mean the shipped route had silently regressed onto the
+    // 30-axiom package, which is exactly what must never happen quietly.
     assert!(
-        source.contains("Real.lt_irrefl"),
-        "the module must carry the ordered-field reasoning, not an opaque prop"
+        source.contains("CReal.lt_irrefl"),
+        "the module must carry the ordered-field reasoning over the CONSTRUCTED \
+         reals, not an opaque prop and not the axiomatized package; got:\n{source}"
+    );
+    assert!(
+        !source.contains("AxReal."),
+        "the shipped LRA route must not reach the 30-axiom AxReal package"
     );
 }
 

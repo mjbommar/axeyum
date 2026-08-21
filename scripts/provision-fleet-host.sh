@@ -158,6 +158,52 @@ else
   say "PATH: ~/.bashrc already exports ~/.cargo/bin"
 fi
 
+# --- 3b. What `scripts/local-ci.sh` needs --------------------------------
+# Hosted CI's own comment calls local-ci.sh "the authoritative gate for main".
+# Measured 2026-08-18 it could not run on ANY host in this fleet, and this
+# script was why: it installs the pinned nightly, just, cargo-deny and Lean, and
+# none of the three things local-ci.sh actually invokes. On the dev box,
+# `cargo nextest --version` exited 101 (no such command) and
+# `rustup run 1.88.0 cargo --version` exited 1 (toolchain not installed) --
+# and `cargo nextest run --profile local --workspace --all-features` IS the
+# test sweep. So the gate had never run anywhere, and nothing said so.
+#
+# `--profile minimal` is not tidiness: a plain `rustup toolchain install 1.88.0`
+# FAILS on this fleet's rustup with "some components are unavailable for
+# download for channel '1.88.0': 'miri', 'rustc-codegen-cranelift'", because it
+# inherits the default profile's component set from the nightly channel.
+"$CARGO_BIN/rustup" toolchain install stable --profile minimal -c clippy >/dev/null 2>&1 \
+  && say "stable: present ($("$CARGO_BIN/rustup" run stable rustc --version 2>&1 | head -1))" \
+  || { say "stable toolchain install FAILED"; fail=1; }
+"$CARGO_BIN/rustup" toolchain install 1.88.0 --profile minimal >/dev/null 2>&1 \
+  && say "MSRV 1.88.0: present ($("$CARGO_BIN/rustup" run 1.88.0 rustc --version 2>&1 | head -1))" \
+  || { say "MSRV 1.88.0 install FAILED"; fail=1; }
+
+if [ -x "$CARGO_BIN/cargo-nextest" ]; then
+  say "cargo-nextest: already present ($("$CARGO_BIN/cargo-nextest" --version 2>&1 | head -1))"
+elif [ -x "$STAGE/cargo-nextest" ]; then
+  install -m 0755 "$STAGE/cargo-nextest" "$CARGO_BIN/cargo-nextest" \
+    && say "cargo-nextest: installed from $STAGE" \
+    || { say "cargo-nextest: stage copy FAILED"; fail=1; }
+else
+  say "cargo-nextest: building from crates.io (slow)..."
+  "$CARGO_BIN/cargo" install cargo-nextest --locked >/dev/null 2>&1 \
+    && say "cargo-nextest: built ($("$CARGO_BIN/cargo-nextest" --version 2>&1 | head -1))" \
+    || { say "cargo-nextest: install FAILED"; fail=1; }
+fi
+if [ -x "$CARGO_BIN/cargo-nextest" ] && [ ! -x "$STAGE/cargo-nextest" ]; then
+  mkdir -p "$STAGE" && cp -f "$CARGO_BIN/cargo-nextest" "$STAGE/cargo-nextest" 2>/dev/null \
+    && say "cargo-nextest: staged to $STAGE for isolated hosts"
+fi
+
+if command -v z3 >/dev/null 2>&1; then
+  say "z3: present ($(z3 --version 2>&1 | head -1))"
+else
+  say "z3: MISSING -- needs root: sudo apt-get install -y z3 libz3-dev"
+  say "     (not installed here: this script does not assume sudo)"
+  fail=1
+fi
+
 # --- 4. Commit hooks in the checkout -------------------------------------
 if [ -d "$REPO/.git" ]; then
   git -C "$REPO" config core.hooksPath hooks \
@@ -185,6 +231,15 @@ v bwrap-sandbox "bwrap --ro-bind /usr /usr /usr/bin/true && echo runnable"
 v lean       "\"\$(lean_bin)\" --version"
 v hooksPath  "git -C \"$REPO\" config --get core.hooksPath"
 v nas3       "[ -w /nas3/data ] && echo rw"
+# The local-ci prerequisites, verified the way this block verifies everything
+# else -- by making the tool speak, not by trusting the installer's exit status.
+v msrv-1.88  "\"$CARGO_BIN/rustup\" run 1.88.0 rustc --version"
+v stable     "\"$CARGO_BIN/rustup\" run stable rustc --version"
+v nextest    "\"$CARGO_BIN/cargo-nextest\" --version"
+v z3         "z3 --version"
+# ...and then the claim that actually matters: does the authoritative gate agree
+# it can run here? Its preflight is the authority, not this list.
+v local-ci-preflight "scripts/local-ci.sh --preflight-only 2>&1 | head -1"
 # The two checks that matter for GATES rather than for tools: can
 # check-lean-gate.sh discover Lean where it actually looks, and does a
 # NON-INTERACTIVE ssh see cargo. Both were false on this fleet after the first

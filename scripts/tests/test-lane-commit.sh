@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+# Controls for `scripts/lane-commit.sh`, in a throwaway repo.
+#
+# Three cases, one per failure this session actually produced:
+#
+#   1. a rename with only ONE side named  -> refused    (the too-NARROW pathspec
+#      that committed four ADR deletions without their replacements)
+#   2. a sibling lane's untracked file present but not named -> NOT committed
+#      (the too-WIDE pathspec that swept two lanes' new files)
+#   3. the honest case -> committed, and the shared index left clean
+#
+# Case 2 is the one the repository's documented assertion cannot express: it
+# compares the staged set against the pathspec, so it passes whenever both are
+# wrong together, which is what happened twice.
+set -uo pipefail
+cd "$(dirname "$0")/../.." || exit 2
+HELPER="$PWD/scripts/lane-commit.sh"
+
+WORK="$(mktemp -d)"
+trap 'rm -rf "$WORK"' EXIT
+fail=0
+ok()  { echo "ok   $1"; }
+bad() { echo "FAIL $1"; fail=1; }
+
+cd "$WORK" || exit 2
+git init -q .
+git config user.email t@t; git config user.name t
+mkdir -p .git/hooks   # no commit-msg hook here: the Agent: trailer is not under test
+echo one > a.txt; echo two > b.txt
+git add -A; git commit -qm base
+export AXEYUM_AGENT=test-lane
+printf 'subject\n\nbody\n' > "$WORK/msg"
+
+# --- 1. half a rename is refused -------------------------------------------
+git mv a.txt a-renamed.txt
+out=$("$HELPER" --dry-run -- a-renamed.txt 2>&1); rc=$?
+case "$rc:$out" in
+  0:*) bad "1 half a rename was ACCEPTED" ;;
+  *"did not name them"*|*"REFUSING"*) ok "1 half a rename refused" ;;
+  *) bad "1 refused with an unexpected message: $out" ;;
+esac
+# naming both sides is accepted
+out=$("$HELPER" --dry-run -- a.txt a-renamed.txt 2>&1); rc=$?
+[ "$rc" = 0 ] && ok "1b naming both sides of the rename is accepted" \
+  || bad "1b both sides refused: $out"
+git mv a-renamed.txt a.txt   # restore
+
+# --- 2. a sibling's untracked file is never swept --------------------------
+echo mine > mine.txt
+echo theirs > sibling-untracked.txt          # another lane's work in progress
+out=$("$HELPER" -m "$WORK/msg" -- mine.txt 2>&1); rc=$?
+if [ "$rc" != 0 ]; then
+  bad "2 the honest commit was refused: $out"
+elif git cat-file -e "HEAD:sibling-untracked.txt" 2>/dev/null; then
+  bad "2 a sibling lane's untracked file was COMMITTED"
+elif ! git cat-file -e "HEAD:mine.txt" 2>/dev/null; then
+  bad "2 my own file did not make it into HEAD"
+else
+  ok "2 sibling's untracked file left alone; mine committed"
+fi
+
+# --- 3. the shared index is left clean for the committed paths -------------
+unset GIT_INDEX_FILE
+if [ -z "$(git diff --cached --name-only HEAD -- mine.txt)" ]; then
+  ok "3 no staged revert left behind for the committed path"
+else
+  bad "3 the shared index still differs from HEAD for mine.txt"
+fi
+
+# --- 4. naming a path that is not dirty is refused, not silently committed --
+out=$("$HELPER" --dry-run -- b.txt 2>&1); rc=$?
+case "$rc:$out" in
+  0:*) bad "4 naming an unchanged path was accepted" ;;
+  *"did not stage"*) ok "4 naming an unchanged path refused" ;;
+  *) bad "4 refused with an unexpected message: $out" ;;
+esac
+
+# --- 5. naming a DIRECTORY that contains a sibling's file is refused --------
+# The "extra staged" guard is unreachable when every named path is an explicit
+# file -- `git add -A -- <file>` cannot stage anything else. It fires on the case
+# that actually happened: a pathspec naming a DIRECTORY, which sweeps whatever
+# else is in it. Without this case that guard could be deleted with the suite
+# still green, which is the failure mode it exists to prevent.
+mkdir -p shared
+echo mine2 > shared/mine2.txt
+echo theirs2 > shared/sibling2.txt
+out=$("$HELPER" --dry-run -- shared 2>&1); rc=$?
+case "$rc:$out" in
+  0:*) bad "5 naming a directory containing a sibling's file was ACCEPTED" ;;
+  *"did not name them"*) ok "5 directory pathspec sweeping a sibling refused" ;;
+  *) bad "5 refused with an unexpected message: $out" ;;
+esac
+# ...and naming both files explicitly is fine.
+out=$("$HELPER" --dry-run -- shared/mine2.txt shared/sibling2.txt 2>&1); rc=$?
+[ "$rc" = 0 ] && ok "5b naming both explicitly is accepted" \
+  || bad "5b explicit naming refused: $out"
+
+if [ "$fail" = 0 ]; then echo "LANE_COMMIT_CONTROLS|ok"; else echo "LANE_COMMIT_CONTROLS|FAILED" >&2; fi
+exit "$fail"

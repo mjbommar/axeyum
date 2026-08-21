@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "id": "F:real-lattice-is-constructed-axiom-free",
+  "title": "The constructed reals carry max, min and a total absolute value, built with no index shift and no decision procedure",
+  "statement": "CReal.max, CReal.min : CReal -> CReal -> CReal and CReal.abs : CReal -> CReal are Definitions in the axeyum Lean kernel with empty axiom footprints, together with the six lattice laws (le_max_left, le_max_right, max_le, min_le_left, min_le_right, le_min), three Equiv-congruences, and the four abs laws (le_abs_self, neg_le_abs, abs_le, abs_nonneg). Two things make this cheap and neither was predicted. FIRST, max is not DERIVED from a decision: CReal.le is undecidable and Rat.le_or_lt is Or-valued, hence a Prop, and eliminating a Prop into Type is what this kernel refuses. Rat.max is DEFINED ON THE REPRESENTATION, by Int.rec on the sign of the cross-difference num b * den a - num a * den b, where the sign is a CONSTRUCTOR. One case-analysis principle Rat.max_cases : forall a b (P : Rat -> Prop), (Rat.le a b -> P b) -> (Rat.le b a -> P a) -> P (Rat.max a b) carries every lattice law, and there is exactly one Int.rec in the module. SECOND, Rat.sub_max_le -- a - c <= q -> b - e <= q -> max a b - max c e <= q, joint one-Lipschitz-ness -- means max does not degrade the modulus, so CReal.max samples at the SAME index as its arguments. It is the first operation since CReal.neg that costs no index shift; add samples at 2n+1, mul at a shift computed from both magnitudes, inv at (C+1)n + C. The same lemma with the Equiv hypotheses in place of the regularity facts is max_congr, so one helper is regularity AND congruence for both operations. CReal.abs x := CReal.max x (CReal.neg x), so it introduces no sequence of its own: abs_le IS max_le, le_abs_self IS le_max_left, abs_congr is max_congr with neg_congr in its second slot, and only abs_nonneg is new. Everything is one-sided: Equiv (abs x) x or Equiv (abs x) (neg x) is a decision on the sign of a real and is not proved, not assumed and not used.",
+  "formal": {
+    "language": "lean4",
+    "statement": "TODO: the formal statement, precise enough to dispatch",
+    "fragment": "CReal",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:real-axioms-modelled-by-constructed-setoid"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "real-lattice-is-constructed-axiom-free-1",
+      "kind": "kernel-term",
+      "supports": "94 CReal declarations admitted (76 before this lane), every one a checked Definition or Theorem with an empty axiom_footprint, and the whole environment's trusted surface still EMPTY -- read out of the kernel, with the exit status depending on both values.",
+      "check_status": "checked",
+      "checker_command": "out=$(scripts/cargo-serialized.sh run -q -p axeyum-lean-kernel --example creal_setoid_witness 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE '94 declarations admitted, trusted surface = 0 [(]empty[)]'",
+      "notes": "Anchored on TWO values on one line -- the count 94 and `trusted surface = 0 (empty)` -- so a dropped declaration and a leaked axiom each flip it. Verified discriminating by scripts/new-fact.py. This is the row that carries the axiom-freedom claim; the example exits 1 with a named FAIL line if any admitted declaration is an Axiom or Opaque, or if any footprint is non-empty."
+    },
+    {
+      "id": "real-lattice-is-constructed-axiom-free-2",
+      "kind": "kernel-term",
+      "supports": "`abs is not the identity` -- CReal.not_equiv_abs_neg_one and CReal.not_le_zero_neg_one are both present as checked theorems, which is what stops the four abs laws being satisfied by `abs x := x`.",
+      "check_status": "checked",
+      "checker_command": "out=$(scripts/cargo-serialized.sh run -q -p axeyum-lean-kernel --example creal_setoid_witness 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'abs is not the identity = true'",
+      "notes": "This is the NON-TRIVIALITY row and it exists because nothing in this fact carries a side condition: the failure mode here is not an uninhabited guard but a DEGENERATE OPERATION. `max x y := x` satisfies le_max_left by reflexivity; `abs x := x` satisfies le_abs_self, neg_le_abs and abs_le -- footprint-free, statements verbatim. Verified discriminating by scripts/new-fact.py (`true` -> `false` kills it). The example's exit status depends on it: witness clause (10)."
+    },
+    {
+      "id": "real-lattice-is-constructed-axiom-free-3",
+      "kind": "kernel-term",
+      "supports": "All 18 new declarations -- 3 definitions and 15 theorems -- appear in the witness's inventory with an EMPTY footprint column.",
+      "check_status": "checked",
+      "checker_command": "out=$(scripts/cargo-serialized.sh run -q -p axeyum-lean-kernel --example creal_setoid_witness 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^CReal[.](max|min|abs|le_max_left|le_max_right|max_le|min_le_left|min_le_right|le_min|max_congr|min_congr|abs_congr|le_abs_self|neg_le_abs|abs_le|abs_nonneg|not_le_zero_neg_one|not_equiv_abs_neg_one)[[:space:]]+(definition|theorem)[[:space:]]+-$')\" = 18",
+      "notes": "A POPULATION check: it catches a declaration disappearing, but no mutation of a surviving row changes the count, which is why it was written with --allow-population-only and is the weakest of the three. It is not load-bearing on its own; row 1 is."
+    },
+    {
+      "id": "real-lattice-statements-verbatim-and-mutations-refused",
+      "kind": "kernel-term",
+      "supports": "The fifteen lattice statements are asserted VERBATIM as rendered types (not by footprint); max idempotence, `max 0 1 is not 0`, `min 0 1 is not 1` and `|-1| is not -1` are all admitted THROUGH THE KERNEL from the laws alone; and three one-token mutations are REFUSED.",
+      "check_status": "checked",
+      "checker_command": "out=$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal::creal_tests::the_lattice 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'test result: ok\\. 3 passed; 0 failed'",
+      "notes": "Anchored on a NONZERO test count (3), because a filter matching nothing prints 'ok. 0 passed' and exits 0 -- and on `0 failed`, so a green-looking partial run cannot pass. Verified discriminating by scripts/new-fact.py. The three refused mutations are `max x y <= x` (from le_max_left, FALSE at x=0,y=1), `|x| <= 0` (from abs_nonneg, FALSE at x=1), and `not (|1| ~ 1)` -- the abs discrimination's own script with `neg one` replaced by `one`, which is FALSE and must not go through, or the discrimination would be proving nothing about the sign."
+    },
+    {
+      "id": "rational-lattice-computes-on-both-branches",
+      "kind": "kernel-term",
+      "supports": "Rat.max and Rat.min REDUCE by Eq.refl at four concrete pairs, including one whose argument is negative, and the wrong answer is REFUSED. Every Rat lattice declaration is checked and footprint-free.",
+      "check_status": "checked",
+      "checker_command": "out=$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::the_rational_lattice 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'test result: ok\\. 3 passed; 0 failed'",
+      "notes": "This is the row that pins the OPERATION rather than its laws, one level down: all nine Rat lattice laws are one-sided consequences of max_cases and would hold, footprint-free, of a max that always returned its first argument. Reduction cannot. The negative control (`Rat.max 3 1 = 1` and `Rat.min 3 1 = 3` both REFUSED) is what makes the positive reductions mean anything -- a conversion checker that accepted everything would otherwise make them pass. Anchored on a NONZERO count and `0 failed`; verified discriminating by scripts/new-fact.py."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:real-numbers",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:constructive-analysis",
+      "relation": "uses",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:order-theory",
+      "relation": "uses",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-19",
+    "established_by": "axeyum-lean-kernel rat_prelude::lattice and creal::lattice (ADR-0519; agent-creal-order lane)",
+    "source": "Bishop-style constructive analysis: the lattice operations are the ones that need no completeness, and over a setoid of regular sequences they are the ones that need no index shift either"
+  },
+  "notes": "WHAT THIS DOES NOT SAY. It does not say the order on the reals is decidable: max_cases eliminates into Prop, it is a ONE-LEVEL-DOWN fact about Rat, and `forall x y, CReal.le x y or CReal.le y x` is neither proved nor assumed. It does not say `Equiv (abs x) x or Equiv (abs x) (neg x)`: that is a decision on the sign of a real and is not available; everything proved here is one-sided. It does not give max_comm, max_assoc, `max a a = a` as a Rat identity, or `max (a+q) (b+q) = max a b + q` -- nothing consumes them, and each is one more max_cases when something does. It does not introduce Rat.abs: ADR-0512's `-q <= r and r <= q` encoding is still how every bound in the real construction is written, and CReal.abs is `max x (neg x)` one level up. It does not assume or use Markov's principle in any disguise: `not (x ~ 0) -> x # 0` is neither proved nor assumed. And it does not make sqrt, suprema or completeness any cheaper -- abs is the SHAPE those statements take, not a step toward proving them."
+}

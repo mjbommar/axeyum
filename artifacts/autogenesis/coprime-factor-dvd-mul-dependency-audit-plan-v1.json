@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-coprime-factor-dvd-mul-dependency-audit-plan",
+  "state": "preregistered-exact-three-root-audit-before-stream-reread",
+  "predecessor": {"path": "artifacts/autogenesis/coprime-factor-cancellation-residual-result-v1.json", "sha256": "43e0f9c4d17928e2093a62ddb92bf7eb13d83d100a6da28b7bbe709a5b4eecf1"},
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/4c81f2ce2-coprime-factor-cancellation-residual-v1/residual.ndjson", "sha256": "3bab0b939e7164402824dd4a6dbe4e7760bf9a655add46e8fd414e723618a43d", "textual_read_allowed": false},
+  "ordered_roots": ["Eq.trans", "Nat.mul_assoc", "congrArg"],
+  "acceptance": {"exactly_one_importer_read": true, "all_three_roots_must_resolve": true, "identity_dependencies_and_footprints_required": true, "proof_terms_types_or_values_may_be_rendered": false},
+  "budget": {"max_importer_runs": 1, "max_proof_bearing_stream_reads": 1, "max_theorem_submissions": 0, "max_retries": 0},
+  "authority": {"dependency_audit_credit": 0, "dvd_mul_leaf_credit": 0, "residual_cancellation_credit": 0, "official_cancellation_credit": 0, "exact_fibonacci_target_submissions": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_on_result": "If all three roots are clean, treat propext as a direct axiom edge in the authored witness and replace Eq.trans transport with an explicit parameterized equality chain; otherwise replace the measured carrier.",
+  "output": "artifacts/autogenesis/coprime-factor-dvd-mul-dependency-audit-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-coprime-factor-dvd-mul-dependency-audit-plan.py",
+  "limitations": "Classification grants no theorem or downstream authority."
+}

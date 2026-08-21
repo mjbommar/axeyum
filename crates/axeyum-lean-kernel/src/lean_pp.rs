@@ -41,10 +41,115 @@ use crate::{Declaration, ExprId, ExprNode, Kernel, LevelId, LevelNode, Lit, Name
 const COMPACT_SHARE_MIN_TREE_NODES: u64 = 8;
 const COMPACT_CHUNK_TREE_NODES: u64 = 512;
 
+/// The identity of a **binder scope**: a hash chain folded over the chain of
+/// binder occurrences enclosing a position in the rendered term.
+///
+/// A hash-consed proof DAG is printed as a *tree*, and that is where a
+/// self-contained module's size goes: measured 2026-08-18 on the constructed
+/// reals, `CReal.mul_assoc` is 1,296 kernel nodes and 324,609 printed ones.
+/// Sharing repeated nodes fixes that, but only **closed** nodes could be
+/// shared, and a proof body is mostly open — every subterm under a `fun` has
+/// loose de Bruijn variables. Hoisting those is not merely awkward, it is
+/// wrong in general: two occurrences of one node under two different binders
+/// denote two different terms.
+///
+/// A scope id is exactly the condition that makes it right. Two occurrences
+/// carrying the same id sit under the same chain of binder *occurrences*, so
+/// their loose variables denote the same binders and one `let` may serve both;
+/// occurrences under different binders get different ids and are never
+/// conflated. The chain is folded from the binder nodes themselves, so it is
+/// deterministic — module text is a public API promise.
+type ScopeId = u64;
+
+/// The scope at a declaration's own top level. No binder is open there, so
+/// every node keyed at `ROOT_SCOPE` is closed and one binding serves all of
+/// its occurrences.
+const ROOT_SCOPE: ScopeId = 0;
+
+/// Extend a scope by one binder occurrence.
+fn scope_child(scope: ScopeId, binder: ExprId) -> ScopeId {
+    let mixed = scope
+        .rotate_left(17)
+        .wrapping_mul(0x9E37_79B9_7F4A_7C15)
+        .wrapping_add(u64::from(binder.0).wrapping_add(1));
+    let mixed = mixed ^ (mixed >> 29);
+    // `0` is reserved for the root, so a child scope must never collide with
+    // it: a child that hashed to `ROOT_SCOPE` would let an open node be keyed
+    // as if it were closed.
+    if mixed == ROOT_SCOPE { 1 } else { mixed }
+}
+
+/// A share key: the node, plus the scope its loose variables are read in.
+/// Closed nodes are normalized to [`ROOT_SCOPE`].
+type ShareKey = (ExprId, ScopeId);
+
 #[derive(Debug, Default)]
 struct LeanSharePlan {
-    names: BTreeMap<ExprId, String>,
+    names: BTreeMap<ShareKey, String>,
+    /// Keys hoisted to **top-level `def`s**. Always closed, so always keyed at
+    /// [`ROOT_SCOPE`].
     order: Vec<ExprId>,
+    /// Keys hoisted to a `let` at the top of the body a binder opens, indexed
+    /// by that body's scope and held in dependency order.
+    blocks: BTreeMap<ScopeId, Vec<ShareKey>>,
+}
+
+/// The share map plus *where* rendering currently is: which scope, and which
+/// key (if any) is being expanded rather than referenced by name.
+#[derive(Clone, Copy)]
+struct ShareView<'a> {
+    names: &'a BTreeMap<ShareKey, String>,
+    blocks: &'a BTreeMap<ScopeId, Vec<ShareKey>>,
+    scope: ScopeId,
+    expand: Option<ShareKey>,
+}
+
+impl<'a> ShareView<'a> {
+    fn new(plan: &'a LeanSharePlan) -> Self {
+        Self {
+            names: &plan.names,
+            blocks: &plan.blocks,
+            scope: ROOT_SCOPE,
+            expand: None,
+        }
+    }
+
+    /// The name standing for `expression` here, if one does.
+    ///
+    /// A node is looked up at the current scope first and at [`ROOT_SCOPE`]
+    /// second. The second lookup is what shares closed nodes across scopes;
+    /// it cannot capture an open one, because the planner keys a node at
+    /// `ROOT_SCOPE` only when it has no loose variables.
+    fn lookup(&self, expression: ExprId) -> Option<&'a str> {
+        for key in [(expression, self.scope), (expression, ROOT_SCOPE)] {
+            if self.expand == Some(key) {
+                return None;
+            }
+            if let Some(name) = self.names.get(&key) {
+                return Some(name.as_str());
+            }
+        }
+        None
+    }
+
+    /// Move into a binder body's scope (a fresh position, so nothing is being
+    /// expanded there).
+    fn at(self, scope: ScopeId) -> Self {
+        Self {
+            scope,
+            expand: None,
+            ..self
+        }
+    }
+
+    /// Render `key`'s definition rather than a reference to it.
+    fn expanding(self, key: ShareKey) -> Self {
+        Self {
+            scope: key.1,
+            expand: Some(key),
+            ..self
+        }
+    }
 }
 
 trait LeanModuleOutput: std::fmt::Write {
@@ -55,6 +160,186 @@ impl LeanModuleOutput for String {
     fn append_owned(&mut self, text: String) {
         self.push_str(&text);
     }
+}
+
+/// A **shared prelude module**: the development a family of query modules cites,
+/// emitted once as its own Lean module instead of inlined into every one of
+/// them.
+///
+/// # Why this exists
+///
+/// A refutation over the constructed reals inlines the whole ℕ/ℤ/ℚ/setoid
+/// development with every proof body. Measured 2026-08-18 on the shipped front
+/// door: the emitted module is 1,304,276 bytes, of which **the refutation's own
+/// theorem term is 4,193** — 0.16%. The other 99.84% is identical for every
+/// query over the same carrier. Emitting it once and `import`ing it takes the
+/// per-query module to single-digit kilobytes.
+///
+/// # What a third party has to do
+///
+/// This is a strictly weaker artefact than the self-contained module it
+/// replaces, and the difference is worth stating rather than hiding behind the
+/// byte count: a single file is checked by `lean Query.lean` and nothing else,
+/// whereas the split needs the prelude compiled first and found on `LEAN_PATH`.
+///
+/// ```text
+/// lean -o <dir>/<Name>.olean <dir>/<Name>.lean
+/// LEAN_PATH=<dir> lean <dir>/Query.lean
+/// ```
+///
+/// [`Self::check_script`] emits exactly those two lines for a given directory,
+/// so the recipe is generated from the artefact rather than copied from prose.
+/// `#print axioms` traverses imported proofs, so the axiom-freedom claim is
+/// unchanged — the query module's `#print axioms` reports the same footprint it
+/// reported when the development was inlined.
+#[derive(Clone, Debug)]
+pub struct LeanPreludeModule {
+    name: String,
+    source: String,
+    provided: BTreeSet<NameId>,
+}
+
+impl LeanPreludeModule {
+    /// The Lean module name a query module `import`s. This must also be the
+    /// artefact's file stem: Lean resolves `import Foo.Bar` to `Foo/Bar.olean`
+    /// under a `LEAN_PATH` entry.
+    #[must_use]
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// The module source.
+    #[must_use]
+    pub fn source(&self) -> &str {
+        &self.source
+    }
+
+    /// The file name this module must be written to for `import` to resolve.
+    #[must_use]
+    pub fn file_name(&self) -> String {
+        format!("{}.lean", self.name.replace('.', "/"))
+    }
+
+    /// The declaration names this module supplies — what a query module must
+    /// **not** re-declare.
+    #[must_use]
+    pub fn provided(&self) -> &BTreeSet<NameId> {
+        &self.provided
+    }
+
+    /// How many declarations this module supplies.
+    #[must_use]
+    pub fn provided_len(&self) -> usize {
+        self.provided.len()
+    }
+
+    /// The two commands a third party runs to check a query module against this
+    /// prelude, given the directory both files were written to. Generated from
+    /// the artefact so the recipe cannot drift from the module name.
+    ///
+    /// `--root` is not optional. Lean derives a file's module name from its path
+    /// relative to the root directory, which defaults to the working directory,
+    /// so without it `lean -o /tmp/x/M.olean /tmp/x/M.lean` run from anywhere
+    /// else fails with `input file ... must be contained in root directory`.
+    #[must_use]
+    pub fn check_script(&self, directory: &str, query_file: &str) -> String {
+        format!(
+            "lean --root {directory} -o {directory}/{name}.olean {directory}/{name}.lean\n\
+             LEAN_PATH={directory} lean --root {directory} {directory}/{query_file}\n",
+            name = self.name
+        )
+    }
+}
+
+/// Which of the three module shapes a banner opens.
+///
+/// The three differ only in their header comment, whether an `import` line
+/// follows `prelude`, and whether they declare Lean's compiler-internal
+/// constants -- which must appear exactly once across a module set.
+#[derive(Clone, Copy)]
+enum BannerKind<'a> {
+    /// One file that declares everything it cites (the historical shape, and
+    /// still what the shipped front door emits).
+    SelfContained,
+    /// The shared development a family of query modules imports.
+    SharedPrelude,
+    /// A query module whose shared development is `import`ed by module name.
+    Importing(&'a str),
+}
+
+/// The exact fixed preamble a **self-contained** module opens with — every byte
+/// [`Kernel::render_lean_module`] writes before the first declaration.
+///
+/// Public because the banner is *shared text under many pins*, and that is the
+/// shape of a recurring defect rather than a convenience. `b760fd6ae` (+863
+/// bytes, the codegen constants) and `46724faec` (+777 bytes, `maxRecDepth`)
+/// each added banner text and re-pinned only the golden module that happened to
+/// sit in a gate; the same +1,640 landed unannounced on four others and `main`
+/// was red for a day. That was the third recurrence.
+///
+/// With the banner nameable, a byte pin over a rendered module can pin the part
+/// the producer of a *proof* change actually owns — see [`split_module_banner`],
+/// which is what the golden suites assert against. The banner keeps its own pin,
+/// in one place, where a header diff is read and waved through deliberately.
+#[must_use]
+pub fn self_contained_module_banner() -> String {
+    let mut out = String::new();
+    Kernel::write_module_banner(&mut out, BannerKind::SelfContained);
+    out
+}
+
+/// The preamble of the **shared development** a family of query modules imports
+/// ([`Kernel::render_lean_prelude_module`]). See [`self_contained_module_banner`].
+#[must_use]
+pub fn shared_prelude_module_banner() -> String {
+    let mut out = String::new();
+    Kernel::write_module_banner(&mut out, BannerKind::SharedPrelude);
+    out
+}
+
+/// The preamble of a **query** module that `import`s `module`
+/// ([`Kernel::render_lean_module_compact_importing`]). It omits the
+/// compiler-internal constants, which the imported module already declares.
+/// See [`self_contained_module_banner`].
+#[must_use]
+pub fn importing_module_banner(module: &str) -> String {
+    let mut out = String::new();
+    Kernel::write_module_banner(&mut out, BannerKind::Importing(module));
+    out
+}
+
+/// Split a rendered Lean module into `(banner, body)`.
+///
+/// Returns `None` when `source` does not begin with a banner **this** kernel
+/// emits — a mangled, hand-edited, or foreign module is not silently accepted as
+/// a body-only pin, so the banner is still checked byte for byte on every use.
+///
+/// The shape is read from the source itself: an `import` line inside the
+/// preamble names the shared development, and the two unimported shapes are
+/// distinguished by trying each. Deliberately not a `starts_with("--")` scan or
+/// a search for the last banner line: those would let banner text drift into the
+/// "body" half and re-create the very coupling this exists to break.
+#[must_use]
+pub fn split_module_banner(source: &str) -> Option<(&str, &str)> {
+    // The `import` line is written inside the preamble, before any declaration,
+    // so a hit in the first handful of lines is the banner's own.
+    let imported = source
+        .lines()
+        .take(16)
+        .find_map(|line| line.strip_prefix("import "))
+        .map(str::trim);
+    let candidates = match imported {
+        Some(module) => vec![importing_module_banner(module)],
+        None => vec![
+            self_contained_module_banner(),
+            shared_prelude_module_banner(),
+        ],
+    };
+    candidates.iter().find_map(|banner| {
+        source
+            .strip_prefix(banner.as_str())
+            .map(|body| (&source[..banner.len()], body))
+    })
 }
 
 struct IoLeanModuleOutput<'a, W: std::io::Write + ?Sized> {
@@ -100,6 +385,50 @@ impl Kernel {
         )
     }
 
+    /// Whether [`Declaration::Theorem`] renders with the `def` keyword rather
+    /// than `theorem` (ADR-0518). Off unless [`Self::set_render_proofs_as_def`]
+    /// turned it on.
+    #[must_use]
+    pub const fn render_proofs_as_def(&self) -> bool {
+        self.render_proofs_as_def
+    }
+
+    /// Render every environment [`Declaration::Theorem`] with the `def` keyword.
+    ///
+    /// **This changes only the keyword.** No term, no type, no binder, no share
+    /// name and no module banner moves; the emitted bytes differ from the
+    /// default rendering exactly by the prefix of the lines that open a theorem.
+    /// The module's *root* `theorem <name> : <goal> := <proof>` is deliberately
+    /// NOT affected — nothing reduces through the root, so re-spelling it would
+    /// cost honesty and buy nothing.
+    ///
+    /// # Why the option exists
+    ///
+    /// Lean has two checkers and they disagree about a proof's opacity
+    /// (ADR-0517). Lean's *kernel* unfolds anything carrying a value and accepts
+    /// the whole constructed-real carrier; Lean's *elaborator* refuses to unfold
+    /// a `theorem` while reducing, so a declaration whose type-checking must
+    /// compute through `Nat.gcd` — whose Euclidean descent is justified by the
+    /// theorem `Nat.mod_lt` — is refused from `.lean` source. Spelling proofs as
+    /// `def` removes that opacity and the elaborator accepts them too.
+    ///
+    /// It is off by default because a `def` is a weaker statement about the
+    /// artefact than a `theorem` is, and because it costs elaboration time; the
+    /// numbers and the recommendation are in ADR-0518.
+    pub fn set_render_proofs_as_def(&mut self, render_as_def: bool) {
+        self.render_proofs_as_def = render_as_def;
+    }
+
+    /// The keyword that opens an environment theorem: `theorem`, or `def` under
+    /// [`Self::set_render_proofs_as_def`].
+    const fn proof_keyword(&self) -> &'static str {
+        if self.render_proofs_as_def {
+            "def"
+        } else {
+            "theorem"
+        }
+    }
+
     /// Render a [`Declaration`] as a Lean 4 top-level command. The directly-emittable
     /// kinds (`axiom`/`def`/`theorem`/`opaque`) render verbatim; an
     /// `Inductive`/`Constructor`/`Recursor` renders as a comment, since Lean
@@ -132,7 +461,8 @@ impl Kernel {
                 ty,
                 value,
             } => format!(
-                "theorem {}{} : {} :=\n  {}",
+                "{} {}{} : {} :=\n  {}",
+                self.proof_keyword(),
                 self.render_name(*name),
                 self.render_uparams(uparams),
                 self.render_lean(*ty),
@@ -297,6 +627,87 @@ impl Kernel {
         }
     }
 
+    /// Render the **shared prelude module** holding every declaration reachable
+    /// from `roots`, to be compiled once and `import`ed by the query modules
+    /// [`Self::render_lean_module_compact_importing`] renders.
+    ///
+    /// `roots` are declaration names, typically every name in the carrier
+    /// context's environment before any query-specific symbol was admitted
+    /// (`kernel.environment().iter().map(|(n, _)| *n)`). Rendering is
+    /// deterministic, so two contexts built the same way produce a byte-identical
+    /// prelude — which is what makes "emit once, import many" sound rather than
+    /// merely convenient.
+    ///
+    /// `module_name` must be a valid Lean module name and must match the file
+    /// stem the source is written to.
+    ///
+    /// The returned module carries no theorem and no `#print axioms`: it is a
+    /// development, not a claim.
+    #[must_use]
+    pub fn render_lean_prelude_module(
+        &self,
+        module_name: &str,
+        roots: &[NameId],
+    ) -> LeanPreludeModule {
+        let order = self.reachable_decl_order_from_names(roots);
+        let mut source = String::new();
+        Self::write_module_banner(&mut source, BannerKind::SharedPrelude);
+        let (owned_by_lean, at_consts, real_inductives) = self.lean_owned_constants(&order, &[]);
+        self.write_decl_blocks(
+            &mut source,
+            &order,
+            &real_inductives,
+            &owned_by_lean,
+            &at_consts,
+            &BTreeSet::new(),
+            true,
+        );
+        // Everything in `order` is supplied by this module once compiled --
+        // including the constructors and recursors it did NOT write out, because
+        // Lean regenerates those from the `inductive` commands it did.
+        let provided: BTreeSet<NameId> = order.into_iter().collect();
+        LeanPreludeModule {
+            name: module_name.to_owned(),
+            source,
+            provided,
+        }
+    }
+
+    /// Render a **query module** that `import`s `prelude_module` instead of
+    /// inlining the development it supplies.
+    ///
+    /// Semantically this is [`Self::render_lean_module_compact_with_inductives`]
+    /// with the shared declarations removed and an `import` line in their place;
+    /// the theorem term, the `@`-application decisions, and the `#print axioms`
+    /// tail are identical. Checking it requires the prelude compiled to an
+    /// `.olean` on `LEAN_PATH` — see [`LeanPreludeModule::check_script`].
+    ///
+    /// `prelude_module` must have been rendered from **this** kernel: names are
+    /// interned per kernel, so a [`LeanPreludeModule`] from another one would
+    /// suppress the wrong declarations.
+    #[must_use]
+    pub fn render_lean_module_compact_importing(
+        &self,
+        theorem_name: &str,
+        goal: ExprId,
+        proof: ExprId,
+        real_inductives: &[NameId],
+        prelude_module: &LeanPreludeModule,
+    ) -> String {
+        let mut out = String::new();
+        self.write_lean_module_shaped(
+            &mut out,
+            theorem_name,
+            goal,
+            proof,
+            real_inductives,
+            true,
+            &prelude_module.provided,
+            Some(&prelude_module.name),
+        );
+        out
+    }
+
     fn render_lean_module_impl(
         &self,
         theorem_name: &str,
@@ -317,6 +728,98 @@ impl Kernel {
         out
     }
 
+    /// The fixed module preamble: `prelude` mode, an optional `import` of a
+    /// separately-compiled shared module, the codegen section, the
+    /// recursion-depth option, and Lean's compiler-internal constants.
+    ///
+    /// `import_module` is `Some(name)` for a **query** module in the split
+    /// layout ([`Kernel::render_lean_module_compact_importing`]). Lean requires
+    /// `prelude` and every `import` to precede all other commands, so the import
+    /// is written immediately after `prelude`. The compiler-internal constants
+    /// are then **omitted**, because the imported module already declares them
+    /// and Lean rejects a redeclaration -- the option lines are module-scoped and
+    /// are repeated.
+    ///
+    /// Its own function because it is long, fixed text and
+    /// [`Self::write_lean_module_impl`] is over `clippy::too_many_lines`
+    /// with it inline -- a lint that fires on STABLE and not on nightly.
+    fn write_module_banner<O: LeanModuleOutput>(out: &mut O, kind: BannerKind<'_>) {
+        let _ = out.write_str(match kind {
+            BannerKind::SelfContained => {
+                "-- Auto-generated by axeyum-lean-kernel: a self-contained re-check of a\n\
+                 -- reconstructed refutation. `prelude` avoids clashing with Lean core.\n\
+                 prelude\n"
+            }
+            BannerKind::SharedPrelude => {
+                "-- Auto-generated by axeyum-lean-kernel: the SHARED development a family\n\
+                 -- of query modules imports. It proves nothing on its own; it carries the\n\
+                 -- declarations every refutation over this carrier cites. Compile it to an\n\
+                 -- `.olean` and put its directory on `LEAN_PATH`.\n\
+                 -- `prelude` avoids clashing with Lean core.\n\
+                 prelude\n"
+            }
+            BannerKind::Importing(_) => {
+                "-- Auto-generated by axeyum-lean-kernel: a re-check of a reconstructed\n\
+                 -- refutation against a separately-compiled shared development.\n\
+                 -- `prelude` avoids clashing with Lean core.\n\
+                 prelude\n"
+            }
+        });
+        if let BannerKind::Importing(module) = kind {
+            let _ = write!(
+                out,
+                "-- The shared development is emitted once by\n\
+                 -- `Kernel::render_lean_prelude_module`. Build it to `{module}.olean`\n\
+                 -- first and point `LEAN_PATH` at the directory holding it.\n\
+                 import {module}\n"
+            );
+        }
+        let _ = out.write_str(
+            "set_option linter.unusedVariables false\n\
+         -- These declarations are proofs, not programs: a recursor-based `def`\n\
+         -- has no compiled code and Lean's code generator declines it\n\
+         -- (\"code generator does not support recursor `T.rec` yet\"). The section\n\
+         -- suppresses codegen only; it does not weaken type checking.\n\
+         noncomputable section\n\
+         -- Scope-aware sharing (see `ScopeId`) binds repeated subterms with\n\
+         -- `let`, and a `let` chain is NESTED syntax: one binding per level.\n\
+         -- Measured 2026-08-18, the constructed-carrier module binds 2,897\n\
+         -- of them inside one distributivity lemma alone, and Lean 4.30.0\n\
+         -- rejected the file at that declaration with `maximum recursion\n\
+         -- depth has been reached` -- the default limit is 512. (No carrier\n\
+         -- name appears in this banner on purpose: a sibling guard asserts a\n\
+         -- module over the constructed carrier never spells the axiomatized\n\
+         -- package's name, and it reads the whole file as one string.) This\n\
+         -- raises the\n\
+         -- ELABORATOR's recursion counter and nothing else: the kernel still\n\
+         -- checks every term, and `#print axioms` is unaffected.\n\
+         set_option maxRecDepth 65536\n\n",
+        );
+        // The compiler-internal constants are declared exactly ONCE across a
+        // module set: an importing module gets them from the import, and Lean
+        // rejects a redeclaration ("has already been declared").
+        if matches!(kind, BannerKind::Importing(_)) {
+            return;
+        }
+        let _ = out.write_str(
+            "-- Lean's own compiler-internal constants, which `Init.Prelude` declares\n\
+         -- (`unsafe axiom lcErased : Type`) and `prelude` mode therefore omits.\n\
+         -- Lean 4.34 runs code generation over a Prop-valued inductive that\n\
+         -- carries data -- `Or`, `Exists`, `Nat.le` -- and its IR names these, so\n\
+         -- without them the module dies on `Unknown constant lcErased` before any\n\
+         -- proof is checked. Measured 2026-08-17: 21 of 77 crosscheck families were\n\
+         -- rejected by 4.34.0-rc1 and accepted by 4.30.0, which is why the gate's\n\
+         -- verdict depended on which toolchain happened to be installed.\n\
+         --\n\
+         -- They are compiler-only: no proof term mentions them, so they do NOT\n\
+         -- enter any `#print axioms` footprint. Asserted, not assumed, by\n\
+         -- `codegen_constants_are_declared_but_never_in_the_footprint`.\n\
+         unsafe axiom lcErased : Type\n\
+         unsafe axiom lcAny : Type\n\
+         unsafe axiom lcVoid : Type\n\n",
+        );
+    }
+
     fn write_lean_module_impl<O: LeanModuleOutput>(
         &self,
         out: &mut O,
@@ -326,14 +829,114 @@ impl Kernel {
         real_inductives: &[NameId],
         compact: bool,
     ) {
+        self.write_lean_module_shaped(
+            out,
+            theorem_name,
+            goal,
+            proof,
+            real_inductives,
+            compact,
+            &BTreeSet::new(),
+            None,
+        );
+    }
+
+    /// The one module writer, in the three shapes [`BannerKind`] names.
+    ///
+    /// `provided` is the set of declaration names a separately-compiled imported
+    /// module already supplies: they are **skipped** here (Lean rejects a
+    /// redeclaration) but still counted when deciding which constants need an
+    /// `@`-application, because that is a property of the constant and not of
+    /// which file declares it. `import_module` is `Some` exactly when `provided`
+    /// is non-empty in the intended use, but the two are independent parameters
+    /// so a test can vary one without the other.
+    #[allow(clippy::too_many_arguments)]
+    fn write_lean_module_shaped<O: LeanModuleOutput>(
+        &self,
+        out: &mut O,
+        theorem_name: &str,
+        goal: ExprId,
+        proof: ExprId,
+        real_inductives: &[NameId],
+        compact: bool,
+        provided: &BTreeSet<NameId>,
+        import_module: Option<&str>,
+    ) {
         let order = self.reachable_decl_order(&[goal, proof]);
-        // Every reachable inductive is rendered as a real Lean `inductive`, not
-        // as an opaque `axiom`. An axiomatized family has no ι-reduction rule on
-        // the Lean side, so Lean's definitional equality is strictly weaker than
-        // the kernel's and any proof whose `Eq.refl` needs a recursor to
-        // *compute* is rejected — see [`Self::render_lean_module_with_inductives`].
-        // `real_inductives` remains an explicit request (it is what a caller uses
-        // to state the dependency), but it is a subset of what is emitted.
+        let (owned_by_lean, at_consts, all_inductives) =
+            self.lean_owned_constants(&order, real_inductives);
+        let real_inductives: &[NameId] = &all_inductives;
+        Self::write_module_banner(
+            out,
+            match import_module {
+                Some(module) => BannerKind::Importing(module),
+                None => BannerKind::SelfContained,
+            },
+        );
+        self.write_decl_blocks(
+            out,
+            &order,
+            real_inductives,
+            &owned_by_lean,
+            &at_consts,
+            provided,
+            compact,
+        );
+        let shares = if compact {
+            self.compact_share_plan(&[goal, proof], theorem_name, &at_consts)
+        } else {
+            LeanSharePlan::default()
+        };
+        let view = ShareView::new(&shares);
+        for &expression in &shares.order {
+            let key = (expression, ROOT_SCOPE);
+            let name = &shares.names[&key];
+            let _ = write!(out, "\ndef {name} :=\n  ");
+            self.write_lean_with_shares(out, expression, &at_consts, view.expanding(key));
+            let _ = out.write_char('\n');
+        }
+        let _ = write!(out, "\ntheorem {theorem_name} : ");
+        if compact {
+            self.write_lean_with_shares(out, goal, &at_consts, view);
+        } else {
+            self.write_lean_without_shares(out, goal, &at_consts);
+        }
+        let _ = out.write_str(" :=\n  ");
+        if compact {
+            self.write_lean_with_shares(out, proof, &at_consts, view);
+        } else {
+            self.write_lean_without_shares(out, proof, &at_consts);
+        }
+        let _ = write!(out, "\n\n#print axioms {theorem_name}\n");
+    }
+
+    /// The constants Lean itself owns in a module covering `order`, and the ones
+    /// that must be applied with `@`.
+    ///
+    /// Every reachable inductive is rendered as a real Lean `inductive`, not as
+    /// an opaque `axiom`. An axiomatized family has no ι-reduction rule on the
+    /// Lean side, so Lean's definitional equality is strictly weaker than the
+    /// kernel's and any proof whose `Eq.refl` needs a recursor to *compute* is
+    /// rejected — see [`Self::render_lean_module_with_inductives`].
+    /// `requested` remains an explicit request (it is what a caller uses to state
+    /// the dependency), but it is a subset of what is emitted.
+    ///
+    /// Returns `(owned_by_lean, at_consts, inductives)`: the constructor and
+    /// recursor names Lean auto-generates (emit nothing for them), the
+    /// `@`-application set — Lean makes an inductive's parameters and a
+    /// recursor's motive **implicit**, so the kernel's positional applications
+    /// must be written with `@` — and the inductives themselves in a stable
+    /// order.
+    ///
+    /// This is computed over the WHOLE reachable set, never over the subset a
+    /// particular module writes out: whether a constant needs `@` is a property
+    /// of the constant, not of which file declares it, and a query module that
+    /// imports its inductives must still apply their constructors with `@`.
+    fn lean_owned_constants(
+        &self,
+        order: &[NameId],
+        requested: &[NameId],
+    ) -> (BTreeSet<NameId>, BTreeSet<NameId>, Vec<NameId>) {
         let mut all_inductives: BTreeSet<NameId> = order
             .iter()
             .copied()
@@ -344,37 +947,15 @@ impl Kernel {
                 )
             })
             .collect();
-        all_inductives.extend(real_inductives.iter().copied());
+        all_inductives.extend(requested.iter().copied());
         let all_inductives: Vec<NameId> = all_inductives.into_iter().collect();
-        let real_inductives: &[NameId] = &all_inductives;
-        let _ = out.write_str(
-            "-- Auto-generated by axeyum-lean-kernel: a self-contained re-check of a\n\
-             -- reconstructed refutation. `prelude` avoids clashing with Lean core.\n\
-             prelude\n\
-             set_option linter.unusedVariables false\n\
-             -- These declarations are proofs, not programs: a recursor-based `def`\n\
-             -- has no compiled code and Lean's code generator declines it\n\
-             -- (\"code generator does not support recursor `T.rec` yet\"). The section\n\
-             -- suppresses codegen only; it does not weaken type checking.\n\
-             noncomputable section\n\n",
-        );
-        // The constructor/recursor names Lean will auto-generate for the real
-        // inductives — emit nothing for them (Lean owns them). The recursor names
-        // are also the `@`-application set: Lean makes their `motive` implicit, so
-        // the kernel's explicit-motive recursor term must apply them with `@`.
-        let mut owned_by_lean: std::collections::BTreeSet<NameId> =
-            std::collections::BTreeSet::new();
-        let mut at_consts: std::collections::BTreeSet<NameId> = std::collections::BTreeSet::new();
-        for &ind in real_inductives {
+
+        let mut owned_by_lean: BTreeSet<NameId> = BTreeSet::new();
+        let mut at_consts: BTreeSet<NameId> = BTreeSet::new();
+        for &ind in &all_inductives {
             if let Some(Declaration::Inductive { ctor_names, .. }) = self.environment().get(ind) {
                 for &c in ctor_names {
                     owned_by_lean.insert(c);
-                    // Lean makes an inductive's parameters **implicit** in its
-                    // constructors regardless of how the parameter binders were
-                    // written (`@List.nil : {α : Type u} → List α`). The kernel
-                    // term applies them positionally, so every regenerated
-                    // constructor must be applied with `@`. For a parameterless
-                    // family this is a no-op.
                     at_consts.insert(c);
                 }
                 let rec = self.name_of_rec(ind);
@@ -382,8 +963,26 @@ impl Kernel {
                 at_consts.insert(rec);
             }
         }
-        for name in &order {
-            if owned_by_lean.contains(name) {
+        (owned_by_lean, at_consts, all_inductives)
+    }
+
+    /// Emit one top-level command per declaration in `order`, skipping the
+    /// constructors/recursors Lean regenerates from an emitted `inductive`
+    /// (`owned_by_lean`) and anything an imported module already supplies
+    /// (`provided`).
+    #[allow(clippy::too_many_arguments)]
+    fn write_decl_blocks<O: LeanModuleOutput>(
+        &self,
+        out: &mut O,
+        order: &[NameId],
+        real_inductives: &[NameId],
+        owned_by_lean: &BTreeSet<NameId>,
+        at_consts: &BTreeSet<NameId>,
+        provided: &BTreeSet<NameId>,
+        compact: bool,
+    ) {
+        for name in order {
+            if owned_by_lean.contains(name) || provided.contains(name) {
                 continue;
             }
             if real_inductives.contains(name)
@@ -394,40 +993,10 @@ impl Kernel {
                 continue;
             }
             if let Some(decl) = self.environment().get(*name) {
-                self.write_decl_command_with_at(out, decl, &at_consts, compact);
+                self.write_decl_command_with_at(out, decl, at_consts, compact);
                 let _ = out.write_char('\n');
             }
         }
-        let shares = if compact {
-            self.compact_share_plan(&[goal, proof], theorem_name, &at_consts)
-        } else {
-            LeanSharePlan::default()
-        };
-        for &expression in &shares.order {
-            let name = &shares.names[&expression];
-            let _ = write!(out, "\ndef {name} :=\n  ");
-            self.write_lean_with_shares(
-                out,
-                expression,
-                &at_consts,
-                &shares.names,
-                Some(expression),
-            );
-            let _ = out.write_char('\n');
-        }
-        let _ = write!(out, "\ntheorem {theorem_name} : ");
-        if compact {
-            self.write_lean_with_shares(out, goal, &at_consts, &shares.names, None);
-        } else {
-            self.write_lean_without_shares(out, goal, &at_consts);
-        }
-        let _ = out.write_str(" :=\n  ");
-        if compact {
-            self.write_lean_with_shares(out, proof, &at_consts, &shares.names, None);
-        } else {
-            self.write_lean_without_shares(out, proof, &at_consts);
-        }
-        let _ = write!(out, "\n\n#print axioms {theorem_name}\n");
     }
 
     /// The recursor name `I.rec` an inductive `I` generates: the `Recursor`
@@ -666,7 +1235,7 @@ impl Kernel {
                 let kw = if matches!(decl, Declaration::Opaque { .. }) {
                     "opaque"
                 } else {
-                    "theorem"
+                    self.proof_keyword()
                 };
                 let _ = write!(
                     out,
@@ -753,25 +1322,64 @@ impl Kernel {
         trusted
     }
 
+    /// The environment declarations reachable from `roots` — every constant a
+    /// module rendering `roots` would have to declare, in dependency order.
+    ///
+    /// Public because a **shared prelude module** is defined by a root set the
+    /// caller chooses, and the obvious choice — "every declaration in the carrier
+    /// context" — is the wrong one. Measured 2026-08-18 on the constructed-real
+    /// carrier: the context holds 445 declarations, a refutation reaches 280 of
+    /// them, and two of the 165 it does not reach (`CReal.Equiv.not_zero_one`,
+    /// `CReal.not_le_one_zero`) are **rejected by Lean 4.30.0's ELABORATOR**
+    /// although the in-tree kernel admits them. Rooting a shared module at the
+    /// whole environment therefore produces a file `lean Module.lean` will not
+    /// compile, for reasons that have nothing to do with the refutations
+    /// importing it. Intersecting this answer with the carrier snapshot gives a
+    /// root set that is both shared and checkable.
+    ///
+    /// **Elaborator, not kernel** — this said "Lean" until ADR-0517, and the
+    /// difference is the whole diagnosis. Lean's *kernel* accepts all four, and
+    /// the whole carrier with them (`real_lean_creal_carrier_kernel_replay`
+    /// replays 470 of 470 through `Environment.addDeclCore` in 1.4 s). The
+    /// elaborator's reducer treats a `theorem` as opaque, and these proofs must
+    /// compute through `Nat.gcd`, whose descent rests on the theorem
+    /// `Nat.mod_lt`; re-spelling every `theorem` as `def` in the same file makes
+    /// the elaborator accept it.
+    #[must_use]
+    pub fn declarations_reached(&self, roots: &[ExprId]) -> Vec<NameId> {
+        self.reachable_decl_order(roots)
+    }
+
     /// The environment declarations reachable from `roots` (transitively through
     /// each declaration's type and — for definitions/theorems/opaques — value),
     /// in dependency order (a declaration appears after every declaration it
     /// references). Names not present in the environment are skipped.
     fn reachable_decl_order(&self, roots: &[ExprId]) -> Vec<NameId> {
-        // Reachability closure over constant references.
-        let mut needed: std::collections::BTreeSet<NameId> = std::collections::BTreeSet::new();
-        let mut work: Vec<NameId> = Vec::new();
         let mut seed = Vec::new();
         for &r in roots {
             self.collect_const_deps(r, &mut seed);
         }
+        self.decl_order_from_seed(seed)
+    }
+
+    /// [`Self::reachable_decl_order`] rooted at declaration **names** rather than
+    /// at expressions — what a shared prelude module is defined by, since it has
+    /// no goal or proof term to walk from.
+    fn reachable_decl_order_from_names(&self, roots: &[NameId]) -> Vec<NameId> {
+        self.decl_order_from_seed(roots.to_vec())
+    }
+
+    fn decl_order_from_seed(&self, seed: Vec<NameId>) -> Vec<NameId> {
+        // Reachability closure over constant references.
+        let mut needed: std::collections::BTreeSet<NameId> = std::collections::BTreeSet::new();
+        let mut work: Vec<NameId> = Vec::new();
         for n in seed {
             if needed.insert(n) {
                 work.push(n);
             }
         }
         while let Some(n) = work.pop() {
-            for d in self.decl_deps(n) {
+            for d in self.render_deps(n) {
                 if needed.insert(d) {
                     work.push(d);
                 }
@@ -873,6 +1481,35 @@ impl Kernel {
         deps
     }
 
+    /// [`Self::decl_deps`] plus, for an **inductive**, the constants its
+    /// CONSTRUCTORS' types mention.
+    ///
+    /// Used only by the module renderer, and deliberately not by
+    /// [`Self::axiom_footprint`]: a footprint is what a proof *rests on*, and a
+    /// constructor's type is not that. But a rendered `inductive` command writes
+    /// its constructors inline, so a module needs everything those types mention
+    /// **before** the family, and `decl_deps` of an inductive sees only its own
+    /// type — for the constructed reals that is `Sort 1`, which depends on
+    /// nothing at all.
+    ///
+    /// Measured 2026-08-18: without this, a module carrying the constructed ℚ
+    /// emits `inductive Rat` at line 255 with a constructor mentioning
+    /// `Int.natAbs`, which the same module defines at line 365, and real Lean
+    /// rejects it with `Unknown constant Int.natAbs`. Five of the 77
+    /// `lean_crosscheck` families failed exactly this way. The `Real` package
+    /// never exposed it because its only inductives are the propositional
+    /// connectives, whose constructors mention nothing that is not already
+    /// above them.
+    fn render_deps(&self, name: NameId) -> Vec<NameId> {
+        let mut deps = self.decl_deps(name);
+        if let Some(Declaration::Inductive { ctor_names, .. }) = self.environment().get(name) {
+            for &ctor in ctor_names {
+                deps.extend(self.decl_deps(ctor));
+            }
+        }
+        deps
+    }
+
     fn topo_visit(
         &self,
         name: NameId,
@@ -883,7 +1520,7 @@ impl Kernel {
         if !visited.insert(name) {
             return;
         }
-        for d in self.decl_deps(name) {
+        for d in self.render_deps(name) {
             if needed.contains(&d) {
                 self.topo_visit(d, needed, visited, order);
             }
@@ -952,6 +1589,21 @@ impl Kernel {
     /// as `axeyum.reconstruct.dtrec._N`), so remapping the root `Nat` segment is
     /// unambiguous and affects only the prelude's computational naturals — the
     /// in-tree kernel and its stored names are untouched (this is pure rendering).
+    /// A name **as an emitted Lean module spells it**, which is not the same
+    /// string as [`Self::display_name`].
+    ///
+    /// Two rules diverge, and both bite anything that tries to match a
+    /// `#print axioms` footprint against `axiom` lines in a module: a numeric
+    /// name component is not a legal Lean identifier on its own, so
+    /// `axeyum.reconstruct.x.0` is emitted as `axeyum.reconstruct.x._0`; and the
+    /// kernel's computational naturals are rooted at `AxNat` so they do not
+    /// shadow Lean's `Nat`. Comparing display names to module text silently
+    /// reports "not covered" for an artefact that is perfectly correct.
+    #[must_use]
+    pub fn lean_name(&self, id: NameId) -> String {
+        self.render_name(id)
+    }
+
     fn render_name(&self, id: NameId) -> String {
         match self.name_node(id) {
             NameNode::Anonymous => String::new(),
@@ -1263,10 +1915,239 @@ impl Kernel {
                     break candidate;
                 }
             };
-            names.insert(expression, name);
+            names.insert((expression, ROOT_SCOPE), name);
             order.push(expression);
         }
-        LeanSharePlan { names, order }
+        LeanSharePlan {
+            names,
+            order,
+            blocks: BTreeMap::new(),
+        }
+    }
+
+    /// The scope a binder node's body is read in.
+    ///
+    /// A **closed** binder normalizes to [`ROOT_SCOPE`] first, so every
+    /// occurrence of it opens the same body scope and its interior stays
+    /// shareable across all of them. Planner and writer both call this, which
+    /// is what keeps their scope ids in step: a reference that resolved in one
+    /// and not the other would silently lose sharing, and a `let` emitted in a
+    /// scope no reference reaches would be dead text.
+    fn body_scope(&self, binder: ExprId, scope: ScopeId) -> ScopeId {
+        let outer = if self.num_loose_bvars(binder) == 0 {
+            ROOT_SCOPE
+        } else {
+            scope
+        };
+        scope_child(outer, binder)
+    }
+
+    /// A key's children, each carried into the scope it is read in.
+    fn share_children(&self, key: ShareKey) -> Vec<ShareKey> {
+        let (expression, scope) = key;
+        let normalize = |child: ExprId, at: ScopeId| -> ShareKey {
+            if self.num_loose_bvars(child) == 0 {
+                (child, ROOT_SCOPE)
+            } else {
+                (child, at)
+            }
+        };
+        match self.expr_node(expression) {
+            ExprNode::App(function, argument) => {
+                vec![normalize(*function, scope), normalize(*argument, scope)]
+            }
+            ExprNode::Lam(_, ty, body, _) | ExprNode::Pi(_, ty, body, _) => vec![
+                normalize(*ty, scope),
+                normalize(*body, self.body_scope(expression, scope)),
+            ],
+            ExprNode::Let(_, ty, value, body) => vec![
+                normalize(*ty, scope),
+                normalize(*value, scope),
+                normalize(*body, self.body_scope(expression, scope)),
+            ],
+            ExprNode::Proj(_, _, structure) => vec![normalize(*structure, scope)],
+            ExprNode::BVar(_)
+            | ExprNode::FVar(_)
+            | ExprNode::Sort(_)
+            | ExprNode::Const(_, _)
+            | ExprNode::Lit(_) => Vec::new(),
+        }
+    }
+
+    /// A **scope-correct** share plan for one expression: which repeated nodes
+    /// become a `let`, and in which binder body each `let` is emitted.
+    ///
+    /// [`Self::compact_share_plan`] hoists to top-level `def`s, so it can only
+    /// ever select **closed** nodes — and a proof body is almost entirely open
+    /// ones. Measured 2026-08-18 on the shipped constructed-reals front door,
+    /// that restriction is why compact rendering saved 0.6% of a 2.6 MB module.
+    /// This selects open nodes too, keyed by [`ScopeId`], and homes each `let`
+    /// at the top of the innermost body whose binders it reads.
+    fn scoped_share_plan(
+        &self,
+        root: ExprId,
+        expression_name: &str,
+        at_consts: &BTreeSet<NameId>,
+    ) -> LeanSharePlan {
+        let (postorder, lam_scopes) = self.scoped_key_postorder(root);
+        let selected = self.scoped_share_candidates(root, &postorder, &lam_scopes, at_consts);
+
+        let mut reserved = self
+            .environment()
+            .iter()
+            .map(|(&name, _)| self.render_name(name))
+            .collect::<BTreeSet<_>>();
+        for key in &postorder {
+            let binder = match self.expr_node(key.0) {
+                ExprNode::Lam(name, ..) | ExprNode::Pi(name, ..) | ExprNode::Let(name, ..) => {
+                    self.render_name(*name)
+                }
+                _ => continue,
+            };
+            if !binder.is_empty() {
+                reserved.insert(binder);
+            }
+        }
+        reserved.insert(expression_name.to_owned());
+
+        let mut names = BTreeMap::new();
+        let mut blocks: BTreeMap<ScopeId, Vec<ShareKey>> = BTreeMap::new();
+        let mut suffix = 0_u64;
+        // Post-order, so a `let` is always emitted after everything it names.
+        for key in postorder {
+            if !selected.contains(&key) {
+                continue;
+            }
+            // SHORT on purpose. A share pays for itself only when the name is
+            // cheaper than the term it replaces, and these are references, not
+            // documentation: measured 2026-08-18 on the constructed-reals front
+            // door, `axeyum_proof_share_NNNNN` at ~21 bytes a reference ate most
+            // of the saving, and shortening the prefix alone took the shipped
+            // module from 1,877,436 bytes to 1,303,499. The top-level `def`
+            // names keep the long spelling: there are few of them and they are
+            // what a reader greps for.
+            let name = loop {
+                let candidate = format!("_s{suffix}");
+                suffix += 1;
+                if reserved.insert(candidate.clone()) {
+                    break candidate;
+                }
+            };
+            names.insert(key, name);
+            blocks.entry(key.1).or_default().push(key);
+        }
+        LeanSharePlan {
+            names,
+            order: Vec::new(),
+            blocks,
+        }
+    }
+
+    /// The key DAG reachable from `root`, in post-order, plus the scopes a
+    /// `let` may be opened in.
+    ///
+    /// A `Pi` or a `Let` body is deliberately not one of them: `let` is a term
+    /// form, and this writer will not put one inside a type arrow, so a key
+    /// homed there would be referenced by a name nothing ever binds.
+    fn scoped_key_postorder(&self, root: ExprId) -> (Vec<ShareKey>, HashSet<ScopeId>) {
+        let mut postorder: Vec<ShareKey> = Vec::new();
+        let mut visited: HashSet<ShareKey> = HashSet::new();
+        let mut lam_scopes: HashSet<ScopeId> = HashSet::new();
+        let mut stack: Vec<(ShareKey, bool)> = vec![((root, ROOT_SCOPE), false)];
+        while let Some((key, expanded)) = stack.pop() {
+            if expanded {
+                postorder.push(key);
+                continue;
+            }
+            if !visited.insert(key) {
+                continue;
+            }
+            if matches!(self.expr_node(key.0), ExprNode::Lam(..)) {
+                lam_scopes.insert(self.body_scope(key.0, key.1));
+            }
+            stack.push((key, true));
+            for child in self.share_children(key).into_iter().rev() {
+                stack.push((child, false));
+            }
+        }
+        drop(visited);
+        (postorder, lam_scopes)
+    }
+
+    /// Which keys become a binding: repeated ones, plus deterministic cut
+    /// points so a long single-use chain stays bounded.
+    fn scoped_share_candidates(
+        &self,
+        root: ExprId,
+        postorder: &[ShareKey],
+        lam_scopes: &HashSet<ScopeId>,
+        at_consts: &BTreeSet<NameId>,
+    ) -> HashSet<ShareKey> {
+        let mut occurrences: HashMap<ShareKey, u64> = HashMap::with_capacity(postorder.len());
+        occurrences.insert((root, ROOT_SCOPE), 1);
+        for key in postorder.iter().rev() {
+            let count = occurrences.get(key).copied().unwrap_or_default();
+            if count == 0 {
+                continue;
+            }
+            for child in self.share_children(*key) {
+                let current = occurrences.get(&child).copied().unwrap_or_default();
+                occurrences.insert(child, current.saturating_add(count));
+            }
+        }
+
+        let mut tree_sizes: HashMap<ShareKey, u64> = HashMap::with_capacity(postorder.len());
+        for key in postorder {
+            let mut size = 1_u64;
+            for child in self.share_children(*key) {
+                size = size.saturating_add(tree_sizes.get(&child).copied().unwrap_or(1));
+            }
+            tree_sizes.insert(*key, size);
+        }
+
+        let shareable = |key: ShareKey| -> bool {
+            (key.1 == ROOT_SCOPE || lam_scopes.contains(&key.1))
+                && !self.has_fvars(key.0)
+                && matches!(
+                    self.expr_node(key.0),
+                    ExprNode::App(_, _)
+                        | ExprNode::Proj(..)
+                        | ExprNode::Lam(..)
+                        | ExprNode::Pi(..)
+                        | ExprNode::Let(..)
+                )
+                && !self.hoisting_exposes_implicit_binders(key.0, at_consts)
+        };
+
+        let mut selected: HashSet<ShareKey> = postorder
+            .iter()
+            .copied()
+            .filter(|&key| {
+                occurrences.get(&key).copied().unwrap_or_default() >= 2
+                    && tree_sizes.get(&key).copied().unwrap_or_default()
+                        >= COMPACT_SHARE_MIN_TREE_NODES
+                    && shareable(key)
+            })
+            .collect();
+        drop(occurrences);
+        drop(tree_sizes);
+
+        // Deterministic cut points, so a long single-use chain stays bounded
+        // even when nothing in it repeats (see [`Self::compact_share_plan`]).
+        let mut chunk_sizes: HashMap<ShareKey, u64> = HashMap::with_capacity(postorder.len());
+        for key in postorder {
+            let mut size = 1_u64;
+            for child in self.share_children(*key) {
+                size = size.saturating_add(chunk_sizes.get(&child).copied().unwrap_or(1));
+            }
+            if selected.contains(key) || (shareable(*key) && size >= COMPACT_CHUNK_TREE_NODES) {
+                selected.insert(*key);
+                size = 1;
+            }
+            chunk_sizes.insert(*key, size);
+        }
+        drop(chunk_sizes);
+        selected
     }
 
     fn write_lean_without_shares<O: LeanModuleOutput>(
@@ -1275,7 +2156,8 @@ impl Kernel {
         expression: ExprId,
         at_consts: &BTreeSet<NameId>,
     ) {
-        self.write_lean_with_shares(out, expression, at_consts, &BTreeMap::new(), None);
+        let empty = LeanSharePlan::default();
+        self.write_lean_with_shares(out, expression, at_consts, ShareView::new(&empty));
     }
 
     fn write_lean_with_shares<O: LeanModuleOutput>(
@@ -1283,18 +2165,10 @@ impl Kernel {
         out: &mut O,
         expression: ExprId,
         at_consts: &BTreeSet<NameId>,
-        shares: &BTreeMap<ExprId, String>,
-        expand_root: Option<ExprId>,
+        view: ShareView<'_>,
     ) {
         let mut binders = Vec::new();
-        self.write_expr_with_shares(
-            out,
-            expression,
-            &mut binders,
-            at_consts,
-            shares,
-            expand_root,
-        );
+        self.write_expr_with_shares(out, expression, &mut binders, at_consts, view);
     }
 
     fn write_lean_with_local_shares<O: LeanModuleOutput>(
@@ -1303,18 +2177,39 @@ impl Kernel {
         expression: ExprId,
         at_consts: &BTreeSet<NameId>,
     ) {
-        let shares = self.compact_share_plan(&[expression], "axeyum_local_expression", at_consts);
-        if shares.order.is_empty() {
+        let plan = self.scoped_share_plan(expression, "axeyum_local_expression", at_consts);
+        if plan.names.is_empty() {
             self.write_lean_without_shares(out, expression, at_consts);
             return;
         }
-        for &shared in &shares.order {
-            let name = &shares.names[&shared];
-            let _ = write!(out, "let {name} :=\n  ");
-            self.write_lean_with_shares(out, shared, at_consts, &shares.names, Some(shared));
-            let _ = out.write_str(";\n");
+        let view = ShareView::new(&plan);
+        let mut binders = Vec::new();
+        self.write_scope_lets(out, ROOT_SCOPE, &mut binders, at_consts, view);
+        self.write_expr_with_shares(out, expression, &mut binders, at_consts, view);
+    }
+
+    /// Emit the `let` bindings the plan homes at `scope`, in dependency order.
+    ///
+    /// Called at the top of the body a binder opens (and once at `ROOT_SCOPE`
+    /// for the whole expression), which is exactly where every loose variable
+    /// a homed key reads is already bound.
+    fn write_scope_lets<O: LeanModuleOutput>(
+        &self,
+        out: &mut O,
+        scope: ScopeId,
+        binders: &mut Vec<String>,
+        at_consts: &BTreeSet<NameId>,
+        view: ShareView<'_>,
+    ) {
+        let Some(keys) = view.blocks.get(&scope) else {
+            return;
+        };
+        for &key in keys {
+            let name = &view.names[&key];
+            let _ = write!(out, "let {name} := ");
+            self.write_expr_with_shares(out, key.0, binders, at_consts, view.expanding(key));
+            let _ = out.write_str("; ");
         }
-        self.write_lean_with_shares(out, expression, at_consts, &shares.names, None);
     }
 
     fn write_expr_with_shares_atom<O: LeanModuleOutput>(
@@ -1323,12 +2218,9 @@ impl Kernel {
         expression: ExprId,
         binders: &mut Vec<String>,
         at_consts: &BTreeSet<NameId>,
-        shares: &BTreeMap<ExprId, String>,
-        expand_root: Option<ExprId>,
+        view: ShareView<'_>,
     ) {
-        if expand_root != Some(expression)
-            && let Some(name) = shares.get(&expression)
-        {
+        if let Some(name) = view.lookup(expression) {
             let _ = out.write_str(name);
             return;
         }
@@ -1339,25 +2231,11 @@ impl Kernel {
             | ExprNode::Sort(_)
             | ExprNode::Proj(..)
             | ExprNode::Lit(_) => {
-                self.write_expr_with_shares(
-                    out,
-                    expression,
-                    binders,
-                    at_consts,
-                    shares,
-                    expand_root,
-                );
+                self.write_expr_with_shares(out, expression, binders, at_consts, view);
             }
             ExprNode::App(_, _) | ExprNode::Lam(..) | ExprNode::Pi(..) | ExprNode::Let(..) => {
                 let _ = out.write_char('(');
-                self.write_expr_with_shares(
-                    out,
-                    expression,
-                    binders,
-                    at_consts,
-                    shares,
-                    expand_root,
-                );
+                self.write_expr_with_shares(out, expression, binders, at_consts, view);
                 let _ = out.write_char(')');
             }
         }
@@ -1370,11 +2248,10 @@ impl Kernel {
         field_index: u32,
         binders: &mut Vec<String>,
         at_consts: &BTreeSet<NameId>,
-        share_state: (&BTreeMap<ExprId, String>, Option<ExprId>),
+        view: ShareView<'_>,
     ) {
-        let (shares, expand_root) = share_state;
         let _ = out.write_char('(');
-        self.write_expr_with_shares(out, structure, binders, at_consts, shares, expand_root);
+        self.write_expr_with_shares(out, structure, binders, at_consts, view);
         let _ = write!(out, ").{}", u64::from(field_index) + 1);
     }
 
@@ -1395,25 +2272,15 @@ impl Kernel {
         expression: ExprId,
         binders: &mut Vec<String>,
         at_consts: &BTreeSet<NameId>,
-        shares: &BTreeMap<ExprId, String>,
-        expand_root: Option<ExprId>,
+        view: ShareView<'_>,
     ) {
         // One flat left-associated spine: see [`Self::app_spine`]. A shared
         // node inside the spine ends it (it prints as its name).
-        let (head, arguments) = self.app_spine(expression, |node| {
-            expand_root != Some(node) && shares.contains_key(&node)
-        });
-        self.write_expr_with_shares_atom(out, head, binders, at_consts, shares, expand_root);
+        let (head, arguments) = self.app_spine(expression, |node| view.lookup(node).is_some());
+        self.write_expr_with_shares_atom(out, head, binders, at_consts, view);
         for argument in arguments {
             let _ = out.write_char(' ');
-            self.write_expr_with_shares_atom(
-                out,
-                argument,
-                binders,
-                at_consts,
-                shares,
-                expand_root,
-            );
+            self.write_expr_with_shares_atom(out, argument, binders, at_consts, view);
         }
     }
 
@@ -1423,12 +2290,9 @@ impl Kernel {
         expression: ExprId,
         binders: &mut Vec<String>,
         at_consts: &BTreeSet<NameId>,
-        shares: &BTreeMap<ExprId, String>,
-        expand_root: Option<ExprId>,
+        view: ShareView<'_>,
     ) {
-        if expand_root != Some(expression)
-            && let Some(name) = shares.get(&expression)
-        {
+        if let Some(name) = view.lookup(expression) {
             let _ = out.write_str(name);
             return;
         }
@@ -1469,47 +2333,44 @@ impl Kernel {
                     *field_index,
                     binders,
                     at_consts,
-                    (shares, expand_root),
+                    view,
                 );
             }
             ExprNode::App(_, _) => {
-                self.write_application_with_shares(
-                    out,
-                    expression,
-                    binders,
-                    at_consts,
-                    shares,
-                    expand_root,
-                );
+                self.write_application_with_shares(out, expression, binders, at_consts, view);
             }
             ExprNode::Lam(name, ty, body, _) => {
                 let binder = self.binder_name(*name, binders.len());
                 let _ = write!(out, "fun ({binder} : ");
-                self.write_expr_with_shares(out, *ty, binders, at_consts, shares, expand_root);
+                self.write_expr_with_shares(out, *ty, binders, at_consts, view);
                 let _ = out.write_str(") => ");
                 binders.push(binder.clone());
-                self.write_expr_with_shares(out, *body, binders, at_consts, shares, expand_root);
+                let inner = view.at(self.body_scope(expression, view.scope));
+                self.write_scope_lets(out, inner.scope, binders, at_consts, inner);
+                self.write_expr_with_shares(out, *body, binders, at_consts, inner);
                 binders.pop();
             }
             ExprNode::Pi(name, ty, body, _) => {
                 let binder = self.binder_name(*name, binders.len());
                 let _ = write!(out, "(({binder} : ");
-                self.write_expr_with_shares(out, *ty, binders, at_consts, shares, expand_root);
+                self.write_expr_with_shares(out, *ty, binders, at_consts, view);
                 let _ = out.write_str(") -> ");
                 binders.push(binder.clone());
-                self.write_expr_with_shares(out, *body, binders, at_consts, shares, expand_root);
+                let inner = view.at(self.body_scope(expression, view.scope));
+                self.write_expr_with_shares(out, *body, binders, at_consts, inner);
                 binders.pop();
                 let _ = out.write_char(')');
             }
             ExprNode::Let(name, ty, value, body) => {
                 let binder = self.binder_name(*name, binders.len());
                 let _ = write!(out, "let {binder} : ");
-                self.write_expr_with_shares(out, *ty, binders, at_consts, shares, expand_root);
+                self.write_expr_with_shares(out, *ty, binders, at_consts, view);
                 let _ = out.write_str(" := ");
-                self.write_expr_with_shares(out, *value, binders, at_consts, shares, expand_root);
+                self.write_expr_with_shares(out, *value, binders, at_consts, view);
                 let _ = out.write_str("; ");
                 binders.push(binder.clone());
-                self.write_expr_with_shares(out, *body, binders, at_consts, shares, expand_root);
+                let inner = view.at(self.body_scope(expression, view.scope));
+                self.write_expr_with_shares(out, *body, binders, at_consts, inner);
                 binders.pop();
             }
             ExprNode::Lit(literal) => Self::write_literal(out, literal),
@@ -1649,7 +2510,8 @@ impl Kernel {
 mod tests {
     use std::collections::BTreeSet;
 
-    use crate::Kernel;
+    use super::{ROOT_SCOPE, ScopeId};
+    use crate::{ExprId, Kernel};
 
     /// `fun (p : Prop) => p` renders to readable Lean with the de Bruijn variable
     /// resolved to its binder name, and the round-trip parses structurally.
@@ -1665,6 +2527,160 @@ mod tests {
         let body = k.bvar(0);
         let lam = k.lam(p, prop, body, crate::BinderInfo::Default);
         assert_eq!(k.render_lean(lam), "fun (p : Prop) => p");
+    }
+
+    /// A rendered `inductive` command must come **after** everything its
+    /// CONSTRUCTORS mention, not merely after what its own type mentions.
+    ///
+    /// The renderer writes constructors inline inside the `inductive` block, so a
+    /// constructor referring to a definition emitted later produces a module real
+    /// Lean rejects with `Unknown constant`. The topological sort used to order
+    /// an inductive by `decl_deps`, which for a `Sort 1`-valued family is
+    /// *nothing*, and no in-tree kernel test noticed: the whole class is
+    /// invisible unless a constructor's type mentions a definition, which the
+    /// propositional connectives never do and the constructed ℚ does
+    /// (`Rat.mk` mentions `Int.natAbs`).
+    ///
+    /// This test is deliberately synthetic and cheap. The end-to-end evidence is
+    /// `tests/lean_crosscheck.rs`, which feeds the modules to a real `lean` — but
+    /// that suite **skips itself** when no `lean` binary is installed, so on most
+    /// hosts it proves nothing and this test is the only thing standing here.
+    #[test]
+    fn an_inductive_is_emitted_after_what_its_constructors_mention() {
+        let mut k = Kernel::new();
+        let anon = k.anon();
+        let prop = k.sort_zero();
+
+        // INTERNED FIRST, on purpose. The topological walk starts from a
+        // `BTreeSet<NameId>`, so with the bug present the emitted order still
+        // happens to be right whenever the dependency was interned earlier —
+        // and the first version of this test proved nothing for exactly that
+        // reason. Interning the inductive before the definition it depends on
+        // reproduces the real case, where `Rat` is interned by the rational
+        // prelude before the `Int.natAbs` that same prelude needs.
+        let later = k.name_str(anon, "Later");
+        let later_mk = k.name_str(later, "mk");
+
+        // `inductive Seed : Prop | intro : Seed`, so there is something for a
+        // definition to be about.
+        let seed = k.name_str(anon, "Seed");
+        let seed_intro = k.name_str(seed, "intro");
+        let seed_ty = k.const_(seed, vec![]);
+        k.add_inductive(seed, &[], 0, prop, &[(seed_intro, seed_ty)])
+            .expect("Seed admits");
+
+        // `def Marker : Prop := Seed` — a DEFINITION, which is what an
+        // inductive's own type can never depend on.
+        let marker = k.name_str(anon, "Marker");
+        let marker_value = k.const_(seed, vec![]);
+        k.add_declaration(crate::Declaration::Definition {
+            name: marker,
+            uparams: vec![],
+            ty: prop,
+            value: marker_value,
+            hint: crate::ReducibilityHint::Regular(0),
+        })
+        .expect("Marker admits");
+
+        // `inductive Later : Prop | mk : Marker -> Later`. Its own type is
+        // `Prop`; only the CONSTRUCTOR mentions `Marker`.
+        let later_ty = k.const_(later, vec![]);
+        let marker_const = k.const_(marker, vec![]);
+        let mk_ty = {
+            let hole = k.name_str(anon, "x");
+            k.pi(hole, marker_const, later_ty, crate::BinderInfo::Default)
+        };
+        k.add_inductive(later, &[], 0, prop, &[(later_mk, mk_ty)])
+            .expect("Later admits");
+
+        // A goal/proof pair reaching `Later` through its constructor.
+        let goal = k.const_(later, vec![]);
+        let proof = {
+            let mk = k.const_(later_mk, vec![]);
+            let seed_proof = k.const_(seed_intro, vec![]);
+            k.app(mk, seed_proof)
+        };
+        let source = k.render_lean_module("probe", goal, proof);
+
+        let marker_at = source
+            .find("def Marker")
+            .expect("the definition must be emitted");
+        let later_at = source
+            .find("inductive Later")
+            .expect("the inductive must be emitted");
+        assert!(
+            marker_at < later_at,
+            "`inductive Later` is emitted at byte {later_at} but its constructor \
+             mentions `Marker`, emitted at byte {marker_at} -- Lean reads a module \
+             top to bottom and rejects the forward reference:\n{source}"
+        );
+    }
+
+    /// A constant that only a rendered constructor mentions must still be
+    /// **emitted**, not merely ordered.
+    ///
+    /// The sibling test above covers the ordering half of the fix; this covers
+    /// the reachability half, and the two are independent. Here the proof never
+    /// touches the constructor, so nothing else in the module pulls its
+    /// dependency in — yet the `inductive` block writes the constructor's type
+    /// out regardless, and a module naming a constant it never declares is one
+    /// Lean rejects.
+    #[test]
+    fn a_constant_only_a_constructor_mentions_is_still_emitted() {
+        let mut k = Kernel::new();
+        let anon = k.anon();
+        let prop = k.sort_zero();
+
+        let seed = k.name_str(anon, "Seed");
+        let seed_intro = k.name_str(seed, "intro");
+        let seed_ty = k.const_(seed, vec![]);
+        k.add_inductive(seed, &[], 0, prop, &[(seed_intro, seed_ty)])
+            .expect("Seed admits");
+
+        let marker = k.name_str(anon, "Marker");
+        let marker_value = k.const_(seed, vec![]);
+        k.add_declaration(crate::Declaration::Definition {
+            name: marker,
+            uparams: vec![],
+            ty: prop,
+            value: marker_value,
+            hint: crate::ReducibilityHint::Regular(0),
+        })
+        .expect("Marker admits");
+
+        let later = k.name_str(anon, "Later");
+        let later_mk = k.name_str(later, "mk");
+        let later_ty = k.const_(later, vec![]);
+        let marker_const = k.const_(marker, vec![]);
+        let mk_ty = {
+            let hole = k.name_str(anon, "x");
+            k.pi(hole, marker_const, later_ty, crate::BinderInfo::Default)
+        };
+        k.add_inductive(later, &[], 0, prop, &[(later_mk, mk_ty)])
+            .expect("Later admits");
+
+        // The proof is an OPAQUE inhabitant, so `Later.mk` -- and therefore
+        // `Marker` -- is reachable only through the inductive block itself.
+        let witness = k.name_str(anon, "witness");
+        let goal = k.const_(later, vec![]);
+        k.add_declaration(crate::Declaration::Axiom {
+            name: witness,
+            uparams: vec![],
+            ty: goal,
+        })
+        .expect("witness admits");
+        let proof = k.const_(witness, vec![]);
+
+        let source = k.render_lean_module("probe", goal, proof);
+        assert!(
+            source.contains("inductive Later"),
+            "the inductive under test was not emitted at all:\n{source}"
+        );
+        assert!(
+            source.contains("def Marker"),
+            "`inductive Later`'s constructor mentions `Marker`, which the module \
+             never declares -- Lean rejects it with `Unknown constant`:\n{source}"
+        );
     }
 
     /// Core projections use Lean's 1-based field-index surface syntax while
@@ -1964,7 +2980,7 @@ mod tests {
 
         let module = k.render_lean_module_compact("large_axiom", goal, proof);
         assert!(
-            module.contains("axiom h : let axeyum_proof_share_"),
+            module.contains("axiom h : let _s"),
             "large declaration types must retain DAG chunks in their own scope"
         );
         assert!(module.contains("theorem large_axiom"));
@@ -2004,6 +3020,119 @@ mod tests {
 
         let plan = k.compact_share_plan(&[lambda], "open_term", &BTreeSet::new());
         assert!(plan.names.is_empty(), "open terms must not be hoisted");
+    }
+
+    /// A `F (F … #0)` chain repeated inside one lambda, plus the pieces every
+    /// scoped-sharing test needs.
+    #[cfg(test)]
+    fn open_chain_fixture(chain: usize) -> (Kernel, ExprId, ExprId, ExprId) {
+        use crate::{BinderInfo, Declaration, build_logic_prelude};
+
+        let mut k = Kernel::new();
+        let logic = build_logic_prelude(&mut k).expect("logic prelude must build");
+        let anon = k.anon();
+        let prop = k.sort_zero();
+        let function_ty = k.pi(anon, prop, prop, BinderInfo::Default);
+        let function_name = k.name_str(anon, "F");
+        k.add_declaration(Declaration::Axiom {
+            name: function_name,
+            uparams: Vec::new(),
+            ty: function_ty,
+        })
+        .unwrap();
+        let function = k.const_(function_name, Vec::new());
+        let mut open = k.bvar(0);
+        for _ in 0..chain {
+            open = k.app(function, open);
+        }
+        let and = k.const_(logic.and, Vec::new());
+        let repeated = {
+            let expression = k.app(and, open);
+            k.app(expression, open)
+        };
+        (k, repeated, prop, and)
+    }
+
+    /// The saving this whole scheme exists for: a repeated **open** term is
+    /// shared, and its binding sits inside the binder that binds its loose
+    /// variable rather than being hoisted out of it.
+    #[test]
+    fn scoped_plan_shares_open_terms_inside_the_binder_that_binds_them() {
+        use crate::BinderInfo;
+
+        let (mut k, repeated, prop, _and) = open_chain_fixture(8);
+        let anon = k.anon();
+        let lambda = k.lam(anon, prop, repeated, BinderInfo::Default);
+
+        let plan = k.scoped_share_plan(lambda, "scoped", &BTreeSet::new());
+        assert!(
+            !plan.names.is_empty(),
+            "a repeated open term must be shared: that is the entire point"
+        );
+        for &(expression, scope) in plan.names.keys() {
+            assert!(
+                scope != ROOT_SCOPE || k.num_loose_bvars(expression) == 0,
+                "an OPEN term keyed at the root scope would be bound outside \
+                 the binder that binds it"
+            );
+        }
+        // The top-level `def` planner must still refuse it -- a `def` has no
+        // enclosing binder to read the loose variable in.
+        assert!(
+            k.compact_share_plan(&[lambda], "scoped", &BTreeSet::new())
+                .names
+                .is_empty()
+        );
+    }
+
+    /// The soundness guard. One hash-consed open node under **two different
+    /// binders** is two different terms, so it must be bound twice, once in
+    /// each scope. Keying shares by node alone would bind it once, outside
+    /// both, and silently change what the module says.
+    #[test]
+    fn one_open_node_under_two_binders_is_bound_once_per_binder() {
+        use crate::BinderInfo;
+
+        let (mut k, repeated, prop, and) = open_chain_fixture(8);
+        let anon = k.anon();
+        let x = k.name_str(anon, "x");
+        let y = k.name_str(anon, "y");
+        // Two distinct lambda NODES over one shared body node.
+        let first = k.lam(x, prop, repeated, BinderInfo::Default);
+        let second = k.lam(y, prop, repeated, BinderInfo::Default);
+        assert_ne!(first, second);
+        let root = {
+            let expression = k.app(and, first);
+            k.app(expression, second)
+        };
+
+        let plan = k.scoped_share_plan(root, "two_binders", &BTreeSet::new());
+        let scopes: BTreeSet<ScopeId> = plan.names.keys().map(|key| key.1).collect();
+        assert_eq!(
+            scopes.len(),
+            2,
+            "the shared body must be bound separately under each binder, got {:?}",
+            plan.names
+        );
+        assert!(!scopes.contains(&ROOT_SCOPE));
+    }
+
+    /// `let` is a term form and this writer will not put one inside a type
+    /// arrow, so a key homed at a `Pi` body's scope would be referenced by a
+    /// name nothing ever binds. The plan must not select it.
+    #[test]
+    fn a_repeated_term_under_a_pi_binder_is_not_shared() {
+        use crate::BinderInfo;
+
+        let (mut k, repeated, prop, _and) = open_chain_fixture(8);
+        let anon = k.anon();
+        let pi = k.pi(anon, prop, repeated, BinderInfo::Default);
+
+        let plan = k.scoped_share_plan(pi, "pi_body", &BTreeSet::new());
+        assert!(
+            plan.names.is_empty(),
+            "nothing may be homed in a Pi body: no `let` is ever emitted there"
+        );
     }
 
     #[test]
@@ -2144,5 +3273,250 @@ mod tests {
             plan.names.len()
         );
         assert_eq!(plan.names.len(), plan.order.len());
+    }
+
+    // ---------------------------------------------------------------------
+    // The shared prelude module (`render_lean_prelude_module` +
+    // `render_lean_module_compact_importing`).
+    // ---------------------------------------------------------------------
+
+    /// A kernel carrying the logical prelude plus a query on top of it: `hna`
+    /// refutes `ha`, and the shared development is everything the prelude
+    /// builder admitted.
+    ///
+    /// Returns `(kernel, carrier_names, goal, proof)`. `carrier_names` is the
+    /// environment snapshot taken BEFORE the query symbols were admitted — the
+    /// definition of "shared" a caller has to supply.
+    fn split_fixture() -> (Kernel, Vec<crate::NameId>, ExprId, ExprId) {
+        let mut k = Kernel::new();
+        let logic = crate::build_logic_prelude(&mut k).expect("logic prelude must build");
+        let carrier: Vec<crate::NameId> = k.environment().iter().map(|(n, _)| *n).collect();
+
+        let anon = k.anon();
+        let prop = k.sort_zero();
+        let false_ = k.const_(logic.false_, vec![]);
+
+        let a_name = k.name_str(anon, "A");
+        k.add_declaration(crate::Declaration::Axiom {
+            name: a_name,
+            uparams: vec![],
+            ty: prop,
+        })
+        .expect("A admits");
+        let a = k.const_(a_name, vec![]);
+
+        let ha_name = k.name_str(anon, "ha");
+        k.add_declaration(crate::Declaration::Axiom {
+            name: ha_name,
+            uparams: vec![],
+            ty: a,
+        })
+        .expect("ha admits");
+
+        let not_a = k.pi(anon, a, false_, crate::BinderInfo::Default);
+        let refutes = k.name_str(anon, "hna");
+        k.add_declaration(crate::Declaration::Axiom {
+            name: refutes,
+            uparams: vec![],
+            ty: not_a,
+        })
+        .expect("hna admits");
+
+        let ha = k.const_(ha_name, vec![]);
+        let hna = k.const_(refutes, vec![]);
+        let proof = k.app(hna, ha);
+        (k, carrier, false_, proof)
+    }
+
+    /// The split is a partition, not a duplication: every declaration the
+    /// self-contained module writes out is written by exactly one of the two
+    /// halves.
+    ///
+    /// This is the property that makes the byte saving real rather than a
+    /// relabelling, and the property Lean enforces from the other side — a
+    /// declaration emitted twice is `has already been declared`.
+    #[test]
+    fn a_shared_prelude_and_its_query_module_declare_disjoint_names() {
+        let (k, carrier, goal, proof) = split_fixture();
+        let shared = k.render_lean_prelude_module("AxeyumShared", &carrier);
+        let query = k.render_lean_module_compact_importing("q", goal, proof, &[], &shared);
+
+        let declared = |source: &str| -> BTreeSet<String> {
+            source
+                .lines()
+                .filter_map(|line| {
+                    let rest = line
+                        .strip_prefix("axiom ")
+                        .or_else(|| line.strip_prefix("def "))
+                        .or_else(|| line.strip_prefix("theorem "))
+                        .or_else(|| line.strip_prefix("opaque "))
+                        .or_else(|| line.strip_prefix("inductive "))?;
+                    Some(rest.split([' ', '.']).next()?.to_owned())
+                })
+                .collect()
+        };
+        let shared_names = declared(shared.source());
+        let query_names = declared(&query);
+        assert!(
+            !shared_names.is_empty() && !query_names.is_empty(),
+            "both halves must declare something, or the disjointness below is vacuous"
+        );
+        let both: Vec<&String> = shared_names.intersection(&query_names).collect();
+        assert!(
+            both.is_empty(),
+            "the query module re-declares names the import supplies: {both:?}"
+        );
+        // The query's OWN symbols are in the query half and nowhere else.
+        for symbol in ["A", "ha", "hna"] {
+            assert!(
+                query_names.contains(symbol),
+                "the query module must declare its own `{symbol}`:\n{query}"
+            );
+        }
+        // And the shared half carries the development.
+        assert!(
+            shared_names.contains("False"),
+            "the shared module must carry the logical prelude:\n{}",
+            shared.source()
+        );
+    }
+
+    /// The query module names its import, and only its import, as the source of
+    /// the shared development.
+    #[test]
+    fn a_query_module_imports_the_shared_module_by_name() {
+        let (k, carrier, goal, proof) = split_fixture();
+        let shared = k.render_lean_prelude_module("AxeyumShared", &carrier);
+        let query = k.render_lean_module_compact_importing("q", goal, proof, &[], &shared);
+
+        let prelude_line = query
+            .lines()
+            .position(|line| line == "prelude")
+            .expect("a `prelude` line");
+        let import_line = query
+            .lines()
+            .position(|line| line == "import AxeyumShared")
+            .unwrap_or_else(|| panic!("the query module must import the shared module:\n{query}"));
+        assert!(
+            import_line > prelude_line,
+            "Lean requires `prelude` before any `import`:\n{query}"
+        );
+        // Lean rejects an `import` that follows any other command.
+        let first_command = query
+            .lines()
+            .position(|line| {
+                !line.is_empty()
+                    && !line.starts_with("--")
+                    && line != "prelude"
+                    && !line.starts_with("import ")
+            })
+            .expect("some command");
+        assert!(
+            import_line < first_command,
+            "every `import` must precede every command:\n{query}"
+        );
+        assert_eq!(shared.file_name(), "AxeyumShared.lean");
+        assert!(shared.check_script("/d", "Q.lean").contains("LEAN_PATH=/d"));
+    }
+
+    /// Lean's compiler-internal constants are declared exactly ONCE across the
+    /// module set. Declaring them in both halves is `has already been declared`;
+    /// declaring them in neither is `Unknown constant lcErased` under a
+    /// toolchain that runs codegen over a Prop-valued inductive carrying data.
+    #[test]
+    fn the_codegen_constants_are_declared_in_exactly_one_half() {
+        let (k, carrier, goal, proof) = split_fixture();
+        let shared = k.render_lean_prelude_module("AxeyumShared", &carrier);
+        let query = k.render_lean_module_compact_importing("q", goal, proof, &[], &shared);
+        for constant in ["lcErased", "lcAny", "lcVoid"] {
+            let declaration = format!("unsafe axiom {constant} : Type");
+            assert!(
+                shared.source().contains(&declaration),
+                "the shared module must declare `{constant}`"
+            );
+            assert!(
+                !query.contains(&declaration),
+                "the query module must not RE-declare `{constant}`; Lean rejects that:\n{query}"
+            );
+        }
+    }
+
+    /// The elaborator options are module-scoped in Lean and do NOT travel
+    /// through an `import`, so both halves must set them. `maxRecDepth` in
+    /// particular: the shared development binds thousands of nested `let`s and
+    /// the query module's own theorem term does too.
+    #[test]
+    fn both_halves_set_the_module_scoped_elaborator_options() {
+        let (k, carrier, goal, proof) = split_fixture();
+        let shared = k.render_lean_prelude_module("AxeyumShared", &carrier);
+        let query = k.render_lean_module_compact_importing("q", goal, proof, &[], &shared);
+        for option in ["set_option maxRecDepth 65536", "noncomputable section"] {
+            assert!(shared.source().contains(option), "shared module: {option}");
+            assert!(query.contains(option), "query module: {option}");
+        }
+    }
+
+    /// The claim the split is FOR. Everything but the query's own declarations
+    /// and its theorem term moves out of the per-query module.
+    #[test]
+    fn the_query_module_is_much_smaller_than_the_self_contained_one() {
+        let (k, carrier, goal, proof) = split_fixture();
+        let whole = k.render_lean_module_compact("q", goal, proof);
+        let shared = k.render_lean_prelude_module("AxeyumShared", &carrier);
+        let query = k.render_lean_module_compact_importing("q", goal, proof, &[], &shared);
+        // At this fixture's scale the fixed banner dominates both files, so the
+        // measurable claim is that the DEVELOPMENT left the query module, not a
+        // ratio. The ratio is measured where the development is large:
+        // `examples/shared_prelude_module.rs` on the constructed-real carrier.
+        assert!(
+            query.len() < whole.len(),
+            "whole {} B, query {} B, shared {} B",
+            whole.len(),
+            query.len(),
+            shared.source().len()
+        );
+        assert!(
+            whole.contains("inductive False") && !query.contains("inductive False"),
+            "the development must be in the shared half only:\n{query}"
+        );
+        // The audit command still closes the query module: `#print axioms`
+        // traverses imported proofs, so the footprint claim is unmoved.
+        assert!(query.trim_end().ends_with("#print axioms q"), "{query}");
+    }
+
+    /// A shared module has no theorem and makes no claim; it is a development.
+    #[test]
+    fn a_shared_prelude_module_states_no_theorem() {
+        let (k, carrier, _, _) = split_fixture();
+        let shared = k.render_lean_prelude_module("AxeyumShared", &carrier);
+        assert!(
+            !shared
+                .source()
+                .lines()
+                .any(|line| line.starts_with("#print axioms")),
+            "a development module must not carry an audit command"
+        );
+        assert!(
+            !shared.source().contains("\nimport "),
+            "the shared module is the root of the import graph"
+        );
+        assert!(shared.provided_len() > 10, "{}", shared.provided_len());
+    }
+
+    /// Rendering is deterministic, which is what makes "emit once, import many"
+    /// sound: two contexts built the same way must produce a byte-identical
+    /// shared module, or a per-query prelude would be needed after all.
+    #[test]
+    fn two_identically_built_contexts_render_the_same_shared_module() {
+        let (first, first_names, _, _) = split_fixture();
+        let (second, second_names, _, _) = split_fixture();
+        assert_eq!(
+            first
+                .render_lean_prelude_module("AxeyumShared", &first_names)
+                .source(),
+            second
+                .render_lean_prelude_module("AxeyumShared", &second_names)
+                .source()
+        );
     }
 }

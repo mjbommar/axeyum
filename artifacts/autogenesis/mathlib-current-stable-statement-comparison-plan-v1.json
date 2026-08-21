@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-current-stable-statement-comparison-plan",
+  "state": "preregistered-no-extraction-or-proof-credit",
+  "policy_version": "mathlib-selected-statement-version-comparison-v1",
+  "observation_date": "2026-08-20",
+  "baseline": {
+    "mathlib_tag": "v4.30.0",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean_version": "4.30.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "statement_inventory": {
+      "path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-nat-int-statement-inventory-v2.ndjson",
+      "sha256": "4285e551680abf3b0cafb11709015f04b3aef3eb05ce23af2392b12cec31aecc",
+      "records": 9729,
+      "mode": "0444"
+    }
+  },
+  "comparison": {
+    "mathlib_tag": "v4.32.1",
+    "mathlib_commit": "520045ab14e26149ee970e2e617ca04b09bde5d6",
+    "lean_version": "4.32.1",
+    "lean_githash": "f054605aea4b840552cca2e725580bffd1e1b704",
+    "release_channel": "stable",
+    "checkout_path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.32.1-checkout",
+    "statement_inventory_path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.32.1-nat-int-statement-inventory-v1.ndjson"
+  },
+  "inputs": {
+    "source_manifest": {
+      "path": "artifacts/autogenesis/mathlib-statement-source-v1.json",
+      "sha256": "8d7df257783ab2cdcfad18719de68d6f40681e1bacb06e938c7f0827d07eebdc"
+    },
+    "extractor": {
+      "path": "scripts/lean/autogenesis_mathlib_statement_inventory.lean",
+      "sha256": "78cc93de6ab3c1fed5378c757f0ebfcbee47e66ecd72c25022755a4707e2b376"
+    },
+    "selected_candidates": {
+      "path": "artifacts/autogenesis/mathlib-nat-int-candidates-v1.json",
+      "sha256": "adbb3aff520664495089312a35ac2be1fd017a4ce39e4eff6443ea067d5c0704",
+      "records": 240
+    }
+  },
+  "fixed_sequence": [
+    "install the exact Lean v4.32.1 toolchain and shallow-clone exact Mathlib tag v4.32.1 outside Git",
+    "obtain the release oleans through Mathlib's pinned cache mechanism",
+    "run the unchanged statement-only extractor once and freeze the external inventory read-only",
+    "independently validate schema, lexical order, uniqueness, scope, record count, and absence of proof or value fields",
+    "compare the existing 240 selected names by presence, module, pretty type hash, and structural type hash",
+    "commit only the small comparison manifest, checker, tests, documentation, and external inventory identity"
+  ],
+  "comparison_classes": [
+    "absent-in-current-stable",
+    "structurally-identical",
+    "pretty-type-only-drift",
+    "structural-type-drift",
+    "module-only-drift"
+  ],
+  "budget": {
+    "max_mathlib_clones": 1,
+    "max_statement_extractions": 1,
+    "max_extractor_compatibility_patches": 0,
+    "max_selected_comparisons": 240,
+    "max_proof_search_invocations": 0,
+    "max_kernel_theorem_submissions": 0,
+    "max_executor_invocations": 0,
+    "max_retries": 0
+  },
+  "gates": {
+    "exact_tags_and_commits_required": true,
+    "same_extractor_required": true,
+    "proof_and_value_fields_forbidden": true,
+    "external_inventory_must_be_read_only": true,
+    "baseline_identity_must_not_change": true,
+    "all_240_selected_names_must_be_classified": true
+  },
+  "authority": {
+    "mathlib_source_proof_bodies_allowed": false,
+    "theorem_values_allowed": false,
+    "full_export_required": false,
+    "proof_import_allowed": false,
+    "fact_status_changes_allowed": false,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "verification": "python3 scripts/check-autogenesis-mathlib-current-stable-statement-comparison-plan.py",
+  "limitations": "This plan measures statement survival across two pinned stable releases. It does not migrate Axeyum's Lean baseline, establish proof portability, rerun held-out evaluation, or grant any theorem credit."
+}

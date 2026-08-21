@@ -51,6 +51,27 @@ pub use write::write_script;
 
 use axeyum_ir::IrError;
 
+/// The Unicode code points of an SMT-LIB string-literal token — the atom as the
+/// reader produced it, **surrounding quotes included** — or `None` when `atom` is
+/// not a well-formed string literal (or an escape names a code point above
+/// `\u{2FFFF}`, which SMT-LIB does not have).
+///
+/// This is the one decoder every route already shares internally (the byte-model
+/// bounded encoder and the code-point word/regex routes all go through it), so
+/// `"\u{62}"` is the single character `b` everywhere and `""""` is the single
+/// character `"`. It is public because a *certificate* over source
+/// s-expressions needs the same literal lengths the solver reasoned with: a
+/// second decoder is a second chance to disagree, and a disagreement about
+/// `|"\u{1F600}"|` is a disagreement about a verdict.
+#[must_use]
+pub fn string_literal_code_points(atom: &str) -> Option<Vec<u32>> {
+    if atom.len() < 2 || !atom.starts_with('"') || !atom.ends_with('"') {
+        return None;
+    }
+    let inner = atom[1..atom.len() - 1].replace("\"\"", "\"");
+    parse::decode_string_code_points(&inner)
+}
+
 /// Errors from SMT-LIB reading.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SmtError {

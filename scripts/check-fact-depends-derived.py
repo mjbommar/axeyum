@@ -61,7 +61,33 @@ FACTS = ROOT / "artifacts/facts"
 
 KERNEL_ROUTES = {"kernel-lean"}
 # `grep -qE '^Nat\.mul_one[[:space:]]'` and `grep -qxF 'Nat.pow_add<TAB>3<TAB>…'`
-THEOREM_RE = re.compile(r"\^?((?:Nat|Int|Real|Rat|List|Bool|Prop|Acc|WellFounded)\\?\.[A-Za-z0-9_']+)")
+# A prelude theorem name as a checker command writes it. Three shapes, all real:
+# `Nat.mul_one` plain; `Nat\.mul_one` escaped for a regex; and
+# `Int[.]Characterization[.]categorical` bracket-escaped for `grep -E`, which is
+# how the characterization facts write it. Segments repeat, because the names
+# are namespaced — matching only ONE segment yields `Int.Characterization`,
+# which is not a theorem, and the fact then drops out silently.
+#
+# Measured 2026-08-18: the single-segment form left 8 of 43 kernel-route facts
+# unenforced, including every fact added that day.
+# No apostrophe. Lean permits primed names, but a checker command quotes its
+# grep pattern with `'`, so allowing one lets the name absorb the CLOSING QUOTE
+# — `Int[.]Characterization[.]categorical'` is then looked up, is not in the
+# graph, and the fact is silently skipped. Measured 2026-08-18: 0 of the 312
+# theorems this kernel declares contain a prime, so excluding it costs nothing
+# today. If a primed name ever appears, this must handle quoting rather than
+# widening the class back.
+#
+# `(?<![A-Za-z])` and the `AxReal`-before-`Real` ordering are both load-bearing
+# after ADR-0522. Without the boundary, `AxReal.add_comm` matches at offset 2 and
+# yields `Real.add_comm` -- a name no kernel declares. That is worse than missing
+# it: `unnamed` never fires (a name WAS found), the graph lookup misses, and the
+# fact is skipped with nothing printed. Measured 2026-08-19, the silent-skip path
+# this file's header promises to report instead.
+_SEG = r"[A-Za-z0-9_]+"
+_DOT = r"(?:\\?\.|\[\.\])"
+_NS = "AxReal|AxNat|Nat|Int|Real|Rat|List|Bool|Prop|Acc|WellFounded|Str"
+THEOREM_RE = re.compile(rf"\^?(?<![A-Za-z])((?:{_NS})(?:{_DOT}{_SEG})+)")
 
 
 def inventory() -> dict[str, list[str]]:
@@ -91,7 +117,7 @@ def theorem_of(fact: dict[str, Any]) -> str | None:
     for item in fact.get("evidence") or []:
         found = THEOREM_RE.search(item.get("checker_command", ""))
         if found:
-            return found.group(1).replace("\\", "")
+            return found.group(1).replace("\\", "").replace("[.]", ".")
     return None
 
 

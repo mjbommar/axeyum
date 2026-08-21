@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-coprime-factor-cancellation-composition-plan",
+  "state": "preregistered-eight-stream-native-leaf-composition-before-code",
+  "accepted_inputs": {
+    "official_balanced_bezout": {"path": "artifacts/autogenesis/official-gcd-balanced-bezout-exact-reuse-result-v1.json", "sha256": "218edbd1a0569db0d94f953d74adb38af79c1a43e5797dfe883face31f73a0c1"},
+    "clean_mul_leaves": {"path": "artifacts/autogenesis/balanced-bezout-clean-mul-leaves-result-v1.json", "sha256": "f4f0ce40c469d65e24639cfef76edd4ec1ce9ce7d6a0d865e7b95d9d71c1700c"},
+    "residual_cancellation": {"path": "artifacts/autogenesis/coprime-factor-cancellation-residual-v2-result-v1.json", "sha256": "08d74429b7d7ec0d40a0e8cf22049c8487fcefaa88eaf9cf21680b903f651702"},
+    "all_nat_adapter": {"path": "artifacts/autogenesis/dvd-add-cancel-all-nat-adapter-result-v1.json", "sha256": "c9ce2a90e3167f8c71e1c813ec2ce9f3dae13b791549d9aac43396dec6b33e7b"}
+  },
+  "implementation": {"path": "crates/axeyum-lean-import/examples/official_coprime_factor_cancellation_composition.rs", "proof_terms_types_or_values_may_be_rendered": false},
+  "composition": {
+    "replay_official_balanced_bezout_closure": true,
+    "native_root": "Nat.dvd_add_right_cancel_of_pos",
+    "stream_roots": ["Axeyum.Autogenesis.balancedBezoutMulAssocLeafV1", "Axeyum.Autogenesis.balancedBezoutRightDistribLeafV1", "Axeyum.Autogenesis.coprimeFactorDivisibilityCancellationResidualV2", "Axeyum.Autogenesis.dvdAddCancelAllNatAdapterV1"],
+    "specialization_order": ["close all-Nat additive cancellation with native positive leaf", "close residual cancellation with official balanced Bezout, clean associativity, clean right distributivity, and all-Nat cancellation"],
+    "final_theorem": "Axeyum.Autogenesis.officialCoprimeFactorDivisibilityCancellationV1"
+  },
+  "acceptance": {"fresh_complete_invocations": 2, "outputs_must_be_byte_identical": true, "all_streams_must_be_axiom_free": true, "every_composition_and_specialization_must_replay": true, "final_axiom_footprint": [], "final_contract": "forall a c b d, Nat.gcd a c = 1 -> d divides a -> d divides (c*b) -> d divides b"},
+  "budget": {"max_binary_builds": 1, "max_complete_invocations": 2, "max_input_stream_reads": 16, "max_composition_operations": 14, "max_specialization_operations": 10, "max_final_theorem_submissions": 2, "max_retries": 0, "max_exact_fibonacci_target_submissions": 0},
+  "authority": {"official_cancellation_credit": 0, "target_specialization_credit": 0, "exact_fibonacci_target_submissions": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_on_accept": "Use official cancellation with the accepted Fibonacci addition theorem to reconstruct Nat.gcd_fib_add_self.",
+  "output": "artifacts/autogenesis/official-coprime-factor-cancellation-composition-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-official-coprime-factor-cancellation-composition-plan.py",
+  "limitations": "The plan may close only general official coprime-factor cancellation; it grants no Fibonacci target or ledger credit before accepted replay evidence."
+}

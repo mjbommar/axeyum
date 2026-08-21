@@ -8,6 +8,12 @@ use axeyum_solver::{
     reconstruct_int_affine_growth_to_lean_module, scan_proof_fragment,
 };
 
+// The golden pin covers the module BODY; the shared banner is pinned once, in
+// `axeyum-lean-kernel --test module_banner_pin`. Header text under many pins is
+// what made this suite red three times -- see the helper's module note.
+#[path = "../../axeyum-lean-kernel/tests/support/lean_golden.rs"]
+mod lean_golden;
+
 const REPAIR_CONST_NTERM: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../../corpus/public-curated/quantified/LIA/cvc5-regress-clean/",
@@ -23,11 +29,6 @@ fn repair_const_nterm_reconstructs_and_routes() {
     let source =
         reconstruct_int_affine_growth_to_lean_module(&script.arena, &assertions, &certificate)
             .expect("target reconstructs");
-    let fnv1a = source
-        .bytes()
-        .fold(0xcbf2_9ce4_8422_2325_u64, |hash, byte| {
-            (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3)
-        });
     // Re-pinned 2026-08-15 (was `(79_801, 0x0e88_e1a5_ecbf_6a7a)`): `0fc7cc357`
     // discharged five of the six remaining integer axioms (`integer: axiom=6 → 1`),
     // so `Int.add_assoc`, `Int.mul_assoc`, `Int.left_distrib`, `Int.add_le_add` and
@@ -53,7 +54,13 @@ fn repair_const_nterm_reconstructs_and_routes() {
     // is gone from the list, so this refutation depends on no library axiom at
     // all. `check_one_lean` now fails any module whose axiom list contains an
     // `Int.` entry, so the shrink is a gate rather than a comment.
-    assert_eq!((source.len(), fnv1a), (206_580, 0xb144_c9c5_d88a_0655));
+    // The +1_640 of HEADER text that made this pin red on 2026-08-18 -- `b760fd6ae`
+    // (+863, Lean's codegen constants) and `46724faec` (+777, `maxRecDepth`), the
+    // third recurrence of one mechanism -- can no longer reach it: the pin below
+    // covers the module BODY, and the banner is pinned once in
+    // `axeyum-lean-kernel --test module_banner_pin`. If this moves, PROOF text
+    // moved. See `crates/axeyum-lean-kernel/tests/support/lean_golden.rs`.
+    lean_golden::assert_golden_module("affine-growth", &source, (206_098, 0x059f_ad6b_63f4_1238));
     assert!(source.contains("theorem axeyum_refutation : False"));
     assert!(source.contains("euclidean_decomposition"));
     assert!(!source.contains("sorryAx"));

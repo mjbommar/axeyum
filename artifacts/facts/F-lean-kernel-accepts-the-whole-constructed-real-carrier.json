@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "F:lean-kernel-accepts-the-whole-constructed-real-carrier",
+  "title": "Official Lean's own kernel accepts every declaration of the constructed-real carrier",
+  "statement": "Every declaration that build_creal_prelude admits -- all 470 of them, with no reachability filter -- is accepted by official Lean 4.30.0's own kernel via Lean.Environment.addDeclCore starting from mkEmptyEnvironment, including the four that Lean's ELABORATOR refuses when the same development is handed to it as .lean source. The number of constants Lean's environment ends with equals the number this kernel holds, so acceptance cannot mean acceptance of a subset; and the same binary rejects the same stream when CReal.Equiv.not_zero_one's proof is replaced by another closed proof, naming that theorem's own type when it does.",
+  "formal": {
+    "language": "lean4",
+    "statement": "Let K be the kernel state after `build_creal_prelude(&mut Kernel::new())`, and let S = `K.render_lean4export_ndjson(Lean4ExportMetadata::axeyum(\"4.30.0\"))` be the official lean4export NDJSON 3.1.0 encoding of the COMPLETE checked environment (no reachability filter). Let L be the Lean binary that `lean-toolchain` pins (4.30.0, commit d024af099ca4bf2c86f649261ebf59565dc8c622). Then `scripts/lean/replay-lean4export.lean`, which folds `Lean.Environment.addDeclCore` over S starting from `mkEmptyEnvironment`, succeeds under L, and the resulting environment holds exactly `K.environment().iter().count()` constants (470 on 2026-08-18). In particular `CReal.Equiv.not_zero_one` and `CReal.not_le_one_zero` are admitted by L's kernel, although L's ELABORATOR refuses both when the same development is rendered as `.lean` source (ADR-0517).",
+    "fragment": "lean4-kernel-declaration-stream",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "lean-kernel-accepts-the-whole-constructed-real-carrier-1",
+      "kind": "kernel-term",
+      "supports": "The whole carrier, and the WHOLE of it. Lean's kernel ends with exactly as many constants as this kernel holds -- 470 = 470, both numbers read out of the run rather than transcribed. This is the row that distinguishes `accepted` from `accepted a subset`, which is the failure mode every other real-Lean check in this repository is exposed to: they render the closure of one refutation, so Lean only ever sees the declarations some query happens to cite.",
+      "check_status": "checked",
+      "checker_command": "out=$(AXEYUM_REQUIRE_LEAN=1 cargo test -q -p axeyum-lean-kernel --test real_lean_creal_carrier_kernel_replay -- --nocapture 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'AXEYUM-CREAL-CARRIER declared=470 lean_kernel_constants=470'",
+      "notes": "Verified discriminating by scripts/new-fact.py: the pattern matches the real output and fails on mutated output. Anchored on the two counts printed on ONE line, so neither can drift without the other being noticed, and both are read from the kernel and from Lean at run time. A bare `470` in a document would be a transcription; this is a comparison."
+    },
+    {
+      "id": "lean-kernel-accepts-the-whole-constructed-real-carrier-2",
+      "kind": "kernel-term",
+      "supports": "Lean actually RAN, twice. An exit status cannot distinguish `checked 2 modules` from `checked none`, and this repository has shipped suites that were inert for weeks. The suite prints its own invocation count and the pinned toolchain it used; `scripts/check-lean-gate.sh` sums those counts and cross-checks the binary.",
+      "check_status": "checked",
+      "checker_command": "out=$(AXEYUM_REQUIRE_LEAN=1 cargo test -q -p axeyum-lean-kernel --test real_lean_creal_carrier_kernel_replay -- --nocapture 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'AXEYUM-LEAN-CHECKED creal-carrier-kernel-replay checked=2'",
+      "notes": "Verified discriminating by scripts/new-fact.py: the pattern matches the real output and fails on mutated output. Anchored on the suite's own `AXEYUM-LEAN-CHECKED` count, not on the exit status. The count is the thing an inert suite cannot produce."
+    },
+    {
+      "id": "lean-kernel-accepts-the-whole-constructed-real-carrier-3",
+      "kind": "kernel-term",
+      "supports": "The NEGATIVE control passed, which is what makes the two rows above mean anything. The second of the two Lean invocations replays the same stream with `CReal.Equiv.not_zero_one`'s proof replaced by another closed proof, and the run only passes if Lean's kernel REJECTS it naming `CReal.Equiv` -- i.e. only if it really type-checked that declaration against that type.",
+      "check_status": "checked",
+      "checker_command": "out=$(AXEYUM_REQUIRE_LEAN=1 cargo test -q -p axeyum-lean-kernel --test real_lean_creal_carrier_kernel_replay -- --nocapture 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE '1 passed; 0 failed'",
+      "notes": "Verified discriminating by scripts/new-fact.py: the pattern matches the real output and fails on mutated output. Anchored on the harness verdict for a suite whose every assertion is about the finding: the count equality, the presence of the two residue declarations by name BEFORE any Lean runs, and the tampered-stream rejection. `0 failed` is only informative because of what the assertions are."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-08-18",
+    "established_by": "lane `agent-creal-lean-divergence`, crates/axeyum-lean-kernel/tests/real_lean_creal_carrier_kernel_replay.rs",
+    "source": "Measured while investigating a handover claim that this kernel admits four `CReal` declarations Lean's kernel rejects. It does not: Lean's ELABORATOR refuses them and Lean's kernel accepts them, which is ADR-0517. The whole-carrier replay exists because the refusal had gone unnoticed -- emission is reachability driven, so 122 of the carrier's declarations had never been handed to any Lean."
+  },
+  "notes": "WHAT THIS DOES NOT SAY.\n\n1. It does not say the carrier is AXIOM-FREE. That is `Kernel::axiom_footprint`'s claim and is checked elsewhere; this fact is only that Lean's kernel accepts the declarations, whatever they rest on. A development full of axioms would replay just as happily.\n\n2. It does not say the `.lean` SOURCE artefact carries the whole carrier. It does not: Lean's elaborator refuses four declarations of it (two, plus two `unknown constant` cascades), because its reducer treats a `theorem` as opaque and `Nat.gcd`'s recursive step is justified by the theorem `Nat.mod_lt`. Re-spelling every `theorem` as `def` in the same file makes the elaborator accept the whole carrier in 27.9 s; that change is measured and deliberately not taken (ADR-0517).\n\n3. It does not say the 470 declarations are the RIGHT ones, only that Lean admits the ones there are. `creal_setoid_witness` is what stops the development being vacuous -- `Equiv.not_zero_one` and `not_le_one_zero` are exactly the declarations that make `CReal.Equiv` and `CReal.le` non-total, and they are two of the four the elaborator refuses.\n\n4. The number 470 is a snapshot of a carrier under active development; the fact's content is the EQUALITY of the two counts, and the checker compares them rather than either alone. It will need re-pinning when the carrier grows, which is the intended failure."
+}

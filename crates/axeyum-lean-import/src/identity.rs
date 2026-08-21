@@ -14,6 +14,7 @@ const NAME_DOMAIN: &str = "axeyum.lean.name.v1";
 const LEVEL_DOMAIN: &str = "axeyum.lean.level.v1";
 const EXPR_DOMAIN: &str = "axeyum.lean.expr.v1";
 const ALPHA_EXPR_DOMAIN: &str = "axeyum.lean.expr.alpha.v1";
+const KERNEL_TYPE_SHAPE_DOMAIN: &str = "axeyum.lean.expr.kernel-type-shape.v1";
 const DECL_DOMAIN: &str = "axeyum.lean.declaration.v1";
 const DEPENDENCY_DOMAIN: &str = "axeyum.lean.direct-dependencies.v1";
 
@@ -94,6 +95,28 @@ pub fn canonical_alpha_expression_sha256(
     expression: ExprId,
 ) -> Result<String, String> {
     let digest = IdentityBuilder::new_alpha(kernel).expression_digest(expression)?;
+    Ok(hex(&digest))
+}
+
+/// Conservative cross-kernel type-shape identity.
+///
+/// This ignores binder names, binder information, and universe-parameter
+/// spelling because the Lean kernel treats the first two as elaboration /
+/// presentation metadata and universe parameters are alpha-renamable. It does
+/// not unfold definitions or normalize aliases: sorts, constants, universe
+/// incidence, application order, projections, literals, and bound-variable
+/// structure remain identity-bearing. Equality is therefore evidence of the
+/// narrow structural compatibility this function describes, not general
+/// definitional equality and not authority to reuse a declaration.
+///
+/// # Errors
+///
+/// Returns a diagnostic if the expression DAG cannot be hashed completely.
+pub fn canonical_kernel_type_shape_sha256(
+    kernel: &Kernel,
+    expression: ExprId,
+) -> Result<String, String> {
+    let digest = IdentityBuilder::new_kernel_type_shape(kernel).expression_digest(expression)?;
     Ok(hex(&digest))
 }
 
@@ -224,6 +247,8 @@ struct IdentityBuilder<'kernel> {
     level_cache: Vec<Option<Hash>>,
     expression_cache: Vec<Option<Hash>>,
     include_binder_names: bool,
+    include_binder_info: bool,
+    expression_domain: &'static str,
     alpha_level_params: BTreeMap<NameId, u64>,
 }
 
@@ -235,6 +260,8 @@ impl<'kernel> IdentityBuilder<'kernel> {
             level_cache: Vec::new(),
             expression_cache: Vec::new(),
             include_binder_names: true,
+            include_binder_info: true,
+            expression_domain: EXPR_DOMAIN,
             alpha_level_params: BTreeMap::new(),
         }
     }
@@ -246,6 +273,21 @@ impl<'kernel> IdentityBuilder<'kernel> {
             level_cache: Vec::new(),
             expression_cache: Vec::new(),
             include_binder_names: false,
+            include_binder_info: true,
+            expression_domain: ALPHA_EXPR_DOMAIN,
+            alpha_level_params: BTreeMap::new(),
+        }
+    }
+
+    fn new_kernel_type_shape(kernel: &'kernel Kernel) -> Self {
+        Self {
+            kernel,
+            name_cache: Vec::new(),
+            level_cache: Vec::new(),
+            expression_cache: Vec::new(),
+            include_binder_names: false,
+            include_binder_info: false,
+            expression_domain: KERNEL_TYPE_SHAPE_DOMAIN,
             alpha_level_params: BTreeMap::new(),
         }
     }
@@ -332,12 +374,7 @@ impl<'kernel> IdentityBuilder<'kernel> {
     }
 
     fn hash_expression_node(&mut self, node: ExprNode) -> Result<Hash, String> {
-        let domain = if self.include_binder_names {
-            EXPR_DOMAIN
-        } else {
-            ALPHA_EXPR_DOMAIN
-        };
-        let mut hasher = CanonicalHasher::new(domain);
+        let mut hasher = CanonicalHasher::new(self.expression_domain);
         match node {
             ExprNode::BVar(index) => {
                 hasher.put_u8(0);
@@ -382,7 +419,9 @@ impl<'kernel> IdentityBuilder<'kernel> {
                 }
                 hasher.put_hash(self.cached_expression(ty)?);
                 hasher.put_hash(self.cached_expression(body)?);
-                hasher.put_u8(binder_info_tag(binder_info));
+                if self.include_binder_info {
+                    hasher.put_u8(binder_info_tag(binder_info));
+                }
             }
             ExprNode::Pi(name, ty, body, binder_info) => {
                 hasher.put_u8(7);
@@ -392,7 +431,9 @@ impl<'kernel> IdentityBuilder<'kernel> {
                 }
                 hasher.put_hash(self.cached_expression(ty)?);
                 hasher.put_hash(self.cached_expression(body)?);
-                hasher.put_u8(binder_info_tag(binder_info));
+                if self.include_binder_info {
+                    hasher.put_u8(binder_info_tag(binder_info));
+                }
             }
             ExprNode::Let(name, ty, value, body) => {
                 hasher.put_u8(8);
@@ -775,6 +816,109 @@ mod tests {
         assert_eq!(
             canonical_alpha_expression_sha256(&kernel, left_let).unwrap(),
             canonical_alpha_expression_sha256(&kernel, renamed_let).unwrap()
+        );
+    }
+
+    #[test]
+    fn kernel_type_shape_ignores_only_kernel_irrelevant_binder_metadata() {
+        let mut kernel = Kernel::new();
+        let root = kernel.anon();
+        let left_name = kernel.name_str(root, "left");
+        let right_name = kernel.name_str(root, "right");
+        let function_name = kernel.name_str(root, "Function");
+        let argument_name = kernel.name_str(root, "Argument");
+        let recursor_name = kernel.name_str(root, "Recursor");
+        let base_case_name = kernel.name_str(root, "BaseCase");
+        let step_case_name = kernel.name_str(root, "StepCase");
+        let prop = kernel.sort_zero();
+        let body = kernel.bvar(0);
+
+        let explicit = kernel.pi(left_name, prop, body, BinderInfo::Default);
+        let implicit = kernel.pi(right_name, prop, body, BinderInfo::Implicit);
+        assert_ne!(
+            canonical_alpha_expression_sha256(&kernel, explicit).unwrap(),
+            canonical_alpha_expression_sha256(&kernel, implicit).unwrap()
+        );
+        assert_eq!(
+            canonical_kernel_type_shape_sha256(&kernel, explicit).unwrap(),
+            canonical_kernel_type_shape_sha256(&kernel, implicit).unwrap()
+        );
+
+        let explicit_lam = kernel.lam(left_name, prop, body, BinderInfo::Default);
+        let instance_lam = kernel.lam(right_name, prop, body, BinderInfo::InstImplicit);
+        assert_eq!(
+            canonical_kernel_type_shape_sha256(&kernel, explicit_lam).unwrap(),
+            canonical_kernel_type_shape_sha256(&kernel, instance_lam).unwrap()
+        );
+
+        let zero = kernel.level_zero();
+        let one = kernel.level_succ(zero);
+        let sort_one = kernel.sort(one);
+        assert_ne!(
+            canonical_kernel_type_shape_sha256(&kernel, prop).unwrap(),
+            canonical_kernel_type_shape_sha256(&kernel, sort_one).unwrap()
+        );
+
+        let function_constant = kernel.const_(function_name, vec![]);
+        let argument_constant = kernel.const_(argument_name, vec![]);
+        assert_ne!(
+            canonical_kernel_type_shape_sha256(&kernel, function_constant).unwrap(),
+            canonical_kernel_type_shape_sha256(&kernel, argument_constant).unwrap()
+        );
+        let application_forward = kernel.app(function_constant, argument_constant);
+        let application_reversed = kernel.app(argument_constant, function_constant);
+        assert_ne!(
+            canonical_kernel_type_shape_sha256(&kernel, application_forward).unwrap(),
+            canonical_kernel_type_shape_sha256(&kernel, application_reversed).unwrap()
+        );
+
+        let loose_body = kernel.bvar(1);
+        let different_binding = kernel.pi(left_name, prop, loose_body, BinderInfo::Default);
+        assert_ne!(
+            canonical_kernel_type_shape_sha256(&kernel, explicit).unwrap(),
+            canonical_kernel_type_shape_sha256(&kernel, different_binding).unwrap()
+        );
+
+        let u = kernel.name_str(root, "u");
+        let v = kernel.name_str(root, "v");
+        let level_u = kernel.level_param(u);
+        let level_v = kernel.level_param(v);
+        let sort_u = kernel.sort(level_u);
+        let sort_v = kernel.sort(level_v);
+        assert_eq!(
+            canonical_kernel_type_shape_sha256(&kernel, sort_u).unwrap(),
+            canonical_kernel_type_shape_sha256(&kernel, sort_v).unwrap()
+        );
+        let distinct_levels = kernel.level_max(level_u, level_v);
+        let repeated_level = kernel.level_max(level_u, level_u);
+        let distinct_sort = kernel.sort(distinct_levels);
+        let repeated_sort = kernel.sort(repeated_level);
+        assert_ne!(
+            canonical_kernel_type_shape_sha256(&kernel, distinct_sort).unwrap(),
+            canonical_kernel_type_shape_sha256(&kernel, repeated_sort).unwrap()
+        );
+
+        let projection_zero = kernel.proj(function_name, 0, argument_constant);
+        let projection_one = kernel.proj(function_name, 1, argument_constant);
+        assert_ne!(
+            canonical_kernel_type_shape_sha256(&kernel, projection_zero).unwrap(),
+            canonical_kernel_type_shape_sha256(&kernel, projection_one).unwrap()
+        );
+        assert_ne!(
+            canonical_kernel_type_shape_sha256(&kernel, explicit).unwrap(),
+            canonical_kernel_type_shape_sha256(&kernel, explicit_lam).unwrap()
+        );
+
+        let recursor = kernel.const_(recursor_name, vec![]);
+        let base_case = kernel.const_(base_case_name, vec![]);
+        let step_case = kernel.const_(step_case_name, vec![]);
+        let recursor_base = kernel.app(recursor, base_case);
+        let recursor_step = kernel.app(recursor, step_case);
+        let base_then_step = kernel.app(recursor_base, step_case);
+        let step_then_base = kernel.app(recursor_step, base_case);
+        assert_ne!(
+            canonical_kernel_type_shape_sha256(&kernel, base_then_step).unwrap(),
+            canonical_kernel_type_shape_sha256(&kernel, step_then_base).unwrap()
         );
     }
 

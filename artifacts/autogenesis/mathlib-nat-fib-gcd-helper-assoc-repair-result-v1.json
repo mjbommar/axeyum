@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-helper-assoc-repair-result-v1",
+  "state": "one-associativity-middle-corrected-helper-type-definitionally-equal-no-submission",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-nat-fib-gcd-helper-assoc-repair-plan-v1.json",
+    "sha256": "5d4e58a2506cfd94122fa4a3bc49e85300d63926c0c84df7ca2ab03c44a7b58d"
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+    "sha256": "db962586e3c4285f6fdcfea3279e28a4b5af60ec9ffb1c049ce60074012392e3"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/audits/b2244f1b8-nat-fib-gcd-helper-assoc-repair-v1",
+    "index_sha256": "566ca352d21473cc8911cb67c5d5b1ccdf73a479b8c01fa0f75b0c3342c52e32",
+    "observation_sha256": "c0d36962769972530c35d57ac75bdfcf12b05164d547554fd7523d062f40800b",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "observation": {
+    "definitionally_equal": true,
+    "expected_type_sha256": "5ee3bae290cb671a34edfe8a557f8abc026cf240db8f1c146c14a548cf306968",
+    "inferred_type_sha256": "157ff1ff39ba70d805f5fe01fe841e885f3cb826a109477aace8541bea734adf",
+    "proof_value_rendered": false
+  },
+  "repair": {
+    "source_edits": 1,
+    "corrected_middle": "m*q + (r + m)",
+    "theorem_statement_changes": 0,
+    "route_changes": 0
+  },
+  "execution": {
+    "complete_diagnostics": 1,
+    "proof_inferences": 1,
+    "proof_values_rendered": 0,
+    "helper_theorem_submissions": 0,
+    "target_theorem_submissions": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "helper_credit": 0,
+    "target_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "preregister a fresh bounded helper-plus-target construction attempt; the original no-retry construction remains spent",
+  "limitations": "Definitional equality licenses a fresh construction attempt only. No helper or target theorem was submitted, no capsule was written, and no fact changed."
+}

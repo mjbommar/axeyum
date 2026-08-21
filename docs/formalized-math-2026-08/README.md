@@ -1,5 +1,40 @@
 # Formalized mathematics strand — August 2026
 
+> **STATUS 2026-08-19 — the cross-check story changed, and this strand is its
+> home.** Lean has **two** checkers and they disagree about our own artifact.
+> Measured 2026-08-18 on the 470-declaration constructed-real carrier:
+> `lean AxeyumCarrier.lean` — the **elaborator** — refuses 4 declarations in
+> 14.1 s, while `lean --run replay-lean4export.lean carrier.ndjson` — the
+> **kernel**, `Environment.addDeclCore` from an empty environment — accepts
+> **all 470** in 1.4 s.
+>
+> - **Our kernel is not more permissive than Lean's.** That was one of three
+>   candidate explanations and it is not the one. Lean's elaborator will not
+>   unfold a `theorem` while reducing, and the four refused `CReal` declarations
+>   must compute through `Nat.gcd`, whose descent rests on the theorem
+>   `Nat.mod_lt`. Re-spelling `theorem` as `def` — one token per line, no term
+>   changed — makes the whole carrier elaborate clean
+>   ([ADR-0517](../research/09-decisions/adr-0517-lean-has-two-checkers-and-the-kernel-is-the-one-we-target.md)).
+> - **The default did not change, deliberately**
+>   ([ADR-0518](../research/09-decisions/adr-0518-proofs-stay-spelled-theorem-and-the-def-option-is-a-measuring-instrument.md)):
+>   every artefact this repository ships already elaborates clean under
+>   `theorem`, so the switch buys nothing on the shipped surface and would break
+>   the suite that pins the divergence.
+> - **The coverage hole that hid it.** Emission is reachability driven, so
+>   **122 of the carrier's declarations had never been handed to any Lean.**
+>   Closed by a suite that exports the COMPLETE environment and requires Lean's
+>   reported constant count to equal our kernel's.
+> - **Two limitations to publish, not to footnote.** The shipped `.lean`
+>   artefact still does not carry the whole carrier, and 4 of the carrier's
+>   declarations are kernel-checkable but not elaborator-checkable.
+>
+> The mechanism, the coverage hole and how to state the limitation are in
+> [`03-integrate.md`](03-integrate.md#lean-has-two-checkers-and-they-disagree).
+> Also measured 2026-08-19 and used below: the trusted surface is
+> `complex 0 · creal 0 · integer 0 · logic 0 · nat 0 · rat 0 · string 0 · real 30`,
+> where `real` is the axiomatized ℝ package the constructed carrier exists to
+> replace.
+
 > **STATUS 2026-08-15 — started.** The strand had no landed work for as long as
 > it existed; the first increment is in. What landed, and what it measured:
 >
@@ -79,6 +114,21 @@ each and updating tests. Ten lanes is ~1,500/day. The construction plan and the
 arithmetic are in [`05-throughput.md`](05-throughput.md); the binding constraint
 turns out to be a **single-file lock**, not compute or capability.
 
+> **Do not quote that rate without the correction beside it.** Re-measured on
+> 2026-08-17 and again on 2026-08-19: **6.4 theorems/day/lane realized against
+> 149 projected**, because a lane spends most of its time on things that are not
+> proving. And the counter that produced 149 measures *one prelude* —
+> `nat_prelude` has been flat at **139** since 2026-08-17 while ℤ (57 derived,
+> all axiom-free), ℚ, the constructed ℝ and ℂ were proved out elsewhere. Both
+> re-measurements, and why no number in that section can currently size a roadmap
+> item, are in [`05-throughput.md`](05-throughput.md#re-measured-2026-08-19-the-counter-is-flat-and-the-counter-is-now-the-wrong-instrument).
+>
+> **"The binding constraint turns out to be a single-file lock" is falsified.**
+> The lock was removed: `nat_prelude.rs` is 845 lines today, sharded into eleven
+> topic modules, the first two splits landing 2026-08-14. Five days of sharded
+> library produced +33 theorems. It was a real multi-agent-hygiene win and not a
+> throughput win, and this sentence conflated the two.
+
 What makes this ours rather than a re-derivation is the loop the integration
 allows: the library gives the solver facts, the solver decides goals the library
 needs, reconstruction turns those decisions into kernel-checked terms, and the
@@ -95,6 +145,11 @@ Import stays, in a supporting role we are uniquely placed to fill:
   six import clean today with `axioms=none`.
 - On 2026-08-14 the **reverse** direction closed too: Lean's own kernel accepted
   an axeyum development from an empty environment, with a tamper control.
+  **Narrower than it reads, corrected 2026-08-18:** what Lean saw was the
+  closure of one refutation, not the carrier — 343 of 465 declarations when it
+  was measured. The whole carrier was first handed to Lean on 2026-08-18, and
+  Lean's *kernel* took all 470 while its *elaborator* refused four (see the
+  status block above).
 
 A library checked by exactly one kernel is a single point of trust. A second,
 independent kernel that admits the same declarations is a measurement almost
@@ -102,6 +157,16 @@ nobody can produce — and it tells us where our own construction diverges from
 the world's. That is worth having *in addition to* building, and it is the
 research community's pluralistic-library problem ("QED Reloaded", Rabe et al.),
 whose interchange infrastructure we should consume rather than rebuild.
+
+**And the divergence has now been measured in the direction that matters most.**
+The worrying outcome was never "Lean refuses something of ours"; it was "our
+kernel admits something Lean's would not," which is a soundness defect wearing a
+compatibility costume. On the constructed-real carrier that outcome is excluded:
+Lean's kernel accepts every declaration our kernel does. The residue is a
+*checker* difference inside Lean, not a kernel disagreement between projects —
+which is a much better result and a much narrower claim, and it is only visible
+because someone exported the complete environment rather than the reachable part
+of it.
 
 ## Where we actually stand
 
@@ -119,6 +184,33 @@ artifacts/facts         5 facts on proof_route `imported-kernel-lean`
 Nat prelude             128 theorems, 23 of them divisibility
 references/             EMPTY — nothing cloned on this host
 ```
+
+**Re-measured 2026-08-19**, each row by running the named example
+(`-p axeyum-lean-kernel` except `front_door_carrier`, which is
+`-p axeyum-solver --features full`):
+
+```
+artifacts/facts         340 fact files; docs/research/09-decisions 523 ADRs
+Nat prelude             139 theorems, 31 of them naming `dvd`   (nat_theorem_inventory)
+Int prelude             57 derived, 57 with an EMPTY axiom footprint, 0 still asserted
+                                                                 (int_theorem_inventory)
+trusted surface         complex 0 · creal 0 · integer 0 · logic 0 · nat 0 · rat 0
+                        · string 0 · real 30                     (nat_axiom_inventory
+                                                                  --include-constructed)
+shipped front door      1,304,276 / 1,330,091 / 1,442,247 B over CReal, ZERO carrier
+                        axioms on all three; the `Real` control non-vacuous at 12/17/8
+                                        (front_door_carrier --require-axiom-free, exit 0)
+artifacts/lean-imports  6 pinned NDJSON streams, 476 KB
+references/             NOT empty on this host: `lean4export` and `drat-trim` are
+                        cloned. The 2026-08-16 line above was a HOST fact and it
+                        has changed; it was never a project fact (`references/`
+                        is gitignored), which is exactly why it should not be
+                        read as a project status.
+```
+
+`real: 30` is the **axiomatized** ℝ package and the only nonzero row — it is what
+the constructed carrier exists to replace, not an assumption the constructed
+results rest on.
 
 **Cited from [`diary-import-scale.md`](diary-import-scale.md) and
 [`diary-import-strings.md`](diary-import-strings.md), NOT re-derived here** —
@@ -195,5 +287,18 @@ asked for — plus, from the import side, how much foreign mathematics axeyum ca
 now *use* in a proof, a certificate or a negative control that it could not use
 before.
 
-The first number is currently zero. [`05`](05-throughput.md) C2 makes it
-positive.
+**Corrected 2026-08-19: the first number is no longer zero, and the correction is
+smaller than it sounds.** Three facts carry `kind: kernel-term`,
+`check_status: checked` and an empty axiom footprint with no hand-written Lean
+proof term behind them — `Nat.ascFactorial_zero`, `Nat.descFactorial_zero` (a
+target-independent bounded producer that emits `Eq.refl`; 2 of 138 candidate
+rows) and `Nat.fib_add_two` (a target-specific term program, repaired by hand
+across two failed runs, so it does **not** meet the autogenesis programme's own
+autonomy bar). All three re-derive today: `scripts/check-autogenesis-fact-operation.py`
+exits 0 on each. What is machine-driven throughout is selection, checking and
+crash-safe admission.
+
+[`05`](05-throughput.md#it-is-no-longer-zero--corrected-2026-08-19) has the
+qualifications. **C2 — solver refutation reconstructed into a library theorem —
+has still produced zero**, so the arrow this strand is named for remains ahead of
+us; the number moved by a different and narrower route.

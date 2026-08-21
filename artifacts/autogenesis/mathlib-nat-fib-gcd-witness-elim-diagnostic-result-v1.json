@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-witness-elim-diagnostic-result-v1",
+  "state": "five-stages-infer-final-exists-rec-internal-type-mismatch",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-nat-fib-gcd-witness-elim-diagnostic-plan-v1.json",
+    "sha256": "e7810e036cde7f4ff8fbc65f5460b1358360f395049c52e71ac2f972206b8672"
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+    "sha256": "d5cb23910bcc90db0f4ee3dd4feb9a81221152f802178394c2f44da0e2cebfd9"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/audits/e574f828e-nat-fib-gcd-witness-elim-diagnostic-v1",
+    "index_sha256": "52047dc8fd4d24830623ea4aeabb037ba097a871ff83b8d56d4ae7cb2a0e65e1",
+    "observation_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "3c925e7e673aa72ea4d03c65aa980e4784c797f616f02d643d599b613fc80023",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "observation": {
+    "successful_stages": [
+      "ih_gcd_comm",
+      "quotient_iteration",
+      "quotient_congruence",
+      "combined_chain",
+      "exists_minor"
+    ],
+    "failed_stage": "exists_rec",
+    "error": "exists-rec stage inference failed: TypeMismatch { expected: ExprId(111154), got: ExprId(111283) }",
+    "process_local_expression_ids_are_not_semantic_evidence": true,
+    "proof_values_rendered": 0,
+    "target_submitted": false
+  },
+  "execution": {
+    "complete_diagnostics": 0,
+    "helper_theorem_submissions": 1,
+    "ordered_stage_inferences_attempted": 6,
+    "ordered_stage_inferences_succeeded": 5,
+    "target_theorem_submissions": 0,
+    "proof_values_rendered": 0,
+    "capsule_writes": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "helper_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "preregister ordered prefix inference for Exists.rec applied to Nat, predicate, motive, minor, and witness",
+  "limitations": "All arithmetic and equality-chain stages infer. The remaining mismatch is inside the final dependent eliminator application, but its first failing argument is not yet known."
+}

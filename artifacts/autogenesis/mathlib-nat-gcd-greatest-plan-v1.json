@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-gcd-greatest-plan-v1",
+  "state": "preregistered-target-native-gcd-greatest-before-code-or-execution",
+  "predecessor": {
+    "path": "artifacts/autogenesis/mathlib-nat-gcd-fib-add-self-admission-v1.json",
+    "sha256": "b7e508b5d81b139a30b62ebfe6960750a07f0392c23a54824c88298e6190a88c"
+  },
+  "target": {
+    "fact_id": "F:ml430-nat-gcd-greatest-0a04214a",
+    "name": "Nat.gcd_greatest",
+    "statement": "∀ {a b d : ℕ}, d ∣ a → d ∣ b → (∀ (e : ℕ), e ∣ a → e ∣ b → e ∣ d) → d = a.gcd b",
+    "method": "prove both divisibility directions: the accepted dvdGcdOfficialV1 gives d divides gcd a b, the supplied greatest predicate applied to accepted gcdDvdLeftOfficialV1 and gcdDvdRightOfficialV1 gives gcd a b divides d, and accepted dvdAntisymmOfficialV1 closes equality"
+  },
+  "input_capsule": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/527508a56-target-native-gcd-divisibility-v7/gcd-1.ndjson",
+    "sha256": "9ecf0b10d1390f880040790fb1845a11d7987b94c0d3a71acf4ad8dca0c5a304",
+    "bytes": 835637,
+    "result_manifest": "artifacts/autogenesis/nat-gcd-fib-add-self-target-native-gcd-divisibility-result-v7.json",
+    "result_manifest_sha256": "8f947e9c85648782be31ceba0c2c40af615116bdc21b5fe741ebe3c62ca82efc"
+  },
+  "required_direct_theorem_dependencies": [
+    "Axeyum.Autogenesis.dvdAntisymmOfficialV1",
+    "Axeyum.Autogenesis.dvdGcdOfficialV1",
+    "Axeyum.Autogenesis.gcdDvdLeftOfficialV1",
+    "Axeyum.Autogenesis.gcdDvdRightOfficialV1"
+  ],
+  "acceptance": {
+    "one_driver_build": true,
+    "complete_invocations": 2,
+    "exact_target_submissions": 2,
+    "exports": 2,
+    "fresh_imports": 4,
+    "outputs_byte_identical": true,
+    "receipts_byte_identical": true,
+    "all_axiom_footprints": []
+  },
+  "budget": {
+    "max_driver_builds": 1,
+    "max_complete_invocations": 2,
+    "max_exact_target_submissions": 2,
+    "max_exports": 2,
+    "max_imports": 4,
+    "max_retries": 0,
+    "max_search_invocations": 0,
+    "max_evaluations": 0,
+    "max_ledger_writes": 0
+  },
+  "next_on_accept": "seal the exact target capsule, register its crash-safe fact operation, admit only F:ml430-nat-gcd-greatest-0a04214a, and remeasure the frontier before returning to Nat.fib_gcd",
+  "limitations": "This grants no theorem, fact, evaluation, or ledger credit before two exact target-native reconstructions and four fresh imports reproduce with empty footprints."
+}

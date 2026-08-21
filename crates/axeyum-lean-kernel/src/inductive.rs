@@ -260,6 +260,8 @@ impl Kernel {
     /// # Errors
     ///
     /// Returns [`KernelError::EmptyInductiveGroup`] for no families,
+    /// [`KernelError::UndeclaredUniverseParam`] if a family or constructor type
+    /// mentions a universe parameter the group does not bind,
     /// [`KernelError::DuplicateInductiveGroupName`] for group-local name
     /// collisions, [`KernelError::MutualInductiveParameterMismatch`] for a
     /// non-shared parameter telescope,
@@ -1640,6 +1642,36 @@ impl Kernel {
         num_params: usize,
         families: &[InductiveFamilySpec],
     ) -> Result<(), KernelError> {
+        // Universe closure, before anything is checked or provisionally
+        // inserted: every `Param` a family or constructor type mentions must be
+        // one the group binds.
+        //
+        // This gate type-checks its group itself and never routes through
+        // `Kernel::check_declaration`, so the closure check that covers every
+        // other declaration kind did not cover this one. Measured 2026-08-18 by
+        // the kernel-vs-Lean wire differential: with `check_declaration` fixed,
+        // one disagreement survived — a `Level.succ` retargeted onto a
+        // parameter level inside `Nat`'s group, which Lean's kernel refused as
+        // an `invalid reference to undefined universe level parameter` and this
+        // gate admitted.
+        //
+        // It lives in the GATE, not in `add_mutual_inductive` where it was first
+        // written: `scripts/check-kernel-trusted-core.py` derives the trusted
+        // core as the forward closure from the four admission gates, and a check
+        // in a caller of a gate is outside that closure — which is another way
+        // of saying anything reaching the gate by another route would skip it.
+        for family in families {
+            for expr in
+                std::iter::once(family.ty).chain(family.constructors.iter().map(|(_, ty)| *ty))
+            {
+                if let Some(param) = self.undeclared_universe_param(expr, uparams) {
+                    return Err(KernelError::UndeclaredUniverseParam {
+                        declaration: family.name,
+                        param,
+                    });
+                }
+            }
+        }
         let mut group = self.check_mutual_inductive_preflight(uparams, num_params, families)?;
 
         // Positivity sees every family before any header is visible. This is

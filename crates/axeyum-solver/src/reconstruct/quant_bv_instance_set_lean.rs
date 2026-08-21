@@ -490,8 +490,8 @@ impl ReconstructCtx {
         let false_prop = self.kernel.const_(self.prelude.false_, vec![]);
         let rec = self.kernel.const_(self.prelude.bool_rec, vec![self.one]);
         let applied = self.kernel.app(rec, motive);
-        let applied = self.kernel.app(applied, true_prop);
         let applied = self.kernel.app(applied, false_prop);
+        let applied = self.kernel.app(applied, true_prop);
         self.kernel.app(applied, value)
     }
 
@@ -921,10 +921,10 @@ fn computational_bool_not_value(ctx: &mut ReconstructCtx, value: ExprId) -> Expr
     let motive = ctx.kernel.lam(anon, bool_ty, bool_ty, BinderInfo::Default);
     let rec = ctx.kernel.const_(ctx.prelude.bool_rec, vec![ctx.one]);
     let rec = ctx.kernel.app(rec, motive);
-    let false_ = ctx.kernel.const_(ctx.prelude.bool_false, vec![]);
-    let rec = ctx.kernel.app(rec, false_);
     let true_ = ctx.kernel.const_(ctx.prelude.bool_true, vec![]);
     let rec = ctx.kernel.app(rec, true_);
+    let false_ = ctx.kernel.const_(ctx.prelude.bool_false, vec![]);
+    let rec = ctx.kernel.app(rec, false_);
     ctx.kernel.app(rec, value)
 }
 
@@ -934,9 +934,9 @@ fn computational_bool_and_value(ctx: &mut ReconstructCtx, left: ExprId, right: E
     let motive = ctx.kernel.lam(anon, bool_ty, bool_ty, BinderInfo::Default);
     let rec = ctx.kernel.const_(ctx.prelude.bool_rec, vec![ctx.one]);
     let rec = ctx.kernel.app(rec, motive);
-    let rec = ctx.kernel.app(rec, right);
     let false_ = ctx.kernel.const_(ctx.prelude.bool_false, vec![]);
     let rec = ctx.kernel.app(rec, false_);
+    let rec = ctx.kernel.app(rec, right);
     ctx.kernel.app(rec, left)
 }
 

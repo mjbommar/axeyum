@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-gcd-balanced-bezout-closed-result",
+  "state": "first-complete-invocation-declined-at-well-founded-fix-type-shape-no-retry",
+  "plan": {"path": "artifacts/autogenesis/official-gcd-balanced-bezout-closed-plan-v1.json", "sha256": "89bd1b7c9bb22af7a5ea26c365fdcaaefca2ebd26d69ebf3191d0c847b3f2124", "commit": "0e23382f8"},
+  "evidence_pack": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/0e23382f8-official-gcd-balanced-bezout-closed-v1/manifest.json", "sha256": "c136a95253f6259e5faed9f10ffa9c0e475f5f5be85c7c3c7a57d5efcaa44d7a", "directory_mode": "0555", "file_mode": "0444"},
+  "implementation": {"path": "crates/axeyum-lean-import/examples/nat_gcd_succ_specialization.rs", "sha256": "253e4b149c4611b5fef918b3cfd19be020b49fffc71d6e759b3807049c0cd99f", "mode": "--closed-balanced-bezout"},
+  "execution": {"binary_builds": 1, "complete_invocations": 1, "input_stream_reads": 4, "intermediate_specialization_operations": 3, "generic_composition_attempts": 1, "closed_theorem_submissions": 0, "retries": 0, "second_invocation_skipped_after_first_decline": true},
+  "decline": {
+    "operation": "compose accepted generic balanced-Bezout theorem into accepted target-owned gcd support kernel",
+    "class": "type-shape-mismatch",
+    "first_rejected": "WellFounded.fix",
+    "source_type_shape_sha256": "f45b230503d6ddc03c61714008f6165dd055ff995d927507fc6d7aaffcf6afd6",
+    "target_type_shape_sha256": "0c2e9552a1056133fbd4e6a318344cfb1310468f7d2113efb37ebba0bf6ef32c",
+    "proof_material_rendered": false,
+    "partial_kernel_published": false
+  },
+  "next_boundary": {"required_next_increment": "preregister a proof-free compatibility audit of the two WellFounded.fix declarations and their representation closure before choosing translation or reconstruction", "closed_specialization_completed": false, "compatibility_override_authorized": false},
+  "authority": {"closed_gcd_balanced_bezout_credit": 0, "cancellation_credit": 0, "target_specialization_credit": 0, "exact_fibonacci_target_submissions": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "verification": "python3 scripts/check-autogenesis-official-gcd-balanced-bezout-closed-result.py",
+  "limitations": "The unconditional theorem was not submitted. The result identifies only a representation mismatch at WellFounded.fix and authorizes no compatibility override, cancellation, target, fact, evaluation, or ledger action."
+}

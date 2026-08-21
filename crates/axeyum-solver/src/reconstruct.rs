@@ -56,10 +56,23 @@ mod quant_bv_instance_set_lean;
 mod quantifier;
 mod resolution;
 
-pub use arithmetic::ordered_ring::{
-    OrderedRingRefutation, RING_LAW_BINDERS, RING_SYMBOL_BINDERS, RingTelescope,
-    generalize_over_ordered_ring, render_ordered_ring_module,
+pub use arithmetic::control::{
+    CONTROL_AXIOM_LEAF, CONTROL_AXIOM_NAME, CONTROL_DISCHARGE_NAME, ControlCarrier,
+    build_control_carrier, control_carrier_over,
 };
+pub use arithmetic::ordered_ring::{
+    EQUALITY_SLOT_BINDERS, EQUALITY_SLOT_LAWS, EqSetoidWitnesses, EqSpecialization, EqualitySlot,
+    IntInstantiation, IntRefutation, OrderedRingRefutation, RING_LAW_BINDERS, RING_SYMBOL_BINDERS,
+    RingInterfaceBinder, RingTelescope, SETOID_RING_BINDERS, SetoidAdoption, SetoidEq,
+    carrier_axioms_of, generalize_over_ordered_ring, instantiate_at_int_model, minted_axioms_of,
+    reconstruct_int_farkas_to_lean_module, refutation_axiom_footprint, refutation_over_int_axioms,
+    render_ordered_ring_module, residual_eq_constants, ring_interface_telescope,
+    specialize_setoid_to_eq,
+};
+pub use arithmetic::signature::{
+    RingEquality, RingSignature, RingSignatureReport, SIGNATURE_LAWS, SIGNATURE_SYMBOLS,
+};
+pub use arithmetic::string_length::reconstruct_string_length_to_lean_module;
 pub use arithmetic::{LraReconstructCtx, reconstruct_lra_proof, reconstruct_sos_proof};
 pub use bitblast::{
     prove_const_shift_lowering_to_lean_module, reconstruct_bitblast_step,
@@ -201,6 +214,15 @@ pub enum ReconstructError {
         /// The routed fragment that has no theory reconstructor.
         fragment: String,
     },
+    /// The rendered module carries an axiom its own prelude refutes, so its
+    /// `False` follows without consulting the query at all. See the private
+    /// `reject_self_refuting_module`.
+    SelfRefutingModule {
+        /// The routed fragment.
+        fragment: String,
+        /// The name of the self-refuting axiom.
+        axiom: String,
+    },
 }
 
 impl core::fmt::Display for ReconstructError {
@@ -239,6 +261,14 @@ impl core::fmt::Display for ReconstructError {
                     f,
                     "fragment `{fragment}` declares Lean module content `{declared}` \
                      but rendered `{rendered}`"
+                )
+            }
+            ReconstructError::SelfRefutingModule { fragment, axiom } => {
+                write!(
+                    f,
+                    "fragment `{fragment}` rendered a SELF-REFUTING module: `{axiom}` is \
+                     `Not X` with `X` provable by reflexivity alone, so the module's \
+                     `False` follows from that axiom and needs nothing from the query"
                 )
             }
             ReconstructError::NoTheoryContent { fragment } => {
@@ -1010,6 +1040,21 @@ pub enum ProofFragment {
     /// lazy-SMT DPLL(T) refutation checker over exact integer/real theory
     /// lemmas.
     ArithDpll,
+    /// A conjunctive INTEGER linear system whose rational relaxation is already
+    /// infeasible, refuted by Farkas and carried into `ℤ`.
+    ///
+    /// The refutation is found on the real relaxation, then abstracted over the
+    /// 22 ordered-commutative-ring laws — which is possible because a Farkas
+    /// combination uses ring operations and order and never division — and
+    /// instantiated at the integers, which model all 22 with empty axiom
+    /// footprints. So the CLAIM is never relaxed: the combination is carried out
+    /// in `ℤ` itself and the module is a theorem about integers, not about their
+    /// real embedding.
+    ///
+    /// Distinct from [`Self::IntInequality`], which owns the opposite case: a
+    /// system that is LP-FEASIBLE and infeasible only over `ℤ` (`3x ≥ 1 ∧
+    /// 3x ≤ 2`) has no Farkas combination at all, and this route declines it.
+    IntFarkas,
     /// Bounded nonlinear/integer arithmetic certified by the proven-box
     /// bounded-int-blast certificate: a finite integer box, exact covering width,
     /// regenerated DIMACS, and DRAT refutation.
@@ -1031,6 +1076,33 @@ pub enum ProofFragment {
     /// A syntactic even-power NRA refutation: a sum of even powers plus a
     /// nonnegative rational constant is asserted strictly negative.
     NraEvenPower,
+    /// A monomial-divisibility NRA refutation: one product is asserted zero,
+    /// another asserted non-zero, and the first divides the second.
+    ///
+    /// A THEORY reconstruction, not a structural attestation: the term is built
+    /// from the certificate's factors and every step is a ring law
+    /// (`congr_mul` / `mul_comm` / `mul_zero`), so Lean can reject it on the
+    /// merits. Kernel-checked over the CONSTRUCTED reals — `lra_ctx()` builds
+    /// `CReal` (trusted surface 0), not the 30-axiom `AxReal` package.
+    RealZeroProduct,
+    /// A degree-2 Positivstellensatz NRA refutation: two asserted lower bounds
+    /// whose exact product is the polynomial a third assertion calls negative.
+    ///
+    /// A THEORY reconstruction — `mul_nonneg` / `lt_of_le_of_lt` / `lt_irrefl`
+    /// applied to terms built from the certificate's own polynomials — and
+    /// kernel-checked over the CONSTRUCTED reals, since `lra_ctx()` builds
+    /// `CReal` (trusted surface 0), not the 30-axiom `AxReal` package.
+    RealProduct,
+    /// A monomial LOWER-BOUND NRA refutation: every variable of a monomial
+    /// carries a nonnegative lower bound stated by the query, so the monomial is
+    /// bounded below by their product, which contradicts an asserted `M < k`.
+    ///
+    /// A THEORY reconstruction — the bound is propagated through the product by
+    /// `mul_le_mul_of_nonneg_left` and the closing numeral comparison is a fold
+    /// of `add_le_add`, all applied to terms built from the certificate's own
+    /// factors — and kernel-checked over the CONSTRUCTED reals, since `lra_ctx()`
+    /// builds `CReal` (trusted surface 0), not the 30-axiom `AxReal` package.
+    MonomialBound,
     /// A top-level universal quantifier.
     Forall,
     /// A closed universal integer equality/disequality refuted by one evaluator-
@@ -1217,7 +1289,11 @@ impl ProofFragment {
             | ProofFragment::BoundedIntBlast
             | ProofFragment::NraEvenPower => StructuralAttestation,
             // --- Theory reconstructions: the term is built from the query. ---
-            ProofFragment::QfBv
+            ProofFragment::RealZeroProduct
+            | ProofFragment::RealProduct
+            | ProofFragment::MonomialBound
+            | ProofFragment::IntFarkas
+            | ProofFragment::QfBv
             | ProofFragment::ReflexiveDisequality
             | ProofFragment::TermIdentity
             | ProofFragment::QfUf
@@ -1783,6 +1859,26 @@ fn scan_arithmetic_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> P
         || sos_certificate_certifies(arena, assertions)
     {
         ProofFragment::Sos
+    } else if crate::nra_product_cert::real_product_refutation(arena, assertions)
+        .is_some_and(|c| matches!(c.signs().2, crate::nra_product_cert::AtomSign::Negative))
+    {
+        // Degree-2 Positivstellensatz. Ahead of the attestation tier for the
+        // same reason as the zero-product route: when both could apply, the tier
+        // Lean can fail on should win.
+        ProofFragment::RealProduct
+    } else if crate::nra_zero_product_cert::real_zero_product_refutation(arena, assertions)
+        .is_some_and(|c| c.zeroing_cases().len() == 1)
+    {
+        // Monomial divisibility, direct form. Ahead of `NraEvenPower` because
+        // this one is a theory reconstruction and that one is an attestation:
+        // when both could apply, the tier Lean can fail on should win.
+        ProofFragment::RealZeroProduct
+    } else if monomial_bound_reconstruction_covers(arena, assertions) {
+        // A monomial lower bound. Ahead of `NraEvenPower` for the same reason as
+        // the two routes above: this one is a theory reconstruction and that one
+        // is an attestation, so when both could apply the tier Lean can fail on
+        // should win.
+        ProofFragment::MonomialBound
     } else if crate::nra_even_power::nra_even_power_refutation(arena, assertions).is_some() {
         // Higher even-power nonnegativity (e.g. `x^4 < 0`) is outside the
         // degree-2 SOS/LDLᵀ certificate, but has its own checked structural
@@ -1830,6 +1926,19 @@ fn scan_arithmetic_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> P
         // reconstruction is allowed — but the emitted module is a structural
         // attestation, not arithmetic (see [`LeanModuleContent`]).
         ProofFragment::LraDpll
+    } else if int_farkas_reconstruction_certifies(arena, assertions) {
+        // A conjunctive INTEGER system whose rational relaxation is infeasible.
+        //
+        // This arm MUST precede the lazy-SMT arm below, for exactly the reason
+        // the `Lra` arm precedes `LraDpll`: `arith_dpll_refutation_certifies`
+        // also accepts these queries, and `ProofFragment::ArithDpll`'s module is
+        // a structural attestation containing no arithmetic. Measured
+        // 2026-08-17, `x > 5 ∧ x < 3` and `x - y ≤ 1 ∧ y - x ≤ -3` both routed
+        // there and rendered a shim, while an axiom-free integer refutation of
+        // each was available. Like that arm, the predicate trial-builds the
+        // module, so a shape this route cannot cover keeps falling through
+        // rather than turning a working route into an error.
+        ProofFragment::IntFarkas
     } else if arith_dpll_refutation_certifies(arena, assertions) {
         // General Boolean-structured linear arithmetic. The arithmetic lazy-SMT
         // certificate is re-derived and self-checked before reconstruction.
@@ -1841,6 +1950,41 @@ fn scan_arithmetic_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> P
     } else {
         ProofFragment::Lra
     }
+}
+
+/// Does the integer Farkas route actually produce a module for `assertions`?
+///
+/// Trial-builds it, exactly as [`lra_farkas_reconstruction_certifies`] does and
+/// for the same reason: the scan must not route a query to a reconstructor that
+/// will then decline, because the fragment it returns also declares whether the
+/// module contains reasoning. Answering "yes" and failing later would turn a
+/// query that at least attests today into an error.
+fn int_farkas_reconstruction_certifies(arena: &TermArena, assertions: &[TermId]) -> bool {
+    reconstruct_int_farkas_to_lean_module(arena, assertions).is_ok()
+}
+
+/// The carrier every shipped LRA/SOS reconstruction runs over: the **constructed
+/// reals**.
+///
+/// One function, so the classifier and the renderer cannot disagree about which
+/// carrier a query was accepted on — the failure mode that would let
+/// `scan_proof_fragment` route a query the renderer then declines.
+///
+/// `CReal` rather than `Real` because the two are interchangeable for this route
+/// and only one of them is free: `build_arith_prelude` admits 30 **axioms** (this
+/// repository's entire remaining trusted surface, `real: axiom=30`), while
+/// `build_creal_prelude` proves all 30 from the constructed ℚ and its equality
+/// slot is adopted rather than assumed, at zero declarations against the `Real`
+/// route's eighteen. What comes back is therefore a refutation whose carrier
+/// footprint is empty; `examples/front_door_carrier.rs` measures exactly that,
+/// through this same front door.
+///
+/// The cost is a `CReal` build, which is 4.7 s — once per process, then 67 ms per
+/// context out of the `PreludeKey::CReal` template (ADR-0464). Without that
+/// template this would not be a shippable default, which is why the template
+/// landed first.
+fn lra_ctx() -> Result<LraReconstructCtx, ReconstructError> {
+    LraReconstructCtx::try_new_over_constructed_reals()
 }
 
 /// Does the **genuine** conjunctive-Farkas LRA reconstructor cover `assertions`?
@@ -1866,7 +2010,9 @@ fn lra_farkas_reconstruction_certifies(arena: &TermArena, assertions: &[TermId])
     ) {
         return false;
     }
-    let mut ctx = LraReconstructCtx::new();
+    let Ok(mut ctx) = lra_ctx() else {
+        return false;
+    };
     match reconstruct_lra_proof(&mut ctx, arena, assertions) {
         Ok(term) => lra_term_infers_false(&mut ctx, term),
         Err(_) => false,
@@ -1975,7 +2121,7 @@ fn render_ctx_module(ctx: &mut ReconstructCtx, proof: ExprId) -> String {
         ctx.kernel_mut().const_(n, vec![])
     };
     ctx.kernel()
-        .render_lean_module(LEAN_MODULE_THEOREM, false_, proof)
+        .render_lean_module_compact(LEAN_MODULE_THEOREM, false_, proof)
 }
 
 /// Gate a [`LraReconstructCtx`]-built `proof : False` through the kernel
@@ -1999,7 +2145,7 @@ fn gate_and_render_lra_module(
     };
     Ok(ctx
         .kernel()
-        .render_lean_module(LEAN_MODULE_THEOREM, false_, proof))
+        .render_lean_module_compact(LEAN_MODULE_THEOREM, false_, proof))
 }
 
 /// Dispatch a `QF_DT` (datatype-fragment) refutation to a self-contained Lean
@@ -2095,7 +2241,7 @@ pub fn prove_unsat_to_lean_module(
 ) -> Result<(ProofFragment, String), ReconstructError> {
     let fragment = scan_proof_fragment(arena, assertions);
     match reconstruct_proof_fragment_to_lean_module(fragment, arena, assertions) {
-        Ok(source) => Ok((fragment, source)),
+        Ok(source) => bounded(fragment, source),
         Err(original_error) if should_retry_with_normalized_lean_input(&original_error) => {
             let normalized_assertions = normalize_lean_assertion_inputs(arena, assertions);
             let normalized = normalized_assertions.as_slice();
@@ -2104,10 +2250,54 @@ pub fn prove_unsat_to_lean_module(
             }
             let fragment = scan_proof_fragment(arena, normalized);
             let source = reconstruct_proof_fragment_to_lean_module(fragment, arena, normalized)?;
-            Ok((fragment, source))
+            bounded(fragment, source)
         }
         Err(error) => Err(error),
     }
+}
+
+/// Largest module this front door will hand back.
+///
+/// Measured 2026-08-20 across the 262 modules the committed dominance audits
+/// record a size for: **median 3,169 bytes**, and the largest LEGITIMATE one is
+/// `cli__regress0__quantifiers__issue2031-bv-var-elim` at 28.6 MB. Against that,
+/// `BvAlternationCounterexample` was returning `Ok` with **625 MB**
+/// (`cli__regress1__quantifiers__bug802`) and **2.38 GB**
+/// (`small-pipeline-fixpoint-3`) — 22x and 83x the largest real module.
+///
+/// 64 MiB is therefore ~2x headroom over anything observed to be useful and 10x
+/// to 37x below the pathological cases: the two populations are well separated,
+/// so this is a threshold rather than a guess.
+///
+/// This matters beyond tidiness. A 2.4 GB `String` is held in memory on a box
+/// whose kernel OOM-killed a live agent session on 2026-08-17. A route that
+/// SUCCEEDS at that size is worse than one that declines, because nothing
+/// downstream treats `Ok` as a hazard.
+pub const MAX_LEAN_MODULE_BYTES: usize = 64 * 1024 * 1024;
+
+/// Refuse a module too large to be useful, rather than returning it.
+///
+/// **This bounds what is RETURNED, not the peak allocation.** The module is
+/// already built by the time it is measured, so the transient 2.4 GB still
+/// happens; what changes is that it is released immediately and reported as a
+/// failure instead of travelling on as a success. Bounding construction itself
+/// means threading a budget through every renderer, which is the right fix and a
+/// larger one.
+fn bounded(
+    fragment: ProofFragment,
+    source: String,
+) -> Result<(ProofFragment, String), ReconstructError> {
+    if source.len() > MAX_LEAN_MODULE_BYTES {
+        let bytes = source.len();
+        drop(source);
+        return Err(ReconstructError::MalformedStep {
+            rule: "lean_module_size".to_owned(),
+            detail: format!(
+                "{fragment:?} produced a {bytes}-byte Lean module, over the {MAX_LEAN_MODULE_BYTES}-byte cap. The largest module any committed audit records is 28.6 MB; nothing consumes one this size, and holding it is a memory hazard. Declining is the honest outcome"
+            ),
+        });
+    }
+    Ok((fragment, source))
 }
 
 /// **[`prove_unsat_to_lean_module`], but it declines instead of handing back a
@@ -2513,16 +2703,24 @@ fn reconstruct_proof_fragment_to_lean_module(
             render_ctx_module(&mut ctx, t)
         }
         ProofFragment::Lra => {
-            let mut ctx = LraReconstructCtx::new();
+            let mut ctx = lra_ctx()?;
             let t = reconstruct_lra_proof(&mut ctx, arena, assertions)?;
             gate_and_render_lra_module(&mut ctx, t, "LRA")?
         }
         ProofFragment::DisjunctiveLra => {
-            let mut ctx = LraReconstructCtx::new();
+            let mut ctx = lra_ctx()?;
             let t = reconstruct_disjunctive_lra_proof(&mut ctx, arena, assertions)?;
             gate_and_render_lra_module(&mut ctx, t, "disjunctive-LRA")?
         }
+        ProofFragment::IntFarkas => reconstruct_int_farkas_to_lean_module(arena, assertions)?,
         ProofFragment::Sos => reconstruct_sos_to_lean_module(arena, assertions)?,
+        ProofFragment::RealZeroProduct => {
+            reconstruct_real_zero_product_to_lean_module(arena, assertions)?
+        }
+        ProofFragment::RealProduct => reconstruct_real_product_to_lean_module(arena, assertions)?,
+        ProofFragment::MonomialBound => {
+            reconstruct_monomial_bound_to_lean_module(arena, assertions)?
+        }
         ProofFragment::Diophantine => {
             // The integer Diophantine reconstructor builds its own integer-prelude
             // kernel, gates the `False` proof, and renders the module (ADR-0042).
@@ -2562,6 +2760,7 @@ fn gate_module_content(
     fragment: ProofFragment,
     source: String,
 ) -> Result<String, ReconstructError> {
+    let source = reject_self_refuting_module(fragment, source)?;
     let rendered = LeanModuleContent::of_module_source(&source);
     match fragment.lean_module_content() {
         Some(declared) if declared == rendered => Ok(source),
@@ -2575,6 +2774,289 @@ fn gate_module_content(
             declared: "none (fragment emits no module)".to_owned(),
             rendered: rendered.as_str().to_owned(),
         }),
+    }
+}
+
+/// Refuse a rendered module whose `False` its own prelude already supplies.
+///
+/// A reconstruction earns its keep by deriving `False` **from the query**. A
+/// module carrying
+///
+/// ```text
+/// axiom axeyum.reconstruct.hyp._41 : Not (And (Iff prop._24 prop._24) …)
+/// ```
+///
+/// does not: every conjunct is `Iff.refl`, so the conjunction is provable and
+/// that one axiom refutes itself. Lean accepts the module, `#print axioms`
+/// is clean, and the same module would be accepted for a query that said
+/// something else entirely — the other axioms are decoration and the query is
+/// not consulted at all. `3076b6ae0` found the first such module (an
+/// `Eq.{1} α t t` against its own negation, refuted by `rfl`) and made its
+/// route decline; this is the same judgement at the one boundary every route's
+/// module passes through, so a route that degenerates in future declines the
+/// first time it is exercised instead of shipping the artifact.
+///
+/// Deliberately narrow, and deliberately fail-OPEN on anything it cannot read:
+/// this rejects our own output, so an unparsable type must not take a sound
+/// module down with it. It decides exactly one property — "is some axiom's type
+/// `Not X` with `X` provable by reflexivity alone" — and nothing about whether a
+/// module that passes says anything useful. That is the transcription question,
+/// and it is `scripts/check-lra-hypothesis-binding.py`'s.
+///
+/// Measured 2026-08-18 over the 269 committed queries that render a module:
+/// 4,652 axioms, **one** self-refuting, and it is the module this rejects.
+fn reject_self_refuting_module(
+    fragment: ProofFragment,
+    source: String,
+) -> Result<String, ReconstructError> {
+    // `ReflexiveDisequality` is the one fragment whose ENTIRE semantics is "the
+    // query asserts `Not (t = t)`", so its hypothesis axiom is self-refuting by
+    // construction and that is the refutation, not a degeneracy. The property
+    // this guard decides -- "some axiom's type is `Not X` with `X` provable by
+    // reflexivity" -- cannot separate an axiom the emitter FABRICATED from one
+    // the query actually asserted; for every other fragment the former is the
+    // only way to get here, and for this one the latter is the only way.
+    // `scan_proof_fragment` classifies this fragment precisely when the query
+    // has that shape, so the exemption is decided by the query, not by us.
+    //
+    // Narrow on purpose: an exemption is how a guard stops guarding, and
+    // `61906c585`'s neighbour incident is the reminder. This one is a single
+    // enum variant whose meaning is the exempted property, and
+    // `the_reflexive_disequality_exemption_is_not_a_blanket_pass` holds a module
+    // of another fragment carrying the same shape and requires it to be
+    // rejected.
+    if fragment == ProofFragment::ReflexiveDisequality {
+        return Ok(source);
+    }
+    match self_refuting_axiom(&source) {
+        Some(axiom) => Err(ReconstructError::SelfRefutingModule {
+            fragment: format!("{fragment:?}"),
+            axiom,
+        }),
+        None => Ok(source),
+    }
+}
+
+/// The name of the first `axiom … : Not X` in `source` whose `X` is provable by
+/// reflexivity alone, if there is one.
+fn self_refuting_axiom(source: &str) -> Option<String> {
+    for line in source.lines() {
+        let Some(rest) = line.strip_prefix("axiom ") else {
+            continue;
+        };
+        let (name, ty) = rest.split_once(" : ")?;
+        // A type that spilled onto the next line is a PREFIX, and a prefix
+        // parses to something this predicate was not asked about. Skip it:
+        // rejecting on a partial read would take down modules for a rendering
+        // detail. (Measured: no committed module has one.)
+        if ty.matches('(').count() != ty.matches(')').count() {
+            continue;
+        }
+        let Some(expr) = parse_lean_application(ty) else {
+            continue;
+        };
+        if let LeanNode::App(parts) = &expr
+            && parts.len() == 2
+            && matches!(&parts[0], LeanNode::Leaf(head) if head == "Not")
+            && refl_provable(&parts[1])
+        {
+            return Some(name.trim().to_owned());
+        }
+    }
+    None
+}
+
+/// A rendered Lean type, as a prefix application tree.
+#[derive(Debug, PartialEq, Eq)]
+enum LeanNode {
+    /// An identifier (`Not`, `Eq.{1}`, `axeyum.reconstruct.prop._24`, `->`, …).
+    Leaf(String),
+    /// A juxtaposition `f a b …`, always with at least two elements.
+    App(Vec<LeanNode>),
+}
+
+/// Parse the fully-parenthesized prefix form the module renderer emits.
+///
+/// Returns [`None`] on unbalanced parentheses or an empty application — this is
+/// a recognizer for one shape, not a Lean parser, and everything it does not
+/// recognize is simply not the shape.
+fn parse_lean_application(ty: &str) -> Option<LeanNode> {
+    let spaced = ty.replace('(', " ( ").replace(')', " ) ");
+    let mut tokens = spaced.split_whitespace();
+    let mut stack: Vec<Vec<LeanNode>> = vec![Vec::new()];
+    for token in &mut tokens {
+        match token {
+            "(" => stack.push(Vec::new()),
+            ")" => {
+                let done = stack.pop()?;
+                let node = collapse(done)?;
+                stack.last_mut()?.push(node);
+            }
+            other => stack.last_mut()?.push(LeanNode::Leaf(other.to_owned())),
+        }
+    }
+    if stack.len() != 1 {
+        return None;
+    }
+    collapse(stack.pop()?)
+}
+
+/// One parenthesized group becomes a leaf if it holds one node, an application
+/// otherwise.
+fn collapse(mut parts: Vec<LeanNode>) -> Option<LeanNode> {
+    match parts.len() {
+        0 => None,
+        1 => parts.pop(),
+        _ => Some(LeanNode::App(parts)),
+    }
+}
+
+/// Is this proposition provable by reflexivity alone?
+///
+/// An `And`-tree whose every leaf is `Iff p p` or `Eq.{u} τ t t` with the two
+/// sides **syntactically identical**. Nothing else: a `->`, an `Or`, a `Not`, or
+/// two sides that merely look similar are all `false`, because this decides
+/// whether the module's `False` is free and a maybe is a no.
+fn refl_provable(node: &LeanNode) -> bool {
+    let LeanNode::App(parts) = node else {
+        return false;
+    };
+    let Some((LeanNode::Leaf(head), args)) = parts.split_first() else {
+        return false;
+    };
+    match (head.as_str(), args.len()) {
+        ("And", 2) => refl_provable(&args[0]) && refl_provable(&args[1]),
+        ("Iff", 2) => args[0] == args[1],
+        // `Eq.{u} τ lhs rhs`: the universe is part of the head token.
+        (_, 3) if head == "Eq" || head.starts_with("Eq.{") => args[1] == args[2],
+        _ => false,
+    }
+}
+
+#[cfg(test)]
+mod self_refuting_module_tests {
+    use super::{
+        LeanNode, ProofFragment, refl_provable, reject_self_refuting_module, self_refuting_axiom,
+    };
+
+    /// The shape that shipped. `cvc5__cli__regress0__bv__holes__extract-concat.smt2`
+    /// rendered eleven of these `Iff`s under one negation; three is enough to
+    /// read.
+    const VACUOUS: &str = "\
+axiom axeyum.reconstruct.prop._0 : Prop
+axiom axeyum.reconstruct.hyp._3 : Not (And (Iff p0 p0) (And (Iff p1 p1) (Iff p2 p2)))
+theorem axeyum_refutation : False := trivial
+";
+
+    /// The SAME module with ONE conjunct relating two DIFFERENT props. It is a
+    /// real assumption about the query and must pass. Without this twin the
+    /// predicate above is indistinguishable from one that rejects everything.
+    const HONEST: &str = "\
+axiom axeyum.reconstruct.prop._0 : Prop
+axiom axeyum.reconstruct.hyp._3 : Not (And (Iff p0 p0) (And (Iff p1 p2) (Iff p2 p2)))
+theorem axeyum_refutation : False := trivial
+";
+
+    /// The exemption is for ONE fragment, not for the shape.
+    ///
+    /// `ReflexiveDisequality` is exempt because its entire semantics is "the
+    /// query asserts `Not (t = t)`" — the self-refuting axiom IS the query's own
+    /// assertion, and `scan_proof_fragment` classifies the fragment precisely
+    /// when the query has that shape, so the query decides the exemption rather
+    /// than the emitter. Hand the SAME module to any other fragment and it must
+    /// still be rejected; without this, the exemption is indistinguishable from
+    /// deleting the guard, which is how a guard stops guarding.
+    #[test]
+    fn the_reflexive_disequality_exemption_is_not_a_blanket_pass() {
+        assert!(
+            reject_self_refuting_module(ProofFragment::ReflexiveDisequality, VACUOUS.to_owned())
+                .is_ok(),
+            "the fragment whose meaning IS a reflexive disequality must pass"
+        );
+        for fragment in [
+            ProofFragment::Lra,
+            ProofFragment::Sos,
+            ProofFragment::IntFarkas,
+        ] {
+            assert!(
+                reject_self_refuting_module(fragment, VACUOUS.to_owned()).is_err(),
+                "{fragment:?} must still reject a self-refuting module"
+            );
+        }
+        assert!(
+            reject_self_refuting_module(ProofFragment::Lra, HONEST.to_owned()).is_ok(),
+            "an honest module must still pass, or the loop above proves nothing"
+        );
+    }
+
+    #[test]
+    fn a_negated_conjunction_of_reflexive_iffs_is_self_refuting() {
+        assert_eq!(
+            self_refuting_axiom(VACUOUS).as_deref(),
+            Some("axeyum.reconstruct.hyp._3")
+        );
+    }
+
+    #[test]
+    fn one_honest_conjunct_makes_it_a_real_assumption() {
+        assert_eq!(self_refuting_axiom(HONEST), None);
+    }
+
+    #[test]
+    fn the_narrow_rfl_shape_is_still_recognized() {
+        let source = "axiom axeyum.reconstruct.hyp._2 : Not (Eq.{1} α a a)\n";
+        assert_eq!(
+            self_refuting_axiom(source).as_deref(),
+            Some("axeyum.reconstruct.hyp._2")
+        );
+    }
+
+    #[test]
+    fn a_disequality_between_different_terms_is_a_real_assumption() {
+        let source = "axiom axeyum.reconstruct.hyp._2 : Not (Eq.{1} α a b)\n";
+        assert_eq!(self_refuting_axiom(source), None);
+    }
+
+    /// The grammar is CLOSED. `Or (Iff p p) X` really is provable, but admitting
+    /// `Or` would start this predicate reasoning rather than recognizing, and a
+    /// wrong yes takes down a sound route.
+    #[test]
+    fn an_or_is_refused_even_though_one_disjunct_is_reflexive() {
+        let source = "axiom axeyum.reconstruct.hyp._2 : Not (Or (Iff p p) (Iff q q))\n";
+        assert_eq!(self_refuting_axiom(source), None);
+    }
+
+    /// Provable is not contradictory. Only the NEGATION hands the module a free
+    /// `False`.
+    #[test]
+    fn an_unnegated_reflexive_conjunction_is_not_self_refuting() {
+        let source = "axiom axeyum.reconstruct.hyp._2 : And (Iff p p) (Iff q q)\n";
+        assert_eq!(self_refuting_axiom(source), None);
+    }
+
+    /// A pi-type is not a shape this predicate models, and every quantified
+    /// route renders one. It must read as "no", not as a parse failure that
+    /// takes a module down.
+    #[test]
+    fn a_pi_type_hypothesis_is_left_alone() {
+        let source = "axiom axeyum.reconstruct.hyp._0 : ((x0 : Int) -> Not (Eq.{1} Int x0 x0))\n";
+        assert_eq!(self_refuting_axiom(source), None);
+    }
+
+    #[test]
+    fn the_parser_reads_a_nested_prefix_application() {
+        assert!(refl_provable(
+            &super::parse_lean_application("And (Iff p p) (Iff q q)").unwrap()
+        ));
+        assert!(!refl_provable(&LeanNode::Leaf("p".to_owned())));
+    }
+
+    /// Unbalanced parentheses are a rendering detail, not a verdict: a partial
+    /// read must never reject.
+    #[test]
+    fn an_unbalanced_type_is_skipped_rather_than_judged() {
+        let source = "axiom axeyum.reconstruct.hyp._2 : Not (And (Iff p p)\n";
+        assert_eq!(self_refuting_axiom(source), None);
     }
 }
 
@@ -2622,6 +3104,132 @@ fn reconstruct_qf_abv_to_lean_source(
 ///
 /// Returns a [`ReconstructError`] when the query is not classified as the `Sos`
 /// fragment, or the SOS reconstruction does not kernel-check to `False`.
+/// Reconstruct a degree-2 Positivstellensatz refutation into a Lean module.
+///
+/// # Errors
+///
+/// [`ReconstructError`] when the query carries no product certificate, or the
+/// reconstruction does not kernel-check to `False` over the constructed reals.
+pub fn reconstruct_real_product_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    let Some(certificate) = crate::nra_product_cert::real_product_refutation(arena, assertions)
+    else {
+        return Err(ReconstructError::MalformedStep {
+            rule: "reconstruct_real_product".to_owned(),
+            detail: "query carries no degree-2 Positivstellensatz certificate".to_owned(),
+        });
+    };
+    let mut ctx = lra_ctx()?;
+    let term =
+        arithmetic::product_positivstellensatz::reconstruct_real_product(&mut ctx, &certificate)?;
+    gate_and_render_lra_module(&mut ctx, term, "RealProduct")
+}
+
+/// Does the monomial-bound reconstruction cover `assertions`?
+///
+/// A cheap syntactic predicate, deliberately not "the reconstruction builds":
+/// the honest gate would need a `CReal` kernel, and the classifier is a pure
+/// predicate on `&TermArena` that runs on every arithmetic query. It mirrors the
+/// module's own scope checks, so a query it claims here is one
+/// [`reconstruct_monomial_bound`](arithmetic::monomial_bound::reconstruct_monomial_bound)
+/// accepts; anything else keeps the route it has today.
+fn monomial_bound_reconstruction_covers(arena: &TermArena, assertions: &[TermId]) -> bool {
+    use crate::nra_monomial_bound_cert::{MonomialBound, RefutedAtom};
+
+    let Some(certificate) =
+        crate::nra_monomial_bound_cert::monomial_bound_refutation(arena, assertions)
+    else {
+        return false;
+    };
+    if certificate.refuted_kind() != RefutedAtom::LessThan {
+        return false;
+    }
+    let MonomialBound::AtLeast(_) = certificate.bound() else {
+        return false;
+    };
+    let asserted =
+        crate::nra_monomial_bound_cert::directly_asserted_lower_bounds(arena, assertions);
+    let integral_in_range = |w: (i128, i128)| {
+        axeyum_ir::Rational::checked_new(w.0, w.1)
+            .is_some_and(|v| v.denominator() == 1 && (0..=64).contains(&v.numerator()))
+    };
+    if !integral_in_range(certificate.refuted_against()) {
+        return false;
+    }
+    let mut non_unit = 0_u32;
+    for (name, exponent, lower) in certificate.factors() {
+        let Some(w) = lower else { return false };
+        if *exponent == 0 || !integral_in_range(*w) {
+            return false;
+        }
+        let Some(value) = asserted.get(name) else {
+            return false;
+        };
+        if value.0 != axeyum_ir::Rational::checked_new(w.0, w.1).expect("checked above") {
+            return false;
+        }
+        if w.0 != 1 || w.1 != 1 {
+            non_unit += exponent;
+        }
+    }
+    non_unit <= 1
+}
+
+/// Reconstruct a monomial lower-bound refutation into a Lean module.
+///
+/// # Errors
+///
+/// [`ReconstructError`] when the query carries no monomial-bound certificate, or
+/// the reconstruction does not kernel-check to `False` over the constructed
+/// reals.
+pub fn reconstruct_monomial_bound_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    let Some(certificate) =
+        crate::nra_monomial_bound_cert::monomial_bound_refutation(arena, assertions)
+    else {
+        return Err(ReconstructError::MalformedStep {
+            rule: "reconstruct_monomial_bound".to_owned(),
+            detail: "query carries no monomial lower-bound certificate".to_owned(),
+        });
+    };
+    let mut ctx = lra_ctx()?;
+    let term = arithmetic::monomial_bound::reconstruct_monomial_bound(
+        &mut ctx,
+        arena,
+        assertions,
+        &certificate,
+    )?;
+    gate_and_render_lra_module(&mut ctx, term, "MonomialBound")
+}
+
+/// Reconstruct a monomial-divisibility refutation into a Lean module.
+///
+/// # Errors
+///
+/// [`ReconstructError`] when the query is not classified as the
+/// `RealZeroProduct` fragment, or the reconstruction does not kernel-check to
+/// `False` over the constructed reals.
+pub fn reconstruct_real_zero_product_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    let Some(certificate) =
+        crate::nra_zero_product_cert::real_zero_product_refutation(arena, assertions)
+    else {
+        return Err(ReconstructError::MalformedStep {
+            rule: "reconstruct_real_zero_product".to_owned(),
+            detail: "query carries no monomial-divisibility certificate".to_owned(),
+        });
+    };
+    let mut ctx = lra_ctx()?;
+    let term = arithmetic::zero_product::reconstruct_real_zero_product(&mut ctx, &certificate)?;
+    gate_and_render_lra_module(&mut ctx, term, "RealZeroProduct")
+}
+
 pub fn reconstruct_sos_to_lean_module(
     arena: &TermArena,
     assertions: &[TermId],
@@ -2650,7 +3258,7 @@ fn reconstruct_sos_to_lean_module_raw(
             detail: "query is not an SOS-reconstructable unsat".to_owned(),
         });
     }
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = lra_ctx()?;
     match reconstruct_sos_proof(&mut ctx, arena, assertions) {
         Ok(t) => gate_and_render_lra_module(&mut ctx, t, "SOS"),
         Err(ReconstructError::UnsupportedTerm { .. }) => {
@@ -3131,3 +3739,58 @@ fn fresh_axiom(
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod lean_module_cap_tests {
+    //! The size guard itself, exercised directly.
+    //!
+    //! The integration test in `tests/lean_module_size_cap.rs` pins the
+    //! THRESHOLD — that 64 MiB sits between the largest real module (28.6 MB)
+    //! and the smallest pathological one (625 MB). It does not pin the guard:
+    //! mutation testing showed the whole `if` could be deleted with everything
+    //! still green, because no fixture there is large enough to trip it and
+    //! building a 2.4 GB one to find out would cost more memory than the bug.
+    //!
+    //! Calling `bounded` directly costs one 65 MiB allocation, held for the
+    //! length of one assertion.
+
+    use super::{MAX_LEAN_MODULE_BYTES, ProofFragment, bounded};
+
+    #[test]
+    fn a_module_over_the_cap_is_refused() {
+        let oversized = "x".repeat(MAX_LEAN_MODULE_BYTES + 1);
+        let result = bounded(ProofFragment::Lra, oversized);
+        let Err(error) = result else {
+            panic!("a module over the cap must be refused, not returned");
+        };
+        let rendered = format!("{error:?}");
+        assert!(
+            rendered.contains("lean_module_size"),
+            "the refusal must name the rule so a caller can tell it from a \
+             reconstruction failure; got {rendered}"
+        );
+        // The message is a diagnostic a human reads: it must not arrive as a
+        // ribbon of continuation whitespace.
+        assert!(
+            !rendered.contains("  "),
+            "the detail should be single-spaced; got {rendered}"
+        );
+    }
+
+    #[test]
+    fn a_module_at_the_cap_is_returned_unchanged() {
+        // Boundary: exactly at the limit is fine, one over is not.
+        let exact = "y".repeat(MAX_LEAN_MODULE_BYTES);
+        let (fragment, source) =
+            bounded(ProofFragment::Lra, exact).expect("a module AT the cap is acceptable");
+        assert_eq!(fragment, ProofFragment::Lra);
+        assert_eq!(source.len(), MAX_LEAN_MODULE_BYTES);
+    }
+
+    #[test]
+    fn an_ordinary_module_passes_through_untouched() {
+        let ordinary = "theorem refute : False := by exact absurd h1 h2".to_owned();
+        let (_, source) = bounded(ProofFragment::Lra, ordinary.clone()).expect("accepted");
+        assert_eq!(source, ordinary);
+    }
+}

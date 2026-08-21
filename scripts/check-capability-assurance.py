@@ -51,8 +51,27 @@ SELF = re.compile(r"check_drat|recheck|replay|re-deriv|independent(ly)? check", 
 # Verdict agreement, not artifact checking.
 DIFFERENTIAL = re.compile(r"differential|vs\.? Z3|vs\.? cvc5|oracle", re.I)
 
+# --- ranking the gap (strand item B) ------------------------------------
+# What an external checker would need to CONSUME. A logic whose evidence already
+# names a refutation artifact is a plumbing job; one that names only a model
+# replay needs an UNSAT proof format first, which is a research question.
+UNSAT_ARTIFACT = re.compile(
+    r"\bDRAT\b|\bLRAT\b|Farkas|resolution proof|unsat core|certificate", re.I
+)
+# `replay` unanchored: the table says "model replay" in one row and "is REPLAYED
+# through the ground evaluator" in the next, and they mean the same thing. Band 1
+# is tested first, so widening here cannot steal a logic that has a refutation
+# artifact.
+SAT_ARTIFACT = re.compile(r"replay|witness|model is (re)?checked", re.I)
+
+BANDS = {
+    1: "artifact already built — export it and point a checker at it",
+    2: "model replay only — needs an UNSAT proof format first",
+    3: "no refutation artifact named",
+}
+
 # The externally-checked count may not FALL. Measured 2026-08-17: 36 entries
-# across 11 of 23 areas.
+# across 12 of 23 logics (11 when written; QF_RDL was gated 2026-08-17).
 #
 # This is the strand's primary metric, and the reason it needs a floor is that
 # it had drifted UNMEASURED. `01-decide-vs-certify.md` said "Four name a
@@ -60,7 +79,7 @@ DIFFERENTIAL = re.compile(r"differential|vs\.? Z3|vs\.? cvc5|oracle", re.I)
 # real, and seven more had joined them — QF_ABV, QF_BV, QF_UF, QF_UFLIA,
 # QF_UFLRA, datatypes, reachability — mostly via Carcara. Nobody noticed,
 # because counting required reading 101 prose fields.
-EXTERNAL_FLOOR = 36
+EXTERNAL_FLOOR = 39
 MIN_ENTRIES = 90
 
 
@@ -78,6 +97,9 @@ def entries(text: str) -> list[dict[str, str]]:
         am = re.search(r"assurance:\s*Assurance::(\w+)", body)
         if am:
             rec["assurance"] = am.group(1)
+        cm = re.search(r"checked_by:\s*CheckedBy::(\w+)", body)
+        if cm:
+            rec["checked_by"] = cm.group(1)
         if "area" in rec:
             out.append(rec)
     return out
@@ -118,7 +140,38 @@ def logics(area: str) -> set[str]:
     return out
 
 
+DECLARED = {
+    "ExternalChecker": "external-artifact-checker",
+    "SelfChecker": "self-checker",
+    "DifferentialOracle": "differential-only",
+    "Argument": "argument-only",
+}
+
+
 def tier(rec: dict[str, str]) -> str:
+    """WHO checks this capability's artifact — read from the table, not guessed.
+
+    Until 2026-08-17 this was `inferred_tier` below, a regex over the prose
+    `evidence` field, and the table now states the answer instead (strand item C).
+    The inference is kept as a cross-check, never as the source: see
+    `overstated`.
+    """
+    declared = rec.get("checked_by")
+    if declared:
+        return DECLARED.get(declared, "unclassified")
+    return inferred_tier(rec)
+
+
+def inferred_tier(rec: dict[str, str]) -> str:
+    """The old prose heuristic, retained ONLY to contradict the declared field.
+
+    Kept because it is the one independent opinion available about a row: if a
+    capability declares an external checker and its own evidence never names
+    one, something is wrong with the row. It is not trusted in the other
+    direction — measured, it silently misplaced 15 rows, and every round of
+    widening it revealed another phrasing ("re-checked", "VERIFY-BEFORE-RETURN",
+    "check_auto-unsat checks", "kernel infer").
+    """
     ev = rec.get("evidence", "")
     if EXTERNAL.search(ev):
         return "external-artifact-checker"
@@ -127,6 +180,68 @@ def tier(rec: dict[str, str]) -> str:
     if DIFFERENTIAL.search(ev):
         return "differential-only"
     return "unclassified"
+
+
+def overstated(recs: list[dict[str, str]]) -> list[str]:
+    """Rows claiming an EXTERNAL checker whose evidence names none.
+
+    Asymmetric on purpose, matching this table's standing rule — *downgrade
+    rather than overstate*. A row declaring `SelfChecker` while its prose happens
+    to mention Lean is not an error (it may be explaining what Lean does NOT
+    cover, which two real rows do). A row declaring `ExternalChecker` with no
+    external checker named anywhere in its evidence is a claim with nothing
+    behind it, and this is the strand's headline number.
+    """
+    return [
+        f"{r['area']}: declares CheckedBy::ExternalChecker, but its evidence names no external "
+        "checker (Carcara / Lean / drat-trim). This row is counted in the strand's primary "
+        "metric, so the claim needs an artifact and a checker in the evidence field"
+        for r in recs
+        if r.get("checked_by") == "ExternalChecker" and not EXTERNAL.search(r.get("evidence", ""))
+    ]
+
+
+def rank(recs: list[dict[str, str]]) -> dict[str, tuple[int, set[str]]]:
+    """Gap logics banded by how far they are from an external check.
+
+    Derived, because a written-down ranking rots: item B names `QF_UF` and
+    `datatypes` as candidates to rank, and both are externally checked already.
+
+    Same caveat as `tier`: this reads the evidence PROSE, so it reports what the
+    table claims exists, not what the code emits. It is a queue, not a gate.
+    """
+    external = {
+        lg
+        for r in recs
+        if tier(r) == "external-artifact-checker"
+        for lg in logics(r["area"])
+    }
+    out: dict[str, tuple[int, set[str]]] = {}
+    for lg in {lg for r in recs for lg in logics(r["area"])} - external:
+        ev = " ".join(
+            r.get("evidence", "") for r in recs if lg in logics(r["area"])
+        )
+        hits = {h.lower() for h in UNSAT_ARTIFACT.findall(ev)}
+        band = 1 if hits else (2 if SAT_ARTIFACT.search(ev) else 3)
+        out[lg] = (band, hits)
+    return out
+
+
+def compound_only(recs: list[dict[str, str]]) -> set[str]:
+    """Logics whose assurance is never stated on their own.
+
+    `tier` is per ROW, so a row named `QF_IDL / QF_RDL` asserts one tier for both
+    logics. Measured 2026-08-17 that is wrong for exactly that row: QF_RDL
+    reconstructs to a Lean theory module and QF_IDL renders only an attestation
+    (`crates/axeyum-solver/tests/difference_logic_lean_content.rs`). Reported so
+    the gap list carries its own uncertainty.
+    """
+    solo = {
+        lg for r in recs if len(logics(r["area"])) == 1 for lg in logics(r["area"])
+    }
+    return {
+        lg for r in recs if len(logics(r["area"])) > 1 for lg in logics(r["area"])
+    } - solo
 
 
 def main(argv: list[str]) -> int:
@@ -148,12 +263,48 @@ def main(argv: list[str]) -> int:
                 {lg for r in recs if tier(r) == "unclassified"
                  for lg in logics(r["area"])})))
 
+    if "--rank" in argv:
+        banded = rank(recs)
+        shared = compound_only(recs)
+        print(f"  gap ranked by distance to an external checker ({len(banded)} logics):")
+        for band in sorted(BANDS):
+            members = sorted(lg for lg, (b, _) in banded.items() if b == band)
+            if not members:
+                continue
+            print(f"    band {band} — {BANDS[band]}")
+            for lg in members:
+                hits = ", ".join(sorted(banded[lg][1])) or "-"
+                mark = "  [tier shared with another logic]" if lg in shared else ""
+                print(f"      {lg:<20} artifact: {hits}{mark}")
+        if shared:
+            print("  assurance never stated per logic: " + ", ".join(sorted(shared)))
+
+    covered = {
+        lg
+        for r in recs
+        if tier(r) == "external-artifact-checker"
+        for lg in logics(r["area"])
+    }
+    if "--quiet" not in argv:
+        print(
+            f"  logics: {len(covered)} of {len(areas)} have an external artifact "
+            f"checker; {len(areas) - len(covered)} do not (rank them with --rank)"
+        )
+
     print(f"CAPABILITY_ASSURANCE|entries={len(recs)}|areas={len(areas)}|"
           f"external={external}|self={tiers['self-checker']}|"
           f"differential={tiers['differential-only']}|"
-          f"unclassified={tiers['unclassified']}")
+          f"unclassified={tiers['unclassified']}|"
+          f"logics_external={len(covered)}|logics_total={len(areas)}")
 
-    failures = []
+    undeclared = [r["area"] for r in recs if "checked_by" not in r]
+    failures = list(overstated(recs))
+    if undeclared:
+        failures.append(
+            f"{len(undeclared)} capability rows do not declare `checked_by` "
+            f"({', '.join(sorted(set(undeclared))[:6])}...). Every row must state who checks "
+            "its artifact; falling back to the prose heuristic is what strand item C removed"
+        )
     if len(recs) < MIN_ENTRIES:
         failures.append(
             f"parsed only {len(recs)} capability entries (floor {MIN_ENTRIES}); the "

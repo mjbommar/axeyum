@@ -19,8 +19,9 @@ Two independent measurements, cross-checked against each other
     row per admitted ``Declaration::Axiom``: ``prelude<TAB>name<TAB>type-hex``.
     This is the row-level source: names and canonical types, SHA-256 bound.
 
-``nat_axiom_inventory``
-    Constructs **five** preludes -- `logic`, `nat`, `real`, `integer`, `string`
+``nat_axiom_inventory --include-constructed``
+    Constructs **eight** preludes -- `logic`, `nat`, `real`, `integer`, `rat`,
+    `string`, and (only under the flag) the constructed `creal` and `complex`
     -- and emits the whole *trusted surface* (``axiom`` + ``opaque`` +
     ``quotient``), plus a per-prelude count line on stderr **for every prelude
     it built, including the axiom-free ones**.
@@ -41,12 +42,20 @@ trusted surface) shows up as a disagreement rather than as a smaller number.
 What ``--check`` fails on
 -------------------------
 
-* any drift in the derived block (counts, trusted surface, prelude set);
+* any drift in the derived block (counts, trusted surface, prelude set) --
+  reported per prelude and **with its direction**, because a rise and a fall are
+  different events: a rise means something previously proved is now assumed, a
+  fall is a result the ledger has not published yet.  Both fail the gate; see
+  ``describe_measurement_drift``;
 * any drift in a row's name or canonical type digest;
 * a ledger population change -- rows added or removed -- which requires a
   deliberate ``--accept-population-change`` run that files the departed rows in
   ``retired_entries`` rather than deleting them, so a *reduction in the trusted
-  surface is published as a reduction* instead of quietly shrinking a table;
+  surface is published as a reduction* instead of quietly shrinking a table.
+  A **rename** is not a population change and has its own verb,
+  ``--accept-rename OLD=NEW``: routing one through the retirement path would
+  discard every classification decision and publish 30 retirements that never
+  happened;
 * a stale count in any document listed in the manifest's ``live_documents``.
 
 Scope limit of the document scan, stated plainly: it gates the *anchored*
@@ -75,20 +84,45 @@ ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "docs" / "plan" / "lean-axiom-ledger-v1.json"
 OUT_MD = ROOT / "docs" / "plan" / "generated" / "lean-axiom-ledger.md"
 
+AXIOM_ROWS_EXAMPLE = "prelude_axiom_inventory"
+TRUSTED_SURFACE_EXAMPLE = "nat_axiom_inventory"
+
 AXIOM_ROWS_COMMAND = (
-    "cargo run --quiet -p axeyum-lean-kernel --example prelude_axiom_inventory"
+    f"cargo run --quiet -p axeyum-lean-kernel --example {AXIOM_ROWS_EXAMPLE}"
 )
+
+# `--include-constructed` is NOT optional here, and the profile is not a taste
+# call.  Without the flag `nat_axiom_inventory` never builds `CReal` (ADR-0512)
+# or `Complex` (ADR-0521), so the two developments this repository most recently
+# staked a trust claim on emit no coverage line and no rows -- an empty answer to
+# a question the tool was never asked, which reads identically to "measured, and
+# axiom-free".  `EXPECTED_PRELUDES` is what makes dropping the flag a gate
+# failure rather than a quieter ledger.
+#
+# `--release` because the flag costs kernel type-checking, and the profile
+# changes that by 12x: measured 2026-08-18 on this host, `--include-constructed`
+# runs in 2m03s debug and 10.3s release, against a one-off marginal rebuild cost
+# of 8.9s release versus 6.4s debug.  Two minutes on a gate that also runs in
+# `scripts/check.sh` is the kind of cost lanes route around.
+#
+# Keeping the row source in DEBUG is deliberate too: the cross-check below then
+# compares two profiles as well as two enumerations, so a measurement that
+# depended on optimisation settings would surface as a disagreement.
 TRUSTED_SURFACE_COMMAND = (
-    "cargo run --quiet -p axeyum-lean-kernel --example nat_axiom_inventory"
+    f"cargo run --quiet --release -p axeyum-lean-kernel "
+    f"--example {TRUSTED_SURFACE_EXAMPLE} -- --include-constructed"
 )
 TYPE_IDENTITY = "sha256 of Kernel::render_lean(declaration.ty) UTF-8 bytes"
 
 SOURCE_PATHS = {
     "logic": "crates/axeyum-lean-kernel/src/prelude.rs",
     "nat": "crates/axeyum-lean-kernel/src/nat_prelude.rs",
-    "real": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
+    "axreal": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
     "integer": "crates/axeyum-lean-kernel/src/int_prelude.rs",
+    "rat": "crates/axeyum-lean-kernel/src/rat_prelude.rs",
     "string": "crates/axeyum-lean-kernel/src/string_prelude.rs",
+    "creal": "crates/axeyum-lean-kernel/src/creal.rs",
+    "complex": "crates/axeyum-lean-kernel/src/complex.rs",
 }
 TRUSTED_KINDS = ("axiom", "opaque", "quotient")
 
@@ -131,9 +165,34 @@ ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 #
 # `test_a_prelude_dropping_out_of_coverage_fails` is the control, and it went
 # green-for-the-wrong-reason the moment `integer` hit zero.
-EXPECTED_PRELUDES: tuple[str, ...] = ("integer", "logic", "nat", "real", "string")
+#
+# Extended 2026-08-18 with `rat`, `creal` and `complex`.  `rat` had been in the
+# measurement since 2026-08-17 but not in this tuple, so the second-line coverage
+# guard did not cover it.  `creal`/`complex` were in NEITHER: they need
+# `--include-constructed`, and a gate that pins a number for a prelude the
+# command never builds passes vacuously.  Their membership here is precisely what
+# makes silently dropping that flag fail.
+EXPECTED_PRELUDES: tuple[str, ...] = (
+    "axreal",
+    "complex",
+    "creal",
+    "integer",
+    "logic",
+    "nat",
+    "rat",
+    "string",
+)
 
 # Anchored count phrasings.  Each entry is (label, pattern, quantity-per-group).
+#
+# THE `(?<![A-Za-z])` IS LBearing WEIGHT, not tidiness.  `real (\d+)` matches
+# inside `creal 0`, and "creal 0, integer 0, string 0" is an ordinary sentence to
+# write now that the constructed carrier exists and is the one at zero.  Measured
+# 2026-08-19, before the lookbehind: that sentence captured (0, 0, 0) and was
+# scored against `axreal`, which is 30 -- so a document stating the constructed
+# carriers' counts correctly would red this gate, and the diagnosis would name
+# the wrong prelude.  A checker that fails on true prose teaches people to
+# disable it.  `scripts/tests/test_lean_axiom_ledger.py` controls both readings.
 # Anchoring on ledger vocabulary -- prelude names, "ledger", "prelude
 # assumptions" -- is what keeps the scan from matching unrelated integers in
 # large documents.  A pattern that would match "34-row ESBMC gate" is not worth
@@ -145,18 +204,18 @@ EXPECTED_PRELUDES: tuple[str, ...] = ("integer", "logic", "nat", "real", "string
 COUNT_CLAIM_PATTERNS: tuple[tuple[str, re.Pattern[str], tuple[str, ...]], ...] = (
     (
         "real N, integer N, string N",
-        re.compile(r"real (\d+), integer (\d+), string (\d+)"),
-        ("real", "integer", "string"),
+        re.compile(r"(?<![A-Za-z])real (\d+), integer (\d+), string (\d+)"),
+        ("axreal", "integer", "string"),
     ),
     (
         "N real, N integer, N string",
         re.compile(r"(\d+) real, (\d+) integer, (\d+) string"),
-        ("real", "integer", "string"),
+        ("axreal", "integer", "string"),
     ),
     (
         "real N + integer N + string ... N",
-        re.compile(r"real (\d+) \+ integer (\d+) \+ string [^0-9\n]{0,24}(\d+)"),
-        ("real", "integer", "string"),
+        re.compile(r"(?<![A-Za-z])real (\d+) \+ integer (\d+) \+ string [^0-9\n]{0,24}(\d+)"),
+        ("axreal", "integer", "string"),
     ),
     ("N-row ledger", re.compile(r"(\d+)-row [^\n]{0,32}?ledger"), ("total",)),
     ("N prelude assumptions", re.compile(r"(\d+) prelude assumptions"), ("total",)),
@@ -384,8 +443,8 @@ def cross_check(measurement: Measurement) -> None:
         if observed != declared["axiom"]:
             raise LedgerError(
                 f"the two inventories disagree on {prelude}: "
-                f"{AXIOM_ROWS_COMMAND.split()[-1]} emitted {observed} axiom rows, "
-                f"{TRUSTED_SURFACE_COMMAND.split()[-1]} declared "
+                f"{AXIOM_ROWS_EXAMPLE} emitted {observed} axiom rows, "
+                f"{TRUSTED_SURFACE_EXAMPLE} declared "
                 f"axiom={declared['axiom']}"
             )
     for prelude in EXPECTED_PRELUDES:
@@ -462,6 +521,127 @@ def scan_live_document(
     return failures
 
 
+REPIN = "python3 scripts/gen-lean-axiom-ledger.py"
+REPIN_POPULATION = (
+    "python3 scripts/gen-lean-axiom-ledger.py --accept-population-change "
+    "--retirement-note '<why it left>' --retirement-evidence <path>"
+)
+
+# The stable, greppable half of every drift failure.  The directional half is
+# appended after it; callers and older greps key on this.
+STALE = "measurement block is stale"
+
+
+def _kind_breakdown(before: dict[str, Any], after: dict[str, Any]) -> str:
+    return ", ".join(
+        f"{kind} {before.get(kind)} -> {after.get(kind)}"
+        for kind in TRUSTED_KINDS
+        if before.get(kind) != after.get(kind)
+    )
+
+
+def describe_measurement_drift(
+    committed: Any, derived: dict[str, Any]
+) -> list[str]:
+    """Say WHICH WAY a trusted-surface number moved, and what to do about it.
+
+    The previous form of this check emitted two whole JSON blobs and left the
+    reader to diff them.  That is adequate for a number that only ever grows and
+    useless for one that moves both ways, which this one does: `integer` fell
+    34 -> 1 -> 0 and `string` 1 -> 0 while the example's own doc comment still
+    asserted 1 for both.
+
+    The two directions are not the same event and must not read the same:
+
+    * a **rise** is a regression -- something that used to be proved is now
+      assumed, and the ledger is the only place that would say so;
+    * a **fall** is a *result*.  The flywheel is supposed to notice that a
+      prelude became axiom-free and hand out the next goal, and a gate that
+      merely says "stale" invites the lane to re-run the generator without ever
+      registering that the trusted base shrank.
+
+    Both fail.  A gate whose exit status did not depend on the finding would be
+    worse than no gate; what changes with direction is what the operator is told
+    to do next.
+    """
+    if committed == derived:
+        return []
+    if not isinstance(committed, dict):
+        return [f"{STALE}: it is not an object; run {REPIN}"]
+
+    failures: list[str] = []
+    committed_surface = committed.get("trusted_surface")
+    derived_surface = derived["trusted_surface"]
+    if isinstance(committed_surface, dict):
+        for prelude in sorted(set(committed_surface) | set(derived_surface)):
+            before = committed_surface.get(prelude)
+            after = derived_surface.get(prelude)
+            if before == after:
+                continue
+            if after is None:
+                failures.append(
+                    f"{STALE} -- COVERAGE LOST: `{prelude}` is pinned at "
+                    f"{before.get('total_trusted') if isinstance(before, dict) else before}"
+                    " but the measurement no longer builds it. An unmeasured "
+                    "prelude and an axiom-free one print the same zero, so this "
+                    "must never be resolved by deleting the pin: restore the "
+                    "prelude to the inventory (or the `--include-constructed` "
+                    "flag to its command) instead."
+                )
+                continue
+            if before is None:
+                failures.append(
+                    f"{STALE} -- COVERAGE ADDED: `{prelude}` is newly measured at "
+                    f"trusted surface {after['total_trusted']} and is not pinned "
+                    f"yet. Pin it: {REPIN}"
+                )
+                continue
+            if not isinstance(before, dict):
+                failures.append(f"{STALE}: `{prelude}` pin is not an object; run {REPIN}")
+                continue
+            was = before.get("total_trusted")
+            now = after["total_trusted"]
+            detail = _kind_breakdown(before, after) or "kinds unchanged"
+            if isinstance(was, int) and now > was:
+                failures.append(
+                    f"{STALE} -- REGRESSION: `{prelude}` trusted surface ROSE "
+                    f"{was} -> {now} ({detail}). Something previously proved is "
+                    "now assumed. Do not re-pin until you know which declaration "
+                    f"lost its proof body; then: {REPIN_POPULATION}"
+                )
+            elif isinstance(was, int) and now < was:
+                failures.append(
+                    f"{STALE} -- IMPROVEMENT: `{prelude}` trusted surface FELL "
+                    f"{was} -> {now} ({detail}). The trusted base shrank and "
+                    "nothing recorded it -- that is a result to publish, not a "
+                    "gate to satisfy. Re-pin, which files the departed rows as "
+                    f"retired rather than deleting them: {REPIN_POPULATION}"
+                )
+            else:
+                failures.append(
+                    f"{STALE} -- RESHAPED: `{prelude}` trusted surface is still "
+                    f"{now} but its kinds moved ({detail}). `opaque` and "
+                    "`quotient` are trusted for different reasons than `axiom`; "
+                    f"re-pin only once you know which: {REPIN}"
+                )
+
+    for key in sorted(set(committed) | set(derived)):
+        if key == "trusted_surface" or committed.get(key) == derived.get(key):
+            continue
+        failures.append(
+            f"{STALE}: {key} committed "
+            f"{json.dumps(committed.get(key), sort_keys=True)} vs measured "
+            f"{json.dumps(derived.get(key), sort_keys=True)}; run {REPIN}"
+        )
+
+    if not failures:
+        failures.append(
+            f"{STALE}; committed {json.dumps(committed, sort_keys=True)} vs "
+            f"measured {json.dumps(derived, sort_keys=True)}"
+        )
+    return failures
+
+
 def validate_manifest(data: dict[str, Any], measurement: Measurement) -> list[str]:
     failures: list[str] = []
     if data.get("version") != 2:
@@ -472,12 +652,7 @@ def validate_manifest(data: dict[str, Any], measurement: Measurement) -> list[st
         failures.append("population_as_of must be an ISO date")
 
     derived = measurement.derived_block()
-    if data.get("measurement") != derived:
-        failures.append(
-            "measurement block is stale; committed "
-            f"{json.dumps(data.get('measurement'), sort_keys=True)} vs measured "
-            f"{json.dumps(derived, sort_keys=True)}"
-        )
+    failures.extend(describe_measurement_drift(data.get("measurement"), derived))
 
     authored_policy = data.get("trust_policy")
     if not isinstance(authored_policy, dict):
@@ -666,7 +841,7 @@ def render(data: dict[str, Any]) -> str:
     policy = data["trust_policy"]
     classifications = Counter(entry["classification"] for entry in entries)
     discharges = Counter(entry["discharge_status"] for entry in entries)
-    real_names = {entry["name"] for entry in entries if entry["prelude"] == "real"}
+    real_names = {entry["name"] for entry in entries if entry["prelude"] == "axreal"}
     int_names = {entry["name"] for entry in entries if entry["prelude"] == "integer"}
     shared = sorted(real_names & int_names)
     axiom_free = [
@@ -712,7 +887,7 @@ def render(data: dict[str, Any]) -> str:
         "own coverage; a prelude that silently stopped being built fails the gate "
         "instead of shrinking the total.",
         f"- {len(shared)} names are shared by the isolated real and integer "
-        "preludes; ADR-0387's `Int.*` / `Real.*` namespaces make the packages "
+        "preludes; ADR-0387's `Int.*` / `AxReal.*` namespaces make the packages "
         "composable.",
         f"- Integer trust policy: [{adr_label}]({adr_link}) — "
         + policy["publication_rule"],
@@ -731,6 +906,23 @@ def render(data: dict[str, Any]) -> str:
         "",
         "Counts are over the whole trusted surface, not `Declaration::Axiom` alone: "
         "`Opaque` has no proof body and `Quotient` admits `Quot.sound`.",
+        "",
+        "**`axreal` is not this project's real numbers.** It is the legacy "
+        "*axiomatized* ordered field — an opaque carrier plus the field, order "
+        "and compatibility laws asserted (ADR-0522) — and every one of the "
+        "assumptions in this table is one of its laws. The real numbers the "
+        "shipped route actually reasons over are `creal`, the Bishop setoid of "
+        "regular rational sequences (ADR-0512), which is **constructed** and "
+        "appears above at zero. `complex` is built from `creal` and is likewise "
+        "at zero (ADR-0521).",
+        "",
+        "So read the total as *what is still assumed somewhere in the tree*, not "
+        "as the cost of having real numbers. ADR-0509 draws the distinction this "
+        "table cannot: these 30 are **declared** and no shipped route **reaches** "
+        "them, which is a weaker claim than deletion and a stronger one than a "
+        "count of 30 suggests. The prelude was named `real` until 2026-08-19, "
+        "and this row read `real 30` — which invited exactly the opposite "
+        "reading of the same measurement.",
         "",
         "| Prelude | Axiom | Opaque | Quotient | Trusted total | Ledger rows |",
         "|---|---|---|---|---|---|",
@@ -760,6 +952,13 @@ def render(data: dict[str, Any]) -> str:
             "change fails validation before the generated ledger can remain "
             "current. A population change additionally requires an explicit "
             "`--accept-population-change` run.",
+            "- **Every prelude above is pinned by value, and a moved number is "
+            "reported with its direction.** A *rise* is a regression — something "
+            "previously proved is now assumed. A *fall* is a result this ledger "
+            "has not published yet, and it is the direction a blanket "
+            "axiom-free assertion structurally cannot see, because that "
+            "assertion only ever becomes more true. Both fail the gate; what "
+            "differs is what the operator is told to do next.",
             "- Every row has source, semantic classification, owner, review owner, "
             "discharge state, and retained-evidence fields.",
             "- `discharged` requires a real repository evidence path; a "
@@ -856,6 +1055,77 @@ def refresh(data: dict[str, Any], measurement: Measurement) -> dict[str, Any]:
     return data
 
 
+def accept_rename(
+    data: dict[str, Any],
+    measurement: Measurement,
+    mapping: dict[str, str],
+) -> list[str]:
+    """Carry a live row's authored metadata across a *renamed* declaration.
+
+    A rename is not a population change and must not be filed as one.  Routing
+    it through ``--accept-population-change`` would retire 30 rows and admit 30
+    fresh ``unclassified`` ones, which loses every classification and discharge
+    decision **and** inflates the published "assumptions retired" figure by 30 --
+    a trusted-surface reduction this project did not make, in the direction that
+    flatters it.  That is the same class of error the ledger exists to prevent,
+    so renaming gets its own verb.
+
+    Identity still comes from the measurement, never from this argument: the
+    caller says *which prefix moved where*, the rows are re-keyed, and the
+    canonical type and digest are taken from the admitted row under the new
+    name.  If the mapping is wrong in any way -- target not admitted, source
+    unmatched, collision with a row that already exists -- this raises, and even
+    if it did not, `validate_rows` would then report the live set disagreeing
+    with the kernel.  There is no spelling of this flag that lets an unmeasured
+    name into the ledger.
+
+    A prefix maps the declaration itself (``Real``) and its children
+    (``Real.add``), and nothing else: ``CReal`` is not renamed by ``Real=AxReal``
+    because ``CReal`` neither equals ``Real`` nor starts with ``Real.`` -- which
+    is the very confusion ADR-0522's rename removes.
+    """
+    admitted = {entry_key(row): row for row in measurement.axiom_rows}
+    entries: list[dict[str, Any]] = list(data.get("entries", []))
+    renamed: list[str] = []
+
+    for entry in entries:
+        name = str(entry["name"])
+        for old, new in mapping.items():
+            if name == old:
+                moved = new
+            elif name.startswith(f"{old}."):
+                moved = new + name[len(old) :]
+            else:
+                continue
+            key = (str(entry["prelude"]), moved)
+            if key not in admitted:
+                raise LedgerError(
+                    f"--accept-rename {old}={new}: {entry['prelude']}::{name} would "
+                    f"become {moved}, which the kernel does not admit. A rename is "
+                    "only a rename if the new name is measured; if the declaration "
+                    "actually left, use --accept-population-change."
+                )
+            entry["name"] = moved
+            entry["canonical_type"] = admitted[key]["canonical_type"]
+            entry["type_sha256"] = admitted[key]["type_sha256"]
+            renamed.append(f"{entry['prelude']}::{name}->{moved}")
+            break
+
+    keys = [entry_key(entry) for entry in entries]
+    if len(set(keys)) != len(keys):
+        raise LedgerError("--accept-rename produced duplicate prelude/name keys")
+    entries.sort(key=entry_key)
+    data["entries"] = entries
+    return renamed
+
+
+def parse_rename(argument: str) -> tuple[str, str]:
+    old, separator, new = argument.partition("=")
+    if not separator or not old or not new:
+        raise LedgerError(f"--accept-rename expects OLD=NEW, got {argument!r}")
+    return old, new
+
+
 def accept_population_change(
     data: dict[str, Any],
     measurement: Measurement,
@@ -947,6 +1217,15 @@ def main() -> int:
         help="file rows the kernel no longer admits as retired, and add new ones "
         "as unclassified; required whenever the trusted population moves",
     )
+    parser.add_argument(
+        "--accept-rename",
+        action="append",
+        default=[],
+        metavar="OLD=NEW",
+        help="a declaration (and its dotted children) was RENAMED, not retired: "
+        "carry each live row's authored classification across the new name and "
+        "re-derive its type from the measurement (repeatable)",
+    )
     parser.add_argument("--retired-on", help="ISO date recorded on retired rows")
     parser.add_argument("--retirement-note", help="why the rows left the trusted surface")
     parser.add_argument(
@@ -967,6 +1246,21 @@ def main() -> int:
         print(f"missing ledger: {relative(MANIFEST)}", file=sys.stderr)
         return 1
     data = load_manifest()
+
+    if args.accept_rename:
+        if args.check:
+            print("--check and --accept-rename are exclusive", file=sys.stderr)
+            return 1
+        try:
+            mapping = dict(parse_rename(item) for item in args.accept_rename)
+            renamed = accept_rename(data, measurement, mapping)
+        except LedgerError as error:
+            print(f"LEAN_AXIOM_LEDGER_ERROR|{error}", file=sys.stderr)
+            return 1
+        print(
+            f"LEAN_AXIOM_LEDGER_RENAME|rows={len(renamed)}|"
+            + ",".join(f"{old}->{new}" for old, new in sorted(mapping.items()))
+        )
 
     if args.accept_population_change:
         if args.check:

@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-balanced-bezout-euclidean-update-dependency-audit-result",
+  "state": "nine-roots-classified-two-propext-carriers",
+  "plan": {
+    "path": "artifacts/autogenesis/balanced-bezout-euclidean-update-dependency-audit-plan-v1.json",
+    "sha256": "6d4f77ee296d4cc68bdc78fc49268768505c532c25cd3f66d50bfd4f4fe5b3a3",
+    "commit": "dc3070e68d07db4be69346fa1a8de2efa744c466"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/029ce6f91-balanced-bezout-update-dependency-audit-v1/manifest.json",
+    "sha256": "00eb7464ef7d32de7f9f76ddf940810e6850425272f06f98648b963ee79e0df6",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "execution": {
+    "compiler_invocations": 0,
+    "exporter_invocations": 0,
+    "importer_runs": 1,
+    "proof_bearing_stream_reads": 1,
+    "retries": 0,
+    "new_theorem_submissions": 0
+  },
+  "summary": {
+    "population": 9,
+    "empty_footprint": 7,
+    "propext_bearing": 2,
+    "other_assumption_bearing": 0,
+    "propext_carriers": ["Nat.mul_assoc", "Nat.right_distrib"],
+    "clean_roots": [
+      "Eq.symm",
+      "Eq.trans",
+      "Nat.add_assoc",
+      "Nat.left_distrib",
+      "_private.AxeyumAutogenesisBalancedBezoutEuclideanUpdateV1.0.Axeyum.Autogenesis.rotateFourthThenSwapV1",
+      "_private.AxeyumAutogenesisBalancedBezoutEuclideanUpdateV1.0.Axeyum.Autogenesis.rotateLastFiveV1",
+      "congrArg"
+    ],
+    "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0}
+  },
+  "carriers": [
+    {
+      "name": "Nat.mul_assoc",
+      "declaration_sha256": "9cc915af2d8f3e3f41c767a1f5fa28dd61bc5dc97015abb764535e64d5c55295",
+      "axiom_footprint": ["propext"],
+      "direct_theorem_dependencies": []
+    },
+    {
+      "name": "Nat.right_distrib",
+      "declaration_sha256": "c0e09e5aa296457e76c9755e610c7a1f14681a485e0ed9bfbdf6c22fa12899d8",
+      "axiom_footprint": ["propext"],
+      "direct_theorem_dependencies": [
+        "Eq.trans",
+        "Nat.left_distrib",
+        "Nat.mul_comm",
+        "congr",
+        "congrArg",
+        "congrFun'",
+        "eq_self",
+        "of_eq_true"
+      ]
+    }
+  ],
+  "next_boundary": {
+    "required_replacements": ["Nat.mul_assoc", "Nat.right_distrib"],
+    "v2_method": "inject exact clean leaf contracts as specialization parameters while retaining the V1 witness map, permutations, and equality chain",
+    "unchanged_update_source_except_leaf_injection": true,
+    "v2_compilation_authorized": false
+  },
+  "authority": {
+    "dependency_classification_credit": 1,
+    "euclidean_update_credit": 0,
+    "generic_balanced_bezout_credit": 0,
+    "target_specialization_credit": 0,
+    "cancellation_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "verification": "python3 scripts/check-autogenesis-balanced-bezout-euclidean-update-dependency-audit-result.py",
+  "limitations": "The result classifies only V1's nine direct theorem dependencies. It proves neither a replacement leaf nor an accepted Euclidean update and grants no generic gcd, target, evaluation, fact, or ledger credit."
+}

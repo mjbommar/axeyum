@@ -97,14 +97,14 @@ fn declare_composite_witness(kernel: &mut Kernel) {
         }
         term
     };
-    let real_ty = apply(kernel, "Real", &[]);
-    let real_zero = apply(kernel, "Real.zero", &[]);
-    let real_one = apply(kernel, "Real.one", &[]);
+    let real_ty = apply(kernel, "AxReal", &[]);
+    let real_zero = apply(kernel, "AxReal.zero", &[]);
+    let real_one = apply(kernel, "AxReal.one", &[]);
     let additive = {
-        let inner_left = apply(kernel, "Real.add", &[real_zero, real_one]);
-        let left = apply(kernel, "Real.add", &[inner_left, real_one]);
-        let inner_right = apply(kernel, "Real.add", &[real_one, real_one]);
-        let right = apply(kernel, "Real.add", &[real_zero, inner_right]);
+        let inner_left = apply(kernel, "AxReal.add", &[real_zero, real_one]);
+        let left = apply(kernel, "AxReal.add", &[inner_left, real_one]);
+        let inner_right = apply(kernel, "AxReal.add", &[real_one, real_one]);
+        let right = apply(kernel, "AxReal.add", &[real_zero, inner_right]);
         let level_zero = kernel.level_zero();
         let level_one = kernel.level_succ(level_zero);
         let name = named(kernel, "Eq");
@@ -113,7 +113,7 @@ fn declare_composite_witness(kernel: &mut Kernel) {
         let term = kernel.app(term, left);
         kernel.app(term, right)
     };
-    let additive_proof = apply(kernel, "Real.add_assoc", &[real_zero, real_one, real_one]);
+    let additive_proof = apply(kernel, "AxReal.add_assoc", &[real_zero, real_one, real_one]);
     let int_one = apply(kernel, "Int.one", &[]);
     let positive = apply(kernel, "Int.zero_lt_one", &[]);
     let euclidean_proof = apply(
@@ -148,7 +148,7 @@ fn declare_composite_witness(kernel: &mut Kernel) {
 fn int_footprints_name_only_what_a_declaration_actually_uses() {
     let mut kernel = Kernel::new();
     let _ = build_int_prelude(&mut kernel).expect("Int prelude must build");
-    let _ = build_arith_prelude(&mut kernel).expect("Real prelude must build");
+    let _ = build_arith_prelude(&mut kernel).expect("AxReal prelude must build");
 
     let trusted = kernel
         .environment()
@@ -180,11 +180,11 @@ fn int_footprints_name_only_what_a_declaration_actually_uses() {
     assert_eq!(
         composite,
         vec![
-            "Real",
-            "Real.add",
-            "Real.add_assoc",
-            "Real.one",
-            "Real.zero",
+            "AxReal",
+            "AxReal.add",
+            "AxReal.add_assoc",
+            "AxReal.one",
+            "AxReal.zero",
         ],
     );
     // Derived from the axiom-free `Nat` development: nothing at all — including
@@ -217,7 +217,7 @@ fn int_footprints_name_only_what_a_declaration_actually_uses() {
     );
     assert_ne!(
         footprint_names(&kernel, "Int.euclidean_decomposition"),
-        footprint_names(&kernel, "Real.add_assoc"),
+        footprint_names(&kernel, "AxReal.add_assoc"),
     );
 
     // ...and no declaration may drag in the whole environment.
@@ -225,7 +225,7 @@ fn int_footprints_name_only_what_a_declaration_actually_uses() {
         "combined",
         "Int.mul_one",
         "Int.euclidean_decomposition",
-        "Real.add_assoc",
+        "AxReal.add_assoc",
     ] {
         let size = footprint_names(&kernel, name).len();
         assert!(
@@ -239,7 +239,7 @@ fn int_footprints_name_only_what_a_declaration_actually_uses() {
 #[test]
 fn an_axiom_rests_on_itself() {
     let mut kernel = Kernel::new();
-    let _ = build_arith_prelude(&mut kernel).expect("Real prelude must build");
+    let _ = build_arith_prelude(&mut kernel).expect("AxReal prelude must build");
 
     // Matches Lean's `#print axioms` on an axiom. Omitting the root would let a
     // fact cite an axiom as its own axiom-free evidence.
@@ -247,9 +247,9 @@ fn an_axiom_rests_on_itself() {
     // The subject was `Int.euclidean_decomposition` until 2026-08-16, when it
     // stopped being an axiom and became a theorem — at which point this test
     // was asserting a self-reference property of something with an EMPTY
-    // footprint, and failed. It now runs on `Real.add_comm`, which is still
+    // footprint, and failed. It now runs on `AxReal.add_comm`, which is still
     // assumed. The real prelude's 30 axioms are where this property can be
     // exercised at all, and if that ever reaches zero this test must move again
     // rather than be deleted: the property is about axioms, not about ℝ.
-    assert!(footprint_names(&kernel, "Real.add_comm").contains(&"Real.add_comm".to_owned()));
+    assert!(footprint_names(&kernel, "AxReal.add_comm").contains(&"AxReal.add_comm".to_owned()));
 }

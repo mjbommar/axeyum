@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-clean-dvd-antisymm-result",
+  "state": "first-invocation-aborted-at-missing-native-successor-positivity-leaf-no-retry",
+  "plan": {"path": "artifacts/autogenesis/nat-gcd-fib-add-self-clean-dvd-antisymm-plan-v3.json", "sha256": "120863fbb5bc2d8ecd16b8c8f6e9043d3da176f796239f62151a55b3481cc79c", "commit": "025e2d83f"},
+  "evidence_pack": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/dda5d54a0-clean-dvd-antisymm-v3/manifest.json", "sha256": "4b3bd8c88a709ede2cab0853778107d50ebaf645e2bcd9bf4fa5625df4d45b1c", "directory_mode": "0555", "file_mode": "0444"},
+  "implementation": {"path": "crates/axeyum-lean-import/examples/clean_dvd_antisymm.rs", "source_sha256": "e027a9b4caf78ab78327c4dd746b1914c0d7ea8eb11ca31e03ed9b7c6b1d931c", "binary_sha256": "4d74f0a8b77134b93bd12af6d61f454e4712551deed28bfe4ba6018a28ae1a66", "commit": "dda5d54a0"},
+  "execution": {"binary_builds": 1, "complete_invocations": 1, "input_stream_reads": 1, "clean_zero_dvd_native_submissions": 1, "clean_le_of_dvd_native_submissions": 1, "clean_dvd_antisymm_submissions": 0, "composition_operations": 0, "published_support_theorems": 0, "exact_target_submissions": 0, "retries": 0, "second_invocation_skipped": true},
+  "decline": {"operation": "construct clean divisibility antisymmetry wholly in the preregistered native kernel", "class": "MissingDeclaration", "diagnostic": "declaration is absent: Nat.succ_pos", "interpretation": "the zero-divisibility repair succeeds, but the native prelude exposes successor positivity through zero_le and le_succ_succ rather than the Mathlib convenience theorem", "partial_kernel_published": false},
+  "authority": {"support_credit": 0, "exact_target_submissions": 0, "target_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_boundary": {"required_next_increment": "preregister inline successor positivity from native zero_le and le_succ_succ before rebuilding clean divisibility antisymmetry"},
+  "verification": "python3 scripts/check-autogenesis-nat-gcd-fib-add-self-clean-dvd-antisymm-result-v3.py",
+  "limitations": "No clean antisymmetry closure or partial kernel was published. This authorizes only a separately preregistered inline native successor-positivity proof; it grants no Fibonacci target or ledger credit."
+}

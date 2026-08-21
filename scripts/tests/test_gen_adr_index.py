@@ -142,6 +142,178 @@ class CollectTests(unittest.TestCase):
         self.assertIn("no adr-*.md", str(caught.exception))
 
 
+class RemoteCollisionTests(unittest.TestCase):
+    """`find_remote_collisions` / `next_free_number`: the cross-checkout guard.
+
+    `--check` (above) only ever reads this working tree, so it cannot see
+    `origin/main` minting the same ADR number for a different decision -- the
+    live defect this repository shipped twice (0471-0474, then 0468-0470,
+    both measured 2026-08-18). These are the pure comparison the network-
+    touching `check_remote` wraps.
+    """
+
+    def test_same_number_different_content_is_a_collision(self) -> None:
+        # A number no real ADR uses. The fixture originally used 0468, a LIVE
+        # number, and a repository-wide renumber (`ADR-0468` -> `ADR-0512`,
+        # itself a collision fix) rewrote the two filenames here and left the
+        # bare `"0468"` assertion behind, because the sed patterns were
+        # `ADR-0468` and `adr-0468-` and a bare number matches neither. The
+        # suite then failed `'0483' != '0468'`. A fixture that names real ADRs
+        # is a fixture the next renumber breaks, so this one names none.
+        collisions = MODULE.find_remote_collisions(
+            ["adr-0999-local-side.md"],
+            ["adr-0999-remote-side.md"],
+        )
+        self.assertEqual(len(collisions), 1)
+        number, local_only, remote_only = collisions[0]
+        self.assertEqual(number, "0999")
+        self.assertEqual(local_only, ["adr-0999-local-side.md"])
+        self.assertEqual(remote_only, ["adr-0999-remote-side.md"])
+
+    def test_identical_filename_on_both_sides_is_not_a_collision(self) -> None:
+        # Shared history: the same lane's ADR, already present on both trees.
+        self.assertEqual(
+            MODULE.find_remote_collisions(["adr-0001-x.md"], ["adr-0001-x.md"]), []
+        )
+
+    def test_number_only_on_one_side_is_not_a_collision(self) -> None:
+        self.assertEqual(
+            MODULE.find_remote_collisions(["adr-0500-x.md"], ["adr-0100-y.md"]), []
+        )
+
+    def test_non_numbered_filenames_are_ignored_not_crashed(self) -> None:
+        # Numbers deliberately disjoint from the "both sides differ" fixture
+        # above, so this exercises only the non-numbered-name skip and not
+        # the both-sides-must-differ guard as well.
+        self.assertEqual(
+            MODULE.find_remote_collisions(
+                ["adr-changelog.md", "adr-0001-x.md"], ["adr-0900-y.md"]
+            ),
+            [],
+        )
+
+    def test_next_free_number_is_one_past_the_higher_side(self) -> None:
+        self.assertEqual(
+            MODULE.next_free_number(
+                ["adr-0480-x.md"], ["adr-0479-y.md", "adr-0477-z.md"]
+            ),
+            "0481",
+        )
+
+
+class CheckRemoteModeTests(unittest.TestCase):
+    """`check_remote`: exit status, SKIP-vs-fail, and the staleness trade."""
+
+    def setUp(self) -> None:
+        self._saved = {
+            name: getattr(MODULE, name)
+            for name in (
+                "remote_ref_commit",
+                "remote_adr_filenames",
+                "fetch_head_age_seconds",
+                "DECISIONS",
+            )
+        }
+        self.addCleanup(lambda: [setattr(MODULE, k, v) for k, v in self._saved.items()])
+
+    def _use_local(self, tmp: Path, filenames: list[str]) -> None:
+        for name in filenames:
+            (tmp / name).write_text("", encoding="utf-8")
+        MODULE.DECISIONS = tmp
+
+    def test_unresolvable_remote_ref_is_skipped_not_failed(self) -> None:
+        MODULE.remote_ref_commit = lambda ref: None
+
+        def _must_not_run(ref: str) -> list[str]:
+            raise AssertionError("remote_adr_filenames must not run when the ref is unresolved")
+
+        MODULE.remote_adr_filenames = _must_not_run
+        with TemporaryDirectory() as tmp:
+            self._use_local(Path(tmp), ["adr-0001-x.md"])
+            self.assertEqual(MODULE.check_remote("origin/main", 24.0, False), 0)
+
+    def test_real_collision_fails_regardless_of_freshness(self) -> None:
+        # One method, not two: both scenarios below depend on the SAME guard
+        # (`if collisions:` firing before the staleness branch is even
+        # reached), so a deletion of that guard must kill exactly one test,
+        # not two that happen to probe it from different angles.
+        MODULE.remote_ref_commit = lambda ref: "deadbeef" * 5
+        MODULE.remote_adr_filenames = lambda ref: ["adr-0002-other.md"]
+        with TemporaryDirectory() as tmp:
+            self._use_local(Path(tmp), ["adr-0002-mine.md"])
+            MODULE.fetch_head_age_seconds = lambda: 0.0
+            self.assertEqual(
+                MODULE.check_remote("origin/main", 24.0, False), 1, "fresh + collision"
+            )
+            MODULE.fetch_head_age_seconds = lambda: 999_999.0
+            self.assertEqual(
+                MODULE.check_remote("origin/main", 24.0, False), 1, "stale + collision"
+            )
+
+    def test_fresh_clean_passes(self) -> None:
+        # Numbers deliberately disjoint from any "both sides claim it"
+        # fixture, so this depends only on the overall clean/exit-0 path and
+        # not on the both-sides-must-differ guard tested above.
+        MODULE.remote_ref_commit = lambda ref: "deadbeef" * 5
+        MODULE.remote_adr_filenames = lambda ref: ["adr-0900-y.md"]
+        MODULE.fetch_head_age_seconds = lambda: 0.0
+        with TemporaryDirectory() as tmp:
+            self._use_local(Path(tmp), ["adr-0001-x.md"])
+            self.assertEqual(MODULE.check_remote("origin/main", 24.0, False), 0)
+
+    def test_stale_clean_is_advisory_not_a_failure_by_default(self) -> None:
+        MODULE.remote_ref_commit = lambda ref: "deadbeef" * 5
+        MODULE.remote_adr_filenames = lambda ref: ["adr-0900-y.md"]
+        MODULE.fetch_head_age_seconds = lambda: 999_999.0
+        with TemporaryDirectory() as tmp:
+            self._use_local(Path(tmp), ["adr-0001-x.md"])
+            self.assertEqual(MODULE.check_remote("origin/main", 24.0, False), 0)
+
+    def test_stale_clean_fails_with_require_fresh(self) -> None:
+        MODULE.remote_ref_commit = lambda ref: "deadbeef" * 5
+        MODULE.remote_adr_filenames = lambda ref: ["adr-0900-y.md"]
+        MODULE.fetch_head_age_seconds = lambda: 999_999.0
+        with TemporaryDirectory() as tmp:
+            self._use_local(Path(tmp), ["adr-0001-x.md"])
+            self.assertEqual(MODULE.check_remote("origin/main", 24.0, True), 1)
+
+
+class CheckRemoteCLITests(unittest.TestCase):
+    """`--check-remote` CLI wiring, through `main()`."""
+
+    def test_flags_are_parsed_and_routed_to_check_remote(self) -> None:
+        calls: list[tuple[str, float, bool]] = []
+
+        def _fake_check_remote(remote_ref: str, max_staleness_hours: float, require_fresh: bool) -> int:
+            calls.append((remote_ref, max_staleness_hours, require_fresh))
+            return 0
+
+        original_check_remote, original_argv = MODULE.check_remote, sys.argv
+        MODULE.check_remote = _fake_check_remote
+        sys.argv = [
+            "gen-adr-index.py",
+            "--check-remote",
+            "--remote-ref",
+            "upstream/main",
+            "--max-staleness-hours",
+            "6",
+            "--require-fresh",
+        ]
+        try:
+            self.assertEqual(MODULE.main(), 0)
+        finally:
+            MODULE.check_remote, sys.argv = original_check_remote, original_argv
+        self.assertEqual(calls, [("upstream/main", 6.0, True)])
+
+    # A real-git end-to-end run of the SKIP path (no mocking at all) was
+    # exercised manually against this checkout's actual `origin/main` while
+    # building this gate, rather than kept as a permanent unit test here: it
+    # would exercise the exact same `remote_ref_commit is None` guard as
+    # `CheckRemoteModeTests.test_unresolvable_remote_ref_is_skipped_not_failed`,
+    # and a second test dying from the same guard's deletion would violate
+    # this suite's one-guard-one-test discipline for no added coverage.
+
+
 class CheckModeTests(unittest.TestCase):
     """`--check` is the gate; it has to notice a hand edit."""
 

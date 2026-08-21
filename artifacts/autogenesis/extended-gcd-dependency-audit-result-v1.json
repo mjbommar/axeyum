@@ -1,0 +1,170 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-extended-gcd-dependency-audit-result",
+  "state": "coefficient-core-is-propext-bearing-xgcd-val-terminal-and-eighteen-novel-dependencies-exposed",
+  "plan": {
+    "path": "artifacts/autogenesis/extended-gcd-dependency-audit-plan-v1.json",
+    "sha256": "c93e5cfa758256112342e9e04459c93d940b958eb4edda688b15a57b35a9c67d"
+  },
+  "pack_manifest": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/609241d91-extended-gcd-dependency-audit-v1/manifest.json",
+    "sha256": "a9177779f2ef4adaf35f4d170c7b2a08eaa1c3a5c76de7ffb10bd43f0baeff49"
+  },
+  "rows": [
+    {
+      "axiom_footprint": [],
+      "class": "empty-footprint",
+      "declaration_sha256": "5169663bb77a2a10781eacda54658f96a269f7ac16a3807eae3b75d1378c3e2e",
+      "direct_theorem_dependencies": [],
+      "name": "Eq.trans"
+    },
+    {
+      "axiom_footprint": [],
+      "class": "empty-footprint",
+      "declaration_sha256": "8f4e7a1d6780998db2749d791ed2648a4b0e132df3332220f0a871727f004011",
+      "direct_theorem_dependencies": ["Eq.symm"],
+      "name": "Int.mul_zero"
+    },
+    {
+      "axiom_footprint": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound", "propext"],
+      "class": "propext-bearing",
+      "declaration_sha256": "3ffb78cd99dbca4e6e63f1d8728ea2ee4d26817e070041167f8b2c2a6e957b55",
+      "direct_theorem_dependencies": ["Eq.symm", "Nat.xgcd.eq_1", "Nat.xgcdAux_fst", "congrArg"],
+      "name": "Nat.xgcdAux_val"
+    },
+    {
+      "axiom_footprint": ["propext"],
+      "class": "propext-bearing",
+      "declaration_sha256": "22f850fc2efa6297736d5ce706e9689681a3585aa420b59853a4b130c332c657",
+      "direct_theorem_dependencies": [],
+      "name": "Nat.xgcd_val"
+    },
+    {
+      "axiom_footprint": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound", "propext"],
+      "class": "propext-bearing",
+      "declaration_sha256": "968d3496f6305471c61ae5b4a00657e34c84263f76929f786882ea393c1d2e5d",
+      "direct_theorem_dependencies": [
+        "Eq.symm",
+        "Eq.trans",
+        "Int.add_mul",
+        "Int.emod_def",
+        "Int.mul_sub",
+        "Nat.gcd.induction",
+        "Nat.xgcdAux_rec",
+        "add_comm",
+        "add_sub_assoc",
+        "congrArg",
+        "forall_congr",
+        "imp_self._simp_1",
+        "implies_congr",
+        "implies_true",
+        "mul_assoc",
+        "mul_comm",
+        "of_eq_true",
+        "sub_add_eq_add_sub",
+        "sub_sub"
+      ],
+      "name": "_private.Mathlib.Data.Int.GCD.0.Nat.xgcdAux_P"
+    },
+    {
+      "axiom_footprint": [],
+      "class": "empty-footprint",
+      "declaration_sha256": "e98220030930d94521e138897f808d9af4b8fb2b34aee5e310856137739508c7",
+      "direct_theorem_dependencies": ["AddZeroClass.add_zero"],
+      "name": "add_zero"
+    },
+    {
+      "axiom_footprint": [],
+      "class": "empty-footprint",
+      "declaration_sha256": "4a78e7643ebdd35c471d6dfa43410bd070d2c5cf6a2eb595cdedd1b56891f31d",
+      "direct_theorem_dependencies": [],
+      "name": "congr"
+    },
+    {
+      "axiom_footprint": [],
+      "class": "empty-footprint",
+      "declaration_sha256": "d39a34eb11556f4a80414b3cbda6ae21118baba14aa37ba6bff92265bf3a853b",
+      "direct_theorem_dependencies": [],
+      "name": "congrArg"
+    },
+    {
+      "axiom_footprint": ["propext"],
+      "class": "propext-bearing",
+      "declaration_sha256": "aea63c83e1f7eee68d34d6a3cf61a1e988318c51459a8c9eb8c5476abc0f5a48",
+      "direct_theorem_dependencies": ["eq_true"],
+      "name": "eq_self"
+    },
+    {
+      "axiom_footprint": [],
+      "class": "empty-footprint",
+      "declaration_sha256": "271535655495fa224eb87f876ad40d73952508b03ba97b8e9a122de11dc8c44c",
+      "direct_theorem_dependencies": ["MulOneClass.mul_one"],
+      "name": "mul_one"
+    },
+    {
+      "axiom_footprint": [],
+      "class": "empty-footprint",
+      "declaration_sha256": "154d47c359f3d2cfb876896c432e67b289cf246c56079cedfbe7fc5fbd6ed839",
+      "direct_theorem_dependencies": ["Eq.symm", "trivial"],
+      "name": "of_eq_true"
+    },
+    {
+      "axiom_footprint": [],
+      "class": "empty-footprint",
+      "declaration_sha256": "d2f2f88917df1056a74a9c6e8e0e8a3f2f2a27ec98b6ab3d10a78b4e2a670502",
+      "direct_theorem_dependencies": ["AddZeroClass.zero_add"],
+      "name": "zero_add"
+    }
+  ],
+  "novel_candidate_dependencies": [
+    "Eq.symm",
+    "Nat.xgcd.eq_1",
+    "Nat.xgcdAux_fst",
+    "Int.add_mul",
+    "Int.emod_def",
+    "Int.mul_sub",
+    "Nat.gcd.induction",
+    "Nat.xgcdAux_rec",
+    "add_comm",
+    "add_sub_assoc",
+    "forall_congr",
+    "imp_self._simp_1",
+    "implies_congr",
+    "implies_true",
+    "mul_assoc",
+    "mul_comm",
+    "sub_add_eq_add_sub",
+    "sub_sub"
+  ],
+  "summary": {
+    "population": 12,
+    "empty_footprint": 8,
+    "propext_bearing": 4,
+    "candidate_coefficient_core_empty": 0,
+    "candidate_coefficient_core_propext_bearing": 3,
+    "xgcd_val_direct_theorem_dependencies": 0,
+    "novel_candidate_dependency_count": 18,
+    "explicit_extended_gcd_reconstruction_authorized": false,
+    "exact_novel_dependency_audit_required": true
+  },
+  "budget": {
+    "exporter_invocations": 0,
+    "batch_importer_runs": 1,
+    "proof_bearing_stream_reads": 1,
+    "retries": 0,
+    "reconstruction_source_compilations": 0,
+    "new_theorem_submissions": 0,
+    "exact_target_submissions": 0,
+    "executor_invocations": 0
+  },
+  "authority": {
+    "proof_terms_rendered": 0,
+    "theorem_types_rendered": 0,
+    "theorem_values_rendered": 0,
+    "support_theorem_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "limitations": "The measured official coefficient core is reference evidence only. This result authorizes neither reconstruction nor admission; Nat.xgcd_val requires a target-owned replacement because its propext footprint has no direct theorem dependency to descend through."
+}

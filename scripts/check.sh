@@ -65,6 +65,11 @@ step fact-depends-tests python3 -m unittest scripts.tests.test_check_fact_depend
 # (`Kernel::theorem_dependencies`) instead of being transcribed -- 18 real edges
 # were missing when this first ran, including two facts proved the same day.
 step fact-depends python3 scripts/check-fact-depends-derived.py --quiet
+step fact-derived-numbers-tests python3 -m unittest scripts.tests.test_check_fact_derived_numbers
+# Same ledger, its PROSE: every number a fact states about its own
+# `axiom_footprint` is re-derived from the array instead of re-read. The fact it
+# was built from said "the 30 axioms" for three days after the array became 26.
+step fact-derived-numbers python3 scripts/check-fact-derived-numbers.py --quiet
 step autogenesis-chain-catalog-tests python3 -m unittest scripts.tests.test_create_autogenesis_chain_catalog
 step autogenesis-chain-catalog python3 scripts/create-autogenesis-chain-catalog.py --check
 step autogenesis-nursery-tests python3 -m unittest scripts.tests.test_check_autogenesis_nursery
@@ -112,6 +117,42 @@ step capability-assurance-tests python3 -m unittest scripts.tests.test_check_cap
 # `evidence` fields, so it drifted unmeasured from 4 areas to 11. Derived and
 # floored now; a differential oracle is NOT counted as an external check.
 step capability-assurance python3 scripts/check-capability-assurance.py --quiet
+# The table names the function behind each capability; a row naming a route that
+# no longer exists is a lie nothing else catches. Item A's "at minimum gated
+# against the routes it describes".
+step capability-routes python3 scripts/check-capability-routes.py
+step capability-routes-controls python3 -m unittest scripts.tests.test_check_capability_routes
+# A control that no gate RUNS cannot fail, so it is not a control. Measured
+# 2026-08-17: 63 of 137 control modules were executed by nothing, and running the
+# 51 that need no cargo found 6 that no longer even import. Ratchet, not a wall.
+step control-tests-reachable python3 scripts/check-control-tests-reachable.py
+step control-tests-reachable-controls python3 -m unittest scripts.tests.test_check_control_tests_reachable
+# The mutation harness itself. Every "exactly one test died" in this repository
+# rests on the mutant having been BUILT and RUN, and until 2026-08-18 nothing
+# checked either: a mutation that broke compilation, and a suite that executed
+# zero tests, both arrived as "not clean" and were scored as coverage. The four
+# outcomes are now distinct, and `self-demo` produces one of each from a real
+# mutation -- so a harness that cannot tell them apart fails here rather than
+# reporting a number nobody measured.
+step mutation-harness-controls python3 -m unittest scripts.tests.test_mutation_controls
+step mutation-harness-four-outcomes python3 scripts/tests/mutation_controls.py self-demo
+step mutation-anchors-are-fresh python3 scripts/tests/mutation_controls.py --check-anchors
+step example-inventory-count python3 scripts/gen-example-inventory.py --check
+step example-inventory-controls ./scripts/tests/test-gen-example-inventory.sh
+step adopted-controls scripts/check-adopted-controls.sh
+# The trusted base, derived rather than eyeballed: the forward call-graph closure
+# from every non-test caller of `Environment::insert_unchecked`. 5,129 function
+# lines of 29,929 in axeyum-lean-kernel/src. Pins the admission gates and the SET
+# of files on the path -- which is how `lean_export.rs` turned up inside it.
+# The SMT-LIB -> rendered-statement transcription: item 3 of the residual trust
+# surface, and the one it calls weaker than the kernel. Every hypothesis axiom a
+# reconstructed module declares must bind back to an `(assert ...)` line of the
+# query, with both sides normalized by independent Python parsers. Self-corrupts
+# and requires the corruption to be caught.
+step lra-hypothesis-binding python3 scripts/check-lra-hypothesis-binding.py
+step lra-hypothesis-binding-controls python3 -m unittest scripts.tests.test_check_lra_hypothesis_binding
+step kernel-trusted-core python3 scripts/check-kernel-trusted-core.py
+step kernel-trusted-core-controls python3 -m unittest scripts.tests.test_check_kernel_trusted_core
 step smt-evidence-tests python3 -m unittest scripts.tests.test_check_smt_evidence_certified
 # Every settled SMT-route fact's own evidence command tests only the VERDICT
 # (`... | tail -1` = unsat), which passes on an UNCERTIFIED refutation --
@@ -140,6 +181,85 @@ step facts-replay ./scripts/check-fact-evidence-replay.sh
 # `scripts/tests/test-gate-scope-controls.sh`.
 step clippy ./scripts/check-clippy-complete.sh
 step gate-controls ./scripts/tests/test-gate-scope-controls.sh
+# Controls for two gates that check OTHER gates, which is where an agreeable
+# checker does the most damage: the local-ci run recorder (a step that exits 0
+# having run zero tests must record `vacuous`, and that guard was unreachable
+# when written) and the fact scaffolder (a `checker_command` must be proved to
+# fail before the fact exists). Seconds each, no workspace build.
+step local-ci-record-controls ./scripts/tests/test-local-ci-record.sh
+# Is the record itself still evidence of anything? A record can exist, be
+# green, and describe a sha nobody has built on top of in days, or a branch
+# that got rebased away, or a step array that disagrees with its own
+# top-level verdict. ENFORCING as of 2026-08-19: it was `--report-only` while
+# the only record in existence (a6ee37c6a-s4.json) was `verdict: FAIL`, since
+# a gate that is red from the day it lands is a gate people learn to ignore.
+# `57af69142-s4.json` is an all-pass record (5/5 steps, 7561 nextest + 179
+# doctests, 6656 s) so the reason for report-only is gone.
+#
+# IF THIS REDS FOR YOU AND YOU CHANGED NOTHING RELEVANT, it is almost always
+# STALE, not broken: the newest record is >48h old, and the fix is to run
+# `scripts/local-ci.sh --record` (~110 min, one lock across the box) and
+# commit the record it leaves in `artifacts/local-ci-runs/`. Do NOT re-add
+# `--report-only` -- that turns the one gate that knows whether the
+# authoritative sweep still passes back into a gate that cannot fail.
+step local-ci-freshness ./scripts/check-local-ci-freshness.sh
+step local-ci-freshness-controls ./scripts/tests/test-check-local-ci-freshness.sh
+# `bench-results/PARITY.md` is this repository's declared headline, and
+# `scripts/parity-run.sh` -- the only thing that writes it -- was invoked by NO
+# gate: not this script, not `just check`, not CI (measured 2026-08-21). The
+# board consequently froze on 2026-08-06 through the steepest improvement in the
+# project's history and nothing went red. This is the gate that reds.
+step parity-freshness ./scripts/check-parity-freshness.py
+step parity-freshness-controls ./scripts/tests/test-check-parity-freshness.sh
+step new-fact-controls ./scripts/tests/test-new-fact-controls.sh
+step lane-commit-controls ./scripts/tests/test-lane-commit.sh
+step lane-push-controls ./scripts/tests/test-lane-push-target.sh
+# The pre-push compile step must build examples/ and tests/. Without
+# `--all-targets` it builds neither, and on 2026-08-20 a non-compiling
+# workspace reached `main` under the hook's own "pushed SHA compiles" line.
+step prepush-all-targets ./scripts/tests/test-prepush-checks-all-targets.sh
+step prepush-worktree-controls ./scripts/tests/test-prepare-prepush-worktree.sh
+step lean-golden-pin-controls ./scripts/tests/test-check-lean-golden-pins.sh
+# ...and the ratchet that makes the two lines above impossible to forget. Both
+# were written, both pass, and one of them was invoked by nothing for a day
+# because registering a control is a manual step separate from writing it.
+step control-registration ./scripts/check-control-registration.sh
+# Ban the shell idioms that print a WRONG ANSWER while exiting 0. Both pinned
+# patterns were real defects on 2026-08-20: `grep -q` piped under pipefail
+# made the SAME tree report 7 orphans then 3, and `$?` after a pipeline
+# reported exit=0 for a script that exits 1.
+step shell-antipatterns ./scripts/check-shell-antipatterns.sh
+# `bench-results/DOMINANCE.md` is generated and had NO `--check` and no gate,
+# so it sat SIX AUDITS behind its own inputs -- its QF_S row claimed 87
+# decided against an artifact recording 93 -- while reading as current.
+step dominance-scoreboard python3 scripts/gen-dominance-scoreboard.py --check
+# The Lean-reconstruction unit tests, moved OUT of `hooks/pre-push` on
+# 2026-08-20. Measured idle: 268 tests, 294s, because each builds Lean
+# preludes -- 90% of the hook's unit sweep and ~45% of every Rust push. They
+# check that a Lean module is built correctly, not that a verdict is sound,
+# so a daily gate is the right home. Neither aggregate gate ran the solver
+# `--lib` sweep at all before this, so this is also the first time they are
+# gated anywhere except the push hook and local-ci.
+step solver-reconstruct-sweep cargo test -p axeyum-solver --lib --features full reconstruct::
+# The one evidence test that builds Lean preludes: 292.973s of a 293.08s
+# suite, measured idle. Skipped in `hooks/pre-push` for that reason, so this
+# is where it runs.
+step evidence-lean-module-wrapper cargo test -p axeyum-solver --features full --test evidence qf_nra_sos_certificate_wrapper_carries_lean_module
+# The axiom-freedom measurements. `axreal: axiom=30` is the whole remaining
+# trusted surface and the claim that the shipped route no longer reaches it
+# rested, until 2026-08-18, on three examples that NO gate ran -- zero
+# invocations across scripts/, justfile and .github/workflows/, while two ADRs
+# cited them as evidence. Each `--require-*` flag makes the exit status depend
+# on the finding. `--release` because they build the whole constructed
+# N/Z/Q/setoid development: 509s release against multiples of that in debug.
+step axiom-freedom-front-door cargo run --release -q -p axeyum-solver --features full \
+    --example front_door_carrier -- --require-axiom-free
+step axiom-freedom-interface-pin cargo run --release -q -p axeyum-solver --features full \
+    --example ring_interface_pin -- --require-identical
+step axiom-freedom-generalized cargo run --release -q -p axeyum-solver --features full \
+    --example ordered_ring_refutation -- --require-empty
+step axiom-freedom-constructed cargo run --release -q -p axeyum-solver --features full \
+    --example ordered_ring_refutation -- --constructed-reals
 step autogenesis-knowledge-controls ./scripts/check-autogenesis-knowledge-controls.sh
 step autogenesis-proposer-isolation ./scripts/check-autogenesis-proposer-isolation.sh
 step autogenesis-induction-search ./scripts/check-autogenesis-induction-search.sh
@@ -157,6 +277,12 @@ step frontier cargo test -p axeyum-solver --test progress_frontier --features fu
 # ... ok"; the corpus `:status` sweep sat inert that way for 15 days. Compiles
 # but does not execute (`--list`), so it is cheap.
 step gate-liveness ./scripts/check-gate-liveness.sh
+# The golden-Lean-module gate: every suite that pins a rendered Lean module's
+# bytes, discovered from the source rather than listed, plus the banner pin that
+# is the one place a module-header change is meant to be seen. Four of these were
+# red on `main` for a day in 2026-08 because no pre-merge gate ran a `tests/*.rs`
+# integration target of theirs; see the script's header.
+step golden-lean-pins ./scripts/check-lean-golden-pins.sh
 # The real-Lean gate. Every suite that hands a generated module to an EXTERNAL
 # `lean` printed `ok` on a machine where Lean 4.30.0 was installed but not on
 # `PATH` (elan keeps toolchains under ~/.elan/toolchains/), so nothing outside
@@ -164,6 +290,15 @@ step gate-liveness ./scripts/check-gate-liveness.sh
 # it REJECTED them (a5975725f). This discovers the toolchain, sets
 # AXEYUM_REQUIRE_LEAN=1 so a missing binary FAILS, and prints how many Lean
 # invocations actually happened. AXEYUM_ALLOW_NO_LEAN=1 for a machine with none.
+# Every `crates/axeyum-lean-kernel/tests/*.rs` must be in EXACTLY ONE of {runs at
+# push time, owned by the real-Lean gate below}. `hooks/pre-push` ran that crate
+# wholesale, so its fifteen real-Lean suites ran twice on every push (2,396 s,
+# measured 2026-08-19); running only the non-Lean half is safe exactly while the
+# other half is provably owned, which is what this asserts. Membership is
+# discovered from the source, so a new suite cannot land outside both halves.
+step kernel-suite-partition-controls python3 -m unittest scripts.tests.test_check_kernel_suites
+step kernel-suite-partition ./scripts/check-kernel-suites.sh --list
+step lean-toolchain-policy ./scripts/tests/test-lean-toolchain-policy.sh
 step lean-gate ./scripts/check-lean-gate.sh
 export RUSTDOCFLAGS="-D warnings" # match CI's deny-warnings rustdoc
 step doc    cargo doc --workspace --all-features --no-deps
@@ -307,6 +442,23 @@ step prelude-reuse  ./scripts/check-prelude-reuse-equivalence.sh
 step aggregate-scope ./scripts/check-aggregate-scope.sh
 step plan-authority python3 scripts/check-plan-authority.py
 step links         ./scripts/check-links.sh
+# ADR numbers are a shared append point ACROSS CHECKOUTS, which `adr-index`
+# above cannot see (it only reads this working tree): two lanes in two clones
+# can each read "the highest number I can see", allocate the same one for two
+# different decisions, and merge clean, because the filenames differ by slug
+# so git never conflicts. Measured 2026-08-18: `origin/main` and this branch
+# had claimed 0471-0474 twice, AND (found live, by this exact gate)
+# 0468-0470 a second time. `--check-remote` diffs this tree's ADR numbers
+# against `origin/main`'s and fails on a real collision, naming it and the
+# next free number; it does NOT fail when `origin/main` is unresolvable (no
+# fetch, no `origin`, not a git checkout) or, on a clean result, when the
+# fetched ref is stale beyond `--max-staleness-hours` -- see `check_remote`'s
+# docstring in gen-adr-index.py for why fail-open is the deliberate side of
+# that trade in both cases, and how a found collision is NOT forgiven by
+# either one. Unlike the justfile's `check` recipe, `step` here never aborts
+# the run on a failing step, so this can stay next to `adr-index` without
+# hiding whether `links` (or anything else) passed.
+step adr-remote-collisions python3 scripts/gen-adr-index.py --check-remote
 
 if [ "$list_only" = "1" ]; then
   echo "check: $ran steps" >&2

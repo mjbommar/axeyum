@@ -1,9 +1,9 @@
 //! Tests for the ordered-ring generalization of an LRA refutation.
 //!
 //! The claims under test are (1) the generalized theorem's measured axiom
-//! footprint is empty, (2) instantiating it at `Real` recovers the original
+//! footprint is empty, (2) instantiating it at `AxReal` recovers the original
 //! statement, (3) under [`RingTelescope::Used`] the recovery is footprint-exact,
-//! and (4) the telescope this module abstracts is *all* of the `Real` package —
+//! and (4) the telescope this module abstracts is *all* of the `AxReal` package —
 //! a 31st axiom cannot slip past it.
 
 use axeyum_ir::{Rational, TermArena, TermId};
@@ -12,7 +12,7 @@ use super::{
     RING_BINDER_NAMES, RING_LAW_BINDERS, RING_SYMBOL_BINDERS, RingTelescope,
     generalize_over_ordered_ring, ring_telescope,
 };
-use crate::reconstruct::arithmetic::{LraReconstructCtx, reconstruct_lra_proof};
+use crate::reconstruct::arithmetic::{LraReconstructCtx, RingSignature, reconstruct_lra_proof};
 
 /// `x ≤ 0 ∧ 1 ≤ x` — the baby-Farkas order chain, the smallest refutation that
 /// reaches the kernel.
@@ -46,7 +46,7 @@ fn general_farkas() -> (TermArena, Vec<TermId>) {
 /// **The result.** A reconstructed Farkas refutation, parameterised over the
 /// ordered-ring interface, has an EMPTY axiom footprint — measured by
 /// `Kernel::axiom_footprint`, not asserted — while the un-generalized statement
-/// it came from rests on `Real` declarations plus its own variable and
+/// it came from rests on `AxReal` declarations plus its own variable and
 /// hypothesis axioms.
 #[test]
 fn generalized_refutation_has_an_empty_axiom_footprint() {
@@ -63,7 +63,7 @@ fn generalized_refutation_has_an_empty_axiom_footprint() {
         generalized.footprint
     );
     // The baseline is NOT empty, so the assertion above discriminates rather
-    // than passing vacuously: 15 Real declarations + 1 variable + 2 hypotheses.
+    // than passing vacuously: 15 AxReal declarations + 1 variable + 2 hypotheses.
     assert_eq!(
         generalized.original_footprint.len(),
         18,
@@ -73,7 +73,7 @@ fn generalized_refutation_has_an_empty_axiom_footprint() {
     assert_eq!(
         generalized.ring_used.len(),
         15,
-        "the baby-Farkas chain uses 15 of the 30 Real declarations: {:?}",
+        "the baby-Farkas chain uses 15 of the 30 AxReal declarations: {:?}",
         generalized.ring_used
     );
     assert_eq!(generalized.ring_binders, 30);
@@ -82,7 +82,7 @@ fn generalized_refutation_has_an_empty_axiom_footprint() {
     assert_eq!(generalized.binder_count(), 30 + 1 + 2);
 }
 
-/// **Nothing is lost.** Applying the generalized theorem to the 30 `Real`
+/// **Nothing is lost.** Applying the generalized theorem to the 30 `AxReal`
 /// constants and to the refutation's own variable/hypothesis axioms is a proof
 /// of `False` the kernel re-checks, and every axiom the original rested on is
 /// back. The generalization is a strengthening, not a different claim.
@@ -184,7 +184,10 @@ fn sum_of_squares_refutation_generalizes_axiom_free() {
         generalized.footprint
     );
     assert!(
-        generalized.ring_used.iter().any(|n| n == "Real.sq_nonneg"),
+        generalized
+            .ring_used
+            .iter()
+            .any(|n| n == "AxReal.sq_nonneg"),
         "the SOS route must reach sq_nonneg, else this covers nothing new: {:?}",
         generalized.ring_used
     );
@@ -209,14 +212,14 @@ fn strict_cycle_refutation_generalizes_axiom_free() {
 
     assert!(generalized.footprint.is_empty());
     assert!(
-        generalized.ring_used.iter().any(|n| n == "Real.lt_trans"),
+        generalized.ring_used.iter().any(|n| n == "AxReal.lt_trans"),
         "expected lt_trans in {:?}",
         generalized.ring_used
     );
     assert!(generalized.instantiation_footprint_is_exact());
 }
 
-/// The abstraction telescope must cover the **whole** `Real` package. If a 31st
+/// The abstraction telescope must cover the **whole** `AxReal` package. If a 31st
 /// declaration is added and not listed here, a refutation using it would keep a
 /// non-empty footprint; this fails first, and loudly, at the source.
 #[test]
@@ -224,8 +227,9 @@ fn the_ring_telescope_is_every_real_declaration() {
     use axeyum_lean_kernel::{Declaration, Kernel, build_arith_prelude};
 
     let mut kernel = Kernel::new();
-    let arith = build_arith_prelude(&mut kernel).expect("Real prelude builds");
-    let telescope: std::collections::BTreeSet<_> = ring_telescope(&arith).into_iter().collect();
+    let arith = build_arith_prelude(&mut kernel).expect("AxReal prelude builds");
+    let signature = crate::reconstruct::arithmetic::RingSignature::from(arith);
+    let telescope: std::collections::BTreeSet<_> = ring_telescope(&signature).into_iter().collect();
     assert_eq!(telescope.len(), RING_BINDER_NAMES.len());
     assert_eq!(RING_SYMBOL_BINDERS + RING_LAW_BINDERS, telescope.len());
 
@@ -236,18 +240,389 @@ fn the_ring_telescope_is_every_real_declaration() {
             Declaration::Axiom { name, .. } => Some(*name),
             _ => None,
         })
-        .filter(|&name| kernel.display_name(name).to_string().starts_with("Real"))
+        .filter(|&name| kernel.display_name(name).to_string().starts_with("AxReal"))
         .collect();
     assert_eq!(
         declared.len(),
         RING_BINDER_NAMES.len(),
-        "the Real package is no longer 30 declarations"
+        "the AxReal package is no longer 30 declarations"
     );
     for name in declared {
         assert!(
             telescope.contains(&name),
-            "`{}` is a Real axiom the ordered-ring telescope does not abstract",
+            "`{}` is an AxReal axiom the ordered-ring telescope does not abstract",
             kernel.display_name(name)
         );
     }
+}
+
+// ---------------------------------------------------------------------------
+// ADR-0512 phase R3: the equality slot.
+// ---------------------------------------------------------------------------
+
+/// Reconstruct `fixture` twice in one context — once with the kernel's `Eq`,
+/// once with the equality slot — generalize each, and specialize the setoid form
+/// back at `Eq`.
+///
+/// One context deliberately: the two statements are then interned in the same
+/// kernel, so comparing them is an [`ExprId`] equality (structural identity, no
+/// rendering and no definitional-equality check that could accept a reshaped
+/// statement).
+fn round_trip(
+    fixture: (TermArena, Vec<TermId>),
+) -> (
+    LraReconstructCtx,
+    super::OrderedRingRefutation,
+    super::OrderedRingRefutation,
+    super::EqSpecialization,
+) {
+    let (arena, assertions) = fixture;
+    let mut ctx = LraReconstructCtx::new();
+    let eq_proof = reconstruct_lra_proof(&mut ctx, &arena, &assertions).expect("reconstructs");
+    let full = generalize_over_ordered_ring(&mut ctx, eq_proof, RingTelescope::FullInterface)
+        .expect("the Eq-shaped refutation generalizes");
+    ctx.enable_setoid_equality()
+        .expect("the equality slot declares");
+    let setoid_proof =
+        reconstruct_lra_proof(&mut ctx, &arena, &assertions).expect("reconstructs again");
+    let setoid =
+        generalize_over_ordered_ring(&mut ctx, setoid_proof, RingTelescope::SetoidInterface)
+            .expect("the setoid refutation generalizes");
+    let specialized =
+        super::specialize_setoid_to_eq(&mut ctx, &setoid, &full).expect("specializes at Eq");
+    (ctx, full, setoid, specialized)
+}
+
+/// **The R3 result.** The 39-binder setoid statement, instantiated at `Eq`,
+/// is the very expression the 30-binder statement already is — not merely
+/// definitionally equal to it.
+///
+/// This is what makes widening the interface a *generalization* rather than a
+/// silent change of claim: if the rewrite through `eq` had reshaped a law, the
+/// specialization would still typecheck (the kernel normalizes) and would still
+/// be axiom-free, and only this identity would notice.
+#[test]
+fn the_setoid_telescope_specializes_back_to_todays_statement() {
+    for fixture in [baby_farkas(), general_farkas()] {
+        let (ctx, full, setoid, specialized) = round_trip(fixture);
+        assert_eq!(
+            full.ring_binders,
+            RING_BINDER_NAMES.len(),
+            "the Eq-shaped telescope is no longer 30"
+        );
+        assert_eq!(
+            setoid.ring_binders,
+            super::SETOID_RING_BINDERS,
+            "the setoid telescope is not 39"
+        );
+        assert_eq!(
+            setoid.ring_binders,
+            full.ring_binders + super::EQUALITY_SLOT_BINDERS,
+            "the equality slot did not widen the interface, so reproducing the statement \
+             would be the trivial claim that 30 binders reproduce 30 binders"
+        );
+        assert!(
+            specialized.reproduces_reference,
+            "instantiating the setoid telescope at Eq did not reproduce today's statement\n\
+             at Eq : {}\ntoday : {}",
+            specialized.statement_rendered, specialized.reference_rendered
+        );
+        assert!(
+            specialized.binder_type_mismatches.is_empty(),
+            "a binder type did not come back verbatim: {:?}",
+            specialized.binder_type_mismatches
+        );
+        assert_eq!(
+            specialized.binder_types_reproduced, full.ring_binders,
+            "the two telescopes did not line up over all {} non-slot positions, so the \
+             comparison above only covered a prefix",
+            full.ring_binders
+        );
+        assert!(
+            specialized.footprint.is_empty(),
+            "the specialization rests on {:?}",
+            specialized.footprint
+        );
+        drop(ctx);
+    }
+}
+
+/// The setoid-generalized statement assumes nothing — the same measurement the
+/// `Eq`-shaped form already passes, re-run over 39 binders instead of 30.
+#[test]
+fn the_setoid_generalization_is_axiom_free() {
+    let (_ctx, _full, setoid, _specialized) = round_trip(general_farkas());
+    assert!(
+        setoid.footprint.is_empty(),
+        "the setoid generalization rests on {:?}",
+        setoid.footprint
+    );
+    assert!(
+        !setoid.original_footprint.is_empty(),
+        "the negative control is empty, so the measurement above is vacuous"
+    );
+}
+
+/// The setoid proof mentions **no** kernel `Eq` constant, and the `Eq`-shaped
+/// proof of the same query mentions several.
+///
+/// The second half is the control that makes the first half a measurement.
+/// `Eq`, `Eq.refl` and `Eq.rec` are an inductive, a constructor and a recursor,
+/// not axioms, so a proof that kept using them still generalizes to an
+/// axiom-free 39-binder theorem — every other number in this module still reads
+/// as success — while being uninstantiable at a carrier whose equality is a
+/// defined relation, which is the whole point of the slot.
+#[test]
+fn the_setoid_proof_mentions_no_kernel_equality_and_the_eq_proof_does() {
+    let (arena, assertions) = general_farkas();
+    let mut ctx = LraReconstructCtx::new();
+    let eq_proof = reconstruct_lra_proof(&mut ctx, &arena, &assertions).expect("reconstructs");
+    let with_eq = super::residual_eq_constants(&ctx, eq_proof);
+    ctx.enable_setoid_equality()
+        .expect("the equality slot declares");
+    let setoid_proof =
+        reconstruct_lra_proof(&mut ctx, &arena, &assertions).expect("reconstructs again");
+    let with_slot = super::residual_eq_constants(&ctx, setoid_proof);
+
+    assert!(
+        !with_eq.is_empty(),
+        "the Eq-shaped proof mentions no equality constant, so the scanner cannot \
+         distinguish the two modes and the assertion below proves nothing"
+    );
+    assert!(
+        with_slot.is_empty(),
+        "the setoid proof still mentions {with_slot:?}"
+    );
+}
+
+/// The setoid telescope requires the slot to have been declared **before**
+/// reconstruction. Asking for it over an `Eq`-shaped proof is refused rather
+/// than generalized over the wrong thing.
+#[test]
+fn the_setoid_telescope_refuses_an_eq_shaped_proof() {
+    let (arena, assertions) = baby_farkas();
+    let mut ctx = LraReconstructCtx::new();
+    let proof = reconstruct_lra_proof(&mut ctx, &arena, &assertions).expect("reconstructs");
+    let refused = generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::SetoidInterface);
+    assert!(
+        refused.is_err(),
+        "a proof built against `Eq` was generalized over the setoid telescope"
+    );
+
+    // And once the slot exists, the OLD proof is still refused — it rests on the
+    // Eq-shaped `AxReal` laws, which the setoid telescope does not bind.
+    ctx.enable_setoid_equality()
+        .expect("the equality slot declares");
+    let still_refused =
+        generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::SetoidInterface);
+    assert!(
+        still_refused.is_err(),
+        "declaring the slot made an Eq-shaped proof look setoid-shaped"
+    );
+}
+
+/// The setoid telescope is exactly the `Eq`-shaped one with nine positions
+/// added, and the 22 laws keep their relative order — which is what lets the
+/// specialization hand the law binders through positionally rather than by name.
+#[test]
+fn the_setoid_binder_table_extends_the_eq_shaped_one() {
+    assert_eq!(super::SETOID_RING_BINDER_NAMES.len(), 39);
+    assert_eq!(
+        &super::SETOID_RING_BINDER_NAMES[..RING_SYMBOL_BINDERS],
+        &RING_BINDER_NAMES[..RING_SYMBOL_BINDERS],
+        "the eight carrier/operation binders moved"
+    );
+    assert_eq!(
+        &super::SETOID_RING_BINDER_NAMES[RING_SYMBOL_BINDERS + super::EQUALITY_SLOT_BINDERS..],
+        &RING_BINDER_NAMES[RING_SYMBOL_BINDERS..],
+        "the 22 law binders are not in the same order in both telescopes"
+    );
+}
+
+/// `carrier_axioms_of` answers a weaker question than its name suggests, and
+/// this pins the difference.
+///
+/// The `axeyum.reconstruct.` namespace is NOT reserved for a query's own free
+/// variables. The `AxReal` route mints eighteen equality-slot axioms there,
+/// Ackermann mints `axeyum.reconstruct.func._*`, and the `.dio` / `.word` /
+/// `.lex` / `.regex` routes all mint under it. Excluding the whole namespace by
+/// prefix therefore lets a route reach "zero carrier axioms" by minting what it
+/// needs under its own name — and the headline claim of this repository is
+/// exactly a zero-carrier-axiom count.
+///
+/// So the honest claim is that BOTH classifiers return empty, and these two
+/// assertions are what make the second one able to fail.
+#[test]
+fn a_minted_axiom_is_not_hidden_by_the_reconstruct_namespace() {
+    let footprint: Vec<String> = [
+        // the query's own — legitimately excluded from both
+        "axeyum.reconstruct.lra.x.0",
+        "axeyum.reconstruct.lra.hyp.1",
+        // minted BY a route, under the same namespace: an assumption either way
+        "axeyum.reconstruct.func._0",
+        "axeyum.reconstruct.lra.setoid.eq_trans",
+        // the carrier's own
+        "AxReal.add_comm",
+    ]
+    .iter()
+    .map(|s| (*s).to_string())
+    .collect();
+
+    assert_eq!(
+        super::carrier_axioms_of(&footprint),
+        vec!["AxReal.add_comm".to_string()],
+        "carrier classification is `outside the reconstruct namespace`"
+    );
+    assert_eq!(
+        super::minted_axioms_of(&footprint),
+        vec![
+            "axeyum.reconstruct.func._0".to_string(),
+            "axeyum.reconstruct.lra.setoid.eq_trans".to_string(),
+        ],
+        "an axiom minted under the reconstruct namespace is still an assumption; \
+         only `x.<n>` and `hyp.<n>` are the query's own"
+    );
+}
+
+/// The narrow shape `is_query_local` accepts, stated as cases rather than left
+/// to the regex-free parser above.
+#[test]
+fn only_indexed_variable_and_hypothesis_names_count_as_query_local() {
+    let mixed: Vec<String> = [
+        "axeyum.reconstruct.lra.x.0",    // yes
+        "axeyum.reconstruct.dio.hyp.12", // yes, another route
+        "axeyum.reconstruct.lra.x",      // no index
+        "axeyum.reconstruct.lra.hyp.n",  // index is not a number
+        "axeyum.reconstruct.lra.slot.0", // indexed, but not x/hyp
+        "axeyum.reconstruct.func._0",    // minted
+    ]
+    .iter()
+    .map(|s| (*s).to_string())
+    .collect();
+    assert_eq!(
+        super::minted_axioms_of(&mixed),
+        vec![
+            "axeyum.reconstruct.lra.x".to_string(),
+            "axeyum.reconstruct.lra.hyp.n".to_string(),
+            "axeyum.reconstruct.lra.slot.0".to_string(),
+            "axeyum.reconstruct.func._0".to_string(),
+        ],
+        "anything under the namespace that is not an INDEXED x/hyp is minted"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// The interface telescope, detached from any refutation (ADR-0515).
+// ---------------------------------------------------------------------------
+
+/// The 30 binder types [`ring_interface_telescope`] computes are **the same
+/// expressions** the generalized statement opens into.
+///
+/// This is what makes the standalone telescope a pin on the shipped statement
+/// rather than a lookalike built beside it: both are interned in the same
+/// kernel, so equality here is `ExprId` identity.
+#[test]
+fn the_standalone_telescope_is_the_generalized_statements_own_prefix() {
+    use axeyum_lean_kernel::ExprNode;
+
+    let (arena, assertions) = baby_farkas();
+    let mut ctx = LraReconstructCtx::new();
+    let proof = reconstruct_lra_proof(&mut ctx, &arena, &assertions)
+        .expect("baby-Farkas instance reconstructs to False");
+    let generalized = generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::FullInterface)
+        .expect("the refutation generalizes");
+
+    let signature = ctx.arith;
+    let interface = super::ring_interface_telescope(&mut ctx.kernel, &signature)
+        .expect("the interface telescope is computable from the same signature");
+    assert_eq!(interface.len(), RING_BINDER_NAMES.len());
+
+    let mut body = generalized.statement;
+    for (position, binder) in interface.iter().enumerate() {
+        let ExprNode::Pi(_, domain, rest, _) = *ctx.kernel.expr_node(body) else {
+            panic!("the generalized statement runs out of binders at position {position}");
+        };
+        assert_eq!(
+            domain, binder.ty,
+            "binder {position} (`{}`) of the generalized statement is not the interface's",
+            binder.binder
+        );
+        body = rest;
+    }
+}
+
+/// **The result ADR-0515 rests on.** The interface telescope read off the
+/// axiomatized `AxReal` package and the one read off the **axiom-free** `Int`
+/// development are the same 30 statements, rendered byte for byte.
+///
+/// So the ledger's 30 digest pins do not need the axioms: the same canonical
+/// types are produced by a development whose trusted surface is zero. A
+/// difference here would not be a bug in this test — it would be the honest
+/// report that the two say different things, and that moving the pin is a
+/// silent weakening.
+#[test]
+fn the_interface_is_the_same_statements_over_real_and_over_int() {
+    use axeyum_lean_kernel::{Kernel, build_arith_prelude, build_int_prelude};
+
+    let mut real_kernel = Kernel::new();
+    let arith = build_arith_prelude(&mut real_kernel).expect("the AxReal package builds");
+    let real = super::ring_interface_telescope(&mut real_kernel, &RingSignature::from(arith))
+        .expect("the AxReal interface telescope is computable");
+
+    let mut int_kernel = Kernel::new();
+    let int = build_int_prelude(&mut int_kernel).expect("the Int development builds");
+    let integer = super::ring_interface_telescope(&mut int_kernel, &RingSignature::from(int))
+        .expect("the Int interface telescope is computable");
+
+    assert_eq!(real.len(), 30);
+    assert_eq!(integer.len(), 30);
+    let differing: Vec<&str> = real
+        .iter()
+        .zip(integer.iter())
+        .filter(|(r, i)| r.rendered != i.rendered)
+        .map(|(r, _)| r.binder)
+        .collect();
+    assert!(
+        differing.is_empty(),
+        "the axiom-free `Int` interface differs from the axiomatized `AxReal` one at {} of 30 \
+         binders: {differing:?}",
+        differing.len()
+    );
+    // The control on that zero: the two telescopes really were read from
+    // different environments, so "identical" is not "compared with itself".
+    assert!(real[0].source.starts_with("AxReal"), "{}", real[0].source);
+    assert!(
+        integer[0].source.starts_with("Int"),
+        "{}",
+        integer[0].source
+    );
+}
+
+/// The presence guard: a signature naming a declaration that is not in the
+/// environment is refused, rather than producing a telescope with a hole in it.
+///
+/// The empty kernel is not an arbitrary choice of "foreign environment". A
+/// [`NameId`](axeyum_lean_kernel::NameId) is an **index**, so a signature
+/// carried into a *populated* other kernel resolves silently to whatever
+/// declarations happen to sit at those indices — measured while writing this
+/// test, the `AxReal` signature read against a kernel carrying the `Int`
+/// development produced 30 well-formed binders sourced from `Nat.le`,
+/// `Nat.beq_refl`, `Nat.pow_succ`, … and no error at all. Presence cannot see
+/// that; [`RingSignature::validate_in`] is the guard that can, and this guard
+/// only claims the narrower thing.
+#[test]
+fn the_interface_telescope_refuses_a_signature_the_environment_does_not_carry() {
+    use axeyum_lean_kernel::{Kernel, build_arith_prelude};
+
+    let mut real_kernel = Kernel::new();
+    let arith = build_arith_prelude(&mut real_kernel).expect("the AxReal package builds");
+    let mut empty = Kernel::new();
+
+    let err = super::ring_interface_telescope(&mut empty, &RingSignature::from(arith))
+        .expect_err("a signature the environment does not carry must be refused");
+    let rendered = format!("{err:?}");
+    assert!(
+        rendered.contains("is not in this environment"),
+        "the refusal must name the missing entry: {rendered}"
+    );
 }

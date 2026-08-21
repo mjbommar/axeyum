@@ -22,11 +22,10 @@ That tests the **verdict**. It does not test whether the refutation was
 
 So the invariant holds today — by practice, not by enforcement. Nothing stops
 the nineteenth from being uncertified, and the evidence command would not
-notice. Demonstrated on a dedicated mutation control,
-`scripts/tests/fixtures/qf-nia-square-two-uncertified.smt2`: a genuinely
-unsatisfiable instance the exact integer-square decider refutes but cannot yet
-certify. The verdict-only command shape **exits 0** on it while the evidence
-line reports `kind=unsat-uncertified certified=0`.
+notice. Demonstrated on the public QF_NIA `arith/mod-simp.smt2` regression: a
+genuinely unsatisfiable instance the solver refutes but cannot yet certify. The
+verdict-only command shape **exits 0** on it while the evidence line reports
+`kind=unsat-uncertified certified=0`.
 
 THE CONTROL HAS ALREADY EXPIRED ONCE, which is the point of the guard that
 watches it. Until 2026-08-17 it was `neg-barber-no-such-barber.smt2`; on that
@@ -69,13 +68,13 @@ MIN_INSTANCES = 15
 
 # The negative control: genuinely unsat, NOT certified. See probe().
 #
-# It is a dedicated checker mutation fixture rather than an open knowledge fact:
-# leaving a proved proposition open merely to calibrate a gate would make test
-# state an authority over the fact ledger. The exact `x*x = 2` decider returns
-# Unsat, but the intentionally narrower negative-discriminant certificate
-# declines because D=8 is positive. If a later integer-root certificate covers
-# this shape, this gate must fail and the fixture must move again.
-PROBE = "scripts/tests/fixtures/qf-nia-square-two-uncertified.smt2"
+# It is not a settled fact's evidence row, so calibration cannot force
+# mathematical state. If a later certificate covers this QF_NIA shape, the
+# gate must fail and the control must move again.
+PROBE = (
+    "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/"
+    "cli__regress0__arith__mod-simp.smt2"
+)
 
 
 _CLI: list[str] | None = None
@@ -211,9 +210,9 @@ def probe_failures(probe: dict[str, Any] | None) -> list[str]:
     """The negative control, and the one guard whose failure is good news.
 
     A check that only ever confirms `certified=1` cannot show it would notice
-    `certified=0`. The `x*x = 2` fixture is the discriminating case: really
-    unsatisfiable, so a verdict-only checker passes it, and really uncertified,
-    so this one must be able to see the difference.
+    `certified=0`. The QF_NIA modulo regression is the discriminating case:
+    really unsatisfiable, so a verdict-only checker passes it, and really
+    uncertified, so this one must be able to see the difference.
     """
     if probe is None:
         return [

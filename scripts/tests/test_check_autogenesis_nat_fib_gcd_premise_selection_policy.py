@@ -48,6 +48,23 @@ class NatFibGcdPremiseSelectionPolicyTests(unittest.TestCase):
     def test_execution_credit_is_rejected(self):
         self.reject(lambda value: value["authority"].__setitem__("evaluation_credit_so_far", 1), "authority")
 
+    def test_live_progress_must_be_a_proved_prefix(self):
+        facts = copy.deepcopy(self.facts)
+        later = facts["F:ml430-nat-fib-gcd-d1d98407"]
+        later["epistemic_status"] = "proved"
+        later["proof_route"] = "kernel-lean"
+        later["axiom_footprint"] = []
+        later["evidence"] = [{"check_status": "checked"}]
+        with self.assertRaisesRegex(MODULE.PremiseSelectionError, "proved prefix"):
+            MODULE.validate_policy(self.policy, self.reviewed, facts)
+
+    def test_settled_live_fact_requires_axiom_free_kernel_evidence(self):
+        facts = copy.deepcopy(self.facts)
+        first = facts["F:ml430-nat-fib-add-two-b86e0c82"]
+        first["evidence"] = []
+        with self.assertRaisesRegex(MODULE.PremiseSelectionError, "kernel evidence"):
+            MODULE.validate_policy(self.policy, self.reviewed, facts)
+
 
 if __name__ == "__main__":
     unittest.main()

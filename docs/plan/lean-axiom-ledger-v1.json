@@ -1,19 +1,40 @@
 {
   "version": 2,
   "title": "Axeyum Lean reconstruction prelude axiom ledger",
-  "population_as_of": "2026-08-16",
+  "population_as_of": "2026-08-17",
   "measurement": {
     "axiom_rows_command": "cargo run --quiet -p axeyum-lean-kernel --example prelude_axiom_inventory",
-    "trusted_surface_command": "cargo run --quiet -p axeyum-lean-kernel --example nat_axiom_inventory",
+    "trusted_surface_command": "cargo run --quiet --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed",
     "type_identity": "sha256 of Kernel::render_lean(declaration.ty) UTF-8 bytes",
     "preludes": [
+      "axreal",
+      "complex",
+      "creal",
       "integer",
       "logic",
       "nat",
-      "real",
+      "rat",
       "string"
     ],
     "trusted_surface": {
+      "axreal": {
+        "axiom": 30,
+        "opaque": 0,
+        "quotient": 0,
+        "total_trusted": 30
+      },
+      "complex": {
+        "axiom": 0,
+        "opaque": 0,
+        "quotient": 0,
+        "total_trusted": 0
+      },
+      "creal": {
+        "axiom": 0,
+        "opaque": 0,
+        "quotient": 0,
+        "total_trusted": 0
+      },
       "integer": {
         "axiom": 0,
         "opaque": 0,
@@ -32,26 +53,29 @@
         "quotient": 0,
         "total_trusted": 0
       },
-      "real": {
-        "axiom": 30,
+      "rat": {
+        "axiom": 0,
         "opaque": 0,
         "quotient": 0,
-        "total_trusted": 30
+        "total_trusted": 0
       },
       "string": {
-        "axiom": 1,
+        "axiom": 0,
         "opaque": 0,
         "quotient": 0,
-        "total_trusted": 1
+        "total_trusted": 0
       }
     },
     "axiom_counts": {
+      "axreal": 30,
+      "complex": 0,
+      "creal": 0,
       "integer": 0,
       "logic": 0,
       "nat": 0,
-      "real": 30,
-      "string": 1,
-      "total": 31
+      "rat": 0,
+      "string": 0,
+      "total": 30
     }
   },
   "trust_policy": {
@@ -90,8 +114,8 @@
   ],
   "entries": [
     {
-      "prelude": "real",
-      "name": "Real",
+      "prelude": "axreal",
+      "name": "AxReal",
       "canonical_type": "Sort (1)",
       "type_sha256": "73d4fe359be51073c75f6c2a03507b52a55364cf0c923d65def2fa12cb438933",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
@@ -103,10 +127,10 @@
       "note": "Carrier sort of the real reconstruction profile; intentionally abstract."
     },
     {
-      "prelude": "real",
-      "name": "Real.add",
-      "canonical_type": "((x0 : Real) -> ((x1 : Real) -> Real))",
-      "type_sha256": "f2e8a9c49ce5206d637c9c5ee49f06f6a3af55513878d9f7e8e384eea3aa4f81",
+      "prelude": "axreal",
+      "name": "AxReal.add",
+      "canonical_type": "((x0 : AxReal) -> ((x1 : AxReal) -> AxReal))",
+      "type_sha256": "9a1095ebb7e7f3c8be0739e50fdeb8e477e65eef4654053d850e60af4945506e",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
       "classification": "primitive-interface",
       "owner": "axeyum-lean-kernel",
@@ -116,10 +140,10 @@
       "note": "Binary operation of the ring interface; intentionally abstract."
     },
     {
-      "prelude": "real",
-      "name": "Real.add_assoc",
-      "canonical_type": "((x0 : Real) -> ((x1 : Real) -> ((x2 : Real) -> Eq.{1} Real (Real.add (Real.add x0 x1) x2) (Real.add x0 (Real.add x1 x2)))))",
-      "type_sha256": "010706d27846e58f8806ea5c1cf86f36006509e6ba0d1fe53c30bc6a815e0375",
+      "prelude": "axreal",
+      "name": "AxReal.add_assoc",
+      "canonical_type": "((x0 : AxReal) -> ((x1 : AxReal) -> ((x2 : AxReal) -> Eq.{1} AxReal (AxReal.add (AxReal.add x0 x1) x2) (AxReal.add x0 (AxReal.add x1 x2)))))",
+      "type_sha256": "89c85f1b696b466df15b38ca075b5a655e12aef7a1a225def814f7b4078c940a",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
       "classification": "external-assumption",
       "owner": "axeyum-lean-kernel",
@@ -129,10 +153,10 @@
       "note": "Associativity of `add`: an abelian-group axiom of the profile."
     },
     {
-      "prelude": "real",
-      "name": "Real.add_comm",
-      "canonical_type": "((x0 : Real) -> ((x1 : Real) -> Eq.{1} Real (Real.add x0 x1) (Real.add x1 x0)))",
-      "type_sha256": "96ac1fae5e7cb3bfce50d0acf0ae06d725ab9db784437abb8dddf22ff2a63fd8",
+      "prelude": "axreal",
+      "name": "AxReal.add_comm",
+      "canonical_type": "((x0 : AxReal) -> ((x1 : AxReal) -> Eq.{1} AxReal (AxReal.add x0 x1) (AxReal.add x1 x0)))",
+      "type_sha256": "b57422809db16ffcc4d601a421b11fe41a90e683fae2da8a95cff9695eb11dee",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
       "classification": "external-assumption",
       "owner": "axeyum-lean-kernel",
@@ -142,10 +166,10 @@
       "note": "Commutativity of `add`: an abelian-group axiom of the profile."
     },
     {
-      "prelude": "real",
-      "name": "Real.add_le_add",
-      "canonical_type": "((x0 : Real) -> ((x1 : Real) -> ((x2 : Real) -> ((x3 : Real) -> ((x4 : Real.le x0 x1) -> ((x5 : Real.le x2 x3) -> Real.le (Real.add x0 x2) (Real.add x1 x3)))))))",
-      "type_sha256": "f2dba407206ae9aee1e7271b20ac080a5ed3be5cc60e819dd51f8ad39e3ba472",
+      "prelude": "axreal",
+      "name": "AxReal.add_le_add",
+      "canonical_type": "((x0 : AxReal) -> ((x1 : AxReal) -> ((x2 : AxReal) -> ((x3 : AxReal) -> ((x4 : AxReal.le x0 x1) -> ((x5 : AxReal.le x2 x3) -> AxReal.le (AxReal.add x0 x2) (AxReal.add x1 x3)))))))",
+      "type_sha256": "1ecd890660212db88dd7f1a1340209521a84afba8a39bc41207908170b54ed3b",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
       "classification": "external-assumption",
       "owner": "axeyum-lean-kernel",
@@ -155,10 +179,10 @@
       "note": "Additive monotonicity of `le`. Stated in the four-argument form; not derivable from the one-sided form, which this profile does not admit."
     },
     {
-      "prelude": "real",
-      "name": "Real.add_lt_add_of_le_of_lt",
-      "canonical_type": "((x0 : Real) -> ((x1 : Real) -> ((x2 : Real) -> ((x3 : Real) -> ((x4 : Real.le x0 x1) -> ((x5 : Real.lt x2 x3) -> Real.lt (Real.add x0 x2) (Real.add x1 x3)))))))",
-      "type_sha256": "61dab1f23de81a2ee826601b5adca6d84e7b1bc845dd9b377198cfb5e32eaf18",
+      "prelude": "axreal",
+      "name": "AxReal.add_lt_add_of_le_of_lt",
+      "canonical_type": "((x0 : AxReal) -> ((x1 : AxReal) -> ((x2 : AxReal) -> ((x3 : AxReal) -> ((x4 : AxReal.le x0 x1) -> ((x5 : AxReal.lt x2 x3) -> AxReal.lt (AxReal.add x0 x2) (AxReal.add x1 x3)))))))",
+      "type_sha256": "81db25978ae163c5610ea820e54f8a29c077120a66e772957c19702af4778a49",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
       "classification": "external-assumption",
       "owner": "axeyum-lean-kernel",
@@ -168,10 +192,10 @@
       "note": "Mixed additive monotonicity; an ordered-ring compatibility assumption connecting `add`, `le`, and `lt`."
     },
     {
-      "prelude": "real",
-      "name": "Real.add_neg",
-      "canonical_type": "((x0 : Real) -> Eq.{1} Real (Real.add x0 (Real.neg x0)) Real.zero)",
-      "type_sha256": "be1f382dc2e9103cd241fa8c87b5c6621ad1dbf15d5f0c282add161c1b9368ed",
+      "prelude": "axreal",
+      "name": "AxReal.add_neg",
+      "canonical_type": "((x0 : AxReal) -> Eq.{1} AxReal (AxReal.add x0 (AxReal.neg x0)) AxReal.zero)",
+      "type_sha256": "d6410774eb71dd100d1840dda4c6cf2e1ef23fe8659634a0ee57dbeb1d0f7dff",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
       "classification": "external-assumption",
       "owner": "axeyum-lean-kernel",
@@ -181,10 +205,10 @@
       "note": "Right inverse for `add`: an abelian-group axiom of the profile."
     },
     {
-      "prelude": "real",
-      "name": "Real.add_zero",
-      "canonical_type": "((x0 : Real) -> Eq.{1} Real (Real.add x0 Real.zero) x0)",
-      "type_sha256": "5fdb128700136eaf8890e16fcb700b26ba436ec4b8ec30e3c4a43080f0c6209f",
+      "prelude": "axreal",
+      "name": "AxReal.add_zero",
+      "canonical_type": "((x0 : AxReal) -> Eq.{1} AxReal (AxReal.add x0 AxReal.zero) x0)",
+      "type_sha256": "b696625c14e848148eac73b7015b4eebf2a1f441e9300611e8486804655088c7",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
       "classification": "external-assumption",
       "owner": "axeyum-lean-kernel",
@@ -194,10 +218,10 @@
       "note": "Right identity for `add`: an abelian-group axiom of the profile."
     },
     {
-      "prelude": "real",
-      "name": "Real.le",
-      "canonical_type": "((x0 : Real) -> ((x1 : Real) -> Prop))",
-      "type_sha256": "a10c86b54d3bc736182d7f41c8b61bd52ddfdc419d11ec68231f003858b4d4b6",
+      "prelude": "axreal",
+      "name": "AxReal.le",
+      "canonical_type": "((x0 : AxReal) -> ((x1 : AxReal) -> Prop))",
+      "type_sha256": "753c8c2001b13a61dc9ecba0b4daadd145d5178cb9769b15f161e4e92386a031",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
       "classification": "primitive-interface",
       "owner": "axeyum-lean-kernel",
@@ -207,10 +231,10 @@
       "note": "Order relation of the profile, declared as a primitive `Prop`-valued relation."
     },
     {
-      "prelude": "real",
-      "name": "Real.le_of_lt",
-      "canonical_type": "((x0 : Real) -> ((x1 : Real) -> ((x2 : Real.lt x0 x1) -> Real.le x0 x1)))",
-      "type_sha256": "d3ecb420bd8b58b96bf42f156b23030ae7a99bb5864c9fda2374ededac593551",
+      "prelude": "axreal",
+      "name": "AxReal.le_of_lt",
+      "canonical_type": "((x0 : AxReal) -> ((x1 : AxReal) -> ((x2 : AxReal.lt x0 x1) -> AxReal.le x0 x1)))",
+      "type_sha256": "902a4ace4a1bcc22926db02f8fc44a630495ef6ead57ec119f3667e8412a3d94",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
       "classification": "external-assumption",
       "owner": "axeyum-lean-kernel",
@@ -220,10 +244,10 @@
       "note": "Connects the two primitive order relations (`lt` implies `le`). Not derivable because `lt` is a primitive, not a definition; load-bearing — `lt_trans` is derived from it."
     },
     {
-      "prelude": "real",
-      "name": "Real.le_refl",
-      "canonical_type": "((x0 : Real) -> Real.le x0 x0)",
-      "type_sha256": "f5c864085fd2bb4fb0f638d9b3cb9cb1f64379761d9accc22a9197ece7a867cd",
+      "prelude": "axreal",
+      "name": "AxReal.le_refl",
+      "canonical_type": "((x0 : AxReal) -> AxReal.le x0 x0)",
+      "type_sha256": "21ecd845e5615f2c29f0ae811192f97ae4e3dea6a2e7fc85f09d127bdc3662ab",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
       "classification": "external-assumption",
       "owner": "axeyum-lean-kernel",
@@ -233,10 +257,10 @@
       "note": "Reflexivity of `le`: a preorder axiom of the profile."
     },
     {
-      "prelude": "real",
-      "name": "Real.le_trans",
-      "canonical_type": "((x0 : Real) -> ((x1 : Real) -> ((x2 : Real) -> ((x3 : Real.le x0 x1) -> ((x4 : Real.le x1 x2) -> Real.le x0 x2)))))",
-      "type_sha256": "1a5c60023b90c8f031e31e9b1873ae601012899f2ec7337959bbea48309fa407",
+      "prelude": "axreal",
+      "name": "AxReal.le_trans",
+      "canonical_type": "((x0 : AxReal) -> ((x1 : AxReal) -> ((x2 : AxReal) -> ((x3 : AxReal.le x0 x1) -> ((x4 : AxReal.le x1 x2) -> AxReal.le x0 x2)))))",
+      "type_sha256": "03c11c1fcb9de331066ec3719ec2fb8e3f364434c7eb9554bc836b1da6b78ca8",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
       "classification": "external-assumption",
       "owner": "axeyum-lean-kernel",
@@ -246,10 +270,10 @@
       "note": "Transitivity of `le`: a preorder axiom of the profile."
     },
     {
-      "prelude": "real",
-      "name": "Real.left_distrib",
-      "canonical_type": "((x0 : Real) -> ((x1 : Real) -> ((x2 : Real) -> Eq.{1} Real (Real.mul x0 (Real.add x1 x2)) (Real.add (Real.mul x0 x1) (Real.mul x0 x2)))))",
-      "type_sha256": "49e4bb494347a7cebb968e140694e73bbb2061fc77606cb54f0f441bd2014239",
+      "prelude": "axreal",
+      "name": "AxReal.left_distrib",
+      "canonical_type": "((x0 : AxReal) -> ((x1 : AxReal) -> ((x2 : AxReal) -> Eq.{1} AxReal (AxReal.mul x0 (AxReal.add x1 x2)) (AxReal.add (AxReal.mul x0 x1) (AxReal.mul x0 x2)))))",
+      "type_sha256": "b50968b27155f838eb986b3471f04dcc721a66bfaf020e0c679f679f8f58033e",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
       "classification": "external-assumption",
       "owner": "axeyum-lean-kernel",
@@ -259,10 +283,10 @@
       "note": "Left distributivity: the commutative-ring axiom linking `add` and `mul`. Load-bearing — `mul_zero` is derived from it."
     },
     {
-      "prelude": "real",
-      "name": "Real.lt",
-      "canonical_type": "((x0 : Real) -> ((x1 : Real) -> Prop))",
-      "type_sha256": "a10c86b54d3bc736182d7f41c8b61bd52ddfdc419d11ec68231f003858b4d4b6",
+      "prelude": "axreal",
+      "name": "AxReal.lt",
+      "canonical_type": "((x0 : AxReal) -> ((x1 : AxReal) -> Prop))",
+      "type_sha256": "753c8c2001b13a61dc9ecba0b4daadd145d5178cb9769b15f161e4e92386a031",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
       "classification": "primitive-interface",
       "owner": "axeyum-lean-kernel",
@@ -272,10 +296,10 @@
       "note": "Strict order relation, declared as a primitive `Prop`-valued relation independent of `le`; the two are connected only by the order-interface assumptions below."
     },
     {
-      "prelude": "real",
-      "name": "Real.lt_irrefl",
-      "canonical_type": "((x0 : Real) -> Not (Real.lt x0 x0))",
-      "type_sha256": "d5e994116fa2552b8f08bb81cc13787eaa9bb29d01514a14ed0964989b25b22d",
+      "prelude": "axreal",
+      "name": "AxReal.lt_irrefl",
+      "canonical_type": "((x0 : AxReal) -> Not (AxReal.lt x0 x0))",
+      "type_sha256": "3f3146b15e86a7a3a488a6f239883501102785bbe518495a0c8f0017a2560325",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
       "classification": "external-assumption",
       "owner": "axeyum-lean-kernel",
@@ -285,10 +309,10 @@
       "note": "Irreflexivity of the primitive `lt`; independent of the `le` axioms."
     },
     {
-      "prelude": "real",
-      "name": "Real.lt_of_le_of_lt",
-      "canonical_type": "((x0 : Real) -> ((x1 : Real) -> ((x2 : Real) -> ((x3 : Real.le x0 x1) -> ((x4 : Real.lt x1 x2) -> Real.lt x0 x2)))))",
-      "type_sha256": "8b1cf1cfc93a487470e1c27fa8e657654e3145091192e124fe86ae9f59740ffd",
+      "prelude": "axreal",
+      "name": "AxReal.lt_of_le_of_lt",
+      "canonical_type": "((x0 : AxReal) -> ((x1 : AxReal) -> ((x2 : AxReal) -> ((x3 : AxReal.le x0 x1) -> ((x4 : AxReal.lt x1 x2) -> AxReal.lt x0 x2)))))",
+      "type_sha256": "a0c71c2fa471224978fcfc7372df6df4cc3ac3874120c77d6a675a282e0eddb9",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
       "classification": "external-assumption",
       "owner": "axeyum-lean-kernel",
@@ -298,10 +322,10 @@
       "note": "Mixed transitivity of the two primitive order relations; an order-interface assumption."
     },
     {
-      "prelude": "real",
-      "name": "Real.lt_of_lt_of_le",
-      "canonical_type": "((x0 : Real) -> ((x1 : Real) -> ((x2 : Real) -> ((x3 : Real.lt x0 x1) -> ((x4 : Real.le x1 x2) -> Real.lt x0 x2)))))",
-      "type_sha256": "124f6579d3deeba5d60cf3d01dad82bd45c09712d5e9af626546ad6e68388c55",
+      "prelude": "axreal",
+      "name": "AxReal.lt_of_lt_of_le",
+      "canonical_type": "((x0 : AxReal) -> ((x1 : AxReal) -> ((x2 : AxReal) -> ((x3 : AxReal.lt x0 x1) -> ((x4 : AxReal.le x1 x2) -> AxReal.lt x0 x2)))))",
+      "type_sha256": "0ce9705a9a600ff66a412d1fca5ed8ace97ad0c3f89e7394aa544e18762ba8e8",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
       "classification": "external-assumption",
       "owner": "axeyum-lean-kernel",
@@ -311,10 +335,10 @@
       "note": "Mixed transitivity of the two primitive order relations; load-bearing — `lt_trans` is derived from it."
     },
     {
-      "prelude": "real",
-      "name": "Real.lt_trans",
-      "canonical_type": "((x0 : Real) -> ((x1 : Real) -> ((x2 : Real) -> ((x3 : Real.lt x0 x1) -> ((x4 : Real.lt x1 x2) -> Real.lt x0 x2)))))",
-      "type_sha256": "e8157e27eeb1a96770c6a82fe7cd3b4c91b5f2614caa6387c93826fd688de4fe",
+      "prelude": "axreal",
+      "name": "AxReal.lt_trans",
+      "canonical_type": "((x0 : AxReal) -> ((x1 : AxReal) -> ((x2 : AxReal) -> ((x3 : AxReal.lt x0 x1) -> ((x4 : AxReal.lt x1 x2) -> AxReal.lt x0 x2)))))",
+      "type_sha256": "9709b10a6ac19cfb0e7b6e8c2b9ee0026504b8ed990fa00474296cb13e8c6142",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
       "classification": "derivable-theorem",
       "owner": "axeyum-lean-kernel",
@@ -324,10 +348,10 @@
       "note": "Derivable from the order interface: `le_of_lt` turns `lt y z` into `le y z`, and `lt_of_lt_of_le` combines it with `lt x y` to give `lt x z`. Route: replace with a checked theorem term over `le_of_lt` and `lt_of_lt_of_le`."
     },
     {
-      "prelude": "real",
-      "name": "Real.mul",
-      "canonical_type": "((x0 : Real) -> ((x1 : Real) -> Real))",
-      "type_sha256": "f2e8a9c49ce5206d637c9c5ee49f06f6a3af55513878d9f7e8e384eea3aa4f81",
+      "prelude": "axreal",
+      "name": "AxReal.mul",
+      "canonical_type": "((x0 : AxReal) -> ((x1 : AxReal) -> AxReal))",
+      "type_sha256": "9a1095ebb7e7f3c8be0739e50fdeb8e477e65eef4654053d850e60af4945506e",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
       "classification": "primitive-interface",
       "owner": "axeyum-lean-kernel",
@@ -337,10 +361,10 @@
       "note": "Binary operation of the ring interface; intentionally abstract."
     },
     {
-      "prelude": "real",
-      "name": "Real.mul_assoc",
-      "canonical_type": "((x0 : Real) -> ((x1 : Real) -> ((x2 : Real) -> Eq.{1} Real (Real.mul (Real.mul x0 x1) x2) (Real.mul x0 (Real.mul x1 x2)))))",
-      "type_sha256": "c22be271299ef5138292168168a43fdf1bd4d4476dbead0c2919def7d79424a1",
+      "prelude": "axreal",
+      "name": "AxReal.mul_assoc",
+      "canonical_type": "((x0 : AxReal) -> ((x1 : AxReal) -> ((x2 : AxReal) -> Eq.{1} AxReal (AxReal.mul (AxReal.mul x0 x1) x2) (AxReal.mul x0 (AxReal.mul x1 x2)))))",
+      "type_sha256": "7ba323e70286173ebede9d8e223a30193688eb946f9ae061f9e4eb89d4a89981",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
       "classification": "external-assumption",
       "owner": "axeyum-lean-kernel",
@@ -350,10 +374,10 @@
       "note": "Associativity of `mul`: a commutative-ring axiom of the profile."
     },
     {
-      "prelude": "real",
-      "name": "Real.mul_comm",
-      "canonical_type": "((x0 : Real) -> ((x1 : Real) -> Eq.{1} Real (Real.mul x0 x1) (Real.mul x1 x0)))",
-      "type_sha256": "3c0b942ac4b04998399a7ab1dde5ac1375448892dbfa2c064fc24b7faf646c53",
+      "prelude": "axreal",
+      "name": "AxReal.mul_comm",
+      "canonical_type": "((x0 : AxReal) -> ((x1 : AxReal) -> Eq.{1} AxReal (AxReal.mul x0 x1) (AxReal.mul x1 x0)))",
+      "type_sha256": "d15d2dd4b854b32a5f47a3c49c7e528780b1c158a9658608e50c8ef910d2828e",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
       "classification": "external-assumption",
       "owner": "axeyum-lean-kernel",
@@ -363,10 +387,10 @@
       "note": "Commutativity of `mul`: a commutative-ring axiom of the profile."
     },
     {
-      "prelude": "real",
-      "name": "Real.mul_le_mul_of_nonneg_left",
-      "canonical_type": "((x0 : Real) -> ((x1 : Real) -> ((x2 : Real) -> ((x3 : Real.le Real.zero x0) -> ((x4 : Real.le x1 x2) -> Real.le (Real.mul x0 x1) (Real.mul x0 x2))))))",
-      "type_sha256": "3ff0e3315918a93418533bc852007c850f0099a2a3e239b84403975fd0b402a8",
+      "prelude": "axreal",
+      "name": "AxReal.mul_le_mul_of_nonneg_left",
+      "canonical_type": "((x0 : AxReal) -> ((x1 : AxReal) -> ((x2 : AxReal) -> ((x3 : AxReal.le AxReal.zero x0) -> ((x4 : AxReal.le x1 x2) -> AxReal.le (AxReal.mul x0 x1) (AxReal.mul x0 x2))))))",
+      "type_sha256": "1efb13a1e2c0fed9f871e5f95ff768a3eb6739d36a155cf44ced2f1ae4cc5ae3",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
       "classification": "external-assumption",
       "owner": "axeyum-lean-kernel",
@@ -376,10 +400,10 @@
       "note": "Multiplicative monotonicity under a nonnegative left factor: the ordered-ring axiom for `mul`. Load-bearing — `mul_nonneg` is derived from it."
     },
     {
-      "prelude": "real",
-      "name": "Real.mul_nonneg",
-      "canonical_type": "((x0 : Real) -> ((x1 : Real) -> ((x2 : Real.le Real.zero x0) -> ((x3 : Real.le Real.zero x1) -> Real.le Real.zero (Real.mul x0 x1)))))",
-      "type_sha256": "ba9072322e8a0653a24193b48c7909982d9ea1d9cacea908434df90281b34a91",
+      "prelude": "axreal",
+      "name": "AxReal.mul_nonneg",
+      "canonical_type": "((x0 : AxReal) -> ((x1 : AxReal) -> ((x2 : AxReal.le AxReal.zero x0) -> ((x3 : AxReal.le AxReal.zero x1) -> AxReal.le AxReal.zero (AxReal.mul x0 x1)))))",
+      "type_sha256": "0e3ef33f4684b720e9d95fef8286288f5d7d12af939b06f0b5cc346319fca937",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
       "classification": "derivable-theorem",
       "owner": "axeyum-lean-kernel",
@@ -389,10 +413,10 @@
       "note": "Derivable from `mul_le_mul_of_nonneg_left` instantiated at `x1 := zero`, `x2 := b`: from `0 <= a` and `0 <= b` it yields `a*0 <= a*b`, and `mul_zero` rewrites `a*0` to `0`. Route: replace with a checked theorem term over `mul_le_mul_of_nonneg_left` and `mul_zero` (itself derivable)."
     },
     {
-      "prelude": "real",
-      "name": "Real.mul_one",
-      "canonical_type": "((x0 : Real) -> Eq.{1} Real (Real.mul x0 Real.one) x0)",
-      "type_sha256": "d8d0e9e72d701ef85b76be29d3cc5f97ee21e4846e8165b726c1cbe6a8ccb902",
+      "prelude": "axreal",
+      "name": "AxReal.mul_one",
+      "canonical_type": "((x0 : AxReal) -> Eq.{1} AxReal (AxReal.mul x0 AxReal.one) x0)",
+      "type_sha256": "905dc270f401d094bca9dab6de51827758fd994576d177ab1d9318fccbc87b55",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
       "classification": "external-assumption",
       "owner": "axeyum-lean-kernel",
@@ -402,10 +426,10 @@
       "note": "Right identity for `mul`: a commutative-ring axiom of the profile."
     },
     {
-      "prelude": "real",
-      "name": "Real.mul_zero",
-      "canonical_type": "((x0 : Real) -> Eq.{1} Real (Real.mul x0 Real.zero) Real.zero)",
-      "type_sha256": "7bebbf5bf8b0eb78d1b6d46281315452269b93e5b4f9f6afcb6a81997dd9827b",
+      "prelude": "axreal",
+      "name": "AxReal.mul_zero",
+      "canonical_type": "((x0 : AxReal) -> Eq.{1} AxReal (AxReal.mul x0 AxReal.zero) AxReal.zero)",
+      "type_sha256": "91d06a7ebaa2bd7ae862690aa81ae68f08cb742ca76cfdcd6a03586c99aefe44",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
       "classification": "derivable-theorem",
       "owner": "axeyum-lean-kernel",
@@ -415,10 +439,10 @@
       "note": "Derivable in any ring: `left_distrib` gives `x*(0+0) = x*0 + x*0`, `add_zero` rewrites the left side to `x*0`, and cancelling with `add_neg`/`add_assoc`/`add_comm` yields `x*0 = 0`. Route: replace with a checked theorem term over `left_distrib`, `add_zero`, `add_assoc`, `add_comm`, `add_neg`."
     },
     {
-      "prelude": "real",
-      "name": "Real.neg",
-      "canonical_type": "((x0 : Real) -> Real)",
-      "type_sha256": "9320571f977aee60b4ad45a17f33141ed397307d63889b68f6e8a90101e36656",
+      "prelude": "axreal",
+      "name": "AxReal.neg",
+      "canonical_type": "((x0 : AxReal) -> AxReal)",
+      "type_sha256": "5fea5c580ac9ac835e3d60d9ae3b8bccfba7913ce4e5f79f7361129f2d285982",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
       "classification": "primitive-interface",
       "owner": "axeyum-lean-kernel",
@@ -428,10 +452,10 @@
       "note": "Additive inverse operation of the ring interface; intentionally abstract."
     },
     {
-      "prelude": "real",
-      "name": "Real.one",
-      "canonical_type": "Real",
-      "type_sha256": "e55fe37737b783cc821bb77a370950bb6a51dcf386ab6ee70d31808409ba412e",
+      "prelude": "axreal",
+      "name": "AxReal.one",
+      "canonical_type": "AxReal",
+      "type_sha256": "c5072556a63d1dca64c66cc5e93df90b6549bfd5f6eea0a1b1acfaa66fd38df9",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
       "classification": "primitive-interface",
       "owner": "axeyum-lean-kernel",
@@ -441,10 +465,10 @@
       "note": "Multiplicative identity constant of the ring interface; intentionally abstract."
     },
     {
-      "prelude": "real",
-      "name": "Real.sq_nonneg",
-      "canonical_type": "((x0 : Real) -> Real.le Real.zero (Real.mul x0 x0))",
-      "type_sha256": "605acf4574faed32958aa25327f592fe46270080b7764c0a4d02e411ed9f2d64",
+      "prelude": "axreal",
+      "name": "AxReal.sq_nonneg",
+      "canonical_type": "((x0 : AxReal) -> AxReal.le AxReal.zero (AxReal.mul x0 x0))",
+      "type_sha256": "5ceb1722fb0c114b8dc277ee24f1bac88a03fc10977ed3731b036b6476e3763d",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
       "classification": "external-assumption",
       "owner": "axeyum-lean-kernel",
@@ -454,10 +478,10 @@
       "note": "Squares are nonnegative. NOT derivable in this profile: the standard proof case-splits on `le_total`, which the real prelude deliberately does not admit. It is therefore a genuine assumption here, and the reason the real profile is a partially ordered ring rather than a linearly ordered one. Consumed by the SOS/NRA certificate route."
     },
     {
-      "prelude": "real",
-      "name": "Real.zero",
-      "canonical_type": "Real",
-      "type_sha256": "e55fe37737b783cc821bb77a370950bb6a51dcf386ab6ee70d31808409ba412e",
+      "prelude": "axreal",
+      "name": "AxReal.zero",
+      "canonical_type": "AxReal",
+      "type_sha256": "c5072556a63d1dca64c66cc5e93df90b6549bfd5f6eea0a1b1acfaa66fd38df9",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
       "classification": "primitive-interface",
       "owner": "axeyum-lean-kernel",
@@ -467,10 +491,10 @@
       "note": "Additive identity constant of the ring interface; intentionally abstract."
     },
     {
-      "prelude": "real",
-      "name": "Real.zero_lt_one",
-      "canonical_type": "Real.lt Real.zero Real.one",
-      "type_sha256": "b8b5fca98eaedc898bf7553c4225a08e801c5b862dbad897ab79e74897a23b5c",
+      "prelude": "axreal",
+      "name": "AxReal.zero_lt_one",
+      "canonical_type": "AxReal.lt AxReal.zero AxReal.one",
+      "type_sha256": "69d2008346a542c24e2442df5976cddee657de7b42f8c01c1b1ad3005ff8799b",
       "source_path": "crates/axeyum-lean-kernel/src/arith_prelude.rs",
       "classification": "external-assumption",
       "owner": "axeyum-lean-kernel",
@@ -478,19 +502,6 @@
       "discharge_status": "retained",
       "discharge_evidence": [],
       "note": "Nontriviality of the profile; excludes the zero ring."
-    },
-    {
-      "prelude": "string",
-      "name": "axeyum.string.2.append",
-      "canonical_type": "((x0 : axeyum.string._2.Str) -> ((x1 : axeyum.string._2.Str) -> axeyum.string._2.Str))",
-      "type_sha256": "5807e40ae2f7047b9c13ec27ba628bd001a37d77633c65598aec24aa94561f25",
-      "source_path": "crates/axeyum-lean-kernel/src/string_prelude.rs",
-      "classification": "primitive-interface",
-      "owner": "axeyum-lean-kernel",
-      "review_owner": "TL3.2",
-      "discharge_status": "retained",
-      "discharge_evidence": [],
-      "note": "Binary carrier operation of the string reconstruction profile; intentionally abstract. Note this row is inserted directly as `Declaration::Axiom` rather than through `declare_axiom(...)`, which is why the earlier 64-row call-site census missed it."
     }
   ],
   "retired_entries": [
@@ -1069,6 +1080,24 @@
         "crates/axeyum-lean-kernel/src/int_prelude.rs",
         "docs/plan/archive/35-int-keystone.md",
         "docs/plan/archive/36-int-remainder.md"
+      ]
+    },
+    {
+      "prelude": "string",
+      "name": "axeyum.string.2.append",
+      "canonical_type": "((x0 : axeyum.string._2.Str) -> ((x1 : axeyum.string._2.Str) -> axeyum.string._2.Str))",
+      "type_sha256": "5807e40ae2f7047b9c13ec27ba628bd001a37d77633c65598aec24aa94561f25",
+      "source_path": "crates/axeyum-lean-kernel/src/string_prelude.rs",
+      "owner": "axeyum-lean-kernel",
+      "review_owner": "TL3.2",
+      "note": "Binary carrier operation of the string reconstruction profile; intentionally abstract. Note this row is inserted directly as `Declaration::Axiom` rather than through `declare_axiom(...)`, which is why the earlier 64-row call-site census missed it.",
+      "retired_on": "2026-08-17",
+      "retirement_note": "Retired: `append` is no longer assumed. `axeyum.string.<n>.append` is now a checked `Declaration::Definition` by structural recursion over `Str.rec`, and its four free-monoid laws (`nil_append`, `cons_append`, `append_nil`, `append_assoc`) are `Declaration::Theorem`s whose proof terms the kernel re-checks on admission. The string prelude trusted surface is empty. Its `primitive-interface`/`retained` classification is overturned by ADR-0513: the carrier `Str` is a constructed inductive, so the row was a `derivable-theorem`. Checked outside this kernel too -- a real `lean` binary accepts the exported module and its `#print axioms` names no `axeyum.string.*` row.",
+      "retirement_evidence": [
+        "crates/axeyum-lean-kernel/src/string_prelude/monoid.rs",
+        "crates/axeyum-lean-kernel/src/string_prelude/tests.rs",
+        "crates/axeyum-lean-kernel/tests/real_lean_string_monoid_crosscheck.rs",
+        "docs/research/09-decisions/adr-0513-string-append-is-constructed-not-assumed.md"
       ]
     }
   ]

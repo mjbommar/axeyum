@@ -1,0 +1,77 @@
+# Instances that render a Lean module NO verdict grips.
+#
+# Until 2026-08-18 this list lived as a comment inside
+# `hypothesis-binding-attestations.txt` — "listed so a later sweep does not
+# re-discover them as news. They are NOT checked." That was honest and it was
+# not enough. A class nothing runs on can only be ENTERED: an instance that
+# becomes bindable stays declined forever, and an instance whose module degrades
+# is never looked at. Both costs were real, and the second one had already been
+# paid: `cvc5__cli__regress0__bv__holes__extract-concat.smt2` sat in this list
+# rendering a SELF-REFUTING module — eleven reflexive `Iff`s under one negation,
+# so Lean's `False` followed from that one axiom with the `.smt2` file never
+# consulted — and no run in this repository ever touched it. It is gone from the
+# list below because its route now declines.
+#
+# So this is a pin now, and it is TWO-SIDED like its four neighbours. Each
+# instance must
+#
+#   * render a module (a route that stops rendering one fails the run, loudly,
+#     rather than silently shrinking the denominator), and
+#   * FAIL the bound, structural, anchored and attestation checks, each named.
+#
+# The only way a declined pin can fail is by an instance getting BETTER. That is
+# exactly the direction a prose list cannot see, and it is the direction this
+# repository has twice discovered by measurement rather than by a check: 95
+# modules were recorded as content-free while they were structural all along,
+# and 66 were recorded as merely `structural` while their queries asserted the
+# disequality outright.
+#
+# WHAT IS HERE, and why each is out of reach. Measured 2026-08-18.
+#
+#   16  QUANTIFIED LIA/BV. The rendered hypothesis is a pi-type
+#       `((x0 : Int) -> … Or/Not/Iff …)` or an `Exists`/`Not Exists` — a shape no
+#       linear-atom parser models, and the atom pool the binder matches against
+#       is a set of ground linear atoms. Binding these needs a checker for
+#       quantified statements, which is a different object.
+#       (The prose list this replaces said 13 quantified and 7 ground. Measured
+#       by path, it is 16 under `quantified/` and 4 that are not — the two
+#       counts were of different things and neither said which.)
+#
+#    1  GROUND, and the hypothesis is the OUTPUT OF A SOLVER STEP rather than a
+#       transcription of any `(assert …)` line, so there is no assertion for it
+#       to bind to:
+#         * `constarr2.smt2` renders one axiom, `Eq.{1} Int Int.zero Int.one`.
+#           The query says `all1 = const 1`, `all2 = const 2`, `all1 = all2`; the
+#           `0 = 1` is what the Diophantine step DERIVED from reading those
+#           arrays at an index. It is a closed proposition and it mentions no
+#           query symbol at all. NOT self-refuting — nothing in the module's own
+#           prelude proves `Int.zero = Int.one` without it — but its Lean
+#           evidence corroborates as little as an attestation's does, and it is
+#           counted here rather than there because the attestation class means a
+#           specific opaque-skeleton SHAPE, which this is not.
+#         * the two `bug593.smt2` rows LEFT this file the moment it became a
+#           check. They bind structurally, and the pin said so on its first run —
+#           which is the whole point of a two-sided class. Read the note in
+#           `hypothesis-binding-structural-instances.txt` before believing the
+#           verdict: their correspondence is SHALLOW, and measuring that is what
+#           the move bought.
+#
+#    1  `extract-concat` — REMOVED, see the header. Its route declines.
+#
+corpus/public-curated/non-incremental/QF_ALIA/cvc5-regress-clean/cli__regress0__arrays__constarr2.smt2
+corpus/public-curated/quantified/BV/bitwuzla-regress-clean/solver__quant__regsmtparselet.smt2
+corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__ari-syqi.smt2
+corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__issue2031-bv-var-elim.smt2
+corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-simp.smt2
+corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__NUM878.smt2
+corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__ari118-bv-2occ-x.smt2
+corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__nested9_true-unreach-call.i_575.smt2
+corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__psyco-107-bv.smt2
+corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress0__quantifiers__ARI176e1.smt2
+corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress0__quantifiers__clock-10.smt2
+corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress0__quantifiers__clock-3.smt2
+corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__006-cbqi-ite.smt2
+corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__cbqi-sdlx-fixpoint-3-dd.smt2
+corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__issue4433-nqe.smt2
+corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__issue5279-nqe.smt2
+corpus/public-curated/quantified/LIA/cvc5-regress-clean/cli__regress1__quantifiers__repair-const-nterm.smt2

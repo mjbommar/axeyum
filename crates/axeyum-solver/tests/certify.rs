@@ -72,3 +72,43 @@ fn agrees_with_a_known_bitvector_identity() {
         CertifyOutcome::CertifiedUnsat { .. }
     ));
 }
+
+/// The arena is a shared DAG, so the symbol scan that precedes enumeration must
+/// cost one visit per *node*, not one per *path*.
+///
+/// This shape is a `bvadd(prev, prev)` chain: 61 DAG nodes whose tree unfolding
+/// has 2^60 leaves. It is not adversarial — it is what a bit-blasted `fp.div`
+/// looks like, and the real instance
+/// (`QF_BVFP/bitwuzla-regress-clean/solver__fp__Float-no-simp3-main.smt2`) made
+/// this scan run 1.28e10 times in 90 s at flat memory and a flat 136 kB stack
+/// before it was memoized.
+///
+/// The width is deliberately over the bit budget, so the call returns
+/// `DomainTooLarge` and the scan is the only thing being measured — no
+/// evaluation happens. The work runs on a worker thread so a regression
+/// **fails** here instead of hanging the suite.
+#[test]
+fn symbol_scan_does_not_unfold_a_shared_dag() {
+    use std::time::Duration;
+
+    let (tx, rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("shared_dag_x", 32).unwrap();
+        let mut term = x;
+        for _ in 0..60 {
+            term = arena.bv_add(term, term).unwrap();
+        }
+        let zero = arena.bv_const(32, 0).unwrap();
+        let eq = arena.eq(term, zero).unwrap();
+        let _ = tx.send(certify_qf_bv_by_enumeration(&arena, &[eq], 20));
+    });
+    let outcome = rx
+        .recv_timeout(Duration::from_secs(30))
+        .expect("the symbol scan did not return (exponential DAG unfolding?)")
+        .expect("a pure BV query is enumerable in principle");
+    assert!(
+        matches!(outcome, CertifyOutcome::DomainTooLarge { total_bits: 32 }),
+        "a 32-bit symbol is past the 20-bit budget, got {outcome:?}"
+    );
+}

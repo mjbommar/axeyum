@@ -146,5 +146,48 @@ class TheCommittedLedgerAgreesWithTheKernel(unittest.TestCase):
         self.assertEqual(DD.main(["--quiet"]), 0)
 
 
+class ATheoremNameIsWrittenThreeWaysInCheckerCommands(unittest.TestCase):
+    """The pattern reads names out of shell commands, and those commands escape
+    for whatever tool they pipe into. Measured 2026-08-18, matching only the
+    plain form left 8 of 43 kernel-route facts unenforced — including every fact
+    added that day — and the checker reported `missing_edges=0` regardless."""
+
+    def test_a_plain_name_matches(self) -> None:
+        found = DD.THEOREM_RE.search("nat_theorem_inventory -- Nat.mul_one")
+        self.assertEqual(found.group(1), "Nat.mul_one")
+
+    def test_a_regex_escaped_name_matches(self) -> None:
+        found = DD.THEOREM_RE.search(r"grep -qE '^Nat\.pow_add\s'")
+        self.assertEqual(found.group(1), r"Nat\.pow_add")
+
+    def test_a_grep_bracket_escaped_namespaced_name_matches(self) -> None:
+        """How the characterization facts write it. Matching one segment yields
+        `Int.Characterization`, which is not a theorem, so the fact drops out
+        silently rather than failing."""
+        found = DD.THEOREM_RE.search(
+            "grep -qE '^int-categoricity[[:space:]]+Int[.]Characterization[.]categorical'"
+        )
+        self.assertEqual(found.group(1), "Int[.]Characterization[.]categorical")
+
+    def test_the_bracket_form_resolves_to_a_real_theorem_name(self) -> None:
+        """Matching is not enough: the name must be normalised before it can be
+        looked up in the kernel's graph."""
+        fact = {"evidence": [{"checker_command": "x Int[.]Characterization[.]categorical y"}]}
+        self.assertEqual(DD.theorem_of(fact), "Int.Characterization.categorical")
+
+    def test_a_command_naming_no_theorem_still_yields_none(self) -> None:
+        """The control: five facts legitimately run a Rust test instead, and must
+        keep dropping out rather than being matched by accident."""
+        fact = {
+            "evidence": [
+                {
+                    "checker_command": "cargo test -p axeyum-lean-kernel --lib "
+                    "rat_add_renormalises_and_neg_is_an_involution"
+                }
+            ]
+        }
+        self.assertIsNone(DD.theorem_of(fact))
+
+
 if __name__ == "__main__":
     unittest.main()

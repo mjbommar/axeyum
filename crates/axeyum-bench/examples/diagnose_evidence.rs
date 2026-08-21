@@ -19,9 +19,10 @@ use axeyum_cnf::check_alethe;
 use axeyum_ir::{TermArena, TermId, TermNode, render};
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{
-    CheckResult, DeclineReason, Evidence, RouteOutcome, RouteTrace, SolverConfig,
+    CheckResult, DeclineReason, Evidence, EvidenceCheck, RouteOutcome, RouteTrace, SolverConfig,
     UnsatProofOutcome, check_auto_explained, export_qf_aufbv_unsat_proof_within, produce_evidence,
-    prove_qf_abv_unsat_alethe, prove_qf_abv_unsat_alethe_via_elimination, solve,
+    produce_evidence_smtlib_with_script, prove_qf_abv_unsat_alethe,
+    prove_qf_abv_unsat_alethe_via_elimination, solve,
 };
 
 fn elapsed_ms(start: Instant) -> f64 {
@@ -105,7 +106,12 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
         Evidence::UnsatIntQuadraticNegativeDiscriminant(_) => {
             "int-quadratic-negative-discriminant-unsat"
         }
+        Evidence::UnsatIntUnivariatePoly(_) => "int-univariate-poly-unsat",
         Evidence::UnsatNraEvenPower(_) => "nra-even-power-unsat",
+        Evidence::UnsatRealZeroProduct(_) => "real-zero-product-unsat",
+        Evidence::UnsatRealProduct(_) => "real-product-unsat",
+        Evidence::UnsatRealHandelman(_) => "real-handelman-unsat",
+        Evidence::UnsatMonomialBound(_) => "monomial-bound-unsat",
         Evidence::UnsatDiophantine { .. } => "diophantine-unsat",
         Evidence::UnsatBoundedIntBlast(_) => "bounded-int-blast-unsat",
         Evidence::UnsatFiniteDomainPigeonhole(_) => "finite-domain-pigeonhole-unsat",
@@ -133,6 +139,7 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
         Evidence::UnsatFifoBc04(_) => "fifo-bc04-unsat",
         Evidence::UnsatRegexEmptiness { .. } => "regex-emptiness-unsat",
         Evidence::UnsatWordClash(_) => "word-clash-unsat",
+        Evidence::UnsatStringLength { .. } => "string-length-unsat",
         Evidence::UnsatQuantInstanceSet(_) => "quant-instance-set-unsat",
         Evidence::Unknown(_) => "unknown",
     }
@@ -465,5 +472,33 @@ fn main() {
             elapsed_ms(start)
         ),
         Err(error) => println!("produce_evidence: error {error} {:.3}ms", elapsed_ms(start)),
+    }
+
+    // For a STRING script the line above is about a query nobody solves: the flat
+    // arena view `produce_evidence` sees is the ADR-0029 bounded packed-BV encoding
+    // (or, under the word-first fallback, empty), while the shipped route is the text
+    // front door. Reporting only the arena line here made this tool disagree with the
+    // dominance audit on every `QF_S`/`QF_SLIA`/`QF_SEQ` file -- and the audit was
+    // right about which one is the product.
+    let probe = parse_script(&text).expect("parse SMT-LIB file");
+    if probe.uses_bounded_strings || probe.word_only_fallback.is_some() {
+        let start = Instant::now();
+        match produce_evidence_smtlib_with_script(&text, &config) {
+            Ok(produced) => {
+                let outcome = produced.check_outcome();
+                println!(
+                    "produce_evidence_smtlib: {} certified={} checked={} outcome={} {:.3}ms",
+                    evidence_kind(&produced.report.evidence),
+                    produced.report.evidence.is_certified(),
+                    matches!(outcome, Ok(EvidenceCheck::Verified)),
+                    outcome.map_or_else(|_| "error".to_owned(), |o| o.label().to_owned()),
+                    elapsed_ms(start)
+                );
+            }
+            Err(error) => println!(
+                "produce_evidence_smtlib: error {error} {:.3}ms",
+                elapsed_ms(start)
+            ),
+        }
     }
 }

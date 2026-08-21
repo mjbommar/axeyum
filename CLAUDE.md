@@ -419,8 +419,68 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
 
   Do **not** `git read-tree HEAD` the shared index to fix this: another lane may
   have legitimately staged work there, and you would drop their staging. Resync
-  only your own paths, and only after confirming `git diff HEAD -- <path>` is
-  empty for each.
+  only your own paths, and only after confirming the worktree content matches
+  `HEAD` for each.
+
+  **`git diff HEAD -- <path>` is the WRONG test for a file you newly added**, and
+  it fails in the direction that loses work. A new file has no entry in the
+  shared index, so `git diff HEAD` reports it as a *deletion* — the check says
+  "differs", you decline to restage, and the staged deletion of your own new
+  file is exactly what stays behind for the next lane to commit. Two lanes hit
+  this on 2026-08-18, one of them nearly leaving a staged −525-line deletion of
+  two files it had just added. Compare the objects instead, which is defined for
+  a path the index has never seen:
+
+      for f in <paths>; do
+        [ "$(git hash-object "$f")" = "$(git rev-parse "HEAD:$f")" ] \
+          || echo "DIFFERS: $f"
+      done
+- **`read-tree` AND `commit` MUST BE THE SAME SHELL INVOCATION — a refresh in an
+  earlier command is already stale.** Eighth and ninth incidents, 2026-08-17,
+  both by agents that had read the rule above and believed they were following
+  it. `agent-reals-design` deleted 1,623 lines of `rat_prelude`; an hour later
+  `agent-characterization` deleted 1,514 lines of the same file the same way.
+  Each repaired it, but only after the fact.
+
+  The mechanism is that "refresh first" reads as setup rather than as part of
+  the commit. Between one Bash call running `git read-tree HEAD` and a later one
+  running `git commit`, **another lane commits and HEAD moves**; the private
+  index still holds the old blobs, so committing writes them back and reverts
+  the other lane. Nothing in the diff you were looking at hints at it.
+
+      # WRONG -- two invocations, HEAD can move between them
+      git read-tree HEAD
+      … think, edit, run a test …
+      git add -- a.rs && git commit -m "…"
+
+      # RIGHT -- one invocation, nothing between
+      git read-tree HEAD && git add -- a.rs && git commit -m "…"
+
+  Two checks catch it, and the obvious one does not. `git diff --cached --stat`
+  compares against the index's own stale base and looks clean; **`git diff
+  --cached --stat HEAD` is the one that fires.** And after committing, read the
+  FILE COUNT in `git show --stat`, not whether your own hunks look right: the
+  only symptom in the second incident was 15 files where 11 were staged.
+
+  **One invocation is still not enough — VERIFY THE STAGED SET.** Tenth incident,
+  2026-08-18, by a lane that did put `read-tree`, `add` and `commit` in a single
+  Bash call: another lane committed during the `git add`, and the commit reverted
+  six of its files (−302 lines). The window is real work, not a race you can win
+  by typing faster. Amended within a minute, nothing lost, but the rule above
+  does not prevent it.
+
+  So do not trust the sequence — assert the outcome. The staged set must equal
+  your pathspec, checked between `add` and `commit` in the same invocation:
+
+      P="a.rs b.rs"
+      git read-tree HEAD && git add -- $P && \
+        test -z "$(git diff --cached --name-only HEAD | grep -vxF "$(printf '%s\n' $P)")" && \
+        git commit -F - <<'MSG'
+      …
+      MSG
+
+  If that `test` fails, HEAD moved: re-run `read-tree`/`add` and check again. The
+  diff-against-HEAD is what sees it; the index's own base cannot.
 - **`git commit -m "…"` SILENTLY DELETES anything in backticks.** Double quotes
   mean the shell runs each backtick span as a command and substitutes its output,
   which for prose is almost always empty. This repository's commit messages are
@@ -439,6 +499,43 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
 
   `git commit -m 'single quotes'` also works, but only until the message needs an
   apostrophe.
+- **THE STAGED-SET ASSERTION CANNOT CATCH A WRONG PATHSPEC — check it BOTH
+  ways, or use `scripts/lane-commit.sh`.** Eleventh and twelfth incidents,
+  2026-08-18, by the same agent within an hour, in opposite directions, both
+  passing the assertion above.
+
+  *Too narrow.* A pathspec derived from `git status --porcelain
+  --untracked-files=no` after a `git mv`: the renamed-TO files are untracked in a
+  freshly `read-tree`'d private index, so they were omitted. The commit landed
+  four ADR **deletions with none of the additions** — 705 lines removed, 243
+  added — and four decisions were absent from history while every reference in
+  the tree pointed at them.
+
+  *Too wide.* The remedy was `--untracked-files=all`, which in a shared checkout
+  enumerates **other lanes' untracked files**. The next commit swept a sibling
+  lane's new example and another's pinned output file.
+
+  Both passed `test -z "$(git diff --cached --name-only HEAD | grep -vxF …)"`,
+  because that compares the staged set against the pathspec and **both times the
+  pathspec itself was wrong**. It catches HEAD moving under you mid-commit, which
+  is a real hazard and a different one. Note also that with rename detection on,
+  `--name-only` prints only a rename's DESTINATION, so a pathspec that correctly
+  names both sides is reported as half-unstaged — use `--no-renames`.
+
+  `scripts/lane-commit.sh -m <msgfile> -- <path>…` takes the paths explicitly and
+  refuses unless: nothing staged that you did not name, nothing named that failed
+  to stage, and no path in `HEAD` gone from disk with its deletion unstaged in a
+  directory you are committing into (the half-rename). It then resyncs the shared
+  index for exactly those paths, using `git hash-object` against `git rev-parse
+  HEAD:<path>` rather than `git diff HEAD`, and `git reset HEAD -- <path>` for
+  anything another lane moved under you. Controls:
+  `scripts/tests/test-lane-commit.sh`, one case per incident above; each guard
+  mutation-verified to kill exactly one.
+
+  The guard that catches the *wide* case is unreachable when every named path is
+  an explicit file — `git add -A -- <file>` cannot stage anything else. It fires
+  on a pathspec naming a **directory**, which is what actually happened. A suite
+  without that case would let the guard be deleted while staying green.
 - **Lane identity lives in the environment, not in git config.**
   `export AXEYUM_AGENT=<lane>`; the `hooks/commit-msg` hook stamps an
   `Agent:` trailer and refuses an unidentified commit. Do **not** use
@@ -450,6 +547,85 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   this tree. Treat dirty files you don't own as off-limits.
 - Format single files with `rustfmt --edition 2024 <file>` — never
   `cargo fmt`/`cargo fmt -p` (workspace-wide; clobbers other lanes' WIP).
+- **MUTATION TESTING IN THE SHARED WORKTREE BREAKS OTHER LANES' BUILDS, and the
+  failures it causes look like their bug.** Deleting a guard to check that
+  exactly one test dies means editing a tracked source file in place. Every
+  other lane compiles from that same file, so for the seconds or minutes your
+  mutant is on disk, their build sees it.
+
+  Measured 2026-08-20: verifying a `MAX_UNARY_TERMS` budget by `sed`-ing the
+  constant to `4096` and then `2` made a sibling lane's
+  `cargo test --features full --lib reconstruct::` report **8 failures**, all in
+  `string_length::tests`, all complaining about "the **2** budget" while the
+  committed constant was `128`. That lane lost time re-running from a snapshot
+  before working out the failures were not theirs. Nothing in the output pointed
+  at another lane; a mutated constant is indistinguishable from a wrong one.
+
+  `scripts/tests/mutation_controls.py` does not have this problem, and that is
+  most of why it exists: it `copytree`s to a scratch root and mutates the copy.
+  Register a suite there instead. If you must mutate by hand, do it in
+  `W=$(scripts/lane-snapshot.sh HEAD)`, never in the shared checkout — and see
+  the `__pycache__` trap under Gotchas, which makes hand loops report the
+  *previous* mutant's result anyway.
+
+- **THE SESSION SCRATCHPAD IS SHARED BY EVERY LANE IN THE SESSION, and a
+  fixed-name file in it is a shared append point.** `/tmp/claude-1000/<project>/
+  <session>/scratchpad` is per SESSION, not per lane, so concurrent lanes write
+  into one directory. On 2026-08-18 a lane kept its snapshot path in `W.txt`
+  there; another lane overwrote `W.txt` with its own path, and the first lane's
+  next `cp` loop wrote 13 files into the second lane's `/data0` snapshot tree
+  before it noticed. It restored every one with `git show <sha>:<path>`, but any
+  UNCOMMITTED edit inside that snapshot would have been gone.
+
+  The failure is not the collision, it is that the collision was silent and
+  compounded: a wrong path in a variable turns an ordinary `cp` into a write
+  into someone else's checkout. Name scratchpad files per lane
+  (`$AXEYUM_AGENT.W`, not `W.txt`) — the repository's own rule about per-lane
+  state in per-lane paths applies here too, and nothing said so until it cost
+  something. Prefer `scripts/lane-snapshot.sh`, which already stamps its
+  directories with the owning lane, and prefer passing paths in a variable
+  within one invocation over persisting them to a file at all.
+- **Push with `scripts/lane-push.sh`, and never start a second push.** Measured
+  2026-08-19: two pushes started ten minutes apart took **5,510 s and 9,876 s**,
+  and the second's own steps account for only ~4,900 s of that — the rest was
+  spent blocked on `hooks/pre-push`'s worktree flock, printing nothing. `git
+  push` is silent while it waits and has no timeout, so that state is
+  indistinguishable from a hang, and I did it to myself twice in one day. The
+  wrapper refuses with exit **75** when another push is running (`--force`
+  overrides), and prints what the push will COST before starting: the hook exits
+  immediately when no `*.rs`/`*.toml` changed in the range, and otherwise runs a
+  battery measured at **545 s uncontended** — with single steps reaching 2,699 s
+  under lane contention. Batching commits makes that early exit fire less often,
+  not more: one Rust file in a range of twenty commits buys the whole battery.
+- **Heavy cargo goes through `scripts/cargo-serialized.sh <cargo args…>`.** Two
+  dev boxes (s1, s4) have been taken down by concurrent lane builds, and on
+  2026-08-17 a kernel OOM killed a live agent session — one test reached 125 GB,
+  because `recv_timeout` on a detached thread bounds *time*, not memory. Every
+  lane was told in prose to serialize; prose does not hold a lock. The wrapper
+  takes an `flock` on a host-local file (one cargo at a time on this host) and
+  runs the job in a `systemd-run --user --scope` carrying **both** `MemoryMax`
+  and `MemorySwapMax`, so the ceiling kills the JOB instead of leaving the host's
+  OOM killer to pick — and it has picked the agent.
+
+  **`MemoryMax` alone does not bite, and I nearly documented that it does.**
+  Measured here: `MemoryMax=64M` *is* applied (`memory.max` reads `67108864`
+  inside the scope's cgroup) and a 400 MB allocation still succeeds, because
+  `memory.swap.max` is `max` and the cgroup just swaps — on a box with 7 G of
+  swap already 6 G full, so the runaway thrashes and takes the host down anyway.
+  Adding `MemorySwapMax=0` turns the same allocation into status **137**, a
+  SIGKILL from the cgroup's own OOM killer, host untouched. A ceiling without a
+  swap ceiling is decoration.
+
+  So the wrapper carries its own probe: `scripts/cargo-serialized.sh --self-check`
+  over-allocates through the same lock and the same scope construction and fails
+  if it survives. It discriminates — `AXEYUM_CARGO_SWAP=1G` flips it to
+  `NOT-ENFORCED|status=0|out=SURVIVED`, exit 1. **Run it per host**: swap and
+  cgroup delegation differ, so a wrapper that caps s4 says nothing about s5.
+  Exit **75** means the lock timed out, deliberately distinct from a test
+  failure; the job's own status passes through otherwise (verified 0, 101, 75).
+  `AXEYUM_CARGO_MEM` / `AXEYUM_CARGO_SWAP` / `AXEYUM_CARGO_WAIT` /
+  `AXEYUM_CARGO_CPUS` tune it. Snapshot builds should set `AXEYUM_CARGO_LOCK` to
+  a per-tree path so a long cold build does not starve the shared worktree.
 - One writer per worktree/area at a time; long-running background gates are
   run FOREGROUND by the agent that owns them (waiting on completion
   notifications has stalled agents repeatedly).
@@ -495,6 +671,93 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   agents are routinely pointed at it for string triage — a whole lever can get
   built on a fabricated `unsat`. Cross-check any verdict it reports against the
   reference binary and the file's declared `:status` before believing it.
+- **A CERTIFICATE MUST CARRY EVERY DISTINCTION ITS PRODUCER MAKES, or the checker
+  cannot re-derive the refutation — and mutation testing will not find the gap.**
+  Measured 2026-08-20 in `nra_monomial_bound_cert.rs`. The producer distinguished
+  `M < k` from `M <= k` (the first is refuted by `M >= k`, the second only by the
+  strictly stronger `M > k`), but the certificate recorded only the CONSTANT `k`.
+  So `check_monomial_bound_refutation` could not tell them apart and returned
+  `true` for a certificate refuting `a >= 1 ∧ b >= 1 ∧ a*b <= 1` — **satisfiable
+  at a = b = 1**. No wrong `unsat` shipped, because the producer declines that
+  query; but the *independent re-validator*, whose entire job is to catch a
+  producer that is wrong, would have accepted a forged refutation of a SAT query.
+
+  **Mutation testing could not have caught this, and it is important to see why.**
+  Mutation deletes guards that EXIST and asks whether a test dies. A guard that
+  was never written has nothing to delete. Nine guards in that module were each
+  killed by exactly one test, and the module was still unsound. The technique
+  measures the strength of the guards you have; it says nothing about the ones
+  you are missing.
+
+  What does find them: for every case the PRODUCER distinguishes, write an
+  adversarial fixture over a **satisfiable** query in which every other guard
+  passes. If the certificate cannot express the distinction, that fixture is
+  impossible to write — and the impossibility is the finding.
+
+- **BANNED SHELL IDIOMS. Every one of these has printed a WRONG ANSWER that was
+  then reported as fact, and none of them look broken when they fail.** The
+  shared failure mode: the command exits 0 and prints something plausible.
+
+  1. **`echo "exit=$?"` after a pipeline.** `$?` is the LAST stage. Measured
+     2026-08-20: `python3 scripts/create-autogenesis-nursery-dispatch-baseline.py
+     --check 2>&1 | tail -12; echo "exit=$?"` printed `exit=0` for a script that
+     exits **1** — `tail`'s status. Run the command bare, or use
+     `${PIPESTATUS[0]}`, or `set -o pipefail`.
+  2. **`grep -q` as a pipeline consumer under `set -o pipefail`.** `-q` exits at
+     the first match and SIGPIPEs the producer, so the pipeline status is 141 —
+     which `pipefail` turns into "not found". Measured 2026-08-20 in
+     `scripts/check-control-registration.sh`: the same unchanged tree reported
+     **7 orphans on one run and 3 on the next**, because whether the producer
+     finished writing first depends on buffering. Use `grep -c` and test the
+     count; it consumes all input and cannot SIGPIPE.
+  3. **`grep -B1`/`-A1` to pair a commit subject with its trailer.** With
+     `--format=%b` the line before a trailer is BLANK. Measured 2026-08-20:
+     reported **1 commit when there were 21**. Use
+     `git log --format='%H|%s|%(trailers:key=Agent,valueonly)'`.
+  4. **Reporting an empty `grep` as a negative result.** An empty answer and a
+     wrong query are the same observation. This is the grep-shaped case of the
+     coverage trap below; pair the negative with a positive control that MUST
+     produce output, in the same command.
+  5. **Fixed-name files in the session scratchpad.** It is per-SESSION, shared by
+     every lane (see the multi-agent section). `push.log`, `reg.log`, `audit.log`
+     collide; prefix with `$AXEYUM_AGENT`.
+  6. **A "did it finish?" check that has never been shown to fire.** Measured
+     2026-08-20: an end-marker sweep reported `!! NO END MARKER` for two jobs
+     that had completed normally — the scripts had never written markers. The
+     check was wrong, not the job, and the natural reading was the opposite.
+
+  The rule underneath all six, and the one to apply to any command not on this
+  list: **before believing a result, ask what the command would print if it were
+  broken.** If that is what it just printed, it is not evidence.
+
+- **A HAND-ROLLED MUTATION LOOP OVER A PYTHON FILE REPORTS THE PREVIOUS MUTANT'S
+  RESULT.** Python caches compiled modules on `(source mtime in whole SECONDS,
+  source size in bytes)`. Mutation testing produces equal-size mutants **by
+  construction** — one fixed string replaced by another fixed string at
+  different sites — written back to back, well inside one second. So the cache
+  is not a corner case here; it is the default.
+
+  Measured 2026-08-20: three copies of one guard in
+  `check-lra-hypothesis-binding.py` (`bind_structural`, `bind_anchored`,
+  `classify_attestation`, all 138,581 bytes when mutated) each reported killing
+  the *same* test — `AStructuralModule…`. Clearing `__pycache__` between
+  iterations, each kills its own distinct control, correctly named. The loop was
+  restoring and re-mutating exactly as intended; only the bytecode was stale, and
+  `git diff` confirmed the right line changed every time, which is what made the
+  wrong answer so convincing.
+
+  Both directions occur. If the BASELINE is cached, a real kill reports
+  `SURVIVED` — you go hunting a gap that does not exist. If a KILLED mutant is
+  cached, a mutation that changes nothing reports `KILLED` — coverage that was
+  never measured, which is the failure this repository cares most about.
+
+  `scripts/tests/mutation_controls.py` is **not** vulnerable: its `Unittest.build`
+  runs `py_compile` on every target, which rewrites the cache entry. That step
+  was written to catch a subject that does not parse; its second job is invisible
+  from its own code. It is now pinned by `StaleBytecodeTests` and by a self-table
+  entry that keeps the syntax check and drops only the recompile. Use the
+  harness. If you must loop by hand, `find . -name __pycache__ -exec rm -rf {} +`
+  between iterations, and never trust two mutants that report the same dead test.
 - **Tools in this repo have lied more often than the solver has been weak.**
   In one session: a corpus gate that ran zero tests for 15 days while exiting 0;
   a pre-push hook that had never run because `core.hooksPath` was unset; a
@@ -516,6 +779,47 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   that it ran. (`nat_axiom_inventory` now covers `nat`/`logic` and the full
   trusted surface — `Axiom` alone is not it, since `Opaque` has no proof body and
   `Quotient` admits `Quot.sound`.)
+- **`AxReal` and `CReal` are different things and one is a substring of the
+  other.** `CReal` is the CONSTRUCTED reals — a Bishop setoid over the
+  constructed rationals, trusted surface 0 (ADR-0512) — and it is what the
+  shipped route actually reasons over. `AxReal` is the legacy AXIOMATIZED
+  ordered-field package, and it is the repository's only nonzero row:
+  `axreal: axiom=30`. Every other prelude — `logic`, `nat`, `integer`, `rat`,
+  `creal`, `complex`, `string` — measures 0.
+
+  **The prelude key was `real` until 2026-08-19, and the rename was half-done for
+  a day.** ADR-0522 renamed the declarations `Real.*` → `AxReal.*`, but the
+  ledger still filed them under prelude `real`, so the table a referee reads said
+  `real 30` about 30 rows all named `AxReal.…` — the label contradicting its own
+  contents, and inviting precisely the reading the rename existed to prevent
+  ("their reals cost 30 axioms", when the reals are `creal` at 0). Both halves
+  are landed now. Do not reintroduce `real` as a prelude label; the generated
+  ledger carries a paragraph saying what `axreal` is, and `EXPECTED_PRELUDES`
+  in `scripts/gen-lean-axiom-ledger.py` is the list a new one must join.
+
+  A `contains("Real.")` test matches `CReal.` too, and that has already been hit
+  and worked around locally (`examples/front_door_carrier.rs:169` decides the
+  carrier from the carrier DECLARATION for exactly this reason). The same hazard
+  bit the ledger's own prose scanner: `real (\d+), integer (\d+), string (\d+)`
+  matched inside "creal 0, integer 0, string 0" — an ordinary sentence now that
+  the constructed carrier is the one at zero — and scored it against `axreal`,
+  so a document stating the counts CORRECTLY would have redded the gate. Fixed
+  with a `(?<![A-Za-z])` lookbehind and controlled both ways in
+  `scripts/tests/test_lean_axiom_ledger.py`. Decide which package you mean by
+  its declaration, never by a substring; if you must match text, anchor it.
+
+  **Declared is not reached, and both numbers are published** (ADR-0509). The 30
+  are declared; no shipped route reaches them — `Lra`, `DisjunctiveLra`, `Sos`
+  and `IntFarkas` all reconstruct over constructed carriers. So "we have 30
+  axioms" and "our proofs rest on 30 axioms" are both wrong: the first ignores
+  that nothing reaches them, the second is simply false. Quote the pair.
+
+  The count is not a dial. `Real`'s carrier is opaque, so nothing over it is
+  definable and every operation and law must be assumed — **30 is the floor for
+  an axiomatized ordered field**, not a choice. The negative control every
+  axiom-freedom measurement is read against is now one assumed law over a
+  CONSTRUCTED carrier (ADR-0515), which is stronger, because that axiom is
+  provably redundant and the 30 are only relatively consistent.
 - **You cannot read the kernel's theorem inventory from source text.**
   Declarations go through a `.theorem(name, …)` helper taking an interned
   `NameId` field, so grepping `.theorem("…")` returns **zero** matches and

@@ -180,18 +180,102 @@ class LeanAxiomLedgerContractTests(unittest.TestCase):
     def test_a_new_axiom_fails_until_it_is_accepted(self) -> None:
         grown = clone(self.measurement)
         template = grown.axiom_rows[0]
-        invented = {**template, "name": "Real.zzz_invented"}
+        invented = {**template, "name": "AxReal.zzz_invented"}
         grown.axiom_rows.append(invented)
         grown.axiom_rows.sort(key=GEN.entry_key)
         grown.surface_rows.append({**invented, "kind": "axiom"})
-        grown.surface_counts["real"]["axiom"] += 1
-        grown.surface_counts["real"]["total_trusted"] += 1
+        grown.surface_counts["axreal"]["axiom"] += 1
+        grown.surface_counts["axreal"]["total_trusted"] += 1
         self.assertTrue(
             any(
                 "ledger is missing admitted axioms" in failure
                 for failure in self.failures(grown)
             )
         )
+
+    # ---- a rename is not a retirement -------------------------------------
+
+    def test_a_rename_carries_metadata_and_retires_nothing(self) -> None:
+        """`Real` -> `AxReal` (ADR-0522) must not read as 30 retirements."""
+        renamed_measurement = clone(self.measurement)
+        for row in renamed_measurement.axiom_rows + renamed_measurement.surface_rows:
+            if row["prelude"] != "axreal":
+                continue
+            row["name"] = "Ax" + row["name"]
+            row["canonical_type"] = row["canonical_type"].replace("AxReal", "AxAxReal")
+            row["type_sha256"] = GEN.digest(row["canonical_type"])
+        renamed_measurement.axiom_rows.sort(key=GEN.entry_key)
+
+        # Without the deliberate flag this reads as a whole-package swap.
+        failures = self.failures(renamed_measurement)
+        self.assertTrue(any("ledger is missing admitted axioms" in f for f in failures))
+        self.assertTrue(
+            any("the kernel no longer admits" in f for f in failures), failures
+        )
+
+        before = {
+            entry["name"]: entry["classification"]
+            for entry in self.data["entries"]
+            if entry["prelude"] == "axreal"
+        }
+        retired_before = len(self.data["retired_entries"])
+        moved = GEN.accept_rename(
+            self.data, renamed_measurement, {"AxReal": "AxAxReal"}
+        )
+        self.assertEqual(len(moved), len(before))
+        # Nothing was filed as retired: the trusted surface did not shrink.
+        self.assertEqual(len(self.data["retired_entries"]), retired_before)
+        # Every authored classification survived the move.
+        after = {
+            entry["name"]: entry["classification"]
+            for entry in self.data["entries"]
+            if entry["prelude"] == "axreal"
+        }
+        self.assertEqual(
+            {"Ax" + name: value for name, value in before.items()}, after
+        )
+        self.assertEqual(
+            GEN.validate_rows(self.data["entries"], renamed_measurement), []
+        )
+
+    def test_a_rename_whose_target_is_not_admitted_is_refused(self) -> None:
+        with self.assertRaises(GEN.LedgerError) as caught:
+            GEN.accept_rename(self.data, self.measurement, {"AxReal": "Nonesuch"})
+        self.assertIn("which the kernel does not admit", str(caught.exception))
+        self.assertIn("--accept-population-change", str(caught.exception))
+
+    def test_a_rename_prefix_does_not_capture_a_longer_name(self) -> None:
+        """A rename maps `X` and `X.child`, never every name starting with `X`.
+
+        `Real` being a *substring* of `CReal` is the confusion ADR-0522 exists to
+        end; a rename verb that matched on bare `startswith` would reintroduce it
+        one level up. `AxRea` is a proper prefix of every live row's name and of
+        no declaration, so the correct behaviour is to rename nothing at all.
+        """
+        live = [
+            entry["name"]
+            for entry in self.data["entries"]
+            if entry["prelude"] == "axreal"
+        ]
+        self.assertTrue(all(name.startswith("AxRea") for name in live), live)
+        self.assertEqual(
+            GEN.accept_rename(self.data, self.measurement, {"AxRea": "Q"}), []
+        )
+        self.assertEqual(
+            [
+                entry["name"]
+                for entry in self.data["entries"]
+                if entry["prelude"] == "axreal"
+            ],
+            live,
+        )
+        self.assertEqual(GEN.validate_rows(self.data["entries"], self.measurement), [])
+
+    def test_rename_argument_must_be_old_equals_new(self) -> None:
+        for bad in ("AxReal", "=AxReal", "AxReal="):
+            with self.assertRaises(GEN.LedgerError):
+                GEN.parse_rename(bad)
+        self.assertEqual(GEN.parse_rename("A=B"), ("A", "B"))
 
     def test_retired_row_cannot_be_live_or_still_admitted(self) -> None:
         revived = copy.deepcopy(self.data["entries"][0])
@@ -231,12 +315,146 @@ class LeanAxiomLedgerContractTests(unittest.TestCase):
             GEN.cross_check(blind)
         self.assertIn("no coverage line", str(caught.exception))
 
+    # ---- the constructed carriers are measured, not assumed measured ------
+    #
+    # `creal` and `complex` need `--include-constructed`; without it they emit
+    # no coverage line and no rows, and a pin of 0 for them would pass
+    # vacuously. Each of the three deletions below is checked to kill exactly
+    # one test, so the coverage tuple is not one shared reject path.
+
+    def test_the_trusted_surface_command_asks_for_the_constructed_carriers(self) -> None:
+        # NOT independently mutation-isolable, and deliberately so: removing
+        # this flag makes `GEN.measure()` fail cross-check, which takes the
+        # whole suite's setUpClass down. Recorded rather than hidden.
+        self.assertIn("--include-constructed", GEN.TRUSTED_SURFACE_COMMAND)
+        self.assertIn("--release", GEN.TRUSTED_SURFACE_COMMAND)
+
+    def test_creal_is_measured_and_pinned(self) -> None:
+        self.assertIn("creal", self.measurement.surface_counts)
+        self.assertEqual(
+            self.measurement.surface_counts["creal"],
+            self.data["measurement"]["trusted_surface"]["creal"],
+        )
+
+    def test_complex_is_measured_and_pinned(self) -> None:
+        self.assertIn("complex", self.measurement.surface_counts)
+        self.assertEqual(
+            self.measurement.surface_counts["complex"],
+            self.data["measurement"]["trusted_surface"]["complex"],
+        )
+
+    def test_every_measured_prelude_is_pinned_by_value(self) -> None:
+        # The property the whole change exists for: no prelude is merely
+        # asserted to be zero, each is asserted to equal its measured number.
+        self.assertEqual(
+            self.data["measurement"]["trusted_surface"],
+            {
+                prelude: dict(counts)
+                for prelude, counts in self.measurement.surface_counts.items()
+            },
+        )
+        self.assertTrue(
+            set(GEN.EXPECTED_PRELUDES) <= set(self.measurement.surface_counts)
+        )
+
+    def test_creal_dropping_out_of_coverage_fails(self) -> None:
+        blind = clone(self.measurement)
+        del blind.surface_counts["creal"]
+        with self.assertRaises(GEN.LedgerError) as caught:
+            GEN.cross_check(blind)
+        self.assertIn("'creal' has no coverage line", str(caught.exception))
+
+    def test_complex_dropping_out_of_coverage_fails(self) -> None:
+        blind = clone(self.measurement)
+        del blind.surface_counts["complex"]
+        with self.assertRaises(GEN.LedgerError) as caught:
+            GEN.cross_check(blind)
+        self.assertIn("'complex' has no coverage line", str(caught.exception))
+
+    def test_rat_dropping_out_of_coverage_fails(self) -> None:
+        blind = clone(self.measurement)
+        del blind.surface_counts["rat"]
+        with self.assertRaises(GEN.LedgerError) as caught:
+            GEN.cross_check(blind)
+        self.assertIn("'rat' has no coverage line", str(caught.exception))
+
+    # ---- a moved number is reported WITH ITS DIRECTION --------------------
+    #
+    # Every case below also fails the gate; what is under test is that the two
+    # directions do not read the same, because they are not the same event.
+
+    def test_a_risen_count_is_reported_as_a_regression(self) -> None:
+        self.data["measurement"]["trusted_surface"]["axreal"] = {
+            "axiom": 28, "opaque": 0, "quotient": 0, "total_trusted": 28,
+        }
+        failures = self.failures()
+        self.assertTrue(any("REGRESSION" in f and "ROSE 28 -> 30" in f for f in failures))
+        self.assertFalse(any("IMPROVEMENT" in f for f in failures))
+
+    def test_a_fallen_count_is_reported_as_an_improvement_to_publish(self) -> None:
+        self.data["measurement"]["trusted_surface"]["axreal"] = {
+            "axiom": 32, "opaque": 0, "quotient": 0, "total_trusted": 32,
+        }
+        failures = self.failures()
+        self.assertTrue(any("IMPROVEMENT" in f and "FELL 32 -> 30" in f for f in failures))
+        self.assertFalse(any("REGRESSION" in f for f in failures))
+
+    def test_an_axiom_free_prelude_falling_to_zero_is_still_reported(self) -> None:
+        # The direction `--require-axiom-free` structurally cannot see: a pin of
+        # 1 against a measured 0 is a result, and it must not read as noise.
+        self.data["measurement"]["trusted_surface"]["creal"] = {
+            "axiom": 1, "opaque": 0, "quotient": 0, "total_trusted": 1,
+        }
+        self.assertTrue(
+            any("IMPROVEMENT" in f and "`creal`" in f for f in self.failures())
+        )
+
+    def test_a_newly_measured_prelude_is_reported_as_coverage_added(self) -> None:
+        del self.data["measurement"]["trusted_surface"]["complex"]
+        self.assertTrue(
+            any("COVERAGE ADDED" in f and "`complex`" in f for f in self.failures())
+        )
+
+    def test_a_prelude_leaving_the_measurement_is_reported_as_coverage_lost(self) -> None:
+        shrunk = clone(self.measurement)
+        del shrunk.surface_counts["complex"]
+        shrunk.surface_rows = [
+            row for row in shrunk.surface_rows if row["prelude"] != "complex"
+        ]
+        failures = self.failures(shrunk)
+        self.assertTrue(
+            any("COVERAGE LOST" in f and "`complex`" in f for f in failures)
+        )
+
+    def test_a_kind_reshape_at_an_unchanged_total_fails(self) -> None:
+        # `opaque` and `quotient` are trusted for different reasons than
+        # `axiom`; a swap that holds the total constant is still a change.
+        self.data["measurement"]["trusted_surface"]["axreal"] = {
+            "axiom": 29, "opaque": 1, "quotient": 0, "total_trusted": 30,
+        }
+        self.assertTrue(
+            any("RESHAPED" in f and "`axreal`" in f for f in self.failures())
+        )
+
+    def test_unexplained_measurement_drift_still_fails(self) -> None:
+        # The catch-all. Without it a shape the per-prelude walk cannot read
+        # produces an empty failure list -- a checker that cannot fail.
+        self.data["measurement"]["trusted_surface"] = []
+        failures = self.failures()
+        self.assertTrue(any("measurement block is stale" in f for f in failures))
+
+    def test_a_non_object_measurement_block_fails(self) -> None:
+        self.data["measurement"] = "thirty"
+        self.assertTrue(
+            any("it is not an object" in f for f in self.failures())
+        )
+
     def test_the_two_inventories_must_agree_on_counts(self) -> None:
         skewed = clone(self.measurement)
-        skewed.surface_counts["real"]["axiom"] += 1
+        skewed.surface_counts["axreal"]["axiom"] += 1
         with self.assertRaises(GEN.LedgerError) as caught:
             GEN.cross_check(skewed)
-        self.assertIn("the two inventories disagree on real", str(caught.exception))
+        self.assertIn("the two inventories disagree on axreal", str(caught.exception))
 
     def test_the_two_inventories_must_agree_on_canonical_types(self) -> None:
         skewed = clone(self.measurement)
@@ -312,6 +530,30 @@ class LeanAxiomLedgerContractTests(unittest.TestCase):
         )
         self.assertTrue(any("stale ledger count" in failure for failure in failures))
         self.assertTrue(any("integer=34" in failure for failure in failures))
+
+    def test_creal_is_not_read_as_a_claim_about_axreal(self) -> None:
+        """`real (\\d+)` matches inside `creal 0`, and that sentence is true prose."""
+        counts = self.measurement.axiom_counts
+        # Exactly what a document describing the CONSTRUCTED carriers would say.
+        # Before the `(?<![A-Za-z])` lookbehind this captured (0, 0, 0), scored
+        # it against `axreal` (30), and reported a stale count in a sentence
+        # that is correct -- a checker failing on true prose gets switched off.
+        failures = GEN.scan_live_document(
+            "fake.md", "the constructed carriers stand at creal 0, integer 0, string 0", counts
+        )
+        self.assertFalse(
+            any("stale ledger count" in failure for failure in failures),
+            f"`creal 0` was read as a claim about `axreal`: {failures}",
+        )
+        # ...and the guard must not have been bought by making the pattern inert.
+        # A genuine `axreal` claim at the wrong number must still be caught.
+        stale = GEN.scan_live_document(
+            "fake.md", "the assumptions stand at real 7, integer 0, string 0", counts
+        )
+        self.assertTrue(
+            any("stale ledger count" in failure for failure in stale),
+            "the lookbehind disabled the pattern instead of narrowing it",
+        )
 
     def test_a_document_that_stops_citing_the_ledger_fails(self) -> None:
         # The cheapest way to pass a stale-number scan is to delete the

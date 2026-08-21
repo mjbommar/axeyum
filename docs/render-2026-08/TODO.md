@@ -40,7 +40,7 @@ the coordinator commits via the private-index procedure.
         of 15-integrate-diary.md.
 
 ## Round 3 (P1)
-- [x] P1-ADR -- ADR-0509 (proposed): Doc-IR + RunRecord + the kernel inventory
+- [x] P1-ADR -- ADR-0540 (proposed): Doc-IR + RunRecord + the kernel inventory
         snapshot become public evidence formats (semantics/replay/checker per
         Hard Rules); render/ promotes to axeyum-render on named triggers, not
         yet; no-Node + self-containment and the fail-closed law (assembly

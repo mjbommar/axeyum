@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-coprime-factor-cancellation-dependency-audit-plan",
+  "state": "preregistered-exact-seventeen-root-audit-before-sealed-stream-reread",
+  "predecessor": {"path": "artifacts/autogenesis/coprime-factor-cancellation-self-contained-result-v1.json", "sha256": "e06ea82849788bc6069e41b32c1dc852f0dbc0fea8735d2b57198ce0241cb137"},
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/9140114b6-coprime-factor-cancellation-self-contained-v1/cancellation-generic.ndjson", "sha256": "e434f46f1ce7b23149cc0ea660c1d43792cd574217d4d8bfd36bc22a79815686", "textual_read_allowed": false},
+  "ordered_roots": ["Eq.symm", "Eq.trans", "Iff.mpr", "Nat.add_assoc", "Nat.add_comm", "Nat.dvd_add", "Nat.dvd_add_iff_right", "Nat.dvd_mul_right_of_dvd", "Nat.mul_comm", "Nat.mul_left_comm", "Nat.one_mul", "Nat.right_distrib", "congr", "congrArg", "congrFun'", "eq_self", "of_eq_true"],
+  "tool": {"example": "theorem_footprint_batch_audit", "proof_terms_types_or_values_may_be_rendered": false},
+  "acceptance": {"exactly_one_importer_read": true, "all_seventeen_roots_must_resolve": true, "each_root_must_report_declaration_identity_dependencies_and_axiom_footprint": true},
+  "budget": {"max_importer_runs": 1, "max_proof_bearing_stream_reads": 1, "max_theorem_submissions": 0, "max_retries": 0},
+  "authority": {"dependency_audit_credit": 0, "generic_cancellation_credit": 0, "official_cancellation_credit": 0, "target_specialization_credit": 0, "exact_fibonacci_target_submissions": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_on_result": "Select exact target-owned replacements for every assumption-bearing direct dependency before V3 source construction.",
+  "output": "artifacts/autogenesis/coprime-factor-cancellation-dependency-audit-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-coprime-factor-cancellation-dependency-audit-plan.py",
+  "limitations": "This is classification only and grants no theorem, specialization, Fibonacci, fact, evaluation, or ledger credit."
+}

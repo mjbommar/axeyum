@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-coprime-factor-cancellation-generic-plan",
+  "state": "preregistered-balanced-Bezout-parameterized-cancellation-before-source",
+  "predecessor": {"path": "artifacts/autogenesis/official-gcd-balanced-bezout-exact-reuse-result-v1.json", "sha256": "218edbd1a0569db0d94f953d74adb38af79c1a43e5797dfe883face31f73a0c1", "accepted_theorem": "Axeyum.Autogenesis.officialGcdBalancedBezoutClosedOfficialKernelV1"},
+  "construction": {
+    "source": "scripts/lean/autogenesis_coprime_factor_cancellation_generic_v1.lean",
+    "module": "AxeyumAutogenesisCoprimeFactorCancellationGenericV1",
+    "target": "Axeyum.Autogenesis.coprimeFactorDivisibilityCancellationGenericV1",
+    "contract": "(forall a c, BalancedBezoutUpdateV2 a c (Nat.gcd a c)) -> forall a c b d, Nat.gcd a c = 1 -> d divides a -> d divides (c * b) -> d divides b",
+    "method": "multiply the balanced-natural Bezout equation by b, prove every non-leading term divisible by d, and cancel the divisible tail",
+    "proof_search_allowed": false,
+    "upstream_proof_body_reads_allowed": false,
+    "proof_terms_types_or_values_may_be_rendered": false
+  },
+  "fixed_environment": {"ssh_alias": "s5", "hostname": "server5", "mathlib_checkout": "/home/mjbommar/lean-import-scale/mathlib4", "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f", "lean_version": "4.30.0", "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622", "lean4export_binary": "/home/mjbommar/lean-import-scale/lean4export/.lake/build/bin/lean4export", "lean4export_binary_sha256": "8e763913b03762488571a93ced6ec1a4e04f7d8eebbe40bd1215ba41a6bd4449"},
+  "preexisting_status_baseline": [
+    {"path": "AxeyumFibGeneric.lean", "status": "untracked", "bytes": 1595, "mode": "0664", "sha256": "f9d3ea9024497cf1aed34a071fe541e515fb4169738d3d369dd6bf9a7ad414be"},
+    {"path": "AxeyumNatFibRecurrencePointwise.lean", "status": "untracked", "bytes": 632, "mode": "0664", "sha256": "b339a3d8e4ce1700d367fa5fdf0ac0e05d411cc48c49ce6f6e30b702a9b7baf5"},
+    {"path": "AxeyumNatGcdFixEq.lean", "status": "untracked", "bytes": 3603, "mode": "0664", "sha256": "939d225a168b5a94d042ceab47c4dd265a81bf149ea8cfbe08012ca5089373a7"}
+  ],
+  "execution": {"evidence_pack": "/nas3/data/axeyum/autogenesis/reference-packs/58c5a9e71-coprime-factor-cancellation-generic-v1", "remote_source": "/home/mjbommar/lean-import-scale/mathlib4/AxeyumAutogenesisCoprimeFactorCancellationGenericV1.lean", "temporary_output_stem": "/home/mjbommar/lean-import-scale/mathlib4/.lake/build/lib/lean/AxeyumAutogenesisCoprimeFactorCancellationGenericV1", "all_three_temporary_paths_must_be_absent_before_copy": true, "status_must_equal_exact_baseline_before_copy": true, "status_must_equal_exact_baseline_after_cleanup": true},
+  "acceptance": {"source_must_compile": true, "root_selected_stream_must_be_nonempty": true, "root_selected_stream_max_bytes": 2000000, "fresh_kernel_imports_required": 2, "audits_must_be_byte_identical": true, "axiom_footprint_must_be_empty": true, "balanced_Bezout_must_be_an_explicit_parameter": true, "failed_compilation_export_or_first_import_ends_increment": true},
+  "budget": {"max_source_copies": 1, "max_compiler_invocations": 1, "max_exporter_invocations": 1, "max_importer_runs": 2, "max_proof_bearing_stream_reads": 2, "max_retries": 0, "max_generic_cancellation_submissions": 1, "max_official_specializations": 0, "max_exact_fibonacci_target_submissions": 0, "max_executor_invocations": 0},
+  "authority": {"generic_cancellation_credit": 0, "official_cancellation_credit": 0, "target_specialization_credit": 0, "exact_fibonacci_target_submissions": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_on_accept": "Preregister composition and specialization of the generic cancellation theorem over the accepted official-kernel balanced-Bezout theorem.",
+  "output": "artifacts/autogenesis/coprime-factor-cancellation-generic-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-coprime-factor-cancellation-generic-plan.py",
+  "limitations": "This plan may establish only the parameterized cancellation theorem. It grants no official specialization, Fibonacci target, fact, evaluation, or ledger authority."
+}

@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-helper-assoc-repair-plan-v1",
+  "state": "preregistered-one-intermediate-correction-before-code",
+  "input": {
+    "diagnostic_result": "artifacts/autogenesis/mathlib-nat-fib-gcd-helper-type-diagnostic-result-v1.json",
+    "sha256": "ba7261fbcffa5ffb0dad158337d85e12185ead1663aaeb1a9f6140332ff8bc06"
+  },
+  "repair": {
+    "function": "declare_fib_gcd_quotient_iteration",
+    "operation": "final reversed Nat.add_assoc transport",
+    "replace_middle": "m*q + (m + r)",
+    "with_middle": "m*q + (r + m)",
+    "permitted_source_edits": 1,
+    "theorem_statement_changes": 0,
+    "route_changes": 0
+  },
+  "verification": {
+    "mode": "existing no-submission helper type diagnostic",
+    "complete_diagnostics": 1,
+    "required_definitionally_equal": true,
+    "helper_theorem_submissions": 0,
+    "target_theorem_submissions": 0
+  },
+  "next_on_accept": "preregister a fresh bounded helper-plus-target construction attempt; the original no-retry attempt remains spent",
+  "next_on_decline": "retain the next internal inference rejection and stop without another edit",
+  "limitations": "This authorizes one expression-argument correction and one no-submission diagnostic only."
+}

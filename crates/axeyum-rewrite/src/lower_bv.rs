@@ -47,6 +47,38 @@ use axeyum_ir::{IrError, Op, TermArena, TermId, TermNode};
 /// Panics on a malformed shift whose shifted operand lacks a bit-vector sort (it
 /// cannot occur for a well-formed `bvshl`/`bvlshr`/`bvashr` term).
 pub fn lower_derived_bv(arena: &mut TermArena, term: TermId) -> Result<TermId, IrError> {
+    lower_derived_bv_memo(arena, term, &mut std::collections::HashMap::new())
+}
+
+/// [`lower_derived_bv`] with the memo that makes it terminate on a shared DAG.
+///
+/// **This cache is not an optimisation.** A `TermArena` shares subterms
+/// structurally, and the naive recursion walks the DAG as a TREE — a subterm
+/// reachable by `k` paths is lowered `k` times, which is exponential in the
+/// sharing depth.
+///
+/// Measured 2026-08-20 on `solver__fp__fp_fromsbv.smt2`, whose arena holds 2,971
+/// nodes and never grows during the walk: **2,240,000,000+ calls**, still
+/// climbing when the run was killed. The instance was recorded as decided in a
+/// committed dominance audit that nothing had re-run for two months, so nothing
+/// noticed.
+///
+/// Caching is sound because lowering is a pure function of the input `TermId`:
+/// the arena interns, so the same input always yields the same output node, and
+/// the map lives for one top-level call so it cannot go stale against later
+/// arena growth.
+///
+/// It moves the wall rather than removing it — this module's own docs note that
+/// the unrolled `divide` is "intractable beyond tiny widths", which is what the
+/// FP queries lower to. What it removes is the exponential ON TOP of that.
+fn lower_derived_bv_memo(
+    arena: &mut TermArena,
+    term: TermId,
+    memo: &mut std::collections::HashMap<TermId, TermId>,
+) -> Result<TermId, IrError> {
+    if let Some(&done) = memo.get(&term) {
+        return Ok(done);
+    }
     // Copy `op` and children out without cloning the node, then lower bottom-up.
     let (op, args): (Op, Vec<TermId>) = match arena.node(term) {
         TermNode::App { op, args } => (*op, args.to_vec()),
@@ -54,10 +86,11 @@ pub fn lower_derived_bv(arena: &mut TermArena, term: TermId) -> Result<TermId, I
     };
     let mut largs = Vec::with_capacity(args.len());
     for a in args {
-        largs.push(lower_derived_bv(arena, a)?);
+        let lowered = lower_derived_bv_memo(arena, a, memo)?;
+        largs.push(lowered);
     }
 
-    Ok(match op {
+    let lowered = match op {
         Op::BvSub => {
             let nb = arena.bv_neg(largs[1])?;
             arena.bv_add(largs[0], nb)?
@@ -159,7 +192,9 @@ pub fn lower_derived_bv(arena: &mut TermArena, term: TermId) -> Result<TermId, I
         }
         // Not a lowered operator: rebuild with lowered children (sort preserved).
         _ => arena.rebuild_with_args(term, &largs),
-    })
+    };
+    memo.insert(term, lowered);
+    Ok(lowered)
 }
 
 /// `rotate_left`/`rotate_right` of `x` by `by` (taken mod the operand width),

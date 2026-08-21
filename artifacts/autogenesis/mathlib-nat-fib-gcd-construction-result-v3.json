@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-construction-result-v3",
+  "state": "exact-target-reconstructed-twice-byte-identical-empty-footprint",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-nat-fib-gcd-construction-plan-v3.json",
+    "sha256": "3305e1596bfbb8a45ccc60eb28dcec71a59aa4950e08511fd2bf81136848f993"
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+    "sha256": "15cbfa5b690a7fe9d48a07e85ff56ca6f6d5c3449fcbcd1fff530dcc63418620"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/749f30f65-nat-fib-gcd-v3",
+    "index_sha256": "48c27c120f37ec2a66c9889cdbb3b8f4ff74a8eac7b84d23fc94d3aadd593c92",
+    "observation_sha256": "bf23a0e4e374c877f2657ae1c712833f75c86301b086a27acbfad27a092a4031",
+    "capsule_sha256": "8ac3c35874540a10e5fa393c65f3ad313a6cf6a06303cec68fec3ec45d0f04cd",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "helper": {
+    "name": "Axeyum.Autogenesis.fibGcdQuotientIterationV1",
+    "declaration_sha256": "8cc7dfab10b130788410684d811731a9df750946bb20604010b7b30f583ae1d7",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": ["Nat.add_assoc", "Nat.add_comm", "Nat.gcd_fib_add_self", "Nat.mul_succ", "Nat.zero_add"]
+  },
+  "target": {
+    "name": "Nat.fib_gcd",
+    "goal_sha256": "eb65db781afc310abd8a714f7f5b426c7a11daae78e737ea40a81612f23277d5",
+    "declaration_sha256": "2b5f52996fdc275c859364de7b99bf32ab4ba01e24fc14e10cf65bbd5724ea8d",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [
+      "Axeyum.Autogenesis.fibGcdQuotientIterationV1",
+      "Axeyum.Autogenesis.gcdCommCleanV1",
+      "Axeyum.Autogenesis.modQuotientWitnessV4",
+      "Axeyum.Autogenesis.officialNatGcdSuccClosedV1",
+      "Nat.gcd.induction"
+    ]
+  },
+  "capsule": {
+    "bytes": 1053571,
+    "sha256": "8ac3c35874540a10e5fa393c65f3ad313a6cf6a06303cec68fec3ec45d0f04cd",
+    "fresh_imports": 4
+  },
+  "execution": {
+    "complete_invocations": 2,
+    "helper_theorem_submissions": 2,
+    "target_theorem_submissions": 2,
+    "exports": 2,
+    "fresh_imports": 4,
+    "outputs_byte_identical": true,
+    "observations_byte_identical": true,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "target_credit": 1,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "seal the exact capsule identity, register a replaying fact operation, then perform crash-safe authoritative admission",
+  "limitations": "The theorem is a reproducible empty-footprint kernel result. The fact remains open until separately registered and admitted."
+}

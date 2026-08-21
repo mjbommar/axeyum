@@ -15,7 +15,18 @@ checker/importer, and several consumers. It is not yet a drop-in Z3 replacement
 or a replacement for the Lean system.
 
 The [Lean requirements](docs/plan/lean-kernel-requirements-2026-08-13.md) are
-**WIP**. Nat is zero-axiom; Int reconstruction remains assumption-bearing.
+**WIP**. Trusted surface, re-derived by `gen-lean-axiom-ledger.py --check`
+rather than authored, 2026-08-19: `complex 0 · creal 0 · integer 0 · logic 0 ·
+nat 0 · rat 0 · string 0 · real 30` — `real`, the axiomatized package, is the
+only nonzero row. "Int reconstruction remains assumption-bearing" was true until
+that day and is not.
+
+**Declared is not reached; both are published**
+([ADR-0509](docs/research/09-decisions/adr-0509-the-trusted-surface-is-measured-as-reached-not-only-declared.md)).
+The 30 stay declared, reached by no shipped route. The package is kept as the
+negative control those measurements are read against — delete it and no such
+measurement can fail — now one assumed law over a constructed carrier
+([ADR-0515](docs/research/09-decisions/adr-0515-a-negative-control-is-one-assumed-law-over-a-constructed-carrier.md)).
 
 Exact pushed repairs for the A5 (linear-arithmetic), A3 (string/integer) and
 A2 (stale-branch) streams — commit-by-commit, with the non-credited partial
@@ -23,64 +34,12 @@ streams retained — are in the
 [A5/A3/A2 repair journal](docs/plan/a5-a3-repair-journal-2026-08.md). The
 current release returns typed `unknown` on each former abort trigger; A3 yields
 to A4.
+### A1 arithmetic resource closure — `DONE`, archived
 
-### A1 arithmetic resource closure
-
-A1 is **DONE**. Resource increment `96ff85930` (merge `14f80a2bf`) resolves the
-two measured arithmetic resource defects:
-
-1. ADR-0377 makes arithmetic timeout query-global across sequential exact-real,
-   NRA, real-relaxation, NIA-linearization, bounded-blast, and width-ladder
-   routes. The same absolute deadline is polled inside solver-local CAD
-   polynomial, projection, determinant, exact-division, and rational-cell loops.
-   The public QF_NIA `ext-rew-aggr-test` now returns `Unknown(Timeout)` in 0.30 s
-   for a 250 ms optimized request instead of 1.10 s; a committed debug regression
-   finishes in 0.28 s and requires less than 1 s.
-2. Online LRA normalization now has deterministic node, coefficient-work, and
-   retained-cache ceilings. Production entry points distinguish deadline expiry
-   from resource exhaustion and return `Unknown(Timeout)` or
-   `Unknown(ResourceLimit)` rather than constructing a partial theory. The
-   existing 1,024-atom front-door cap remains; current `sc-39.base.cvc.smt2`
-   declines in 0.10 s at roughly 13 MiB instead of reproducing the historical
-   8 GiB abort seen when that cap was experimentally raised.
-
-Focused resource gates are green: deadline 6/6, online-LRA 7/7, CAD 37/37, the
-normalization exhausted/near-miss unit, full all-feature solver Clippy, format,
-and documentation links. The terminal aggregate solver gate
-`CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --all-features --quiet --
---test-threads=2` passed 1,073 library tests and every integration/doctest bin,
-including the 397.85-second UFLIA and 286.00-second word-equation differential
-tests. `just parity-docs` is independently green at 35 rows, 24 logics, 992
-files, 762 decided, 674 oracle-compared, and zero disagreements; its unrelated,
-load-sensitive frontier refresh was discarded.
-
-All six required retained lists were rerun fresh from row 1. Results are QF_NIA
-34/200 versus 89, QF_LIA 117/200 versus 140, QF_LRA 86/200 versus 146, QF_RDL
-105/200 versus 155, QF_IDL 68/200 versus 124, and QF_UFLIA 94/200 versus 180;
-all have zero disagreements. The sole lower whole-sweep decision, one QF_LIA
-`ex3000...` UNSAT, reproduced 3/3 in isolation at about 8.1 seconds under the
-24-second protocol and is classified as load-sensitive sweep timing, not a
-semantic loss. The ledger honestly retains 117.
-
-The QF_IDL run exposed and then closed a real fallback-reservation regression.
-Commit `4477f2bb9` bounds every probe-front-end phase and uses a measured 12/12
-probe/fallback split only for 128–1,024-atom numeric equality gates; a global
-12/12 split was rejected after losing five controls. A 171-case QF_IDL/QF_RDL
-A/B was monotone. The final full sweep recovers `lpsat-goal-18.smt2` as UNSAT,
-retains the BubbleSort gain, adds one SAT graph case, and has no Axeyum loss.
-
-Commit `5ce07c55e` (merge `8ea6a7cad`) also makes parity resume identity
-fail-closed: exact committed-list paths are canonical; ambiguous legacy
-basenames, duplicate rows, and population drift are rejected. The six accepted
-A1 runs were fresh and non-resumed. Full evidence, sidecar hashes, rejected IDL
-policies, and gate separation are retained in
-[`docs/plan/arithmetic-a1-retained-result-2026-08-06.md`](docs/plan/arithmetic-a1-retained-result-2026-08-06.md).
-
-Disk cleanup preserved every branch and salvaged dirty inactive-worktree deltas
-to labelled Git stashes before retiring their checkouts. Reproducible Cargo
-artifacts and empty failed-run directories were removed only after ancestry,
-cleanliness, and open-file checks. Only clean `main` remains registered; retained
-evidence and unrelated temporary projects were untouched.
+The two measured resource defects and their pushed repairs are in
+[`docs/plan/archive/30-a1-a2-completed-programme-items.md`](docs/plan/archive/30-a1-a2-completed-programme-items.md).
+Moved 2026-08-19: it is closed work, and this file is for what is true
+now. Nothing was deleted.
 
 ### Current evidence snapshot
 

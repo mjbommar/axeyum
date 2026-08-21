@@ -1,0 +1,8 @@
+{
+  "schema_version":1,"kind":"axeyum-autogenesis-nat-gcd-fib-add-self-target-native-coprime-audit-result-v2","state":"target-native-gcd-equations-and-all-nat-cancellation-present-public-divisibility-layer-missing",
+  "plan":{"path":"artifacts/autogenesis/nat-gcd-fib-add-self-target-native-coprime-audit-plan-v2.json","sha256":"367df2f94e3bea197b0980194a217c5a5a20992020718c8d65be9cead539ff98"},"implementation_commit":"6cc370e18","evidence_pack":{"path":"/nas3/data/axeyum/autogenesis/audits/6cc370e18-target-native-fib-coprime-primitives-v2","manifest_sha256":"8418b16d79c31fa8d4048c030eeebc0603d0f905290b1279ae9e056ec0776d46","directory_mode":"0555","file_mode":"0444"},
+  "present":["Axeyum.Autogenesis.dvdAddCancelAllNatClosedV1","Nat.dvd_add_right_cancel_of_pos","Nat.not_succ_le_zero","Nat.le_refl","False","False.rec","Nat.mul_zero","Nat.mod_lt","Axeyum.Autogenesis.nat_gcd_succ","Axeyum.Autogenesis.officialNatGcdSuccClosedV1","Axeyum.Autogenesis.nat_gcd_zero_left","WellFounded.fix"],
+  "missing":["Nat.dvd_add","Iff","Iff.intro","Nat.dvd_mod_iff","Nat.lt_wellFounded"],
+  "selection":"Avoid Iff by injecting direct all-natural cancellation into a target-native fib_coprime constructor; reconstruct target-owned dvd_add and eq_one_of_dvd_one first, then the GCD divisibility family.",
+  "execution":{"complete_audits":1,"kernel_submissions":0,"exports":0,"retries":0,"rendered_proof_terms":0,"rendered_theorem_types":0,"rendered_theorem_values":0},"authority":{"support_credit":0,"target_credit":0,"fact_status_changes":0,"evaluation_credit":0,"ledger_writes":0},"limitations":"No theorem or ledger credit is granted."
+}

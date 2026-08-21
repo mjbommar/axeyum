@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-coprime-carrier-audit-result-v1",
+  "state": "single-conflicting-helper-below-exact-target-parent",
+  "plan": {"path": "artifacts/autogenesis/nat-gcd-fib-add-self-coprime-carrier-audit-plan-v1.json", "sha256": "51b54db07dd7000ef9fb253b59958337c047f7e9a37c08b8bf7bc4934501b66d"},
+  "implementation_commit": "b2871748b",
+  "evidence_pack": {"path": "/nas3/data/axeyum/autogenesis/audits/b2871748b-gcd-fib-coprime-carrier-audit-v1", "manifest_sha256": "53f620bcfcb5536130b8e59ecdc880aab4069f4fa408aa492e0141694a045973", "directory_mode": "0555", "file_mode": "0444"},
+  "measurement": {"source_root": "Nat.fib_coprime_fib_succ", "root_closure_size": 343, "carrier_count": 7, "blocked_dependency": "Axeyum.Autogenesis.gcdModel_succ", "blocked_source_declaration_sha256": "a68b3ec06967b22f5e750c4805f33a4a0356996115480bcf74aadef5c0f4fd18", "blocked_target_declaration_sha256": "1bed324731c7a439f24fa01302cc1ad4acb28b7614fbb546f12e6b89d4c76529", "introducing_capsule": "Axeyum.Autogenesis.officialCoprimeFactorDivisibilityCancellationV1"},
+  "nearest_exact_parent": {"name": "Axeyum.Autogenesis.nat_gcd_succ", "declaration_sha256": "1a9cf6e4ef4dc54a298214571515e7682a6265d9db7008b7cf1f8b3c38d11f16", "source_axiom_footprint": [], "source_closure_size": 258, "target_compatibility": "exact-declaration"},
+  "remaining_carriers": ["Nat.gcd_succ", "Nat.dvd_gcd", "Nat.gcd_dvd", "Nat.gcd_dvd_left", "Nat.gcd_dvd_right"],
+  "execution": {"reads_per_input": 1, "complete_audits": 1, "kernel_submissions": 0, "exports": 0, "retries": 0, "rendered_proof_terms": 0, "rendered_theorem_types": 0, "rendered_theorem_values": 0},
+  "selection": "Compose Nat.fib_coprime_fib_succ with Axeyum.Autogenesis.nat_gcd_succ as an exact checked target leaf; do not reorder the two capsules because either order retains the same-name helper conflict.",
+  "authority": {"support_credit": 0, "target_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "limitations": "This is diagnostic evidence only and grants no theorem or ledger credit."
+}

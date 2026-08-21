@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-r091-clean-dvd-antisymm-plan-v10",
+  "state": "preregistered-structural-successor-congruence-before-code-or-rerun",
+  "predecessor": {"path": "artifacts/autogenesis/official-r091-clean-dvd-antisymm-result-v9.json"},
+  "correction": {
+    "target": "Axeyum.Autogenesis.leAntisymmOfficialV1",
+    "rejected_subterm": "congrArg Nat.succ predecessorEquality",
+    "replacement": "Eq.rec transport of Eq.refl (Nat.succ left) through predecessorEquality under the motive fun right => Nat.succ left = Nat.succ right",
+    "reference": "crates/axeyum-lean-kernel/src/nat_prelude/order.rs native le_antisymm successor branch via NatOps::congr",
+    "statement_changed": false,
+    "induction_structure_changed": false,
+    "other_term_changes_authorized": false
+  },
+  "supports": [
+    "Axeyum.Autogenesis.eqZeroOfZeroDvdOfficialV1",
+    "Axeyum.Autogenesis.oneLeRightOfMulOfficialV1",
+    "Axeyum.Autogenesis.mulLeMulLeftOfficialV1",
+    "Axeyum.Autogenesis.leOfDvdOfficialV1",
+    "Axeyum.Autogenesis.leAntisymmOfficialV1",
+    "Axeyum.Autogenesis.dvdAntisymmOfficialV1"
+  ],
+  "acceptance": {"fresh_complete_invocations": 2, "cancellation_compositions": 2, "support_submissions": 12, "exports": 2, "outputs_byte_identical": true, "fresh_imports_per_output": 2, "all_axiom_footprints": [], "exact_target_submissions": 0},
+  "budget": {"max_driver_builds": 1, "max_complete_invocations": 2, "max_support_submissions": 12, "max_exports": 2, "max_imports": 4, "max_exact_target_submissions": 0, "max_retries": 0},
+  "authority": {"support_credit_before_acceptance": 0, "target_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_on_accept": "Replace the portable clean-order input in the exact Fibonacci gcd-shift driver with the official-r091 capsule and preregister two exact-target runs.",
+  "output": "artifacts/autogenesis/official-r091-clean-dvd-antisymm-result-v10.json",
+  "verification": "python3 scripts/check-autogenesis-official-r091-clean-dvd-antisymm-v9-v10.py",
+  "limitations": "This authorizes one structural congruence substitution and a fresh clean-order reconstruction only; it grants no Fibonacci target or ledger credit."
+}

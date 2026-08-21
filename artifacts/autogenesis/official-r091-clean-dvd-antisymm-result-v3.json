@@ -1,0 +1,38 @@
+{
+    "schema_version": 1,
+    "kind": "axeyum-autogenesis-official-r091-clean-dvd-antisymm-result-v3",
+    "state": "mod-lt-bootstrap-declined-no-additions-second-skipped",
+    "implementation_commit": "33d15f3b597679147c45a46a06d8bbc786f484b7",
+    "evidence_pack": {
+        "path": "/nas3/data/axeyum/autogenesis/reference-packs/33d15f3b5-official-r091-clean-dvd-antisymm-v3",
+        "manifest_sha256": "876a4be1f9b3823f86f8503af122020da41c1f7a586ecd84f6e382b10b0c4fa1",
+        "directory_mode": "0555",
+        "file_mode": "0444"
+    },
+    "decline": {
+        "stage": "bootstrap-composition-before-cancellation-or-support",
+        "class": "NoAdditions",
+        "root": "Nat.mod_lt",
+        "partial_kernel_published": false
+    },
+    "execution": {
+        "binary_builds": 1,
+        "complete_invocations": 1,
+        "input_stream_reads": 2,
+        "successful_compositions": 0,
+        "support_submissions": 0,
+        "exports": 0,
+        "exact_target_submissions": 0,
+        "retries": 0,
+        "second_invocation_skipped": true
+    },
+    "authority": {
+        "support_credit": 0,
+        "target_credit": 0,
+        "fact_status_changes": 0,
+        "evaluation_credit": 0,
+        "ledger_writes": 0
+    },
+    "next_boundary": "Preregister exact identity and kernel-type-shape reuse of existing r091 Nat.mod_lt as a checked target theorem leaf during cancellation composition.",
+    "limitations": "No support or target theorem was submitted or credited."
+}

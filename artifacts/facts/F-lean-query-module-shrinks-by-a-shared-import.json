@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "id": "F:lean-query-module-shrinks-by-a-shared-import",
+  "title": "A Lean query module over the constructed reals shrinks 257x when the shared development is imported rather than inlined",
+  "statement": "Rendering a refutation over the constructed reals as a query module that imports a separately-compiled shared development, instead of a single self-contained file, takes the per-query artefact from 1,304,276 bytes to 5,056 bytes (257x); the shared module is byte-identical across the three front-door fixtures; the two halves together cover the kernel's axiom footprint exactly; and every refutation still rests on zero carrier axioms. The split is a strictly weaker artefact: it needs the shared module compiled to an .olean and found on LEAN_PATH (ADR-0511).",
+  "formal": {
+    "language": "lean4",
+    "statement": "Let K be the kernel state of `LraReconstructCtx::try_new_over_constructed_reals()` extended with a refutation `p : False` for the query `x < 0 and 0 <= x`, C the set of declaration names present before the query symbols were admitted, and R = C intersect `declarations_reached([False, p])`. Then |render_lean_module_compact_importing(K, p, render_lean_prelude_module(K, R))| = 5056 and |render_lean_module_compact(K, p)| = 1304276; the prelude module is a function of R alone, so it is byte-identical for every query with the same R; and every name in `axiom_footprint(p)` is declared by an `axiom` line in exactly one of the two modules, with the query module declaring no `axiom` outside that footprint.",
+    "fragment": "QF_LRA",
+    "free_symbols": [
+      "x"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "F:lean-query-module-shrinks-by-a-shared-import-1",
+      "kind": "instance-pin",
+      "supports": "The shared half is a function of the ROOT SET and nothing else, so one compiled `.olean` serves the whole query family. Without this the split is a relabelling: each query would need its own prelude and the per-query total would be unchanged.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run -q -p axeyum-solver --features full --example shared_prelude_module -- --require-split 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'the shared module is byte-identical across fixtures: true'",
+      "notes": "Verified discriminating by scripts/new-fact.py: the pattern matches the real output and fails on mutated output. Anchored on the byte-identity verdict rather than on the shared module's size: a size match is consistent with two different modules of equal length, and identity is the property the claim needs."
+    },
+    {
+      "id": "F:lean-query-module-shrinks-by-a-shared-import-2",
+      "kind": "instance-pin",
+      "supports": "Nothing the kernel's `axiom_footprint` counts went missing when the module was split, and the query half introduced no assumption the kernel did not count. This is the split's form of the invariant `front_door_carrier --require-axiom-free` enforces on the single file; a smaller artefact that dropped a footprint entry would be a regression however good the byte count looked. It is coverage and NOT a summed line count, because the shared half legitimately carries axioms a given refutation never reaches.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run -q -p axeyum-solver --features full --example shared_prelude_module -- --require-split 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'the two halves cover the kernel footprint exactly: true'",
+      "notes": "Verified discriminating by scripts/new-fact.py: the pattern matches the real output and fails on mutated output. Anchored on the two-directional coverage verdict, not on an axiom-line count. A count is what the single-file invariant uses and it is WRONG here — the shared half is rooted at a union over the query family, so it carries axioms this refutation never reaches and a sum would exceed the footprint for a module set that is entirely correct."
+    },
+    {
+      "id": "F:lean-query-module-shrinks-by-a-shared-import-3",
+      "kind": "instance-pin",
+      "supports": "The headline result is unmoved by the layout change: the refutation still rests on zero CARRIER axioms, only on the query's own variable and hypotheses. This is what stops the byte saving from being bought by re-admitting an assumption.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run -q -p axeyum-solver --features full --example shared_prelude_module -- --require-split 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'refutations still rest on zero carrier axioms: true'",
+      "notes": "Verified discriminating by scripts/new-fact.py: the pattern matches the real output and fails on mutated output. Anchored on the carrier-axiom verdict, which is computed from `Kernel::axiom_footprint` (this kernel's `#print axioms`) and not from module text."
+    },
+    {
+      "id": "F:lean-query-module-shrinks-by-a-shared-import-4",
+      "kind": "instance-pin",
+      "supports": "The saving is real on every fixture, not only the one the byte figures quote — the weakest of the three is 91x.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run -q -p axeyum-solver --features full --example shared_prelude_module -- --require-split 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'every query module is at least 50x smaller: true'",
+      "notes": "Verified discriminating by scripts/new-fact.py: the pattern matches the real output and fails on mutated output. Anchored on the floor verdict, which is over the MINIMUM factor across the three fixtures, so a regression on any one of them fails it."
+    },
+    {
+      "id": "F:lean-query-module-shrinks-by-a-shared-import-5",
+      "kind": "instance-pin",
+      "supports": "The exact bytes, on the fixture the title quotes. The other four rows are verdicts a rewrite could keep true while the numbers moved; this one pins them.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run -q -p axeyum-solver --features full --example shared_prelude_module -- --require-split 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE '5056 B query \\+ 1715764 B shared'",
+      "notes": "Verified discriminating by scripts/new-fact.py: the pattern matches the real output and fails on mutated output. Anchored on the two byte counts printed together on one line, so neither can drift without the other being noticed. It is the row that fails first if the carrier grows or the writer regresses."
+    }
+  ],
+  "concept_refs": [
+    "lean-module-export",
+    "constructed-reals"
+  ],
+  "provenance": {
+    "date": "2026-08-18",
+    "established_by": "agent-lean-prelude-module",
+    "source": "ADR-0511; crates/axeyum-solver/examples/shared_prelude_module.rs; crates/axeyum-lean-kernel/tests/real_lean_shared_prelude_crosscheck.rs"
+  },
+  "notes": "WHAT THIS DOES NOT SAY. (1) It is not a claim that the split is the DEFAULT: `prove_unsat_to_lean_module` still returns one self-contained file, and every real-Lean suite still hands `lean` a single module (ADR-0511 records why). (2) The split artefact is STRICTLY WEAKER for a third party: a self-contained module needs `lean Query.lean` and nothing else, whereas this needs the shared module compiled to an `.olean` with `--root` and found on `LEAN_PATH`. The exact recipe is generated by `LeanPreludeModule::check_script` and is what `real_lean_shared_prelude_crosscheck` runs against the pinned Lean 4.30.0, with a no-`LEAN_PATH` refusal as its control. (3) The 1,715,764-byte shared module is LARGER than any single self-contained module, so the split only pays from the second query onward. (4) The root set is the union of what THIS family of three fixtures reaches (343 of the carrier's 465 declarations). Rooting it at all 465 emits a file Lean 4.30.0 REFUSES, at `CReal.Equiv.not_zero_one` and `CReal.not_le_one_zero`, which the in-tree kernel admits; that divergence is real, is not a rendering artefact (it reproduces with the sharing pass off), and is not fixed here. (5) The command measures the Rust-side rendering; that Lean ACCEPTS the emitted pair is a separate measurement, recorded in ADR-0511 (14.4 s to compile the shared module, 0.102 s to check the query module against it) and gated by `scripts/check-lean-gate.sh`."
+}

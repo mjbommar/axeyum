@@ -161,11 +161,84 @@ the left column must run on a host that satisfies the right one.
 | kernel / library / export | `scripts/check-lean-gate.sh`, the Lean axiom ledger | **Lean at the repo pin** |
 | linear arithmetic | the z3 differential fuzzes (`--features z3`) | `GITHUB_TOKEN` for the `z3/gh-release` fetch |
 | ledgers, claims, facts | `validate-facts.py`, `validate-claims.py`, `check-links.sh` | Python only — runs anywhere |
+| **anything merged to `main`** | `scripts/local-ci.sh` — hosted CI calls this *the authoritative gate for main* | `cargo-nextest`, rust **stable**, rust **1.88.0**, `z3` |
 | Autogenesis proposer isolation | `scripts/check-autogenesis-proposer-isolation.sh` | Python + `bubblewrap` |
+
+The `local-ci.sh` row was added on 2026-08-18, after measuring that **no host in
+this fleet could run it** — including the dev box. `cargo nextest --version`
+exited 101 (`no such command`) on s4, s5 and s7; `rustup run 1.88.0 cargo
+--version` exited 1 (toolchain not installed) on all three; `provision-fleet-host.sh`
+installed none of them. Since `cargo nextest run --profile local --workspace
+--all-features` *is* the test sweep, and each step is `run … || rc=$?`, the
+script would not have stopped — it would have carried on with the two central
+steps never executing. Four independent signals said it had never been run at
+all: `artifacts/local-ci/` absent, the isolated target dir
+`~/.cache/axeyum-local-ci-target` absent, no crontab entry and no user systemd
+timer, and only four tracked files mentioning it, none of them an entry point.
+
+Two things changed as a result. `local-ci.sh` now **refuses to start** on a host
+missing any prerequisite (`--preflight-only` asks the question without running
+the gate), because a gate that limps still produces output shaped like a gate's.
+And `--record` writes a tracked JSON per (sha, host) under
+`artifacts/local-ci-runs/`, so "did the authoritative gate pass on this SHA" has
+an answer — the log directory is gitignored, which is why it never did.
+
+Installing 1.88.0 needs `--profile minimal`: the plain form fails on this
+fleet's rustup with *"some components are unavailable for download for channel
+'1.88.0': 'miri', 'rustc-codegen-cranelift'"*, inherited from the nightly
+channel's default profile.
 
 The Lean row is the one that shapes scheduling. Two of the three roadmap strands
 are Lean-bound, so before this baseline existed they both serialised onto the
 single host that had a `lean` binary.
+
+## Where build output goes, and why the root disk keeps filling
+
+Measured 2026-08-19 on s4, with eight lanes active:
+
+```
+/dev/sda2   915G  789G   81G  91%  /          <- the root disk, nearly full
+/dev/sdb1   7.3T  620G  6.3T   9%  /data0     <- the disk with the room
+tmpfs        62G  9.4G   53G  16%  /tmp       <- RAM, not disk
+```
+
+The single largest consumer is the shared checkout's own `target/` at **404 GB**,
+of which `target/debug/deps` is **335 GB across 18,333 files**. That is not a
+leak: it is every feature permutation eight lanes have built, and it is mostly
+debug info — the largest artefact, `libaxeyum_solver-*.rlib` at 318 MB, is
+**80% `.debug*` sections** (135 MB of 169 MB).
+
+Three rules follow, and two of them were already half-adopted:
+
+- **Per-lane build output belongs on /data0.**
+  `scripts/lane-snapshot.sh --target` already returns
+  `/data0/axeyum/target/$AXEYUM_AGENT` and lanes that use it cost the root disk
+  nothing. `hooks/pre-push` builds in `/data0/axeyum/prepush`. As of
+  2026-08-19 `scripts/local-ci.sh` defaults to `/data0/axeyum/local-ci-target`
+  rather than `~/.cache` (its previous dir was a further 32 GB on root), with
+  `$HOME` still the fallback on a host with no `/data0`.
+- **Scratch belongs on /data0, never `/tmp`.** `/tmp` here is a **62 GB tmpfs —
+  RAM** — and CLAUDE.md records it as a standing contributor to the OOM kills
+  that have taken out sessions on this box.
+- **The shared worktree's `target/` has no policy, and that is the 404 GB.**
+  Every lane building in the checkout writes there. Relocating it via
+  `.cargo/config.toml` (`build.target-dir`) plus `[profile.dev] debug =
+  "line-tables-only"` would move it to the disk with room and cut roughly the
+  80% that is debug info.
+
+  **That change is disruptive and must be scheduled, not slipped in.** Cargo
+  bakes absolute paths into its fingerprints, so changing `build.target-dir`
+  invalidates the entire 404 GB cache and forces a cold rebuild of a
+  236k-line workspace for every lane at once — the same mechanism that made the
+  pre-push hook rebuild from scratch on every push while its worktree came from
+  `mktemp -d`. Do it when no `cargo`/`rustc` is running, not while eight lanes
+  are mid-build.
+
+**What is safe to reclaim while builds are running:** nothing inside
+`axeyum/target`. Deleting `deps/` or `incremental/` under a live build corrupts
+the in-flight job. `~/.cache/axeyum-local-ci-target` is safe **only when
+`local-ci.sh` is idle**, which is checkable — no `nextest`/`local-ci` process —
+and after 2026-08-19 it is no longer written to at all.
 
 ## Verification
 

@@ -63,7 +63,7 @@ class EachGuardCanFail(unittest.TestCase):
 class TheTableItselfIsParsed(unittest.TestCase):
     def test_entry_and_area_counts_are_what_was_measured(self) -> None:
         recs = CA.entries(CA.TABLE.read_text(encoding="utf-8"))
-        self.assertEqual(len(recs), 101)
+        self.assertEqual(len(recs), 105)
         self.assertGreaterEqual(len({r["area"] for r in recs}), 23)
         ext = {r["area"] for r in recs if CA.tier(r) == "external-artifact-checker"}
         self.assertGreaterEqual(len(ext), 11)
@@ -93,6 +93,167 @@ class CompoundAreaNamesCountAsTheLogicsTheyName(unittest.TestCase):
         """Prefix inheritance must not fire on non-logic areas."""
         self.assertEqual(CA.logics("symbolic execution"), {"symbolic execution"})
         self.assertEqual(CA.logics("datatypes"), {"datatypes"})
+
+
+class TheTableStatesWhoChecksItRatherThanBeingGuessed(unittest.TestCase):
+    """Strand item C. The prose heuristic silently misplaced 15 rows, and each
+    round of widening it revealed another phrasing — "re-checked",
+    "VERIFY-BEFORE-RETURN", "check_auto-unsat checks", "kernel infer". The table
+    declares the answer now; the heuristic survives only to contradict it."""
+
+    def test_the_declared_field_beats_the_prose(self) -> None:
+        """Evidence naming Lean, declared as a self-check, stays a self-check —
+        two real rows explain what the Lean path does NOT cover."""
+        rec = {
+            "area": "QF_X",
+            "feature": "f",
+            "evidence": "the Lean reconstruction path does not yet cover this",
+            "checked_by": "SelfChecker",
+        }
+        self.assertEqual(CA.tier(rec), "self-checker")
+        self.assertEqual(CA.inferred_tier(rec), "external-artifact-checker")
+
+    def test_a_row_with_no_declaration_falls_back_to_the_heuristic(self) -> None:
+        rec = {"area": "QF_X", "feature": "f", "evidence": "accepted by Carcara"}
+        self.assertEqual(CA.tier(rec), "external-artifact-checker")
+
+    def test_argument_only_is_a_tier_of_its_own(self) -> None:
+        """"Decided, not certified" is stated, not left to be discovered."""
+        rec = {"area": "QF_X", "feature": "f", "evidence": "sound by construction",
+               "checked_by": "Argument"}
+        self.assertEqual(CA.tier(rec), "argument-only")
+
+    def test_claiming_an_external_checker_with_none_named_is_an_error(self) -> None:
+        recs = [{"area": "QF_X", "feature": "f", "evidence": "we re-check it ourselves",
+                 "checked_by": "ExternalChecker"}]
+        errs = CA.overstated(recs)
+        self.assertTrue(errs)
+        self.assertIn("names no external checker", errs[0])
+
+    def test_the_guard_is_asymmetric_and_does_not_police_downgrades(self) -> None:
+        """A row may mention Lean while declaring a lesser tier — downgrade
+        rather than overstate. Policing that direction would flag the two rows
+        that explain what Lean does not cover."""
+        recs = [{"area": "QF_X", "feature": "f",
+                 "evidence": "Carcara accepts the sibling; this route does not reach it",
+                 "checked_by": "SelfChecker"}]
+        self.assertEqual(CA.overstated(recs), [])
+
+    def test_the_committed_table_declares_every_row(self) -> None:
+        recs = CA.entries(CA.TABLE.read_text(encoding="utf-8"))
+        missing = [r["area"] for r in recs if "checked_by" not in r]
+        self.assertEqual(missing, [], "these rows still rely on the prose heuristic")
+
+    def test_the_committed_table_overstates_nothing(self) -> None:
+        recs = CA.entries(CA.TABLE.read_text(encoding="utf-8"))
+        self.assertEqual(CA.overstated(recs), [])
+
+    def test_nothing_is_unclassified_any_more(self) -> None:
+        """The bucket that hid 15 rows is empty, and must stay empty."""
+        recs = CA.entries(CA.TABLE.read_text(encoding="utf-8"))
+        self.assertEqual([r["area"] for r in recs if CA.tier(r) == "unclassified"], [])
+
+
+class LogicCoverageIsTheNumberTheStrandQuotes(unittest.TestCase):
+    """The strand states its metric as "N of 23 logics", but only the ENTRY
+    count was ever emitted, so the quoted figure came from ad-hoc snippets that
+    each recomputed it — which is how it drifted before. It is derived and
+    printed now."""
+
+    def test_covered_logics_and_the_gap_partition_the_whole_set(self) -> None:
+        recs = CA.entries(CA.TABLE.read_text(encoding="utf-8"))
+        allg = {lg for r in recs for lg in CA.logics(r["area"])}
+        covered = {
+            lg
+            for r in recs
+            if CA.tier(r) == "external-artifact-checker"
+            for lg in CA.logics(r["area"])
+        }
+        self.assertEqual(covered | set(CA.rank(recs)), allg)
+        self.assertEqual(covered & set(CA.rank(recs)), set())
+
+    def test_a_compound_row_covers_every_logic_it_names(self) -> None:
+        """Entry count and logic count differ precisely here, which is why one
+        cannot stand in for the other."""
+        recs = [
+            {"area": "QF_ABV / QF_AUFBV", "evidence": "checked by Lean", "feature": "f"}
+        ]
+        self.assertEqual(CA.rank(recs), {})
+
+
+class TheGapIsRankedByDistanceToAnExternalChecker(unittest.TestCase):
+    """Strand item B. The ranking is derived because a written one rots: item B
+    itself names `QF_UF` and `datatypes` as candidates, and both have since
+    become externally checked."""
+
+    @staticmethod
+    def _recs(rows: list[tuple[str, str]]) -> list[dict[str, str]]:
+        return [{"area": a, "evidence": e, "feature": "f"} for a, e in rows]
+
+    def test_an_existing_refutation_artifact_is_band_one(self) -> None:
+        """A DRAT proof that is built and discarded is plumbing, not research."""
+        recs = self._recs([
+            ("QF_LRA", "checked by Lean"),
+            ("SAT", "the DRAT certificate is checked by check_drat"),
+        ])
+        self.assertEqual(CA.rank(recs)["SAT"][0], 1)
+
+    def test_a_model_replay_without_a_refutation_artifact_is_band_two(self) -> None:
+        recs = self._recs([
+            ("QF_LRA", "checked by Lean"),
+            ("QF_S", "every sat model is replayed through the ground evaluator"),
+        ])
+        self.assertEqual(CA.rank(recs)["QF_S"][0], 2)
+
+    def test_no_named_artifact_at_all_is_band_three(self) -> None:
+        recs = self._recs([
+            ("QF_LRA", "checked by Lean"),
+            ("synthesis", "the enumerator terminates"),
+        ])
+        self.assertEqual(CA.rank(recs)["synthesis"][0], 3)
+
+    def test_an_externally_checked_logic_is_not_in_the_gap_at_all(self) -> None:
+        """The control: ranking must not offer work on a solved logic."""
+        recs = self._recs([("QF_LRA", "reconstructed and checked by Lean")])
+        self.assertNotIn("QF_LRA", CA.rank(recs))
+
+
+class ASharedRowCannotStateTwoDifferentAssurances(unittest.TestCase):
+    """`tier` is per ROW, so `QF_IDL / QF_RDL` asserts one tier for both. Measured
+    2026-08-17 that is wrong for exactly that row: QF_RDL renders a Lean theory
+    reconstruction (official Lean 4.30.0 accepts it; two mutations rejected) and
+    QF_IDL renders only a structural attestation. The number cannot express that,
+    so it must at least disclose it."""
+
+    @staticmethod
+    def _recs(rows: list[str]) -> list[dict[str, str]]:
+        return [{"area": a, "evidence": "e", "feature": "f"} for a in rows]
+
+    def test_a_logic_seen_only_in_a_compound_row_is_disclosed(self) -> None:
+        recs = self._recs(["QF_IDL / QF_RDL", "QF_LRA"])
+        self.assertEqual(CA.compound_only(recs), {"QF_IDL", "QF_RDL"})
+
+    def test_a_logic_with_its_own_row_is_not_disclosed(self) -> None:
+        """The control: having a row of its own is what makes the tier that
+        logic's own claim, even when it also appears in a compound row."""
+        recs = self._recs(["QF_IDL / QF_RDL", "QF_RDL"])
+        self.assertEqual(CA.compound_only(recs), {"QF_IDL"})
+
+    def test_the_committed_table_still_discloses_the_logic_that_is_shared(self) -> None:
+        """QF_IDL's assurance is still stated only through `QF_IDL / QF_RDL`."""
+        recs = CA.entries(CA.TABLE.read_text(encoding="utf-8"))
+        self.assertIn("QF_IDL", CA.compound_only(recs))
+
+    def test_qf_rdl_got_its_own_row_once_it_was_gated_separately(self) -> None:
+        """The resolution of the case this class was written for. QF_RDL is now
+        handed to official Lean by `lean_crosscheck` while QF_IDL still routes
+        through ArithDpll and renders only an attestation, so the two no longer
+        share a single claim — QF_RDL states its own."""
+        recs = CA.entries(CA.TABLE.read_text(encoding="utf-8"))
+        self.assertNotIn("QF_RDL", CA.compound_only(recs))
+        solo = [r for r in recs if CA.logics(r["area"]) == {"QF_RDL"}]
+        self.assertTrue(solo, "QF_RDL lost its own row")
+        self.assertEqual(CA.tier(solo[0]), "external-artifact-checker")
 
 
 if __name__ == "__main__":

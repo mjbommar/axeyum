@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-coprime-factor-cancellation-dependency-audit-result",
+  "state": "seventeen-roots-classified-six-propext-carriers",
+  "plan": {"path": "artifacts/autogenesis/coprime-factor-cancellation-dependency-audit-plan-v1.json", "sha256": "3c0b3eff0a565645779d53bbed00675f43428c919dfffdcc2f78ed918f0c0cd4", "commit": "efe97708a"},
+  "evidence": {"pack": "/nas3/data/axeyum/autogenesis/reference-packs/efe97708a-coprime-factor-cancellation-dependency-audit-v1", "manifest_sha256": "c2a7e50b8af4f19139cf43b7a2398eeae961057320b4344fe63bdabef1a293ae", "audit_sha256": "fca2abbe75abce7914a8b2673b4e18b0b762b33a2017446132de948c3de563b6"},
+  "execution": {"importer_runs": 1, "proof_bearing_stream_reads": 1, "theorem_submissions": 0, "retries": 0},
+  "classification": {"population": 17, "empty_footprint": 11, "propext_bearing": 6, "propext_roots": ["Nat.dvd_add", "Nat.dvd_add_iff_right", "Nat.dvd_mul_right_of_dvd", "Nat.mul_left_comm", "Nat.right_distrib", "eq_self"]},
+  "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0},
+  "authority": {"dependency_audit_credit": 1, "generic_cancellation_credit": 0, "official_cancellation_credit": 0, "target_specialization_credit": 0, "exact_fibonacci_target_submissions": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_boundary": {"required_next_increment": "preregister target-owned replacements for direct divisibility witnesses, multiplication rearrangement, right distributivity, and additive divisibility cancellation"},
+  "verification": "python3 scripts/check-autogenesis-coprime-factor-cancellation-dependency-audit-result.py",
+  "limitations": "This classifies dependencies only. It proves no cancellation theorem and grants no official specialization, Fibonacci, fact, evaluation, or ledger credit."
+}

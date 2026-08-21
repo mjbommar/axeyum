@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-exact-plan",
+  "state": "preregistered-exact-r091-construction-over-four-sealed-capsules-before-code-or-submission",
+  "target": {
+    "fact_id": "F:ml430-nat-gcd-fib-add-self-5a92d5e3",
+    "source_name": "Nat.gcd_fib_add_self",
+    "target_definition": "Axeyum.Autogenesis.Coverage.r091",
+    "statement": "forall m n : Nat, Nat.gcd (Nat.fib m) (Nat.fib (n + m)) = Nat.gcd (Nat.fib m) (Nat.fib n)",
+    "source_statement_sha256": "50e8b2199101f876f48e246e4c64fe97c2a09af5a4e1c4dec38d933c332690f1",
+    "target_goal_sha256": "297c9f4af4d63eff354223f9548ab1d4dd3d7e52aa701e88802d58b7929a1451"
+  },
+  "inputs": {
+    "qualification": {
+      "path": "artifacts/autogenesis/mathlib-nat-gcd-fib-add-self-qualification-v1.json",
+      "sha256": "45aefa08e26c560544c5a57b40a1d6fb47815aca0858de10ddae00f18ebf85e7"
+    },
+    "portable_support_result": {
+      "path": "artifacts/autogenesis/nat-gcd-fib-add-self-portable-support-capsules-result-v1.json",
+      "sha256": "69630f1097ee1fd3144530c1b7e4b305c0afc522df44498867219d282169a6c8"
+    },
+    "target_stream": {
+      "path": "/nas3/data/axeyum/autogenesis/coverage/26fcc2c2f-mathlib-v4.30.0-reflexivity-train-development-v1/streams/r091.ndjson",
+      "sha256": "fc1117679c743009e8548a25d1f73f71f6cd42555ea77b3efce07844673670b2",
+      "root": "Axeyum.Autogenesis.Coverage.r091"
+    },
+    "capsule_pack": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/9b21389e9-nat-gcd-fib-add-self-portable-support-capsules-v1",
+      "manifest_sha256": "92fcd7e46f2204569728ef89ecf1c9c41a78c606d48d16fcdd5e9c301fe65926",
+      "required_roots": [
+        "Axeyum.Autogenesis.NatFibSuccessorAddition",
+        "Nat.fib_coprime_fib_succ",
+        "Axeyum.Autogenesis.officialCoprimeFactorDivisibilityCancellationV1",
+        "Axeyum.Autogenesis.dvdAntisymmCleanV5"
+      ]
+    }
+  },
+  "proof_route": {
+    "outer_induction": "induct on m so the zero branch reduces by fib_zero and add_zero and the successor branch receives k",
+    "successor_notation": {
+      "a": "Nat.fib (Nat.succ k)",
+      "b": "Nat.fib n",
+      "c": "Nat.fib (n + Nat.succ k)",
+      "f": "Nat.fib k",
+      "left_gcd": "Nat.gcd a c",
+      "right_gcd": "Nat.gcd a b"
+    },
+    "steps": [
+      "derive c = a * Nat.fib (Nat.succ n) + f * b from the accepted Fibonacci successor-addition capsule",
+      "prove right_gcd divides c from gcd projections, divisibility multiplication, and divisibility addition, then prove right_gcd divides left_gcd with Nat.dvd_gcd",
+      "construct target-owned clean gcd commutativity by applying the accepted clean divisibility antisymmetry theorem to the two directions obtained solely from Nat.gcd_dvd_left, Nat.gcd_dvd_right, and Nat.dvd_gcd",
+      "turn accepted Nat.gcd f a = 1 into Nat.gcd a f = 1 using only the clean gcd-commutativity theorem",
+      "use left_gcd divides a and c plus the addition equality and Nat.dvd_add_iff_right to derive left_gcd divides f * b",
+      "apply official coprime-factor divisibility cancellation with a, f, b, and left_gcd to derive left_gcd divides b",
+      "derive left_gcd divides right_gcd with Nat.dvd_gcd, then close the two gcd values using the accepted clean divisibility antisymmetry theorem"
+    ],
+    "forbidden_shortcuts": [
+      "Nat.gcd_comm from the source stream because its complete footprint contains propext",
+      "Nat.dvd_antisymm from the source stream because its complete footprint contains propext",
+      "source proof-body inspection",
+      "held-out result inspection",
+      "unregistered same-name theorem transport",
+      "quotient, propext, funext, choice, classical, or sorry assumptions"
+    ]
+  },
+  "construction": {
+    "driver": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+    "composition_order": [
+      "r091",
+      "clean divisibility antisymmetry capsule",
+      "official cancellation capsule",
+      "Fibonacci addition capsule",
+      "Fibonacci coprimality capsule"
+    ],
+    "every_capsule_composition_must_replay": true,
+    "every_composed_theorem_footprint_must_be_empty": true,
+    "target_type_must_equal_the_r091_definition_value": true,
+    "target_name": "Nat.gcd_fib_add_self",
+    "target_must_be_submitted_only_after_all_support_checks": true
+  },
+  "acceptance": {
+    "fresh_complete_invocations": 2,
+    "target_submissions_per_invocation": 1,
+    "outputs_must_be_byte_identical": true,
+    "target_goal_sha256_must_match": true,
+    "target_declaration_sha256_must_match_across_runs": true,
+    "target_proof_sha256_must_match_across_runs": true,
+    "target_axiom_footprint": [],
+    "all_four_capsule_roots_must_be_direct_or_transitive_dependencies": true,
+    "proof_terms_types_or_values_may_be_rendered": false
+  },
+  "budget": {
+    "max_driver_builds": 1,
+    "max_complete_invocations": 2,
+    "max_capsule_compositions": 8,
+    "max_local_gcd_comm_submissions": 2,
+    "max_exact_target_submissions": 2,
+    "max_retries": 0
+  },
+  "authority": {
+    "target_credit_before_acceptance": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_on_accept": "Issue a dependency-bound theorem receipt, admit the exact fact through the crash-safe ledger transaction, and verify the newly unlocked frontier from a clean worktree.",
+  "output": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-nat-gcd-fib-add-self-exact-plan.py",
+  "limitations": "This plan authorizes exactly two complete exact-target attempts. It grants no theorem, receipt, fact, evaluation, or ledger credit before both runs pass every acceptance condition."
+}

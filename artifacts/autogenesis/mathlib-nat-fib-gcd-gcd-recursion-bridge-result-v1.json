@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-gcd-recursion-bridge-result-v1",
+  "state": "driver-compile-declined-before-input-read-or-audit",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-nat-fib-gcd-gcd-recursion-bridge-plan-v1.json",
+    "sha256": "5bafc65471269b83cbc17a1f50256b7968e3d81ce6b4b528748e8b1a8b759cec"
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+    "sha256": "43d7ea4f017575347376617fcfd15ac4904677ae8490fa3b910f04d2f888d1dd"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/audits/a381ff380-nat-fib-gcd-gcd-recursion-bridge-v1",
+    "index_sha256": "b45c23bad755d9f5c4a639f6f9441cd7b400d280470f46d2f0b878522d365d6c",
+    "observation_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "3665eb8d20646d2c7bb3cd6f27288b182befb3d622ed63a17e74505a362f500d"
+  },
+  "observation": {
+    "stage": "driver compilation",
+    "errors": ["axiom_footprint returns Vec<NameId>, not Result", "Kernel::render_name is private"],
+    "proof_input_reads": 0,
+    "complete_audits": 0,
+    "kernel_submissions": 0,
+    "candidate_credit": 0
+  },
+  "authority": {
+    "bridge_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "preregister exactly one reporting correction: replace rendered footprint names with the public footprint count and require zero",
+  "limitations": "No proof-bearing input was read and neither bridge candidate was observed. This is compiler evidence only."
+}

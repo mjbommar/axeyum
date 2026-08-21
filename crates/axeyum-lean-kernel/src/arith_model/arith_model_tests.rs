@@ -1,11 +1,11 @@
-//! Tests for the `Int` model of the `Real` axiom package.
+//! Tests for the `Int` model of the `AxReal` axiom package.
 //!
 //! Three properties, and the second is the one that keeps the first honest:
 //!
 //! - [`every_law_is_witnessed_and_axiom_free`] — the interpretation of each
-//!   `Real` law is admitted with an `Int` theorem as its proof, and the witness
+//!   `AxReal` law is admitted with an `Int` theorem as its proof, and the witness
 //!   rests on nothing.
-//! - [`the_interpretation_covers_every_real_declaration`] — no `Real`
+//! - [`the_interpretation_covers_every_real_declaration`] — no `AxReal`
 //!   declaration is left out. A count of "22 laws modelled" means nothing
 //!   unless the package really has 22 laws; this test derives the population
 //!   from the environment instead of from this file.
@@ -19,18 +19,18 @@ use super::build_int_model_of_arith;
 use crate::env::Declaration;
 use crate::{Kernel, build_int_prelude};
 
-/// Every `Real` law is modelled by an `Int` theorem the kernel accepted, and
+/// Every `AxReal` law is modelled by an `Int` theorem the kernel accepted, and
 /// every witness has an empty axiom footprint.
 ///
 /// The empty footprint is the whole point. A witness whose closure reached a
-/// `Real` axiom would type-check trivially (`Real.add_comm` proves
-/// `Real.add_comm`) and would establish nothing; only the footprint separates a
+/// `AxReal` axiom would type-check trivially (`AxReal.add_comm` proves
+/// `AxReal.add_comm`) and would establish nothing; only the footprint separates a
 /// model from a restatement.
 #[test]
 fn every_law_is_witnessed_and_axiom_free() {
     let mut k = Kernel::new();
     let model = build_int_model_of_arith(&mut k).expect("the Int model must build");
-    assert_eq!(model.laws.len(), 22, "the Real package has 22 laws");
+    assert_eq!(model.laws.len(), 22, "the AxReal package has 22 laws");
     for law in &model.laws {
         let footprint = k.axiom_footprint(law.witness);
         assert!(
@@ -53,11 +53,11 @@ fn every_law_is_witnessed_and_axiom_free() {
     }
 }
 
-/// Interpreting a `Real` axiom lands on exactly the `Int` law's own statement,
+/// Interpreting a `AxReal` axiom lands on exactly the `Int` law's own statement,
 /// not merely on something definitionally equal to it.
 ///
 /// This is stronger than admission and is what lets the two developments share
-/// a reading: the `Real` axiom and the `Int` theorem say the same thing about
+/// a reading: the `AxReal` axiom and the `Int` theorem say the same thing about
 /// their respective carriers, symbol for symbol. If a law ever fails here the
 /// two statements have drifted apart in shape and the difference should be
 /// examined rather than absorbed by the definitional-equality checker.
@@ -73,11 +73,11 @@ fn interpretation_is_syntactic_identity_on_every_law() {
         .collect();
     assert!(
         drifted.is_empty(),
-        "interpreted Real axioms that are not syntactically the Int law: {drifted:?}"
+        "interpreted AxReal axioms that are not syntactically the Int law: {drifted:?}"
     );
 }
 
-/// Every `Real.*` declaration is accounted for: either an interpreted symbol or
+/// Every `AxReal.*` declaration is accounted for: either an interpreted symbol or
 /// a modelled law. Nothing in the package is silently skipped.
 #[test]
 fn the_interpretation_covers_every_real_declaration() {
@@ -91,7 +91,7 @@ fn the_interpretation_covers_every_real_declaration() {
     for (_, declaration) in k.environment().iter() {
         if let Declaration::Axiom { name, .. } = declaration {
             let rendered = k.display_name(*name).to_string();
-            if rendered == "Real" || rendered.starts_with("Real.") {
+            if rendered == "AxReal" || rendered.starts_with("AxReal.") {
                 declared.insert(*name);
             }
         }
@@ -99,7 +99,7 @@ fn the_interpretation_covers_every_real_declaration() {
     assert_eq!(
         declared.len(),
         30,
-        "the Real package is 30 trusted declarations"
+        "the AxReal package is 30 trusted declarations"
     );
     let missed: Vec<_> = declared
         .difference(&accounted)
@@ -107,14 +107,14 @@ fn the_interpretation_covers_every_real_declaration() {
         .collect();
     assert!(
         missed.is_empty(),
-        "Real declarations with no interpretation: {missed:?}"
+        "AxReal declarations with no interpretation: {missed:?}"
     );
 }
 
-/// The `Real` package contains no multiplicative inverse, no division, no
+/// The `AxReal` package contains no multiplicative inverse, no division, no
 /// supremum/completeness axiom, no Archimedean axiom and no density axiom.
 ///
-/// This is the measurement the decision to model `Real` in `ℤ` rests on, and it
+/// This is the measurement the decision to model `AxReal` in `ℤ` rests on, and it
 /// is exactly the kind of claim that rots silently. Adding any of these names
 /// makes `ℤ` stop being a model, and this test fails before the model does.
 #[test]
@@ -137,7 +137,7 @@ fn the_real_package_has_no_inverse_completeness_or_archimedean_axiom() {
     for (_, declaration) in k.environment().iter() {
         if let Declaration::Axiom { name, .. } = declaration {
             let rendered = k.display_name(*name).to_string();
-            let Some(leaf) = rendered.strip_prefix("Real.") else {
+            let Some(leaf) = rendered.strip_prefix("AxReal.") else {
                 continue;
             };
             let lowered = leaf.to_ascii_lowercase();
@@ -148,12 +148,12 @@ fn the_real_package_has_no_inverse_completeness_or_archimedean_axiom() {
     }
     assert!(
         offenders.is_empty(),
-        "the Real package grew a field/completeness axiom the Int model cannot satisfy: \
+        "the AxReal package grew a field/completeness axiom the Int model cannot satisfy: \
          {offenders:?}"
     );
 }
 
-/// `Int.sq_nonneg` — the one `Real` law that had no `Int` counterpart before
+/// `Int.sq_nonneg` — the one `AxReal` law that had no `Int` counterpart before
 /// this model existed — is derived and axiom-free.
 #[test]
 fn int_square_nonnegativity_is_derived() {

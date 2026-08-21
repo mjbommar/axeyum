@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-construction-plan-v3",
+  "state": "preregistered-two-run-construction-after-complete-proof-type-check",
+  "authority": {
+    "repair_result": {
+      "path": "artifacts/autogenesis/mathlib-nat-fib-gcd-left-transport-repair-result-v1.json",
+      "sha256": "fae35ff5b1d63856b6e7eac455819f8a8107ebb603396021f4a97aa2b09791b7"
+    },
+    "implementation": {
+      "path": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+      "sha256": "15cbfa5b690a7fe9d48a07e85ff56ca6f6d5c3449fcbcd1fff530dcc63418620",
+      "permitted_source_edits": 0
+    }
+  },
+  "inputs": [
+    {
+      "root": "Nat.gcd_greatest",
+      "capsule": "/nas3/data/axeyum/autogenesis/reference-packs/85b9d4243-target-native-gcd-greatest-v4/target-1.ndjson",
+      "sha256": "c233478948b4d4aedc01c839ef9013c3feb2ddb0009d8b57699d7efb755375e6"
+    },
+    {
+      "root": "Nat.gcd_fib_add_self",
+      "capsule": "/nas3/data/axeyum/autogenesis/reference-packs/dfa79618c-target-native-exact-v3/target-1.ndjson",
+      "sha256": "279dc4db5daa6dc2f532f9876052500a7e278c54264b32ccbc9d4256907dfc24"
+    }
+  ],
+  "submissions_per_run": [
+    "Axeyum.Autogenesis.fibGcdQuotientIterationV1",
+    "Nat.fib_gcd"
+  ],
+  "budget": {
+    "complete_invocations": 2,
+    "capsule_reads": 4,
+    "fresh_output_imports": 4,
+    "helper_theorem_submissions": 2,
+    "target_theorem_submissions": 2,
+    "exports": 2,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "all_theorem_axiom_footprints": [],
+    "outputs_byte_identical": true,
+    "target_evidence_byte_identical": true,
+    "fact_status_changes": 0
+  },
+  "next_on_accept": "seal the exact Nat.fib_gcd capsule and register its authoritative fact operation",
+  "next_on_decline": "retain the first rejection and skip the second run",
+  "limitations": "This is the first construction authorization after the complete target proof type checked definitionally. It does not admit the fact."
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-r091-clean-dvd-antisymm-result-v9",
+  "state": "four-supports-local-order-antisymmetry-type-mismatch-second-skipped",
+  "plan": {"path": "artifacts/autogenesis/official-r091-clean-dvd-antisymm-plan-v9.json", "sha256": "da0d104eca3913d8184994cd5d1029ff35b83eb8e5b3a10c2994948d13f7e338"},
+  "implementation_commit": "64b0eed45",
+  "evidence_pack": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/64b0eed45-official-r091-clean-dvd-antisymm-v9", "manifest_sha256": "864bc3e8738e576c2d3cf037604ecc9fddbd6808f645077f3b899badd38a8a44", "directory_mode": "0555", "file_mode": "0444"},
+  "decline": {"stage": "official-order-antisymmetry-submission", "class": "TypeMismatch", "partial_kernel_published": false},
+  "execution": {"complete_invocations": 1, "successful_cancellation_compositions": 1, "locally_accepted_supports": 4, "published_supports": 0, "exports": 0, "imports": 0, "exact_target_submissions": 0, "retries": 0, "second_invocation_skipped": true},
+  "local_progress": ["Axeyum.Autogenesis.eqZeroOfZeroDvdOfficialV1", "Axeyum.Autogenesis.oneLeRightOfMulOfficialV1", "Axeyum.Autogenesis.mulLeMulLeftOfficialV1", "Axeyum.Autogenesis.leOfDvdOfficialV1"],
+  "authority": {"support_credit": 0, "target_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_boundary": "Replace only the successor-equality congrArg application with the structural Eq.rec congruence construction already accepted in the native Nat prelude, then rerun under a fresh zero-retry plan.",
+  "limitations": "Four supports were admitted only into the ephemeral first-run kernel and receive no credit; no clean-order export or Fibonacci target was established."
+}

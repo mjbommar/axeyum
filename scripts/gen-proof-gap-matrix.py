@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import subprocess
 from collections import Counter
 from pathlib import Path
 
@@ -240,6 +241,86 @@ def pct(numerator: int, denominator: int) -> str:
     return f"{100.0 * numerator / denominator:.1f}%"
 
 
+def audit_provenance() -> list[tuple[str, str, str]]:
+    """`(audit, short sha, YYYY-MM-DD)` for every audit this report consumes.
+
+    Read from git rather than from the artifacts, because the artifacts do not
+    say: a dominance audit records `logic`, `slice`, `timeout_ms` and a `version`
+    integer, and **nothing about the code that produced it**. So a reader had no
+    way to tell a measurement taken today from one taken two months ago, and the
+    numbers below are reproduced verbatim into planning documents as if current.
+
+    Measured 2026-08-20: every one of the 35 committed audits predates the
+    newest solver-source commit, the oldest by **55 days**. Instances the audits
+    record as `bare-unsat` are certified today — 20 of the 31 string-family
+    paths, plus `cli__regress0__nl__very-simple-unsat`, which is now
+    `nra-even-power-unsat`.
+
+    Worse than stale: **an audit row can disagree with the tree at its own
+    commit.** `r0_QF_SLIA_replace-find-base` is recorded `audit_outcome=unsat,
+    baseline_outcome=unsat, baseline_matches_audit=true` in the audit last
+    touched by `8aff8d507`. Building that exact commit and running the same
+    byte-identical corpus file (`git hash-object` matches) returns **`sat`** —
+    a wrong answer on a query z3 decides unsat. Today the same file returns
+    `unknown`, which is sound; the wrong-sat has been fixed since.
+
+    So the date on the audit FILE is not the date of the measurement inside it.
+    `8aff8d507` is titled "refresh bare-route audits to v2" — a schema migration
+    that can rewrite JSON without re-running anything, leaving rows of unknown
+    and unknowable age. That is the defect: not that the numbers are old, but
+    that nothing in the artifact says how old, and the commit date is not a
+    usable proxy.
+
+    Dates are commit dates of the audit FILES, so they are stable inputs: they
+    move only when an audit is actually refreshed, which is exactly when this
+    report should be regenerated.
+    """
+    rows: list[tuple[str, str, str]] = []
+    for path in sorted(AUDIT_DIR.glob("*.json")):
+        rel = path.relative_to(ROOT).as_posix()
+
+        # Prefer the audit's OWN stamp when it has one. `audit_dominance` records
+        # `source_revision: {sha, dirty}` from schema version 3 onward, and that
+        # is the only answer that means "the code this measurement ran against"
+        # rather than "the last time somebody touched the file". Until the 35
+        # committed audits are re-run they all fall through to the git date, and
+        # the table says which is which -- a `file-date` row is an admission, not
+        # a value.
+        try:
+            stamped = json.loads(path.read_text(encoding="utf-8")).get("source_revision")
+        except (OSError, json.JSONDecodeError):
+            stamped = None
+        if isinstance(stamped, dict) and isinstance(stamped.get("sha"), str):
+            sha = stamped["sha"][:9]
+            dirty = stamped.get("dirty")
+            origin = stamped.get("source")
+            label = "stamped" if origin in (None, "git") else f"stamped via {origin}"
+            if dirty is True:
+                # A dirty tree has no name and cannot be rebuilt; the sha is
+                # actively misleading unless this is said out loud.
+                label = f"{label}, DIRTY TREE"
+            elif dirty is None:
+                label = f"{label}, dirty unknown"
+            rows.append((rel, sha, label))
+            continue
+
+        try:
+            out = subprocess.run(
+                ["git", "log", "-1", "--format=%h %cs", "--", rel],
+                cwd=ROOT, capture_output=True, text=True, timeout=60, check=True,
+            ).stdout.strip()
+        except (subprocess.SubprocessError, OSError):
+            out = ""
+        if not out:
+            # Uncommitted or unreadable: say so rather than omitting the row,
+            # which would quietly shrink the provenance table.
+            rows.append((rel, "uncommitted", "no stamp, no commit"))
+            continue
+        sha, _, date = out.partition(" ")
+        rows.append((rel, sha, f"{date} (file date, NOT measurement date)"))
+    return rows
+
+
 def markdown(report: dict) -> str:
     summary = report["summary"]
     lines = [
@@ -251,6 +332,27 @@ def markdown(report: dict) -> str:
         "This matrix separates solver outcomes from evidence production, independent",
         "checking, declared trust, and Lean reconstruction. Counts cover baseline UNSAT",
         "instances only; SAT model replay is outside this report.",
+        "",
+        "## These numbers are AS OF the audits below, not as of HEAD",
+        "",
+        "Every figure here is replayed from committed `bench-results/dominance/*.json`,",
+        "and a dominance audit records nothing about the code that produced it. So the",
+        "table is only as current as the audits, and the audits are refreshed by hand.",
+        "",
+        "Measured 2026-08-20: all 35 committed audits predate the newest solver-source",
+        "commit, the oldest by **55 days**. 20 of the 31 string-family paths recorded",
+        "here as `bare-unsat` are certified today, as is",
+        "`cli__regress0__nl__very-simple-unsat`.",
+        "",
+        "And the file date is not the measurement date. `r0_QF_SLIA_replace-find-base`",
+        "is recorded `audit_outcome=unsat ... baseline_matches_audit=true`; building the",
+        "audit's own commit `8aff8d507` and running the byte-identical corpus file",
+        "returns **`sat`** — a wrong answer on a query z3 decides unsat, since fixed",
+        "(today: `unknown`, which is sound). An audit row can therefore disagree with",
+        "the tree it is filed against, so the numbers below have no reliable age at all.",
+        "",
+        "Before quoting any number below, check the dates in **Audit provenance** at the",
+        "end of this file against `git log -1 crates/axeyum-solver/src`.",
         "",
         "## Pipeline snapshot",
         "",
@@ -389,6 +491,25 @@ def markdown(report: dict) -> str:
             "",
         ]
     )
+
+    lines.extend(
+        [
+            "## Audit provenance",
+            "",
+            "The commit that last touched each audit this report replays. Compare the",
+            "newest of these against `git log -1 crates/axeyum-solver/src`: anything",
+            "older means the corresponding rows describe a solver that no longer exists,",
+            "in either direction — newly certified instances still counted as bare, and",
+            "regressions to `unknown` still counted as decided.",
+            "",
+            "| Audit | Revision | Provenance |",
+            "|---|---|---|",
+        ]
+    )
+    for rel, sha, date in audit_provenance():
+        lines.append(f"| `{rel}` | `{sha}` | {date} |")
+    lines.append("")
+
     return "\n".join(lines)
 
 

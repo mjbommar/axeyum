@@ -48,8 +48,13 @@ treated as independent population samples.
 
 The retained audit denominators make that limitation concrete:
 
-- **25 / 35** rows meet the decide-strong threshold and **23 / 35** meet the
-  complete dominance definition.
+- **25 / 35** rows meet the decide-strong threshold and **20 / 35** meet the
+  complete dominance definition. That second figure *fell* from 23 since the
+  2026-07-21 snapshot, and two of the four losses are the audit getting stricter
+  rather than the solver getting worse — see the
+  [gap analysis](plan/gap-analysis-z3-lean-2026-07-21.md) for the instance-level
+  account. Two rows counted in the 20 audited **zero** decisions, so "fully
+  dominant" and "decided nothing" are not distinguished by this ratio.
 - The file-backed rows contain **927 occurrences**, **837 unique normalized paths**,
   and **778 unique byte contents**. **58 exact-alias groups** remove
   **59 additional path** identities.
@@ -67,7 +72,7 @@ termination evidence, the two no-answer rows **cannot be retroactively classifie
 This reproduction path is therefore not claimed to be **fully competition-faithful**.
 
 The append-only [`parity ledger`](../bench-results/PARITY.md) contains
-head-to-head entries for eleven divisions against division-appropriate reference
+head-to-head entries for nine divisions against division-appropriate reference
 binaries on identical committed 200-file lists and a 24-second/8-GiB protocol.
 The latest credited weak arithmetic and combination edges are:
 
@@ -79,7 +84,10 @@ The latest credited weak arithmetic and combination edges are:
 | QF_LRA | 86/200 | 146/200 | 58.9% | 0 |
 | QF_RDL | 105/200 | 155/200 | 67.7% | 0 |
 
-The stronger selected cells include QF_SLIA, QF_BV, UF, QF_ABV, and QF_LIA.
+The stronger selected cells include QF_SLIA, QF_BV, UF, and QF_LIA.
+`bench-results/parity-lists/` also carries committed QF_ABV and QF_UF lists that
+have never been run, so neither is a parity cell; a benchmark list is not a
+result, and this sentence named QF_ABV as one until 2026-08-21.
 Read the latest entry per division for exact solver revisions, reference
 configurations, load observations, and overlap; an older entry can have a higher
 score without being the current credited result.
@@ -99,20 +107,52 @@ The newest QF_BV evidence run has 130 UNSAT decisions:
 These are deliberately different assurance claims. Fresh-arena checking must
 not be described as serialized proof replay.
 
-The broader audit still records 58 uncertified occurrences, eight independently
-checked results without Lean reconstruction, and two QF_NIA `IntPow2`
-proof-production errors. The current official-source proof-family population has
-a retained local Lean 4.30 result of 74/74 accepted. That number is modules Lean
-READ, not propositions Lean PROVED: measured 2026-08-17, 41 of the 74 families
-emit a structural attestation — an axiom pair Lean cannot fail on the merits —
-and 33 carry a theory reconstruction. `scripts/check-lean-gate.sh` now reports
-the two halves separately and floors the reasoning one. Corrected remote attestation
+The broader audit records 42 uncertified occurrences, ten independently
+checked results without Lean reconstruction, and four evidence-audit **timeouts**
+(not proof-production refusals — the earlier reading of that line as a QF_NIA
+`IntPow2` rejection was wrong). The current official-source proof-family
+population has a retained local Lean 4.30 result of **78/78 accepted**. That
+number is modules Lean READ, not propositions Lean PROVED: measured 2026-08-21,
+40 of the 78 families emit a structural attestation — an axiom pair Lean cannot
+fail on the merits — and 38 carry a theory reconstruction, the newest being
+`qf_s_string_length`. The 75th is `qf_rdl_difference`, added
+2026-08-17: real difference logic scans into the same `Lra` fragment as QF_LRA,
+so it reconstructs rather than attests, and the family slice had never contained
+a module from that logic. `scripts/check-lean-gate.sh` now reports
+the two halves separately and floors the reasoning one. **And the reasoning half is
+an upper bound, not a count.** `LeanModuleContent::of_module_source` classifies
+by the PRESENCE of a structural-attestation marker, so a shim that simply does
+not carry one is counted as theory reconstruction by default. Measured
+2026-08-18: family `qf_nra_sos_plus_constant` reported `modules=2 theory=2
+structural=0` while both of its modules said nothing whatever about their
+queries — a `prop._0` wrapper had fired in place of the real SOS reconstructor.
+The Lean split cannot see that class of shim; the instrument that can is the
+transcription binding gate (`scripts/check-lra-hypothesis-binding.py`), which
+classified exactly those instances as `attested`. Read the two together, and
+treat a rise in `theory_families` unaccompanied by a rise in `bound`/`structural`
+as unexplained rather than as progress. Corrected remote attestation
 and exhaustive execution remain open.
 
-Across the retained broad UNSAT denominator, **259 / 327** outcomes satisfy the
+Across the retained broad UNSAT denominator, **269 / 326** outcomes satisfy the
 full certified, independently checked, trust-hole-free, Lean-reconstructed
-conjunction; **8 certified** and independently checked outcomes lack Lean
-reconstruction; and **2 proof-production errors** remain.
+conjunction; **42 uncertified** outcomes carry no certificate at all;
+**10 certified** and independently checked outcomes lack Lean reconstruction;
+and **3 proof-production errors** remain. All 35 audits were re-run at
+`496288979` on 2026-08-21 and four rows moved: **+5 of the +7 dominant outcomes
+are capability** (two `RealProduct` and one `MonomialBound` reconstruction in
+QF_NRA, two `StringLength` in QF_S) and **+2 are the instrument** — two QF_NRA
+synthetic instances that had been billed for a process-wide 32 s `CReal` prelude
+build inside a 10 s per-instance cap, and which a directory-backed row drops
+without recording a timeout. The A/B that separates the two is in the
+[gap analysis](plan/gap-analysis-z3-lean-2026-07-21.md). All three of those errors are evidence-audit
+**timeouts**, not rejections — three quantified-BV instances — so they are a
+budget the audit did not fit inside, and the earlier reading of this line as a
+proof-production *refusal* was wrong. `QF_FP/solver__fp__fp_misc.smt2` was a
+fourth and is not: `4032bd660` found an unmemoized DAG walk in the classifier,
+not a budget, and the QF_FP and QF_BVFP rows were re-run at `a3799dca2`. It is
+now certified and independently checked in 314 ms; it is still not dominant,
+because `887b52e64` deliberately withdrew the term-level FP route pending a
+certified `Fpa2Bv` reduction, so it carries a `bit-blast` trust hole instead.
 
 Two small performance controls remain useful but bounded: Axeyum and the Z3
 crate each decide **8 / 113** at 20 seconds on p4dfa, on partially different

@@ -49,6 +49,7 @@ mod backend;
 mod error;
 mod incremental;
 mod layers;
+mod memory_budget;
 mod model;
 mod proof;
 mod sat_bv_backend;
@@ -131,9 +132,14 @@ macro_rules! full_modules {
         mod nat_induction;
         mod nia_linearize;
         mod nia_square;
+        mod nia_univariate_cert;
         mod nra;
         mod nra_even_power;
+        mod nra_handelman_cert;
+        mod nra_monomial_bound_cert;
+        mod nra_product_cert;
         mod nra_real_root;
+        mod nra_zero_product_cert;
         mod optimize;
         mod pb;
         mod pbls;
@@ -197,6 +203,7 @@ macro_rules! full_modules {
         pub mod smtlib;
         mod solver;
         mod strategy;
+        mod string_length_cert;
         mod string_theory;
         pub mod strings;
         pub mod support_matrix;
@@ -343,10 +350,16 @@ pub mod proofs {
         };
         pub use crate::lex_reconstruct::reconstruct_lex_clash_to_lean_module;
         pub use crate::reconstruct::{
-            LeanModuleContent, LraReconstructCtx, OrderedRingRefutation, ProofFragment,
-            RING_LAW_BINDERS, RING_SYMBOL_BINDERS, ReconstructCtx, ReconstructError, RingTelescope,
-            STRUCTURAL_ATTESTATION_MARKER, declared_assumption_clauses,
-            generalize_over_ordered_ring, prove_const_shift_lowering_to_lean_module,
+            CONTROL_AXIOM_LEAF, CONTROL_AXIOM_NAME, CONTROL_DISCHARGE_NAME, ControlCarrier,
+            EQUALITY_SLOT_BINDERS, EQUALITY_SLOT_LAWS, EqSetoidWitnesses, EqSpecialization,
+            EqualitySlot, IntInstantiation, IntRefutation, LeanModuleContent, LraReconstructCtx,
+            MAX_LEAN_MODULE_BYTES, OrderedRingRefutation, ProofFragment, RING_LAW_BINDERS,
+            RING_SYMBOL_BINDERS, ReconstructCtx, ReconstructError, RingEquality,
+            RingInterfaceBinder, RingSignature, RingSignatureReport, RingTelescope,
+            SETOID_RING_BINDERS, SIGNATURE_LAWS, SIGNATURE_SYMBOLS, STRUCTURAL_ATTESTATION_MARKER,
+            SetoidAdoption, SetoidEq, build_control_carrier, carrier_axioms_of,
+            control_carrier_over, declared_assumption_clauses, generalize_over_ordered_ring,
+            instantiate_at_int_model, minted_axioms_of, prove_const_shift_lowering_to_lean_module,
             prove_unsat_to_lean, prove_unsat_to_lean_module, prove_unsat_to_lean_theory_module,
             reconstruct_bitblast_step, reconstruct_bv_alternation_counterexample_to_lean_module,
             reconstruct_bv_closed_universal_counterexample_to_lean_module,
@@ -355,11 +368,14 @@ pub mod proofs {
             reconstruct_bv_positive_universal_instance_set_to_lean_module,
             reconstruct_bv_vacuous_exists_universal_counterexample_to_lean_module,
             reconstruct_cnf_intro_rule, reconstruct_const_shift_lowering, reconstruct_eq_step,
-            reconstruct_lra_proof, reconstruct_negated_existential_witness_to_lean_module,
-            reconstruct_qf_bv_proof, reconstruct_qf_uf_proof, reconstruct_qf_ufbv_proof,
-            reconstruct_quant_unsat_proof, reconstruct_resolution_proof,
-            reconstruct_resolution_proof_compact, reconstruct_skolem_unsat_proof,
-            reconstruct_sos_proof, render_ordered_ring_module, scan_proof_fragment,
+            reconstruct_int_farkas_to_lean_module, reconstruct_lra_proof,
+            reconstruct_negated_existential_witness_to_lean_module, reconstruct_qf_bv_proof,
+            reconstruct_qf_uf_proof, reconstruct_qf_ufbv_proof, reconstruct_quant_unsat_proof,
+            reconstruct_resolution_proof, reconstruct_resolution_proof_compact,
+            reconstruct_skolem_unsat_proof, reconstruct_sos_proof,
+            reconstruct_string_length_to_lean_module, refutation_axiom_footprint,
+            refutation_over_int_axioms, render_ordered_ring_module, residual_eq_constants,
+            ring_interface_telescope, scan_proof_fragment, specialize_setoid_to_eq,
         };
         pub use crate::regex_reconstruct::reconstruct_regex_emptiness_to_lean_module;
     }
@@ -434,10 +450,30 @@ pub mod certificates {
             check_int_quadratic_negative_discriminant_refutation,
             int_quadratic_negative_discriminant_refutation,
         };
+        pub use crate::nia_univariate_cert::{
+            IntUnivariateRefutationCertificate, IntUnivariateRefutationReason,
+            check_int_univariate_refutation, int_univariate_refutation,
+        };
         pub use crate::nra_even_power::{
             NraEvenPowerRefutationCertificate, nra_even_power_refutation,
         };
+        pub use crate::nra_handelman_cert::{
+            HandelmanAtom, HandelmanCase, HandelmanProduct, HandelmanRefutationCertificate,
+            check_handelman_refutation, handelman_refutation,
+        };
+        pub use crate::nra_monomial_bound_cert::{
+            MonomialBound, MonomialBoundRefutationCertificate, RefutedAtom,
+            check_monomial_bound_refutation, monomial_bound_refutation,
+        };
+        pub use crate::nra_product_cert::{
+            AtomSign, RealProductRefutationCertificate, check_real_product_refutation,
+            real_product_refutation,
+        };
         pub use crate::nra_real_root::SosCertificate;
+        pub use crate::nra_zero_product_cert::{
+            RealZeroProductRefutationCertificate, check_real_zero_product_refutation,
+            real_zero_product_refutation,
+        };
     }
 
     /// Exhaustive finite-domain and finite-bit-vector certification.
@@ -616,6 +652,10 @@ pub mod theories {
 
     /// String-theory decision procedures.
     pub mod strings {
+        pub use crate::string_length_cert::{
+            FactRef, LengthLemma, StringLengthRefutationCertificate,
+            check_string_length_refutation, string_length_refutation,
+        };
         pub use crate::string_theory::{
             check_qf_s_online_cdclt, check_qf_s_online_cdclt_with_memberships, check_qf_slia_length,
         };
@@ -1250,10 +1290,16 @@ macro_rules! full_exports {
         };
         #[doc(hidden)]
         pub use reconstruct::{
-            LeanModuleContent, LraReconstructCtx, OrderedRingRefutation, ProofFragment,
-            RING_LAW_BINDERS, RING_SYMBOL_BINDERS, ReconstructCtx, ReconstructError, RingTelescope,
-            STRUCTURAL_ATTESTATION_MARKER, declared_assumption_clauses,
-            generalize_over_ordered_ring, prove_const_shift_lowering_to_lean_module,
+            CONTROL_AXIOM_LEAF, CONTROL_AXIOM_NAME, CONTROL_DISCHARGE_NAME, ControlCarrier,
+            EQUALITY_SLOT_BINDERS, EQUALITY_SLOT_LAWS, EqSetoidWitnesses, EqSpecialization,
+            EqualitySlot, IntInstantiation, IntRefutation, LeanModuleContent, LraReconstructCtx,
+            MAX_LEAN_MODULE_BYTES, OrderedRingRefutation, ProofFragment, RING_LAW_BINDERS,
+            RING_SYMBOL_BINDERS, ReconstructCtx, ReconstructError, RingEquality,
+            RingInterfaceBinder, RingSignature, RingSignatureReport, RingTelescope,
+            SETOID_RING_BINDERS, SIGNATURE_LAWS, SIGNATURE_SYMBOLS, STRUCTURAL_ATTESTATION_MARKER,
+            SetoidAdoption, SetoidEq, build_control_carrier, carrier_axioms_of,
+            control_carrier_over, declared_assumption_clauses, generalize_over_ordered_ring,
+            instantiate_at_int_model, minted_axioms_of, prove_const_shift_lowering_to_lean_module,
             prove_unsat_to_lean, prove_unsat_to_lean_module, prove_unsat_to_lean_theory_module,
             reconstruct_bitblast_step, reconstruct_bv_alternation_counterexample_to_lean_module,
             reconstruct_bv_closed_universal_counterexample_to_lean_module,
@@ -1262,11 +1308,14 @@ macro_rules! full_exports {
             reconstruct_bv_positive_universal_instance_set_to_lean_module,
             reconstruct_bv_vacuous_exists_universal_counterexample_to_lean_module,
             reconstruct_cnf_intro_rule, reconstruct_const_shift_lowering, reconstruct_eq_step,
-            reconstruct_lra_proof, reconstruct_negated_existential_witness_to_lean_module,
-            reconstruct_qf_bv_proof, reconstruct_qf_uf_proof, reconstruct_qf_ufbv_proof,
-            reconstruct_quant_unsat_proof, reconstruct_resolution_proof,
-            reconstruct_resolution_proof_compact, reconstruct_skolem_unsat_proof,
-            reconstruct_sos_proof, render_ordered_ring_module, scan_proof_fragment,
+            reconstruct_int_farkas_to_lean_module, reconstruct_lra_proof,
+            reconstruct_negated_existential_witness_to_lean_module, reconstruct_qf_bv_proof,
+            reconstruct_qf_uf_proof, reconstruct_qf_ufbv_proof, reconstruct_quant_unsat_proof,
+            reconstruct_resolution_proof, reconstruct_resolution_proof_compact,
+            reconstruct_skolem_unsat_proof, reconstruct_sos_proof,
+            reconstruct_string_length_to_lean_module, refutation_axiom_footprint,
+            refutation_over_int_axioms, render_ordered_ring_module, residual_eq_constants,
+            ring_interface_telescope, scan_proof_fragment, specialize_setoid_to_eq,
         };
         #[doc(hidden)]
         pub use records::{RecordError, RecordSort};
@@ -1295,6 +1344,11 @@ macro_rules! full_exports {
         pub use solver::Solver;
         pub use strategy::{
             Strategy, recommended_portfolio, solve_with_portfolio, solve_with_strategy,
+        };
+        #[doc(hidden)]
+        pub use string_length_cert::{
+            FactRef, LengthLemma, StringLengthRefutationCertificate,
+            check_string_length_refutation, string_length_refutation,
         };
         #[doc(hidden)]
         pub use string_theory::{

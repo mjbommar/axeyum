@@ -3,8 +3,27 @@
 //! into a [`Kernel`]'s environment through the trusted
 //! [`Kernel::add_declaration`](crate::Kernel::add_declaration) gate.
 //!
-//! The carrier is *named* `Real` because `ℝ` is the intended interpretation,
-//! but the 30 declarations below are not an axiomatization of `ℝ`: there is no
+//! The carrier is named `AxReal` — "the **ax**iomatized reals" — following the
+//! `Ax` convention [`Kernel::lean_name`](crate::Kernel::lean_name) already uses
+//! for `AxNat`, and for the same reason: `ℝ` is the intended interpretation, so
+//! the obvious name is `Real`, and `Real` is a **substring of `CReal`**, the
+//! *constructed* carrier
+//! (ADR-0512) that the shipped route actually reaches. A `contains("Real.")`
+//! test therefore matches `CReal.` too, and
+//! `crates/axeyum-solver/examples/front_door_carrier.rs` had to work around
+//! exactly that by deciding the carrier from the carrier *declaration*.
+//! `CReal` does not contain `AxReal`, so the rename kills that confusion at the
+//! source and makes every surviving reference to this package a deliberate one
+//! (ADR-0522, which also decides that the package is then retired).
+//!
+//! Unlike `AxNat`, which is a *rendering-only* remap (the stored root segment is
+//! still `Nat`, because Lean's builtin `Nat` has to keep its special kernel
+//! support), this renames the **stored** declaration. `display_name`,
+//! `lean_name`, [`Kernel::axiom_footprint`](crate::Kernel::axiom_footprint) and
+//! the axiom ledger therefore all move together, and no code path can observe
+//! the old spelling.
+//!
+//! The 30 declarations below are not an axiomatization of `ℝ`: there is no
 //! multiplicative inverse and no division, so this is not a field, and there is
 //! no completeness, Archimedean, density or totality axiom either. Every axiom
 //! here is true of `ℤ`, and
@@ -29,15 +48,15 @@
 //!
 //! The carrier lives in `Type = Sort 1`; the relations land in `Prop = Sort 0`:
 //!
-//! - **Carrier** `Real : Type` (an opaque [`Declaration::Axiom`] of type
+//! - **Carrier** `AxReal : Type` (an opaque [`Declaration::Axiom`] of type
 //!   `Sort 1`).
-//! - **Operations** (each an `axiom`): `add : Real → Real → Real`, `mul : Real → Real → Real`,
-//!   `neg : Real → Real`, `zero : Real`, `one : Real`.
-//! - **Relations** (each an `axiom`): `le : Real → Real → Prop`, `lt : Real → Real → Prop`.
+//! - **Operations** (each an `axiom`): `add : AxReal → AxReal → AxReal`, `mul : AxReal → AxReal → AxReal`,
+//!   `neg : AxReal → AxReal`, `zero : AxReal`, `one : AxReal`.
+//! - **Relations** (each an `axiom`): `le : AxReal → AxReal → Prop`, `lt : AxReal → AxReal → Prop`.
 //! - **Order axioms**: `le_refl`, `le_trans`, `lt_irrefl` (via `Not`),
 //!   `lt_trans`, `lt_of_lt_of_le`, `lt_of_le_of_lt`, `le_of_lt`.
 //! - **Additive axioms**: `add_le_add`, `add_comm`, `add_assoc`, `add_zero`
-//!   (via `Eq` at the `Real` level), `add_neg` (via `Eq`).
+//!   (via `Eq` at the `AxReal` level), `add_neg` (via `Eq`).
 //! - **Scaling axiom**: `mul_le_mul_of_nonneg_left`.
 //! - **Constant axiom**: `zero_lt_one : lt zero one`.
 //!
@@ -47,12 +66,50 @@
 //! `u := 1` because the carrier is `Sort 1`.
 #![allow(clippy::similar_names, clippy::many_single_char_names)]
 
+use core::sync::atomic::{AtomicUsize, Ordering};
+
 use crate::env::Declaration;
 use crate::expr::ExprId;
 use crate::name::NameId;
 use crate::{
     BinderInfo, Kernel, KernelError, LogicPrelude, PreludeKey, PreludeValue, build_logic_prelude,
 };
+
+/// How many times [`build_arith_prelude`] has been called in this process.
+///
+/// The `AxReal` package is the repository's entire remaining trusted surface, and
+/// every claim that a route no longer depends on it has so far been checked by
+/// reading the finished proof term's
+/// [`axiom_footprint`](Kernel::axiom_footprint). That is the right check for a
+/// *term*, and it is not the same question as whether the route **reached** the
+/// axioms: `reconstruct_int_farkas_to_lean_module` refuted over `AxReal`,
+/// abstracted the 30 constants back out and instantiated at `ℤ`, so its module
+/// named no `AxReal` axiom while the route built all 30 of them — and that stood
+/// for a day after the front door was announced as axiom-free, because nothing
+/// could observe the construction.
+///
+/// This counter can. It is incremented by the public entry point only, so it
+/// counts *consumers* asking for the package; the template warm-up path in
+/// [`prelude_cache`](crate::prelude_cache) goes through
+/// `build_arith_prelude_uncached` and is deliberately not counted.
+///
+/// It is process-global and therefore only meaningful in a process that is not
+/// building the package concurrently for another reason — read it from a single
+/// test in its own binary, or from an example, never from one test among many
+/// running in parallel.
+static ARITH_PRELUDE_BUILDS: AtomicUsize = AtomicUsize::new(0);
+
+/// How many times a consumer has asked for the axiomatized `AxReal` package in
+/// this process — see the counter's own documentation on
+/// `ARITH_PRELUDE_BUILDS` (private) for what is and is not counted.
+///
+/// Zero after running a reconstruction route means that route reached no
+/// carrier axiom at all, which is a strictly stronger statement than its proof
+/// term having an empty `AxReal` footprint.
+#[must_use]
+pub fn arith_prelude_builds() -> usize {
+    ARITH_PRELUDE_BUILDS.load(Ordering::Relaxed)
+}
 
 /// The interned names produced by [`build_arith_prelude`]: the carrier, the
 /// field/order operations, and every axiom of the linear ordered field, plus the
@@ -67,54 +124,54 @@ pub struct ArithPrelude {
     pub logic: LogicPrelude,
 
     // --- carrier + operations ------------------------------------------------
-    /// `Real : Type` (i.e. `Real : Sort 1`) — the ordered field's carrier.
+    /// `AxReal : Type` (i.e. `AxReal : Sort 1`) — the ordered field's carrier.
     pub r: NameId,
-    /// `add : Real → Real → Real`.
+    /// `add : AxReal → AxReal → AxReal`.
     pub add: NameId,
-    /// `mul : Real → Real → Real`.
+    /// `mul : AxReal → AxReal → AxReal`.
     pub mul: NameId,
-    /// `neg : Real → Real`.
+    /// `neg : AxReal → AxReal`.
     pub neg: NameId,
-    /// `zero : Real`.
+    /// `zero : AxReal`.
     pub zero: NameId,
-    /// `one : Real`.
+    /// `one : AxReal`.
     pub one: NameId,
-    /// `le : Real → Real → Prop`.
+    /// `le : AxReal → AxReal → Prop`.
     pub le: NameId,
-    /// `lt : Real → Real → Prop`.
+    /// `lt : AxReal → AxReal → Prop`.
     pub lt: NameId,
 
     // --- order axioms --------------------------------------------------------
-    /// `le_refl : ∀ (a : Real), le a a`.
+    /// `le_refl : ∀ (a : AxReal), le a a`.
     pub le_refl: NameId,
-    /// `le_trans : ∀ (a b c : Real), le a b → le b c → le a c`.
+    /// `le_trans : ∀ (a b c : AxReal), le a b → le b c → le a c`.
     pub le_trans: NameId,
-    /// `lt_irrefl : ∀ (a : Real), Not (lt a a)`.
+    /// `lt_irrefl : ∀ (a : AxReal), Not (lt a a)`.
     pub lt_irrefl: NameId,
-    /// `lt_trans : ∀ (a b c : Real), lt a b → lt b c → lt a c`.
+    /// `lt_trans : ∀ (a b c : AxReal), lt a b → lt b c → lt a c`.
     pub lt_trans: NameId,
-    /// `lt_of_lt_of_le : ∀ (a b c : Real), lt a b → le b c → lt a c`.
+    /// `lt_of_lt_of_le : ∀ (a b c : AxReal), lt a b → le b c → lt a c`.
     pub lt_of_lt_of_le: NameId,
-    /// `lt_of_le_of_lt : ∀ (a b c : Real), le a b → lt b c → lt a c`.
+    /// `lt_of_le_of_lt : ∀ (a b c : AxReal), le a b → lt b c → lt a c`.
     pub lt_of_le_of_lt: NameId,
-    /// `le_of_lt : ∀ (a b : Real), lt a b → le a b`.
+    /// `le_of_lt : ∀ (a b : AxReal), lt a b → le a b`.
     pub le_of_lt: NameId,
 
     // --- additive axioms -----------------------------------------------------
-    /// `add_le_add : ∀ (a b c d : Real), le a b → le c d → le (add a c) (add b d)`.
+    /// `add_le_add : ∀ (a b c d : AxReal), le a b → le c d → le (add a c) (add b d)`.
     pub add_le_add: NameId,
-    /// `add_comm : ∀ (a b : Real), Eq Real (add a b) (add b a)`.
+    /// `add_comm : ∀ (a b : AxReal), Eq AxReal (add a b) (add b a)`.
     pub add_comm: NameId,
-    /// `add_assoc : ∀ (a b c : Real), Eq Real (add (add a b) c) (add a (add b c))`.
+    /// `add_assoc : ∀ (a b c : AxReal), Eq AxReal (add (add a b) c) (add a (add b c))`.
     pub add_assoc: NameId,
-    /// `add_zero : ∀ (a : Real), Eq Real (add a zero) a`.
+    /// `add_zero : ∀ (a : AxReal), Eq AxReal (add a zero) a`.
     pub add_zero: NameId,
-    /// `add_neg : ∀ (a : Real), Eq Real (add a (neg a)) zero`.
+    /// `add_neg : ∀ (a : AxReal), Eq AxReal (add a (neg a)) zero`.
     pub add_neg: NameId,
 
     // --- scaling axiom -------------------------------------------------------
     /// `mul_le_mul_of_nonneg_left :
-    /// ∀ (c a b : Real), le zero c → le a b → le (mul c a) (mul c b)`.
+    /// ∀ (c a b : AxReal), le zero c → le a b → le (mul c a) (mul c b)`.
     pub mul_le_mul_of_nonneg_left: NameId,
 
     // --- constant axiom ------------------------------------------------------
@@ -123,7 +180,7 @@ pub struct ArithPrelude {
 
     // --- mixed strict/non-strict additive axiom (Task #16) -------------------
     /// `add_lt_add_of_le_of_lt :
-    /// ∀ (a b c d : Real), le a b → lt c d → lt (add a c) (add b d)`.
+    /// ∀ (a b c d : AxReal), le a b → lt c d → lt (add a c) (add b d)`.
     ///
     /// Summing a non-strict inequality with a strict one yields a strict result.
     /// This is the single combinator the mixed-Farkas reconstruction needs; the
@@ -136,30 +193,74 @@ pub struct ArithPrelude {
     // completes the multiplicative fragment the degree-2 SOS ring normalizer and
     // square-nonnegativity proof need. Each axiom's type is type-checked at
     // admission.
-    /// `mul_comm : ∀ (a b : Real), Eq Real (mul a b) (mul b a)`.
+    /// `mul_comm : ∀ (a b : AxReal), Eq AxReal (mul a b) (mul b a)`.
     pub mul_comm: NameId,
-    /// `mul_assoc : ∀ (a b c : Real), Eq Real (mul (mul a b) c) (mul a (mul b c))`.
+    /// `mul_assoc : ∀ (a b c : AxReal), Eq AxReal (mul (mul a b) c) (mul a (mul b c))`.
     pub mul_assoc: NameId,
-    /// `mul_one : ∀ (a : Real), Eq Real (mul a one) a`.
+    /// `mul_one : ∀ (a : AxReal), Eq AxReal (mul a one) a`.
     pub mul_one: NameId,
-    /// `mul_zero : ∀ (a : Real), Eq Real (mul a zero) zero`.
+    /// `mul_zero : ∀ (a : AxReal), Eq AxReal (mul a zero) zero`.
     pub mul_zero: NameId,
     /// `left_distrib :
-    /// ∀ (a b c : Real), Eq Real (mul a (add b c)) (add (mul a b) (mul a c))`.
+    /// ∀ (a b c : AxReal), Eq AxReal (mul a (add b c)) (add (mul a b) (mul a c))`.
     pub left_distrib: NameId,
-    /// `mul_nonneg : ∀ (a b : Real), le zero a → le zero b → le zero (mul a b)`.
+    /// `mul_nonneg : ∀ (a b : AxReal), le zero a → le zero b → le zero (mul a b)`.
     /// The product of nonnegatives is nonnegative.
     pub mul_nonneg: NameId,
-    /// `sq_nonneg : ∀ (a : Real), le zero (mul a a)`. Unconditional
+    /// `sq_nonneg : ∀ (a : AxReal), le zero (mul a a)`. Unconditional
     /// square-nonnegativity (every real square is `≥ 0`, sign-independent) — the
     /// nonnegativity primitive each SOS square `ℓₖ²` rests on.
     pub sq_nonneg: NameId,
 }
 
+impl ArithPrelude {
+    /// The package's 22 **laws**, in declaration order — i.e. the 30 trusted
+    /// declarations minus the eight carrier/operation symbols (`AxReal`, `add`,
+    /// `mul`, `neg`, `zero`, `one`, `le`, `lt`).
+    ///
+    /// The order is the one
+    /// [`CRealPrelude::ordered_ring_laws`](crate::CRealPrelude::ordered_ring_laws)
+    /// and `RatPrelude::ring_laws` mirror, so the three lists line up entry by
+    /// entry and a model can be built by zipping them rather than by writing
+    /// out 22 pairs. That the entries really do correspond is checked by leaf
+    /// name in `creal_model`'s tests, not assumed.
+    ///
+    /// This list exists so that "22 of 22" is read out of the kernel rather
+    /// than asserted in prose; the population it must exhaust is derived from
+    /// the environment by `arith_model`'s coverage test.
+    #[must_use]
+    pub fn ordered_ring_laws(&self) -> [NameId; 22] {
+        [
+            self.le_refl,
+            self.le_trans,
+            self.lt_irrefl,
+            self.lt_trans,
+            self.lt_of_lt_of_le,
+            self.lt_of_le_of_lt,
+            self.le_of_lt,
+            self.add_le_add,
+            self.add_comm,
+            self.add_assoc,
+            self.add_zero,
+            self.add_neg,
+            self.mul_le_mul_of_nonneg_left,
+            self.zero_lt_one,
+            self.add_lt_add_of_le_of_lt,
+            self.mul_comm,
+            self.mul_assoc,
+            self.mul_one,
+            self.mul_zero,
+            self.left_distrib,
+            self.mul_nonneg,
+            self.sq_nonneg,
+        ]
+    }
+}
+
 /// Declare the axiomatized **linear ordered field** into `kernel`'s environment,
 /// returning the [`ArithPrelude`] of interned names. The logical prelude is built
 /// or exact-validated first. Every declaration in this package is namespaced
-/// under `Real`.
+/// under `AxReal`.
 ///
 /// Every axiom is admitted through the **trusted**
 /// [`Kernel::add_declaration`](crate::Kernel::add_declaration) gate, which
@@ -168,13 +269,14 @@ pub struct ArithPrelude {
 /// *is* a proof that the axiom set is well-formed.
 ///
 /// Repeated construction validates and returns the exact registered package.
-/// Any failure rolls back all Real declarations admitted by this invocation.
+/// Any failure rolls back all `AxReal` declarations admitted by this invocation.
 ///
 /// # Errors
 ///
 /// Returns the trusted gate's rejection or an exact-package conflict. A failed
-/// Real build leaves the pre-call environment unchanged.
+/// `AxReal` build leaves the pre-call environment unchanged.
 pub fn build_arith_prelude(kernel: &mut Kernel) -> Result<ArithPrelude, KernelError> {
+    ARITH_PRELUDE_BUILDS.fetch_add(1, Ordering::Relaxed);
     if let Some(PreludeValue::Real(prelude)) =
         crate::prelude_cache::try_restore(kernel, PreludeKey::Real)
     {
@@ -199,8 +301,8 @@ pub(crate) fn build_arith_prelude_uncached(
     let built = (|| -> Result<ArithPrelude, KernelError> {
         let anon = kernel.anon();
 
-        // --- carrier Real : Type (= Sort 1) -----------------------------------------
-        let r = kernel.name_str(anon, "Real");
+        // --- carrier AxReal : Type (= Sort 1) -----------------------------------------
+        let r = kernel.name_str(anon, "AxReal");
         {
             let one_lvl = {
                 let z = kernel.level_zero();
@@ -214,7 +316,7 @@ pub(crate) fn build_arith_prelude_uncached(
             })?;
         }
 
-        // `Real` as a type expression, and `Prop`.
+        // `AxReal` as a type expression, and `Prop`.
         let r_ty = kernel.const_(r, vec![]);
         // Helper: the arrow `dom → cod` (a non-dependent Pi).
         let arrow = |kernel: &mut Kernel, dom: ExprId, cod: ExprId| -> ExprId {
@@ -223,22 +325,22 @@ pub(crate) fn build_arith_prelude_uncached(
         };
 
         // --- operations ----------------------------------------------------------
-        // add, mul : Real → Real → Real.
+        // add, mul : AxReal → AxReal → AxReal.
         let bin_op_ty = {
             let inner = arrow(kernel, r_ty, r_ty);
             arrow(kernel, r_ty, inner)
         };
         let add = declare_axiom(kernel, r, "add", bin_op_ty)?;
         let mul = declare_axiom(kernel, r, "mul", bin_op_ty)?;
-        // neg : Real → Real.
+        // neg : AxReal → AxReal.
         let neg = {
             let ty = arrow(kernel, r_ty, r_ty);
             declare_axiom(kernel, r, "neg", ty)?
         };
-        // zero, one : Real.
+        // zero, one : AxReal.
         let zero = declare_axiom(kernel, r, "zero", r_ty)?;
         let one = declare_axiom(kernel, r, "one", r_ty)?;
-        // le, lt : Real → Real → Prop.
+        // le, lt : AxReal → AxReal → Prop.
         let rel_ty = {
             let prop = kernel.sort_zero();
             let inner = arrow(kernel, r_ty, prop);
@@ -248,7 +350,7 @@ pub(crate) fn build_arith_prelude_uncached(
         let lt = declare_axiom(kernel, r, "lt", rel_ty)?;
 
         // ----- small term builders over the now-declared symbols -----------------
-        // We build axiom *types* as Pi-telescopes over `Real`. Inside a telescope of
+        // We build axiom *types* as Pi-telescopes over `AxReal`. Inside a telescope of
         // `n` binders, the binder introduced `k`-th from the outside is at de Bruijn
         // index `n - 1 - k` when referenced at the *innermost* point. We always
         // reference variables at the innermost (result) position of each axiom, so
@@ -261,9 +363,9 @@ pub(crate) fn build_arith_prelude_uncached(
             kernel.app(e, y)
         };
 
-        // The Pi `∀ (a : Real), body` etc. are built directly with `kernel.pi`.
+        // The Pi `∀ (a : AxReal), body` etc. are built directly with `kernel.pi`.
 
-        // --- le_refl : ∀ (a : Real), le a a -----------------------------------------
+        // --- le_refl : ∀ (a : AxReal), le a a -----------------------------------------
         let le_refl = {
             let a0 = kernel.bvar(0);
             let a0b = kernel.bvar(0);
@@ -272,7 +374,7 @@ pub(crate) fn build_arith_prelude_uncached(
             declare_axiom(kernel, r, "le_refl", ty)?
         };
 
-        // --- le_trans : ∀ (a b c : Real), le a b → le b c → le a c ------------------
+        // --- le_trans : ∀ (a b c : AxReal), le a b → le b c → le a c ------------------
         // Telescope a,b,c then two hyp arrows. At the result (under a,b,c,h1,h2):
         //   a = BVar 4, b = BVar 3, c = BVar 2. (Indices computed per binder depth.)
         let le_trans = {
@@ -297,7 +399,7 @@ pub(crate) fn build_arith_prelude_uncached(
             declare_axiom(kernel, r, "le_trans", ty)?
         };
 
-        // --- lt_irrefl : ∀ (a : Real), Not (lt a a) ---------------------------------
+        // --- lt_irrefl : ∀ (a : AxReal), Not (lt a a) ---------------------------------
         let lt_irrefl = {
             let a0 = kernel.bvar(0);
             let a0b = kernel.bvar(0);
@@ -308,25 +410,25 @@ pub(crate) fn build_arith_prelude_uncached(
             declare_axiom(kernel, r, "lt_irrefl", ty)?
         };
 
-        // --- lt_trans : ∀ (a b c : Real), lt a b → lt b c → lt a c ------------------
+        // --- lt_trans : ∀ (a b c : AxReal), lt a b → lt b c → lt a c ------------------
         let lt_trans = {
             let ty = trans_axiom_ty(kernel, anon, r_ty, lt, lt, lt);
             declare_axiom(kernel, r, "lt_trans", ty)?
         };
 
-        // --- lt_of_lt_of_le : ∀ (a b c : Real), lt a b → le b c → lt a c ------------
+        // --- lt_of_lt_of_le : ∀ (a b c : AxReal), lt a b → le b c → lt a c ------------
         let lt_of_lt_of_le = {
             let ty = trans_axiom_ty(kernel, anon, r_ty, lt, le, lt);
             declare_axiom(kernel, r, "lt_of_lt_of_le", ty)?
         };
 
-        // --- lt_of_le_of_lt : ∀ (a b c : Real), le a b → lt b c → lt a c ------------
+        // --- lt_of_le_of_lt : ∀ (a b c : AxReal), le a b → lt b c → lt a c ------------
         let lt_of_le_of_lt = {
             let ty = trans_axiom_ty(kernel, anon, r_ty, le, lt, lt);
             declare_axiom(kernel, r, "lt_of_le_of_lt", ty)?
         };
 
-        // --- le_of_lt : ∀ (a b : Real), lt a b → le a b -----------------------------
+        // --- le_of_lt : ∀ (a b : AxReal), lt a b → le a b -----------------------------
         let le_of_lt = {
             // Under a,b,h: a=2,b=1 (result le a b); h: lt a b under a,b → a=1,b=0.
             let a2 = kernel.bvar(2);
@@ -340,7 +442,7 @@ pub(crate) fn build_arith_prelude_uncached(
             declare_axiom(kernel, r, "le_of_lt", ty)?
         };
 
-        // --- add_le_add : ∀ (a b c d : Real), le a b → le c d → le (add a c)(add b d) -
+        // --- add_le_add : ∀ (a b c d : AxReal), le a b → le c d → le (add a c)(add b d) -
         let add_le_add = {
             // Under a,b,c,d,h1,h2 the result references: a=5,b=4,c=3,d=2.
             let a5 = kernel.bvar(5);
@@ -364,7 +466,7 @@ pub(crate) fn build_arith_prelude_uncached(
             declare_axiom(kernel, r, "add_le_add", ty)?
         };
 
-        // Equality builder `Eq.{1} Real x y` (carrier is Sort 1 ⇒ u := 1).
+        // Equality builder `Eq.{1} AxReal x y` (carrier is Sort 1 ⇒ u := 1).
         let one_lvl = {
             let z = kernel.level_zero();
             kernel.level_succ(z)
@@ -377,7 +479,7 @@ pub(crate) fn build_arith_prelude_uncached(
             kernel.app(e, y)
         };
 
-        // --- add_comm : ∀ (a b : Real), Eq Real (add a b) (add b a) --------------------
+        // --- add_comm : ∀ (a b : AxReal), Eq AxReal (add a b) (add b a) --------------------
         let add_comm = {
             // Under a,b: a=1,b=0.
             let a1 = kernel.bvar(1);
@@ -391,7 +493,7 @@ pub(crate) fn build_arith_prelude_uncached(
             declare_axiom(kernel, r, "add_comm", ty)?
         };
 
-        // --- add_assoc : ∀ (a b c : Real), Eq Real (add (add a b) c) (add a (add b c)) -
+        // --- add_assoc : ∀ (a b c : AxReal), Eq AxReal (add (add a b) c) (add a (add b c)) -
         let add_assoc = {
             // Under a,b,c: a=2,b=1,c=0.
             let a2 = kernel.bvar(2);
@@ -409,7 +511,7 @@ pub(crate) fn build_arith_prelude_uncached(
             declare_axiom(kernel, r, "add_assoc", ty)?
         };
 
-        // --- add_zero : ∀ (a : Real), Eq Real (add a zero) a ---------------------------
+        // --- add_zero : ∀ (a : AxReal), Eq AxReal (add a zero) a ---------------------------
         let add_zero = {
             let a0 = kernel.bvar(0);
             let zero_c = kernel.const_(zero, vec![]);
@@ -420,7 +522,7 @@ pub(crate) fn build_arith_prelude_uncached(
             declare_axiom(kernel, r, "add_zero", ty)?
         };
 
-        // --- add_neg : ∀ (a : Real), Eq Real (add a (neg a)) zero ----------------------
+        // --- add_neg : ∀ (a : AxReal), Eq AxReal (add a (neg a)) zero ----------------------
         let add_neg = {
             let a0 = kernel.bvar(0);
             let neg_c = kernel.const_(neg, vec![]);
@@ -434,7 +536,7 @@ pub(crate) fn build_arith_prelude_uncached(
         };
 
         // --- mul_le_mul_of_nonneg_left :
-        //       ∀ (c a b : Real), le zero c → le a b → le (mul c a) (mul c b) --------
+        //       ∀ (c a b : AxReal), le zero c → le a b → le (mul c a) (mul c b) --------
         let mul_le_mul_of_nonneg_left = {
             // Binder order c,a,b then h1: le zero c, h2: le a b. Result under
             // c,a,b,h1,h2: c=4,a=3,b=2.
@@ -468,7 +570,7 @@ pub(crate) fn build_arith_prelude_uncached(
         };
 
         // --- add_lt_add_of_le_of_lt (Task #16) -----------------------------------
-        //   ∀ (a b c d : Real), le a b → lt c d → lt (add a c)(add b d).
+        //   ∀ (a b c d : AxReal), le a b → lt c d → lt (add a c)(add b d).
         // Same telescope/de-Bruijn shape as `add_le_add`, but the second hypothesis
         // and the conclusion are `lt`.
         let add_lt_add_of_le_of_lt = {
@@ -494,7 +596,7 @@ pub(crate) fn build_arith_prelude_uncached(
             declare_axiom(kernel, r, "add_lt_add_of_le_of_lt", ty)?
         };
 
-        // --- mul_comm : ∀ (a b : Real), Eq Real (mul a b) (mul b a) --------------------
+        // --- mul_comm : ∀ (a b : AxReal), Eq AxReal (mul a b) (mul b a) --------------------
         // (Same shape as `add_comm`, with `mul` for `add`.) Under a,b: a=1,b=0.
         let mul_comm = {
             let a1 = kernel.bvar(1);
@@ -508,7 +610,7 @@ pub(crate) fn build_arith_prelude_uncached(
             declare_axiom(kernel, r, "mul_comm", ty)?
         };
 
-        // --- mul_assoc : ∀ (a b c : Real), Eq Real (mul (mul a b) c)(mul a (mul b c)) --
+        // --- mul_assoc : ∀ (a b c : AxReal), Eq AxReal (mul (mul a b) c)(mul a (mul b c)) --
         // (Same shape as `add_assoc`.) Under a,b,c: a=2,b=1,c=0.
         let mul_assoc = {
             let a2 = kernel.bvar(2);
@@ -526,7 +628,7 @@ pub(crate) fn build_arith_prelude_uncached(
             declare_axiom(kernel, r, "mul_assoc", ty)?
         };
 
-        // --- mul_one : ∀ (a : Real), Eq Real (mul a one) a -----------------------------
+        // --- mul_one : ∀ (a : AxReal), Eq AxReal (mul a one) a -----------------------------
         // (Same shape as `add_zero`, with `mul`/`one` for `add`/`zero`.)
         let mul_one = {
             let a0 = kernel.bvar(0);
@@ -538,7 +640,7 @@ pub(crate) fn build_arith_prelude_uncached(
             declare_axiom(kernel, r, "mul_one", ty)?
         };
 
-        // --- mul_zero : ∀ (a : Real), Eq Real (mul a zero) zero ------------------------
+        // --- mul_zero : ∀ (a : AxReal), Eq AxReal (mul a zero) zero ------------------------
         let mul_zero = {
             let a0 = kernel.bvar(0);
             let zero_c = kernel.const_(zero, vec![]);
@@ -550,7 +652,7 @@ pub(crate) fn build_arith_prelude_uncached(
         };
 
         // --- left_distrib :
-        //       ∀ (a b c : Real), Eq Real (mul a (add b c)) (add (mul a b)(mul a c)) ----
+        //       ∀ (a b c : AxReal), Eq AxReal (mul a (add b c)) (add (mul a b)(mul a c)) ----
         // Under a,b,c: a=2,b=1,c=0.
         let left_distrib = {
             let a2 = kernel.bvar(2);
@@ -570,7 +672,7 @@ pub(crate) fn build_arith_prelude_uncached(
             declare_axiom(kernel, r, "left_distrib", ty)?
         };
 
-        // --- mul_nonneg : ∀ (a b : Real), le zero a → le zero b → le zero (mul a b) -
+        // --- mul_nonneg : ∀ (a b : AxReal), le zero a → le zero b → le zero (mul a b) -
         // (Hyp shape mirrors `mul_le_mul_of_nonneg_left`'s `le zero c`.) Telescope
         // a,b then h1,h2. Result under a,b,h1,h2: a=3,b=2; h2 under a,b,h1: b=1; h1
         // under a,b: a=1.
@@ -594,7 +696,7 @@ pub(crate) fn build_arith_prelude_uncached(
             declare_axiom(kernel, r, "mul_nonneg", ty)?
         };
 
-        // --- sq_nonneg : ∀ (a : Real), le zero (mul a a) ----------------------------
+        // --- sq_nonneg : ∀ (a : AxReal), le zero (mul a a) ----------------------------
         // UNCONDITIONAL square-nonnegativity (true for every real, including negative
         // a — `mul_nonneg` only covers `0 ≤ a`). This is the actual nonnegativity
         // primitive each SOS square `ℓₖ²` needs. Under a: a=0.
@@ -654,7 +756,7 @@ pub(crate) fn build_arith_prelude_uncached(
     }
 }
 
-/// Wrap `body` in `n` `∀ (_ : Real)` binders, returning `Π (Real)^n, body`.
+/// Wrap `body` in `n` `∀ (_ : AxReal)` binders, returning `Π (AxReal)^n, body`.
 fn telescope_r(
     kernel: &mut Kernel,
     anon: NameId,
@@ -669,7 +771,7 @@ fn telescope_r(
 }
 
 /// Build the shared 3-place "transitivity" axiom type
-/// `∀ (a b c : Real), rel1 a b → rel2 b c → rel3 a c` for relation symbols
+/// `∀ (a b c : AxReal), rel1 a b → rel2 b c → rel3 a c` for relation symbols
 /// `rel1`/`rel2`/`rel3`.
 fn trans_axiom_ty(
     kernel: &mut Kernel,

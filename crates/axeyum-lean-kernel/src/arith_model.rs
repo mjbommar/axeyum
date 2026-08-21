@@ -1,43 +1,49 @@
-//! A **machine-checked model** of the `Real` axiom package, interpreted in the
+//! A **machine-checked model** of the `AxReal` axiom package, interpreted in the
 //! constructed, axiom-free `Int` development.
 //!
 //! ## Why this exists
 //!
-//! [`build_arith_prelude`] declares 30 trusted constants under `Real` and its
+//! [`build_arith_prelude`] declares 30 trusted constants under `AxReal` and its
 //! doc comment calls them "an axiomatized **linear ordered field**". Enumerate
 //! them and that description is wrong in a way that changes what has to be
 //! built: the package declares **no multiplicative inverse, no division, no
 //! completeness (supremum) axiom, no Archimedean axiom and no density axiom**.
 //! Eight declarations are the carrier and its operations
-//! (`Real`, `add`, `mul`, `neg`, `zero`, `one`, `le`, `lt`) and the remaining
+//! (`AxReal`, `add`, `mul`, `neg`, `zero`, `one`, `le`, `lt`) and the remaining
 //! 22 are the laws of a **commutative ring with `1`, compatibly ordered** —
 //! every one of which is true of `ℤ`.
 //!
 //! That matters because `ℤ` is *constructed* here (see
 //! [`build_int_prelude`](crate::build_int_prelude)) and its laws are theorems
 //! with an empty [`axiom_footprint`](crate::Kernel::axiom_footprint), whereas
-//! `ℝ` cannot be constructed in this kernel at all today — the quotient package
-//! is `Quot`/`Quot.mk`/`Quot.lift`/`Quot.ind` and contains **no `Quot.sound`**,
-//! so a Cauchy-sequence quotient is not merely expensive, it is inexpressible.
-//! ADR-0456 carries the full accounting.
+//! `ℝ` — when this module was written — could not be constructed in this kernel
+//! at all: the quotient package is `Quot`/`Quot.mk`/`Quot.lift`/`Quot.ind` and
+//! contains **no `Quot.sound`**, so a Cauchy-sequence quotient is not merely
+//! expensive, it is inexpressible. ADR-0456 carries that accounting.
+//!
+//! **That conclusion was overturned, and the correction is why this module has
+//! a successor.** The missing option was that ring equality need not be `Eq`:
+//! ADR-0512 constructs ℝ as a Bishop setoid whose equality is a *defined*
+//! relation, so no quotient is needed and `Quot.sound` never comes up. See
+//! "Superseded by the constructed reals" below.
 //!
 //! ## What this module establishes, and what it does not
 //!
-//! [`build_int_model_of_arith`] declares, for each of the 22 `Real` **laws**, a
+//! [`build_int_model_of_arith`] declares, for each of the 22 `AxReal` **laws**, a
 //! theorem
 //!
 //! ```text
-//! Real.IntModel.<law> : ⟦ type of Real.<law> ⟧    := Int.<law>
+//! AxReal.IntModel.<law> : ⟦ type of AxReal.<law> ⟧    := Int.<law>
 //! ```
 //!
-//! where `⟦·⟧` is the constant substitution `Real ↦ Int`, `Real.add ↦ Int.add`,
-//! …, `Real.lt ↦ Int.lt` applied to the axiom's type. The interpreted type is
+//! where `⟦·⟧` is the constant substitution `AxReal ↦ Int`, `AxReal.add ↦ Int.add`,
+//! …, `AxReal.lt ↦ Int.lt` applied to the axiom's type. The interpreted type is
 //! **computed from the axiom actually in the environment**, never written by
 //! hand, and the kernel then type-checks the `Int` theorem against it at
 //! admission. Every witness carries an empty axiom footprint.
 //!
-//! The consequence is a **relative consistency** statement: the `Real` axiom
-//! set has a model whose theory is derived from nothing, so no `Real`-based
+//! The consequence is a **relative consistency** statement: the `AxReal` axiom
+//! set has a model whose theory is derived from nothing, so no `AxReal`-based
 //! reconstruction is vacuous on account of a contradictory axiom package. Be
 //! precise about the strength of that claim:
 //!
@@ -46,17 +52,34 @@
 //! - The step from "every axiom translates" to "every *derivation* translates"
 //!   is the standard homomorphism argument over the term language, and it is
 //!   **not** itself machine-checked here — the kernel has no way to state it.
-//! - Interpreting `Real` as `ℤ` does **not** discharge the `Real` axioms. A
+//! - Interpreting `AxReal` as `ℤ` does **not** discharge the `AxReal` axioms. A
 //!   theorem about `Int` is weaker than the same theorem about `ℝ`, and this
 //!   module never claims otherwise. Discharging them requires either
 //!   constructing a carrier (`ℚ` suffices for every axiom in the package; `ℝ`
 //!   is needed only once a completeness axiom is added) or parameterising the
 //!   consumers over the ordered-ring interface so the laws become hypotheses.
 //!
-//! The completeness of the interpretation is itself tested: every `Real.*`
+//! The completeness of the interpretation is itself tested: every `AxReal.*`
 //! declaration in the environment must be either an interpreted symbol or a
 //! law with a witness, so a future 31st axiom cannot slip past this module
 //! while the count still reads "all covered".
+//!
+//! ## Superseded by the constructed reals
+//!
+//! [`build_creal_model_of_arith`](crate::build_creal_model_of_arith) (ADR-0512
+//! phase R4) now models the same 22 laws in
+//! [`CReal`](crate::CRealPrelude) — a Bishop setoid of regular ℚ-sequences over
+//! the constructed ℚ, also at zero trusted declarations — which discharges the
+//! "`ℤ` is not ℝ" caveat above: the carrier there **is** the real numbers.
+//!
+//! This module is kept, and is not redundant. There are now **three** checked
+//! models of the package — `ℤ` here, `ℚ` in the `rat_prelude` model module, and `CReal` —
+//! and they do not dominate one another. `ℤ` and `ℚ` interpret ring equality by
+//! the kernel's own `Eq` and are not ℝ; `CReal` is ℝ and cannot, because nine
+//! of the 22 laws are satisfied only after `Eq AxReal` is read as `CReal.Equiv`.
+//! So they bracket the package from opposite sides — two keep `Eq` and lose ℝ,
+//! one keeps ℝ and loses `Eq` — and it is the set, not any one of them, that
+//! says which of the 30 declarations the equality slot is load-bearing for.
 
 use std::collections::HashMap;
 
@@ -67,18 +90,18 @@ use crate::int_prelude::{IntPrelude, build_int_prelude};
 use crate::name::NameId;
 use crate::{Kernel, KernelError};
 
-/// One interpreted law: the `Real` axiom, the `Int` theorem that models it, and
+/// One interpreted law: the `AxReal` axiom, the `Int` theorem that models it, and
 /// the kernel-checked witness declaration binding them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ArithModelLaw {
-    /// The `Real` axiom being interpreted.
+    /// The `AxReal` axiom being interpreted.
     pub real: NameId,
     /// The `Int` theorem supplied as its proof under the interpretation.
     pub int: NameId,
-    /// The admitted witness `Real.IntModel.<law>`, whose type is the
+    /// The admitted witness `AxReal.IntModel.<law>`, whose type is the
     /// *computed* interpretation of `real`'s type.
     pub witness: NameId,
-    /// Whether the interpreted `Real` type is **syntactically identical** to
+    /// Whether the interpreted `AxReal` type is **syntactically identical** to
     /// the `Int` theorem's own declared type (rather than merely definitionally
     /// equal). Recorded because identity is the stronger and more auditable
     /// outcome, and because a law where it fails is a law whose two statements
@@ -90,14 +113,14 @@ pub struct ArithModelLaw {
 /// interpretation, and one checked witness per law.
 #[derive(Debug, Clone)]
 pub struct ArithModel {
-    /// The axiomatized `Real` package being modelled.
+    /// The axiomatized `AxReal` package being modelled.
     pub arith: ArithPrelude,
     /// The constructed `Int` development doing the modelling.
     pub int: IntPrelude,
-    /// The interpretation of `Real`'s eight carrier/operation symbols, as
-    /// `(Real symbol, Int symbol)` pairs in declaration order.
+    /// The interpretation of `AxReal`'s eight carrier/operation symbols, as
+    /// `(AxReal symbol, Int symbol)` pairs in declaration order.
     pub symbols: Vec<(NameId, NameId)>,
-    /// One entry per `Real` law, in declaration order.
+    /// One entry per `AxReal` law, in declaration order.
     pub laws: Vec<ArithModelLaw>,
 }
 
@@ -109,11 +132,11 @@ impl ArithModel {
     }
 }
 
-/// Build both preludes and admit the interpretation of every `Real` law into
+/// Build both preludes and admit the interpretation of every `AxReal` law into
 /// the constructed `Int` development.
 ///
 /// The witness types are computed by substituting the interpreted symbols into
-/// the `Real` axioms **as they stand in the environment**, so an axiom whose
+/// the `AxReal` axioms **as they stand in the environment**, so an axiom whose
 /// statement changes changes the obligation, and an axiom that `ℤ` does not
 /// satisfy makes this function fail rather than silently drop a row.
 ///
@@ -121,7 +144,7 @@ impl ArithModel {
 ///
 /// Returns the trusted gate's rejection. In particular a
 /// [`KernelError`] from `add_declaration` here means the kernel **refused** an
-/// `Int` theorem as a proof of the interpreted `Real` axiom — i.e. `ℤ` was not
+/// `Int` theorem as a proof of the interpreted `AxReal` axiom — i.e. `ℤ` was not
 /// shown to model that axiom.
 pub fn build_int_model_of_arith(kernel: &mut Kernel) -> Result<ArithModel, KernelError> {
     let arith = build_arith_prelude(kernel)?;
@@ -169,7 +192,7 @@ pub fn build_int_model_of_arith(kernel: &mut Kernel) -> Result<ArithModel, Kerne
 
     let anon = kernel.anon();
     let model_root = {
-        let real = kernel.name_str(anon, "Real");
+        let real = kernel.name_str(anon, "AxReal");
         kernel.name_str(real, "IntModel")
     };
 
@@ -208,7 +231,7 @@ pub fn build_int_model_of_arith(kernel: &mut Kernel) -> Result<ArithModel, Kerne
 
 /// The declared type of `name`, or [`KernelError::UnknownConst`] if the
 /// environment does not carry it.
-fn declaration_type(kernel: &Kernel, name: NameId) -> Result<ExprId, KernelError> {
+pub(crate) fn declaration_type(kernel: &Kernel, name: NameId) -> Result<ExprId, KernelError> {
     kernel
         .environment()
         .get(name)
@@ -216,8 +239,8 @@ fn declaration_type(kernel: &Kernel, name: NameId) -> Result<ExprId, KernelError
         .ok_or(KernelError::UnknownConst { name })
 }
 
-/// The final component of a dotted name (`Real.add_comm` ↦ `add_comm`).
-fn leaf_name(kernel: &Kernel, name: NameId) -> String {
+/// The final component of a dotted name (`AxReal.add_comm` ↦ `add_comm`).
+pub(crate) fn leaf_name(kernel: &Kernel, name: NameId) -> String {
     let rendered = kernel.display_name(name).to_string();
     rendered
         .rsplit('.')
@@ -231,9 +254,9 @@ fn leaf_name(kernel: &Kernel, name: NameId) -> String {
 ///
 /// Universe arguments, binder names and binder info are carried through
 /// untouched: the interpretation renames constants and nothing else, which is
-/// what makes the resulting obligation the `Real` axiom rather than a
+/// what makes the resulting obligation the `AxReal` axiom rather than a
 /// convenient restatement of it.
-fn interpret(
+pub(crate) fn interpret(
     kernel: &mut Kernel,
     e: ExprId,
     map: &HashMap<NameId, NameId>,

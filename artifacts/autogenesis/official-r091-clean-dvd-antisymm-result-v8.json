@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-r091-clean-dvd-antisymm-result-v8",
+  "state": "first-run-declined-at-monomorphic-le-recursor-second-skipped",
+  "plan": {"path": "artifacts/autogenesis/official-r091-clean-dvd-antisymm-plan-v8.json", "sha256": "67d25d4a9cfccac8047791507155320a2e2dbbcce7e4acf92a9beaa714a74efa"},
+  "implementation_commit": "4ccca2216",
+  "evidence_pack": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/4ccca2216-official-r091-clean-dvd-antisymm-v8", "manifest_sha256": "941c5ec95915c29d07d449ed0dcec0cb6bb2040114e6f550f4dfc6e8cccecd70", "directory_mode": "0555", "file_mode": "0444"},
+  "decline": {"stage": "official-multiplicative-monotonicity-submission", "class": "UniverseArityMismatch", "name": "Nat.le.rec", "expected_universe_arity": 0, "supplied_universe_arity": 1, "partial_kernel_published": false},
+  "execution": {"complete_invocations": 1, "successful_cancellation_compositions": 1, "support_submissions": 0, "exports": 0, "imports": 0, "exact_target_submissions": 0, "retries": 0, "second_invocation_skipped": true},
+  "authority": {"support_credit": 0, "target_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_boundary": "Instantiate monomorphic Nat.le.rec with no universe arguments, without changing the frozen theorem statement or proof method, then rerun under a fresh zero-retry plan.",
+  "limitations": "The cancellation composition succeeded, but the first new support was rejected before admission; no support, clean-order, or Fibonacci target credit is granted."
+}

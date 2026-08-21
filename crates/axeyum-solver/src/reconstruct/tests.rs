@@ -3778,16 +3778,92 @@ fn arithmetic_family_generated_source_is_byte_stable() {
     let zero = arena.real_const(Rational::integer(0));
     let square = arena.real_mul(x, x).unwrap();
     let negative_square = arena.real_lt(square, zero).unwrap();
-    let source = super::reconstruct_sos_to_lean_module(&arena, &[negative_square])
-        .expect("SOS fixture reconstructs and renders");
+    // Explicitly over the `AxReal` package, like the linear half above. This
+    // fixture pins the PRINTER and the ring normalizer, not the carrier the
+    // shipped route picks: since 2026-08-18 `reconstruct_sos_to_lean_module`
+    // runs over the constructed reals, whose module carries the whole ℕ/ℤ/ℚ/
+    // setoid development and is 2.5 MB. Blessing that as a golden file would
+    // make a 2.5 MB diff the review surface for every printer change.
+    // `front_door_carrier_emits_the_constructed_carrier` is what checks the
+    // shipped route's carrier.
+    let mut ctx = super::LraReconstructCtx::new();
+    let proof = super::reconstruct_sos_proof(&mut ctx, &arena, &[negative_square])
+        .expect("SOS fixture reconstructs");
+    let source =
+        super::gate_and_render_lra_module(&mut ctx, proof, "SOS").expect("SOS fixture renders");
     assert_lean_module_fixture("arithmetic-sum-of-squares", &source);
+}
+
+/// The shipped SOS front door emits the **constructed** carrier, and the
+/// refutation it builds rests on **no carrier axiom**.
+///
+/// Two assertions, deliberately not one. The first is about the artifact a user
+/// receives (`reconstruct_sos_to_lean_module`, the route
+/// `ProofFragment::Sos` dispatches to); the second is about what the kernel says
+/// that artifact assumes. A module can name `CReal` everywhere and still rest on
+/// an assumption, and a footprint can be empty for a proof nobody ships.
+///
+/// The `AxReal` control is not decoration: an empty `CReal` carrier footprint means
+/// nothing unless the same measurement over the axiomatized package comes back
+/// non-empty, which is what distinguishes "the carrier is free" from "the
+/// measurement is broken".
+#[test]
+fn the_shipped_sos_route_is_carrier_axiom_free() {
+    use axeyum_ir::{Rational, TermArena};
+
+    use super::arithmetic::ordered_ring::{carrier_axioms_of, refutation_axiom_footprint};
+
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let zero = arena.real_const(Rational::integer(0));
+    let square = arena.real_mul(x, x).unwrap();
+    let negative_square = arena.real_lt(square, zero).unwrap();
+
+    let source = super::reconstruct_sos_to_lean_module(&arena, &[negative_square])
+        .expect("the shipped SOS route reconstructs");
+    assert!(
+        source.contains("CReal"),
+        "the shipped SOS module does not name the constructed carrier"
+    );
+    assert!(
+        !source.contains("axiom AxReal : Sort"),
+        "the shipped SOS module still declares the AXIOMATIZED carrier"
+    );
+
+    let mut ctx = super::LraReconstructCtx::try_new_over_constructed_reals()
+        .expect("the constructed carrier builds");
+    let proof = super::reconstruct_sos_proof(&mut ctx, &arena, &[negative_square])
+        .expect("SOS reconstructs over the constructed carrier");
+    let footprint =
+        refutation_axiom_footprint(&mut ctx, proof).expect("the refutation proves False");
+    let carrier = carrier_axioms_of(&footprint);
+    assert!(
+        carrier.is_empty(),
+        "the constructed carrier is still assuming: {carrier:?}"
+    );
+    assert!(
+        !footprint.is_empty(),
+        "an entirely empty footprint would mean the query's own hypothesis \
+         axioms vanished, which is a broken measurement rather than a result"
+    );
+
+    let mut real_ctx = super::LraReconstructCtx::new();
+    let real_proof = super::reconstruct_sos_proof(&mut real_ctx, &arena, &[negative_square])
+        .expect("SOS reconstructs over the AxReal package");
+    let real_footprint =
+        refutation_axiom_footprint(&mut real_ctx, real_proof).expect("the refutation proves False");
+    assert!(
+        !carrier_axioms_of(&real_footprint).is_empty(),
+        "the `AxReal` control came back carrier-axiom-free, so this test is \
+         measuring nothing"
+    );
 }
 
 /// The **axiom-free** arithmetic module: the same Farkas refutation, generalized
 /// over the ordered-ring interface, rendered as a self-contained Lean file.
 ///
 /// This one is worth a fixture for a reason the other two are not. Every other
-/// generated arithmetic module opens with a block of `axiom Real.*` lines and
+/// generated arithmetic module opens with a block of `axiom AxReal.*` lines and
 /// its `#print axioms` audit names them; this module declares **no axiom at
 /// all**, so the audit real Lean prints is the independent confirmation of the
 /// empty footprint `Kernel::axiom_footprint` measures on our side.
@@ -5200,18 +5276,27 @@ mod lra_dispatch_tests {
         assert!(!source.contains(STRUCTURAL_ATTESTATION_MARKER));
         assert!(!source.contains("sorryAx"), "module must be sorry-free");
 
-        // The ordered-field prelude the refutation actually rests on.
+        // The ordered-ring development the refutation actually rests on. Since
+        // 2026-08-18 that is the CONSTRUCTED carrier `CReal`, not the
+        // axiomatized `AxReal` package, so these names moved namespace.
         for needed in [
-            "axiom Real : Sort (1)",
-            "Real.add_le_add",
-            "Real.lt_irrefl",
+            "CReal.add_le_add",
+            "CReal.lt_irrefl",
             "theorem axeyum_refutation : False :=",
         ] {
             assert!(
                 source.contains(needed),
-                "Farkas module must contain `{needed}`:\n{source}"
+                "Farkas module must contain `{needed}`"
             );
         }
+        // And the point of the move: the carrier is not ASSUMED. `AxReal : Sort`
+        // is the axiomatized package's carrier declaration and must be absent.
+        // Substring matching alone would not see this — every `CReal.foo` name
+        // contains `AxReal.foo` — so the carrier declaration is what is checked.
+        assert!(
+            !source.contains("axiom AxReal : Sort"),
+            "the shipped Farkas module still declares the AXIOMATIZED carrier"
+        );
         // One hypothesis axiom per asserted row, and the two real variables. The
         // shim has neither: its only axioms are `prop._0` and its negation.
         let hypotheses = source.matches("axeyum.reconstruct.lra.hyp.").count();
@@ -5238,7 +5323,17 @@ mod lra_dispatch_tests {
             prove_unsat_to_lean_module(&mut arena, &assertions).expect("strict conflict");
         assert_eq!(fragment, ProofFragment::Lra);
         assert!(!source.contains(STRUCTURAL_ATTESTATION_MARKER));
-        assert!(source.contains("Real.lt"), "module mentions strict order");
+        // `CReal.lt`, spelled in full: `contains("AxReal.lt")` is satisfied by
+        // `CReal.lt` too, so the loose form passed unchanged across the carrier
+        // flip and asserted nothing about which carrier ran.
+        assert!(
+            source.contains("CReal.lt"),
+            "module mentions strict order over the constructed carrier"
+        );
+        assert!(
+            !source.contains("axiom AxReal : Sort"),
+            "the shipped strict-conflict module still declares the AXIOMATIZED carrier"
+        );
         assert!(source.contains("axeyum.reconstruct.lra.hyp."));
     }
 
@@ -5250,7 +5345,22 @@ mod lra_dispatch_tests {
         let (fragment, source) = prove_unsat_to_lean_theory_module(&mut arena, &assertions)
             .expect("the Farkas route has theory content");
         assert_eq!(fragment, ProofFragment::Lra);
-        assert!(source.contains("Real.add_le_add"));
+        // `CReal.add_le_add`, spelled in full. This read `Real.add_le_add`
+        // until 2026-08-19 and passed the whole time the shipped route was on
+        // the CONSTRUCTED carrier, because `CReal.add_le_add` contains
+        // `Real.add_le_add` as a substring: the assertion could not tell the
+        // two carriers apart and said nothing about which one ran. ADR-0522's
+        // rename (`Real` -> `AxReal`) is what surfaced it — `CReal` does not
+        // contain `AxReal` — and the negative below is what keeps it honest.
+        assert!(
+            source.contains("CReal.add_le_add"),
+            "the Farkas module must state additive monotonicity over the \
+             constructed carrier"
+        );
+        assert!(
+            !source.contains("axiom AxReal : Sort"),
+            "the shipped theory module still declares the AXIOMATIZED carrier"
+        );
     }
 
     // --- The shim side: it is marked, and the strict door refuses it ---
@@ -5551,6 +5661,138 @@ mod lra_dispatch_tests {
         assert!(
             err.to_string().contains("structural attestation"),
             "the decline must say why: {err}"
+        );
+    }
+}
+
+/// The array-axiom route renders the query's OWN terms.
+///
+/// Until 2026-08-18 it rendered one opaque constant per whole term, so
+/// `select(store(a, i, v), j)` reached Lean as `atom._0` and the module's entire
+/// vocabulary had no declared relationship to any symbol in the query. Nothing
+/// about the certificate required that — its `lhs`/`rhs` are the query's own
+/// `TermId`s. It was how the emitter was written.
+#[cfg(test)]
+mod array_axiom_transcription {
+    use axeyum_ir::{TermArena, TermId};
+
+    use super::super::prove_unsat_to_lean_module;
+
+    /// `¬(select(store(a, i, v), j) = ite(i = j, v, select(a, j)))`, the `McCarthy`
+    /// read-over-write axiom denied.
+    fn mccarthy(arena: &mut TermArena) -> Vec<TermId> {
+        let a = arena.array_var("a", 4, 8).expect("array a");
+        let i = arena.bv_var("i", 4).expect("i");
+        let j = arena.bv_var("j", 4).expect("j");
+        let v = arena.bv_var("v", 8).expect("v");
+        let stored = arena.store(a, i, v).expect("store");
+        let lhs = arena.select(stored, j).expect("select");
+        let cond = arena.eq(i, j).expect("i = j");
+        let fallback = arena.select(a, j).expect("select a j");
+        let rhs = arena.ite(cond, v, fallback).expect("ite");
+        let eq = arena.eq(lhs, rhs).expect("eq");
+        vec![arena.not(eq).expect("not")]
+    }
+
+    /// `¬(select(ite(c, a, b), i) = ite(c, select(a, i), select(b, i)))`.
+    fn select_over_ite(arena: &mut TermArena) -> Vec<TermId> {
+        let a = arena.array_var("a", 4, 8).expect("array a");
+        let b = arena.array_var("b", 4, 8).expect("array b");
+        let c = arena.bool_var("c").expect("c");
+        let i = arena.bv_var("i", 4).expect("i");
+        let chosen = arena.ite(c, a, b).expect("ite arrays");
+        let lhs = arena.select(chosen, i).expect("select");
+        let from_a = arena.select(a, i).expect("select a i");
+        let from_b = arena.select(b, i).expect("select b i");
+        let rhs = arena.ite(c, from_a, from_b).expect("ite values");
+        let eq = arena.eq(lhs, rhs).expect("eq");
+        vec![arena.not(eq).expect("not")]
+    }
+
+    fn module(build: fn(&mut TermArena) -> Vec<TermId>) -> String {
+        let mut arena = TermArena::new();
+        let assertions = build(&mut arena);
+        prove_unsat_to_lean_module(&mut arena, &assertions)
+            .expect("array-axiom module")
+            .1
+    }
+
+    #[test]
+    fn the_rendered_hypothesis_has_the_querys_term_structure() {
+        let source = module(mccarthy);
+
+        // Four distinct leaves (`a`, `i`, `j`, `v`) and four distinct operators
+        // (`store`, `select`, `ite`, `=`). A module that collapses each side
+        // into one opaque constant declares TWO atoms and no function at all.
+        let atoms = source.matches("axiom axeyum.reconstruct.atom._").count();
+        let funcs = source.matches("axiom axeyum.reconstruct.func._").count();
+        assert_eq!(atoms, 4, "one constant per distinct query leaf:\n{source}");
+        assert_eq!(
+            funcs, 4,
+            "one function per distinct query operator:\n{source}"
+        );
+
+        // `select` is used twice and is one constant both times: that is what
+        // makes the rendering a function of the query's syntax, and what lets an
+        // independent structural match against the `.smt2` file FAIL.
+        let hypothesis = source
+            .lines()
+            .find(|line| line.starts_with("axiom axeyum.reconstruct.hyp.") && line.contains("Not"))
+            .expect("the denied equality");
+        let nesting = hypothesis.matches("axeyum.reconstruct.func._").count();
+        assert!(
+            nesting >= 5,
+            "the denied equality must spell the query's applications out rather than \
+             name them opaquely: {hypothesis}"
+        );
+    }
+
+    #[test]
+    fn two_different_array_axioms_no_longer_render_the_same_module() {
+        // Read-over-write and select-over-ite are different axioms over
+        // different terms in different queries. Under the pre-2026-08-18
+        // emitter they rendered `atom._0 = atom._1` beside its negation --
+        // the same module, byte for byte, and so did every other instance the
+        // route certified. That is what "the module says nothing about the
+        // file" means concretely, and it is the property this test denies.
+        assert_ne!(module(mccarthy), module(select_over_ite));
+    }
+
+    #[test]
+    fn a_query_bigger_than_the_render_cap_falls_back_to_the_opaque_form() {
+        // The cap exists because nothing in the recognizer bounds the term it
+        // matches, and the rendered form is a TREE: a shared DAG is duplicated
+        // at every use. Over the committed corpus the maximum is 156 nodes
+        // against a cap of 512, so no real instance takes this path -- which is
+        // exactly why it needs a test that does. The chain below is deliberately
+        // over the cap and well UNDER the depth at which the kernel's own
+        // recursion overflows (~2050), so removing the cap makes this test fail
+        // on its assertion rather than abort the whole binary.
+        let mut arena = TermArena::new();
+        let a = arena.array_var("a", 4, 8).expect("array a");
+        let j = arena.bv_var("j", 4).expect("j");
+        let v = arena.bv_var("v", 8).expect("v");
+        let mut stored = a;
+        for k in 0..600u32 {
+            let index = arena.bv_var(&format!("i{k}"), 4).expect("index");
+            stored = arena.store(stored, index, v).expect("store");
+        }
+        let outer = arena.bv_var("iz", 4).expect("iz");
+        let base = arena.store(stored, outer, v).expect("store");
+        let lhs = arena.select(base, j).expect("select");
+        let cond = arena.eq(outer, j).expect("iz = j");
+        let fallback = arena.select(stored, j).expect("select");
+        let rhs = arena.ite(cond, v, fallback).expect("ite");
+        let eq = arena.eq(lhs, rhs).expect("eq");
+        let assertions = vec![arena.not(eq).expect("not")];
+
+        let source = prove_unsat_to_lean_module(&mut arena, &assertions)
+            .expect("array-axiom module")
+            .1;
+        let funcs = source.matches("axiom axeyum.reconstruct.func._").count();
+        assert_eq!(
+            funcs, 0,
+            "over the cap the route renders one opaque constant per side:\n{source}"
         );
     }
 }

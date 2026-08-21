@@ -7104,17 +7104,23 @@ enum Frame<'a> {
         body: &'a SExpr,
     },
     /// Enter a quantifier scope (bound names → fresh symbol vars), then queue
-    /// the body, scope pop, and the quantifier wrap.
+    /// the body, scope pop, and the quantifier wrap. `patterns` are the
+    /// already-built user trigger alternatives (SMT-LIB `:pattern`), carried
+    /// through to the wrap so they can be recorded against the term the wrap
+    /// produces.
     BindQuantifier {
         bindings: Vec<(&'a str, TermId)>,
         syms: Vec<axeyum_ir::SymbolId>,
         is_forall: bool,
         body: &'a SExpr,
+        patterns: Vec<Vec<TermId>>,
     },
-    /// Pop the quantifier body and wrap it in `forall`/`exists` over `syms`.
+    /// Pop the quantifier body and wrap it in `forall`/`exists` over `syms`,
+    /// recording `patterns` as that term's user-supplied triggers.
     ApplyQuantifier {
         syms: Vec<axeyum_ir::SymbolId>,
         is_forall: bool,
+        patterns: Vec<Vec<TermId>>,
     },
     /// Pop the just-evaluated scrutinee `e` and set up the `match` desugaring
     /// (ADR-pending datatype `match`): plan per-case testers and binding scopes,
@@ -7284,17 +7290,26 @@ fn parse_term<'a>(
                 syms,
                 is_forall,
                 body,
+                patterns,
             } => {
                 let mut scope = HashMap::new();
                 for (name, term) in bindings {
                     scope.insert(name, term);
                 }
                 scopes.push(scope);
-                frames.push(Frame::ApplyQuantifier { syms, is_forall });
+                frames.push(Frame::ApplyQuantifier {
+                    syms,
+                    is_forall,
+                    patterns,
+                });
                 frames.push(Frame::PopScope);
                 frames.push(Frame::Eval(body));
             }
-            Frame::ApplyQuantifier { syms, is_forall } => {
+            Frame::ApplyQuantifier {
+                syms,
+                is_forall,
+                patterns,
+            } => {
                 let mut acc = results
                     .pop()
                     .ok_or_else(|| SmtError::Syntax("quantifier body".to_owned()))?;
@@ -7304,6 +7319,13 @@ fn parse_term<'a>(
                     } else {
                         arena.exists(sym, acc)?
                     };
+                }
+                // `acc` is now the OUTERMOST binder of the chain, which is the
+                // term downstream registers as "the universal"; the triggers
+                // belong to it, not to an inner link. Recording is a no-op when
+                // the annotation was absent or entirely declined.
+                if !patterns.is_empty() {
+                    arena.set_quantifier_patterns(acc, patterns);
                 }
                 results.push(acc);
             }
@@ -7349,18 +7371,22 @@ fn queue_eval<'a>(
 ) -> Result<(), SmtError> {
     match expr {
         SExpr::Atom(a) => results.push(parse_atom(arena, a, aliases, named, scopes)?),
-        SExpr::List(items) => queue_list_eval(arena, items, macros, ff, lenabs, frames, results)?,
+        SExpr::List(items) => {
+            queue_list_eval(arena, items, macros, ff, lenabs, scopes, frames, results)?;
+        }
     }
     Ok(())
 }
 
 #[allow(clippy::too_many_lines)]
+#[allow(clippy::too_many_arguments)]
 fn queue_list_eval<'a>(
     arena: &mut TermArena,
     items: &'a [SExpr],
     macros: &HashMap<String, MacroDef<'a>>,
     ff: &FfInfo,
     lenabs: &LenAbs,
+    scopes: &[HashMap<&'a str, TermId>],
     frames: &mut Vec<Frame<'a>>,
     results: &mut Vec<TermId>,
 ) -> Result<(), SmtError> {
@@ -7370,11 +7396,18 @@ fn queue_list_eval<'a>(
     if head.atom() == Some("_") {
         results.push(parse_indexed_constant(arena, items)?);
     } else if head.atom() == Some("!") {
-        // Attributed term `(! t :attr v ...)` denotes `t`. Non-`:named`
-        // annotations (`:pattern` triggers, …) are hints we drop. A `:named foo`
+        // Attributed term `(! t :attr v ...)` denotes `t`. A `:named foo`
         // attribute additionally binds `foo` as a script-global alias for `t`,
         // so later bare references to `foo` resolve — we queue a
         // [`Frame::RegisterNamed`] to record the binding once `t` is evaluated.
+        //
+        // `:pattern` is NOT handled here. A trigger is written in its
+        // quantifier's binder scope and must resolve against that binder's
+        // symbols, so it is extracted in [`queue_quantifier`] from the body it
+        // annotates (see [`quantifier_trigger_groups`]). Reaching this branch
+        // with a `:pattern` means the annotation is not on a quantifier body,
+        // where SMT-LIB gives it no meaning — it is dropped, as every remaining
+        // non-`:named` annotation is.
         let inner = items
             .get(1)
             .ok_or_else(|| SmtError::Syntax("`!` expects a term".to_owned()))?;
@@ -7388,7 +7421,7 @@ fn queue_list_eval<'a>(
         queue_match_scrutinee(items, frames)?;
     } else if head.atom() == Some("forall") || head.atom() == Some("exists") {
         let is_forall = head.atom() == Some("forall");
-        queue_quantifier(arena, items, is_forall, frames)?;
+        queue_quantifier(arena, items, is_forall, scopes, frames)?;
     } else if head.atom() == Some("as") && items.len() == 3 && items[1].atom() == Some("seq.empty")
     {
         // `(as seq.empty (Seq E))` — the empty sequence (length 0, zero content)
@@ -7562,6 +7595,7 @@ fn queue_quantifier<'a>(
     arena: &mut TermArena,
     items: &'a [SExpr],
     is_forall: bool,
+    scopes: &[HashMap<&'a str, TermId>],
     frames: &mut Vec<Frame<'a>>,
 ) -> Result<(), SmtError> {
     let keyword = if is_forall { "forall" } else { "exists" };
@@ -7595,13 +7629,138 @@ fn queue_quantifier<'a>(
         bindings.push((name, arena.var(sym)));
         syms.push(sym);
     }
+    // Triggers are built HERE, before the body is queued, because a `:pattern`
+    // term is written in the binder's scope and must resolve against these
+    // freshly-minted binder symbols. They are built directly rather than queued
+    // through the frame machine on purpose: an annotation must never be able to
+    // fail a parse that succeeds today (today `:pattern` is dropped outright),
+    // and a queued evaluation propagates its error with `?`. A term the direct
+    // builder cannot construct is declined, not raised.
+    let patterns = quantifier_trigger_groups(arena, body, &bindings, scopes);
     frames.push(Frame::BindQuantifier {
         bindings,
         syms,
         is_forall,
         body,
+        patterns,
     });
     Ok(())
+}
+
+/// Depth ceiling for a user-supplied trigger term. [`build_trigger_term`] is
+/// recursive (the frame machine is not usable here — see [`queue_quantifier`]),
+/// so a hostile `:pattern` nested thousands deep would otherwise recurse on the
+/// Rust stack. Real triggers are two or three levels; anything past this is
+/// declined like any other unbuildable pattern.
+const MAX_TRIGGER_DEPTH: u32 = 32;
+
+/// Extracts the user-supplied trigger alternatives from a quantifier body of the
+/// form `(! inner :pattern (t …) :pattern (u …) …)`.
+///
+/// Each `:pattern` attribute is one **alternative** multi-pattern: its terms must
+/// all match together for that alternative to fire, and any single alternative
+/// firing is enough. A group is taken only if *every* term in it builds and every
+/// term is an application (SMT-LIB forbids a bare variable as a pattern, and a
+/// variable pattern matches the whole e-graph, which is the opposite of a
+/// trigger). A group that fails either test is **declined** — dropped whole, so a
+/// partially-understood annotation can never narrow instantiation below what the
+/// consumer's own trigger selection would have produced.
+fn quantifier_trigger_groups(
+    arena: &mut TermArena,
+    body: &SExpr,
+    bindings: &[(&str, TermId)],
+    scopes: &[HashMap<&str, TermId>],
+) -> Vec<Vec<TermId>> {
+    let Some(items) = body.list() else {
+        return Vec::new();
+    };
+    if items.first().and_then(SExpr::atom) != Some("!") {
+        return Vec::new();
+    }
+    let mut groups = Vec::new();
+    let mut i = 2;
+    while i + 1 < items.len() {
+        if items[i].atom() == Some(":pattern")
+            && let Some(terms) = items[i + 1].list()
+            && !terms.is_empty()
+        {
+            let mut group = Vec::with_capacity(terms.len());
+            for term in terms {
+                match build_trigger_term(arena, term, bindings, scopes, 0) {
+                    // A pattern must be an application: a bare variable, a
+                    // constant, or a `let`-bound alias carries no root symbol to
+                    // index the e-matcher by.
+                    Some(built)
+                        if matches!(
+                            arena.node(built),
+                            TermNode::App {
+                                op: Op::Apply(_),
+                                ..
+                            }
+                        ) =>
+                    {
+                        group.push(built);
+                    }
+                    _ => {
+                        group.clear();
+                        break;
+                    }
+                }
+            }
+            if !group.is_empty() {
+                groups.push(group);
+            }
+        }
+        i += 2;
+    }
+    groups
+}
+
+/// Builds one trigger term: an application tree over declared uninterpreted
+/// functions whose leaves are this quantifier's bound variables, an enclosing
+/// binder's or `let`'s bound names, or declared constants.
+///
+/// Deliberately narrow. Anything else — an interpreted operator, an indexed
+/// identifier, a `define-fun` macro, a nested binder, a literal — returns `None`
+/// and declines the whole group. That is the honest half of this feature: the
+/// e-matcher indexes patterns by a root function declaration, so a pattern it
+/// cannot root is a pattern it cannot fire, and pretending otherwise would
+/// silently starve the quantifier instead of falling back to auto-selection.
+fn build_trigger_term(
+    arena: &mut TermArena,
+    e: &SExpr,
+    bindings: &[(&str, TermId)],
+    scopes: &[HashMap<&str, TermId>],
+    depth: u32,
+) -> Option<TermId> {
+    if depth > MAX_TRIGGER_DEPTH {
+        return None;
+    }
+    match e {
+        SExpr::Atom(name) => {
+            // This binder's variables shadow everything outer, then the
+            // enclosing scopes innermost-first, then a script-level constant.
+            if let Some((_, term)) = bindings.iter().rev().find(|(n, _)| *n == name.as_str()) {
+                return Some(*term);
+            }
+            for scope in scopes.iter().rev() {
+                if let Some(&term) = scope.get(name.as_str()) {
+                    return Some(term);
+                }
+            }
+            let sym = arena.find_symbol(name)?;
+            Some(arena.var(sym))
+        }
+        SExpr::List(items) => {
+            let head = items.first()?.atom()?;
+            let func = arena.find_function(head)?;
+            let mut args = Vec::with_capacity(items.len() - 1);
+            for arg in &items[1..] {
+                args.push(build_trigger_term(arena, arg, bindings, scopes, depth + 1)?);
+            }
+            arena.apply(func, &args).ok()
+        }
+    }
 }
 
 /// Declares a uniquely-named fresh symbol for a quantifier's bound variable, so
@@ -19285,10 +19444,52 @@ fn apply_op(
             // Type-check the complete application before any semantic
             // shortcut. In particular, a duplicate early argument must not
             // hide an ill-sorted later argument.
+            //
+            // BUT a packed string or sequence encodes its SMT-LIB sort as a
+            // bit-vector whose WIDTH carries the length bound, so two operands
+            // of the same SMT-LIB sort routinely have different `Sort::BitVec`
+            // widths — `(seq.unit 0)` is `BitVec(17)` while a declared
+            // `(Seq Int)` is `BitVec(115)`. Comparing `Sort` for equality here
+            // rejected those as ill-sorted before the seq/string-aware pairwise
+            // expansion below could align them.
+            //
+            // `=` has no such pre-check and has always accepted them, so this
+            // made `(distinct x y)` reject a query `(= x y)` accepts. Measured
+            // 2026-08-20: `sat__regress0__strings__issue5542-strings-seq-mix.smt2`
+            // failed to PARSE with `SortsDiffer(BitVec(100), BitVec(197))`,
+            // while the committed dominance audit still recorded it as decided
+            // `sat` with a replayed model.
+            //
+            // Genuinely ill-sorted arguments are still rejected: the exemption
+            // requires BOTH operands to be packed-seq with a registered element
+            // width, or BOTH packed-string. An `Int` against a `(Seq Int)`, or
+            // two honest `BitVec`s of different widths, still error here.
+            //
+            // That precision is DEFENCE IN DEPTH, not the only guard: the
+            // pairwise expansion below ends in `arena.eq`, which raises
+            // `SortsDiffer` for anything the aware-eq helpers decline. Widening
+            // this exemption to "any two bit-vectors" therefore kills no test —
+            // the query still fails to parse, one site later. Mutation testing
+            // reports it as unprotected and that is the correct result, not a
+            // missing test. Keeping the narrow form means the error is raised
+            // where the sorts are actually compared.
             let expected_sort = arena.sort_of(args[0]);
             for &arg in &args[1..] {
                 let actual_sort = arena.sort_of(arg);
-                if actual_sort != expected_sort {
+                if actual_sort == expected_sort {
+                    continue;
+                }
+                let both_packed_seq = matches!(
+                    (expected_sort, actual_sort),
+                    (Sort::BitVec(wa), Sort::BitVec(wb))
+                        if seq.elem_width_of(wa).is_some() && seq.elem_width_of(wb).is_some()
+                );
+                let both_packed_string = matches!(
+                    (expected_sort, actual_sort),
+                    (Sort::BitVec(wa), Sort::BitVec(wb))
+                        if string_max_len_of(wa).is_some() && string_max_len_of(wb).is_some()
+                );
+                if !both_packed_seq && !both_packed_string {
                     return Err(SmtError::Ir(IrError::SortsDiffer(
                         expected_sort,
                         actual_sort,

@@ -17,7 +17,8 @@
 #   cargo fmt --all --check          3s
 #   corpus :status sweep            13s
 #   cargo test --workspace --lib   224s
-#   solver unit sweep (full)        30s
+#   solver unit sweep (full)        31s   (1008 tests; --skip reconstruct::)
+#   [moved to `just check`]        294s   (268 reconstruct:: tests, Lean preludes)
 #   capability frontier ratchet    216s
 #   integration suites x4           ~1s
 #   evidence suite                  70s
@@ -110,7 +111,6 @@ gate_root() {
 }
 GATE_ROOT="$(gate_root)"
 mkdir -p "$GATE_ROOT"
-tmp_wt="$GATE_ROOT/worktree"
 
 # ONE root for every lane, serialized by flock — deliberately not per-lane.
 #
@@ -137,13 +137,7 @@ echo "pre-push: Rust/TOML changed — compile + fmt gate on pushed SHA ${target_
 # stale-mtime trap in CLAUDE.md comes from tar restoring COMMIT times, which can
 # put content behind a warm cache and let a gate pass over code it never
 # compiled. Checkout cannot do that.
-if ! { git -C "$tmp_wt" rev-parse --git-dir >/dev/null 2>&1 \
-       && git -C "$tmp_wt" checkout --detach --force --quiet "$target_sha" 2>/dev/null; }; then
-  rm -rf "$tmp_wt"
-  git -C "$REPO_ROOT" worktree prune
-  git -C "$REPO_ROOT" worktree add --detach --quiet "$tmp_wt" "$target_sha"
-fi
-git -C "$tmp_wt" clean -xdfq
+tmp_wt="$(scripts/prepare-prepush-worktree.sh "$REPO_ROOT" "$GATE_ROOT" "$target_sha")"
 
 # A DEDICATED target dir for the gate — persistent, so it stays warm across
 # pushes, but NOT shared with the main checkout's.
@@ -204,8 +198,25 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   }
 
   gate_started=$SECONDS
-  step_seconds "cargo check --workspace" \
-    env MEM_LIMIT_GB="${MEM_LIMIT_GB:-64}" ./scripts/mem-run.sh cargo check --workspace --quiet
+  # `--all-targets` IS LOAD-BEARING, and its absence let a non-compiling
+  # workspace onto `main` on 2026-08-20 under the message "pushed SHA compiles".
+  #
+  # `cargo check --workspace` builds lib and bin targets and NOT `examples/` or
+  # `tests/`. Adding one `Evidence` variant broke the exhaustive `match` in
+  # `crates/axeyum-bench/examples/{audit_dominance,diagnose_evidence}.rs`; this
+  # step passed, the hook printed its green line, and the break was found later
+  # by running one of those examples by hand. The type system had the answer the
+  # whole time — the gate simply never asked the compiler about half the tree.
+  #
+  # It is close to free: measured on this host, 13s cold and **0s warm**, against
+  # a step already documented at 0s. `scripts/check.sh` was never blind to this
+  # (its clippy wrapper is `--all-targets`), so the aggregate gate would have
+  # caught it — which is exactly why the narrower gate must not claim
+  # "compiles" for a subset of what compiles.
+  #
+  # Control: scripts/tests/test-prepush-checks-all-targets.sh
+  step_seconds "cargo check --workspace --all-targets" \
+    env MEM_LIMIT_GB="${MEM_LIMIT_GB:-64}" ./scripts/mem-run.sh cargo check --workspace --all-targets --quiet
   step_seconds "cargo fmt --all --check" cargo fmt --all --check
   # The oracle-free :status corpus sweep (~6s warm): CI's copy caught a
   # vacuous-sat harness hole (f5b00c72) only AFTER the SHA was public —
@@ -232,8 +243,22 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   # half-measure — a soundness hole reachable only through a rewrite/strings/bv
   # unit test would still slip. ("full sweep catches what per-commit --test
   # misses", enforced workspace-wide at the push boundary.)
-  gated_test "workspace unit sweep" \
-    cargo test --workspace --lib --quiet
+  # THE WORKSPACE UNIT SWEEP MOVED OUT on 2026-08-19. It ran `cargo test
+  # --workspace --lib` on every Rust push: 218 s uncontended at its last honest
+  # measurement, and **2,699 s** in a real push once `axeyum-lean-kernel`'s lib
+  # tests grew (CReal, its inverse, the lattice, and Complex all landed in that
+  # crate in a day; a dozen of its tests now exceed 60 s each). It was also
+  # DOUBLE-CHARGED: the kernel step below ran `-p axeyum-lean-kernel` wholesale,
+  # which includes the same `--lib` tests.
+  #
+  # It exists because a P0 wrong-unsat lived in `axeyum-rewrite`, not in the
+  # solver, so a `-p axeyum-solver` sweep would not have caught it. That coverage
+  # is NOT lost: `cargo nextest run --profile local --workspace --all-features`
+  # in `scripts/local-ci.sh` is a strict superset, and
+  # `scripts/check-local-ci-freshness.sh` is ENFORCING in `just check` and
+  # `scripts/check.sh` — a battery record that is stale, failing, vacuous or
+  # unreadable reds the aggregate gate. The battery moved from every-push to
+  # must-have-run-recently, which is the cadence it was always worth.
 
   # ...and the step above runs on DEFAULT features, under which `axeyum-solver`
   # compiles **23** of its **968** unit tests (measured 2026-08-01): everything
@@ -243,8 +268,24 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   # `full`-gated module would sail through a "green" workspace sweep. `full` is
   # pure Rust (the C/C++ z3 backend is a separate feature), so requiring it here
   # keeps the no-C-dependency promise intact.
-  gated_test "solver unit sweep (full)" \
-    cargo test -p axeyum-solver --lib --features full --quiet
+  # `--skip reconstruct::` is why this step is 31s and not 294s.
+  #
+  # Measured 2026-08-20 on an IDLE box (load 1.03, zero other cargo): the 1008
+  # solver unit tests run in **31s**; the 268 `reconstruct::` tests take
+  # **294s**, because each builds Lean preludes. They were 90% of this step and
+  # ~45% of the entire push, on every push touching a single `.rs` file.
+  #
+  # They are not what this step exists for. The sweep was added because a
+  # wrong-`unsat` unit test shipped (52f3b1d1) — a SOLVER soundness defect. The
+  # `reconstruct::` tests check that a Lean module is built correctly, which is
+  # a different property, caught by `lean-gate` and by the reconstruct sweep now
+  # registered in `scripts/check.sh` and the justfile. Nothing is dropped; the
+  # daily gate keeps them and every git round stops paying for them.
+  #
+  # The comment at the top of this file said this step cost 30s. That was true
+  # once. Timings in a comment rot; these were re-measured today.
+  gated_test "solver unit sweep (full, minus Lean reconstruction)" \
+    cargo test -p axeyum-solver --lib --features full --quiet -- --skip reconstruct::
 
   # The KERNEL's integration suites. `cargo test --workspace --lib` above runs
   # unit tests only and SKIPS every `tests/*.rs`, which is how
@@ -255,22 +296,69 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   # GATE ON ITS OWN"), and the warning was not enough on its own.
   #
   # This is the crate where the trusted surface is asserted, so a stale
-  # assertion here is a stale claim about axiom-freedom. ~1.4s warm.
-  gated_test "kernel suites (unit + integration)" \
-    cargo test -p axeyum-lean-kernel --quiet
+  # assertion here is a stale claim about axiom-freedom. That coverage is why
+  # the step exists and it is NOT being reduced.
+  #
+  # SPLIT, 2026-08-19, because it ran the crate WHOLESALE. Fifteen of the crate's
+  # 46 integration suites hand generated modules to a real `lean`, and
+  # `scripts/check-lean-gate.sh` already owns those -- with a toolchain pin, a
+  # counted floor and a no-skip rule, none of which this step had. So every push
+  # ran them twice, and the comment here said "~1.4s warm". Measured warm on s4
+  # 2026-08-19, in a snapshot tree whose target dir was already built:
+  #   BEFORE  cargo test -p axeyum-lean-kernel            2,296 s
+  #   AFTER   check-kernel-suites.sh --no-lib                80 s  (31 suites, 188 tests)
+  # for a hook that runs 722-1,176 s in total when healthy.
+  #
+  # `scripts/check-kernel-suites.sh` DISCOVERS which half a suite is in (it
+  # carries `#[path = "support/lean_probe.rs"]`, or it does not) and FAILS if any
+  # suite is in neither -- so removing the duplication cannot silently create a
+  # suite that nothing runs. It found one the first time it ran.
+  #
+  # `--no-lib`: the workspace unit sweep two steps above already runs this
+  # crate's unit tests, and several of them take over 60 s each.
+  #
+  # SCOPED TO THE DIFF, and unlike the frontier ratchet's filter this one is
+  # DERIVED rather than judged: `crates/axeyum-lean-kernel/Cargo.toml` has
+  # exactly one dependency, `num-bigint`, and nothing from this workspace. No
+  # change under another crate can move these suites. The manifests are in the
+  # filter for the lint/version surface, and the two gate scripts for their own
+  # sake. The partition assertion is cheap (no cargo) and runs EITHER WAY: it is
+  # what makes the skip safe, since it is the thing that notices a real-Lean
+  # suite dropping out of `check-lean-gate.sh`'s table.
+  if [ -n "$(git diff --name-only "$PREPUSH_BASE" "$PREPUSH_TIP" -- \
+      'crates/axeyum-lean-kernel/**' \
+      'scripts/check-kernel-suites.sh' \
+      'scripts/check-lean-gate.sh' \
+      'Cargo.toml' 'Cargo.lock' | head -1)" ]; then
+    echo "pre-push: Lean kernel changed — kernel suites (non-Lean integration)" >&2
+    step_seconds "kernel suites (non-Lean integration)" \
+      env MEM_LIMIT_GB="${MEM_LIMIT_GB:-64}" ./scripts/mem-run.sh \
+      ./scripts/check-kernel-suites.sh --no-lib
+  else
+    echo "pre-push: no Lean kernel change — kernel suites SKIPPED (partition still asserted)" >&2
+    step_seconds "kernel suite partition" ./scripts/check-kernel-suites.sh --list
+  fi
 
-  # The CAPABILITY RATCHET. It exists because a 17-point `nia_unsat` frontier
-  # regression once shipped and needed an 829-commit bisect to find; it is the
-  # only gate that notices we got WEAKER without getting WRONG. It was not in
-  # this hook at all until 2026-08-04, and CLAUDE.md's documented invocation of
-  # it omitted `--features full` — `tests/progress_frontier.rs:75` is
-  # `#![cfg(feature = "full")]`, so the form agents were told to run compiled an
-  # empty binary and exited 0. `--test-threads=1`: the frontier counts decided
-  # files under a wall-clock budget, so parallel load makes it report false
-  # REGRESSIONs (task #40).
-  gated_test "capability frontier ratchet" \
-    cargo test -p axeyum-solver --test progress_frontier --features full --quiet \
-    -- --test-threads=1
+  # THE CAPABILITY FRONTIER RATCHET MOVED OUT on 2026-08-19, to
+  # `scripts/local-ci.sh`, where it runs serialized with `--test-threads=1`.
+  #
+  # It exists because a 17-point `nia_unsat` regression once shipped and needed
+  # an 829-commit bisect: it is the only gate that notices we got WEAKER without
+  # getting WRONG. That is worth keeping, and it is kept — but not here.
+  #
+  # Moving it makes it STRONGER, which is the only reason it was allowed to
+  # move. It measures the largest N decided within a fixed WALL-CLOCK budget, so
+  # contention does not slow it down, it corrupts it: CLAUDE.md records the same
+  # commit on the same box scoring 35 (load 34), 39 (load 5.4) and 40 (idle).
+  # Each family calibrates the machine and marks a run NOT COMPARABLE or
+  # ADVISORY ONLY when the frame moved. In this hook, with several lanes on the
+  # box, it was **200 s of a 545 s baseline** spent mostly being advisory —
+  # paying full price for a verdict it then declined to enforce.
+  #
+  # `scripts/check-local-ci-freshness.sh` is ENFORCING in `just check` and
+  # `scripts/check.sh`, so a battery record that is stale, failing, vacuous or
+  # unreadable reds the aggregate gate. The ratchet did not become optional; it
+  # became something that must have run recently.
 
   # The ALWAYS-ON integration slice: four cheap `tests/*.rs` suites (measured
   # 2026-08-04: 0.00s + 0.01s + 0.00s + 0.82s warm) that no fast gate ran.
@@ -304,6 +392,38 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
       cargo test -p axeyum-solver --features full --quiet --test "$suite"
   done
 
+  # The GOLDEN LEAN MODULE pins, diff-scoped to the crate that renders them.
+  #
+  # Every module the kernel renders opens with a fixed banner, and until
+  # 2026-08-18 that banner was inside every golden byte pin in the workspace. A
+  # commit that changed it re-pinned the goldens it happened to run and shipped
+  # the same delta unannounced onto the rest -- THREE times (`0fc7cc357`,
+  # `b760fd6ae` +863, `46724faec` +777). `main` was red for a day and the first
+  # ever completed `scripts/local-ci.sh` run found it, 6,400 seconds in.
+  #
+  # The pins now cover the module BODY and the banner has its own committed-text
+  # pin, so a header change fails one named thing instead of five unnamed ones.
+  # This step is the other half: those five are `tests/*.rs` integration targets,
+  # which `--lib` skips by construction and which this hook -- naming six of the
+  # workspace's 465 -- did not name.
+  #
+  # Scoped to `axeyum-lean-kernel/src/**` because that is where all three
+  # recurrences came from: two from `lean_pp.rs` (the banner itself) and one from
+  # `int_prelude.rs` (axioms became theorems, so their proof terms are emitted).
+  # A solver-side reconstruction change can also move a body pin; that is caught
+  # by `just check` / `scripts/check.sh`, where this same script always runs.
+  # Measured warm on s4: see docs/plan/notes/agent-golden-pins.md.
+  if [ -n "$(git diff --name-only "$PREPUSH_BASE" "$PREPUSH_TIP" -- \
+      'crates/axeyum-lean-kernel/src/**' \
+      'crates/axeyum-lean-kernel/tests/support/**' | head -1)" ]; then
+    echo "pre-push: Lean kernel source changed — golden module pins" >&2
+    step_seconds "golden Lean module pins" \
+      env MEM_LIMIT_GB="${MEM_LIMIT_GB:-64}" ./scripts/mem-run.sh \
+      ./scripts/check-lean-golden-pins.sh
+  else
+    echo "pre-push: no Lean kernel source changed — golden module pins SKIPPED" >&2
+  fi
+
   # The `evidence` suite itself is the load-bearing one — `bench-results/PARITY.md`
   # carries a measured `certified / unsat` column, so an evidence route that
   # stops certifying is a headline regression — but it takes ~66s warm, which
@@ -315,8 +435,21 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
       'crates/axeyum-solver/src/**' \
       'crates/axeyum-rewrite/src/**' | head -1)" ]; then
     echo "pre-push: solver/rewrite source changed — evidence suite" >&2
-    gated_test "integration: evidence" \
-      cargo test -p axeyum-solver --features full --quiet --test evidence
+    # ONE test is this whole suite: `qf_nra_sos_certificate_wrapper_carries_
+    # lean_module` measured at **292.973s** of a 293.08s run, because it builds
+    # Lean preludes. The other 68 tests together are ~76s, and they are the ones
+    # that check evidence PRODUCTION -- which is what a solver/rewrite change can
+    # break. The Lean-module wrapper is checked by `lean-gate` and by the
+    # reconstruct sweep now in `scripts/check.sh`.
+    # 0.06s, and it is the only thing in the tree comparing the DECISION route
+    # against the EVIDENCE route on the same query. Two regressions of exactly
+    # that shape were found by hand on 2026-08-20, neither by a test.
+    gated_test "integration: route agreement" \
+      cargo test -p axeyum-solver --features full --quiet \
+        --test decision_and_evidence_routes_agree
+    gated_test "integration: evidence (minus the Lean-module wrapper)" \
+      cargo test -p axeyum-solver --features full --quiet --test evidence \
+        -- --skip qf_nra_sos_certificate_wrapper_carries_lean_module
   fi
 
   # `--lib` compiles ONLY lib targets, so it skips every integration suite in

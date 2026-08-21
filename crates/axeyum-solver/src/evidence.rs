@@ -91,8 +91,13 @@ use crate::lia_gcd::{
 use crate::lra::{FarkasCertificate, lra_farkas_certificate};
 use crate::model::Model;
 use crate::nia_square::IntQuadraticNegativeDiscriminantCertificate;
+use crate::nia_univariate_cert::IntUnivariateRefutationCertificate;
 use crate::nra_even_power::NraEvenPowerRefutationCertificate;
+use crate::nra_handelman_cert::HandelmanRefutationCertificate;
+use crate::nra_monomial_bound_cert::MonomialBoundRefutationCertificate;
+use crate::nra_product_cert::RealProductRefutationCertificate;
 use crate::nra_real_root::{self, SosCertificate};
+use crate::nra_zero_product_cert::RealZeroProductRefutationCertificate;
 use crate::proof::{UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof_within};
 use crate::quant_affine_growth_cert::IntAffineGrowthRefutationCertificate;
 use crate::quant_bv_alternation_cert::BvAlternationCounterexampleCertificate;
@@ -113,6 +118,7 @@ use crate::quant_residue_cert::IntEuclideanResidueRefutationCertificate;
 use crate::quant_vacuous_exists_counterexample_cert::VacuousExistsUniversalCounterexampleCertificate;
 use crate::sat_bv_backend::SatBvBackend;
 use crate::set_cardinality::SetCardinalityRefutationCertificate;
+use crate::string_length_cert::StringLengthRefutationCertificate;
 use crate::term_identity::TermIdentityRefutationCertificate;
 use crate::trust::{TrustId, TrustStep};
 use crate::uf_arith::UfArithCongruenceCertificate;
@@ -545,11 +551,59 @@ pub enum Evidence {
     /// Replay re-collects the exact original assertion and recomputes the
     /// discriminant; no producer-local term identity is trusted.
     UnsatIntQuadraticNegativeDiscriminant(IntQuadraticNegativeDiscriminantCertificate),
+    /// Unsatisfiable (`QF_NIA`): a single-variable integer polynomial
+    /// **equality** refuted by one of three exact arguments — a non-square
+    /// discriminant, rational-but-non-integral quadratic roots, or exhaustion of
+    /// the rational-root candidates for degree ≥ 3. `nia_square` decided these
+    /// exactly all along; nothing emitted the reasoning, so they shipped as bare
+    /// `Evidence::Unsat(None)` and `QF_NIA` sat in *band 2 — model replay only*.
+    ///
+    /// The checker re-collects the polynomial from the untouched assertion and
+    /// then re-derives the refutation **from the coefficients alone**, using an
+    /// argument that shares no code with the producer — so unlike a
+    /// `fresh == cert` re-execution it can disagree with the producer rather
+    /// than only with a different query.
+    UnsatIntUnivariatePoly(IntUnivariateRefutationCertificate),
     /// Unsatisfiable (`NRA`): the query asserts a syntactic sum of even powers
     /// plus a nonnegative rational constant is strictly negative. The checker
     /// re-scans the original assertions and re-matches the exact nonnegativity
     /// shape before accepting.
     UnsatNraEvenPower(NraEvenPowerRefutationCertificate),
+    /// Unsatisfiable (`QF_NRA`): a monomial asserted zero divides a monomial
+    /// asserted non-zero, so the second is zero too. Also covers the case-split
+    /// form, where a disjunction zeroes one variable per arm and **every** arm's
+    /// variable is a factor of the non-zero monomial.
+    ///
+    /// Factors are carried by SOURCE NAME, not `SymbolId`: ids are arena-local
+    /// and mean nothing against a fresh parse, which is what re-validation uses.
+    UnsatRealZeroProduct(RealZeroProductRefutationCertificate),
+    /// Unsatisfiable (`QF_NRA`): the product of two asserted lower-bound
+    /// hypotheses is exactly the polynomial a third assertion claims negative.
+    /// A degree-2 Positivstellensatz refutation, checkable with exact rational
+    /// arithmetic and no CAD.
+    ///
+    /// Strictness is carried, not assumed: `p ≥ 0` and `q ≥ 0` give `pq ≥ 0`,
+    /// which refutes `pq < 0` but NOT `pq ≤ 0`. Only two strict factors refute
+    /// both.
+    UnsatRealProduct(RealProductRefutationCertificate),
+    /// Unsatisfiable (`QF_NRA`): a multi-term Handelman / Positivstellensatz
+    /// combination. Products of asserted hypotheses, with positive rational
+    /// coefficients, plus polynomial multiples of asserted equalities, summing to
+    /// a constant that a sum of nonnegative terms cannot equal. One combination
+    /// per case when the refutation splits a top-level disjunction.
+    ///
+    /// Strictness decides whether a residual of exactly zero closes: a sum of
+    /// nonnegative products is `>= 0`, which contradicts `= 0` only when one term
+    /// is strictly positive. Every atom's strictness is carried and re-derived.
+    UnsatRealHandelman(HandelmanRefutationCertificate),
+    /// Unsatisfiable (`QF_NRA`): per-variable bounds multiply into a bound on a
+    /// monomial that contradicts an asserted atom — either `M >= lo` against
+    /// `M < lo`, or every factor pinned so `M == k` against `M != k`.
+    ///
+    /// An EVEN exponent needs no bound (`x^2 >= 0` for every real `x`); an odd
+    /// one on an unbounded variable leaves the monomial unbounded below, so the
+    /// parity is carried and re-checked rather than assumed.
+    UnsatMonomialBound(MonomialBoundRefutationCertificate),
     /// Unsatisfiable (integer-equality systems): a self-checking "integer Farkas" /
     /// Diophantine refutation of an integer-infeasible system of equalities. The
     /// `certificate`'s independent re-checker [`check_diophantine_certificate`]
@@ -718,13 +772,111 @@ pub enum Evidence {
     /// bare [`Evidence::Unsat(None)`](Evidence::Unsat) for the word-only string
     /// fragment.
     UnsatWordClash(crate::WordClashCertificate),
+    /// Unsatisfiable (`QF_S`/`QF_SLIA`/`QF_SEQ` length fragment): a length /
+    /// code-point abstraction plus a Farkas-style linear refutation.
+    ///
+    /// Every string term becomes an integer length variable keyed on its SOURCE
+    /// NAME, the handful of theory lemmas the argument uses are named
+    /// individually (`|x| >= 0`, `|u| = |v|` from an asserted word equality,
+    /// `|x| >= 1` from `x != ""`, and the `str.to_code` range), and the
+    /// refutation is one nonnegative combination per case-split branch.
+    ///
+    /// Self-contained like [`Evidence::UnsatWordClash`] and
+    /// [`Evidence::UnsatRegexEmptiness`] (ADR-0061), and for the same reason: the
+    /// flat arena view of a string script is the bounded packed-BV encoding, not
+    /// the query. The certificate carries the script's own top-level commands, and
+    /// [`Evidence::check`] re-derives the premises from them before re-deriving
+    /// the arithmetic — a lemma the query does not license is rejected before any
+    /// multiplier is read.
+    ///
+    /// When `lean_module` is present the refutation is ALSO backed by a
+    /// kernel-checked Lean proof over the CONSTRUCTED integers — re-derived, not
+    /// read back, on [`Evidence::check`] (the stored string is never trusted).
+    /// It is `None` for a certificate the reconstruction declines (a case split,
+    /// or a combination too large to build), and that is not a weaker
+    /// certificate: the arithmetic re-derivation is the same either way.
+    UnsatStringLength {
+        /// The re-derivable length/code-point refutation.
+        certificate: StringLengthRefutationCertificate,
+        /// The rendered Lean module, when the reconstruction succeeded.
+        lean_module: Option<String>,
+    },
     /// Undecided, with the classified reason.
     Unknown(UnknownReason),
+}
+
+/// An artifact a checker outside this process can read.
+///
+/// The distinction that matters for this project's identity claim: evidence can
+/// be fully re-validated and still only by calling back into axeyum's own Rust,
+/// which is a much weaker statement than "an independent checker read it". Only
+/// these two forms leave the process.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PortableArtifact {
+    /// DRAT, checkable by `check_drat` here and by external `drat-trim`.
+    Drat,
+    /// Alethe, checkable by Carcara.
+    Alethe,
+}
+
+impl PortableArtifact {
+    /// The stable label for artifacts and summaries.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            PortableArtifact::Drat => "drat",
+            PortableArtifact::Alethe => "alethe",
+        }
+    }
 }
 
 impl Evidence {
     /// Stable short label for this evidence variant.
     ///
+    /// Does this evidence carry an artifact a checker **outside this process**
+    /// can read?
+    ///
+    /// This exists because the number everyone quoted was counted from
+    /// [`Evidence::kind_label`], and labels are not artifacts. The 2026-08-21
+    /// gap analysis reported "only 11 of 129 unsat (8.5%) produce an artifact an
+    /// external checker can read", derived by matching kind strings against
+    /// `unsat-drat` and the Alethe kinds. But `BoundedIntBlastCertificate`
+    /// carries a full DRAT refutation of its bit-blasted CNF in `bv_proof`,
+    /// re-checkable by `check_drat`, and its label reads
+    /// `unsat-bounded-int-blast`. So do `ArithDpllRefutation` and three
+    /// quantified-BV certificates. The metric undercounted the thing it existed
+    /// to measure, and did so in the direction that made the project look worse.
+    ///
+    /// The wildcard below **undercounts by construction**: a new proof-carrying
+    /// variant returns `None` until an arm is added. That is the same defect one
+    /// level down, so it is not left to vigilance — see the test named in this
+    /// module that fails when a certificate gains an `UnsatProof` field without
+    /// an arm here.
+    #[must_use]
+    pub const fn portable_artifact(&self) -> Option<PortableArtifact> {
+        match self {
+            // DRAT: checkable by `check_drat` in-tree and by external
+            // `drat-trim` out of tree (verified with a negative control — a
+            // tampered proof is rejected).
+            Evidence::Unsat(Some(_))
+            | Evidence::UnsatBoundedIntBlast(_)
+            | Evidence::UnsatArithDpll(_)
+            | Evidence::UnsatBvAlternationCounterexample(_)
+            | Evidence::UnsatBvConjunctiveUniversalInstance(_)
+            | Evidence::UnsatBvPositiveUniversalInstanceSet(_) => Some(PortableArtifact::Drat),
+            // Alethe: checkable by Carcara, a Rust Alethe checker.
+            //
+            // `UnsatArithAletheProof` is deliberately EXCLUDED. Its QF_LIA route
+            // emits `lia_generic`, a rule Carcara has no case for and treats as
+            // a hole — so it is checkable only internally, and claiming it here
+            // would re-commit the exact error this function was written to fix.
+            Evidence::UnsatAletheProof(_) | Evidence::UnsatGuardedQuantAletheProof { .. } => {
+                Some(PortableArtifact::Alethe)
+            }
+            _ => None,
+        }
+    }
+
     /// These labels are intended for SDK/UI summaries and artifact metadata.
     /// They are deliberately independent of Rust `Debug` formatting.
     #[must_use]
@@ -779,7 +931,12 @@ impl Evidence {
             Evidence::UnsatIntQuadraticNegativeDiscriminant(_) => {
                 "unsat-int-quadratic-negative-discriminant"
             }
+            Evidence::UnsatIntUnivariatePoly(_) => "unsat-int-univariate-poly",
             Evidence::UnsatNraEvenPower(_) => "unsat-nra-even-power",
+            Evidence::UnsatRealZeroProduct(_) => "unsat-real-zero-product",
+            Evidence::UnsatRealProduct(_) => "unsat-real-product",
+            Evidence::UnsatRealHandelman(_) => "unsat-real-handelman",
+            Evidence::UnsatMonomialBound(_) => "unsat-monomial-bound",
             Evidence::UnsatDiophantine { .. } => "unsat-diophantine",
             Evidence::UnsatBoundedIntBlast(_) => "unsat-bounded-int-blast",
             Evidence::UnsatFiniteDomainPigeonhole(_) => "unsat-finite-domain-pigeonhole",
@@ -809,6 +966,7 @@ impl Evidence {
             Evidence::UnsatFifoBc04(_) => "unsat-fifo-bc04",
             Evidence::UnsatRegexEmptiness { .. } => "unsat-regex-emptiness",
             Evidence::UnsatWordClash(_) => "unsat-word-clash",
+            Evidence::UnsatStringLength { .. } => "unsat-string-length",
             Evidence::Unknown(_) => "unknown",
         }
     }
@@ -847,8 +1005,9 @@ impl Evidence {
     /// [`EvidenceCheck::NothingToCheck`] with the reason. A certificate that is
     /// present and does not hold up is [`EvidenceCheck::Failed`].
     ///
-    /// The certificates that are *self-contained* — [`Evidence::UnsatWordClash`]
-    /// and [`Evidence::UnsatRegexEmptiness`], which carry their own premises and
+    /// The certificates that are *self-contained* — [`Evidence::UnsatWordClash`],
+    /// [`Evidence::UnsatRegexEmptiness`] and [`Evidence::UnsatStringLength`],
+    /// which carry their own premises and
     /// deliberately ignore `(arena, assertions)` (ADR-0061) — are re-derived
     /// here regardless of the arena view, so they still report `Verified`.
     ///
@@ -993,6 +1152,41 @@ impl Evidence {
                     certificate,
                 ),
             ),
+            Evidence::UnsatIntUnivariatePoly(certificate) => {
+                Ok(crate::nia_univariate_cert::check_int_univariate_refutation(
+                    arena,
+                    assertions,
+                    certificate,
+                ))
+            }
+            Evidence::UnsatRealZeroProduct(certificate) => Ok(
+                crate::nra_zero_product_cert::check_real_zero_product_refutation(
+                    arena,
+                    assertions,
+                    certificate,
+                ),
+            ),
+            Evidence::UnsatRealProduct(certificate) => {
+                Ok(crate::nra_product_cert::check_real_product_refutation(
+                    arena,
+                    assertions,
+                    certificate,
+                ))
+            }
+            Evidence::UnsatRealHandelman(certificate) => {
+                Ok(crate::nra_handelman_cert::check_handelman_refutation(
+                    arena,
+                    assertions,
+                    certificate,
+                ))
+            }
+            Evidence::UnsatMonomialBound(certificate) => Ok(
+                crate::nra_monomial_bound_cert::check_monomial_bound_refutation(
+                    arena,
+                    assertions,
+                    certificate,
+                ),
+            ),
             Evidence::UnsatDiophantine {
                 equalities,
                 certificate,
@@ -1111,6 +1305,24 @@ impl Evidence {
             // the empty clause (arena-free; the certificate carries its own premises and
             // element sort key). A tampered proof fails here — never trusted as-is.
             Evidence::UnsatWordClash(certificate) => Ok(certificate.check()),
+            // Length/code-point abstraction refutation: stage 1 re-derives the
+            // premise conjuncts from the carried source commands and binds every
+            // lemma instance to the conjunct that licenses it; stage 2 re-derives
+            // the Farkas combination. Arena-free for the same reason as the two
+            // above — the flat view of a string script is not the query.
+            //
+            // A carried Lean module is re-derived from the same certificate and
+            // must succeed; the stored string is never read back. A certificate
+            // that carries none is checked by the arithmetic alone, so a decline
+            // at production time cannot turn into a check failure here.
+            Evidence::UnsatStringLength {
+                certificate,
+                lean_module,
+            } => Ok(
+                crate::string_length_cert::check_string_length_refutation(certificate)
+                    && (lean_module.is_none()
+                        || crate::reconstruct_string_length_to_lean_module(certificate).is_ok()),
+            ),
             // Nothing to re-validate. `check_outcome` answers these before ever
             // calling here; `false` (never `true`) is the conservative value if
             // that guard is ever bypassed, so no route can resurrect the
@@ -1154,7 +1366,12 @@ impl Evidence {
                 | Evidence::UnsatArithDpll(_)
                 | Evidence::UnsatSos { .. }
                 | Evidence::UnsatIntQuadraticNegativeDiscriminant(_)
+                | Evidence::UnsatIntUnivariatePoly(_)
                 | Evidence::UnsatNraEvenPower(_)
+                | Evidence::UnsatRealZeroProduct(_)
+                | Evidence::UnsatRealProduct(_)
+                | Evidence::UnsatRealHandelman(_)
+                | Evidence::UnsatMonomialBound(_)
                 | Evidence::UnsatDiophantine { .. }
                 | Evidence::UnsatBoundedIntBlast(_)
                 | Evidence::UnsatFiniteDomainPigeonhole(_)
@@ -1182,6 +1399,7 @@ impl Evidence {
                 | Evidence::UnsatFifoBc04(_)
                 | Evidence::UnsatRegexEmptiness { .. }
                 | Evidence::UnsatWordClash(_)
+                | Evidence::UnsatStringLength { .. }
         )
     }
 }
@@ -1435,11 +1653,92 @@ fn check_set_cardinality_evidence(
         .is_some_and(|fresh| fresh == *cert)
 }
 
+/// The largest certified-`unsat` family in the repository — 85 of 281 instances,
+/// 30.2%, measured 2026-08-21 — and until now its check was a re-run of the
+/// producer compared for equality.
+///
+/// That is a **determinism** check, not a soundness check. If
+/// `array_axiom_refutation`'s recognizer matched a satisfiable query, it would
+/// match it identically on the re-run and `fresh == *cert` would hold; the
+/// checker whose job is to catch a wrong producer would agree with it. The
+/// certificate cannot help, because it carries three arena-local `TermId`s and a
+/// schema tag and nothing a checker could re-derive from.
+///
+/// So the re-run is kept — it is what binds the certificate to the assertion the
+/// search chose — and two independent stages are added on top. Each is decided
+/// from the certificate and the arena WITHOUT asking the recognizer anything:
+///
+/// 1. `is_degenerate` — `lhs == rhs` justifies nothing, and the rendered Lean
+///    module for it proves `False` by `rfl` alone. The producer filters this;
+///    the checker never did.
+/// 2. `certificate_is_axiom_instance` — `lhs = rhs` really is an instance of the
+///    schema the certificate names.
+///
+/// **What is still owed, stated rather than implied.** `ReadCongruence`
+/// certificates are not schema matches — they come out of equality facts
+/// accumulated across assertions — so stage 2 cannot decide them and they rest
+/// on the re-run alone. Likewise the BTOR-derived path, where the named
+/// assertion *entails* `¬(lhs = rhs)` rather than stating it:
+/// `assertion_states_disequality` decides the stating case and returns `false`
+/// for the entailing one. Both residuals are the same shape — an independent
+/// checker for facts derived across assertions — and both are real.
 fn check_array_axiom_evidence(
     arena: &TermArena,
     assertions: &[TermId],
     cert: &ArrayAxiomRefutationCertificate,
 ) -> bool {
+    // A degenerate certificate justifies nothing: its Lean module proves `False`
+    // by `rfl` alone, using neither the query nor the array axioms. The producer
+    // filters this; the checker never did.
+    //
+    // Stated plainly, because a guard that cannot fail is worse than none:
+    // **deleting this kills no test**, and that is not an oversight. On the
+    // independent route stage 2 refuses `lhs == rhs` anyway (`x = x` is not an
+    // instance of any array schema), and on the residual route the producer
+    // filters degeneracy before the comparison. It is kept as an explicit and
+    // cheap precondition on a value that can arrive deserialized from outside
+    // this process — but it is subsumed, and the two guards below are the ones
+    // carrying the weight.
+    if cert.is_degenerate() {
+        return false;
+    }
+
+    // THE INDEPENDENT ROUTE. Both conditions are decided from the certificate
+    // and the query alone, without asking the recognizer anything, so a
+    // recognizer that matched a satisfiable query is caught here rather than
+    // agreed with.
+    //
+    // Note what it does NOT do: fall through to the re-run on failure. Anything
+    // reachable by this route is decided by it, because a guard that sits behind
+    // `fresh == *cert` is unreachable — the equality subsumes it, and both
+    // guards then kill no test at all. That is measured, not argued: staged
+    // behind the re-run, deleting either of these changed no test result.
+    let states_the_disequality =
+        crate::array_axiom::assertion_states_disequality(arena, cert.assertion, cert.lhs, cert.rhs);
+    let is_a_schema_kind = cert.kind != crate::array_axiom::ArrayAxiomKind::ReadCongruence;
+    if is_a_schema_kind && states_the_disequality && assertions.contains(&cert.assertion) {
+        // `assertions.contains` is load-bearing and not a formality: without it a
+        // certificate may name a VALID axiom instance the query never asserts,
+        // and `¬(valid identity)` being unsatisfiable would then "refute" a
+        // perfectly satisfiable query.
+        return crate::array_axiom::certificate_is_axiom_instance(arena, cert);
+    }
+
+    // THE RESIDUAL, named rather than implied. Two shapes reach here and both
+    // still rest on re-running the producer and comparing for equality, which is
+    // a determinism check and not a soundness check:
+    //
+    //   * `ReadCongruence` — built from equality facts accumulated ACROSS
+    //     assertions, not by matching a schema against two terms, so there is no
+    //     two-term claim for stage 2 to decide.
+    //   * the BTOR-derived path, where the named assertion *entails*
+    //     `¬(lhs = rhs)` through bit-blasted Boolean structure rather than
+    //     stating it.
+    //
+    // Both need the same missing thing: an independent checker for a fact
+    // derived across assertions. `corpus_array_axiom_certificates_are_measured_against_both_stages`
+    // counts how much of the family is on which side, so this residual is a
+    // number rather than a caveat.
     crate::array_axiom::array_axiom_refutation(arena, assertions)
         .is_some_and(|fresh| fresh == *cert)
 }
@@ -2662,6 +2961,138 @@ pub fn produce_nra_even_power_evidence(
     }))
 }
 
+/// Produce source-bound evidence for a monomial-bound refutation.
+pub fn produce_monomial_bound_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<EvidenceReport> {
+    let certificate = crate::nra_monomial_bound_cert::monomial_bound_refutation(arena, assertions)?;
+    Some(EvidenceReport {
+        evidence: Evidence::UnsatMonomialBound(certificate),
+        provenance: Provenance {
+            semantics_version: SEMANTICS_VERSION,
+            layers: LayerVersions::CURRENT,
+            backend: "nra-monomial-bound-certificate".to_owned(),
+            assertion_count: assertions.len(),
+            timeout: None,
+            resource_limit: None,
+            node_budget: None,
+            cnf_variable_budget: None,
+            cnf_clause_budget: None,
+            prove_unsat: true,
+        },
+        trusted_steps: Vec::new(),
+    })
+}
+
+/// Produce source-bound evidence for a degree-2 Positivstellensatz refutation.
+pub fn produce_real_product_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<EvidenceReport> {
+    let certificate = crate::nra_product_cert::real_product_refutation(arena, assertions)?;
+    Some(EvidenceReport {
+        evidence: Evidence::UnsatRealProduct(certificate),
+        provenance: Provenance {
+            semantics_version: SEMANTICS_VERSION,
+            layers: LayerVersions::CURRENT,
+            backend: "nra-product-positivstellensatz-certificate".to_owned(),
+            assertion_count: assertions.len(),
+            timeout: None,
+            resource_limit: None,
+            node_budget: None,
+            cnf_variable_budget: None,
+            cnf_clause_budget: None,
+            prove_unsat: true,
+        },
+        trusted_steps: Vec::new(),
+    })
+}
+
+/// Produce source-bound evidence for a multi-term Handelman / Positivstellensatz
+/// refutation.
+///
+/// Declines (`None`) for anything purely linear -- a linear refutation is a Farkas
+/// refutation and the linear route already carries one -- and for any nonlinear
+/// query whose combination the bounded search does not find.
+pub fn produce_handelman_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<EvidenceReport> {
+    let certificate = crate::nra_handelman_cert::handelman_refutation(arena, assertions)?;
+    Some(EvidenceReport {
+        evidence: Evidence::UnsatRealHandelman(certificate),
+        provenance: Provenance {
+            semantics_version: SEMANTICS_VERSION,
+            layers: LayerVersions::CURRENT,
+            backend: "nra-handelman-positivstellensatz-certificate".to_owned(),
+            assertion_count: assertions.len(),
+            timeout: None,
+            resource_limit: None,
+            node_budget: None,
+            cnf_variable_budget: None,
+            cnf_clause_budget: None,
+            prove_unsat: true,
+        },
+        trusted_steps: Vec::new(),
+    })
+}
+
+/// Produce source-bound evidence for a real monomial-divisibility refutation.
+pub fn produce_real_zero_product_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<EvidenceReport> {
+    let certificate =
+        crate::nra_zero_product_cert::real_zero_product_refutation(arena, assertions)?;
+    Some(EvidenceReport {
+        evidence: Evidence::UnsatRealZeroProduct(certificate),
+        provenance: Provenance {
+            semantics_version: SEMANTICS_VERSION,
+            layers: LayerVersions::CURRENT,
+            backend: "nra-zero-product-certificate".to_owned(),
+            assertion_count: assertions.len(),
+            timeout: None,
+            resource_limit: None,
+            node_budget: None,
+            cnf_variable_budget: None,
+            cnf_clause_budget: None,
+            prove_unsat: true,
+        },
+        trusted_steps: Vec::new(),
+    })
+}
+
+/// Produce source-bound evidence for a single-variable integer polynomial
+/// equality refuted by a non-square discriminant, non-integral rational roots,
+/// or rational-root exhaustion.
+///
+/// Runs *after* [`produce_int_quadratic_negative_discriminant_evidence`] and
+/// declines on the negative-discriminant shape, so one query never has two
+/// competing artifacts to keep in agreement.
+pub fn produce_int_univariate_poly_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<EvidenceReport> {
+    let certificate = crate::nia_univariate_cert::int_univariate_refutation(arena, assertions)?;
+    Some(EvidenceReport {
+        evidence: Evidence::UnsatIntUnivariatePoly(certificate),
+        provenance: Provenance {
+            semantics_version: SEMANTICS_VERSION,
+            layers: LayerVersions::CURRENT,
+            backend: "nia-univariate-polynomial-certificate".to_owned(),
+            assertion_count: assertions.len(),
+            timeout: None,
+            resource_limit: None,
+            node_budget: None,
+            cnf_variable_budget: None,
+            cnf_clause_budget: None,
+            prove_unsat: true,
+        },
+        trusted_steps: Vec::new(),
+    })
+}
+
 /// Produce source-bound evidence for the negative-discriminant subset of
 /// single-variable integer quadratic equalities.
 pub fn produce_int_quadratic_negative_discriminant_evidence(
@@ -2837,6 +3268,30 @@ pub fn produce_evidence(
             if let Some(report) = produce_nra_even_power_evidence(arena, assertions)? {
                 return Ok(report);
             }
+            // Monomial divisibility. Must sit here, INSIDE the `PureReal` arm and
+            // ahead of `produce_nra_evidence` below: that call returns a bare
+            // `unsat` for anything the NRA abstraction decides, so a hook placed
+            // after the `match` is unreachable for exactly the queries this
+            // certifies. Placed after the `match` first, and it never fired on
+            // the two corpus files it was written for.
+            if let Some(report) = produce_real_zero_product_evidence(arena, assertions) {
+                return Ok(report);
+            }
+            if let Some(report) = produce_real_product_evidence(arena, assertions) {
+                return Ok(report);
+            }
+            if let Some(report) = produce_monomial_bound_evidence(arena, assertions) {
+                return Ok(report);
+            }
+            // The multi-term Handelman combination: the most general of the
+            // certifying `QF_NRA` routes, so it runs last of them and only after
+            // the single-product shapes above have declined. Like them it must
+            // sit INSIDE this arm -- `produce_nra_evidence` below answers these
+            // queries with a bare `unsat`, so a hook after the `match` never
+            // fires for the files it was written for.
+            if let Some(report) = produce_handelman_evidence(arena, assertions) {
+                return Ok(report);
+            }
             match produce_lra_dpll_evidence(arena, assertions, config) {
                 Ok(report) => return Ok(report),
                 Err(SolverError::Unsupported(msg))
@@ -2869,6 +3324,9 @@ pub fn produce_evidence(
         return Ok(report);
     }
     if let Some(report) = produce_int_quadratic_negative_discriminant_evidence(arena, assertions) {
+        return Ok(report);
+    }
+    if let Some(report) = produce_int_univariate_poly_evidence(arena, assertions) {
         return Ok(report);
     }
     if let Some(report) = residue_report(arena, assertions, &provenance) {
@@ -3194,7 +3652,9 @@ impl EvidenceWithScript {
 fn is_subject_independent_evidence(evidence: &Evidence) -> bool {
     matches!(
         evidence,
-        Evidence::UnsatWordClash(_) | Evidence::UnsatRegexEmptiness { .. }
+        Evidence::UnsatWordClash(_)
+            | Evidence::UnsatRegexEmptiness { .. }
+            | Evidence::UnsatStringLength { .. }
     )
 }
 
@@ -3268,7 +3728,7 @@ pub fn produce_evidence_smtlib_with_script(
         // A word-clash / regex-emptiness / concat-emptiness / length conflict decided
         // the `unsat`; upgrade it to a transferable certified variant where one exists,
         // else a correct bare-but-sound `Evidence::Unsat(None)`.
-        CheckResult::Unsat => string_unsat_evidence(&mut script, config),
+        CheckResult::Unsat => string_unsat_evidence(input, &mut script, config),
         CheckResult::Unknown(reason) => Evidence::Unknown(reason),
     };
     Ok(EvidenceWithScript {
@@ -3293,13 +3753,31 @@ pub fn produce_evidence_smtlib_with_script(
 /// 2. **Word clash** → [`Evidence::UnsatWordClash`], carrying the self-contained,
 ///    self-checking Alethe [`WordClashCertificate`](crate::WordClashCertificate)
 ///    (`check()` re-runs the Alethe replay, arena-free — a tampered proof fails).
-/// 3. Otherwise (concat/length conflict, or a reconstruction/cap decline) a correct
+/// 3. **Length / code-point abstraction** → [`Evidence::UnsatStringLength`], carrying
+///    the script's own top-level commands, the named theory lemmas the argument uses,
+///    and one Farkas combination per case-split branch (re-derived from the commands
+///    on re-check — the carried lemma instances are bound to the conjuncts that
+///    license them before any multiplier is read), plus a kernel-checked Lean module
+///    over the constructed integers when the conjunctive reconstruction succeeds.
+/// 4. Otherwise (concat conflict, or a reconstruction/cap decline) a correct
 ///    bare-but-sound [`Evidence::Unsat(None)`](Evidence::Unsat).
 ///
 /// The verdict is never changed — this is a pure evidence upgrade over the object the
 /// route already decided. Each certificate independently re-checks; a decline is a
 /// clean fall-through to the next class, never a fabricated certificate.
-fn string_unsat_evidence(script: &mut axeyum_smtlib::Script, config: &SolverConfig) -> Evidence {
+///
+/// # Why the ORDER puts the length certificate last
+///
+/// It is the newest and the most generic of the three, and its job is to upgrade what
+/// was a bare `Evidence::Unsat(None)` — never to displace a regex-emptiness proof that
+/// reconstructs to a kernel-checked Lean module, or a word clash whose Alethe replay
+/// is stronger evidence about the same query. Placing a new certifier first has
+/// shadowed better ones here before (`quant_instance_set_certificate`, four tests).
+fn string_unsat_evidence(
+    input: &str,
+    script: &mut axeyum_smtlib::Script,
+    config: &SolverConfig,
+) -> Evidence {
     // (1) Regex derivative-emptiness (kernel-checked Lean).
     if let Some((membership, lean_module)) = crate::membership_unsat_certificate(script, config) {
         return Evidence::UnsatRegexEmptiness {
@@ -3318,7 +3796,23 @@ fn string_unsat_evidence(script: &mut axeyum_smtlib::Script, config: &SolverConf
     {
         return Evidence::UnsatWordClash(certificate);
     }
-    // (3) No transferable certificate yet: the correct, honestly-uncertified verdict.
+    // (3) Length / code-point abstraction with a Farkas-style linear refutation.
+    // This reads the SOURCE s-expressions, not `script.arena`: the arena holds the
+    // ADR-0029 bounded packed-BV encoding (or nothing at all under the word-first
+    // fallback), which is neither the query nor a checking subject for it.
+    if let Ok(commands) = axeyum_smtlib::read_all(input)
+        && let Some(certificate) = crate::string_length_cert::string_length_refutation(&commands)
+    {
+        // Best-effort Lean backing: the conjunctive form reconstructs to a
+        // kernel-checked `False` over the constructed integers, a case split does
+        // not (yet). A decline is `None`, never a weaker certificate.
+        let lean_module = crate::reconstruct_string_length_to_lean_module(&certificate).ok();
+        return Evidence::UnsatStringLength {
+            certificate,
+            lean_module,
+        };
+    }
+    // (4) No transferable certificate yet: the correct, honestly-uncertified verdict.
     Evidence::Unsat(None)
 }
 
@@ -3937,7 +4431,12 @@ pub fn prove(
         | Evidence::UnsatArithDpll(_)
         | Evidence::UnsatSos { .. }
         | Evidence::UnsatIntQuadraticNegativeDiscriminant(_)
+        | Evidence::UnsatIntUnivariatePoly(_)
         | Evidence::UnsatNraEvenPower(_)
+        | Evidence::UnsatRealZeroProduct(_)
+        | Evidence::UnsatRealProduct(_)
+        | Evidence::UnsatRealHandelman(_)
+        | Evidence::UnsatMonomialBound(_)
         | Evidence::UnsatDiophantine { .. }
         | Evidence::UnsatBoundedIntBlast(_)
         | Evidence::UnsatFiniteDomainPigeonhole(_)
@@ -3964,7 +4463,8 @@ pub fn prove(
         | Evidence::UnsatBinarySearch16(_)
         | Evidence::UnsatFifoBc04(_)
         | Evidence::UnsatRegexEmptiness { .. }
-        | Evidence::UnsatWordClash(_) => {
+        | Evidence::UnsatWordClash(_)
+        | Evidence::UnsatStringLength { .. } => {
             // Three-valued so the two very different "not verified" cases stay
             // apart (ADR-0384): a certificate that FAILS is a soundness alarm,
             // while a bare `unsat` has nothing to check and keeps the historical
@@ -4401,5 +4901,208 @@ mod tests {
             !outcome.is_verified(),
             "the bounded/empty view must never fabricate a verification, got {outcome:?}"
         );
+    }
+
+    /// Two forged array-axiom certificates over **satisfiable** queries, each
+    /// rejected by exactly one of the two independent stages.
+    ///
+    /// This family is 30.2% of all certified `unsat` (85 of 281, 2026-08-21).
+    /// Its checker used to be `array_axiom_refutation(..).is_some_and(|fresh|
+    /// fresh == *cert)` — a determinism check. A recognizer that matched a
+    /// satisfiable query matches it identically on the re-run, so the checker
+    /// whose entire job is to catch a wrong producer would agree with it.
+    ///
+    /// Writing the fixtures is what proves the stages are real. Both queries
+    /// below are SAT; both certificates are shaped exactly as an honest one; and
+    /// each is refused for one specific reason. CLAUDE.md's rule is that a guard
+    /// which kills no test is a gap — and staged behind the re-run, both of these
+    /// killed nothing, because the equality comparison subsumed them.
+    #[test]
+    fn a_forged_array_axiom_certificate_over_a_sat_query_is_refused() {
+        use crate::array_axiom::{ArrayAxiomKind, ArrayAxiomRefutationCertificate};
+
+        // FIXTURE 1 — the schema claim is a lie.
+        // `(not (= (select a i) (select a j)))` is satisfiable (take i != j), and
+        // it is not an instance of ANY array axiom. The certificate names the
+        // real assertion, is non-degenerate, and claims `ReadOverWrite`.
+        // Stage 1 accepts (the assertion does state this disequality) and only
+        // stage 2 can refuse it.
+        let mut arena = TermArena::new();
+        let key = Sort::BitVec(4);
+        let value = Sort::BitVec(8);
+        let array_sort = Sort::Array {
+            index: axeyum_ir::ArraySortKey::BitVec(4),
+            element: axeyum_ir::ArraySortKey::BitVec(8),
+        };
+        let a_sym = arena.declare("a", array_sort).expect("declare a");
+        let a = arena.var(a_sym);
+        let i_sym = arena.declare("i", key).expect("declare i");
+        let i = arena.var(i_sym);
+        let j_sym = arena.declare("j", key).expect("declare j");
+        let j = arena.var(j_sym);
+        let read_i = arena.select(a, i).expect("select");
+        let read_j = arena.select(a, j).expect("select");
+        let equality = arena.eq(read_i, read_j).expect("eq");
+        let assertion = arena.not(equality).expect("not");
+        let assertions = vec![assertion];
+
+        let forged = Evidence::UnsatArrayAxiom(ArrayAxiomRefutationCertificate {
+            assertion,
+            lhs: read_i,
+            rhs: read_j,
+            kind: ArrayAxiomKind::ReadOverWrite,
+        });
+        assert!(
+            !check_array_axiom_evidence(
+                &arena,
+                &assertions,
+                match &forged {
+                    Evidence::UnsatArrayAxiom(c) => c,
+                    _ => unreachable!(),
+                }
+            ),
+            "`select(a,i) = select(a,j)` is not a ReadOverWrite instance, and the \
+             query it is claimed against is satisfiable at i != j"
+        );
+
+        // FIXTURE 2 — the axiom instance is real, but the query never asserts it.
+        // `lhs = rhs` here IS a valid read-over-write identity, so `not (lhs =
+        // rhs)` would be unsatisfiable — but this query does not assert it. It
+        // asserts something else entirely and is satisfiable. Only the
+        // `assertions.contains` half of stage 1 stands between this certificate
+        // and a "refutation" of a SAT query.
+        let v_sym = arena.declare("v", value).expect("declare v");
+        let v = arena.var(v_sym);
+        let stored = arena.store(a, i, v).expect("store");
+        let lhs = arena.select(stored, j).expect("select");
+        let same_index = arena.eq(i, j).expect("eq");
+        let read_a_j = arena.select(a, j).expect("select");
+        let rhs = arena.ite(same_index, v, read_a_j).expect("ite");
+
+        // The certificate names a disequality term that STATES `lhs != rhs`, so
+        // stage 1's structural half accepts it. The query does not assert that
+        // term — it asserts `i = j` and is satisfiable. Only `assertions.contains`
+        // separates the two, which is why the fixture must build the term and
+        // then withhold it from the assertion list rather than reusing an
+        // unrelated assertion (an earlier draft did, and it was rejected by the
+        // wrong guard — it never reached the one under test).
+        let forged_equality = arena.eq(lhs, rhs).expect("eq");
+        let forged_assertion = arena.not(forged_equality).expect("not");
+        let unrelated = arena.eq(i, j).expect("eq");
+        let unrelated_assertions = vec![unrelated];
+        let forged_instance = ArrayAxiomRefutationCertificate {
+            assertion: forged_assertion,
+            lhs,
+            rhs,
+            kind: ArrayAxiomKind::ReadOverWrite,
+        };
+        assert!(
+            crate::array_axiom::assertion_states_disequality(&arena, forged_assertion, lhs, rhs),
+            "the fixture must clear stage 1's structural half, or it tests the wrong guard"
+        );
+        assert!(
+            crate::array_axiom::certificate_is_axiom_instance(&arena, &forged_instance),
+            "the fixture must be a REAL axiom instance, or it tests the wrong guard"
+        );
+        assert!(
+            !check_array_axiom_evidence(&arena, &unrelated_assertions, &forged_instance),
+            "a valid axiom instance the query never asserts refutes nothing"
+        );
+    }
+
+    /// Every certificate that CARRIES a DRAT proof must be reported as portable.
+    ///
+    /// `portable_artifact`'s wildcard undercounts by construction, and
+    /// undercounting is precisely the bug it was written to fix: the published
+    /// "8.5% of unsat are externally checkable" was counted from kind LABELS,
+    /// while `BoundedIntBlastCertificate` had been carrying a full DRAT
+    /// refutation in `bv_proof` the whole time.
+    ///
+    /// So the source of truth is the source: this reads `evidence.rs` and the
+    /// certificate modules, finds every `Evidence` variant whose certificate
+    /// type has an `UnsatProof` field, and requires an arm for it. A new
+    /// proof-carrying certificate that nobody lists fails here rather than
+    /// quietly deflating the metric again.
+    ///
+    /// It reads files rather than using a trait because a trait would have to be
+    /// implemented by hand for each certificate — which is the same act of
+    /// remembering, with the same failure mode.
+    #[test]
+    fn every_proof_carrying_variant_is_listed_as_portable() {
+        use std::collections::BTreeSet;
+        use std::path::Path;
+
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let mut sources = String::new();
+        let mut stack = vec![root.clone()];
+        while let Some(dir) = stack.pop() {
+            for entry in std::fs::read_dir(&dir).expect("the source tree is readable") {
+                let path = entry.expect("a readable entry").path();
+                if path.is_dir() {
+                    stack.push(path);
+                } else if path.extension().is_some_and(|e| e == "rs") {
+                    sources.push_str(&std::fs::read_to_string(&path).expect("readable"));
+                }
+            }
+        }
+        let evidence = std::fs::read_to_string(root.join("evidence.rs")).expect("readable");
+
+        // Certificate structs with an `UnsatProof`-typed field.
+        let mut proof_carrying: BTreeSet<String> = BTreeSet::new();
+        for (index, _) in sources.match_indices("pub struct ") {
+            let tail = &sources[index..];
+            let Some(open) = tail.find('{') else { continue };
+            let Some(close) = tail.find("\n}") else {
+                continue;
+            };
+            if close < open {
+                continue;
+            }
+            let name: String = tail["pub struct ".len()..open]
+                .split(['<', ' '])
+                .next()
+                .unwrap_or_default()
+                .trim()
+                .to_owned();
+            if tail[open..close].contains("UnsatProof") && !name.is_empty() {
+                proof_carrying.insert(name);
+            }
+        }
+        assert!(
+            proof_carrying.len() >= 5,
+            "the scan found {} proof-carrying certificates, which is too few to \
+             be believable — the parser has drifted, not the code",
+            proof_carrying.len()
+        );
+
+        // The arms actually listed in `portable_artifact`.
+        let listed = evidence
+            .split("pub const fn portable_artifact")
+            .nth(1)
+            .and_then(|tail| tail.split("\n    }").next())
+            .expect("portable_artifact is present")
+            .to_owned();
+
+        for certificate in &proof_carrying {
+            // Find the variant that wraps this certificate type, if any.
+            let needle = format!("({certificate})");
+            let Some(index) = evidence.find(&needle) else {
+                continue;
+            };
+            let head = &evidence[..index];
+            let variant = head
+                .rsplit(['\n', ' '])
+                .find(|token| token.starts_with("Unsat"))
+                .unwrap_or_default();
+            if variant.is_empty() {
+                continue;
+            }
+            assert!(
+                listed.contains(variant),
+                "`{variant}` wraps `{certificate}`, which carries an `UnsatProof`, \
+                 but `portable_artifact` does not list it — the externally-checkable \
+                 count is understated by every instance of this family"
+            );
+        }
     }
 }

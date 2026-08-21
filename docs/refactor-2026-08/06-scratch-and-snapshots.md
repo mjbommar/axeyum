@@ -34,6 +34,19 @@ Three traps in that table, all paid for:
 - **`/data0` itself is root-owned.** It was recommended as the scratch disk
   before anyone checked. `/data0/axeyum/{scratch,target}` now exists and is
   user-writable; `/data0/winlab` shows the same pattern was already in use.
+- **The agent session scratchpad is shared by every lane** (added 2026-08-18).
+  `/tmp/claude-1000/<project>/<session>/scratchpad` is per **session**, not per
+  lane, and every lane is told to use it. One lane kept its snapshot path in a
+  fixed-name `W.txt` there; another overwrote it, and the first lane's next `cp`
+  loop wrote 13 files into the second lane's `/data0` snapshot tree. Committed
+  content was recoverable; an uncommitted edit inside that snapshot would not
+  have been.
+
+  It is also on the tmpfs measured above, so it is RAM. Name files
+  `$AXEYUM_AGENT.<something>`, prefer passing a path in a variable within one
+  invocation over persisting it, and prefer `lane-snapshot.sh`, which stamps its
+  directories with an owner. Neither `git status` nor any gate can see a write
+  that lands outside the repository.
 
 ## The policy
 

@@ -1320,3 +1320,38 @@ mod native_cdcl {
         }
     }
 }
+
+/// `bvnego` above 128 bits, end to end through the bit-blaster.
+///
+/// `TermArena::bv_nego` built the signed minimum as `1u128 << (w - 1)`, and Rust
+/// masks a shift amount mod 128: at `w = 129` release builds got `1`, so the
+/// backend was asked whether `x == 1` — and `(bvnego x) ∧ (x = 1)` came back
+/// **sat**, a wrong `sat` on a query that is unsatisfiable (negating 1 at 129
+/// bits does not overflow). Debug builds panicked on the shift instead.
+///
+/// No committed corpus file reaches this — measured 2026-08-21, `bvnego` occurs
+/// in 0 of 1430 tracked `.smt2` files (control: `bvadd` in 106) — but the parser
+/// front door constructs it from any user input (`parse.rs`, `"bvnego"`), and
+/// widths to `MAX_BV_WIDTH = 65536` are legal, so this is the end-to-end shape
+/// the corpus could not have caught.
+#[test]
+fn wide_bv_nego_is_decided_not_wrongly_sat() {
+    use axeyum_ir::WideUint;
+
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("x", 129).unwrap();
+    let nego = arena.bv_nego(x).unwrap();
+
+    // 1 is NOT the 129-bit signed minimum, so this conjunction is unsatisfiable.
+    let one = arena.bv_const(129, 1).unwrap();
+    let x_is_one = arena.eq(x, one).unwrap();
+    assert!(
+        matches!(check(&arena, &[nego, x_is_one]), CheckResult::Unsat),
+        "(bvnego x) and (x = 1) is unsat at 129 bits"
+    );
+
+    // 2^128 IS the signed minimum: sat, and the model replays.
+    let min = arena.wide_bv_const(WideUint::from_u128(1, 129).shl(128));
+    let x_is_min = arena.eq(x, min).unwrap();
+    expect_sat_checked(&arena, &[nego, x_is_min]);
+}

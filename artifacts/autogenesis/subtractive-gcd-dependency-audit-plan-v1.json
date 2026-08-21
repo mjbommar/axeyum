@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-subtractive-gcd-dependency-audit-plan",
+  "state": "preregistered-before-sealed-stream-reread-no-replacement-authority",
+  "policy_version": "subtractive-gcd-direct-dependency-audit-v1",
+  "inputs": {
+    "root_audit_result": {
+      "path": "artifacts/autogenesis/subtractive-gcd-root-audit-result-v1.json",
+      "sha256": "c4c2d52cc52f34d168b8894be33ae0074975e9a86685a4774dce6771514d1471"
+    },
+    "sealed_pack": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/38e40236f-subtractive-gcd-root-audit-v1/manifest.json",
+      "sha256": "6b03e14eccbbbdf9dbb76750f0f60ba8c045237ba355eea04f436f66cfd39aa0",
+      "mode": "0444"
+    },
+    "sealed_stream": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/38e40236f-subtractive-gcd-root-audit-v1/gcd-roots.ndjson",
+      "sha256": "ff9916e0d74f1a69f7fee33c3b973cd771e6786715b8ea86699da0a8124ae65b",
+      "bytes": 1152342,
+      "mode": "0444"
+    }
+  },
+  "derivation": {
+    "source": "root_audit_result.direct_dependency_union minus root_audit_result.rows names",
+    "source_union_population": 17,
+    "already_measured_population": 3,
+    "fixed_population": 14
+  },
+  "fixed_roots": [
+    "Eq.symm",
+    "Eq.trans",
+    "Nat.gcd_comm",
+    "Nat.gcd_sub_mul_right_left",
+    "Nat.gcd_sub_mul_right_right",
+    "Nat.gcd_succ",
+    "Nat.mod_one",
+    "Nat.mod_self",
+    "Nat.one_mul",
+    "_private.Init.Data.Nat.Gcd.0.Nat.gcd.eq_1",
+    "congrArg",
+    "congrFun'",
+    "eq_self",
+    "of_eq_true"
+  ],
+  "fixed_measurement": {
+    "tool_path": "crates/axeyum-lean-import/examples/theorem_footprint_batch_audit.rs",
+    "tool_sha256": "38e40236fec86f1080af52bafb9394f9f1505ad161dae96e9c48979d00b1094a",
+    "root_order_must_match_plan": true,
+    "proof_terms_types_or_values_may_be_rendered": false,
+    "all_roots_must_resolve_as_theorems": true
+  },
+  "decision_rule": {
+    "authorize_reconstruction_in_this_increment": false,
+    "next_plan_may_reconstruct_only_measured_assumption_carriers": true,
+    "prefer_private_gcd_equation_and_general_subtraction_equations_if_empty": true
+  },
+  "budget": {
+    "max_exporter_invocations": 0,
+    "max_batch_importer_runs": 1,
+    "max_proof_bearing_stream_reads": 1,
+    "max_retries": 0,
+    "max_replacement_source_compilations": 0,
+    "max_new_theorem_submissions": 0,
+    "max_exact_target_submissions": 0,
+    "max_executor_invocations": 0
+  },
+  "authority": {
+    "proof_bodies_readable_by_model": false,
+    "theorem_types_readable_by_model": false,
+    "theorem_values_readable_by_model": false,
+    "replacement_proof_allowed": false,
+    "support_theorem_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/subtractive-gcd-dependency-audit-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-subtractive-gcd-dependency-audit-plan.py",
+  "limitations": "This pass classifies one dependency layer already present in the sealed stream. It proves no gcd equation, Bezout theorem, cancellation theorem, or Fibonacci target."
+}

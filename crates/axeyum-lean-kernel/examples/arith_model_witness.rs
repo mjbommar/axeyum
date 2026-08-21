@@ -1,15 +1,15 @@
-//! Print the machine-checked **model** of the `Real` axiom package in the
+//! Print the machine-checked **model** of the `AxReal` axiom package in the
 //! constructed, axiom-free `Int` development.
 //!
-//! `nat_axiom_inventory` answers "how many trusted declarations does the `Real`
+//! `nat_axiom_inventory` answers "how many trusted declarations does the `AxReal`
 //! prelude have" (30) and stops there. That number, on its own, does not say
 //! whether the axioms are *satisfiable* — and an inconsistent axiom package
 //! would make every reconstruction built on it vacuously valid while every gate
 //! in the repository stayed green. This example answers the next question: is
 //! there a carrier we have actually built that satisfies all of them?
 //!
-//! Each row is a `Real` declaration and its interpretation. For a law, the
-//! `witness` column names a theorem whose type is the `Real` axiom's type with
+//! Each row is a `AxReal` declaration and its interpretation. For a law, the
+//! `witness` column names a theorem whose type is the `AxReal` axiom's type with
 //! the eight carrier/operation constants substituted — computed from the
 //! environment, not written by hand — and whose proof is the corresponding
 //! `Int` theorem, type-checked by the kernel at admission. `footprint` is
@@ -17,7 +17,7 @@
 //!
 //! What this does and does not license is spelled out in the module docs of
 //! `arith_model.rs`: it is a relative-consistency result, not a discharge of
-//! the `Real` axioms. `ℤ` is not `ℝ`.
+//! the `AxReal` axioms. `ℤ` is not `ℝ`.
 //!
 //! ```sh
 //! cargo run --release -q -p axeyum-lean-kernel --example arith_model_witness
@@ -72,7 +72,7 @@ fn main() {
     let identical = rows.iter().filter(|(_, _, _, id)| *id).count();
 
     // The population is derived from the environment, not from the table above:
-    // a Real declaration this model forgot must show up as a shortfall here
+    // an AxReal declaration this model forgot must show up as a shortfall here
     // rather than as a smaller-but-still-tidy count.
     let declared = kernel
         .environment()
@@ -80,14 +80,14 @@ fn main() {
         .filter(|(_, declaration)| match declaration {
             Declaration::Axiom { name, .. } => {
                 let rendered = kernel.display_name(*name).to_string();
-                rendered == "Real" || rendered.starts_with("Real.")
+                rendered == "AxReal" || rendered.starts_with("AxReal.")
             }
             _ => false,
         })
         .count();
 
     eprintln!(
-        "Real: {declared} trusted declarations = {} interpreted symbols + {} modelled laws; \
+        "AxReal: {declared} trusted declarations = {} interpreted symbols + {} modelled laws; \
          {axiom_free}/{} witnesses have an EMPTY axiom footprint, {identical}/{} are \
          syntactically the Int law",
         model.symbols.len(),
@@ -96,7 +96,7 @@ fn main() {
         rows.len()
     );
     eprintln!(
-        "This is relative consistency of the Real axiom set, not a discharge of it: \
+        "This is relative consistency of the AxReal axiom set, not a discharge of it: \
          Int is not R."
     );
 }

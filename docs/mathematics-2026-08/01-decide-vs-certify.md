@@ -35,12 +35,27 @@ machinery and nothing an independent kernel has seen.
 > alone and the count is normalised — including the abbreviated prefix, since
 > `QF_UFLIA/UFLRA` names `QF_UFLRA` and not a logic called `UFLRA`.
 >
-> **11 of 23 logics** have at least one externally-checked capability. The 12
-> without are the actual queue: `QF_AUFBV`, `QF_FP`, `QF_IDL`, `QF_NIA`,
-> `QF_RDL`, `QF_S`, `SAT`, `diagnostics`, `incremental`, `optimization`,
+> **11 of 23 logics** have at least one externally-checked capability (12 as of
+> the supersede note below — `QF_RDL` closed the same day). The 12 without were
+> the actual queue: `QF_AUFBV`, `QF_FP`, `QF_IDL`, `QF_NIA`, ~~`QF_RDL`~~,
+> `QF_S`, `SAT`, `diagnostics`, `incremental`, `optimization`,
 > `symbolic execution`, `synthesis`.
 >
 > The floor is now gated: the externally-checked count may not fall silently.
+>
+> **Superseded later the same day: 12 of 23, and the queue is 11.** `QF_RDL` was
+> closed by item B below — it turned out to reconstruct to a Lean theory module
+> already, and only wanted a module in the gate's family slice. The transcript
+> above is left exactly as it was emitted (`entries=101|external=36`); it is a
+> measurement, not a status line, and hand-editing quoted output is how a
+> "derived" number quietly becomes a transcribed one. Current figures come from
+> re-running the command, which now also prints the logic-level line the strand
+> actually quotes:
+>
+> ```
+> logics: 12 of 23 have an external artifact checker; 11 do not (rank them with --rank)
+> CAPABILITY_ASSURANCE|entries=102|areas=23|external=37|...|logics_external=12|logics_total=23
+> ```
 
 That is not a criticism of the verdicts. `Assurance::Checked` (49 entries) and
 `Assurance::Validated` (40) are real: replayed models, DRAT certificates
@@ -124,16 +139,281 @@ So the actionable form of this section is not "add Lean proofs to 21 areas". It
 is:
 
 **A. Re-derive the capability table from the code rather than maintaining it by
-hand.** A 1,858-line hand-written table of what the system can do is the same
+hand.** A 1,908-line hand-written table of what the system can do is the same
 category of artifact as a guard that exists only in a comment. It should be
 generated, or at minimum gated against the routes it describes.
 
-**B. Rank the 21 by how much a certificate would be worth.** They are not
-equal. `QF_UF` and `datatypes` have small, well-understood proof formats.
-`QF_FP` and strings do not. Ranking honestly beats attempting uniformly.
+*The minimum is done (2026-08-17): `python3 scripts/check-capability-routes.py`,
+in both gates.* The table names the function behind each capability by
+convention — `"CERTIFIED Craig interpolation (lra_interpolant_certified): ..."` —
+and that half is checkable even though the rest is not. **42 routes named, 0
+missing**, so this is a ratchet rather than a repair: it keeps the names true
+through the renames this repository does constantly. A row naming a route that no
+longer exists is the table's cheapest lie — the capability reads as real, the
+name looks authoritative, and nothing notices.
+
+Deliberately name-only. No static check can confirm the named function
+*implements* what the row claims, and pretending otherwise would be the same
+overreach the assurance tiering exists to avoid. Writing the naive version first
+was worth it: it reported `(vocabulary)` — prose in a sentence about Craig
+condition 3 — and `(nia_square)`, which is a `mod` rather than a `fn`. Both are
+now pinned as controls.
+
+Full generation stays open, and is a much larger job: the `feature` and
+`evidence` fields carry boundaries, declines, and measured numbers that no
+signature can produce.
+
+**B. Rank the gap by how much a certificate would be worth.** *Done
+2026-08-17, and derived rather than written down* — `python3
+scripts/check-capability-assurance.py --rank` (also in `just flywheel`). This
+item originally named `QF_UF` and `datatypes` as candidates to rank; both are
+externally checked now, which is exactly why the ranking cannot live in prose.
+
+The band is *distance to an external checker*, read off what each logic's
+evidence says already exists:
+
+| band | meaning | logics |
+| --- | --- | --- |
+| 1 | a refutation artifact is already built — export it and point a checker at it | **empty** — `QF_RDL`, `SAT`, `QF_IDL` all closed 2026-08-17 |
+| 2 | model replay only — needs an UNSAT proof format first | `QF_AUFBV`, `QF_FP`, `QF_NIA`, `QF_S`, `incremental`, `symbolic execution` |
+| 3 | no refutation artifact named | `diagnostics`, `optimization`, `synthesis` |
+
+Band 1 is plumbing, not research, and one row of it is already further along
+than the table can say. `propositional_interpolant` calls `solve_with_drat_proof`,
+checks the proof with `check_drat`, and returns `Option<BoolExpr>` — **the DRAT
+artifact is constructed and dropped**, so no external checker can ever see it.
+
+**The shared-row defect, and what it hid.** `tier` is per *row*, and
+`QF_IDL / QF_RDL` is one row, so both logics carry one assurance claim. Measured
+2026-08-17 they do not deserve the same one:
+
+```text
+qf_rdl  scan=Lra        -> TheoryReconstruction, 47538 bytes
+qf_idl  scan=ArithDpll  -> DECLINED: emits only a structural attestation
+```
+
+`QF_RDL` refutations scan into `Lra` — the same fragment as `QF_LRA`, which *is*
+externally checked. Handed to official Lean 4.30.0 by hand, that module is
+accepted in 0.20s, and two independent mutations of it (a hypothesis relation
+weakened `lt`→`le`; a hypothesis sign flipped) are both rejected. `QF_IDL`
+declines because integer difference logic routes through `ArithDpll`, which has
+no theory reconstruction.
+
+So the top item of this ranking was not a proof format at all: **hand a `QF_RDL`
+module to the Lean gate.** `lean_crosscheck` compiles a one-module-per-*family*
+representative slice, and the `Lra` representative is built from `real_lt`/`real_le`
+directly — no module from the QF_RDL *logic* had ever been handed to `lean`, which
+is why a logic official Lean already accepted still counted as unchecked.
+
+*Done the same day.* The `qf_rdl_difference` family is registered, and every run
+of the gate now reports:
+
+```text
+LEAN_CONTENT|family=15|tag=qf_rdl_difference|modules=1|theory=1|structural=0|representative=theory-reconstruction
+[lean ok] qf_rdl_difference: 'axeyum_refutation' depends on axioms:
+          [Real, Real.add, Real.add_assoc, … Real.zero_lt_one,
+           axeyum.reconstruct.lra.hyp._2, axeyum.reconstruct.lra.hyp._3, …]
+[lean crosscheck:representative] checked 75 of 75 modules … 0 FAILED
+```
+
+— the ordered-field axioms plus the query's own hypotheses, no `sorryAx`. The
+theory-family ratchet moves 33 → 34 and the module floor 96 → 97, so the gain
+cannot silently regress.
+
+> **The `Real` half of that transcript is gone, 2026-08-19.** `QF_RDL` still
+> routes through `ProofFragment::Lra` — the assertion in
+> `qf_rdl_difference_refutation_checks_in_real_lean` requires it — but that
+> fragment's carrier is no longer the axiomatized `Real` package. Since
+> ADR-0512 the shipped `prove_unsat_to_lean_module` reconstructs `Lra`,
+> `DisjunctiveLra` and `Sos` over the **constructed** `CReal`, so the axiom
+> line is the query's own hypotheses and nothing else. Measured today with
+> `cargo run -q -p axeyum-solver --features full --example front_door_carrier`:
+>
+> ```text
+>   --- strict-bound  x<0 and 0<=x
+>     over Real  : footprint 15 of which 12 are CARRIER axioms
+>     over CReal : footprint  3 of which  0 are CARRIER axioms  <== NONE
+>   --- three-row     x+y<=0, 1<=x, 1<=y
+>     over Real  : footprint 22 of which 17 are CARRIER axioms
+>     over CReal : footprint  5 of which  0 are CARRIER axioms  <== NONE
+>   --- sos-square    x*x<0
+>     over Real  : footprint 10 of which  8 are CARRIER axioms
+>     over CReal : footprint  2 of which  0 are CARRIER axioms  <== NONE
+> ```
+>
+> The `Real` column is kept as the non-vacuity control, not as a fallback: a
+> "zero carrier axioms" claim whose control also reports zero is measuring
+> nothing (ADR-0509). The trade is size — the `CReal` modules are 58× to 455×
+> larger, because the carrier is now spelled out rather than assumed. The precondition is separately guarded by
+`crates/axeyum-solver/tests/difference_logic_lean_content.rs`, including a
+control proving the attestation class is still reachable, so its assertion
+cannot pass by having stopped discriminating.
+
+Only *then* was the capability table edited, and this ordering is the point.
+`tier` reads prose, so writing "Lean" into an evidence field is enough to move
+the strand's primary metric — which is why the claim had to be gated first and
+transcribed second, never the reverse. QF_RDL now carries **its own row** rather
+than the shared one: the certificate machinery genuinely covers both logics, but
+the Lean reconstruction covers only QF_RDL, and a compound row cannot say that.
+External coverage goes 36 → 37 entries and **11 → 12 of 23 logics**, with the
+floor raised to match.
+
+**`QF_IDL` closed too, and it was the largest of the three.** It really did have
+no theory reconstruction — but neither did *any* conjunctive integer system whose
+rational relaxation is already infeasible. `x > 5 ∧ x < 3` routed to `ArithDpll`
+and rendered an `axiom P` / `axiom ¬P` shim, while an ordinary Farkas
+combination refutes it.
+
+Both halves of the fix were in the repository, unjoined. `generalize_over_ordered_ring`
+abstracts a Farkas refutation over the 22 laws of an ordered commutative ring —
+possible because Farkas uses ring operations and order and never division —
+leaving an axiom-free theorem true in *any* model. `build_int_model_of_arith`
+exhibits ℤ as a model of all 22, every witness with an empty footprint. Nothing
+had instantiated at it.
+
+`ProofFragment::IntFarkas` does, end to end: relax to find the combination,
+abstract, instantiate at ℤ, discharge the binders against the query's own
+integer variables and constraints. **The claim is never relaxed** — the
+combination is carried out in the integers, so the module is a theorem about
+`Int`, not about a real embedding. Official Lean compiles one module per logic
+on every gate run, and the axiom footprint is the query's own data and nothing
+else:
+
+```text
+[lean ok] qf_idl_int_farkas: 'axeyum_refutation' depends on axioms:
+          [int_hyp._10, int_hyp._11, int_var._8, int_var._9]
+```
+
+No `Real` axioms, no ring laws, no `sorryAx`. Two families rather than one
+because the slice checks one module per *family*, and a logic without its own is
+not covered even when it shares a reconstructor — the exact trap QF_RDL was in.
+The theory/attestation split moved **34 → 37 families against 40**, and a
+committed QF_LIA corpus row moved with it, from attesting to reasoning.
+
+The route declines what it cannot do: `3x ≥ 1 ∧ 3x ≤ 2` is LP-feasible and
+infeasible only over ℤ, so no Farkas combination exists, and it stays with the
+integer-inequality reconstructor (ADR-0042).
+
+**Band 1 is now empty**, and external coverage is **14 of 23 logics**, gap 9.
+What is left is band 2 — six logics with no UNSAT proof format — and band 3.
+Those are research, not plumbing, which is the honest end of this ranking.
+
+**`SAT` closed the same day, and the design question answered itself.** The
+worry was that making this capability externally checked meant designing new
+public surface, which would want an ADR. It did not: **every other interpolating
+area already ships a `*_certified` sibling beside its plain interpolant** —
+`qf_bv_interpolant_certified`, `qf_uf_interpolant_certified`,
+`lra_interpolant_certified`, `lia_interpolant_certified`,
+`uflra_interpolant_certified`, `uflia_interpolant_certified` — all of one shape:
+the same verified `I`, plus two externally-checkable refutations of the Craig
+conditions. Propositional was the seventh case of an accepted pattern, not a new
+decision.
+
+And the artifact was already built, literally. `verify_interpolant` discharged
+`A ∧ ¬I` and `I ∧ B` with the proof-producing core and checked each DRAT with
+`check_drat` — then returned a `bool` and dropped both proofs.
+`propositional_interpolant_certified` returns them. Nothing new is proved.
+
+Both refutations are accepted by **drat-trim**, an independent C implementation,
+on the trivial partition and on a `PHP(3,2)` partition needing real resolution
+(6 exported proof steps — the export is not demonstrated only on a one-step
+empty clause). Gate: `just interpolant-certificate`, which sets
+`AXEYUM_REQUIRE_DRAT_TRIM=1` so a *missing* checker fails rather than skipping;
+verified both ways.
+
+One control was written, failed, and was **replaced rather than deleted**: "the
+`A ∧ ¬I` proof must not check against the `I ∧ B` formula" is vacuous here, since
+both conjunctions refute by unit propagation and both proofs are the single step
+`0`, which legitimately checks against either. The control that discriminates is
+checking a refutation against `A` alone, which is satisfiable.
+
+External coverage: **13 of 23 logics**, gap 10, floor 38. Band 1 now holds only
+`QF_IDL`, which needs a theory reconstruction for `ArithDpll` — a real research
+step, not plumbing. The cheap half of this ranking is finished.
+
+Two logics — `QF_AUFBV` and `QF_IDL` — remain known *only* through a compound
+row (it was three before QF_RDL got its own), so part of the reported gap is
+still uniform-by-assumption. The `--rank` output discloses them rather than
+leaving the number to look cleaner than it is.
 
 **C. Make "decided, not certified" an explicit status**, so the gap is visible
 in the artifact instead of discoverable only by reading a prose evidence field.
+*Done 2026-08-17.* `Capability` carries a `checked_by: CheckedBy` field —
+`ExternalChecker` / `SelfChecker` / `DifferentialOracle` / `Argument` — and the
+rendered matrix gained a **Checked by** column, so the answer is read rather than
+recovered.
+
+`Assurance` never carried this axis: `Checked` says a certificate exists, not
+whether anyone outside this repository can read it. That distinction *is* the
+strand's primary metric, and it lived only in prose.
+
+**The heuristic had to go, and the evidence for that is what building it
+produced.** Reading all 15 rows the classifier could not place: fourteen were
+self-checks written as "re-checked", "re-verified", or "VERIFY-BEFORE-RETURN" —
+phrasings the pattern missed — and widening it to catch those left six more,
+phrased "check_auto-unsat checks", "kernel infer", "certified by the underlying
+decision procedure". Every round of tuning revealed another wording. The bucket
+was never a set of genuinely-unclassifiable capabilities; it was a set of
+sentences a regex had not seen yet.
+
+The classifier survives as a **cross-check, never the source**, and only in one
+direction: a row declaring `ExternalChecker` whose evidence names no external
+checker fails the gate. The asymmetry matches the table's standing rule —
+*downgrade rather than overstate*. Policing the other direction would flag the
+two real rows that mention Lean in order to say what the Lean path does **not**
+cover. Both guards were mutation-tested against the committed table.
+
+The headline did not move, which is the point: `external=38` and **13 of 23
+logics** before and after. What changed is that `unclassified` went 15 → 0, so
+the report no longer holds a bucket of rows whose assurance nobody had stated.
+`self` went 48 → 62 to match.
+
+## What "axiom-free" does and does not mean here
+
+Measured 2026-08-17 against official Lean 4.30.0, because the claim invites an
+overstatement and the numbers settle it.
+
+| | axiom footprint |
+| --- | --- |
+| the generalized ordered-ring refutation | none |
+| instantiated at **our constructed ℤ** | none |
+| instantiated at **Lean core's standard `Int`** | `propext` |
+| Lean core `omega`, same goal | `propext`, `Quot.sound` |
+
+Three things follow, and the first two are limits on the claim.
+
+**Axiom-freedom over the STANDARD integers is not achievable, by us or anyone.**
+Lean core's own `Int.add_comm`, `Int.add_assoc`, `Int.mul_comm`, `Int.lt_irrefl`,
+`Int.lt_trans` and `Int.le_refl` each depend on `propext`. Any route that
+instantiates at the standard `Int` inherits it. The `propext` is a floor set by
+the library, not a defect of a reconstruction strategy.
+
+**So our empty footprint is a consequence of instantiating at OUR ℤ**, which
+`int_prelude` constructs inductively over a proved ℕ with zero axioms. That is a
+real construction, not a dodge — but it is a different object from Lean's `Int`,
+and no bridge between them has been proved. Until one is, the theorem is about
+our integers.
+
+**And the generalized form being axiom-free is not special to this system.** The
+same shape, written by hand in four lines of Lean, is likewise axiom-free. What
+is ours is producing it automatically from a machine-found refutation, and
+measuring the footprint per theorem rather than asserting it.
+
+What survives as a genuine, if narrow, difference: even after bridging to the
+standard ℤ this route would land at `propext`, strictly lighter than `omega`'s
+`propext` + `Quot.sound` on the identical goal.
+
+For orientation, the neighbouring systems are not optimizing this metric at all.
+[lean-smt](https://arxiv.org/pdf/2505.15796) replays cvc5 proofs into Lean and,
+SMT-LIB's logic being classical, parts rest on choice.
+[SMTCoq](https://github.com/smtcoq/smtcoq) verifies a *checker* inside Coq and
+discharges linear arithmetic through Micromega — a reflective trust story rather
+than a term-reconstruction one.
+
+**The next measurement that would move this:** prove a bridge from our `Int` to
+Lean core's `Int`. That converts "axiom-free about our ℤ" into "`propext`-only
+about ℤ", which is a weaker footprint but a stronger *claim*, and is probably
+the better trade.
 
 ## The measurement to repeat
 

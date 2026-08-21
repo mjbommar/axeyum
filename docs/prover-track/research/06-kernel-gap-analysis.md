@@ -674,7 +674,7 @@ every name to a canonical type digest and supersedes this call-site count.
 **Second correction (2026-08-15):** that inventory read **65** assumptions and
 then stopped moving. ℤ has since been constructed over the proved ℕ
 development and `Int.euclidean_decomposition` became a theorem on 2026-08-15,
-so the runtime population is real 30, integer 0, string 1 — and `logic`, `nat`
+so the runtime population is real 30, integer 0, string 0 — and `logic`, `nat`
 and `integer` enumerate to zero, declared by the measurement rather than
 inferred from an empty result. Under
 [ADR-0465](../../research/09-decisions/adr-0465-the-axiom-ledger-is-derived-not-transcribed.md)

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-dvd-add-cancel-all-nat-adapter-result",
+  "state": "adapter-reconstructed-twice-empty-footprint",
+  "plan": {"path": "artifacts/autogenesis/dvd-add-cancel-all-nat-adapter-plan-v1.json", "sha256": "826ff72b8c73ef5817d3a87aabfbc415d8e221df0638adf8c54036e3bf289050", "commit": "c9379241e"},
+  "source": {"path": "scripts/lean/autogenesis_dvd_add_cancel_all_nat_adapter_v1.lean", "sha256": "9127e2ed29ae30249fdfce6ba8d6436c5b9e03bedfe9ab1f309be65451ee19df"},
+  "evidence": {"pack": "/nas3/data/axeyum/autogenesis/reference-packs/c9379241e-dvd-add-cancel-all-nat-adapter-v1", "manifest_sha256": "a27e680256ab0a9cdcf2c3cc11412098dbbe3bfa44608436b005ac7a051b5b1c", "stream_sha256": "9f710f7b64afffe7c021cadfd7ec1dae34bbab1d059d8335628bb4d7c2547558", "audit_sha256": "ac981339cd3d262913672766fde0fa6bc0d58636309db531b2d383a1a5d97555"},
+  "execution": {"source_copies": 1, "compiler_invocations": 1, "exporter_invocations": 1, "importer_runs": 2, "proof_bearing_stream_reads": 2, "retries": 0},
+  "theorem": {"name": "Axeyum.Autogenesis.dvdAddCancelAllNatAdapterV1", "declaration_sha256": "2ab68f18df024f92a1f344e2f323737b7d69293175d6511b99af797be22280e4", "axiom_footprint": [], "fresh_reconstructions": 2, "audits_byte_identical": true},
+  "authority": {"all_nat_adapter_credit": 1, "positive_leaf_credit": 0, "official_cancellation_credit": 0, "exact_fibonacci_target_submissions": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_boundary": {"required_next_increment": "compose native positive-divisor cancellation, specialize this adapter, and close residual cancellation"},
+  "verification": "python3 scripts/check-autogenesis-dvd-add-cancel-all-nat-adapter-result.py",
+  "limitations": "The adapter remains parameterized by positive-divisor cancellation and grants no official cancellation or downstream credit."
+}
