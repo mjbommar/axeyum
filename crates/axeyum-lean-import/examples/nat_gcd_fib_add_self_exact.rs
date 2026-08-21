@@ -286,8 +286,6 @@ struct Dev<'a> {
     eq: NameId,
     eq_refl: NameId,
     eq_rec: NameId,
-    iff: NameId,
-    iff_rec: NameId,
     exists_rec: NameId,
     next_fvar: u64,
 }
@@ -309,8 +307,6 @@ impl<'a> Dev<'a> {
             eq: find_name(kernel, "Eq")?,
             eq_refl: find_name(kernel, "Eq.refl")?,
             eq_rec: find_name(kernel, "Eq.rec")?,
-            iff: find_name(kernel, "Iff")?,
-            iff_rec: find_name(kernel, "Iff.rec")?,
             exists_rec: find_name(kernel, "Exists.rec")?,
             kernel,
             next_fvar: 10_000,
@@ -455,7 +451,10 @@ impl<'a> Dev<'a> {
         self.transport(source, motive, proof, target, equality)
     }
     fn iff_reverse(&mut self, left: ExprId, right: ExprId, proof: ExprId) -> ExprId {
-        let iff_ty = self.lemma(self.iff, &[left, right]);
+        let iff = find_name(self.kernel, "Iff").expect("Iff is required by iff_reverse");
+        let iff_rec =
+            find_name(self.kernel, "Iff.rec").expect("Iff.rec is required by iff_reverse");
+        let iff_ty = self.lemma(iff, &[left, right]);
         let target = self.arrow(right, left);
         let proof_fv = self.fresh();
         let motive = self.lam(proof_fv, iff_ty, target);
@@ -466,7 +465,7 @@ impl<'a> Dev<'a> {
         let minor = self.lam(reverse_fv, target, reverse);
         let minor = self.lam(forward_fv, forward_ty, minor);
         let zero = self.kernel.level_zero();
-        let rec = self.kernel.const_(self.iff_rec, vec![zero]);
+        let rec = self.kernel.const_(iff_rec, vec![zero]);
         self.apply(rec, &[left, right, motive, minor, proof])
     }
     fn induct(
