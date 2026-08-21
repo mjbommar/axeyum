@@ -94,6 +94,12 @@ implication checkers and finite diagnostics; the half-balanced path lemma and
 `19<=ell<=23` preserve the stronger `(LC2)` on all ten endpoint rows while
 refuting perfect uniform sharing on 39 retained layers, so the diagnostic is
 non-vacuous but remains non-credit-bearing.
+One path split is now a theorem rather than a diagnostic: translation
+`f(x)->f(x+1)` forces exact half balance at level `2^v_2(n)` whenever that
+level lies in the coarse path.  Lucas parity and the triangular coefficient
+action prove the statement; exact populations independently replay it.  This
+reduces the first endpoint price from 20 unknown half splits to 19, but gives
+no split when `n` is a power of two and therefore does not prove `(PL2)`.
 The companion characteristic-two Newton-over-Hodge result has also been
 priced conditionally: it forces only divisibility of the connected endpoint
 trace by eight.  At `ell=200` the existing envelope is already divisible by
@@ -796,6 +802,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-21 | `79e1c4a6e` | Proved that translation `f(x)->f(x+1)` forces exact half balance at identity-path level `2^v_2(n)`, spent that split in the endpoint ledger, and retained the remaining 19-split obligation and power-of-two boundary explicitly. |
 | 2026-08-21 | `2da5c9b4c` | Factored each retained Haar layer's polynomial identity share down the nested Witt path, reducing it to 20 half-balanced splits among 190 available levels at the first endpoint and exposing every exact parent/child mass without claiming the open split theorem. |
 | 2026-08-21 | `1a9145641` | Reduced the identity-cylinder variance to the polynomial share `16ell^2 F_j(1)<=F_j(global)`, exposed its exponentially permissive weak-kurtosis sufficient form, and added exact implication and fourth-power diagnostics without claiming the open delocalization theorem. |
 | 2026-08-20 | `b1b4f407a` | Added exact local/global Haar layer energies, refuted perfect uniform sharing on control rows, and priced a stronger linear local-Carleson diagnostic with exponential endpoint surplus. |
