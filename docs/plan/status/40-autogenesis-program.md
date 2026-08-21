@@ -26,8 +26,9 @@
 | 2026-08-21 | `d1a17a762` | Target-owned constructor/parity replacement for official `Int.fib` is frozen before its single construction attempt |
 | 2026-08-21 | (pending) | Exact `Int.fib_natCast` reconstructs twice axiom-free over the 374 KB clean target-owned representation closure |
 | 2026-08-21 | `b689c548d` | Hash-only goal-identity audit is frozen before its tool exists or the sealed clean integer Fibonacci stream is reread |
-| 2026-08-21 | (pending) | One non-rendering sealed-stream read binds the exact canonical theorem type hash with unchanged empty footprint and zero ledger authority |
-| 2026-08-21 | (pending) | Exact crash-safe `Int.fib_natCast` admission is frozen against its sealed capsule before operation code or ledger mutation |
+| 2026-08-21 | `09ddeb5b8` | One non-rendering sealed-stream read binds the exact canonical theorem type hash with unchanged empty footprint and zero ledger authority |
+| 2026-08-21 | `1ebf8e8e0` | Exact crash-safe `Int.fib_natCast` admission is frozen against its sealed capsule before operation code or ledger mutation |
+| 2026-08-21 | (pending) | An exact authoritative operation binds the clean integer Fibonacci capsule, theorem identity, and empty-footprint admission contract |
 
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
