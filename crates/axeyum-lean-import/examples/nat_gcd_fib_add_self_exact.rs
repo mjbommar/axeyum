@@ -209,6 +209,14 @@ fn run() -> Result<(), String> {
         return run_fib_gcd_induction_argument_diagnostic(args);
     }
     let mut args = std::env::args_os().skip(1);
+    if args.next().as_deref()
+        == Some(std::ffi::OsStr::new(
+            "--target-native-fib-gcd-step-branch-diagnostic",
+        ))
+    {
+        return run_fib_gcd_step_branch_diagnostic(args);
+    }
+    let mut args = std::env::args_os().skip(1);
     if args.next().as_deref() == Some(std::ffi::OsStr::new("--target-native-goal-audit")) {
         return run_target_native_goal_audit(args);
     }
@@ -1340,6 +1348,68 @@ fn run_fib_gcd_induction_argument_diagnostic(
     Ok(())
 }
 
+fn run_fib_gcd_step_branch_diagnostic(
+    mut args: impl Iterator<Item = std::ffi::OsString>,
+) -> Result<(), String> {
+    let greatest_path = path(&mut args)?;
+    let shift_path = path(&mut args)?;
+    if args.next().is_some() {
+        return Err("usage: nat_gcd_fib_add_self_exact \
+             --target-native-fib-gcd-step-branch-diagnostic \
+             <gcd-greatest> <gcd-fib-add-self>"
+            .to_owned());
+    }
+    let greatest = import_bound(&greatest_path, GCD_GREATEST_CAPSULE, "gcd-greatest")?;
+    let shift = import_bound(&shift_path, GCD_FIB_SHIFT_CAPSULE, "gcd-fib-add-self")?;
+    let composed = compose_checked_theorem_slice(shift.kernel(), greatest.kernel(), &[TARGET])
+        .map_err(|error| format!("step-branch diagnostic composition declined: {error:?}"))?;
+    verify_checked_theorem_composition(
+        shift.kernel(),
+        greatest.kernel(),
+        composed.kernel(),
+        composed.receipt(),
+    )
+    .map_err(|error| format!("step-branch diagnostic composition did not replay: {error:?}"))?;
+    let mut kernel = composed.kernel().clone();
+    declare_fib_gcd_quotient_iteration(&mut kernel)?;
+    let mut d = Dev::new(&mut kernel)?;
+    let quotient = d.exact("Axeyum.Autogenesis.modQuotientWitnessV4")?;
+    let helper = d.exact(FIB_GCD_ITERATION)?;
+    let gcd_comm = d.exact(CLEAN_GCD_COMM)?;
+    let nat = d.nat_ty();
+    let n_fv = d.fresh();
+    let n = d.kernel.fvar(n_fv);
+    let zero_branch = fib_gcd_step_zero_branch(&mut d, n);
+    let closed_zero = d.lam(n_fv, nat, zero_branch);
+    let zero_type = d
+        .kernel
+        .infer(closed_zero)
+        .map_err(|error| format!("zero step branch inference failed: {error:?}"))?;
+    let predecessor_fv = d.fresh();
+    let predecessor = d.kernel.fvar(predecessor_fv);
+    let successor_branch =
+        fib_gcd_step_successor_branch(&mut d, n, predecessor, quotient, helper, gcd_comm);
+    let closed_successor = d.lam(predecessor_fv, nat, successor_branch);
+    let closed_successor = d.lam(n_fv, nat, closed_successor);
+    let successor_type = d
+        .kernel
+        .infer(closed_successor)
+        .map_err(|error| format!("successor step branch inference failed: {error:?}"))?;
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "schema_version":1,
+            "kind":"axeyum-autogenesis-nat-fib-gcd-step-branch-diagnostic-v1",
+            "state":"zero-and-successor-step-branch-types-inferred",
+            "zero":{"type":d.kernel.render_lean(zero_type),"sha256":canonical_expression_sha256(d.kernel,zero_type)?},
+            "successor":{"type":d.kernel.render_lean(successor_type),"sha256":canonical_expression_sha256(d.kernel,successor_type)?},
+            "execution":{"complete_diagnostics":1,"helper_theorem_submissions":1,"zero_branch_inferences":1,"successor_branch_inferences":1,"step_proof_inferences":0,"target_theorem_submissions":0,"proof_values_rendered":0,"capsule_writes":0,"retries":0,"ledger_writes":0}
+        }))
+        .map_err(|error| error.to_string())?
+    );
+    Ok(())
+}
+
 fn fib_gcd_iteration_statement(d: &mut Dev<'_>, m: ExprId, r: ExprId, q: ExprId) -> ExprId {
     let fib_m = d.fib(m);
     let product = d.mul(m, q);
@@ -1580,41 +1650,54 @@ fn fib_gcd_step_by_cases(
     };
     d.induct(
         &branch_motive,
-        &|d| {
-            let zero = d.zero();
-            let hm_ty = {
-                let one = d.succ(zero);
-                d.le(one, zero)
-            };
-            let remainder = d.modulo(n, zero).expect("Nat.mod must exist");
-            let ih_ty = fib_gcd_statement(d, remainder, zero);
-            let hm_fv = d.fresh();
-            let ih_fv = d.fresh();
-            let fib_n = d.fib(n);
-            let proof = d.refl(fib_n);
-            let proof = d.lam(ih_fv, ih_ty, proof);
-            d.lam(hm_fv, hm_ty, proof)
-        },
+        &|d| fib_gcd_step_zero_branch(d, n),
         &|d, predecessor, _case_ih| {
-            let sm = d.succ(predecessor);
-            let hm_ty = {
-                let zero = d.zero();
-                let one = d.succ(zero);
-                d.le(one, sm)
-            };
-            let remainder = d.modulo(n, sm).expect("Nat.mod must exist");
-            let ih_ty = fib_gcd_statement(d, remainder, sm);
-            let hm_fv = d.fresh();
-            let hm = d.kernel.fvar(hm_fv);
-            let ih_fv = d.fresh();
-            let ih = d.kernel.fvar(ih_fv);
-            let witness = d.lemma(quotient, &[sm, n, hm]);
-            let result = fib_gcd_witness_elim(d, sm, n, remainder, ih, witness, helper, gcd_comm);
-            let result = d.lam(ih_fv, ih_ty, result);
-            d.lam(hm_fv, hm_ty, result)
+            fib_gcd_step_successor_branch(d, n, predecessor, quotient, helper, gcd_comm)
         },
         m,
     )
+}
+
+fn fib_gcd_step_zero_branch(d: &mut Dev<'_>, n: ExprId) -> ExprId {
+    let zero = d.zero();
+    let hm_ty = {
+        let one = d.succ(zero);
+        d.le(one, zero)
+    };
+    let remainder = d.modulo(n, zero).expect("Nat.mod must exist");
+    let ih_ty = fib_gcd_statement(d, remainder, zero);
+    let hm_fv = d.fresh();
+    let ih_fv = d.fresh();
+    let fib_n = d.fib(n);
+    let proof = d.refl(fib_n);
+    let proof = d.lam(ih_fv, ih_ty, proof);
+    d.lam(hm_fv, hm_ty, proof)
+}
+
+fn fib_gcd_step_successor_branch(
+    d: &mut Dev<'_>,
+    n: ExprId,
+    predecessor: ExprId,
+    quotient: NameId,
+    helper: NameId,
+    gcd_comm: NameId,
+) -> ExprId {
+    let sm = d.succ(predecessor);
+    let hm_ty = {
+        let zero = d.zero();
+        let one = d.succ(zero);
+        d.le(one, sm)
+    };
+    let remainder = d.modulo(n, sm).expect("Nat.mod must exist");
+    let ih_ty = fib_gcd_statement(d, remainder, sm);
+    let hm_fv = d.fresh();
+    let hm = d.kernel.fvar(hm_fv);
+    let ih_fv = d.fresh();
+    let ih = d.kernel.fvar(ih_fv);
+    let witness = d.lemma(quotient, &[sm, n, hm]);
+    let result = fib_gcd_witness_elim(d, sm, n, remainder, ih, witness, helper, gcd_comm);
+    let result = d.lam(ih_fv, ih_ty, result);
+    d.lam(hm_fv, hm_ty, result)
 }
 
 #[allow(clippy::too_many_arguments)]
