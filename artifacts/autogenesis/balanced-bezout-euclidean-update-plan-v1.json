@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-balanced-bezout-euclidean-update-plan",
+  "state": "preregistered-explicit-nat-equality-chain-before-compilation-no-theorem-credit",
+  "policy_version": "balanced-bezout-euclidean-update-v1",
+  "inputs": {
+    "accepted_quotient_witness_result": {
+      "path": "artifacts/autogenesis/mod-quotient-witness-kernel-result-v1.json",
+      "sha256": "1902254357d089a81485476b95ae5c7b76eaa0ebd10b280d1a95ee98b2160a80"
+    },
+    "native_constructor": {
+      "path": "crates/axeyum-lean-kernel/src/nat_prelude/bezout.rs",
+      "function": "prove_bezout_euclidean_update",
+      "role": "witness map and explicit equality-chain design reference only"
+    },
+    "authored_source": {
+      "path": "scripts/lean/autogenesis_balanced_bezout_euclidean_update_v1.lean",
+      "sha256": "4304249442dbae993df785e1c744c659d427782cdab58a67389591a9d3b8327f"
+    }
+  },
+  "construction": {
+    "target": "Axeyum.Autogenesis.balancedBezoutEuclideanUpdateV1",
+    "carrier": "exists mp mn np nn : Nat, g + m*mn + n*nn = m*mp + n*np",
+    "contract": "d*q + r = n -> BalancedBezout r d g -> BalancedBezout d n g",
+    "witness_map": {
+      "new_mp": "np + q*mn",
+      "new_mn": "nn + q*mp",
+      "new_np": "mp",
+      "new_nn": "mn"
+    },
+    "method": "pointwise congrArg transport, Nat distributivity/associativity, and explicit adjacent-sum permutations",
+    "required_dependency_families": [
+      "Nat.add_assoc",
+      "Nat.add_comm",
+      "Nat.add_right_comm",
+      "Nat.left_distrib",
+      "Nat.right_distrib",
+      "Nat.mul_assoc",
+      "congrArg"
+    ],
+    "forbidden_dependencies": [
+      "funext",
+      "propext",
+      "Nat.div_add_mod",
+      "Nat.div_eq",
+      "Nat.mod_eq",
+      "Mathlib.Tactic.Ring.Common",
+      "Mathlib.Tactic.Ring.of_eq"
+    ],
+    "public_quotient_used": false,
+    "rewrite_under_binder_used": false,
+    "ring_normalization_used": false,
+    "tactic_simplification_used": false
+  },
+  "preexisting_status_baseline": [
+    {
+      "path": "AxeyumFibGeneric.lean",
+      "status": "untracked",
+      "bytes": 1595,
+      "mode": "0664",
+      "sha256": "f9d3ea9024497cf1aed34a071fe541e515fb4169738d3d369dd6bf9a7ad414be"
+    },
+    {
+      "path": "AxeyumNatFibRecurrencePointwise.lean",
+      "status": "untracked",
+      "bytes": 632,
+      "mode": "0664",
+      "sha256": "b339a3d8e4ce1700d367fa5fdf0ac0e05d411cc48c49ce6f6e30b702a9b7baf5"
+    },
+    {
+      "path": "AxeyumNatGcdFixEq.lean",
+      "status": "untracked",
+      "bytes": 3603,
+      "mode": "0664",
+      "sha256": "939d225a168b5a94d042ceab47c4dd265a81bf149ea8cfbe08012ca5089373a7"
+    }
+  ],
+  "fixed_environment": {
+    "ssh_alias": "s5",
+    "hostname": "server5",
+    "mathlib_checkout": "/home/mjbommar/lean-import-scale/mathlib4",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean_version": "4.30.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "lake_binary": "/home/mjbommar/.elan/toolchains/leanprover--lean4---v4.30.0/bin/lake",
+    "lake_binary_sha256": "d3e1f322c08d87f0d5850132a0b0309c1edbe53d641276b344717da448c8bc8b",
+    "lean4export_binary": "/home/mjbommar/lean-import-scale/lean4export/.lake/build/bin/lean4export",
+    "lean4export_binary_sha256": "8e763913b03762488571a93ced6ec1a4e04f7d8eebbe40bd1215ba41a6bd4449"
+  },
+  "execution": {
+    "evidence_pack": "/nas3/data/axeyum/autogenesis/reference-packs/5a2d0d397-balanced-bezout-euclidean-update-v1",
+    "remote_source": "/home/mjbommar/lean-import-scale/mathlib4/AxeyumAutogenesisBalancedBezoutEuclideanUpdateV1.lean",
+    "temporary_output_stem": "/home/mjbommar/lean-import-scale/mathlib4/.lake/build/lib/lean/AxeyumAutogenesisBalancedBezoutEuclideanUpdateV1",
+    "all_three_temporary_paths_must_be_absent_before_copy": true,
+    "status_must_equal_exact_baseline_before_copy": true,
+    "status_must_equal_exact_baseline_after_cleanup": true,
+    "cleanup_scope_is_exactly_the_source_and_two_outputs": true,
+    "proof_terms_types_or_values_may_be_rendered": false
+  },
+  "acceptance": {
+    "source_must_compile": true,
+    "fresh_kernel_imports_required": 2,
+    "rows_must_match": true,
+    "axiom_footprints_must_be_empty": true,
+    "forbidden_dependencies_must_be_absent": true,
+    "failed_compilation_or_first_import_ends_increment": true
+  },
+  "budget": {
+    "max_source_copies": 1,
+    "max_source_compilations": 1,
+    "max_exporter_invocations": 1,
+    "max_importer_runs": 2,
+    "max_proof_bearing_stream_reads": 2,
+    "max_retries": 0,
+    "max_new_theorem_submissions": 1,
+    "max_generic_gcd_submissions": 0,
+    "max_exact_fibonacci_target_submissions": 0,
+    "max_executor_invocations": 0
+  },
+  "authority": {
+    "proof_bodies_readable_by_model": false,
+    "upstream_proof_sources_readable_by_model": false,
+    "preexisting_files_may_be_opened_by_model": false,
+    "preexisting_files_may_be_changed_or_removed": false,
+    "euclidean_update_credit_requires_acceptance": true,
+    "generic_balanced_bezout_credit": 0,
+    "target_specialization_credit": 0,
+    "cancellation_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_on_accept": "Preregister composition of this update and the accepted quotient witness under official Nat.gcd.induction.",
+  "output": "artifacts/autogenesis/balanced-bezout-euclidean-update-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-balanced-bezout-euclidean-update-plan.py",
+  "limitations": "This increment may establish only the generic arithmetic Euclidean update. It grants no generic gcd theorem, target specialization, cancellation, Fibonacci target, receipt, evaluation, fact, or ledger credit."
+}
