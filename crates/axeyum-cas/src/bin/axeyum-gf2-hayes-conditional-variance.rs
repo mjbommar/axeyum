@@ -1,7 +1,9 @@
 //! Exact identity-cylinder conditional-variance diagnostic for `(REL)`.
 
 use axeyum_cas::gf2_hayes::{
-    HayesLimits, identity_cylinder_conditional_variance, identity_cylinder_path_split_implication,
+    HayesLimits, IdentityCylinderAggregatePathImplication,
+    IdentityCylinderConditionalVarianceReport, identity_cylinder_aggregate_path_implication,
+    identity_cylinder_conditional_variance, identity_cylinder_path_split_implication,
     identity_cylinder_translation_split_implication,
 };
 
@@ -34,6 +36,8 @@ fn run() -> Result<(), String> {
             .map_err(|error| error.to_string())?;
         let translation = identity_cylinder_translation_split_implication(ell, degree)
             .map_err(|error| error.to_string())?;
+        let aggregate = identity_cylinder_aggregate_path_implication(ell, degree)
+            .map_err(|error| error.to_string())?;
         let report = identity_cylinder_conditional_variance(ell, degree, HayesLimits::default())
             .map_err(|error| error.to_string())?;
         println!(
@@ -63,6 +67,7 @@ fn run() -> Result<(), String> {
             translation.residual_half_balanced_steps,
             translation.residual_three_quarter_balanced_steps,
         );
+        print_aggregate_path(ell, degree, &aggregate, &report);
         for level in &report.variance_levels {
             println!(
                 "GF2_HAYES_CONDITIONAL_VARIANCE_LEVEL|status=PASS|ell={ell}|degree={degree}|level={}|parent_count={}|sibling_difference_square_sum={}|global_sibling_difference_square_sum={}|global_sibling_difference_fourth_sum={}|identity_share_at_most_uniform={}|identity_localization_multiplier_ceiling={}|identity_share_within_linear_carleson={}|weak_kurtosis_implies_polynomial_share={}|half_balanced_identity_path_steps={}|three_quarter_balanced_identity_path_steps={}|half_balanced_path_implies_polynomial_share={}|three_quarter_path_implies_polynomial_share={}|conditional_variance_numerator_contribution={}",
@@ -99,4 +104,44 @@ fn run() -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+fn print_aggregate_path(
+    ell: usize,
+    degree: usize,
+    aggregate: &IdentityCylinderAggregatePathImplication,
+    report: &IdentityCylinderConditionalVarianceReport,
+) {
+    println!(
+        "GF2_HAYES_CONDITIONAL_VARIANCE_AGGREGATE|status=PASS|ell={ell}|degree={degree}|coarse_level={}|global_weil_envelope={}|maximum_terminal_mass_for_rel={}|required_half_balanced_steps={}|required_three_quarter_balanced_steps={}|translation_split_level={}|translation_split_within_path={}|residual_half_balanced_steps={}|residual_three_quarter_balanced_steps={}|observed_half_balanced_steps={}|observed_three_quarter_balanced_steps={}|half_balanced_path_implies_rel={}|three_quarter_path_implies_rel={}",
+        aggregate.coarse_level,
+        aggregate.aggregate_global_weil_envelope,
+        aggregate.maximum_aggregate_terminal_mass_for_rel,
+        aggregate.required_half_balanced_steps,
+        aggregate.required_three_quarter_balanced_steps,
+        aggregate.translation_split_level,
+        aggregate.translation_split_within_path,
+        aggregate.residual_half_balanced_steps,
+        aggregate.residual_three_quarter_balanced_steps,
+        report.aggregate_identity_path_balance.half_balanced_steps,
+        report
+            .aggregate_identity_path_balance
+            .three_quarter_balanced_steps,
+        report
+            .aggregate_identity_path_balance
+            .half_balanced_implies_rel,
+        report
+            .aggregate_identity_path_balance
+            .three_quarter_balanced_implies_rel,
+    );
+    for step in &report.aggregate_identity_energy_path {
+        println!(
+            "GF2_HAYES_CONDITIONAL_VARIANCE_AGGREGATE_PATH|status=PASS|ell={ell}|degree={degree}|coarse_level={}|identity_square_mass={}|parent_identity_square_mass={}|at_most_one_half={}|at_most_three_quarters={}",
+            step.coarse_level,
+            step.identity_square_mass,
+            step.parent_identity_square_mass,
+            step.at_most_one_half,
+            step.at_most_three_quarters,
+        );
+    }
 }

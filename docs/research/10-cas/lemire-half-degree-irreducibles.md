@@ -3791,6 +3791,40 @@ spends one of the 20 required half splits, leaving 19.  For power-of-two `n`,
 however, `t=n` lies beyond the coarse path; translation alone cannot prove the
 remaining logarithmic split count.
 
+The separate levelwise path is stronger than the conditional-variance
+argument needs.  Retain the Haar weights and combine every retained level
+before imposing localization:
+
+```text
+A_i = sum_(j=c_0+1)^ell 2^(j-c_0-1) M_(i,j).
+```
+
+The masses remain nested and nonnegative, while the terminal identity is now
+exactly
+
+```text
+A_(c_0) = R V_id,
+```
+
+the numerator of the conditional variance already used by the sharp
+point-versus-variance implication to `(REL)`.  If `U_(ell,n)` is the
+Haar-weighted individual-Weil envelope for `A_0` and `T_(ell,n)` is the
+largest integral terminal mass permitted by the strict `(REL)` allowance,
+then it is enough to have the least `r` with
+
+```text
+2^r T_(ell,n) >= U_(ell,n)
+```
+
+half-balanced steps on this **one aggregate path**.  The sharp integer ledger
+asks for 18 steps at `(ell,n)=(200,401)` and 19 at `(200,402)`; translation
+spends one, leaving 17 and 18.  The corresponding three-quarter prices are 43
+and 45.  This is strictly weaker than asking for 20/47 steps separately on
+every retained level.  The native aggregate implication and exact path
+reconstruction preserve the strict boundary and all Haar weights.  The
+remaining aggregate contractions are still unproved; ADR-0582 records the
+new selected positive-square bridge without granting `(REL)` proof credit.
+
 The most direct zero-`2`-rank shortcut is now priced exactly and gives no
 endpoint information.  Deuring--Shafarevich gives `2`-rank zero at both
 Carlitz levels, hence also on the relative Jacobian quotient.  But the general

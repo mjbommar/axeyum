@@ -5451,6 +5451,71 @@ pub struct IdentityCylinderTranslationSplitImplication {
     pub residual_three_quarter_balanced_steps: usize,
 }
 
+/// Balanced-step summary for the Haar-weighted aggregate identity path.
+///
+/// Unlike [`IdentityCylinderPathBalanceReport`], this report combines every
+/// retained Haar level before testing a split.  Its terminal mass is the
+/// complete conditional-variance numerator, so either sufficient count
+/// implies `(REL)` directly rather than through the stronger levelwise
+/// polynomial-share premise `(PL2)`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IdentityCylinderAggregatePathBalanceReport {
+    /// Number of aggregate steps satisfying `2 * child <= parent`.
+    pub half_balanced_steps: usize,
+    /// Number of aggregate steps satisfying `4 * child <= 3 * parent`.
+    pub three_quarter_balanced_steps: usize,
+    /// Whether the half-balanced count proves the sharp variance premise.
+    pub half_balanced_implies_rel: bool,
+    /// Whether the three-quarter count proves the sharp variance premise.
+    pub three_quarter_balanced_implies_rel: bool,
+}
+
+/// Sharp deterministic implication from one aggregate identity-energy path.
+///
+/// Put
+///
+/// ```text
+/// A_i = sum_(j=c+1)^ell 2^(j-c-1) M_(i,j),
+/// ```
+///
+/// where `M_(i,j)` is the level-`j` square mass above the identity of `E_i`.
+/// Then `A_0` is bounded by the individual-Weil envelope and `A_c` is exactly
+/// the numerator of the conditional variance in the identity cylinder.  The
+/// report prices the least number of half or three-quarter contractions needed
+/// to move from the proved `A_0` envelope to the largest integral `A_c` that
+/// proves `(REL)` by the sharp zero-sum point bound.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IdentityCylinderAggregatePathImplication {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// Lemire endpoint degree.
+    pub degree: usize,
+    /// Coarse identity-cylinder level.
+    pub coarse_level: usize,
+    /// Number of descendants `R=2^(ell-coarse_level)`.
+    pub descendant_count: BigUint,
+    /// Proved individual-Weil envelope for `A_0`.
+    pub aggregate_global_weil_envelope: BigUint,
+    /// Largest integral aggregate terminal mass that proves `(REL)`.
+    pub maximum_aggregate_terminal_mass_for_rel: BigUint,
+    /// Least number of steps satisfying `2*A_i<=A_(i-1)`.
+    pub required_half_balanced_steps: usize,
+    /// Least number of steps satisfying `4*A_i<=3*A_(i-1)`.
+    pub required_three_quarter_balanced_steps: usize,
+    /// First translation-forced split level `2^v2(degree)`.
+    pub translation_split_level: usize,
+    /// Whether that exact split lies on the aggregate path.
+    pub translation_split_within_path: bool,
+    /// Half-balanced steps still unproved after spending translation.
+    pub residual_half_balanced_steps: usize,
+    /// Three-quarter-balanced steps still unproved after spending translation.
+    pub residual_three_quarter_balanced_steps: usize,
+    /// Whether enough path depth exists for the half-balanced route.
+    pub half_balanced_depth_available: bool,
+    /// Whether enough path depth exists for the three-quarter route.
+    pub three_quarter_depth_available: bool,
+}
+
 /// Exact conditional variance and localized Haar reconstruction for the
 /// identity coarse Witt cylinder.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -5480,6 +5545,11 @@ pub struct IdentityCylinderConditionalVarianceReport {
     pub conditional_variance_numerator: BigUint,
     /// Exact localized Haar decomposition of the conditional variance.
     pub variance_levels: Vec<IdentityCylinderVarianceLevel>,
+    /// Haar-weighted sum of all retained level paths, before any absolute
+    /// value or levelwise localization theorem is imposed.
+    pub aggregate_identity_energy_path: Vec<IdentityCylinderEnergyPathStep>,
+    /// Observed aggregate balanced-step counts and exact finite implications.
+    pub aggregate_identity_path_balance: IdentityCylinderAggregatePathBalanceReport,
     /// Clean sufficient target `2^(2ell-2)` for the ordinary conditional
     /// variance, represented with the same denominator.
     pub quarter_scale_variance_target_numerator: BigUint,
@@ -6204,6 +6274,14 @@ pub fn identity_cylinder_conditional_variance(
         ell,
         &moments.conditional_variance_numerator,
     )?;
+    let aggregate_implication = identity_cylinder_aggregate_path_implication(ell, degree)?;
+    let (aggregate_identity_energy_path, aggregate_identity_path_balance) =
+        identity_cylinder_aggregate_energy_path(
+            &variance_levels,
+            coarse_level,
+            &moments.conditional_variance_numerator,
+            &aggregate_implication,
+        )?;
     let quarter_scale_variance_target_numerator = BigUint::from(descendant_count) << (2 * ell - 2);
     let identity_scaled_deviation = moments.scaled_deviations[0].clone();
     let connected_trace = &identity_scaled_deviation << coarse_level;
@@ -6246,6 +6324,8 @@ pub fn identity_cylinder_conditional_variance(
         conditional_scaled_square_sum: moments.conditional_scaled_square_sum,
         conditional_variance_numerator: moments.conditional_variance_numerator,
         variance_levels,
+        aggregate_identity_energy_path,
+        aggregate_identity_path_balance,
         quarter_scale_variance_target_numerator,
         sharp_cauchy_scaled_bound_square,
         rel_allowance_scaled_square,
@@ -6504,13 +6584,96 @@ pub fn identity_cylinder_translation_split_implication(
     })
 }
 
-fn required_identity_path_split_counts(ell: usize) -> Result<(usize, usize), HayesError> {
-    let target = BigUint::from(16_u8) * BigUint::from(ell).pow(2);
+/// Price the single Haar-weighted aggregate identity path directly against
+/// the sharp one-sided relative-trace allowance.
+///
+/// This is weaker than applying [`identity_cylinder_path_split_implication`]
+/// separately to every retained Haar level: levels are combined with their
+/// exact conditional-variance weights before a contraction is requested.  It
+/// remains an implication checker, not a proof that the requested aggregate
+/// contractions hold.
+///
+/// # Errors
+///
+/// Rejects invalid Lemire endpoints, a zero sharp allowance, or split-count
+/// arithmetic exceeding `usize`.
+pub fn identity_cylinder_aggregate_path_implication(
+    ell: usize,
+    degree: usize,
+) -> Result<IdentityCylinderAggregatePathImplication, HayesError> {
+    let implication = population_refinement_one_sided_connected_implication(ell, degree)?;
+    let coarse_level = implication.first_top_level.checked_sub(1).ok_or_else(|| {
+        HayesError::InvalidParameter("aggregate identity-path coarse level underflow".to_owned())
+    })?;
+    let descendant_count = BigUint::from(1_u8) << (ell - coarse_level);
+    let descendant_count_minus_one = &descendant_count - BigUint::from(1_u8);
+    let coarse_scale_square = BigUint::from(1_u8) << (2 * coarse_level);
+    let rel_allowance_scaled_square =
+        &descendant_count * implication.negative_allowance_numerator.pow(2);
+    let maximum_conditional_scaled_square_sum = (&rel_allowance_scaled_square
+        - BigUint::from(1_u8))
+        / (&coarse_scale_square * descendant_count_minus_one);
+    let maximum_aggregate_terminal_mass_for_rel =
+        maximum_conditional_scaled_square_sum / &descendant_count;
+    if maximum_aggregate_terminal_mass_for_rel == BigUint::from(0_u8) {
+        return Err(HayesError::Invariant(
+            "sharp aggregate identity-path allowance vanished".to_owned(),
+        ));
+    }
 
+    let mut aggregate_global_weil_envelope = BigUint::from(0_u8);
+    for level in (coarse_level + 1)..=ell {
+        let global_level_envelope = BigUint::from(level - 1).pow(2) << degree;
+        aggregate_global_weil_envelope += global_level_envelope << (level - coarse_level - 1);
+    }
+    let (required_half_balanced_steps, required_three_quarter_balanced_steps) =
+        required_path_split_counts_for_ratio(
+            &aggregate_global_weil_envelope,
+            &maximum_aggregate_terminal_mass_for_rel,
+        )?;
+    let translation_split_level =
+        1_usize
+            .checked_shl(degree.trailing_zeros())
+            .ok_or_else(|| {
+                HayesError::InvalidParameter(
+                    "aggregate translation split index exceeds usize".to_owned(),
+                )
+            })?;
+    let translation_split_within_path = translation_split_level <= coarse_level;
+    let translation_count = usize::from(translation_split_within_path);
+
+    Ok(IdentityCylinderAggregatePathImplication {
+        ell,
+        degree,
+        coarse_level,
+        descendant_count,
+        aggregate_global_weil_envelope,
+        maximum_aggregate_terminal_mass_for_rel,
+        required_half_balanced_steps,
+        required_three_quarter_balanced_steps,
+        translation_split_level,
+        translation_split_within_path,
+        residual_half_balanced_steps: required_half_balanced_steps - translation_count,
+        residual_three_quarter_balanced_steps: required_three_quarter_balanced_steps
+            - translation_count,
+        half_balanced_depth_available: coarse_level >= required_half_balanced_steps,
+        three_quarter_depth_available: coarse_level >= required_three_quarter_balanced_steps,
+    })
+}
+
+fn required_path_split_counts_for_ratio(
+    initial_envelope: &BigUint,
+    terminal_allowance: &BigUint,
+) -> Result<(usize, usize), HayesError> {
+    if terminal_allowance == &BigUint::from(0_u8) {
+        return Err(HayesError::InvalidParameter(
+            "identity-path terminal allowance must be positive".to_owned(),
+        ));
+    }
     let mut required_half_balanced_steps = 0_usize;
-    let mut half_gain = BigUint::from(1_u8);
-    while half_gain < target {
-        half_gain <<= 1;
+    let mut half_allowance = terminal_allowance.clone();
+    while &half_allowance < initial_envelope {
+        half_allowance <<= 1;
         required_half_balanced_steps =
             required_half_balanced_steps.checked_add(1).ok_or_else(|| {
                 HayesError::InvalidParameter("half-balanced split count overflow".to_owned())
@@ -6518,11 +6681,11 @@ fn required_identity_path_split_counts(ell: usize) -> Result<(usize, usize), Hay
     }
 
     let mut required_three_quarter_balanced_steps = 0_usize;
-    let mut three_quarter_gain_numerator = BigUint::from(1_u8);
-    let mut three_quarter_target = target;
-    while three_quarter_gain_numerator < three_quarter_target {
-        three_quarter_gain_numerator *= BigUint::from(4_u8);
-        three_quarter_target *= BigUint::from(3_u8);
+    let mut reduced_initial = initial_envelope.clone();
+    let mut expanded_allowance = terminal_allowance.clone();
+    while reduced_initial > expanded_allowance {
+        reduced_initial *= BigUint::from(3_u8);
+        expanded_allowance *= BigUint::from(4_u8);
         required_three_quarter_balanced_steps = required_three_quarter_balanced_steps
             .checked_add(1)
             .ok_or_else(|| {
@@ -6535,6 +6698,11 @@ fn required_identity_path_split_counts(ell: usize) -> Result<(usize, usize), Hay
         required_half_balanced_steps,
         required_three_quarter_balanced_steps,
     ))
+}
+
+fn required_identity_path_split_counts(ell: usize) -> Result<(usize, usize), HayesError> {
+    let target = BigUint::from(16_u8) * BigUint::from(ell).pow(2);
+    required_path_split_counts_for_ratio(&target, &BigUint::from(1_u8))
 }
 
 /// Price a Newton-over-Hodge theorem on the connected Carlitz trace.
@@ -17765,6 +17933,86 @@ fn identity_cylinder_variance_levels(
     Ok(levels)
 }
 
+fn identity_cylinder_aggregate_energy_path(
+    levels: &[IdentityCylinderVarianceLevel],
+    coarse_level: usize,
+    expected_terminal_mass: &BigUint,
+    implication: &IdentityCylinderAggregatePathImplication,
+) -> Result<
+    (
+        Vec<IdentityCylinderEnergyPathStep>,
+        IdentityCylinderAggregatePathBalanceReport,
+    ),
+    HayesError,
+> {
+    let aggregate_global_mass = levels.iter().fold(BigUint::from(0_u8), |sum, level| {
+        sum + BigUint::from(level.parent_count) * &level.global_sibling_difference_square_sum
+    });
+    if aggregate_global_mass > implication.aggregate_global_weil_envelope {
+        return Err(HayesError::Invariant(
+            "exact aggregate global energy exceeds its Weil envelope".to_owned(),
+        ));
+    }
+
+    let mut previous = aggregate_global_mass;
+    let mut path = Vec::with_capacity(coarse_level);
+    for path_index in 0..coarse_level {
+        let identity_square_mass = levels.iter().try_fold(
+            BigUint::from(0_u8),
+            |sum, level| -> Result<BigUint, HayesError> {
+                let step = level.identity_energy_path.get(path_index).ok_or_else(|| {
+                    HayesError::Invariant(
+                        "retained Haar level has a truncated identity energy path".to_owned(),
+                    )
+                })?;
+                Ok(sum + BigUint::from(level.parent_count) * &step.identity_square_mass)
+            },
+        )?;
+        if identity_square_mass > previous {
+            return Err(HayesError::Invariant(format!(
+                "aggregate identity energy grows at coarse level {}",
+                path_index + 1
+            )));
+        }
+        let at_most_one_half = (&identity_square_mass << 1) <= previous;
+        let at_most_three_quarters =
+            BigUint::from(4_u8) * &identity_square_mass <= BigUint::from(3_u8) * &previous;
+        path.push(IdentityCylinderEnergyPathStep {
+            coarse_level: path_index + 1,
+            identity_square_mass: identity_square_mass.clone(),
+            parent_identity_square_mass: previous,
+            at_most_one_half,
+            at_most_three_quarters,
+        });
+        previous = identity_square_mass;
+    }
+    if previous != *expected_terminal_mass {
+        return Err(HayesError::Invariant(
+            "aggregate identity path does not reconstruct conditional variance".to_owned(),
+        ));
+    }
+    let half_balanced_steps = path.iter().filter(|step| step.at_most_one_half).count();
+    let three_quarter_balanced_steps = path
+        .iter()
+        .filter(|step| step.at_most_three_quarters)
+        .count();
+    let balance = IdentityCylinderAggregatePathBalanceReport {
+        half_balanced_steps,
+        three_quarter_balanced_steps,
+        half_balanced_implies_rel: half_balanced_steps >= implication.required_half_balanced_steps,
+        three_quarter_balanced_implies_rel: three_quarter_balanced_steps
+            >= implication.required_three_quarter_balanced_steps,
+    };
+    if (balance.half_balanced_implies_rel || balance.three_quarter_balanced_implies_rel)
+        && expected_terminal_mass > &implication.maximum_aggregate_terminal_mass_for_rel
+    {
+        return Err(HayesError::Invariant(
+            "aggregate balanced-step implication does not reach REL allowance".to_owned(),
+        ));
+    }
+    Ok((path, balance))
+}
+
 fn witt_haar_difference_square_sum(
     level: usize,
     quotient_factors: &[PrincipalUnitFactor],
@@ -22127,6 +22375,37 @@ mod tests {
     }
 
     #[test]
+    fn one_aggregate_identity_path_is_sufficient_for_rel() {
+        for ell in 200_usize..=1024 {
+            for degree in [2 * ell + 1, 2 * ell + 2] {
+                let report = identity_cylinder_aggregate_path_implication(ell, degree).unwrap();
+                assert!(report.half_balanced_depth_available);
+                assert!(report.three_quarter_depth_available);
+                assert!(
+                    (&report.maximum_aggregate_terminal_mass_for_rel
+                        << report.required_half_balanced_steps)
+                        >= report.aggregate_global_weil_envelope
+                );
+                if report.required_half_balanced_steps > 0 {
+                    assert!(
+                        (&report.maximum_aggregate_terminal_mass_for_rel
+                            << (report.required_half_balanced_steps - 1))
+                            < report.aggregate_global_weil_envelope
+                    );
+                }
+            }
+        }
+        let odd = identity_cylinder_aggregate_path_implication(200, 401).unwrap();
+        let even = identity_cylinder_aggregate_path_implication(200, 402).unwrap();
+        assert_eq!(odd.required_half_balanced_steps, 18);
+        assert_eq!(odd.required_three_quarter_balanced_steps, 43);
+        assert_eq!(odd.residual_half_balanced_steps, 17);
+        assert_eq!(even.required_half_balanced_steps, 19);
+        assert_eq!(even.required_three_quarter_balanced_steps, 45);
+        assert_eq!(even.residual_half_balanced_steps, 18);
+    }
+
+    #[test]
     fn exact_identity_energy_paths_are_nested_and_reconstruct_local_mass() {
         let limits = HayesLimits::default();
         for ell in 6_usize..=14 {
@@ -22159,6 +22438,23 @@ mod tests {
                             .count()
                     );
                 }
+                assert_eq!(
+                    report.aggregate_identity_energy_path.len(),
+                    report.coarse_level
+                );
+                assert_eq!(
+                    report
+                        .aggregate_identity_energy_path
+                        .last()
+                        .unwrap()
+                        .identity_square_mass,
+                    report.conditional_variance_numerator
+                );
+                assert!(
+                    report.aggregate_identity_energy_path.iter().all(|step| {
+                        step.identity_square_mass <= step.parent_identity_square_mass
+                    })
+                );
             }
         }
     }
@@ -22182,6 +22478,13 @@ mod tests {
                         step.at_most_one_half
                             && (&step.identity_square_mass << 1) == step.parent_identity_square_mass
                     }));
+                    let aggregate_step = &report.aggregate_identity_energy_path
+                        [translation.first_odd_binomial_index - 1];
+                    assert!(aggregate_step.at_most_one_half);
+                    assert_eq!(
+                        &aggregate_step.identity_square_mass << 1,
+                        aggregate_step.parent_identity_square_mass
+                    );
                 }
             }
         }
