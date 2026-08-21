@@ -326,3 +326,4 @@
 | 2026-08-21 | (pending) | Bridge V1 fails before execution on a self-containment policy conflict; V2 permits only the already-qualified fuel reduction |
 | 2026-08-21 | (pending) | V2 reconstructs all public modulo bridges empty-footprint; exact modulo-two step, cases, and successor leaves are frozen next |
 | 2026-08-21 | (pending) | Parity V1 finds its specialized recurrence already normalized; V2 removes only the redundant `dsimp` before qualification |
+| 2026-08-21 | (pending) | Parity V2 qualifies step and both successor roots cleanly; V3 replaces only `modCases`'s dependent match carrier |
