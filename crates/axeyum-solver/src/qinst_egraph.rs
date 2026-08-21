@@ -450,6 +450,70 @@ fn collect_nested_registrations(
     positive: bool,
     out: &mut Vec<NestedRegistration>,
 ) {
+    let mut scan = NestedRegistrationScan {
+        owner,
+        out,
+        has_forall: HashMap::new(),
+    };
+    collect_nested_registrations_rec(arena, term, prefix, path, positive, &mut scan);
+}
+
+/// The parts of a [`collect_nested_registrations`] walk that do not change as it
+/// descends: the owner every registration is rooted at, the registration sink,
+/// and the quantifier-reachability memo that keeps the walk affordable.
+struct NestedRegistrationScan<'a> {
+    owner: TermId,
+    out: &'a mut Vec<NestedRegistration>,
+    /// `term` → does its subterm contain a `Forall` node at all?
+    has_forall: HashMap<TermId, bool>,
+}
+
+/// Does `term`'s subterm contain a `Forall` node anywhere?
+///
+/// Memoized over the arena DAG, so this costs one visit per *node* rather than
+/// one per *path*. The memo cannot go stale: an interned term's node and
+/// arguments are fixed at creation, so growing the arena (which the caller does,
+/// through `wrap_foralls`) adds new terms without changing the answer for any
+/// term already recorded.
+fn subterm_has_forall(arena: &TermArena, term: TermId, memo: &mut HashMap<TermId, bool>) -> bool {
+    if let Some(&known) = memo.get(&term) {
+        return known;
+    }
+    let value = match arena.node(term) {
+        TermNode::App { op, args } => {
+            matches!(op, Op::Forall(_))
+                || args.iter().any(|&arg| subterm_has_forall(arena, arg, memo))
+        }
+        _ => false,
+    };
+    memo.insert(term, value);
+    value
+}
+
+fn collect_nested_registrations_rec(
+    arena: &mut TermArena,
+    term: TermId,
+    prefix: &mut Vec<SymbolId>,
+    path: &mut Vec<u32>,
+    positive: bool,
+    scan: &mut NestedRegistrationScan<'_>,
+) {
+    // The arena is a shared DAG, and this walk is indexed by *position* (`path`),
+    // so it must visit each occurrence — it cannot be memoized on `term` alone.
+    // What it can do is refuse to enter a subterm that has no `Forall` in it:
+    // every effect below (the `out.push`, and the `wrap_foralls` arena write) is
+    // reached only through the `Forall` arm, so such a subterm is walked purely
+    // to produce nothing. Without this guard the tree unfolding of a shared DAG
+    // is exponential — measured on the QF_BVFP file
+    // `bitwuzla-regress-clean/solver__fp__Float-no-simp3-main.smt2`, a quantifier-
+    // FREE query whose ~3,000-node arena kept `produce_evidence` here for 300 s
+    // without returning, at flat RSS and a flat 136 kB stack: the signature of
+    // re-walking shared subterms, not of deep recursion or allocation. This is
+    // the same defect as `contains_quantifier` and `lower_derived_bv` (both fixed
+    // in `e14a13b5d`) and as `certify::collect_enumerable_symbols_rec`.
+    if !subterm_has_forall(arena, term, &mut scan.has_forall) {
+        return;
+    }
     let node = arena.node(term).clone();
     let TermNode::App { op, args } = node else {
         return;
@@ -462,12 +526,12 @@ fn collect_nested_registrations(
         let mut vars = used_prefix(arena, inner_body, prefix);
         vars.extend(inner_vars.iter().copied());
         if let Some(quantifier) = wrap_foralls(arena, inner_body, &vars) {
-            out.push(NestedRegistration {
+            scan.out.push(NestedRegistration {
                 quantifier,
                 vars,
                 body: inner_body,
                 context: positive.then(|| PositiveContext {
-                    owner,
+                    owner: scan.owner,
                     path: path.clone(),
                 }),
             });
@@ -477,14 +541,14 @@ fn collect_nested_registrations(
         // positivity is dropped (see `PositiveContext`).
         let depth = prefix.len();
         prefix.extend(inner_vars);
-        collect_nested_registrations(arena, inner_body, prefix, owner, path, false, out);
+        collect_nested_registrations_rec(arena, inner_body, prefix, path, false, scan);
         prefix.truncate(depth);
         return;
     }
     let step_positive = positive && matches!(op, Op::BoolAnd | Op::BoolOr);
     for (index, arg) in args.into_iter().enumerate() {
         path.push(u32::try_from(index).unwrap_or(u32::MAX));
-        collect_nested_registrations(arena, arg, prefix, owner, path, step_positive, out);
+        collect_nested_registrations_rec(arena, arg, prefix, path, step_positive, scan);
         path.pop();
     }
 }
@@ -6335,6 +6399,97 @@ mod tests {
 
     use super::*;
     use axeyum_ir::Sort;
+
+    /// A quantifier-free formula whose arena representation is a *shared chain*:
+    /// each level is `or(prev, prev)`, so the DAG has `depth + 1` nodes while its
+    /// tree unfolding has `2^depth` leaves.
+    ///
+    /// `collect_nested_registrations` is indexed by argument *position*, so it
+    /// cannot memoize on the term alone — it walks occurrences. Its guard is that
+    /// it refuses to enter a subterm containing no `Forall`, which is what keeps
+    /// this shape linear. Delete the guard and this walk makes 2^60 calls.
+    fn shared_boolean_chain(arena: &mut TermArena, depth: usize) -> TermId {
+        let flag = arena.declare("shared_chain_flag", Sort::Bool).unwrap();
+        let mut term = arena.var(flag);
+        for _ in 0..depth {
+            term = arena.or(term, term).unwrap();
+        }
+        term
+    }
+
+    /// Runs `body` on a worker thread and fails — rather than hanging the suite —
+    /// if it has not returned within `cap`. A blowup here is a non-terminating
+    /// walk at flat memory, so the abandoned thread costs a core, not the box.
+    fn returns_within<T: Send + 'static>(
+        cap: Duration,
+        body: impl FnOnce() -> T + Send + 'static,
+    ) -> T {
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let _ = tx.send(body());
+        });
+        rx.recv_timeout(cap)
+            .expect("walk did not return within the cap (exponential DAG unfolding?)")
+    }
+
+    /// The DAG-sharing guard in `collect_nested_registrations`: a quantifier-free
+    /// leaf must cost one visit per *node*, not one per *path*.
+    #[test]
+    fn nested_registration_scan_does_not_unfold_a_shared_dag() {
+        let found = returns_within(Duration::from_secs(30), || {
+            let mut arena = TermArena::new();
+            // 2^60 tree leaves over 61 DAG nodes: unreachable without the guard,
+            // instant with it.
+            let term = shared_boolean_chain(&mut arena, 60);
+            let mut found = Vec::new();
+            collect_nested_registrations(
+                &mut arena,
+                term,
+                &mut Vec::new(),
+                term,
+                &mut Vec::new(),
+                true,
+                &mut found,
+            );
+            found.len()
+        });
+        assert_eq!(found, 0, "a quantifier-free leaf registers nothing");
+    }
+
+    /// The guard must not cost the registrations it is guarding: a universal
+    /// under a disjunction is still registered, with its positive context.
+    #[test]
+    fn nested_registration_scan_still_registers_a_disjunctive_universal() {
+        let mut arena = TermArena::new();
+        let carrier = arena.declare_uninterpreted_sort("NrsS");
+        let sort = Sort::Uninterpreted(carrier);
+        let predicate = arena.declare_fun("nrs_p", &[sort], Sort::Bool).unwrap();
+        let binder = arena.declare("nrs_x", sort).unwrap();
+        let xv = arena.var(binder);
+        let p_x = arena.apply(predicate, &[xv]).unwrap();
+        let universal = arena.forall(binder, p_x).unwrap();
+        let side = arena.declare("nrs_a", Sort::Bool).unwrap();
+        let side_var = arena.var(side);
+        let leaf = arena.or(side_var, universal).unwrap();
+
+        let mut found = Vec::new();
+        collect_nested_registrations(
+            &mut arena,
+            leaf,
+            &mut Vec::new(),
+            leaf,
+            &mut Vec::new(),
+            true,
+            &mut found,
+        );
+        assert_eq!(found.len(), 1, "the disjunctive universal is registered");
+        let context = found[0]
+            .context
+            .as_ref()
+            .expect("a universal under `or` sits at a positive position");
+        assert_eq!(context.owner, leaf);
+        assert_eq!(context.path, vec![1], "second argument of the `or`");
+    }
 
     /// The term-starved class in miniature: `∀x:S. p(f(x))` against
     /// `∀y:T. ¬p(y)` with the only S-sorted constants living in a ground

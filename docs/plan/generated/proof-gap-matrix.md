@@ -33,10 +33,10 @@ end of this file against `git log -1 crates/axeyum-solver/src`.
 | Stage | Instances | Retained from baseline UNSAT |
 |---|---:|---:|
 | Baseline UNSAT | 324 | 100.0% |
-| Evidence audit reproduced UNSAT | 314 | 96.9% |
-| Evidence marked certified | 275 | 84.9% |
-| Evidence independently checked | 275 | 84.9% |
-| Audit UNSAT with no declared trust hole | 314 | 96.9% |
+| Evidence audit reproduced UNSAT | 318 | 98.1% |
+| Evidence marked certified | 277 | 85.5% |
+| Evidence independently checked | 277 | 85.5% |
+| Audit UNSAT with no declared trust hole | 318 | 98.1% |
 | Lean reconstruction checked | 262 | 80.9% |
 | All dominance conditions | 262 | 80.9% |
 
@@ -52,13 +52,13 @@ normalizes uncertified outcomes to independently unchecked.
 
 | Category | Instances | Meaning |
 |---|---:|---|
-| `proof-production-error` | 10 | Evidence production did not reproduce UNSAT. |
-| `uncertified-and-unchecked` | 39 | The UNSAT route is neither certified nor independently checked. |
+| `proof-production-error` | 6 | Evidence production did not reproduce UNSAT. |
+| `uncertified-and-unchecked` | 41 | The UNSAT route is neither certified nor independently checked. |
 | `uncertified-but-checked` | 0 | Reserved invalid combination; normalized into uncertified-and-unchecked. |
 | `evidence-check-gap` | 0 | Certified evidence exists but did not pass its independent checker. |
 | `trust-hole-and-lean-gap` | 0 | Checked evidence retains a trust hole and has no Lean reconstruction. |
 | `trust-hole` | 0 | Lean reconstruction exists, but a declared trust hole remains. |
-| `lean-reconstruction-gap` | 13 | Certified, checked, trust-free evidence lacks Lean reconstruction. |
+| `lean-reconstruction-gap` | 15 | Certified, checked, trust-free evidence lacks Lean reconstruction. |
 | `dominant` | 262 | Certified, checked, trust-free, and Lean-reconstructed UNSAT. |
 
 ## Evidence-kind gaps
@@ -68,12 +68,12 @@ mechanisms that should drive reconstruction work.
 
 | Evidence kind | Baseline UNSAT | Certified | Checked | Lean | Trust holes | Dominant | Gap |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| `bare-unsat` | 39 | 0 | 0 | 0 | 0 | 0 | 39 |
-| `(none)` | 10 | 0 | 0 | 0 | 10 | 0 | 10 |
+| `bare-unsat` | 41 | 0 | 0 | 0 | 0 | 0 | 41 |
+| `(none)` | 6 | 0 | 0 | 0 | 6 | 0 | 6 |
+| `alethe-unsat` | 14 | 14 | 14 | 11 | 0 | 11 | 3 |
+| `monomial-bound-unsat` | 3 | 3 | 3 | 0 | 0 | 0 | 3 |
 | `real-handelman-unsat` | 3 | 3 | 3 | 0 | 0 | 0 | 3 |
 | `string-length-unsat` | 3 | 3 | 3 | 0 | 0 | 0 | 3 |
-| `alethe-unsat` | 13 | 13 | 13 | 11 | 0 | 11 | 2 |
-| `monomial-bound-unsat` | 2 | 2 | 2 | 0 | 0 | 0 | 2 |
 | `real-product-unsat` | 2 | 2 | 2 | 0 | 0 | 0 | 2 |
 | `real-zero-product-unsat` | 2 | 2 | 2 | 1 | 0 | 1 | 1 |
 | `array-axiom-unsat` | 85 | 85 | 85 | 85 | 0 | 85 | 0 |
@@ -140,9 +140,9 @@ mechanisms that should drive reconstruction work.
 | QF_LIA | `qf-lia-cvc5-regress-clean-solver-vs-z3-10s.json` | 4 | 4 | 4 | 4 | 4 | 0 | 4 | 0 | - |
 | QF_LRA | `qf-lra-cvc5-regress-clean-solver-vs-z3-10s.json` | 3 | 3 | 3 | 3 | 3 | 0 | 3 | 0 | - |
 | QF_NIA | `qf-nia-curated-iand-solver-vs-z3-10s.json` | 2 | 2 | 2 | 2 | 2 | 0 | 2 | 0 | - |
-| QF_NIA | `qf-nia-cvc5-regress-clean-solver-vs-z3-10s.json` | 15 | 13 | 4 | 4 | 2 | 2 | 2 | 2 | `uncertified-and-unchecked`=9, `lean-reconstruction-gap`=2, `proof-production-error`=2 |
+| QF_NIA | `qf-nia-cvc5-regress-clean-solver-vs-z3-10s.json` | 15 | 15 | 5 | 5 | 2 | 0 | 2 | 0 | `uncertified-and-unchecked`=10, `lean-reconstruction-gap`=3 |
 | QF_NIA | `qf-nia-synthetic-graduated-vs-z3.json` | 16 | 16 | 16 | 16 | 16 | 0 | 16 | 0 | - |
-| QF_NRA | `qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json` | 14 | 12 | 11 | 11 | 3 | 2 | 3 | 2 | `lean-reconstruction-gap`=8, `proof-production-error`=2, `uncertified-and-unchecked`=1 |
+| QF_NRA | `qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json` | 14 | 14 | 12 | 12 | 3 | 0 | 3 | 0 | `lean-reconstruction-gap`=9, `uncertified-and-unchecked`=2 |
 | QF_NRA | `qf-nra-synthetic-graduated-vs-z3.json` | 17 | 17 | 17 | 17 | 17 | 0 | 17 | 0 | - |
 | QF_S | `qf-s-cvc5-regress-clean-solver-vs-z3-10s.json` | 26 | 26 | 12 | 12 | 9 | 0 | 9 | 0 | `uncertified-and-unchecked`=14, `lean-reconstruction-gap`=3 |
 | QF_SEQ | `qf-seq-cvc5-regress-clean-solver-vs-z3-10s.json` | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | `uncertified-and-unchecked`=1 |
@@ -163,7 +163,7 @@ mechanisms that should drive reconstruction work.
 
 | Trust hole | Instances |
 |---|---:|
-| `timeout` | 10 |
+| `timeout` | 6 |
 
 ## Proof-production errors
 
@@ -175,10 +175,6 @@ mechanisms that should drive reconstruction work.
 | QF_BVFP | `corpus/public-curated/non-incremental/QF_BVFP/bitwuzla-regress-clean/solver__fp__Float-no-simp3-main.smt2` | `produce-evidence` | unknown |
 | QF_BVFP | `corpus/public-curated/non-incremental/QF_BVFP/bitwuzla-regress-clean/solver__fp__fp_fromsbv.smt2` | `lean-reconstruction` | unknown |
 | QF_FP | `corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_misc.smt2` | `lean-reconstruction` | unknown |
-| QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__arith__div.01.smt2` | `lean-reconstruction` | unknown |
-| QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__arith__mod-simp.smt2` | `lean-reconstruction` | unknown |
-| QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__arith__div.07.smt2` | `lean-reconstruction` | unknown |
-| QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__arith__mult.01.smt2` | `lean-reconstruction` | unknown |
 
 ## Lean reconstruction gaps
 
@@ -188,8 +184,10 @@ correctness or certificate-production queue.
 
 | Logic | File | Evidence kind | Reconstruction error |
 |---|---|---|---|
+| QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__arith__div.01.smt2` | `alethe-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint |
 | QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__arith__div.08.smt2` | `alethe-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint |
 | QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__minimal_unsat_core.smt2` | `alethe-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint |
+| QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__arith__mult.01.smt2` | `monomial-bound-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: real disequality (needs DPLL(T)) |
 | QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__ones.smt2` | `monomial-bound-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint |
 | QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__simple-mono-unsat.smt2` | `monomial-bound-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint |
 | QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__approx-sqrt-unsat.smt2` | `real-handelman-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: nonlinear real multiplication |
@@ -204,10 +202,10 @@ correctness or certificate-production queue.
 
 ## Evidence-driven priority
 
-1. Replace the 39 uncertified audit-row occurrences with serialized, certified evidence and independently check every route. Use the [deduplicated shape census](proof-gap-shape-census.md) for mechanism prevalence.
-2. Add Lean reconstruction for the 13 already certified, checked, trust-free instances.
+1. Replace the 41 uncertified audit-row occurrences with serialized, certified evidence and independently check every route. Use the [deduplicated shape census](proof-gap-shape-census.md) for mechanism prevalence.
+2. Add Lean reconstruction for the 15 already certified, checked, trust-free instances.
 3. Eliminate the 0 declared trust-hole instances rather than counting Lean module acceptance alone.
-4. Fix the 10 proof-production errors and rerun their exact committed rows.
+4. Fix the 6 proof-production errors and rerun their exact committed rows.
 
 These priorities are prevalence-ranked within the committed audits. They do
 not authorize a mechanism until an exact residual-shape census identifies a
@@ -240,9 +238,9 @@ regressions to `unknown` still counted as decided.
 | `bench-results/dominance/qf-lia-cvc5-regress-clean-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
 | `bench-results/dominance/qf-lra-cvc5-regress-clean-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
 | `bench-results/dominance/qf-nia-curated-iand-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-nia-cvc5-regress-clean-dominance-audit.json` | `1fff66825` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-nia-cvc5-regress-clean-dominance-audit.json` | `562b65f13` | stamped via lane-snapshot |
 | `bench-results/dominance/qf-nia-synthetic-graduated-dominance-audit.json` | `2e207eba5` | stamped via lane-snapshot |
-| `bench-results/dominance/qf-nra-cvc5-regress-clean-dominance-audit.json` | `1fff66825` | stamped via lane-snapshot |
+| `bench-results/dominance/qf-nra-cvc5-regress-clean-dominance-audit.json` | `562b65f13` | stamped via lane-snapshot |
 | `bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json` | `1fff66825` | stamped via lane-snapshot |
 | `bench-results/dominance/qf-s-cvc5-regress-clean-dominance-audit.json` | `1fff66825` | stamped via lane-snapshot |
 | `bench-results/dominance/qf-seq-cvc5-regress-clean-dominance-audit.json` | `406662100` | stamped via lane-snapshot |

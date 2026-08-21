@@ -31,8 +31,8 @@ use std::time::{Duration, Instant};
 use axeyum_ir::{TermArena, TermId};
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{
-    Evidence, SolverConfig, produce_evidence, produce_evidence_smtlib, prove_unsat_to_lean_module,
-    scan_proof_fragment,
+    Evidence, LraReconstructCtx, SolverConfig, produce_evidence, produce_evidence_smtlib,
+    prove_unsat_to_lean_module, scan_proof_fragment,
 };
 use serde_json::{Value as JsonValue, json};
 
@@ -751,6 +751,31 @@ fn main() {
         .and_then(|s| s.to_str())
         .unwrap_or("baseline");
 
+    // Warm the constructed-real prelude BEFORE the per-instance timer starts.
+    //
+    // Building it costs **31.9 s the first time in a process and 0.4 s every
+    // time after** — an 80x difference, measured by
+    // `axeyum-lean-kernel --example prelude_build_timing`. It is shared
+    // infrastructure, not per-instance work, but the audit made whichever
+    // instance happened to reach an LRA reconstruction FIRST pay all of it,
+    // inside a 15 s per-instance cap it cannot survive.
+    //
+    // That produced four rows recorded as `timeout` whose emitter had in fact
+    // returned the CORRECT decline — `cli__regress0__arith__div.01` reports the
+    // same `malformed la_generic step` message it always did, 35 s later, of
+    // which `build_creal_prelude` is 35.23 s. They were then scored as
+    // proof-production errors.
+    //
+    // Warming here does not make anything faster; it stops one instance being
+    // billed for the process. The cost is reported separately so it stays
+    // visible rather than disappearing into setup.
+    let warm_start = Instant::now();
+    let warmed = LraReconstructCtx::try_new_over_constructed_reals().is_ok();
+    let prelude_warm_ms = ms(warm_start.elapsed());
+    eprintln!(
+        "dominance audit: constructed-real prelude warmed in {prelude_warm_ms:.0} ms (ok={warmed})"
+    );
+
     let mut records = Vec::new();
     let mut audited_decided = 0usize;
     let mut baseline_decided = 0usize;
@@ -918,6 +943,8 @@ fn main() {
         "logic": logic,
         "slice": slice,
         "timeout_ms": timeout_ms,
+        "prelude_warm_ms": prelude_warm_ms,
+        "prelude_warmed": warmed,
         "limit": if limit == usize::MAX { JsonValue::Null } else { json!(limit) },
         "complete_audit": complete,
         "summary": {
