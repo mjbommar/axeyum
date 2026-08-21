@@ -131,7 +131,8 @@ now. Nothing was deleted.
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
 | 2026-08-21 | `98657cef7` | V2 source compiles but a direct exporter invocation yields an empty stream; V3 freezes the unchanged source and exact `lake env lean4export` command |
 | 2026-08-21 | `fb81c699c` | V3 exposes that `lean4export` is not installed by name; V4 freezes `lake env` plus the absolute pinned exporter path |
-| 2026-08-21 | (pending) | V4 is blocked by s5's user quota before any bytes exist; V5 freezes direct output to the writable shared evidence pack |
+| 2026-08-21 | `bc55d7d5b` | V4 is blocked by s5's user quota before any bytes exist; V5 freezes direct output to the writable shared evidence pack |
+| 2026-08-21 | (pending) | V5 exports the function-parameterized rearrangement twice with empty footprint; exact three-capsule specialization is frozen before driver code exists |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
