@@ -55,7 +55,7 @@ axiom-freedom:
 # not hide any of them — the chain still fails — it stops them hiding everything
 # else. Note the earlier claim that `adr-remote-collisions` was already last was
 # wrong: it was #40 of 41, so `local-ci-freshness` sat behind it.
-check: fmt fmt-all facts facts-replay clippy gate-controls axiom-freedom autogenesis-knowledge-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links aggregate-scope adr-remote-collisions local-ci-freshness
+check: fmt fmt-all facts facts-replay clippy gate-controls axiom-freedom autogenesis-knowledge-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness
 
 fmt:
     cargo fmt --all --check
@@ -349,6 +349,14 @@ gate-controls:
     # guard was mutation-tested individually (delete one, exactly one control
     # dies) -- see the header of scripts/check-local-ci-freshness.sh.
     scripts/tests/test-check-local-ci-freshness.sh
+    # Controls for `parity-freshness` below. Twelve cases, every guard
+    # mutation-tested: a stale board, a board whose only fresh entry is VOIDED,
+    # an unrecognised `## ` header and a near-empty parse must each red it, and
+    # a fresh board -- including one whose freshest entry carries the trailing
+    # `— EVIDENCE MODE` label -- must go green. Two of the twelve run against
+    # the REAL committed ledger, because a parser never pointed at its subject
+    # returns the same empty answer as a strong negative result.
+    scripts/tests/test-check-parity-freshness.sh
     scripts/tests/test-new-fact-controls.sh
     scripts/tests/test-lane-commit.sh
     # `--to <branch>`: the range, the cost estimate and the fast-forward check
@@ -393,6 +401,21 @@ gate-controls:
 # commit the record. Do not re-add `--report-only`.
 local-ci-freshness:
     scripts/check-local-ci-freshness.sh
+
+# Has the parity board been re-measured recently enough to still mean anything?
+# `bench-results/PARITY.md` is the declared headline -- external list pinned by
+# sha256 before each run, `DISAGREEMENTS > 0` voids an entry -- and the script
+# that writes it, `scripts/parity-run.sh`, was invoked by NO gate until
+# 2026-08-21. It froze on 2026-08-06 for fifteen days, through UF 32 -> 85 and
+# QF_RDL 10 -> 105, and nothing went red.
+#
+# Budget is 14 days PER LOGIC (warning at 10), so the remedy for a red is one
+# sweep -- `scripts/parity-run.sh <LOGIC>`, 1-3 h -- and not a board refresh.
+# See scripts/check-parity-freshness.py's header for why 14 and not a rounder
+# number. Do not soften it by editing the ledger: it is append-only so a number
+# going down stays visible.
+parity-freshness:
+    scripts/check-parity-freshness.py
 
 autogenesis-knowledge-controls:
     scripts/check-autogenesis-knowledge-controls.sh
