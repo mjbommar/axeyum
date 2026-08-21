@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-step-branch-diagnostic-plan-v1",
+  "state": "preregistered-zero-then-successor-step-branch-inference-before-code",
+  "input": {
+    "result": "artifacts/autogenesis/mathlib-nat-fib-gcd-induction-argument-diagnostic-result-v1.json",
+    "sha256": "9c896cf2fa7202e1d67504d59c50b3d350c93945f9f86f3a50cb95f395f30fe7"
+  },
+  "implementation_prestate": {
+    "path": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+    "sha256": "896c10c49c33ec1fd69576be4b74482bc2aa0a138eff76c8e67f6605171540af"
+  },
+  "diagnostic": {
+    "mode": "--target-native-fib-gcd-step-branch-diagnostic",
+    "permitted_refactor": "extract the existing zero and successor closures from fib_gcd_step_by_cases into shared builders without changing either body",
+    "order": [
+      "infer the zero branch closed over n",
+      "if it succeeds, infer the successor branch closed over n and predecessor"
+    ],
+    "proof_values_rendered": 0,
+    "theorem_statement_changes": 0,
+    "proof_route_changes": 0
+  },
+  "budget": {
+    "complete_diagnostics": 1,
+    "helper_theorem_submissions": 1,
+    "zero_branch_inferences": 1,
+    "successor_branch_inferences": 1,
+    "step_proof_inferences": 0,
+    "target_theorem_submissions": 0,
+    "capsule_writes": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "next_on_accept": "localize the remaining mismatch to the Nat induction motive or branch assembly",
+  "next_on_decline": "retain the first failing branch and preregister a diagnostic only within that branch",
+  "limitations": "This distinguishes the two step branches only and grants no helper, target, or ledger credit."
+}
