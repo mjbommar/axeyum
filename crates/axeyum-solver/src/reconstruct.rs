@@ -1084,6 +1084,14 @@ pub enum ProofFragment {
     /// merits. Kernel-checked over the CONSTRUCTED reals — `lra_ctx()` builds
     /// `CReal` (trusted surface 0), not the 30-axiom `AxReal` package.
     RealZeroProduct,
+    /// A degree-2 Positivstellensatz NRA refutation: two asserted lower bounds
+    /// whose exact product is the polynomial a third assertion calls negative.
+    ///
+    /// A THEORY reconstruction — `mul_nonneg` / `lt_of_le_of_lt` / `lt_irrefl`
+    /// applied to terms built from the certificate's own polynomials — and
+    /// kernel-checked over the CONSTRUCTED reals, since `lra_ctx()` builds
+    /// `CReal` (trusted surface 0), not the 30-axiom `AxReal` package.
+    RealProduct,
     /// A top-level universal quantifier.
     Forall,
     /// A closed universal integer equality/disequality refuted by one evaluator-
@@ -1271,6 +1279,7 @@ impl ProofFragment {
             | ProofFragment::NraEvenPower => StructuralAttestation,
             // --- Theory reconstructions: the term is built from the query. ---
             ProofFragment::RealZeroProduct
+            | ProofFragment::RealProduct
             | ProofFragment::IntFarkas
             | ProofFragment::QfBv
             | ProofFragment::ReflexiveDisequality
@@ -1838,6 +1847,13 @@ fn scan_arithmetic_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> P
         || sos_certificate_certifies(arena, assertions)
     {
         ProofFragment::Sos
+    } else if crate::nra_product_cert::real_product_refutation(arena, assertions)
+        .is_some_and(|c| matches!(c.signs().2, crate::nra_product_cert::AtomSign::Negative))
+    {
+        // Degree-2 Positivstellensatz. Ahead of the attestation tier for the
+        // same reason as the zero-product route: when both could apply, the tier
+        // Lean can fail on should win.
+        ProofFragment::RealProduct
     } else if crate::nra_zero_product_cert::real_zero_product_refutation(arena, assertions)
         .is_some_and(|c| c.zeroing_cases().len() == 1)
     {
@@ -2683,6 +2699,7 @@ fn reconstruct_proof_fragment_to_lean_module(
         ProofFragment::RealZeroProduct => {
             reconstruct_real_zero_product_to_lean_module(arena, assertions)?
         }
+        ProofFragment::RealProduct => reconstruct_real_product_to_lean_module(arena, assertions)?,
         ProofFragment::Diophantine => {
             // The integer Diophantine reconstructor builds its own integer-prelude
             // kernel, gates the `False` proof, and renders the module (ADR-0042).
@@ -3066,6 +3083,29 @@ fn reconstruct_qf_abv_to_lean_source(
 ///
 /// Returns a [`ReconstructError`] when the query is not classified as the `Sos`
 /// fragment, or the SOS reconstruction does not kernel-check to `False`.
+/// Reconstruct a degree-2 Positivstellensatz refutation into a Lean module.
+///
+/// # Errors
+///
+/// [`ReconstructError`] when the query carries no product certificate, or the
+/// reconstruction does not kernel-check to `False` over the constructed reals.
+pub fn reconstruct_real_product_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    let Some(certificate) = crate::nra_product_cert::real_product_refutation(arena, assertions)
+    else {
+        return Err(ReconstructError::MalformedStep {
+            rule: "reconstruct_real_product".to_owned(),
+            detail: "query carries no degree-2 Positivstellensatz certificate".to_owned(),
+        });
+    };
+    let mut ctx = lra_ctx()?;
+    let term =
+        arithmetic::product_positivstellensatz::reconstruct_real_product(&mut ctx, &certificate)?;
+    gate_and_render_lra_module(&mut ctx, term, "RealProduct")
+}
+
 /// Reconstruct a monomial-divisibility refutation into a Lean module.
 ///
 /// # Errors

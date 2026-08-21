@@ -232,6 +232,16 @@ impl RealProductRefutationCertificate {
     pub const fn signs(&self) -> (AtomSign, AtomSign, AtomSign) {
         (self.left.1, self.right.1, self.refuted.1)
     }
+
+    /// The two factors, rebuilt as polynomials, for a consumer that needs the
+    /// algebra rather than the wire form — notably the Lean reconstruction,
+    /// which must emit the ring expression the refutation is about.
+    ///
+    /// Returns `None` on a malformed wire entry, which a forged certificate can
+    /// contain; the caller must treat that as a refusal, not an empty product.
+    pub(crate) fn factor_polys(&self) -> Option<(NamedPoly, NamedPoly)> {
+        Some((from_wire(&self.left.0)?, from_wire(&self.right.0)?))
+    }
 }
 
 /// `t` as a polynomial over source names, or `None` for anything outside
