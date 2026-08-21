@@ -271,6 +271,9 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | V6 advances to missing positive-product factor support; V7 freezes a primitive-induction replacement |
 | 2026-08-21 | `29c126c0e` | Target-owned positive-product right-factor proof is added without importing broader order theory |
 | 2026-08-21 | (pending) | V7 advances to multiplicative monotonicity; V8 freezes two target-owned order leaves |
+| 2026-08-21 | (pending) | `docs/research/05-algorithms/linear-arithmetic-deficit-diagnosis-2026-08-21.md` + `bench-results/linear-arithmetic-diagnosis-20260821/`: gap #1 diagnosed — three causes not one, 800-file per-file classification, two A/Bs (one refuted, one +17 QF_UFLIA files at 0 disagreements). |
+| 2026-08-21 | `9333f779d` | **`bv_nego` returned a wrong `sat` above 128 bits.** `1u128 << (w - 1)` with legal widths to 65536: Rust masks the shift mod 128, so at `w = 129` the term became `x == 1` instead of `x == 2^128` and the shipped `SatBvBackend` answered **`sat`** to an unsatisfiable query (measured with overflow checks off; debug panicked instead). Fixed by following `bv_umulo`'s existing wide branch. Corpus reachability, which the gap analysis marked UNVERIFIED: **0 of 1430** tracked `.smt2` files use `bvnego` (control: `bvadd` in 106), so it is reachable only from the parser on user input. Three tests close the width asymmetry that hid it — widths 129/130/191/192/193/256/4096 by value *and* by the constant's structure, the 128-bit boundary staying narrow, and the end-to-end backend verdict. Two guards, each mutation-verified to kill exactly one test, registered as `ir-bv-nego-width`. |
+| 2026-08-21 | `d4ffe2a54` | **`SolverConfig::memory_limit_mb` was set but never read on the shipped build** — its only read was under `#[cfg(feature = "z3")]`, and `axeyum-verify`'s `tock_log2_external` had been setting a 2 GB cap on a non-z3 build where it bounded nothing. Now two mechanisms: a portable pre-allocation clause ceiling at a **measured** 384 B/clause (peak-RSS, fresh process per width; a plain `VmRSS` delta under-reports 3–7x and `VmHWM` is monotone, so both obvious methods fail toward *under*-charging), and a `/proc/self/status` probe (**9.4 µs**, 276x an `Instant::now()`, which is why it may only sit at a phase boundary) at three BV boundaries and both front doors. Measured against a tree without it: default path indistinguishable (182.8–183.4 vs 184.0–185.3 µs/check), a configured limit **+32 µs/check fixed**. All five guards **SURVIVED** the first mutation run because they shadowed each other; a scripted-RSS test seam plus direct reach to the post-encoding gate now has each killing exactly one test. A *faithful* bound still needs a `#[global_allocator]` hook — process-global, `unsafe impl`, needs per-query attribution — recorded as an open research question rather than an unspoken gap. |
 | 2026-08-20 | `9eb81822f` | Isolate persistent pre-push worktree metadata from the caller lane and register the two-sided control |
 | 2026-08-20 | `24b16642e` | Confirm the repaired hook against a live Rust push with unchanged caller state and a clean exact-SHA gate checkout |
 | 2026-08-20 | (pending) | The string family's first re-derivable UNSAT artifact beyond word-clash/regex-emptiness: `Evidence::UnsatStringLength` abstracts every string term to an integer length keyed on its SOURCE NAME, names the five theory lemmas the argument uses, and closes with one nonnegative combination per case-split branch. The checker is two stages — bind each lemma to the conjunct that licenses it, then re-derive the arithmetic — and is arena-free, because a string script's flat view is the bounded packed-BV encoding rather than the query. 23 guards mutation-checked; two killed nothing and were fixed rather than kept (one was dead code the command allow-list already covered, one had no multi-`check-sat` fixture). Also: `diagnose_evidence` reported the ARENA front door for string files, i.e. a query nobody solves — it now reports the text front door too, and agreed with the dominance audit for the first time. |
@@ -2048,6 +2051,52 @@ false positives (`specs.len() == 720`, `== 640`, corpus population `226`,
 `outer_bindings.len() == 318`) — element counts, not module bytes. Detail and
 the full measurement table: [`../notes/agent-golden-pins.md`](docs/plan/notes/agent-golden-pins.md).
 
+**Ranked gap #1 is diagnosed: three causes, not one, and the largest single
+block of losses is a route that quits at 5 % budget use** (`WIP`,
+agent-lra-diagnosis, 2026-08-21). Measured at `8426fbd2d` over the four pinned
+200-file competition lists (sha256 unchanged from their `PARITY.md` entries),
+axeyum + z3 4.13.3 at 24 s each, then a second pass for route ladders. cvc5 is
+not installed on this host; z3 lands within 5 files of cvc5's recorded count in
+every division, which is why it is used to decide which failures count.
+Instrument validated by reproducing QF_LRA's recorded 86/200 exactly.
+
+278 misses classify as: **T** budget exhausted 146, **S** admission decline on a
+size constant 73, **I** incompleteness 48, **P** front-door reject 11. The
+route ladders say these are **three** causes, and they do not line up with the
+divisions:
+
+- **`dl-online` runs out of clock** — 64/65 QF_IDL and 51/55 QF_RDL misses. The
+  one genuinely shared cause, and it is shared by two divisions, not four.
+- **the LRA route** — QF_LRA (and QF_RDL's tail): half refuse on
+  `MAX_ONLINE_LRA_ATOMS = 1_024`, half time out.
+- **the lazy UF/arith CEGAR** — QF_UFLIA, **82 of 82** traced misses, one route.
+- plus **26 QF_UFLIA files rejected at the parser** for `Int` literals beyond
+  `i128` (the Certora/EVM family, 2^256 constants). A capability zero, 13 % of
+  the division, untouched by any solver work.
+
+Two one-constant A/Bs, built in a private snapshot, positive-controlled, never
+in the shared tree:
+
+- **REFUTED** — making the LRA atom cap fall through instead of terminal
+  (`lra_theory.rs:203`): **0** new decides over 71 files and **54** memory
+  aborts past 12 GiB. The cap is load-bearing protection; both routes are
+  inadequate above ~1,000 atoms.
+- **CONFIRMED** — `MAX_MINIMIZED_THEORY_CORE_ATOMS` 128 → 4 096
+  (`dpll_lia.rs:48`). QF_UFLIA **92 → 109 (+17)**, QF_IDL 65 → 64 (the one loss
+  re-decides on a quieter box on **both** binaries), **0 disagreements** against
+  z3 and **0** against the declared `:status`. The 48 QF_UFLIA `I1` files return
+  `unknown` after a median **1.3 s of 24 s** with `core_src_minimized=0` — the
+  cores too wide to minimise are exactly the cores whose width then exhausts
+  `MAX_DYNAMIC_LARGE_CORE_LITERALS`.
+
+Next: the shipped form of that fix is **not** the constant this A/B moved —
+minimisation should be budget-driven rather than width-gated, keeping the memory
+protection the `Large` bucket exists for. Nothing here has been through
+`scripts/parity-run.sh`, which is still gated by nothing (gap #2).
+
+Full finding, all counts and controls:
+[`../../research/05-algorithms/linear-arithmetic-deficit-diagnosis-2026-08-21.md`](docs/research/05-algorithms/linear-arithmetic-deficit-diagnosis-2026-08-21.md).
+
 **A mutant that did not compile was scored as coverage** (`WIP`,
 agent-mutation-harness, 2026-08-18). Measured against `mutation_controls.py` as
 it stood: replacing `if len(unchecked) > ceiling:` with `if len(unchecked) > >
@@ -2078,6 +2127,62 @@ the suite ran **zero** tests and the old classifier read the non-zero exit as a
 death. Removed with the reasoning in place; 10/10.
 
 Detail: [`../notes/agent-mutation-harness.md`](docs/plan/notes/agent-mutation-harness.md).
+
+**Both gap-analysis §7 defects closed, and both were worse than the audit
+recorded them** (`DONE`, agent-resource-guards, 2026-08-21).
+
+**`bv_nego` was a wrong `sat`, not a wrong term.** The audit called
+`1u128 << (w - 1)` a "silently wrong term" in release. Measured with overflow
+checks off, the shipped `SatBvBackend` returns **`sat`** for
+`(bvnego x) ∧ (x = 1)` at 129 bits — unsatisfiable, since negating 1 at 129 bits
+does not overflow. The pre-fix term is `WideBvConst(limbs [1, 0, 0])`, i.e.
+`x == 1` where `x == 2^128` was meant, so the query becomes trivially
+satisfiable. Debug panicked instead, which is why it read as a build-profile
+hazard rather than a soundness one.
+
+**The reachability question it marked UNVERIFIED has an answer: no.** `bvnego`
+occurs in **0 of 1430** tracked `.smt2` files; positive control in the same
+command, `bvadd` in 106. It is reachable only from the parser on user input.
+That lowers the severity — we did not ship a wrong answer on our own corpus —
+and it explains why no sweep could have caught it. The asymmetry that hid it is
+in the tests: the exhaustive overflow-predicate sweep loops `for w in 1..=4`,
+and the one wide test in that suite covers `bv_umulo`, whose wide branch has
+existed since it was written.
+
+**`memory_limit_mb` is no longer inert, but a faithful bound is still an ADR.**
+Two mechanisms now: a portable pre-allocation clause ceiling at a measured
+384 B/clause (zero hot-path cost — it changes a comparison that was already
+there), and a `/proc/self/status` probe at three BV phase boundaries plus the
+`solve`/`check_auto` front doors. `unknown` with `UnknownKind::MemoryLimit`,
+never an abort. **Allocation between two probes is still unbounded**, which is
+the 125 GB shape of the 2026-08-17 OOM exactly; closing that needs a
+`#[global_allocator]` hook, which is process-global, `unsafe impl` against a
+workspace-wide deny, and needs thread-local attribution to mean anything
+per-query. Opened as a research question rather than left unspoken.
+
+**Costs measured against a tree without the module**, release, `taskset -c 0-7`:
+the default path is 182.8–183.4 µs/check against a 184.0–185.3 baseline — not
+distinguishable. A configured limit costs **~32 µs per check, fixed**: 0.00013 %
+of a 24 s budget, 17 % of these deliberately tiny checks. The baseline's own
+"limit set" and "no limit" columns being identical *is* the defect.
+
+**Every guard in this lane survived its first mutation run.** All five memory
+guards: each was shadowed by another that rejected the same query — the probes
+are a chain where only the first over the limit can fire, and both clause
+ceilings reject the same oversized encoding. Nothing was wrong with the guards;
+nothing depended on any one of them. Fixed with a `#[cfg(test)]` seam that
+scripts the resident-set reading and by reaching the post-encoding gate
+directly, so each test can only be satisfied by one guard — and the isolation is
+*asserted*, not assumed (the projected-ceiling test fails if the estimate ever
+stops over-approximating rather than quietly stopping isolating). All seven
+guards across both defects now kill exactly one test each, registered as
+`solver-memory-budget` and `ir-bv-nego-width`.
+
+Next on this axis, in cost order: the allocator-hook ADR (the only thing that
+closes the between-probes gap); then a probe on the SAT search itself, where
+`axeyum-cnf`'s `DeadlineCallbacks::stop` is an existing periodic hook and the
+learnt-clause database is the one long-running allocator this lane did not
+bound.
 
 **Two of the three string-length certificates now carry a Lean term real Lean 4
 accepts; the third declines for two independent reasons, and the guard that was
@@ -2440,7 +2545,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | CAS parity | `BLOCKED` by deliberate pause | Wave-24 code `01d47334` and pause commit `245d8f25` are ancestors of current main. Do not start wave 25 until the user resumes it and retained specialized gate evidence is re-audited. |
 | Consumer apps / verified systems | `WIP`, non-critical path | Existing EVM, verifier, property, reflection, and symbolic-execution slices remain useful; do not preempt A2–A7 without measured demand. |
 | Foundational resources | `WIP`, separate content lane | Keep generated-resource gates green; record only project-level priority changes here. |
-| Public documentation and examples | `DONE`, current comprehensive pass | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; all 119 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, optional EVM/verifier certificate fields, and source-comment UNSAT-proof overclaims. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; reopen only for concrete drift. |
+| Public documentation and examples | `DONE`, current comprehensive pass | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; all 122 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, optional EVM/verifier certificate fields, and source-comment UNSAT-proof overclaims. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; reopen only for concrete drift. |
 | Worktree and build-cache hygiene | `WIP`, recovered | A11; only clean `main` is registered and published. A verified 2026-08-12 external Git bundle preserves the retired refs/stashes; all old branches, salvage stashes, inactive checkouts, and their large Cargo targets are removed. Next automate deterministic read-only inventory and exact-target cleanup classification. |
 
 ## Resume protocol

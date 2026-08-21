@@ -1326,6 +1326,62 @@ SUITES["array-bv-abstraction-walk"] = (
 
 
 # --------------------------------------------------------------------------
+# `solver-memory-budget` — a config field that was SET BUT NEVER READ.
+#
+# `SolverConfig::memory_limit_mb` had exactly one read in the workspace, under
+# `#[cfg(feature = "z3")]`, so on the default pure-Rust build — the shipped
+# product — setting it did nothing and nothing said so.  A live caller
+# (`axeyum-verify`'s `tock_log2_external`) set a 2 GB cap on a non-z3 build.
+#
+# The guards below are the two mechanisms and the three probe sites.  Note what
+# this entry can and cannot show, since the distinction has cost this repository
+# real work: mutation deletes guards that EXIST.  It says nothing about the
+# routes that still have no probe at all (simplex mid-solve, string search
+# mid-solve), which `crate::memory_budget` documents rather than hides.
+# --------------------------------------------------------------------------
+
+SUITES["solver-memory-budget"] = (
+    "crates/axeyum-solver/src/sat_bv_backend.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--lib", "memory_budget"),
+        "solver-memory-budget",
+    ),
+    [
+        (
+            # Mechanism 1: megabytes -> clause ceiling, before lowering.
+            "the pre-lowering clause ceiling derived from megabytes",
+            "    if let Some(budget) = MemoryBudget::from_config(config)\n        && estimated_clauses > budget.clause_ceiling()\n    {",
+            "    if false\n        && let Some(budget) = MemoryBudget::from_config(config)\n        && estimated_clauses > budget.clause_ceiling()\n    {",
+        ),
+        (
+            # Mechanism 2, boundary 1 of 3.
+            "the resident-set probe at backend entry",
+            '            && let Some(reason) = budget.exceeded("backend entry")',
+            '            && let Some(reason) = budget.exceeded("backend entry").filter(|_| false)',
+        ),
+        (
+            # Mechanism 2, boundary 2 of 3.
+            "the resident-set probe after bit-vector lowering",
+            '            && let Some(reason) = budget.exceeded("after bit-vector lowering")',
+            '            && let Some(reason) = budget.exceeded("after bit-vector lowering").filter(|_| false)',
+        ),
+        (
+            # Mechanism 2, boundary 3 of 3.
+            "the resident-set probe before the SAT search",
+            '        && let Some(reason) = budget.exceeded("before SAT search")',
+            '        && let Some(reason) = budget.exceeded("before SAT search").filter(|_| false)',
+        ),
+        (
+            # The exact clause count, not the ~8x over-estimate, after encoding.
+            "the post-encoding clause ceiling on the REAL clause count",
+            "    if let Some(budget) = MemoryBudget::from_config(config)\n        && clauses > budget.clause_ceiling()\n    {",
+            "    if false\n        && let Some(budget) = MemoryBudget::from_config(config)\n        && clauses > budget.clause_ceiling()\n    {",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
 # `ir-bv-nego-width` — a width guard that was MISSING, not weak.
 #
 # `TermArena::bv_nego` built the signed minimum as `1u128 << (w - 1)` while legal

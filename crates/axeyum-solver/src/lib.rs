@@ -49,6 +49,7 @@ mod backend;
 mod error;
 mod incremental;
 mod layers;
+mod memory_budget;
 mod model;
 mod proof;
 mod sat_bv_backend;

@@ -327,17 +327,29 @@ every generator omitted them — which is exactly how the *first* instance of th
 class hid for weeks. A generator that cannot emit the shape is blind on the one
 axis where the grammar has a rule.
 
+**Two of the three fixed 2026-08-21, after this audit was written:**
+
+- ~~`TermArena::bv_nego` computes `1u128 << (w - 1)`~~ — fixed, and it was
+  **worse than recorded here**. Measured with overflow checks off (release
+  semantics), the shipped `SatBvBackend` returned **`sat`** for
+  `(bvnego x) ∧ (x = 1)` at 129 bits, which is unsatisfiable: a wrong `sat`
+  through the front door, not merely a wrong term. The reachability question
+  this section marked UNVERIFIED now has an answer: **no committed corpus file
+  reaches it** — `bvnego` occurs in **0 of 1430** tracked `.smt2` files
+  (positive control, same command: `bvadd` in 106). It is reachable only from
+  the parser on user input, which is why no sweep could have found it.
+- ~~`SolverConfig::memory_limit_mb` is set but never read~~ — the field now
+  binds on the pure-Rust path (`crates/axeyum-solver/src/memory_budget.rs`): a
+  portable pre-allocation clause ceiling at a measured 384 B/clause, plus a
+  `/proc` probe at three BV phase boundaries and the two front doors. A
+  *faithful* bound still needs a `#[global_allocator]` hook, which is
+  ADR-sized and is now an open research question rather than an unspoken gap.
+  The default path costs nothing measurable; a configured limit costs ~32 µs
+  per check. **The gap that remains** is allocation between two probes, which
+  is the 125 GB shape exactly.
+
 **Open, not fixed here:**
 
-- `TermArena::bv_nego` computes `1u128 << (w - 1)` with legal widths to 65536.
-  Release masks the shift mod 128 and builds a **silently wrong term**; debug
-  panics. The sibling `bv_umulo` handles the wide case. Tests cover widths 1–4.
-  UNVERIFIED whether a corpus file reaches it end to end.
-- `SolverConfig::memory_limit_mb` is **set but never read** on the pure-Rust
-  path — its only read is under `#[cfg(feature = "z3")]`. A live caller sets a
-  2 GB cap on a non-z3 build where it is inert. The solver has no memory bound
-  at all, which is the exact shape of the 125 GB OOM that killed an agent
-  session on 2026-08-17.
 - `explain_corpus` diverges from the front door in both directions, and prints
   `unsat-UNCONFIRMED`. Do not use its verdicts for anything quantified or
   string-shaped.
@@ -374,7 +386,7 @@ Ordered by *measured* cost, not by how large the hole feels.
 
 | # | Gap | Evidence | Nature |
 |---|---|---|---|
-| 1 | **Linear arithmetic depth** — LRA 58.9%, IDL 54.8%, RDL 67.7%, UFLIA 52.2% | §2 | The largest aggregate deficit, and four divisions share one cause worth diagnosing before building |
+| 1 | **Linear arithmetic depth** — LRA 58.9%, IDL 54.8%, RDL 67.7%, UFLIA 52.2% | §2; **diagnosed 2026-08-21**: [linear-arithmetic-deficit-diagnosis](../research/05-algorithms/linear-arithmetic-deficit-diagnosis-2026-08-21.md) | The largest aggregate deficit. The "one shared cause" clause is **refuted**: the 278 misses split into **three** causes — `dl-online` search timeout (QF_IDL + QF_RDL, the one genuinely shared pair), the LRA route's 1,024-atom refusal plus its slow CDCL(T) (QF_LRA + QF_RDL's tail), and the lazy UF/arith CEGAR (QF_UFLIA, 82/82) — plus 26 QF_UFLIA files lost at the **parser** to `Int` literals beyond `i128`. Highest-leverage fix named and A/B-measured: minimise wide LIA theory cores instead of declining at 5% budget use — **+17 QF_UFLIA files, 0 regressions, 0 disagreements** (94/180 = 52.2% would project to 111/180 = 61.7%; not a parity run). The obvious fix (drop the LRA atom cap's terminality) was built and **refuted**: 0 new decides, 54 of 71 turn into memory aborts |
 | 2 | **Re-measure, then gate the measurement** | §2.1, §8 | 15 days dark on the headline; cheap, and everything else is priced off it |
 | 3 | **Consumer interface** — single-query CLI, inert `set-option`, no-op `get-*` | §6.3 | Nothing here is research; it is the difference between a library and a solver a stranger can run |
 | 4 | **QF_NIA at 38.2%** | §2 | The genuine multi-year catch-up; still correctly last among decision work |
@@ -390,6 +402,47 @@ we lack, cvc5 labels experimental (§4.1). The breadth backlog stays counted, no
 built.
 
 ---
+
+## 9.1 What the queue has already changed about this document
+
+This file is a specification for the work below it, so where that work refutes
+or discharges a row, it is recorded here and not only in the note that found it.
+
+**Refuted.** Row 1's "four divisions share one cause" was a hypothesis and it is
+false — see the row itself for the three-cause split. The part that most changes
+the framing: the largest single block of losses in the *worst* division is not a
+search problem. 48 QF_UFLIA files return `unknown` after a median **1.3 s of a
+24 s budget** with `core_src_minimized=0`, because the cores too wide to
+minimise are exactly the cores whose width then exhausts retention. A deficit
+that read as "we are slower" is substantially "we stop early". And 26 files —
+13% of that division — never reach the solver at all, rejected at the parser for
+`Int` literals beyond `i128`. No row in §9 named that.
+
+**Discharged.**
+
+- **§8, the audit that could not fail.** `audit_dominance` audited only
+  baseline-*decided* instances, so a zero baseline propagated forward forever.
+  It now re-probes the undecided set and reports `newly_decided`. On the row that
+  motivated this: `NEWLY DECIDED 11/12 the baseline recorded as undecided`, where
+  the artifact previously held `"instances": []`.
+- **Gap #6.** The array-axiom family — 30.2% of all certified `unsat` — no longer
+  rests on re-running its producer and comparing for equality. Two stages decide
+  the certificate's own claim, each killed by exactly one adversarial fixture
+  over a **satisfiable** query. Two residual shapes (`ReadCongruence`, and the
+  BTOR path where the assertion only *entails* the disequality) are named in the
+  code rather than implied away.
+- **Gap #3.** `examples/axeyum_cli.rs` answers one verdict per `check-sat`,
+  matching z3 on `push`/`pop` and on `check-sat-assuming` non-retention. The
+  engine could always do this; nothing user-facing reached it.
+- **Gap #2's gate**, ahead of its measurement:
+  `scripts/check-parity-freshness.py` fails when a division's ledger entry ages
+  past 14 days, wired into both gate sets. It reads `FAIL` today, which is the
+  honest state.
+
+**Found while discharging, and not in the original document.** The parity ledger
+holds **nine** divisions, not the eleven `PROJECT-STATE.md` claimed, and has
+never held a QF_ABV entry despite a committed `parity-lists/QF_ABV.txt` — a list
+that was never run.
 
 ## 10. What this document does not establish
 

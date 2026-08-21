@@ -1722,6 +1722,30 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     roll-forward admission event, and separately reported archival/Git
     publication. Fault-injected exact-commit replay accepts the decision.
 
+- [ ] Should axeyum install a `#[global_allocator]` so `memory_limit_mb` can be a
+  **faithful** per-query bound rather than a pre-allocation ceiling plus
+  phase-boundary sampling?
+  - Opened 2026-08-21 alongside the fix that made the field non-inert on the
+    pure-Rust path (`crates/axeyum-solver/src/memory_budget.rs`). Until then its
+    only read was under `#[cfg(feature = "z3")]`, so on the shipped default
+    build a configured cap bounded nothing.
+  - What ships today bounds two things and says where each stops: a portable
+    ceiling on the bit-blasted CNF, applied *before* `lower_terms` allocates
+    (megabytes ÷ a measured 384 B/clause), and a `/proc/self/status` probe at
+    three phase boundaries in the BV backend plus the `solve`/`check_auto` front
+    doors. Allocation **between** two probes is not bounded — which is exactly
+    the 125 GB shape of the 2026-08-17 OOM, so the gap is not academic.
+  - Three things make the allocator hook a decision rather than a patch, and any
+    ADR has to answer all three: it is **process-global** and a library must not
+    install one on its consumer's behalf; `impl GlobalAlloc` is `unsafe impl`
+    against a workspace-wide `unsafe_code` deny (Hard Rules); and per-query
+    attribution needs thread-local accounting, which changes what "budget" means
+    for a multi-threaded consumer.
+  - Measured constraint for whichever design wins: a `/proc` read is 9.4 µs, 276x
+    an `Instant::now()`, so sampling cannot substitute for accounting on any hot
+    path. An allocator hook's per-allocation cost would have to be measured the
+    same way before it could be believed.
+
 ## Source Pointers
 
 - Axeyum research index: ../README.md

@@ -44,6 +44,7 @@ use crate::backend::{
     BitLoweringMode, Capabilities, CheckResult, SolveStats, SolverBackend, SolverConfig,
     SolverError, UnknownKind, UnknownReason,
 };
+use crate::memory_budget::MemoryBudget;
 use crate::model::Model;
 use crate::proof::UnsatProof;
 
@@ -120,6 +121,17 @@ impl SatBvBackend {
             }));
         }
 
+        // Phase boundary 1 of 3 for the memory budget (`memory_budget`): a caller
+        // that arrives already over its limit gets `unknown` before this check
+        // allocates anything at all. ~9.4 us; see that module for why a probe
+        // may only sit at a phase boundary.
+        let memory = MemoryBudget::from_config(config);
+        if let Some(budget) = memory
+            && let Some(reason) = budget.exceeded("backend entry")
+        {
+            return Ok(CheckResult::Unknown(reason));
+        }
+
         if let Some(result) = oversized_encoding_refusal(arena, assertions, config) {
             return Ok(result);
         }
@@ -168,6 +180,18 @@ impl SatBvBackend {
             Err(error) => return Err(map_lower_error(error)),
         };
         let bit_blast = bit_blast_start.elapsed();
+
+        // Phase boundary 2 of 3: lowering is where the AIG is built, and the
+        // projected-clause ceiling above is an ESTIMATE. This is the first point
+        // at which the real cost is observable.
+        if let Some(budget) = memory
+            && let Some(reason) = budget.exceeded("after bit-vector lowering")
+        {
+            stats.translate = bit_blast;
+            push_duration_ms(&mut stats, "bit_blast_ms", bit_blast);
+            self.stats = Some(stats);
+            return Ok(CheckResult::Unknown(reason));
+        }
 
         let roots = lowering
             .roots()
@@ -1688,6 +1712,20 @@ fn oversized_encoding_refusal(
     config: &SolverConfig,
 ) -> Option<CheckResult> {
     let estimated_clauses = estimate_blast_clauses(arena, assertions);
+
+    // `memory_limit_mb`, mechanism 1: megabytes converted into this gate's own
+    // currency. Kept as a SEPARATE refusal rather than folded into `clause_cap`
+    // so the reason a consumer reads names the budget that actually bound —
+    // `MemoryLimit` and `EncodingBudget` are different findings and lead to
+    // different fixes (give it more memory / re-scope the query).
+    if let Some(budget) = MemoryBudget::from_config(config)
+        && estimated_clauses > budget.clause_ceiling()
+    {
+        return Some(CheckResult::Unknown(
+            budget.encoding_refusal(estimated_clauses, "projected"),
+        ));
+    }
+
     let clause_cap = config.cnf_clause_budget.unwrap_or(ABSOLUTE_CLAUSE_CEILING);
     if estimated_clauses > clause_cap {
         return Some(CheckResult::Unknown(UnknownReason {
@@ -1789,6 +1827,28 @@ fn check_cnf_budgets(
             kind: UnknownKind::EncodingBudget,
             detail: format!("CNF has {clauses} clauses, budget {budget}"),
         }));
+    }
+
+    // `memory_limit_mb` against the REAL clause count. The pre-lowering gate ran
+    // on `estimate_blast_clauses`, which over-approximates by ~8x on multipliers;
+    // an encoding can clear that estimate and still be the one that does not fit,
+    // or (more often) be refused there and fit here. This is the exact one.
+    if let Some(budget) = MemoryBudget::from_config(config)
+        && clauses > budget.clause_ceiling()
+    {
+        stats.solve = Duration::ZERO;
+        return Some(CheckResult::Unknown(
+            budget.encoding_refusal(clauses, "encoded"),
+        ));
+    }
+
+    // Phase boundary 3 of 3: everything the encoding allocates is now live, and
+    // the SAT search is about to start on top of it.
+    if let Some(budget) = MemoryBudget::from_config(config)
+        && let Some(reason) = budget.exceeded("before SAT search")
+    {
+        stats.solve = Duration::ZERO;
+        return Some(CheckResult::Unknown(reason));
     }
 
     None
@@ -2040,6 +2100,222 @@ fn usize_to_u64(value: usize) -> u64 {
 mod tests {
     use super::*;
     use axeyum_cnf::{CnfClause, CnfLit, CnfVar, SatUnknownReason};
+
+    // --- `memory_limit_mb`, one test per guard -----------------------------
+    //
+    // These are here rather than in `crate::memory_budget` because two of the
+    // five guards are only reachable through this module's private gates
+    // (`estimate_blast_clauses`, `check_cnf_budgets`), and because the FIRST
+    // mutation run of this feature reported all five SURVIVED: each guard was
+    // shadowed by another that rejected the same query. Each test below is
+    // constructed so that exactly one guard can be the one that fires, and the
+    // construction is asserted rather than assumed.
+    //
+    // The names start `memory_budget_` so `--lib memory_budget` collects them
+    // alongside the module's own tests.
+
+    use crate::memory_budget::{PROBE_LOCK, script_resident_bytes};
+
+    /// A small query, decided in microseconds, that still reaches all three
+    /// probe sites.
+    fn tiny_bv_query() -> (TermArena, Vec<TermId>) {
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", 16).unwrap();
+        let y = arena.bv_var("y", 16).unwrap();
+        let product = arena.bv_mul(x, y).unwrap();
+        let target = arena.bv_const(16, 0x5a5a).unwrap();
+        let assertion = arena.eq(product, target).unwrap();
+        (arena, vec![assertion])
+    }
+
+    /// Runs `tiny_bv_query` under a 1 GiB budget with `readings` scripted into
+    /// the resident-set probe, and returns the verdict.
+    ///
+    /// 1 GiB buys ~2.8 M clauses, and the query encodes a few thousand, so
+    /// neither clause ceiling can fire: whatever declines here is a probe.
+    fn probe_run(readings: &[u64]) -> CheckResult {
+        let (arena, assertions) = tiny_bv_query();
+        let config = SolverConfig::default().with_memory_limit_mb(1024);
+        script_resident_bytes(readings);
+        let result = SatBvBackend::new()
+            .check(&arena, &assertions, &config)
+            .expect("check");
+        script_resident_bytes(&[]);
+        result
+    }
+
+    fn expect_memory_decline(result: &CheckResult, phase: &str) {
+        let CheckResult::Unknown(reason) = result else {
+            panic!("expected a memory decline at {phase}, got {result:?}");
+        };
+        assert_eq!(reason.kind, UnknownKind::MemoryLimit);
+        assert!(
+            reason.detail.contains(phase),
+            "the decline must name the boundary that fired (wanted {phase}): {}",
+            reason.detail
+        );
+    }
+
+    const OVER_1GIB: u64 = 2 * 1024 * 1024 * 1024;
+
+    #[test]
+    fn memory_budget_entry_probe_declines() {
+        let _guard = PROBE_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        expect_memory_decline(&probe_run(&[OVER_1GIB]), "backend entry");
+    }
+
+    /// Under budget on arrival, over it after lowering. The scripted second
+    /// reading is the only way to reach this boundary deterministically: with
+    /// real readings the entry probe would have to be under and the lowering
+    /// growth over, in a process whose resident set is mostly other tests.
+    #[test]
+    fn memory_budget_probe_after_lowering_declines() {
+        let _guard = PROBE_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        expect_memory_decline(&probe_run(&[0, OVER_1GIB]), "after bit-vector lowering");
+    }
+
+    #[test]
+    fn memory_budget_probe_before_sat_search_declines() {
+        let _guard = PROBE_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        expect_memory_decline(&probe_run(&[0, 0, OVER_1GIB]), "before SAT search");
+    }
+
+    /// The PROJECTED ceiling, isolated from the encoded one.
+    ///
+    /// `estimate_blast_clauses` over-approximates a multiplier by ~3x, so a
+    /// budget set halfway between the real clause count and the estimate is
+    /// refused before lowering and would NOT be refused after it. The test
+    /// asserts that gap rather than trusting it: if the estimate ever tightens
+    /// to the real count, this stops isolating anything and says so.
+    #[test]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a clause count
+    fn memory_budget_projected_ceiling_refuses_before_lowering() {
+        let _guard = PROBE_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", 64).unwrap();
+        let y = arena.bv_var("y", 64).unwrap();
+        let left = arena.bv_mul(x, y).unwrap();
+        let right = arena.bv_mul(y, x).unwrap();
+        let equal = arena.eq(left, right).unwrap();
+        let assertion = arena.not(equal).unwrap();
+        let assertions = vec![assertion];
+
+        // What the query really encodes to. `resource_limit` 0 stops the search
+        // the moment it starts, so this is the encoding and nothing else.
+        let mut backend = SatBvBackend::new();
+        let _ = backend
+            .check(
+                &arena,
+                &assertions,
+                &SolverConfig::default().with_resource_limit(0),
+            )
+            .expect("check");
+        let encoded = backend
+            .last_stats()
+            .expect("stats")
+            .backend
+            .iter()
+            .find(|(name, _)| name == "cnf_clauses")
+            .map_or(0.0, |(_, value)| *value) as u64;
+        let projected = estimate_blast_clauses(&arena, &assertions);
+        assert!(
+            projected > encoded * 2,
+            "this test needs the estimate to over-approximate (projected \
+             {projected}, encoded {encoded}); with the two close together it \
+             cannot separate the two ceilings and is not testing what it says"
+        );
+
+        // A ceiling strictly between the two: the projected gate must refuse,
+        // and the encoded gate must not have been able to.
+        let ceiling = u64::midpoint(projected, encoded);
+        let limit_mb = ceiling * crate::memory_budget::ENCODING_BYTES_PER_CLAUSE / (1024 * 1024);
+        assert!(encoded < ceiling && ceiling < projected);
+
+        // Scripted zero: the probes must not be what declines this.
+        script_resident_bytes(&[0, 0, 0]);
+        let result = SatBvBackend::new()
+            .check(
+                &arena,
+                &assertions,
+                &SolverConfig::default()
+                    .with_memory_limit_mb(limit_mb)
+                    .with_resource_limit(0),
+            )
+            .expect("check");
+        script_resident_bytes(&[]);
+
+        let CheckResult::Unknown(reason) = result else {
+            panic!("a budget below the projected encoding must decline: {result:?}");
+        };
+        assert_eq!(reason.kind, UnknownKind::MemoryLimit);
+        assert!(
+            reason.detail.contains("projected"),
+            "the pre-lowering gate must say it projected: {}",
+            reason.detail
+        );
+    }
+
+    /// The ENCODED ceiling, isolated by calling its gate directly.
+    ///
+    /// It cannot be isolated through `check`, because `estimate_blast_clauses`
+    /// over-approximates: any encoding over the ceiling was projected over it
+    /// too, so the pre-lowering gate always fires first. That makes this a
+    /// backstop for an estimate that is a heuristic, not a proof — and a
+    /// backstop nothing can reach is still a backstop nothing tests, so the
+    /// test reaches the gate rather than the route.
+    #[test]
+    fn memory_budget_encoded_ceiling_refuses_the_real_clause_count() {
+        // Probes here too (the generous case reaches the third boundary), so
+        // this must not run inside the probe-count test's window.
+        let _guard = PROBE_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        // One unit clause per variable: `add_clause` dedups, so repeating a
+        // clause 1000 times builds 4 of them, not 1000 (it did, first run).
+        let mut formula = axeyum_cnf::CnfFormula::new(1000);
+        for i in 1..=1000usize {
+            let var = CnfVar::new(i).expect("a variable index");
+            let _ = formula.add_clause(CnfClause::new(vec![CnfLit::positive(var)]));
+        }
+        let clauses = formula.clauses().len() as u64;
+        assert!(
+            clauses > 100,
+            "the fixture must be big enough to exceed a zero ceiling: {clauses}"
+        );
+
+        // A 0 MiB budget is a zero clause ceiling, so this is the encoded gate
+        // and nothing else: no probe can fire (scripted 0) and there is no
+        // pre-lowering estimate on this path at all.
+        let config = SolverConfig::default().with_memory_limit_mb(0);
+        let mut stats = SolveStats::default();
+        script_resident_bytes(&[0, 0, 0]);
+        let refusal = check_cnf_budgets(&config, &formula, &mut stats);
+        script_resident_bytes(&[]);
+        let Some(CheckResult::Unknown(reason)) = refusal else {
+            panic!("a zero-clause ceiling must refuse 1000 clauses: {refusal:?}");
+        };
+        assert_eq!(reason.kind, UnknownKind::MemoryLimit);
+        assert!(
+            reason.detail.contains(&format!("encoded {clauses}")),
+            "the post-encoding gate must quote the REAL clause count, not a \
+             projection: {}",
+            reason.detail
+        );
+
+        // ...and a budget that fits leaves the gate silent.
+        let generous = SolverConfig::default().with_memory_limit_mb(1024);
+        script_resident_bytes(&[0, 0, 0]);
+        assert!(check_cnf_budgets(&generous, &formula, &mut stats).is_none());
+        script_resident_bytes(&[]);
+    }
 
     /// A synthetic `unknown` batsat verdict, the only state the fallback acts on.
     fn unknown() -> SatResult {

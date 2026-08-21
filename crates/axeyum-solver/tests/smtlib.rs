@@ -10,6 +10,7 @@ use std::time::Duration;
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{
     CheckResult, SmtLibOutcome, SolverConfig, UnknownKind, membership_verdict, solve_smtlib,
+    solve_smtlib_incremental,
 };
 
 fn config() -> SolverConfig {
@@ -2551,4 +2552,68 @@ fn constrained_concat_output_keeps_membership_sat_incomplete() {
         None,
         "a constrained output is not a safe existential model definition"
     );
+}
+
+/// The multi-query shapes a general-purpose CLI must answer, pinned against z3.
+///
+/// Gap #3 of `docs/plan/gap-analysis-smt-solvers-2026-08-21.md`: measured
+/// 2026-08-21, the shipped CLI answered a single **`unknown`** to a script that
+/// `z3` answered with three verdicts. Nothing was missing from the solver —
+/// `solve_smtlib_incremental` decided it correctly all along, and no
+/// user-facing entry point reached it. `examples/axeyum_cli.rs` now does.
+///
+/// Both scripts below were run against `z3` 4.13.3 on 2026-08-21 and the
+/// expected verdicts are its output, not this solver's. That is the point of
+/// pinning them: a differential result recorded once is worth more than an
+/// assertion that we agree with ourselves.
+#[test]
+fn incremental_scripts_answer_one_verdict_per_check_sat() {
+    let config = SolverConfig::new().with_timeout(Duration::from_secs(10));
+
+    // push/pop scoping: the inner scope contradicts, and popping it recovers.
+    let scoped = r"(set-logic QF_LIA)
+        (declare-fun x () Int)
+        (assert (> x 5))
+        (check-sat)
+        (push 1)
+        (assert (< x 3))
+        (check-sat)
+        (pop 1)
+        (check-sat)";
+    let results = solve_smtlib_incremental(scoped, &config).expect("the script decides");
+    let verdicts: Vec<_> = results.iter().map(verdict_label).collect();
+    assert_eq!(
+        verdicts,
+        ["sat", "unsat", "sat"],
+        "push/pop scoping (z3 4.13.3 agrees)"
+    );
+
+    // `check-sat-assuming`: assumptions bind for one query and are not retained.
+    // The third query must be `sat` even though the second was `unsat` WITH the
+    // same `q` present — that is exactly the non-retention property.
+    let assuming = r"(set-logic QF_LIA)
+        (declare-fun x () Int)
+        (declare-fun p () Bool)
+        (declare-fun q () Bool)
+        (assert (=> p (> x 10)))
+        (assert (=> q (< x 0)))
+        (check-sat-assuming (p))
+        (check-sat-assuming (p q))
+        (check-sat-assuming (q))
+        (check-sat)";
+    let results = solve_smtlib_incremental(assuming, &config).expect("the script decides");
+    let verdicts: Vec<_> = results.iter().map(verdict_label).collect();
+    assert_eq!(
+        verdicts,
+        ["sat", "unsat", "sat", "sat"],
+        "check-sat-assuming (z3 4.13.3 agrees)"
+    );
+}
+
+fn verdict_label(result: &CheckResult) -> &'static str {
+    match result {
+        CheckResult::Sat(_) => "sat",
+        CheckResult::Unsat => "unsat",
+        CheckResult::Unknown(_) => "unknown",
+    }
 }
