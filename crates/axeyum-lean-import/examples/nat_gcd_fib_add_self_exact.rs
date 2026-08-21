@@ -34,6 +34,7 @@ const COPRIME: &str = "Nat.fib_coprime_fib_succ";
 const COPRIME_CAPSULE: &str = "9106a3442d75a5fdaf51e35436e6fdbea78714d743e666bec27ffd9641160b11";
 const CLEAN_GCD_COMM: &str = "Axeyum.Autogenesis.gcdCommCleanV1";
 const OFFICIAL_EQ_ZERO: &str = "Axeyum.Autogenesis.eqZeroOfZeroDvdOfficialV1";
+const OFFICIAL_ONE_LE_RIGHT_OF_MUL: &str = "Axeyum.Autogenesis.oneLeRightOfMulOfficialV1";
 const OFFICIAL_LE_OF_DVD: &str = "Axeyum.Autogenesis.leOfDvdOfficialV1";
 const OFFICIAL_ANTISYMM: &str = "Axeyum.Autogenesis.dvdAntisymmOfficialV1";
 const USAGE: &str = "usage: nat_gcd_fib_add_self_exact <r091> <clean-order> <cancellation> <addition> <coprimality>";
@@ -211,6 +212,8 @@ fn run_official_clean_order_capsule(
     kernel = compatible.kernel().clone();
     let eq_zero = declare_official_eq_zero(&mut kernel)?;
     require_empty(&kernel, eq_zero, OFFICIAL_EQ_ZERO)?;
+    let one_le_right = declare_official_one_le_right_of_mul(&mut kernel)?;
+    require_empty(&kernel, one_le_right, OFFICIAL_ONE_LE_RIGHT_OF_MUL)?;
     let le_of_dvd = declare_official_le_of_dvd(&mut kernel)?;
     require_empty(&kernel, le_of_dvd, OFFICIAL_LE_OF_DVD)?;
     let antisymm = declare_official_antisymm(&mut kernel)?;
@@ -241,7 +244,12 @@ fn run_official_clean_order_capsule(
             "schema_version": 1,
             "kind": "axeyum-autogenesis-official-r091-clean-dvd-antisymm-capsule",
             "state": "official-clean-order-compatible-with-cancellation-and-roundtrip-checked",
-            "supports": [evidence(&kernel, eq_zero)?, evidence(&kernel, le_of_dvd)?, expected],
+            "supports": [
+                evidence(&kernel, eq_zero)?,
+                evidence(&kernel, one_le_right)?,
+                evidence(&kernel, le_of_dvd)?,
+                expected
+            ],
             "official_cancellation_compatibility": {
                 "bootstrap_root": CANCELLATION_BOOTSTRAP,
                 "source_declaration_sha256": mod_lt_reuse.source_declaration_sha256,
@@ -557,10 +565,90 @@ fn declare_official_eq_zero(kernel: &mut Kernel) -> Result<NameId, String> {
 }
 
 #[allow(clippy::too_many_lines)]
+fn declare_official_one_le_right_of_mul(kernel: &mut Kernel) -> Result<NameId, String> {
+    let target = nested_name(
+        kernel,
+        &["Axeyum", "Autogenesis", "oneLeRightOfMulOfficialV1"],
+    );
+    let mut d = Dev::new(kernel)?;
+    let mul_zero = d.exact("Nat.mul_zero")?;
+    let not_succ_le_zero = d.exact("Nat.not_succ_le_zero")?;
+    let zero_le = d.exact("Nat.zero_le")?;
+    let le_succ = d.exact("Nat.le_succ_succ")?;
+    let false_name = d.exact("False")?;
+    let false_rec = d.exact("False.rec")?;
+    let nat = d.nat_ty();
+    let scale_fv = d.fresh();
+    let scale = d.kernel.fvar(scale_fv);
+    let factor_fv = d.fresh();
+    let factor = d.kernel.fvar(factor_fv);
+    let statement = |d: &mut Dev<'_>, value| {
+        let zero = d.zero();
+        let one = d.succ(zero);
+        let product = d.mul(scale, value);
+        let hypothesis = d.le(one, product);
+        let conclusion = d.le(one, value);
+        d.arrow(hypothesis, conclusion)
+    };
+    let proof = d.induct(
+        &statement,
+        &|d| {
+            let zero = d.zero();
+            let one = d.succ(zero);
+            let product = d.mul(scale, zero);
+            let hypothesis_ty = d.le(one, product);
+            let goal = d.le(one, zero);
+            let hypothesis_fv = d.fresh();
+            let hypothesis = d.kernel.fvar(hypothesis_fv);
+            let collapse = d.lemma(mul_zero, &[scale]);
+            let motive = d.eq_motive(product, &|d, value| {
+                let zero = d.zero();
+                let one = d.succ(zero);
+                d.le(one, value)
+            });
+            let bounded = d.transport(product, motive, hypothesis, zero, collapse);
+            let contradiction = d.lemma(not_succ_le_zero, &[zero, bounded]);
+            let level = d.kernel.level_zero();
+            let rec = d.kernel.const_(false_rec, vec![level]);
+            let false_ty = d.kernel.const_(false_name, vec![]);
+            let motive = d.kernel.lam(d.anon, false_ty, goal, BinderInfo::Default);
+            let body = d.apply(rec, &[motive, contradiction]);
+            d.lam(hypothesis_fv, hypothesis_ty, body)
+        },
+        &|d, predecessor, _ih| {
+            let zero = d.zero();
+            let one = d.succ(zero);
+            let successor = d.succ(predecessor);
+            let product = d.mul(scale, successor);
+            let hypothesis_ty = d.le(one, product);
+            let hypothesis_fv = d.fresh();
+            let base = d.lemma(zero_le, &[predecessor]);
+            let body = d.lemma(le_succ, &[zero, predecessor, base]);
+            d.lam(hypothesis_fv, hypothesis_ty, body)
+        },
+        factor,
+    );
+    let ty = statement(&mut d, factor);
+    let proof = d.lam(factor_fv, nat, proof);
+    let proof = d.lam(scale_fv, nat, proof);
+    let ty = d.pi(factor_fv, nat, ty);
+    let ty = d.pi(scale_fv, nat, ty);
+    d.kernel
+        .add_declaration(Declaration::Theorem {
+            name: target,
+            uparams: vec![],
+            ty,
+            value: proof,
+        })
+        .map_err(|error| format!("official positive-product factor rejected: {error:?}"))?;
+    Ok(target)
+}
+
+#[allow(clippy::too_many_lines)]
 fn declare_official_le_of_dvd(kernel: &mut Kernel) -> Result<NameId, String> {
     let target = nested_name(kernel, &["Axeyum", "Autogenesis", "leOfDvdOfficialV1"]);
     let mut d = Dev::new(kernel)?;
-    let one_le_right = d.exact("Nat.one_le_right_of_mul")?;
+    let one_le_right = d.exact(OFFICIAL_ONE_LE_RIGHT_OF_MUL)?;
     let mul_le_left = d.exact("Nat.mul_le_mul_left")?;
     let mul_one = d.exact("Nat.mul_one")?;
     let nat = d.nat_ty();
