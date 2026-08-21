@@ -88,21 +88,32 @@ fn run() -> Result<(), String> {
     require_identity(adapter.kernel(), MOD_LT_ADAPTER, MOD_LT_ADAPTER_SHA256)?;
     require_identity(generic.kernel(), GENERIC, GENERIC_SHA256)?;
 
-    let with_zero = compose_root(zero_left.kernel(), target.kernel(), ZERO_LEFT, "zero-left")?;
+    let with_mod_lt = compose_root(
+        target.kernel(),
+        generic.kernel(),
+        "Nat.mod_lt",
+        "Nat.mod_lt",
+    )?;
+    let with_adapter = compose_root(
+        adapter.kernel(),
+        with_mod_lt.kernel(),
+        MOD_LT_ADAPTER,
+        "mod-lt-adapter",
+    )?;
+    let with_zero = compose_root(
+        zero_left.kernel(),
+        with_adapter.kernel(),
+        ZERO_LEFT,
+        "zero-left",
+    )?;
     let with_successor = compose_root(
         successor.kernel(),
         with_zero.kernel(),
         SUCCESSOR,
         "successor",
     )?;
-    let with_adapter = compose_root(
-        adapter.kernel(),
-        with_successor.kernel(),
-        MOD_LT_ADAPTER,
-        "mod-lt-adapter",
-    )?;
 
-    let mut mod_prepared = with_adapter.kernel().clone();
+    let mut mod_prepared = with_successor.kernel().clone();
     let mod_adapter_name = find_name(&mod_prepared, MOD_LT_ADAPTER)?;
     let nat_mod_lt = find_name(&mod_prepared, "Nat.mod_lt")?;
     let mod_closed_name = nested_name(
@@ -164,13 +175,7 @@ fn run() -> Result<(), String> {
         SUCCESSOR_CLOSED,
     )?;
 
-    let with_generic = compose_root(
-        generic.kernel(),
-        successor_closed.kernel(),
-        GENERIC,
-        "generic-balanced-bezout",
-    )?;
-    let mut closed_prepared = with_generic.kernel().clone();
+    let mut closed_prepared = successor_closed.kernel().clone();
     let generic_name = find_name(&closed_prepared, GENERIC)?;
     let zero_argument = find_name(&closed_prepared, ZERO_LEFT)?;
     let successor_argument = find_name(&closed_prepared, SUCCESSOR_CLOSED)?;
@@ -222,11 +227,13 @@ fn run() -> Result<(), String> {
             "generic_balanced_bezout_sha256": GENERIC_STREAM_SHA256,
         },
         "compositions": {
+            "mod_lt_receipt_sha256": with_mod_lt.receipt().receipt_sha256,
+            "mod_lt_adapter_receipt_sha256": with_adapter.receipt().receipt_sha256,
             "zero_left_receipt_sha256": with_zero.receipt().receipt_sha256,
             "successor_receipt_sha256": with_successor.receipt().receipt_sha256,
-            "mod_lt_adapter_receipt_sha256": with_adapter.receipt().receipt_sha256,
-            "generic_balanced_bezout_receipt_sha256": with_generic.receipt().receipt_sha256,
         },
+        "composition_base": "generic-balanced-bezout-kernel",
+        "generic_composition_operations": 0,
         "specializations": {
             "mod_lt_succ": {
                 "receipt_sha256": mod_closed.receipt().receipt_sha256,
