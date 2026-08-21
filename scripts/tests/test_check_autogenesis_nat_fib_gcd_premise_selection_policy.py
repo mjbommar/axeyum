@@ -50,7 +50,7 @@ class NatFibGcdPremiseSelectionPolicyTests(unittest.TestCase):
 
     def test_live_progress_must_be_a_proved_prefix(self):
         facts = copy.deepcopy(self.facts)
-        later = facts["F:ml430-nat-gcd-fib-add-self-5a92d5e3"]
+        later = facts["F:ml430-nat-fib-gcd-d1d98407"]
         later["epistemic_status"] = "proved"
         later["proof_route"] = "kernel-lean"
         later["axiom_footprint"] = []

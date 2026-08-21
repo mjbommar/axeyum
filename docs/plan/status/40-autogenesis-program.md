@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** The exact official Lean 4.30 `Nat.fib_coprime_fib_succ` theorem now has dependency-bound semantic receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, independently reissued from two fresh complete target reconstructions. It binds the frozen source, candidate, target, operation and budget; all eight preregistered direct premise identities; 115 replayed transitive diagnostic identities; and an empty complete axiom footprint. The byte-identical observations and zero-credit boundary are sealed in the read-only `169aab71b` pack. No fact transition, evaluation credit, or ledger write has occurred.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` is durably `proved` in the fact ledger through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`. The registered execution retained all eight direct premise identities, the 115-row transitive replay digest, and an empty complete axiom footprint. An after-intent fault left the fact unchanged, recovery made exactly one authoritative write, and a detached clean worktree reproduced the complete episode with semantic replay digest `fd83e8431c506bedea825f7a9a857190b26ad4e54be0faa9066166aa99845983`. The event made exactly `F:ml430-nat-gcd-fib-add-self-5a92d5e3` newly ready; no held-out outcome or evaluation credit was used.
 
-**Next:** register one exact operation that consumes only the sealed dependency-bound receipt and its frozen source/candidate authority, then execute the ordinary crash-safe prepare, apply, event replay, settled-fact replay, and derived child-readiness checks. Do not mutate the fact from the receipt issuer, skip transaction recovery, or inspect held-out data.
+**Next:** qualify the newly ready `Nat.gcd_fib_add_self` row from the post-admission frontier, then preregister its smallest honest bounded proof plan before any target submission. Preserve the measured chain toward `Nat.fib_gcd`; do not inspect held-out outcomes, infer a route from the upstream Mathlib proof body, or treat the coprimality receipt's transitive diagnostics as premise authority.
 
 <!-- plan-section: landed-changes -->
 
@@ -41,3 +41,5 @@
 | 2026-08-20 | `b44bf0ecb` | Dependency-bound theorem receipts require exact sorted premise names and canonical declaration identities |
 | 2026-08-20 | `b55bc977e` | Two fresh full audits preregister the exact eight-premise authority for the official Fibonacci receipt |
 | 2026-08-20 | `169aab71b` | Two fresh official reconstructions issue and replay one exact dependency-bound Fibonacci theorem receipt |
+| 2026-08-20 | `d5aed52ff` | Distinct registered admission preserves exact direct and transitive dependency identities without weakening isolated receipts |
+| 2026-08-20 | `3f96b5463` | Crash-safe exact Fibonacci coprimality admission makes one descendant ready and reproduces from a clean worktree |

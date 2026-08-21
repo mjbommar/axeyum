@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-dependency-theorem-receipt-admission",
+  "state": "durably-admitted-archived-and-clean-replayed",
+  "fact_id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
+  "operation_id": "authoritative-mathlib-nat-fib-coprime-dependency-receipt-v1",
+  "registration_commit": "b1f9cdd60624dfb504d5a3b1b958994c7892d1f6",
+  "external_root": "/nas3/data/axeyum/autogenesis/admissions/b1f9cdd60-mathlib-nat-fib-coprime-v1",
+  "external_index_sha256": "733a538ac9c725d98ed97021f520bb080a4c7f4636e1f16e702c35c90609f265",
+  "source_bundle_sha256": "8f46b227e45b81057385e8a89a75f1cf239e17e803c7847aeec2acee877ce488",
+  "identities": {
+    "frontier_before_sha256": "3eef4c977f9990b3204153a42ba31c1b892d5b22cab3e8d6c47e45cc8da71658",
+    "execution_sha256": "1dc593170da515d02cc871853f62701a50025e824bd138a8267df10f20758e2b",
+    "transaction_sha256": "f44abc6f2e22c3e354f4a2529f7ff064902b7457464a843e449d3cbfdd749849",
+    "admission_event_sha256": "9b925a433c03e2cb61b3334d3805c7721fddf903fdac3fbaad9a73c1530d9582",
+    "frontier_after_sha256": "1aa08dd6f80a8578870bb0b7fdc9b054163d22398b09c54a62f6eb253e37ff86",
+    "readiness_delta_sha256": "95eba953aebbc2935b5a4021fd122b54cf1b0873d8609e7a9c98acb9833ae21c",
+    "before_fact_sha256": "46181c75162bb6e9a38b1608c1a5ea51ad5b71a21ca4d42a755a56f3b4d5079f",
+    "after_fact_sha256": "da738add30bb9fa2b2877b20127ff7f6ea455d9889b1afe8c24b15a310ab04e5"
+  },
+  "external_files": {
+    "frontier-before.json": "f847daddb93517d0554ad5f1171ab0d24b2f62b7828fadce061297b804289bd3",
+    "execution.json": "018d167c030ef3b941e6b7c44ee0c88d05ebf4d81c12f65d19351edb483d4005",
+    "transaction.json": "75a80e2429c662837075ab08a1afbf0bdfedecb49d80f8b28e547d2208e762fe",
+    "admission-event.json": "be27bbc991c222b205991776ba529ed2601192ef6cce519c471cfec10a006a9b",
+    "frontier-after.json": "347391fb963683587e171ce747dd5b3e8c7b46a43bca8db8c7fee5acb8d57eeb",
+    "readiness.json": "c37724cf74bf27af6c386460d9a26a3c946accead7f90e8f47ddd25e5f82ab67",
+    "before-fact.json": "3a3949c4521f4e5b932d28175ea2bb29d118bd655da90bee128781a29d1e6555",
+    "after-fact.json": "146a11e44dc14c0c15e57717a585759ac37dae4f88eab62f2a6b26bccef2364d"
+  },
+  "fault_injection": {
+    "boundary": "after-intent",
+    "exit_status": 75,
+    "fact_unchanged_before_recovery": true
+  },
+  "result": {
+    "authoritative_ledger_writes": 1,
+    "fixture_writes": 0,
+    "newly_ready": [
+      "F:ml430-nat-gcd-fib-add-self-5a92d5e3"
+    ],
+    "axiom_footprint": [],
+    "theorem_dependencies": [
+      {
+        "content_sha256": "982c676b0656664e807c5e195bbdbd43376d78dec029bb3c409df661de39edb4",
+        "name": "Axeyum.Autogenesis.fibAddTwo"
+      },
+      {
+        "content_sha256": "c05e6d0986251392c9b1bc9fcc2bd5d66de22c856b9669cdd993e9993d94f4f9",
+        "name": "Nat.add_comm"
+      },
+      {
+        "content_sha256": "4bc8146aabb20e59aa1b0a19f80588ac80656320031f12b61f96da3f94802cf0",
+        "name": "Nat.dvd_add_iff_right"
+      },
+      {
+        "content_sha256": "325197e87bf46cc929ad03177c49e73de7054b446ec22f132c605af4d3c35e94",
+        "name": "Nat.dvd_gcd"
+      },
+      {
+        "content_sha256": "bc5301b4f9dbd08785db127ca6512283d2125321be596b362129d339c80ffa37",
+        "name": "Nat.eq_one_of_dvd_one"
+      },
+      {
+        "content_sha256": "7fa32fac2240feebdb94d6259f2bbab2dbb83059227286303efd7c306e5ad399",
+        "name": "Nat.gcd_dvd_left"
+      },
+      {
+        "content_sha256": "d3214bf5b657f399baa82c9e2817996b64ae26d688308dfa0641a6ed376fdef4",
+        "name": "Nat.gcd_dvd_right"
+      },
+      {
+        "content_sha256": "f81aee8a1d8528ddf8b7be6007efbee190f2208cdef3dcfda9fa03a1f200175d",
+        "name": "Nat.gcd_zero_left"
+      }
+    ],
+    "target_dependency": null
+  },
+  "clean_replay": {
+    "source_commit": "3f96b54635c03c23258600ebc7129d5496d8a0da",
+    "external_root": "/nas3/data/axeyum/autogenesis/replays/3f96b5463-nat-fib-coprime-v1",
+    "external_index_sha256": "89723074470a1a6f1a5816163ce699e3fbc76fd50bc0d04882b84691d1839b4e",
+    "replay_file_sha256": "a0b3dfdbfa482acaa424a00763c59a5f34876aa4f31c6e6fab211b431899912e",
+    "replay_sha256": "fd83e8431c506bedea825f7a9a857190b26ad4e54be0faa9066166aa99845983",
+    "fresh_execution_sha256": "b8d2ee44f3b3d15bf1fb3d0ccd51001f4bda4847ee122b7306cdf394226ebccd",
+    "fresh_transaction_sha256": "a0513b5190208dc4b4e3f9d07e6b2adc476c6df87871f5d5878832fd801f6686",
+    "fresh_event_sha256": "0a392e8077dbd34331bc441399bbd4db6cb940e96170d08f43efe44cc0cb5bdf",
+    "fresh_readiness_delta_sha256": "a5b758977c7ac5823cf3b1d5a61c5371990aa8de1c570cfc841418d070751855"
+  },
+  "reproduction": "python3 scripts/check-autogenesis-statement-reflexivity-admission.py --manifest artifacts/autogenesis/mathlib-nat-fib-coprime-admission-v1.json",
+  "limitations": "This admits one exact compositional train theorem from its immutable dependency-bound receipt. It grants no held-out evaluation credit, does not treat transitive diagnostics as premise authority, and does not prove the newly ready child."
+}
