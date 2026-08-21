@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. The V3 exact-target decline remains sealed with zero target credit. The support-only driver now reconstructs clean zero-divisibility, positive divisor order, and divisibility antisymmetry directly inside r091 using only names resolved in that kernel; before export it composes and replays the official cancellation capsule in the same environment. The new mode is formatting- and Clippy-clean without reading proof-bearing inputs.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. The exact-target decline remains sealed with zero credit. The first official-r091 clean-order run stopped before support submission because pristine r091 has no named `Nat.mul`; the second run was skipped. V2 now freezes the corrected holistic order: compose and replay official cancellation first to establish its arithmetic representation, then resolve every handle and reconstruct all three clean-order supports inside that completed kernel.
 
-**Next:** pass the full Rust publication gate, then execute the official-r091 clean-order mode twice. Require three empty footprints, successful official-cancellation composition, byte-identical exports, and two independent imports per export. Do not submit the exact GCD-shift target in this increment.
+**Next:** implement only the V2 cancellation-first sequencing change, pass the full Rust gate, then execute twice. Require three empty footprints, byte-identical exports, and two independent imports per export. Do not submit the exact GCD-shift target.
 
 <!-- plan-section: landed-changes -->
 
@@ -186,3 +186,5 @@
 | 2026-08-21 | (pending) | First exact-target run declines before target submission at incompatible native and official `Nat.mul_zero` shapes; second run is skipped |
 | 2026-08-21 | (pending) | Official-r091 clean order freezes three target-owned proofs and requires cancellation compatibility before capsule export |
 | 2026-08-21 | (pending) | Official-r091 clean-order mode compiles Clippy-clean with cancellation compatibility checked before any capsule write |
+| 2026-08-21 | (pending) | First official-r091 support run stops before submission because pristine r091 lacks named `Nat.mul`; second run is skipped |
+| 2026-08-21 | (pending) | V2 freezes official cancellation composition before all clean-order handle resolution and proof construction |

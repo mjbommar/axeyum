@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-r091-clean-dvd-antisymm-result",
+  "state": "first-invocation-declined-at-absent-multiplication-second-skipped",
+  "implementation_commit": "23803706ad636f781a657eb5c6fa805cdd628ebc",
+  "evidence_pack": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/23803706a-official-r091-clean-dvd-antisymm-v1", "manifest_sha256": "3e319710b111d876341e61c229e6ba5e58098cd03759a63f2db6682019b7b6b5", "directory_mode": "0555", "file_mode": "0444"},
+  "decline": {"stage": "official-kernel-name-resolution-before-support-submission", "class": "DeclarationAbsent", "name": "Nat.mul", "partial_kernel_published": false},
+  "execution": {"binary_builds": 1, "complete_invocations": 1, "input_stream_reads": 1, "capsule_compositions": 0, "support_submissions": 0, "root_exports": 0, "fresh_imports": 0, "exact_target_submissions": 0, "retries": 0, "second_invocation_skipped": true},
+  "authority": {"support_credit": 0, "target_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_boundary": "Preregister V2 to compose and replay the official cancellation capsule first, then construct all clean-order supports inside that established official arithmetic representation.",
+  "limitations": "No support or target theorem was submitted or credited."
+}
