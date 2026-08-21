@@ -125,6 +125,7 @@ now. Nothing was deleted.
 | 2026-08-21 | `30d2c89b6` | Nonrendering parameter audit selects the official-representation successor GCD equation and typechecks all seven explicit inputs |
 | 2026-08-21 | `527508a56` | Target-owned `gcd_dvd_left`, `gcd_dvd_right`, and `dvd_gcd` reconstruct twice with byte-identical empty-footprint evidence |
 | 2026-08-21 | `71ba9fb1c` | Consecutive-Fibonacci coprimality reconstructs target-natively without `Iff` or foreign GCD convenience theorems |
+| 2026-08-21 | `dfa79618c` | Exact `Nat.gcd_fib_add_self` reconstructs twice with byte-identical empty-footprint evidence over the target-owned stack |
 | 2026-08-21 | `fc191b3e5` | Full stable statement-survival atlas is preregistered before the one authorized comparison pass |
 | 2026-08-21 | `7edebb579` | Full Nat/Int atlas classifies all 9,839 v4.30/v4.32.1 union names and isolates representation-wide drift |
 | 2026-08-21 | `030d82adb` | First proof-isolated joint quotient/remainder reconstruction fails closed with a measured `propext` footprint |
@@ -1093,9 +1094,9 @@ budget guard to a real remaining-time attempt (this alone would move
 then `Fpa2Bv` certification, which is what both FP rows actually need for
 dominance.
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains proved; its ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. The target-owned divisibility and GCD layers are closed, and target-native consecutive-Fibonacci coprimality now reconstructs twice using exactly eight explicit premises, direct all-natural cancellation, no `Iff`, byte-identical exports, four independent imports, and an empty footprint. No GCD-shift or ledger credit is claimed yet.
+**Status:** `Nat.gcd_fib_add_self` now reconstructs twice from the target-owned divisibility, GCD, Fibonacci-addition, coprimality, and balanced-Bézout cancellation stack. Both exact submissions have empty footprints, export the same 1,031,934-byte capsule, and survive four independent imports. The theorem has durable target credit; `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open until its separately registered crash-safe ledger admission succeeds.
 
-**Next:** compose the target-native coprimality capsule with the accepted addition, cancellation, clean-order, and GCD supports; retarget the already constructed exact proof to the target-owned GCD/divisibility names and execute two fresh `Nat.gcd_fib_add_self` submissions.
+**Next:** register and execute the crash-safe fact transaction for `F:ml430-nat-gcd-fib-add-self-5a92d5e3`, bind the exact capsule and empty footprint, then regenerate and measure the newly ready fact frontier before selecting the next autonomous child.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
