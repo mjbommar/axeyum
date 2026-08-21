@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "id": "F:nra-refutations-reconstruct-over-constructed-reals",
+  "title": "Two QF_NRA refutation certificates reconstruct to a kernel-checked Lean False over the CONSTRUCTED reals",
+  "statement": "Monomial-divisibility and degree-2 Positivstellensatz QF_NRA refutations each emit a Lean term whose type the trusted kernel infers to False, built over CReal (the Bishop setoid of regular rational sequences, trusted surface 0) rather than the axiomatized AxReal package, and classified as theory reconstructions rather than structural attestations.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "(declare-fun a () Real)\n(declare-fun b () Real)\n(declare-fun c () Real)\n(declare-fun d () Real)\n(declare-fun e () Real)\n(assert (= (* a b c d) 0))\n(assert (not (= (* a b c d e) 0)))",
+    "fragment": "QF_NRA",
+    "free_symbols": [
+      "a",
+      "b",
+      "c",
+      "d",
+      "e"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [],
+  "axiom_footprint": [
+    "creal-prelude.constructed-carrier",
+    "axeyum-lean-kernel.type-checker"
+  ],
+  "evidence": [
+    {
+      "id": "nra-refutations-reconstruct-over-constructed-reals-1",
+      "kind": "kernel-term",
+      "supports": "Nothing in the suite failed. Anchored on `0 failed` rather than on a test name plus `ok`, because the latter contains no digit or boolean and so survives every mutation the scaffolder applies \u2014 it would have gone into the ledger as a checker that cannot discriminate.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-solver --features full --lib reconstruct::arithmetic 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'test result: ok\\. [0-9]+ passed; 0 failed'",
+      "notes": "Verified discriminating by scripts/new-fact.py: the pattern matches the real output and fails on mutated output (`0 failed` -> `1 failed`)."
+    },
+    {
+      "id": "nra-refutations-reconstruct-over-constructed-reals-2",
+      "kind": "kernel-term",
+      "supports": "BOTH reconstructions check over the CONSTRUCTED reals, not one. The two named tests build `CReal` explicitly via `try_new_over_constructed_reals_reporting`; `LraReconstructCtx::new()` would build `AxReal` and its 30 assumptions, and the terms would still infer to `False` there. Without pinning the count at 2, one route regressing onto the axiomatized carrier would leave this green.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-solver --features full --lib reconstruct::arithmetic 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^test reconstruct::arithmetic::(zero_product|product_positivstellensatz)::.*constructed_reals \\.\\.\\. ok$')\" = 2",
+      "notes": "POPULATION-ONLY, deliberately, and `--allow-population-only` was passed to say so: no mutation of the output moves the count. It catches a test disappearing or being renamed, which is the failure mode that matters here -- a carrier assertion silently dropped. It does not catch a value changing inside a surviving row; the `0 failed` row above covers that."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-08-20",
+    "established_by": "agent-capability-assurance",
+    "source": "crates/axeyum-solver/src/reconstruct/arithmetic/zero_product.rs (commit bc4b6f589); crates/axeyum-solver/src/reconstruct/arithmetic/product_positivstellensatz.rs (commit 71f1c29a0)"
+  },
+  "notes": "WHAT THIS DOES NOT SAY. (1) It does not say the OTHER four certificate kinds reconstruct: monomial-bound, Handelman, string-length and int-univariate-poly have no Lean proof yet. (2) It does not say the hypotheses are bound to the query's `(assert ...)` lines. They are minted from the certificate, and that binding is the certificate's own two-stage checker, which re-scans the original assertions. It is the same split the hypothesis-binding audit measures across the LRA routes. (3) It does not say an EXTERNAL checker read the module -- the kernel here is this repository's, so this is the self-checker tier, not the external-artifact tier. (4) Scope is deliberately narrow: the zero-product route handles the DIRECT form only (the disjunctive form needs kernel case analysis) and the product route handles a `Negative` refuted atom only (`Nonpositive` needs `mul_pos`). Both declines have tests. WHY THE CARRIER IS THE POINT. `AxReal` is the legacy axiomatized ordered field and carries this repository's only nonzero trusted-surface row, `axreal: axiom=30`. A refutation checked there rests on all 30. `CReal` is constructed and measures 0 (ADR-0512). Both terms would type-check over either, so the distinction lives entirely in which context the test builds -- which is why the test names the carrier and why the count is pinned."
+}

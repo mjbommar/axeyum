@@ -9,7 +9,7 @@
       "baseline_outcome": "unsat",
       "decision_backend": "axeyum-sat-bv rustsat-batsat",
       "dominant_candidate": true,
-      "elapsed_ms": 5.081657,
+      "elapsed_ms": 1.3710129999999998,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -20,12 +20,12 @@
       "lean_fragment": "TermLevelEnum",
       "lean_module_bytes": 3161,
       "phase_timings_ms": {
-        "check_evidence": 0.008628,
-        "lean_reconstruction": 4.503235,
-        "parse_evidence": 0.20332099999999997,
-        "parse_lean": 0.033318,
-        "produce_evidence": 0.298826,
-        "read": 0.018018
+        "check_evidence": 0.004396,
+        "lean_reconstruction": 0.591894,
+        "parse_evidence": 0.179313,
+        "parse_lean": 0.036481,
+        "produce_evidence": 0.25593499999999997,
+        "read": 0.045682
       },
       "trust_holes": [],
       "trust_steps": [
@@ -36,48 +36,75 @@
       ]
     },
     {
-      "audit_outcome": "timeout",
-      "audit_phase": "produce-evidence",
-      "baseline_matches_audit": null,
+      "audit_outcome": "unsat",
+      "audit_phase": "complete",
+      "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
+      "decision_backend": "auto-solve",
       "dominant_candidate": false,
-      "elapsed_ms": 15000.161001,
+      "elapsed_ms": 25.136437,
       "evidence_certified": false,
+      "evidence_check_mode": "not-applicable-uncertified",
       "evidence_checked": false,
-      "evidence_kind": null,
+      "evidence_kind": "bare-unsat",
       "file": "corpus/public-curated/non-incremental/QF_BVFP/bitwuzla-regress-clean/solver__fp__Float-no-simp3-main.smt2",
       "lean_checked": false,
-      "lean_error": null,
+      "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
       "lean_fragment": null,
       "lean_module_bytes": null,
-      "timeout_phase": "produce-evidence",
-      "timeout_phase_elapsed_ms": 14999.352856,
-      "trust_holes": [
-        "timeout"
-      ],
+      "phase_timings_ms": {
+        "check_evidence": 0.000155,
+        "lean_reconstruction": 1.71427,
+        "parse_evidence": 0.58357,
+        "parse_lean": 0.30438,
+        "produce_evidence": 21.078923,
+        "read": 0.024524999999999998
+      },
+      "trust_holes": [],
       "trust_steps": []
     },
     {
-      "audit_outcome": "timeout",
-      "audit_phase": "lean-reconstruction",
-      "baseline_matches_audit": null,
+      "audit_outcome": "unsat",
+      "audit_phase": "complete",
+      "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
+      "decision_backend": "axeyum-sat-bv rustsat-batsat",
       "dominant_candidate": false,
-      "elapsed_ms": 15000.149182,
-      "evidence_certified": false,
-      "evidence_checked": false,
-      "evidence_kind": null,
+      "elapsed_ms": 9.517434,
+      "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
+      "evidence_checked": true,
+      "evidence_kind": "drat-unsat",
       "file": "corpus/public-curated/non-incremental/QF_BVFP/bitwuzla-regress-clean/solver__fp__fp_fromsbv.smt2",
       "lean_checked": false,
-      "lean_error": null,
+      "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
       "lean_fragment": null,
       "lean_module_bytes": null,
-      "timeout_phase": "lean-reconstruction",
-      "timeout_phase_elapsed_ms": 14991.709381,
+      "phase_timings_ms": {
+        "check_evidence": 0.00209,
+        "lean_reconstruction": 2.275794,
+        "parse_evidence": 0.987099,
+        "parse_lean": 0.513991,
+        "produce_evidence": 3.838284,
+        "read": 0.021826
+      },
       "trust_holes": [
-        "timeout"
+        "bit-blast"
       ],
-      "trust_steps": []
+      "trust_steps": [
+        {
+          "certified": false,
+          "id": "bit-blast"
+        },
+        {
+          "certified": true,
+          "id": "tseitin"
+        },
+        {
+          "certified": true,
+          "id": "sat-refutation"
+        }
+      ]
     },
     {
       "audit_outcome": "sat",
@@ -86,7 +113,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "axeyum-sat-bv rustsat-batsat",
       "dominant_candidate": true,
-      "elapsed_ms": 0.249576,
+      "elapsed_ms": 0.178144,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -97,12 +124,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.007390000000000001,
+        "check_evidence": 0.0066619999999999995,
         "lean_reconstruction": null,
-        "parse_evidence": 0.073502,
+        "parse_evidence": 0.042874,
         "parse_lean": null,
-        "produce_evidence": 0.13386699999999999,
-        "read": 0.032329000000000004
+        "produce_evidence": 0.10748500000000001,
+        "read": 0.018968
       },
       "trust_holes": [],
       "trust_steps": []
@@ -114,7 +141,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "axeyum-sat-bv rustsat-batsat",
       "dominant_candidate": true,
-      "elapsed_ms": 0.290489,
+      "elapsed_ms": 0.254372,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -125,12 +152,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.0024619999999999998,
+        "check_evidence": 0.0025629999999999997,
         "lean_reconstruction": null,
-        "parse_evidence": 0.024192,
+        "parse_evidence": 0.023353000000000002,
         "parse_lean": null,
-        "produce_evidence": 0.248426,
-        "read": 0.013516
+        "produce_evidence": 0.215369,
+        "read": 0.010973
       },
       "trust_holes": [],
       "trust_steps": []
@@ -142,7 +169,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "axeyum-sat-bv rustsat-batsat",
       "dominant_candidate": true,
-      "elapsed_ms": 12.069702,
+      "elapsed_ms": 13.318389,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -153,12 +180,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.082073,
+        "check_evidence": 0.087829,
         "lean_reconstruction": null,
-        "parse_evidence": 0.31832,
+        "parse_evidence": 0.205305,
         "parse_lean": null,
-        "produce_evidence": 11.655708,
-        "read": 0.010719
+        "produce_evidence": 13.011217,
+        "read": 0.00988
       },
       "trust_holes": [],
       "trust_steps": []
@@ -170,7 +197,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 2.857862,
+      "elapsed_ms": 2.9953369999999997,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -181,12 +208,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.014829,
+        "check_evidence": 0.015003,
         "lean_reconstruction": null,
-        "parse_evidence": 0.07036200000000001,
+        "parse_evidence": 0.08145899999999999,
         "parse_lean": null,
-        "produce_evidence": 2.743059,
-        "read": 0.027326
+        "produce_evidence": 2.849889,
+        "read": 0.046095
       },
       "trust_holes": [],
       "trust_steps": []
@@ -194,10 +221,12 @@
   ],
   "limit": null,
   "logic": "QF_BVFP",
+  "prelude_warm_ms": 33281.968806000004,
+  "prelude_warmed": true,
   "slice": "qf-bvfp-bitwuzla-regress-clean-solver-vs-z3-10s.json",
   "source_revision": {
     "dirty": false,
-    "sha": "2e207eba5",
+    "sha": "5a25f247a",
     "source": "lane-snapshot"
   },
   "summary": {
@@ -208,12 +237,12 @@
     "baseline_mismatches": 0,
     "dominant_candidates": 5,
     "dominant_pct_audited": 71.42857142857143,
-    "evidence_certified": 5,
-    "evidence_checked": 5,
+    "evidence_certified": 6,
+    "evidence_checked": 6,
     "instances": 8,
     "lean_checked_unsat": 1,
     "lean_unsat_pct": 33.333333333333336,
-    "timeouts": 2
+    "timeouts": 0
   },
   "timeout_ms": 10000,
   "version": 3
