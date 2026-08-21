@@ -182,6 +182,7 @@ compounding, not automation theatre.
 | [Proof-isolated Euclidean construction capsule](83-proof-isolated-euclidean-construction-capsule.md) | Can a fresh construction context receive every allowed statement and audited identity without being exposed to upstream proof material? |
 | [Current-stable Mathlib statement comparison plan](84-current-stable-mathlib-statement-comparison-plan.md) | Which exact stable release and bounded proof-free process should measure whether the selected v4.30 statement surface survives upstream evolution? |
 | [Current-stable Mathlib statement comparison result](85-current-stable-mathlib-statement-comparison-result.md) | How many selected statements survive v4.30 to v4.32.1 unchanged, and which exact names expose upstream drift? |
+| [Full Mathlib statement-survival atlas plan](86-full-mathlib-statement-survival-atlas-plan.md) | How should all 9,839 union names be compared structurally without changing the frozen 240-candidate population? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
