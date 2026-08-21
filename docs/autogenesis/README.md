@@ -227,6 +227,7 @@ compounding, not automation theatre.
 | [Integer Fibonacci recurrence support audit plan](199-int-fib-recurrence-support-audit-plan.md) | Are the two proposed recurrence supports actually admissible, or must the bottom-up chain construct them first? |
 | [Integer Fibonacci support audit failure](200-int-fib-recurrence-support-audit-failure.md) | Did the parent closure contain a complete auditable support pair, and what fail-closed export step follows when it did not? |
 | [Fresh integer Fibonacci recurrence root export plan](201-int-fib-recurrence-root-export-plan.md) | Can a dedicated two-root export qualify the open natural-cast and integer-recurrence premises without laundering them? |
+| [Direct `Int.fib_natCast` construction plan](202-int-fib-natcast-construction-plan.md) | Is the dependency-free natural-cast bridge definitionally reconstructible as the first honest integer Fibonacci leaf? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
