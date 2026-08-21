@@ -305,6 +305,23 @@ pub struct Kernel {
     /// Open expressions are memoised by the context that produced them. See
     /// `Kernel::whnf_no_unfolding` for the full argument.
     whnf_cache: (u64, HashMap<ExprId, ExprId>),
+    /// **Full-δ** weak-head normal forms of **closed** expressions, for exactly
+    /// one declaration-environment revision.
+    ///
+    /// `whnf_cache` above memoises one δ-free step; this memoises the whole
+    /// δ-unfolding loop on top of it. The two are not redundant: a repeated
+    /// `whnf_core` of the same expression re-walks its entire δ chain, paying a
+    /// cache probe per link, and every link that δ-unfolds mints a *fresh*
+    /// expression whose own δ-free reduction is then re-attempted. The
+    /// literal-`Nat` rules make that chain hot — `Kernel::reduce_nat_binop`
+    /// calls `whnf_core` on **both** arguments of every `Nat.add`/`Nat.mul`/
+    /// `Nat.div`/… application it meets, from inside the δ-free normaliser.
+    /// Measured on `build_creal_prelude` (2026-08-20): 1.19 M such calls, 575
+    /// of which produced a literal.
+    ///
+    /// Closed only, for exactly the reason spelled out on `whnf_cache`: the key
+    /// has no local-context component. See `Kernel::whnf_core`.
+    whnf_core_cache: (u64, HashMap<ExprId, ExprId>),
     /// How many times reduction has consulted a [`LocalContext`].
     ///
     /// A tripwire, not a statistic. `Kernel::whnf_no_unfolding` asserts this
@@ -398,6 +415,7 @@ impl Kernel {
             expr_intern,
             infer_closed_cache,
             whnf_cache,
+            whnf_core_cache,
             reduction_ctx_reads,
             nat_binop_cache,
             string_literal_cache,
@@ -421,6 +439,8 @@ impl Kernel {
             && infer_closed_cache.is_empty()
             && whnf_cache.0 == 0
             && whnf_cache.1.is_empty()
+            && whnf_core_cache.0 == 0
+            && whnf_core_cache.1.is_empty()
             && *reduction_ctx_reads == 0
             && nat_binop_cache.is_none()
             && string_literal_cache.is_none()
@@ -472,6 +492,7 @@ impl Kernel {
         self.expr_intern = ExprInterner::default();
         self.infer_closed_cache = HashMap::new();
         self.whnf_cache = (self.env.revision(), HashMap::new());
+        self.whnf_core_cache = (self.env.revision(), HashMap::new());
         self.export_only = true;
     }
 
