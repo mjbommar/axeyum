@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction now includes unconditional official balanced Bézout, official coprime-factor divisibility cancellation, and clean divisibility antisymmetry. All four exact supports—clean antisymmetry, official cancellation, Fibonacci addition, and official Fibonacci coprimality—now exist as sealed root-selected capsules: each exported twice byte-identically, each output independently reimported twice, all declaration identities unchanged, and every complete footprint empty. The proof-free result checker binds the external manifest, all eight capsule files, all eight run records, read-only modes, and the zero-target-credit boundary.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. All four exact supports—clean antisymmetry, official cancellation, Fibonacci addition, and official Fibonacci coprimality—remain sealed, byte-reproducible, independently reimported, identity-stable, and empty-footprint. The first exact-target driver build stopped before executable creation at four Clippy naming diagnostics and three Rust borrow conflicts; it read zero streams and submitted zero theorems. V2 now freezes only those source-level corrections with the mathematical route and authority unchanged.
 
-**Next:** implement the preregistered exact `Nat.gcd_fib_add_self` driver over r091 and only the four sealed support capsules. Reconstruct a clean local `gcd_comm`, prove both divisibility directions, close equality with clean antisymmetry, and retain zero target credit unless two fresh complete runs agree with empty footprints.
+**Next:** implement the V2 source-level corrections, require one Clippy-clean build, then run the exact `Nat.gcd_fib_add_self` driver exactly twice with no retries. Retain zero target credit unless both complete outputs agree and the target footprint is empty.
 
 <!-- plan-section: landed-changes -->
 
@@ -178,3 +178,5 @@
 | 2026-08-21 | `975bf5b47` | Exact Fibonacci coprimality gains a root-selected fail-if-present capsule boundary with two independent imports before write |
 | 2026-08-21 | (pending) | Four portable support roots export twice byte-identically, reimport sixteen raw times, and seal with unchanged identities and empty footprints |
 | 2026-08-21 | (pending) | Exact Fibonacci GCD-shift construction freezes induction, clean commutativity, mutual divisibility, and two zero-retry submissions before code |
+| 2026-08-21 | (pending) | First exact-target source build stops before execution at bounded naming and borrow diagnostics with zero stream reads or submissions |
+| 2026-08-21 | (pending) | V2 freezes only compiler-level corrections while preserving the exact proof route and zero-retry trusted-gate budget |

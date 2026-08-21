@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-exact-result",
+  "state": "first-driver-build-declined-before-stream-read-or-submission-no-retry",
+  "plan": {
+    "path": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-plan-v1.json",
+    "sha256": "8124c428e2092945a1a4e1fd9e7be321e21948fe5f9561d5d33eab103cb67d13"
+  },
+  "attempted_source": {
+    "path": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+    "sha256": "e2e60c3aa113395fbd55d1b582418c4b92c7e6e8a3bddbff384afc379e851179",
+    "retained_in_git": false
+  },
+  "decline": {
+    "stage": "rust-clippy-before-executable",
+    "clippy_similar_names": 4,
+    "clippy_many_single_char_names": 1,
+    "rust_mutable_borrow_conflicts": 3,
+    "interpretation": "The proof driver source did not compile. No proof-bearing input was opened and no kernel operation ran.",
+    "executable_produced": false
+  },
+  "execution": {
+    "driver_builds": 1,
+    "input_stream_reads": 0,
+    "capsule_compositions": 0,
+    "local_gcd_comm_submissions": 0,
+    "exact_target_submissions": 0,
+    "complete_invocations": 0,
+    "retries": 0
+  },
+  "authority": {
+    "target_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Preregister V2 with only the reported naming and borrow corrections before reconstructing the same frozen proof route.",
+  "limitations": "This compiler decline establishes no local gcd commutativity theorem, exact target, receipt, fact transition, evaluation, or ledger credit."
+}
