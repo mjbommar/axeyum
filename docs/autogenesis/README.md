@@ -224,6 +224,7 @@ compounding, not automation theatre.
 | [`Int.fib_neg_natCast` dependency audit result](196-int-fib-neg-natcast-dependency-audit-result.md) | Does the negative-natural surface retain clean transport, and which parity/Fibonacci core remains to replace? |
 | [Private `Int.fib_of_odd` root audit plan](197-int-fib-of-odd-private-root-audit-plan.md) | What kernel footprint and dependency surface sit beneath the one private theorem supporting the remaining Fibonacci core? |
 | [Private `Int.fib_of_odd` root audit result](198-int-fib-of-odd-private-root-audit-result.md) | Is the private root reusable mathematics, or an automation expansion that should be replaced by direct recurrence? |
+| [Integer Fibonacci recurrence support audit plan](199-int-fib-recurrence-support-audit-plan.md) | Are the two proposed recurrence supports actually admissible, or must the bottom-up chain construct them first? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

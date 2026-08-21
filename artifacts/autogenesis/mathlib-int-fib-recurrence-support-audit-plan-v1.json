@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-recurrence-support-audit-plan",
+  "state": "preregistered-before-single-nonrendering-reread-no-reconstruction-authority",
+  "policy_version": "int-fib-recurrence-support-audit-v1",
+  "inputs": {
+    "decision_result": {"path": "artifacts/autogenesis/mathlib-int-fib-of-odd-private-root-audit-result-v1.json", "sha256": "fce124c65d3595a3d0a3ada24080c8804356fac184c0236a4155389d32815eb6"},
+    "proof_bearing_stream": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-root-audit-v1/int-fib-neg.ndjson", "bytes": 14596588, "sha256": "7df7f5dce9c7159f9c468b6f47f13be3e589fb2c1559af554ce73cc48b18730e", "mode": "0444", "textual_read_allowed": false}
+  },
+  "ordered_roots": ["Int.fib_natCast", "Int.fib_add_two"],
+  "target_facts": ["F:ml430-int-fib-natcast-d5886be4", "F:ml430-int-fib-add-two-739358dd"],
+  "fixed_measurement": {"tool_path": "crates/axeyum-lean-import/examples/theorem_footprint_batch_audit.rs", "tool_sha256": "38e40236fec86f1080af52bafb9394f9f1505ad161dae96e9c48979d00b1094a", "proof_terms_types_or_values_may_be_rendered": false},
+  "decision_rule": {"next": "make Int.fib_natCast the first construction target unless both roots are already empty-footprint; never treat open ledger facts as admitted premises", "authorize_successor_in_this_increment": false},
+  "budget": {"max_exporter_invocations": 0, "max_batch_importer_runs": 1, "max_proof_bearing_stream_reads": 1, "max_retries": 0, "max_reconstruction_source_compilations": 0, "max_new_theorem_submissions": 0, "max_exact_target_submissions": 0, "max_executor_invocations": 0},
+  "authority": {"proof_bodies_readable_by_model": false, "theorem_types_readable_by_model": false, "theorem_values_readable_by_model": false, "reconstruction_allowed": false, "support_theorem_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "output": "artifacts/autogenesis/mathlib-int-fib-recurrence-support-audit-result-v1.json"
+}
