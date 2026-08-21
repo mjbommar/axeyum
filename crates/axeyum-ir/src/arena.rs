@@ -1181,12 +1181,23 @@ impl TermArena {
 
     /// `bvnego` — negation overflow: `a` is the signed minimum (`−2^(w−1)`).
     ///
+    /// The signed-minimum constant is built with [`crate::wide::WideUint`] above
+    /// 128 bits, exactly as [`TermArena::bv_umulo`] builds its all-ones constant.
+    /// `1u128 << (w - 1)` is **not** a usable spelling here: legal widths run to
+    /// [`MAX_BV_WIDTH`] (65536), and Rust masks a shift amount mod 128, so `w =
+    /// 129` produced `1` in release — a silently wrong term, not a panic — while
+    /// debug panicked. Fixed 2026-08-21.
+    ///
     /// # Errors
     ///
     /// Returns [`IrError`] from the builders.
     pub fn bv_nego(&mut self, a: TermId) -> Result<TermId, IrError> {
         let w = self.expect_bv(a)?;
-        let min = self.bv_const(w, 1u128 << (w - 1))?;
+        let min = if w > 128 {
+            self.wide_bv_const(crate::wide::WideUint::from_u128(1, w).shl(w - 1))
+        } else {
+            self.bv_const(w, 1u128 << (w - 1))?
+        };
         self.eq(a, min)
     }
 

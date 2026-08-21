@@ -1617,6 +1617,105 @@ fn bv_overflow_predicates_match_reference_exhaustively() {
     }
 }
 
+/// `bv_nego` above 128 bits.
+///
+/// The old spelling was `1u128 << (w - 1)`, which Rust masks mod 128: at
+/// `w = 129` release builds got `1u128 << 0 == 1` — a *silently wrong* term
+/// asserting `x == 1` where `x == 2^128` was meant — while debug builds
+/// panicked. Legal widths run to `MAX_BV_WIDTH = 65536`, so widths 1..=4 (the
+/// only ones the exhaustive predicate sweep covers) could never see it.
+///
+/// The `x = 1` row below is the one that fails under the old code in *release*;
+/// every row fails it in debug, by panic.
+#[test]
+fn wide_bv_nego_is_the_wide_signed_minimum_not_a_masked_shift() {
+    // `2^k` as a `width`-bit wide value.
+    let pow2 = |width: u32, k: u32| WideUint::from_u128(1, width).shl(k);
+
+    for w in [129u32, 130, 191, 192, 193, 256, 4096] {
+        let mut a = TermArena::new();
+        let asg = Assignment::new();
+        let min = pow2(w, w - 1);
+        let cases: [(WideUint, bool); 4] = [
+            // The signed minimum: negating it overflows.
+            (min.clone(), true),
+            // One below it: the largest positive, negates fine.
+            (min.sub(&WideUint::from_u128(1, w)), false),
+            // The value the masked shift collapsed to at w = 129.
+            (WideUint::from_u128(1, w), false),
+            (WideUint::zero(w), false),
+        ];
+        for (value, want) in cases {
+            let x = a.wide_bv_const(value.clone());
+            let nego = a.bv_nego(x).unwrap();
+            assert_eq!(
+                eval(&a, nego, &asg).unwrap(),
+                Value::Bool(want),
+                "bvnego w={w} on a wide operand"
+            );
+        }
+
+        // Structural: the constant `bv_nego` compares against must BE `2^(w-1)`,
+        // full width. Checking the verdict alone would pass on any constant that
+        // happens to miss all four probes above.
+        let x = a.bv_var("x", w).unwrap();
+        let nego = a.bv_nego(x).unwrap();
+        let TermNode::App { args, .. } = a.node(nego) else {
+            unreachable!("bvnego should be an application");
+        };
+        let konst = args
+            .iter()
+            .copied()
+            .find(|&t| !matches!(a.node(t), TermNode::Symbol(_)))
+            .expect("bvnego compares against a constant");
+        match a.node(konst) {
+            TermNode::WideBvConst(value) => {
+                assert_eq!(value.width(), w, "signed-minimum constant width, w={w}");
+                assert_eq!(value, &min, "signed-minimum constant value, w={w}");
+            }
+            other => panic!("w={w}: signed minimum should be a wide constant, got {other:?}"),
+        }
+    }
+}
+
+/// The `w <= 128` half of the same guard: 128 is representable in a `u128` and
+/// must stay on the narrow path, so a fix for the wide case cannot quietly
+/// change the boundary.
+#[test]
+fn bv_nego_at_128_bits_stays_on_the_narrow_path() {
+    let mut a = TermArena::new();
+    let asg = Assignment::new();
+    let min = 1u128 << 127;
+    for (value, want) in [
+        (min, true),
+        (min - 1, false),
+        (1u128, false),
+        (0u128, false),
+    ] {
+        let x = a.bv_const(128, value).unwrap();
+        let nego = a.bv_nego(x).unwrap();
+        assert_eq!(
+            eval(&a, nego, &asg).unwrap(),
+            Value::Bool(want),
+            "bvnego w=128 x={value:#x}"
+        );
+    }
+    let x = a.bv_var("x", 128).unwrap();
+    let nego = a.bv_nego(x).unwrap();
+    let TermNode::App { args, .. } = a.node(nego) else {
+        unreachable!("bvnego should be an application");
+    };
+    let konst = args
+        .iter()
+        .copied()
+        .find(|&t| !matches!(a.node(t), TermNode::Symbol(_)))
+        .expect("bvnego compares against a constant");
+    assert!(
+        matches!(a.node(konst), TermNode::BvConst { width: 128, value } if *value == min),
+        "128-bit signed minimum must stay a narrow BvConst"
+    );
+}
+
 #[test]
 fn wide_bv_umulo_uses_word_width_division_encoding() {
     let mut a = TermArena::new();
