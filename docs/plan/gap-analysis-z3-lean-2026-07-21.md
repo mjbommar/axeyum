@@ -1,5 +1,11 @@
 # Scoped Z3 and Lean gap analysis — 2026-07-21
 
+> **Scope note (added 2026-08-21).** This is the **evidence** map — proof
+> denominators, dominance audits, trust holes — and remains current for that.
+> The **capability** map (what axeyum can decide, against Z3/cvc5/Bitwuzla) is
+> [gap-analysis-smt-solvers-2026-08-21.md](gap-analysis-smt-solvers-2026-08-21.md).
+
+
 Status: **current evidence map and research queue**
 
 This document replaces monolithic “Z3 + Lean parity” as an operational status

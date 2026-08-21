@@ -1,7 +1,15 @@
 # Z3/cvc5 gap analysis (2026-07-07)
 
-> **Historical / superseded.** The current scoped evidence map is
+> **Historical / superseded.** The current CAPABILITY map is
+> [gap-analysis-smt-solvers-2026-08-21.md](gap-analysis-smt-solvers-2026-08-21.md);
+> the current scoped EVIDENCE map is
 > [gap-analysis-z3-lean-2026-07-21.md](gap-analysis-z3-lean-2026-07-21.md).
+>
+> Two of this document's seven gaps are now known to have been mis-stated,
+> in our own disfavour, and the 08-21 audit scores all seven: Gap 1's
+> "Z3 decides all 113 p4dfa in <=1s" was false (both solvers decide 8),
+> and Gap 2's "quantified LIA/UF sit at 0%" was reading an artifact that
+> could not fail -- measured 2026-08-21, quantified LIA is 12/12.
 > This document's original p4dfa premise was corrected by ADR-0059: the
 > registered 20-second controls decide 8/113 for Axeyum and 8/113 for the Z3
 > crate on different sets, rather than a Z3 sweep. Retain this file for the
