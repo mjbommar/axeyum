@@ -253,7 +253,10 @@ fn a_context_scoped_normal_form_ages_out_with_the_environment_revision() {
     let constant = k.const_(name, vec![]);
     let variable = k.fvar(0);
     let open = k.app(constant, variable);
-    assert!(k.has_fvars(open), "the probe must reach the context-scoped half");
+    assert!(
+        k.has_fvars(open),
+        "the probe must reach the context-scoped half"
+    );
 
     let mut ctx = LocalContext::new();
     assert_eq!(
@@ -1263,5 +1266,120 @@ fn local_let_zeta_fires_in_whnf_core_and_only_a_hit_is_a_context_read() {
         reduced, expected,
         "ζ must re-apply the spine, as Lean's `whnf_core` does through its \
          `App` head"
+    );
+}
+
+/// An **open** entry can δ-unfold to a **closed** link, and that link is stored
+/// in the kernel-global half of the memo — the half whose key has no local
+/// context component at all.
+///
+/// This is the path the entry-gated tripwire could not see. `whnf_core` routes
+/// each chain link into the split memo by *its own* closedness, so a walk that
+/// starts open and closes partway through writes into both halves; asserting
+/// only `entry_closed` looks at neither of those writes. Measured 2026-08-20,
+/// one `build_creal_prelude` routes 6 links this way, so the per-link form of
+/// the tripwire is guarding live traffic rather than a hypothetical.
+///
+/// The probe uses a two-step δ chain (`openToClosedHead` → `closedTail` →
+/// `Prop`) so the closed link is a genuine minted intermediate: `closedTail` is
+/// produced by unfolding, appears nowhere in the entry, and is exactly the kind
+/// of expression the chain memo exists to catch. Deleting the chain loop, or
+/// routing links by the entry's closedness instead of their own, each leaves one
+/// of these assertions failing.
+#[test]
+fn an_open_entry_delta_unfolds_to_a_closed_link_stored_context_free() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let zero = k.level_zero();
+    let one = k.level_succ(zero);
+    let type_ = k.sort(one);
+    let prop = k.sort(zero);
+
+    // `def closedTail : Type := Prop`
+    let tail_name = k.name_str(anon, "closedTail");
+    k.add_declaration(Declaration::Definition {
+        name: tail_name,
+        uparams: vec![],
+        ty: type_,
+        value: prop,
+        hint: crate::env::ReducibilityHint::Regular(0),
+    })
+    .expect("the tail definition admits");
+    let tail = k.const_(tail_name, vec![]);
+
+    // `def openToClosedHead : Type := closedTail`
+    let head_name = k.name_str(anon, "openToClosedHead");
+    k.add_declaration(Declaration::Definition {
+        name: head_name,
+        uparams: vec![],
+        ty: type_,
+        value: tail,
+        hint: crate::env::ReducibilityHint::Regular(1),
+    })
+    .expect("the head definition admits");
+    let head = k.const_(head_name, vec![]);
+
+    // `(fun (_ : Prop) => openToClosedHead) x` — open, because of `x`.
+    let body = k.lam(anon, prop, head, BinderInfo::Default);
+    let mut ctx = LocalContext::new();
+    let fvar = ctx.fresh_fvar();
+    ctx.push(LocalDecl {
+        fvar,
+        name: anon,
+        ty: prop,
+        info: BinderInfo::Default,
+    });
+    let variable = k.fvar(fvar);
+    let entry = k.app(body, variable);
+    assert!(k.has_fvars(entry), "the entry must be open");
+    assert!(!k.has_fvars(tail), "the link must be closed");
+
+    assert_eq!(
+        k.whnf_core(entry, &mut ctx),
+        prop,
+        "the chain runs beta, then two delta steps, to `Prop`"
+    );
+
+    assert!(
+        ctx.whnf_core_cache.1.contains_key(&entry),
+        "the open entry belongs to the context-scoped half"
+    );
+    assert!(
+        !k.whnf_core_cache.1.contains_key(&entry),
+        "an open expression must never reach the context-free half"
+    );
+    assert_eq!(
+        k.whnf_core_cache.1.get(&tail).copied(),
+        Some(prop),
+        "the closed link minted by delta-unfolding the open entry is memoised \
+         context-free — this is the write the entry-gated tripwire never saw"
+    );
+
+    // What the context-free key claims, checked rather than argued: the stored
+    // normal form must be what an empty context computes.
+    let mut fresh = LocalContext::new();
+    let mut pristine = Kernel::new();
+    let pristine_anon = pristine.anon();
+    let pristine_name = pristine.name_str(pristine_anon, "closedTail");
+    let pristine_type = {
+        let z = pristine.level_zero();
+        let o = pristine.level_succ(z);
+        pristine.sort(o)
+    };
+    let pristine_prop = pristine.sort_zero();
+    pristine
+        .add_declaration(Declaration::Definition {
+            name: pristine_name,
+            uparams: vec![],
+            ty: pristine_type,
+            value: pristine_prop,
+            hint: crate::env::ReducibilityHint::Regular(0),
+        })
+        .expect("the tail definition admits");
+    let pristine_tail = pristine.const_(pristine_name, vec![]);
+    assert_eq!(
+        pristine.whnf_core(pristine_tail, &mut fresh),
+        pristine_prop,
+        "a closed expression normalises the same with no context at all"
     );
 }

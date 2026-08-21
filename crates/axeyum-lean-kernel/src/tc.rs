@@ -1028,7 +1028,7 @@ impl Kernel {
         // the walk from `e`. So the whole chain is memoised, not just its head.
         // That is where the win is: each δ step *mints a fresh expression*, and
         // those intermediates are exactly the ones nothing else ever caches.
-        let mut chain: Vec<ExprId> = Vec::new();
+        let mut chain: Vec<(ExprId, u64)> = Vec::new();
         let mut cursor = e;
         let normalized = loop {
             if cursor != e
@@ -1036,7 +1036,7 @@ impl Kernel {
             {
                 break normalized;
             }
-            chain.push(cursor);
+            chain.push((cursor, self.reduction_ctx_reads));
             let whnfd = self.whnf_no_unfolding(cursor, ctx);
             match self.unfold_def(whnfd) {
                 Some(next) => cursor = next,
@@ -1044,13 +1044,41 @@ impl Kernel {
             }
         };
 
-        assert!(
+        // Every link is routed into the split memo by *its own* closedness, so
+        // the tripwire has to be per-link too. `entry_closed` alone does not
+        // cover it: an OPEN entry can δ-unfold to a CLOSED link, which is then
+        // written to the kernel-global half — the half whose key has no context
+        // component at all. That is not hypothetical and not rare enough to
+        // argue away: measured 2026-08-20, one `build_creal_prelude` routes 6
+        // such links, and the entry-gated form of this assertion looked at none
+        // of them.
+        //
+        // `reads_at_link` is snapshotted when the link is pushed, before
+        // anything reduces it, so the comparison is exactly "did the walk from
+        // HERE onward consult the context".
+        //
+        // Stated plainly, because a guard that cannot fail is worse than none:
+        // **neutering this assertion kills no test**, and no test can be written
+        // that makes it fire, because "a closed term's reduction cannot reach a
+        // context lookup" is a theorem about `has_fvars`, not a condition some
+        // input violates. Its sibling on `entry_closed` is the same. What it
+        // buys is that the theorem is re-checked at runtime, in release, on
+        // every link actually routed — and what keeps it from being decoration
+        // is `an_open_entry_delta_unfolds_to_a_closed_link_stored_context_free`,
+        // which fails if the chain stops producing the links this looks at.
+        for &(link, reads_at_link) in &chain {
+            assert!(
+                self.has_fvars(link) || self.reduction_ctx_reads == reads_at_link,
+                "δ-normalizing a closed expression read the local context; the \
+                 kernel-global whnf_core cache key has no context component and \
+                 would be unsound"
+            );
+        }
+        debug_assert!(
             !entry_closed || self.reduction_ctx_reads == reads_before,
-            "δ-normalizing a closed expression read the local context; the \
-             kernel-global whnf_core cache key has no context component and \
-             would be unsound"
+            "the per-link tripwire must subsume the entry-closed case"
         );
-        for link in chain {
+        for (link, _) in chain {
             self.remember_whnf_core(revision, link, normalized, ctx);
         }
         normalized
