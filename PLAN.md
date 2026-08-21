@@ -150,6 +150,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | V3 reconstructs the function-parameterized `fib_add_one` residual twice byte-identically with an empty footprint; exact specialization remains unauthorized |
 | 2026-08-21 | (pending) | A same-kernel native capsule for `Int.add_comm` plus `Int.add_neg_cancel_right` is frozen before driver code so exact `fib_add_one` composition cannot mix incompatible theorem handles |
 | 2026-08-21 | (pending) | The native algebra-pair driver compiles and passes focused Clippy without executing the prelude build or writing a proof capsule |
+| 2026-08-21 | (pending) | One native build explicitly qualifies `Int.add_comm` and right cancellation through two fresh imports; the capsule is byte-identical to the earlier cancellation closure |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
