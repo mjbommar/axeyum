@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-sealed-kernel-capsule-admission",
+  "state": "durably-admitted-archived-and-clean-replayed",
+  "fact_id": "F:ml430-nat-gcd-greatest-0a04214a",
+  "operation_id": "authoritative-mathlib-nat-gcd-greatest-kernel-capsule-v1",
+  "registration_commit": "6e112b4bc30a419b087baa77e85ec60e0b486eb3",
+  "external_root": "/nas3/data/axeyum/autogenesis/admissions/6e112b4bc-mathlib-nat-gcd-greatest-v1",
+  "external_index_sha256": "9a282702915fd412c405a6e43ec093d5250d8b94208bb923373e00e7c3910c74",
+  "source_bundle_sha256": "8afe5e6b6e1736663d6ba2eb28f6a3a82709a7f3e28b4d7730d0cef8ddc92959",
+  "identities": {
+    "frontier_before_sha256": "71a57f01b1073441ba1ddab4cf3aba659248d374f2f175ca6d0ab4e86834f596",
+    "execution_sha256": "b6e41f105f3c9f9b30a4f7006644d9b781d3fa43e1547c702c7981150c68f898",
+    "transaction_sha256": "0cf32943dd2268ae3abed6d9e8b109245300e8881abfcd892669aadabceaccc1",
+    "admission_event_sha256": "e91e190d2fec88733006af6d59087deb72080031f8aa7b5272acddcf6c646d5a",
+    "frontier_after_sha256": "f7febbed6148cefc617d6034cc2f8bba34544432512f628b5f3bf0e9bc285fc3",
+    "readiness_delta_sha256": "9cfe4f641e8d6cb6b120e7a5f428bd2084713e0b320ca0a1f26d78b125be273f",
+    "before_fact_sha256": "a6dcea5bc685640816421324ac621522769ff6c080d572985396d91047cc9935",
+    "after_fact_sha256": "29c28e43b24fb97316c139daf56224f07684a7a8bf7ae19f4d52f8fbe3670432"
+  },
+  "external_files": {
+    "frontier-before.json": "86c329abe592787cec27f591d7e4f5d568423bc82b8781593e1be0d671a63fad",
+    "execution.json": "03d6576182d8cafdc837b906d967cd104ffc294d5a949c081f066a389dfa2fd0",
+    "transaction.json": "7273a5e11939074f5649de2afe3268dc707fa5feae6c2d0057a49270dbc1cadd",
+    "admission-event.json": "470672485e4f16a3813a60dc18a39083d19f71d6cf4463d44c5d5722835c9621",
+    "frontier-after.json": "8d29c521b28448ca4dec4df0baa6dc17285c7ceef235e620a25d0a08204f2514",
+    "readiness.json": "1686098352fd0d3d8dd8566e888ae5f98a8bd1609d81c96b52bbcbb31cb79a3f",
+    "before-fact.json": "fd8ff0e7627b03b0727e651f797218a6db938453edad70e86d10ba9c73429f77",
+    "after-fact.json": "b197376163599a57cc538167d6f5aa343e1af66c0ab034096ad6b380125c899d"
+  },
+  "fault_injection": {
+    "boundary": "after-intent",
+    "exit_status": 75,
+    "fact_unchanged_before_recovery": true
+  },
+  "result": {
+    "authoritative_ledger_writes": 1,
+    "fixture_writes": 0,
+    "newly_ready": [],
+    "axiom_footprint": [],
+    "theorem_dependencies": [
+      "Axeyum.Autogenesis.dvdAntisymmOfficialV1",
+      "Axeyum.Autogenesis.dvdGcdOfficialV1",
+      "Axeyum.Autogenesis.gcdDvdLeftOfficialV1",
+      "Axeyum.Autogenesis.gcdDvdRightOfficialV1"
+    ],
+    "target_dependency": null
+  },
+  "clean_replay": {
+    "source_commit": "6e112b4bc30a419b087baa77e85ec60e0b486eb3",
+    "external_root": "/nas3/data/axeyum/autogenesis/replays/6e112b4bc-nat-gcd-greatest-v1",
+    "external_index_sha256": "a893b1bcbd65194a6b37377dcbd5f9116101147e34f2aa8d234d2182f7edb288",
+    "replay_file_sha256": "feb77e8f1734d41a995815652b228f7789aad72d40f0321d2f9b8544e414e142",
+    "replay_sha256": "607ea0cb6c97340c31f1a2ffe6344a62caccae747c76a5c9b7b71b7f468afde1",
+    "fresh_execution_sha256": "b6e41f105f3c9f9b30a4f7006644d9b781d3fa43e1547c702c7981150c68f898",
+    "fresh_transaction_sha256": "0cf32943dd2268ae3abed6d9e8b109245300e8881abfcd892669aadabceaccc1",
+    "fresh_event_sha256": "e91e190d2fec88733006af6d59087deb72080031f8aa7b5272acddcf6c646d5a",
+    "fresh_readiness_delta_sha256": "9cfe4f641e8d6cb6b120e7a5f428bd2084713e0b320ca0a1f26d78b125be273f"
+  },
+  "reproduction": "python3 scripts/check-autogenesis-statement-reflexivity-admission.py --manifest artifacts/autogenesis/mathlib-nat-gcd-greatest-admission-v1.json",
+  "limitations": "This admits one exact Mathlib v4.30 theorem from a fixed target-native capsule. It grants no held-out evaluation credit, no authority to transport same-name declarations, and no credit beyond the named theorem and its empty kernel axiom footprint."
+}
