@@ -662,3 +662,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0587](adr-0587-promote-the-complete-translation-spectral-involution.md) | Prove the full Hayes-class translation functional equation and price all characters it forces to vanish | accepted |
 | [0588](adr-0588-price-translation-zeros-at-exact-conductor.md) | Separate cumulative translation-fixed characters from the exact-conductor zeros they force | accepted |
 | [0589](adr-0589-spend-translation-zeros-before-pricing-witt-low.md) | Remove every proved translation zero from the endpoint Weil ledger and retain the unchanged factor-626 odd price | accepted |
+| [0590](adr-0590-classify-binary-projective-hayes-symmetries.md) | Prove translation is the only nonidentity binary projective transformation acting on the fixed-degree Hayes quotient | accepted |

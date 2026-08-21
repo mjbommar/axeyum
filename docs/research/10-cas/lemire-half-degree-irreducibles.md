@@ -4801,6 +4801,18 @@ and changes nothing.  The symbolic ledger checks both parities through
 theorem must act on residual nonfixed characters or cancel the signed trace
 across conductors.
 
+There is no second binary projective symmetry on this quotient.  For
+`g=(a,b;c,d)` in `PGL_2(GF(2))`, the homogenized action preserves every monic
+degree-`n` polynomial only when `c=0`, so that `g` fixes infinity.  Determinant
+one then leaves only identity and `x->x+1`.  When `c=1`, the transformed
+leading coefficient is `F(a)`, and `(x+a)^n` is an explicit monic degree-drop
+witness.  Inversion can act on selected constant-one polynomials, but the
+reciprocal class after inversion depends on their low coefficients and hence
+is not an action on the present Hayes quotient.  The bounded CAS enumerates
+all six matrices and checks the two surviving actions and four witnesses
+(ADR-0590).  Consequently larger symmetry orbits cannot be obtained from
+`PGL_2(GF(2))`; the residual theorem must use the connected signed trace.
+
 The exact algebra is no longer trapped in that executable. ADR-0486 extracts a
 bounded `axeyum_cas::gf2_hayes` API for the principal-unit cyclic structure,
 identity-class populations, endpoint discrepancies, conductor layers, and the

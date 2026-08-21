@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-21 | `d7f05ba53` | Classified all six binary projective transformations and proved translation is the only nonidentity element acting on the monic fixed-degree Hayes quotient. |
 | 2026-08-21 | `1e6d1aeef` | Spent every exact translation-forced zero in the one-sided endpoint ledger; the odd endpoint improves strictly but still requires saving 626, while the even endpoint is unchanged. |
 | 2026-08-21 | `76e14f95e` | Refined translation cancellation by exact conductor, proving the odd-level forced-zero count is `2^((j-3)/2)` and zero at every even level and at every level of the even endpoint. |
 | 2026-08-21 | `56b2a94da` | Proved the translation-fixed dual has exact order `2^ceil(ell/2)` at every level and made the bounded CAS reject any disagreement with the triangular rank theorem. |
@@ -634,6 +635,13 @@ removes none.  The native symbolic report retains baseline and adjusted
 integers and checks monotonicity through `ell=1024`.  Consequently the
 residual `(WITT-LOW)` theorem is quantitatively unchanged; it must control the
 nonfixed connected trace rather than recount this symmetry (ADR-0589).
+The complete binary projective group supplies no second quotient symmetry.
+Only the stabilizer of infinity preserves every monic fixed-degree polynomial;
+over `GF(2)` its two elements are identity and translation.  Each of the four
+remaining matrices has a checked monic degree-drop witness, and reciprocal
+actions require low-coefficient data absent from the Hayes quotient.  Thus
+`PGL_2(GF(2))` cannot enlarge the translation orbits used above; the residual
+theorem must exploit signed trace structure (ADR-0590).
 The companion characteristic-two Newton-over-Hodge result has also been
 priced conditionally: it forces only divisibility of the connected endpoint
 trace by eight.  At `ell=200` the existing envelope is already divisible by
