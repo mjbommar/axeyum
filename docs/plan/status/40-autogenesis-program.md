@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains proved; its ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Official clean divisibility antisymmetry now reconstructs twice over r091 with six empty-footprint supports and byte-identical capsules. The exact Fibonacci GCD-shift route composes official order, cancellation, and addition; exact `nat_gcd_succ` target-leaf pruning advances coprimality composition, and the measured `WellFounded.fix` path selects a target-native public `Nat.gcd_zero_left` alias. V7 proved the generic zero-left root is already present (`NoAdditions`), so V8 freezes exact reuse rather than redundant composition.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains proved; its ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Official clean divisibility antisymmetry reconstructs twice over r091 with six empty-footprint supports and byte-identical capsules. The exact Fibonacci GCD-shift route now composes official order, cancellation, and addition, reuses exact `nat_gcd_succ`, and builds a target-native public `Nat.gcd_zero_left` alias above the measured `WellFounded.fix` conflict. V8's checker accepted that alias through translated definitional equality, but a stricter local policy rejected the successful class before coprimality composition; run two was skipped and target credit remains zero.
 
-**Next:** implement exact V8 by requiring the existing generic zero-left declaration hash, submitting only the checked public alias, and composing coprimality with the exact `nat_gcd_succ` plus `Nat.gcd_zero_left` leaves. Execute two fresh exact-target runs; on acceptance issue the dependency-bound receipt and use the crash-safe ledger transaction.
+**Next:** implement exact V9 by accepting only the observed translated-definitional-equality receipt for the unchanged public alias, then execute two fresh exact-target runs. On acceptance issue the dependency-bound receipt and use the crash-safe ledger transaction.
 
 <!-- plan-section: landed-changes -->
 
