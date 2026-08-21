@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-dependency-audit-plan",
+  "state": "preregistered-before-single-nonrendering-reread-no-reconstruction-authority",
+  "policy_version": "int-fib-neg-dependency-audit-v1",
+  "inputs": {
+    "root_result": {
+      "path": "artifacts/autogenesis/mathlib-int-fib-neg-root-audit-result-v1.json",
+      "sha256": "b500a897382de74e1718de52b5a2b965eef64a935e3186219a6d73aab1a7125d"
+    },
+    "pack_manifest": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-root-audit-v1/manifest.json",
+      "sha256": "c1ba7157b8f644bbfda48d4db4b4e528eb2705bd7600f0f033304d678f48f3fd"
+    },
+    "proof_bearing_stream": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-root-audit-v1/int-fib-neg.ndjson",
+      "bytes": 14596588,
+      "sha256": "7df7f5dce9c7159f9c468b6f47f13be3e589fb2c1559af554ce73cc48b18730e",
+      "mode": "0444",
+      "textual_read_allowed": false
+    }
+  },
+  "ordered_roots": [
+    "Eq.symm",
+    "Eq.trans",
+    "Even.add_one._simp_1",
+    "Even.neg_pow",
+    "Int.eq_nat_or_neg",
+    "Int.even_coe_nat._simp_1",
+    "Int.fib_neg_natCast",
+    "Nat.not_even_iff_odd._simp_1",
+    "Odd.add_one._simp_1",
+    "Odd.neg_one_pow",
+    "congr",
+    "congrArg",
+    "congrFun'",
+    "eq_self",
+    "even_neg._simp_1",
+    "if_neg",
+    "if_pos",
+    "implies_congr_ctx",
+    "implies_true",
+    "ite_congr",
+    "left_eq_ite_iff._simp_1",
+    "neg_mul",
+    "neg_neg",
+    "of_eq_true",
+    "one_mul",
+    "one_pow"
+  ],
+  "fixed_measurement": {
+    "tool_path": "crates/axeyum-lean-import/examples/theorem_footprint_batch_audit.rs",
+    "tool_sha256": "38e40236fec86f1080af52bafb9394f9f1505ad161dae96e9c48979d00b1094a",
+    "tool_interface": "theorem_footprint_batch_audit <sealed-stream> <ordered-roots...>",
+    "proof_terms_types_or_values_may_be_rendered": false,
+    "every_root_must_resolve_as_theorem": true
+  },
+  "decision_rule": {
+    "clean_core_next": "preregister the smallest Int.fib_neg reconstruction using only empty-footprint dependencies and explicit target-owned replacements",
+    "contaminated_core_next": "preregister a bounded descent only for assumption-bearing mathematical roots required by the smallest reconstruction",
+    "authorize_either_successor_in_this_increment": false
+  },
+  "budget": {
+    "max_exporter_invocations": 0,
+    "max_batch_importer_runs": 1,
+    "max_proof_bearing_stream_reads": 1,
+    "max_retries": 0,
+    "max_reconstruction_source_compilations": 0,
+    "max_new_theorem_submissions": 0,
+    "max_exact_target_submissions": 0,
+    "max_executor_invocations": 0
+  },
+  "authority": {
+    "proof_bodies_readable_by_model": false,
+    "theorem_types_readable_by_model": false,
+    "theorem_values_readable_by_model": false,
+    "reconstruction_allowed": false,
+    "support_theorem_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-neg-dependency-audit-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-int-fib-neg-dependency-audit-plan.py",
+  "limitations": "This pass classifies exactly 26 direct dependencies from one sealed stream. It does not expose proofs, reconstruct Int.fib_neg, or change the fact ledger."
+}
