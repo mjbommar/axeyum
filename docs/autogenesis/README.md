@@ -198,6 +198,7 @@ compounding, not automation theatre.
 | [Public Euclidean bounded-induction decline](99-public-euclidean-bounded-induction-decline.md) | Did primitive bounded induction remove generated recursion, and where is the remaining footprint now exposed? |
 | [Bounded-induction dependency-footprint audit plan](100-bounded-induction-dependency-footprint-audit-plan.md) | Which exact direct theorem dependencies carry the primitive-induction proof's remaining `propext` footprint? |
 | [Bounded-induction dependency-footprint audit result](101-bounded-induction-dependency-footprint-audit-result.md) | Which two public computation equations carry the complete remaining footprint, and which 20 dependencies are clean? |
+| [Public equation carrier audit plan](102-public-equation-carrier-audit-plan.md) | Which declarations immediately beneath `Nat.div_eq` and `Nat.mod_eq` carry their measured footprints? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
