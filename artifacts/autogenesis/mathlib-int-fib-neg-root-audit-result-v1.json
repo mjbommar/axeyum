@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-root-audit-result",
+  "state": "official-int-fib-neg-is-assumption-bearing-exact-dependency-descent-required",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-neg-root-audit-plan-v1.json",
+    "sha256": "fb67e1fdf5d56dc12c0b855406db19a1196c46513b0acf902a72b6291e39150d"
+  },
+  "pack_manifest": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-root-audit-v1/manifest.json",
+    "sha256": "c1ba7157b8f644bbfda48d4db4b4e528eb2705bd7600f0f033304d678f48f3fd"
+  },
+  "row": {
+    "name": "Int.fib_neg",
+    "declaration_sha256": "45a27bc3b444c7b3c68cd20a919d34b65c095dd06cf8a66b2b0725190a587c48",
+    "class": "propext-bearing",
+    "axiom_footprint": [
+      "Classical.choice",
+      "Lean.opaqueId",
+      "Quot",
+      "Quot.ind",
+      "Quot.lift",
+      "Quot.mk",
+      "Quot.sound",
+      "String.Internal.append",
+      "propext"
+    ],
+    "direct_theorem_dependencies": [
+      "Eq.symm",
+      "Eq.trans",
+      "Even.add_one._simp_1",
+      "Even.neg_pow",
+      "Int.eq_nat_or_neg",
+      "Int.even_coe_nat._simp_1",
+      "Int.fib_neg_natCast",
+      "Nat.not_even_iff_odd._simp_1",
+      "Odd.add_one._simp_1",
+      "Odd.neg_one_pow",
+      "congr",
+      "congrArg",
+      "congrFun'",
+      "eq_self",
+      "even_neg._simp_1",
+      "if_neg",
+      "if_pos",
+      "implies_congr_ctx",
+      "implies_true",
+      "ite_congr",
+      "left_eq_ite_iff._simp_1",
+      "neg_mul",
+      "neg_neg",
+      "of_eq_true",
+      "one_mul",
+      "one_pow"
+    ]
+  },
+  "summary": {
+    "population": 1,
+    "empty_footprint": 0,
+    "propext_bearing": 1,
+    "direct_theorem_dependency_count": 26,
+    "exact_capsule_composition_authorized": false,
+    "exact_dependency_audit_required": true
+  },
+  "budget": {
+    "exporter_invocations": 1,
+    "batch_importer_runs": 1,
+    "proof_bearing_stream_reads": 1,
+    "retries": 0,
+    "reconstruction_source_compilations": 0,
+    "new_theorem_submissions": 0,
+    "exact_target_submissions": 0,
+    "executor_invocations": 0
+  },
+  "authority": {
+    "proof_terms_rendered": 0,
+    "theorem_types_rendered": 0,
+    "theorem_values_rendered": 0,
+    "support_theorem_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "limitations": "The official theorem is reference evidence only. Its axiom footprint forbids direct admission, and this result authorizes no dependency audit, reconstruction, theorem credit, or ledger mutation by itself."
+}
