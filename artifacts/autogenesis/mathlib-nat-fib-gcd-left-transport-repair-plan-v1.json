@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-left-transport-repair-plan-v1",
+  "state": "preregistered-explicit-gcd-left-transport-before-code",
+  "input": {
+    "bridge_result": "artifacts/autogenesis/mathlib-nat-fib-gcd-gcd-recursion-bridge-result-v2.json",
+    "sha256": "62a04ea026ae7a7ac40969e62831bde0a3fde916c2fcc0773bd87c8940780675"
+  },
+  "implementation_prestate": {
+    "path": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+    "sha256": "68aca29b638276580a7bd8667ca771e9558ffb7c5763131a5a8f6fbaa43c1539"
+  },
+  "repair": {
+    "selected_theorem": "Axeyum.Autogenesis.officialNatGcdSuccClosedV1",
+    "operation": "specialize at predecessor and n, apply congrArg Nat.fib, and prepend the resulting equality before the existing induction-hypothesis and gcd-commutativity chain",
+    "expected_from": "Nat.fib (Nat.gcd (Nat.succ predecessor) n)",
+    "expected_to": "Nat.fib (Nat.gcd (n % Nat.succ predecessor) (Nat.succ predecessor))",
+    "other_equality_chain_changes": 0,
+    "theorem_statement_changes": 0,
+    "proof_route_changes": 0
+  },
+  "verification": {
+    "mode": "--target-native-fib-gcd-target-type-diagnostic",
+    "complete_diagnostics": 1,
+    "helper_theorem_submissions": 1,
+    "target_proof_inferences": 1,
+    "required_definitionally_equal": true,
+    "target_theorem_submissions": 0,
+    "capsule_writes": 0,
+    "ledger_writes": 0
+  },
+  "next_on_accept": "preregister a fresh two-run exact construction attempt over the repaired proof",
+  "next_on_decline": "retain the first remaining internal inference seam with zero retry",
+  "limitations": "This authorizes one explicit left-side transport and one no-target diagnostic only."
+}
