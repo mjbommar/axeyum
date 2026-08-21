@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-theorem-root-audit-result",
+  "state": "single-importer-run-failed-before-report-no-retry",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-root-audit-plan-v1.json",
+    "commit": "6f10d2c1a5ec4f0cbc02f0880d19110b4ebadf80"
+  },
+  "evidence": {
+    "directory": "/nas3/data/axeyum/autogenesis/audits/6f10d2c1a-int-fib-recurrence-corollary-root-audit-v1",
+    "audit_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "audit_bytes": 0,
+    "index_sha256": "e41a5b743e6d6a262b21602f53eef259bddf9556136457f2bfce37d4d1be0780",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "execution": {
+    "importer_runs": 1,
+    "completed_reports": 0,
+    "stream_reads": 1,
+    "retries": 0,
+    "theorem_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "failure": {
+    "stage": "theorem_root_audit before JSON emission",
+    "exit_status": "nonzero-not-retained-by-initial-set-e-shell",
+    "stdout_bytes": 0,
+    "stderr_retained": false,
+    "root_rows_produced": 0,
+    "claims_accepted": 0
+  },
+  "authority": {
+    "proof_terms_rendered": 0,
+    "theorem_types_rendered": 0,
+    "theorem_values_rendered": 0,
+    "support_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Preregister a fresh two-root Mathlib v4.30 export on a Lean-capable fleet host, producing a small root-selected stream; audit that bounded stream instead of retrying the 14.6 MB full closure.",
+  "limitations": "The failed run establishes no footprint, dependency, theorem, or target result. Its missing retained exit code is reported explicitly rather than inferred; the zero-byte immutable output proves only that no JSON report was emitted."
+}

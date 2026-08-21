@@ -8,7 +8,8 @@
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-21 | (pending) | The two newly ready integer Fibonacci recurrence corollaries are frozen for one exact non-rendering root audit before route selection |
+| 2026-08-21 | `6f10d2c1a` | The two newly ready integer Fibonacci recurrence corollaries are frozen for one exact non-rendering root audit before route selection |
+| 2026-08-21 | (pending) | The single full-closure audit emits no report and receives no retry; the route moves to a fresh bounded two-root export |
 | 2026-08-21 | `c254e3c9a` | Crash-safe recovery admits exact `Int.fib_add_two` with one authoritative write and makes two integer Fibonacci descendants newly ready |
 | 2026-08-21 | (pending) | Immutable primary evidence and an isolated clean replay seal the exact recurrence admission and reproduce its two-fact readiness delta |
 
