@@ -186,6 +186,7 @@ compounding, not automation theatre.
 | [Full Mathlib statement-survival atlas result](87-full-mathlib-statement-survival-atlas-result.md) | How much of the complete Nat/Int statement surface survives, and how much apparent drift is representation-wide rather than theorem-level? |
 | [Proof-isolated Euclidean construction decline](88-proof-isolated-euclidean-construction-decline.md) | Did the first clean joint quotient/remainder reconstruction remain axiom-free, and what exact boundary stopped the second run? |
 | [Euclidean dependency-footprint audit plan](89-euclidean-dependency-footprint-audit-plan.md) | Which exact direct dependencies carry the first clean proof's `propext` footprint, and how can that be measured without reading proof terms? |
+| [Euclidean dependency-footprint audit result](90-euclidean-dependency-footprint-audit-result.md) | Which single theorem carries `propext`, and how narrow is the bottom-up replacement obligation? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
