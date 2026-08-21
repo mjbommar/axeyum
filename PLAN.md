@@ -160,6 +160,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | V4 resolves the exporter runtime but finds no compiled module; V5 freezes an explicit `.lake/build/lib/lean` output path for the unchanged theorem |
 | 2026-08-21 | (pending) | V5 reconstructs the seven-contract integer recurrence in a 447,839-byte capsule with two identical imports, six clean dependencies, and an empty footprint |
 | 2026-08-21 | (pending) | Six elementary residual leaves are frozen for an Omega/rfl proposal whose root-selected kernel audit, not tactic success, decides reuse |
+| 2026-08-21 | (pending) | V1 stops before elaboration because the narrow Omega object is absent; V2 freezes only the already-built umbrella `Mathlib` import |
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
 | 2026-08-21 | `a9610560c` | The durable construction checker binds the separately stored target goal identity without weakening capsule checks |
