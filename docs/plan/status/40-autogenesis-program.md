@@ -4,7 +4,7 @@
 
 **Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction has unconditional official balanced Bézout. Residual cancellation V2, both witness leaves, and the all-Nat adapter are accepted empty-footprint. The first official-cancellation invocation replayed the upstream closure, then declined because both clean multiplication leaves were already present; no final theorem was submitted and the second invocation was skipped.
 
-**Next:** preregister exact declaration identity and checked kernel-type-shape reuse for both already-present multiplication leaves. Update the driver to reuse them, compose only the residual theorem, all-Nat adapter, and positive-divisor leaf, then require two byte-identical empty-footprint final outputs before official cancellation credit.
+**Next:** implement the preregistered exact declaration identity and checked kernel-type-shape reuse for both already-present multiplication leaves. Compose only the residual theorem, all-Nat adapter, and positive-divisor leaf, then require two byte-identical empty-footprint final outputs before official cancellation credit.
 
 <!-- plan-section: landed-changes -->
 
@@ -149,3 +149,4 @@
 | 2026-08-21 | `dd15493b6` | Official cancellation composition is frozen across eight streams and one native positive-divisor leaf before code |
 | 2026-08-21 | (pending) | Eight-stream cancellation driver compiles Clippy-clean and passes the full importer suite without stream execution |
 | 2026-08-21 | (pending) | First official-cancellation run finds both multiplication leaves already present; checked exact reuse replaces the zero-addition composition |
+| 2026-08-21 | (pending) | Exact identity and kernel-type-shape reuse for both multiplication leaves is frozen before code or stream access |
