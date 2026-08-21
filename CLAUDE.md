@@ -758,6 +758,33 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   entry that keeps the syntax check and drops only the recompile. Use the
   harness. If you must loop by hand, `find . -name __pycache__ -exec rm -rf {} +`
   between iterations, and never trust two mutants that report the same dead test.
+- **A BACKGROUND TASK REPORTED AS EXITED MAY STILL BE RUNNING, AND IT WILL TAX
+  EVERY MEASUREMENT YOU TAKE AFTERWARDS.** Found 2026-08-21: a `python3 -` from
+  a session task started **2026-08-18 03:43**, whose output file recorded
+  `[exited with code 144]` at 03:49, was still at **99.5% CPU 85 hours later** —
+  orphaned to `systemd`, parent shell long dead, nothing reading its stdout. The
+  harness had closed the book on it; the kernel had not.
+
+  Cost: a full core of a 16-core box, continuously, for three and a half days.
+  Reaping it took load from **9.27 to 3.44**. Every wall-clock measurement on
+  this host in that window — the `progress_frontier` reference frames, the
+  timing in two capability diagnoses, the competition sweeps — ran ~6% short on
+  capacity, and some of the ratchet's `NOT COMPARABLE` / `ADVISORY ONLY`
+  markings were firing partly because of a ghost. Verdict counts are unaffected
+  (a decided file is decided); anything timing-shaped is not.
+
+  So before trusting a load-sensitive number, look for orphans, not just for
+  your own jobs:
+
+      ps -eo pid,ppid,etimes,pcpu,args --sort=-pcpu --no-headers \
+        | awk '$2==1 && $4>50'      # reparented to init AND burning CPU
+
+  Kill by **PID**, never `pkill -f <pattern>` — that pattern matches the killing
+  shell's own command line, and a lane killed its own ratchet launcher that way
+  the same day. `/proc/<pid>/fd` tells you what a mystery process is writing to,
+  which is how this one was identified as a session task rather than a user's
+  job.
+
 - **Tools in this repo have lied more often than the solver has been weak.**
   In one session: a corpus gate that ran zero tests for 15 days while exiting 0;
   a pre-push hook that had never run because `core.hooksPath` was unset; a
