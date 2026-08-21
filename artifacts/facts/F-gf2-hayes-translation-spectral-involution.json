@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "F:gf2-hayes-translation-spectral-involution",
   "title": "Complete Hayes translation spectral involution",
-  "statement": "For every ell>=1 and n>=1, translation F(x)->F(x+1) acts on the binary principal-unit class u by sigma(u)=(1+t)^n u(t/(1+t)) modulo t^(ell+1). Writing tau(u)=u(t/(1+t)), both tau and sigma are involutions, tau is a group automorphism, and the degree-n Mangoldt and squared-discrepancy spectra satisfy A(chi)=chi((1+t)^n)A(chi composed with tau). Among tau-fixed characters, exactly half are forced to vanish when n is odd and none are forced by this mechanism when n is even.",
+  "statement": "For every ell>=1 and n>=1, translation F(x)->F(x+1) acts on the binary principal-unit class u by sigma(u)=(1+t)^n u(t/(1+t)) modulo t^(ell+1). Writing tau(u)=u(t/(1+t)), both tau and sigma are involutions, tau is a group automorphism, and the degree-n Mangoldt and squared-discrepancy spectra satisfy A(chi)=chi((1+t)^n)A(chi composed with tau). The tau-fixed dual has exactly 2^ceil(ell/2) characters. Among them, exactly half are forced to vanish when n is odd and none are forced by this mechanism when n is even.",
   "formal": {
     "language": "certificate-spec",
     "statement": "{\"format\":\"axeyum-gf2-hayes-translation-spectral-involution\",\"parameters\":{\"degree\":\"n>=1\",\"ell\":\"ell>=1\"},\"sigma\":\"(1+t)^n*tau(u) mod t^(ell+1)\",\"tau\":\"u(t/(1+t)) mod t^(ell+1)\",\"version\":1}",

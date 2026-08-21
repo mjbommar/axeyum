@@ -5552,9 +5552,9 @@ pub struct HayesTranslationSpectralInvolutionReport {
     pub group_order: usize,
     /// Packed translation class `c=(1+t)^degree mod t^(ell+1)`.
     pub translation_class: u64,
-    /// Order of `K={tau(g)g^(-1):g in G}`.
+    /// Order `2^floor(ell/2)` of `K={tau(g)g^(-1):g in G}`.
     pub commutator_image_order: usize,
-    /// Number `|G/K|` of `tau`-fixed dual characters.
+    /// Number `|G/K|=2^ceil(ell/2)` of `tau`-fixed dual characters.
     pub tau_fixed_character_count: usize,
     /// Number of fixed characters with `chi(c)=-1`, hence forced to vanish.
     pub forced_vanishing_character_count: usize,
@@ -6827,6 +6827,18 @@ pub fn hayes_translation_spectral_involution(
         ));
     }
     let tau_fixed_character_count = structure.group_order / commutator_image_order;
+    let expected_fixed_character_count = 1_usize
+        .checked_shl(u32::try_from(ell.div_ceil(2)).map_err(|_| {
+            HayesError::InvalidParameter("translation fixed-dual exponent exceeds u32".to_owned())
+        })?)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("translation fixed-dual count overflow".to_owned())
+        })?;
+    if tau_fixed_character_count != expected_fixed_character_count {
+        return Err(HayesError::Invariant(
+            "translation fixed-dual count is not 2^ceil(ell/2)".to_owned(),
+        ));
+    }
     let translation_class_in_commutator_image = commutator_image.contains(&translation_class);
     // If n is even, c=(1+t)^n is the inverse of
     // tau((1+t)^(n/2))*(1+t)^(-n/2), hence c lies in K.  If n is odd, the
@@ -20398,6 +20410,8 @@ mod tests {
             for degree in [2 * ell + 1, 2 * ell + 2] {
                 let report = hayes_translation_spectral_involution(ell, degree, limits).unwrap();
                 assert_eq!(report.group_order, 1_usize << ell);
+                assert_eq!(report.tau_fixed_character_count, 1_usize << ell.div_ceil(2));
+                assert_eq!(report.commutator_image_order, 1_usize << (ell / 2));
                 assert_eq!(
                     report.group_order,
                     report.commutator_image_order * report.tau_fixed_character_count

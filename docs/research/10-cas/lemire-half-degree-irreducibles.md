@@ -4756,6 +4756,12 @@ A(chi)=chi((1+t)^n) A(chi o tau).                         (TRANS-FE)
 ```
 
 Put `K={tau(g)g^(-1)}`.  The `tau`-fixed dual is the dual of `G_ell/K`.
+The count is exact for every level.  For odd `i<ell`, the first nonzero term
+of `(tau-1)t^i` is `t^(i+1)`, giving `floor(ell/2)` independent image
+directions.  The fixed element `z=t^2/(1+t)`, its powers, and (when `ell` is
+odd) the top term `t^ell` give the complementary
+`ceil(ell/2)`-dimensional fixed space.  Therefore
+`|K|=2^floor(ell/2)` and the fixed dual has order `2^ceil(ell/2)`.
 For odd `n`, the first-coordinate sign character proves `(1+t)^n notin K`,
 so exactly half of the fixed dual has negative evaluation and vanishes in
 `(TRANS-FE)`.  For even `n`, taking `g=(1+t)^(n/2)` proves

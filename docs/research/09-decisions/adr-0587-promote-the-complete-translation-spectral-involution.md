@@ -52,6 +52,28 @@ D2hat_n(chi)   = chi(c) D2hat_n(chi o tau).                (FE)
 
 Thus a fixed character with `chi(c)=-1` makes both coefficients zero.
 
+The quotient order is universal, not an experimental fit.  On the additive
+space of truncated tails,
+
+```text
+tau(t^i)=t^i(1+t)^(-i).
+```
+
+For each odd `i<ell`, `(tau-1)t^i` has first nonzero term `t^(i+1)`.
+These `floor(ell/2)` distinct leading terms make `tau-1` have at least that
+rank.  Conversely `z=t^2/(1+t)` is fixed, so
+`z,z^2,...,z^floor(ell/2)` give `floor(ell/2)` independent fixed tails; when
+`ell` is odd, the additional top term `t^ell` is fixed modulo `t^(ell+1)`.
+Thus the fixed tail dimension is `ceil(ell/2)` and the rank is
+`floor(ell/2)`.  Since `g -> tau(g)g^(-1)` has kernel equal to the fixed
+principal units,
+
+```text
+|K|=2^floor(ell/2),       |G_ell/K|=2^ceil(ell/2).       (COUNT)
+```
+
+The CAS now treats `(COUNT)` as a fail-closed invariant.
+
 The parity dichotomy is exact.  If `n` is even, put
 `g=(1+t)^(n/2)`; then `tau(g)g^(-1)=c^(-1)`, so `c in K` and no fixed
 character has negative evaluation.  If `n` is odd, the first-coordinate sign
