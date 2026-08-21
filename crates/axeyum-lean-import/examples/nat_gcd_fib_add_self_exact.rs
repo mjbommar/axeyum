@@ -61,6 +61,22 @@ const COPRIME_SUPPORT_CANDIDATES: [&str; 17] = [
     "Nat.lt_wellFounded",
     "WellFounded.fix",
 ];
+const GCD_SUPPORT_CANDIDATES: [&str; 14] = [
+    "Nat.gcd.induction",
+    "And",
+    "And.intro",
+    "And.left",
+    "And.right",
+    "Axeyum.Autogenesis.modQuotientWitnessV4",
+    "Axeyum.Autogenesis.dvdAddCancelAllNatClosedV1",
+    TARGET_DVD_ADD,
+    "Nat.dvd_mul_right_of_dvd",
+    "Nat.dvd_refl",
+    "Nat.mul_zero",
+    GCD_ZERO_LEFT_GENERIC,
+    COPRIME_GCD_SUCC_LEAF,
+    "Nat.mod_lt",
+];
 const COPRIME_GCD_SUCC_LEAF: &str = "Axeyum.Autogenesis.nat_gcd_succ";
 const COPRIME_GCD_SUCC_LEAF_SHA256: &str =
     "1a9cf6e4ef4dc54a298214571515e7682a6265d9db7008b7cf1f8b3c38d11f16";
@@ -108,6 +124,10 @@ fn run() -> Result<(), String> {
         ))
     {
         return run_target_native_simple_support_capsule(args);
+    }
+    let mut args = std::env::args_os().skip(1);
+    if args.next().as_deref() == Some(std::ffi::OsStr::new("--target-native-gcd-surface-audit")) {
+        return run_target_native_gcd_surface_audit(args);
     }
     let mut args = std::env::args_os().skip(1);
     let r091_path = path(&mut args)?;
@@ -265,6 +285,79 @@ fn run() -> Result<(), String> {
         }))
         .map_err(|error| error.to_string())?
     );
+    Ok(())
+}
+
+fn run_target_native_gcd_surface_audit(
+    mut args: impl Iterator<Item = std::ffi::OsString>,
+) -> Result<(), String> {
+    let r091_path = path(&mut args)?;
+    let clean_path = path(&mut args)?;
+    let cancellation_path = path(&mut args)?;
+    let addition_path = path(&mut args)?;
+    let simple_path = path(&mut args)?;
+    if args.next().is_some() {
+        return Err("usage: nat_gcd_fib_add_self_exact --target-native-gcd-surface-audit <r091> <official-clean-order> <cancellation> <addition> <simple-support>".to_owned());
+    }
+    let r091 = import_bound(&r091_path, R091_SHA256, "r091")?;
+    let clean = import_bound(&clean_path, CLEAN_ANTISYMM_CAPSULE, CLEAN_ANTISYMM)?;
+    let cancellation = import_bound(&cancellation_path, CANCELLATION_CAPSULE, CANCELLATION)?;
+    let addition = import_bound(&addition_path, ADDITION_CAPSULE, ADDITION)?;
+    let simple = import_bound(
+        &simple_path,
+        "ce0db76dc93690e1e345627ce555e9f53b532a396643581fe554a7bcdce18322",
+        "simple-support",
+    )?;
+    let mut target = r091.kernel().clone();
+    let mut setup = Vec::new();
+    for (roots, source) in [
+        (&[CLEAN_ANTISYMM][..], clean.kernel()),
+        (&[CANCELLATION][..], cancellation.kernel()),
+        (&[ADDITION][..], addition.kernel()),
+        (
+            &[TARGET_DVD_ADD, TARGET_EQ_ONE_OF_DVD_ONE][..],
+            simple.kernel(),
+        ),
+    ] {
+        let completed = compose_checked_theorem_slice(source, &target, roots)
+            .map_err(|error| format!("GCD audit setup composition declined: {error:?}"))?;
+        verify_checked_theorem_composition(
+            source,
+            &target,
+            completed.kernel(),
+            completed.receipt(),
+        )
+        .map_err(|error| format!("GCD audit setup composition did not replay: {error:?}"))?;
+        setup.push(json!({"roots": roots, "receipt_sha256": completed.receipt().receipt_sha256}));
+        target = completed.kernel().clone();
+    }
+    let candidates = GCD_SUPPORT_CANDIDATES
+        .iter()
+        .map(|&candidate| {
+            let row = optional_name(&target, candidate)?
+                .map(|name| {
+                    let declaration = target.environment().get(name)
+                        .ok_or_else(|| format!("candidate disappeared: {candidate}"))?;
+                    let footprint = if matches!(declaration, Declaration::Theorem { .. }) {
+                        names(&target, &target.axiom_footprint(name))
+                    } else { Vec::new() };
+                    Ok::<_, String>(json!({"kind": declaration_kind(declaration), "declaration_sha256": canonical_declaration_sha256(&target, name)?, "axiom_footprint": footprint}))
+                }).transpose()?;
+            Ok::<_, String>(json!({"name": candidate, "target": row}))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    println!("{}", serde_json::to_string_pretty(&json!({
+        "schema_version": 1,
+        "kind": "axeyum-autogenesis-target-native-gcd-divisibility-surface-audit",
+        "setup_compositions": setup,
+        "candidates": candidates,
+        "execution": {"reads_per_input": 1, "complete_audits": 1, "kernel_submissions": 0, "exports": 0, "retries": 0},
+        "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0},
+        "exact_target_submissions": 0,
+        "fact_status_changes": 0,
+        "evaluation_credit": 0,
+        "ledger_writes": 0,
+    })).map_err(|error| error.to_string())?);
     Ok(())
 }
 
