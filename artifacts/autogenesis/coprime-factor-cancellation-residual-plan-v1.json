@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-coprime-factor-cancellation-residual-plan",
+  "state": "preregistered-residual-cancellation-before-source",
+  "predecessors": {
+    "dependency_audit": {"path": "artifacts/autogenesis/coprime-factor-cancellation-dependency-audit-result-v1.json", "sha256": "b5c6fe5c444b9407e9d7e4bac0f53949ce4b9145351b85ff93551dc0c9bd0130"},
+    "clean_multiplication_leaves": {"path": "artifacts/autogenesis/balanced-bezout-clean-mul-leaves-result-v1.json", "sha256": "f4f0ce40c469d65e24639cfef76edd4ec1ce9ce7d6a0d865e7b95d9d71c1700c"}
+  },
+  "source": {"path": "scripts/lean/autogenesis_coprime_factor_cancellation_residual_v1.lean", "module": "AxeyumAutogenesisCoprimeFactorCancellationResidualV1", "target": "Axeyum.Autogenesis.coprimeFactorDivisibilityCancellationResidualV1", "only_import": "Mathlib.Data.Int.GCD", "proof_search_allowed": false, "proof_terms_types_or_values_may_be_rendered": false},
+  "explicit_parameters": ["balancedBezout", "rightDistrib", "dvdAddCancel"],
+  "target_owned_support": [
+    {"name": "Axeyum.Autogenesis.dvdMulRightWitnessV1", "method": "eliminate and rebuild the existential divisibility witness"},
+    {"name": "Axeyum.Autogenesis.dvdAddWitnessV1", "method": "combine two existential witnesses with clean left distributivity"}
+  ],
+  "eliminated_carriers": {"Nat.dvd_add": "dvdAddWitnessV1", "Nat.dvd_mul_right_of_dvd": "dvdMulRightWitnessV1", "Nat.mul_left_comm": "explicit Nat.mul_assoc and clean Nat.mul_comm chain", "Nat.right_distrib": "rightDistrib parameter", "eq_self": "no simp or proposition normalization", "Nat.dvd_add_iff_right": "dvdAddCancel parameter"},
+  "acceptance": {"source_must_compile": true, "root_selected_stream_max_bytes": 2000000, "ordered_roots": ["Axeyum.Autogenesis.dvdMulRightWitnessV1", "Axeyum.Autogenesis.dvdAddWitnessV1", "Axeyum.Autogenesis.coprimeFactorDivisibilityCancellationResidualV1"], "fresh_kernel_imports_required": 2, "audits_must_be_byte_identical": true, "all_three_axiom_footprints_must_be_empty": true, "residual_theorem_must_retain_exactly_three_explicit_parameters": true},
+  "budget": {"max_source_copies": 1, "max_compiler_invocations": 1, "max_exporter_invocations": 1, "max_importer_runs": 2, "max_proof_bearing_stream_reads": 2, "max_retries": 0, "max_support_theorem_submissions": 2, "max_residual_theorem_submissions": 1, "max_official_specializations": 0, "max_exact_fibonacci_target_submissions": 0},
+  "authority": {"support_leaf_credit": 0, "residual_cancellation_credit": 0, "official_cancellation_credit": 0, "target_specialization_credit": 0, "exact_fibonacci_target_submissions": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_on_accept": "Compose and specialize balancedBezout and rightDistrib, leaving only the target-owned additive divisibility cancellation leaf.",
+  "output": "artifacts/autogenesis/coprime-factor-cancellation-residual-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-coprime-factor-cancellation-residual-plan.py",
+  "limitations": "This residual theorem cannot receive official cancellation credit while dvdAddCancel remains a parameter."
+}

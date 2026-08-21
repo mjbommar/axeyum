@@ -4,7 +4,7 @@
 
 **Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction has an unconditional official-representation balanced-Bézout theorem. Self-contained generic cancellation reconstructs deterministically but reaches `propext`; its exact seventeen-root audit splits eleven clean dependencies from six named carriers, with no cancellation credit.
 
-**Next:** preregister target-owned replacements for the six measured carriers: direct divisibility witness construction, multiplication rearrangement, right distributivity, and additive divisibility cancellation. Preserve zero cancellation/Fibonacci authority until a revised theorem imports twice empty-footprint.
+**Next:** execute the preregistered residual cancellation source: two target-owned divisibility witness lemmas and a theorem parameterized only by balanced Bézout, clean right distributivity, and additive divisibility cancellation. Require two byte-identical empty-footprint imports and preserve zero official cancellation/Fibonacci authority.
 
 <!-- plan-section: landed-changes -->
 
@@ -138,3 +138,4 @@
 | 2026-08-21 | (pending) | Self-contained cancellation reconstructs twice deterministically but localizes its rejected footprint to `propext` |
 | 2026-08-21 | `efe97708a` | All seventeen direct cancellation dependencies are frozen before one non-rendering sealed-stream audit |
 | 2026-08-21 | (pending) | One exact audit splits eleven clean cancellation dependencies from six `propext` carriers |
+| 2026-08-21 | (pending) | Residual cancellation freezes direct witness replacements and leaves exactly three explicit theorem parameters |
