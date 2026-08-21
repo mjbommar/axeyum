@@ -407,6 +407,7 @@ Ordered by *measured* cost, not by how large the hole feels.
 | 7 | **User triggers (`:pattern`, `:weight`)** | §5 | The one quantifier gap that is real vs Z3, now that the sat-direction is closed |
 | 8 | **Memory bound is inert** | §7 | Operational, and this box has already been OOM-killed once |
 | 9 | Transcendentals; nested arrays; parametric datatypes | §4.1, §4.3 | Clean capability zeros, each small and each blocking a whole slice |
+| 4b | **`Int` is `i128` in the IR, and 13% of QF_UFLIA never reaches the solver** | measured below | 26 of the 200 QF_UFLIA competition files carry integer literals above 2^127 (78 digits — EVM 2^256 words, Certora benchmarks). Axeyum decides **0 of 26**: they are rejected before any solver work runs. **But the opportunity is 11, not 26** — z3 4.13.3 at 20 s decides only 11 of them, so 15 are hard for the reference too. Not a parser fix: `Value::Int(i128)` is the IR representation and every arithmetic route is built on it, so this is ADR-sized. `WideUint` already exists as the precedent for wide bit-vectors |
 | 10 | **CAV-2024 bit-blasting abstraction** | — | Bitwuzla has it on by default since 0.8.0, cvc5 is adding it, in a division where the top three sit within 32 benchmarks of each other |
 
 Deliberately **not** on this list: new theory columns. Most of what cvc5 has and
@@ -450,6 +451,37 @@ that read as "we are slower" is substantially "we stop early". And 26 files —
   `scripts/check-parity-freshness.py` fails when a division's ledger entry ages
   past 14 days, wired into both gate sets. It reads `FAIL` today, which is the
   honest state.
+
+- **Gap #7, for `:pattern`.** A hand-written trigger is threaded parse → IR →
+  the E-matching loop and now *replaces* auto-selection; alternatives are
+  unioned and multi-patterns joined, and anything the matcher cannot fire is
+  declined whole rather than silently ignored (ADR-0537). `:weight` is
+  explicitly refused, not forgotten: it would change the flood-control cost
+  function, the one lever measured to decide files in both directions.
+
+  **The measured delta on our own corpora is zero, and that is a fact about the
+  corpora.** 0 of 1430 tracked `.smt2` files contain `:pattern`; 0 contain
+  `:weight` (positive control, same command: `assert` in 1419, `forall` in 82).
+  92 quantified files, before and after: **0 verdict differences**. §5's claim
+  that such a workload "has no path here at all" was right, and closing it
+  cannot be priced from anything we currently measure.
+
+  One thing worth not assuming, because the obvious check says the opposite of
+  the truth: obeying a *useless* trigger did not cost the refutation through the
+  front door. z3 4.13.3 with `smt.mbqi=false` goes `unsat` → `unknown` on the
+  file that motivated this; we stay `unsat`, because term invention seeds ground
+  instances of the trigger itself and reaches the excluded witness anyway. So a
+  verdict is a blunt instrument for "was the annotation obeyed" — the direct
+  observable is the proposed instance set, and that is what changed.
+
+**Sized before it was chased.** The diagnosis note reports 26 QF_UFLIA files
+lost at the parser to oversized `Int` literals and observes that no solver work
+touches them — both true, and I verified the 26 independently (78-digit
+literals; positive control on the same scan). What neither document said is how
+many of those the *reference* solves: **z3 4.13.3 at 20 s decides 11 of the 26**.
+So "13% of a division" is a real defect and roughly a **+11** opportunity, not a
++26 one. A gap sized by "files we cannot parse" rather than "files the reference
+decides and we do not" would have overstated this by more than double.
 
 **Found while discharging, and not in the original document.** The parity ledger
 holds **nine** divisions, not the eleven `PROJECT-STATE.md` claimed, and has

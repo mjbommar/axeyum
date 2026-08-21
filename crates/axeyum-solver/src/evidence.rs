@@ -5091,7 +5091,7 @@ mod tests {
             };
             let head = &evidence[..index];
             let variant = head
-                .rsplit(|c: char| c == '\n' || c == ' ')
+                .rsplit(['\n', ' '])
                 .find(|token| token.starts_with("Unsat"))
                 .unwrap_or_default();
             if variant.is_empty() {
