@@ -32,6 +32,7 @@
 | 2026-08-21 | `bd55299d4` | First transaction preparation fails closed because the generic capsule path required nonempty dependencies and two submissions; exact zero-dependency definitional assurance is added with mutation coverage |
 | 2026-08-21 | `4309e904f` | Crash-safe recovery admits exact `Int.fib_natCast` with one authoritative write and makes exact `Int.fib_add_two` newly ready |
 | 2026-08-21 | (pending) | Immutable primary evidence and isolated clean replay seal the exact `Int.fib_natCast` admission and its one-fact readiness delta |
+| 2026-08-21 | (pending) | Direct target-owned `Int.fib_add_two` construction is frozen after its premise becomes ready and before source or execution exists |
 
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |

@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-add-two-clean-construction-plan",
+  "state": "preregistered-after-natcast-admission-before-source-or-execution",
+  "target": {
+    "fact_id": "F:ml430-int-fib-add-two-739358dd",
+    "theorem": "Int.fib_add_two",
+    "formal_statement": "∀ (n : ℤ), Int.fib (n + 2) = Int.fib n + Int.fib (n + 1)"
+  },
+  "premises": [
+    {
+      "fact_id": "F:ml430-int-fib-natcast-d5886be4",
+      "required_status": "proved",
+      "required_footprint": []
+    },
+    {
+      "fact_id": "F:ml430-nat-fib-add-two-b86e0c82",
+      "required_status": "proved",
+      "required_footprint": []
+    }
+  ],
+  "representation": {
+    "definition_source": "artifacts/autogenesis/sources/int-fib-clean-definition-v1.lean",
+    "definition": "Int.fib",
+    "strategy": "constructor and explicit Nat parity cases over the target-owned definition, using only clean natural Fibonacci recurrence and arithmetic transport",
+    "forbidden": [
+      "official Int.fib_add_two proof",
+      "official Int.fib_neg_natCast proof",
+      "Int.instDecidablePredEven closure",
+      "proof search"
+    ]
+  },
+  "execution": {
+    "host": "s5",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean_version": "4.30.0",
+    "source": "artifacts/autogenesis/sources/int-fib-add-two-clean-v1.lean",
+    "source_present_at_plan_commit": false,
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-clean-v1",
+    "pack_present_at_plan_commit": false,
+    "root_selected_export": true
+  },
+  "budget": {
+    "max_compiler_invocations": 1,
+    "max_exporter_invocations": 1,
+    "max_importer_runs": 2,
+    "max_retries": 0,
+    "max_target_theorem_submissions": 1,
+    "max_search_invocations": 0,
+    "max_ledger_writes": 0
+  },
+  "acceptance": {
+    "two_import_observations_byte_identical": true,
+    "axiom_footprint": [],
+    "direct_theorem_dependencies_must_be_named": true,
+    "fact_admission_separate": true
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-add-two-clean-construction-result-v1.json"
+}
