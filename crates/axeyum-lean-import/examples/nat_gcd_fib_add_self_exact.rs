@@ -86,6 +86,8 @@ const GCD_ZERO_LEFT_GENERIC_SHA256: &str =
 const GCD_ZERO_LEFT_PUBLIC: &str = "Nat.gcd_zero_left";
 const TARGET_DVD_ADD: &str = "Axeyum.Autogenesis.dvdAddOfficialV1";
 const TARGET_EQ_ONE_OF_DVD_ONE: &str = "Axeyum.Autogenesis.eqOneOfDvdOneOfficialV1";
+const TARGET_DVD_REFL: &str = "Axeyum.Autogenesis.dvdReflOfficialV1";
+const TARGET_DVD_MUL_RIGHT: &str = "Axeyum.Autogenesis.dvdMulRightOfficialV1";
 const COPRIME_CAPSULE: &str = "9106a3442d75a5fdaf51e35436e6fdbea78714d743e666bec27ffd9641160b11";
 const CLEAN_GCD_COMM: &str = "Axeyum.Autogenesis.gcdCommCleanV1";
 const OFFICIAL_EQ_ZERO: &str = "Axeyum.Autogenesis.eqZeroOfZeroDvdOfficialV1";
@@ -128,6 +130,10 @@ fn run() -> Result<(), String> {
     let mut args = std::env::args_os().skip(1);
     if args.next().as_deref() == Some(std::ffi::OsStr::new("--target-native-gcd-surface-audit")) {
         return run_target_native_gcd_surface_audit(args);
+    }
+    let mut args = std::env::args_os().skip(1);
+    if args.next().as_deref() == Some(std::ffi::OsStr::new("--target-native-dvd-utility-capsule")) {
+        return run_target_native_dvd_utility_capsule(args);
     }
     let mut args = std::env::args_os().skip(1);
     let r091_path = path(&mut args)?;
@@ -285,6 +291,79 @@ fn run() -> Result<(), String> {
         }))
         .map_err(|error| error.to_string())?
     );
+    Ok(())
+}
+
+fn run_target_native_dvd_utility_capsule(
+    mut args: impl Iterator<Item = std::ffi::OsString>,
+) -> Result<(), String> {
+    let r091_path = path(&mut args)?;
+    let clean_path = path(&mut args)?;
+    let cancellation_path = path(&mut args)?;
+    let addition_path = path(&mut args)?;
+    let simple_path = path(&mut args)?;
+    let output_path = path(&mut args)?;
+    if args.next().is_some() || output_path.exists() {
+        return Err("usage: nat_gcd_fib_add_self_exact --target-native-dvd-utility-capsule <r091> <official-clean-order> <cancellation> <addition> <simple-support> <output>".to_owned());
+    }
+    let r091 = import_bound(&r091_path, R091_SHA256, "r091")?;
+    let clean = import_bound(&clean_path, CLEAN_ANTISYMM_CAPSULE, CLEAN_ANTISYMM)?;
+    let cancellation = import_bound(&cancellation_path, CANCELLATION_CAPSULE, CANCELLATION)?;
+    let addition = import_bound(&addition_path, ADDITION_CAPSULE, ADDITION)?;
+    let simple = import_bound(
+        &simple_path,
+        "ce0db76dc93690e1e345627ce555e9f53b532a396643581fe554a7bcdce18322",
+        "simple-support",
+    )?;
+    let mut kernel = r091.kernel().clone();
+    let mut setup = Vec::new();
+    for (roots, source) in [
+        (&[CLEAN_ANTISYMM][..], clean.kernel()),
+        (&[CANCELLATION][..], cancellation.kernel()),
+        (&[ADDITION][..], addition.kernel()),
+        (
+            &[TARGET_DVD_ADD, TARGET_EQ_ONE_OF_DVD_ONE][..],
+            simple.kernel(),
+        ),
+    ] {
+        let completed = compose_checked_theorem_slice(source, &kernel, roots)
+            .map_err(|error| format!("dvd utility setup composition declined: {error:?}"))?;
+        verify_checked_theorem_composition(
+            source,
+            &kernel,
+            completed.kernel(),
+            completed.receipt(),
+        )
+        .map_err(|error| format!("dvd utility setup did not replay: {error:?}"))?;
+        setup.push(json!({"roots": roots, "receipt_sha256": completed.receipt().receipt_sha256}));
+        kernel = completed.kernel().clone();
+    }
+    let refl = declare_target_native_dvd_refl(&mut kernel)?;
+    require_empty(&kernel, refl, TARGET_DVD_REFL)?;
+    let mul = declare_target_native_dvd_mul_right(&mut kernel)?;
+    require_empty(&kernel, mul, TARGET_DVD_MUL_RIGHT)?;
+    let expected = [evidence(&kernel, refl)?, evidence(&kernel, mul)?];
+    let bytes = kernel
+        .render_lean4export_ndjson_roots(&Lean4ExportMetadata::axeyum("4.30.0"), &[refl, mul])
+        .map_err(|error| format!("dvd utility capsule export failed: {error}"))?;
+    for pass in 1..=2 {
+        let replay = import_ndjson(Cursor::new(bytes.as_bytes()), ImportLimits::default())
+            .map_err(|error| format!("dvd utility capsule import {pass} failed: {error:?}"))?;
+        for (name, expected_row) in [
+            (TARGET_DVD_REFL, &expected[0]),
+            (TARGET_DVD_MUL_RIGHT, &expected[1]),
+        ] {
+            let theorem = find_name(replay.kernel(), name)?;
+            if evidence(replay.kernel(), theorem)? != *expected_row {
+                return Err(format!("dvd utility import {pass} changed {name}"));
+            }
+        }
+    }
+    fs::write(&output_path, &bytes)
+        .map_err(|error| format!("dvd utility capsule write failed: {error}"))?;
+    println!("{}", serde_json::to_string_pretty(&json!({
+        "schema_version":1,"kind":"axeyum-autogenesis-target-native-dvd-utility-capsule","state":"two-dvd-utilities-reconstructed-empty-footprint-roundtrip-checked","setup_compositions":setup,"supports":expected,"capsule":{"bytes":bytes.len(),"sha256":hex_sha256(bytes.as_bytes()),"fresh_imports":2},"execution":{"support_submissions":2,"exports":1,"fresh_imports":2,"retries":0},"rendered_material":{"proof_terms":0,"theorem_types":0,"theorem_values":0},"exact_target_submissions":0,"fact_status_changes":0,"evaluation_credit":0,"ledger_writes":0
+    })).map_err(|error| error.to_string())?);
     Ok(())
 }
 
@@ -1604,6 +1683,99 @@ fn declare_official_antisymm(kernel: &mut Kernel) -> Result<NameId, String> {
 }
 
 #[allow(clippy::similar_names)]
+fn declare_target_native_dvd_refl(kernel: &mut Kernel) -> Result<NameId, String> {
+    let target = nested_name(kernel, &["Axeyum", "Autogenesis", "dvdReflOfficialV1"]);
+    let mut d = Dev::new(kernel)?;
+    let mul_one = d.exact("Nat.mul_one")?;
+    let exists_intro = d.exact("Exists.intro")?;
+    let nat = d.nat_ty();
+    let value_fv = d.fresh();
+    let value = d.kernel.fvar(value_fv);
+    let one_value = d.num(1);
+    let product = d.mul(value, one_value);
+    let collapse = d.lemma(mul_one, &[value]);
+    let equation = d.symm(product, value, collapse);
+    let predicate = d.dvd_predicate(value, value);
+    let level = d.one_level();
+    let intro = d.kernel.const_(exists_intro, vec![level]);
+    let proof = d.apply(intro, &[nat, predicate, one_value, equation]);
+    let ty = d.dvd(value, value);
+    let proof = d.lam(value_fv, nat, proof);
+    let ty = d.pi(value_fv, nat, ty);
+    d.kernel
+        .add_declaration(Declaration::Theorem {
+            name: target,
+            uparams: vec![],
+            ty,
+            value: proof,
+        })
+        .map_err(|error| format!("target-native dvd reflexivity rejected: {error:?}"))?;
+    Ok(target)
+}
+
+fn declare_target_native_dvd_mul_right(kernel: &mut Kernel) -> Result<NameId, String> {
+    let target = nested_name(kernel, &["Axeyum", "Autogenesis", "dvdMulRightOfficialV1"]);
+    let mut d = Dev::new(kernel)?;
+    let mul_assoc = d.exact("Nat.mul_assoc")?;
+    let exists_intro = d.exact("Exists.intro")?;
+    let nat = d.nat_ty();
+    let divisor_fv = d.fresh();
+    let divisor = d.kernel.fvar(divisor_fv);
+    let value_fv = d.fresh();
+    let value = d.kernel.fvar(value_fv);
+    let factor_fv = d.fresh();
+    let factor = d.kernel.fvar(factor_fv);
+    let premise_ty = d.dvd(divisor, value);
+    let premise_fv = d.fresh();
+    let premise = d.kernel.fvar(premise_fv);
+    let result_value = d.mul(value, factor);
+    let conclusion = d.dvd(divisor, result_value);
+    let predicate = d.dvd_predicate(divisor, value);
+    let motive = d
+        .kernel
+        .lam(d.anon, premise_ty, conclusion, BinderInfo::Default);
+    let witness_fv = d.fresh();
+    let witness = d.kernel.fvar(witness_fv);
+    let divisor_witness = d.mul(divisor, witness);
+    let equation_ty = d.eq(value, divisor_witness);
+    let equation_fv = d.fresh();
+    let equation = d.kernel.fvar(equation_fv);
+    let first = d.congr(value, divisor_witness, equation, &|d, x| d.mul(x, factor));
+    let associated = d.lemma(mul_assoc, &[divisor, witness, factor]);
+    let result_witness = d.mul(witness, factor);
+    let product = d.mul(divisor, result_witness);
+    let replaced = d.mul(divisor_witness, factor);
+    let full_equation = d.trans(result_value, replaced, product, first, associated);
+    let result_predicate = d.dvd_predicate(divisor, result_value);
+    let level = d.one_level();
+    let intro = d.kernel.const_(exists_intro, vec![level]);
+    let body = d.apply(
+        intro,
+        &[nat, result_predicate, result_witness, full_equation],
+    );
+    let minor = d.lam(equation_fv, equation_ty, body);
+    let minor = d.lam(witness_fv, nat, minor);
+    let rec = d.kernel.const_(d.exists_rec, vec![level]);
+    let proof = d.apply(rec, &[nat, predicate, motive, minor, premise]);
+    let proof = d.lam(premise_fv, premise_ty, proof);
+    let proof = d.lam(factor_fv, nat, proof);
+    let proof = d.lam(value_fv, nat, proof);
+    let proof = d.lam(divisor_fv, nat, proof);
+    let ty = d.arrow(premise_ty, conclusion);
+    let ty = d.pi(factor_fv, nat, ty);
+    let ty = d.pi(value_fv, nat, ty);
+    let ty = d.pi(divisor_fv, nat, ty);
+    d.kernel
+        .add_declaration(Declaration::Theorem {
+            name: target,
+            uparams: vec![],
+            ty,
+            value: proof,
+        })
+        .map_err(|error| format!("target-native dvd multiplication rejected: {error:?}"))?;
+    Ok(target)
+}
+
 fn declare_target_native_dvd_add(kernel: &mut Kernel) -> Result<NameId, String> {
     let target = nested_name(kernel, &["Axeyum", "Autogenesis", "dvdAddOfficialV1"]);
     let mut d = Dev::new(kernel)?;
