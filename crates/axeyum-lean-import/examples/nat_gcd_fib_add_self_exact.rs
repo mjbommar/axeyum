@@ -193,6 +193,14 @@ fn run() -> Result<(), String> {
         return run_fib_gcd_helper_type_diagnostic(args);
     }
     let mut args = std::env::args_os().skip(1);
+    if args.next().as_deref()
+        == Some(std::ffi::OsStr::new(
+            "--target-native-fib-gcd-target-type-diagnostic",
+        ))
+    {
+        return run_fib_gcd_target_type_diagnostic(args);
+    }
+    let mut args = std::env::args_os().skip(1);
     if args.next().as_deref() == Some(std::ffi::OsStr::new("--target-native-goal-audit")) {
         return run_target_native_goal_audit(args);
     }
@@ -1221,6 +1229,51 @@ fn run_fib_gcd_helper_type_diagnostic(
     Ok(())
 }
 
+fn run_fib_gcd_target_type_diagnostic(
+    mut args: impl Iterator<Item = std::ffi::OsString>,
+) -> Result<(), String> {
+    let greatest_path = path(&mut args)?;
+    let shift_path = path(&mut args)?;
+    if args.next().is_some() {
+        return Err("usage: nat_gcd_fib_add_self_exact \
+             --target-native-fib-gcd-target-type-diagnostic \
+             <gcd-greatest> <gcd-fib-add-self>"
+            .to_owned());
+    }
+    let greatest = import_bound(&greatest_path, GCD_GREATEST_CAPSULE, "gcd-greatest")?;
+    let shift = import_bound(&shift_path, GCD_FIB_SHIFT_CAPSULE, "gcd-fib-add-self")?;
+    let composed = compose_checked_theorem_slice(shift.kernel(), greatest.kernel(), &[TARGET])
+        .map_err(|error| format!("target diagnostic composition declined: {error:?}"))?;
+    verify_checked_theorem_composition(
+        shift.kernel(),
+        greatest.kernel(),
+        composed.kernel(),
+        composed.receipt(),
+    )
+    .map_err(|error| format!("target diagnostic composition did not replay: {error:?}"))?;
+    let mut kernel = composed.kernel().clone();
+    declare_fib_gcd_quotient_iteration(&mut kernel)?;
+    let (_name, expected, proof) = build_fib_gcd(&mut kernel)?;
+    let inferred = kernel
+        .infer(proof)
+        .map_err(|error| format!("target proof inference failed: {error:?}"))?;
+    let definitionally_equal = kernel.def_eq(expected, inferred);
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "schema_version":1,
+            "kind":"axeyum-autogenesis-nat-fib-gcd-target-type-diagnostic-v1",
+            "state":"expected-and-inferred-target-types-compared-without-target-submission",
+            "expected":{"type":kernel.render_lean(expected),"sha256":canonical_expression_sha256(&kernel,expected)?},
+            "inferred":{"type":kernel.render_lean(inferred),"sha256":canonical_expression_sha256(&kernel,inferred)?},
+            "definitionally_equal":definitionally_equal,
+            "execution":{"complete_diagnostics":1,"helper_theorem_submissions":1,"target_proof_inferences":1,"target_theorem_submissions":0,"proof_values_rendered":0,"capsule_writes":0,"retries":0,"ledger_writes":0}
+        }))
+        .map_err(|error| error.to_string())?
+    );
+    Ok(())
+}
+
 fn fib_gcd_iteration_statement(d: &mut Dev<'_>, m: ExprId, r: ExprId, q: ExprId) -> ExprId {
     let fib_m = d.fib(m);
     let product = d.mul(m, q);
@@ -1366,6 +1419,19 @@ fn declare_fib_gcd(kernel: &mut Kernel) -> Result<NameId, String> {
     if optional_name(kernel, FIB_GCD_TARGET)?.is_some() {
         return Err("Nat.fib_gcd unexpectedly already exists".to_owned());
     }
+    let (target, ty, proof) = build_fib_gcd(kernel)?;
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name: target,
+            uparams: vec![],
+            ty,
+            value: proof,
+        })
+        .map_err(|error| format!("exact Nat.fib_gcd rejected: {error:?}"))?;
+    Ok(target)
+}
+
+fn build_fib_gcd(kernel: &mut Kernel) -> Result<(NameId, ExprId, ExprId), String> {
     let target = nested_name(kernel, &["Nat", "fib_gcd"]);
     let mut d = Dev::new(kernel)?;
     let gcd_induction = d.exact("Nat.gcd.induction")?;
@@ -1393,15 +1459,7 @@ fn declare_fib_gcd(kernel: &mut Kernel) -> Result<NameId, String> {
     let ty = fib_gcd_statement(&mut d, m, n);
     let ty = d.pi(n_fv, nat, ty);
     let ty = d.pi(m_fv, nat, ty);
-    d.kernel
-        .add_declaration(Declaration::Theorem {
-            name: target,
-            uparams: vec![],
-            ty,
-            value: proof,
-        })
-        .map_err(|error| format!("exact Nat.fib_gcd rejected: {error:?}"))?;
-    Ok(target)
+    Ok((target, ty, proof))
 }
 
 fn fib_gcd_step(

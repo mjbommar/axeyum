@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-target-type-diagnostic-result-v1",
+  "state": "target-proof-inference-stopped-at-internal-type-mismatch-no-target-submission",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-nat-fib-gcd-target-type-diagnostic-plan-v1.json",
+    "sha256": "60489d89b8f3cceb35f30af4a7e56d5873aad9fa6c4ee1797412fc737186796a"
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+    "sha256": "67563e00d85076df502b5655c5b77805621acf4cc478703c6bf265e6049b77b3"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/audits/43c1e4a83-nat-fib-gcd-target-type-diagnostic-v1",
+    "index_sha256": "d1eb836704174d252286f35e2d7ee1151e324fd2f9e0277badfff67d41de1561",
+    "observation_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "968bf24c4c1dc1780f972060540a0974b9a7d72abfdd0a11e20137e6688b93d8",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "observation": {
+    "stage": "target proof inference after accepted process-local helper setup",
+    "error": "target proof inference failed: TypeMismatch { expected: ExprId(112691), got: ExprId(112915) }",
+    "process_local_expression_ids_are_not_semantic_evidence": true,
+    "expected_type_rendered": false,
+    "inferred_type_rendered": false,
+    "proof_value_rendered": false,
+    "target_submitted": false
+  },
+  "execution": {
+    "complete_diagnostics": 0,
+    "helper_theorem_submissions": 1,
+    "target_proof_inferences": 1,
+    "target_theorem_submissions": 0,
+    "proof_values_rendered": 0,
+    "capsule_writes": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "helper_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "preregister one diagnostic that independently infers the exact base and step arguments supplied to Nat.gcd.induction, stopping at the first mismatch without target submission",
+  "limitations": "This localizes the rejection inside the target proof but not yet to its base or step argument. The helper exists only in this failed diagnostic process and no durable theorem or fact changed."
+}
