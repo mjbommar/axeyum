@@ -777,6 +777,14 @@ fibres. Thus neither a direct quadratic-digit identification nor a better
 Fourier bookkeeping step can establish `(HWO)`. The surviving requirement is
 genuine collective signed cancellation in the high-Witt exact-order family.
 
+A fresh primary-source audit of prescribed-coefficient results reaches the
+same exact frontier from the original formulation.  The uniform Hayes--Hsu--
+Car/Pollack theorem prescribes a leading/trailing total only below
+`(1/2-epsilon)n`; Granger's characteristic-two exact-formula program treats
+fixed short prefixes rather than the growing half prefix.  Lemire is precisely
+the excluded equality case after reciprocal reversal.  These sources therefore
+validate the translation but do not reduce `(HWO)` or `(REL)`.
+
 **Next:** prove `(REL)`, encode it as replayable evidence, remove the
 manuscript's fail-visible warning, and perform the final source audit.  The
 active geometric form is the complete signed lower Witt trace `(WITT-LOW)`,

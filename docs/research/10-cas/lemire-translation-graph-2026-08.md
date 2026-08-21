@@ -27,6 +27,8 @@ large-field limit, fixed conductor, or linear conductor loss cannot prove
 | High-Witt exact order | signed trace `T_(j,s)` | [Sawin](https://arxiv.org/abs/1805.04330) | Correct geometry, but published equidistribution is `q -> infinity`. |
 | Factorisation function interval | connected von-Mangoldt trace | [Sawin](https://arxiv.org/abs/1809.05137) | Square-root mechanism requires relatively large characteristic. |
 | Prime/Mobius correlations | Vaughan complete sums | [Gorodetsky--Sawin](https://arxiv.org/abs/1811.04834) | Large-`q` theorem; framework remains relevant. |
+| Prescribed leading block | zero coefficients `x^(n-1),...,x^ceil(n/2)` | [Pollack](https://www.pollack-math.net/prescribed.pdf) | Uniform theorem is strictly below half: `s+t <= (1/2-epsilon)n`. |
+| Exact prescribed-prefix formulas | Artin--Schreier curve point counts | [Granger](https://arxiv.org/abs/1610.06878) | In characteristic two, general formulas stop before the growing half-length prefix. |
 | Quadratic digits along primes | quadratic Type-I/II phase | [Cheng](https://arxiv.org/abs/2605.25877) | New candidate bridge below; theorem is odd-characteristic and fixed-band. |
 | Sparse construction | trinomials/pentanomials/composition | [Handbook discussion](https://archive.ymsc.tsinghua.edu.cn/pacm_download/672/12637-dingjt-p2.pdf) | No all-degree construction theorem. |
 
@@ -90,6 +92,21 @@ collective cancellation across the high-Witt, exact-order signed family before
 absolute values.  It must be a new theorem about that family, rather than a
 quadratic-form identification, a fixed-field pointwise estimate, or a
 rephrasing of the inverse-energy bound.
+
+## Prescribed-coefficient boundary
+
+Lemire is the endpoint leading-block prescription: after reciprocal reversal,
+it fixes `ceil(n/2)-1` consecutive coefficients.  Pollack's Proposition 10
+(quoting the Hayes/Hsu/Car line of work) is uniform over all finite fields only
+for `s+t <= (1/2-epsilon)n`, with `epsilon>0` fixed.  Its displayed error is
+of Weil size and therefore cannot establish the equality case at `q=2`.
+
+This is not repaired by the characteristic-two exact-formula literature.
+Granger's general method requires fewer prescribed coefficients than the
+characteristic; its binary computations treat small fixed prefixes, while the
+half-degree prefix grows with `n`.  Thus the familiar prescribed-coefficient
+theorems translate correctly to `(L)`, but leave exactly the endpoint that
+Lemire asks for.  They are evidence for the formulation, not a hidden proof.
 
 ## Use
 
