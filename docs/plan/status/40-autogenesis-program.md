@@ -2,11 +2,17 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains proved; its ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Official clean divisibility antisymmetry reconstructs twice over r091 with six empty-footprint supports and byte-identical capsules. Target-owned `dvd_add` and `eq_one_of_dvd_one` now reconstruct twice, export byte-identically, and import four times with empty footprints, without importing `Iff`. Four GCD divisibility premises remain; their construction is reduced to `Nat.gcd.induction`, the accepted quotient witness, all-natural cancellation, and the official zero/successor GCD equations.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains proved; its ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. The target-owned divisibility layer now includes reflexivity, multiplication, addition, divisibility antisymmetry, and the divisor-of-one result. The target-owned GCD layer is closed: `gcd_dvd_left`, `gcd_dvd_right`, and `dvd_gcd` reconstruct twice over the explicit Euclidean parameter family, export byte-identically, reimport four times, and have empty footprints. No GCD-shift or ledger credit is claimed yet.
 
-**Next:** audit the exact GCD-induction construction surface, then reconstruct the target-native GCD divisibility pair and greatest-common-divisor theorem. Adapt the unchanged `fib_coprime` argument to those supports and direct all-natural cancellation, admit coprimality, and resume the exact GCD-shift target.
+**Next:** adapt the unchanged `fib_coprime` argument to the accepted target-owned divisibility and GCD supports, using direct all-natural additive cancellation instead of `Iff`; reconstruct and seal target-native coprimality, then resume the exact `Nat.gcd_fib_add_self` target.
 
 <!-- plan-section: landed-changes -->
+
+| 2026-08-21 | `9ff54f11c` | Six clean order/divisibility supports reconstruct twice over r091 with empty footprints and byte-identical capsules |
+| 2026-08-21 | `dfc8874ca` | Target-owned divisibility addition and divisor-of-one supports reconstruct reproducibly without importing `Iff` |
+| 2026-08-21 | `5cdd964ba` | Divisibility reflexivity and multiplication utilities reconstruct twice and bind sealed evidence |
+| 2026-08-21 | `30d2c89b6` | Nonrendering parameter audit selects the official-representation successor GCD equation and typechecks all seven explicit inputs |
+| 2026-08-21 | `527508a56` | Target-owned `gcd_dvd_left`, `gcd_dvd_right`, and `dvd_gcd` reconstruct twice with byte-identical empty-footprint evidence |
 
 | 2026-08-19 | `1afe65473` | Native/imported Nat prelude composition probe |
 | 2026-08-19 | `d1eb38a13` | Alpha-stable cross-kernel expression identity |
