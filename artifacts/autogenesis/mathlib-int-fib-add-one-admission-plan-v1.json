@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-add-one-admission-plan-v1",
+  "state": "preregistered-sealed-capsule-admission-before-operation-code-or-ledger-write",
+  "target": {
+    "fact_id": "F:ml430-int-fib-add-one-33f1b748",
+    "fact_sha256": "c0cbfccdb62f822c1136f504bf2b245529372029764fb728b8135b5afa46ea02",
+    "name": "Int.fib_add_one"
+  },
+  "evidence": {
+    "construction_result": "artifacts/autogenesis/mathlib-int-fib-add-one-composition-result-v1.json",
+    "construction_result_sha256": "f44fca5827b829160ff3048dfaffa76f1944d60ae11bfb2faf814e6412991102",
+    "identity_result": "artifacts/autogenesis/mathlib-int-fib-add-one-goal-identity-result-v1.json",
+    "identity_result_sha256": "4ba48e8e50d24ada9a5f3bbf203511f7cf44ee706a975bd65ade8296c87a8ba5",
+    "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-one-composition-v1/int-fib-add-one.ndjson",
+    "capsule_sha256": "81fb760e78ee25d12fa7b78f8e2d84892809a36db8a4f8d9cc63fda6be66f27c",
+    "capsule_bytes": 880392,
+    "goal_sha256": "b9c99a22010f3a1e749e9647604da9107259f8ed6bd3010a2520778efcff41c6",
+    "declaration_sha256": "2ee4a2c5dbea36f73b7fea51b74d134e75630e3f860c033720a7e679cabfb5a7",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [
+      "Axeyum.Autogenesis.intFibAddOneResidualV3",
+      "Int.add_comm",
+      "Int.add_neg_cancel_right",
+      "Int.fib_add_two"
+    ]
+  },
+  "protocol": {
+    "add_exact_capsule_checker": true,
+    "register_exact_operation": true,
+    "extend_transaction_assurance_for_exact_four-dependency_capsule": true,
+    "derive_transaction_from_clean_commit": true,
+    "fault_injection_after_intent_exit": 75,
+    "require_fact_unchanged_before_recovery": true,
+    "authoritative_ledger_writes": 1,
+    "fixture_writes": 0,
+    "archive_primary_run": true,
+    "isolated_clean_replay": true
+  },
+  "budget": {
+    "max_operation_registrations": 1,
+    "max_fault_injection_executions": 1,
+    "max_authoritative_ledger_writes": 1,
+    "max_recovery_executions": 1,
+    "max_clean_replays": 1,
+    "max_search_invocations": 0,
+    "max_evaluations": 0
+  },
+  "next_on_accept": "resume the target-owned negative-index sign/parity induction using both admitted recurrence orientations",
+  "limitations": "This authorizes only one exact fact transition from the named immutable capsule and grants no authority to close any newly ready proposition."
+}
