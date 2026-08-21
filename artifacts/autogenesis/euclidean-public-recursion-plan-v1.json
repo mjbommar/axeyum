@@ -1,0 +1,175 @@
+{
+  "authority": {
+    "balanced_bezout_reconstruction_allowed": false,
+    "coprime_cancellation_reconstruction_allowed": false,
+    "evaluation_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0,
+    "proof_bodies_readable_by_model": false,
+    "theorem_values_readable_by_model": false
+  },
+  "budget": {
+    "max_exact_fibonacci_target_submissions": 0,
+    "max_executor_invocations": 0,
+    "max_kernel_theorem_submissions": 2,
+    "max_public_support_theorem_declarations": 1,
+    "max_retries_after_kernel_decline": 0,
+    "max_revised_source_paths": 1
+  },
+  "fixed_recursion": {
+    "additional_statement_names_allowed": 0,
+    "base_branch": "the false public-equation branch, closed by local n*0=0 and 0+n=n proofs",
+    "decrease_evidence": [
+      "Nat.sub_lt",
+      "Nat.lt_of_lt_of_le"
+    ],
+    "decreasing_argument": "dividend",
+    "official_nat_div_add_mod_proof_allowed": false,
+    "private_div_go_invariant_dependency_allowed": false,
+    "proof_search_allowed": false,
+    "recursive_argument": "dividend - divisor",
+    "source_path": "scripts/lean/autogenesis_div_add_mod_public_recursion.lean",
+    "subtraction_restoration": "local primitive-recursive proof using Nat.succ_sub_succ_eq_sub",
+    "synchronized_equations": [
+      "Nat.div_eq",
+      "Nat.mod_eq"
+    ],
+    "transparent_wrapper_lift_reuse_allowed": false,
+    "upstream_proof_bodies_allowed": false
+  },
+  "gates": {
+    "authored_type_must_match_official_target": true,
+    "both_declaration_identities_must_match": true,
+    "direct_dependencies_must_be_enumerated": true,
+    "first_footprint_must_be_empty_before_second_run": true,
+    "public_equations_must_be_rewritten_together": true,
+    "recursive_call_must_use_registered_decrease": true
+  },
+  "inputs": {
+    "allowed_statements": [
+      {
+        "module": "Init.Data.Nat.Basic",
+        "name": "Nat.add_assoc",
+        "source_row_sha256": "8a2ec02b9957c77062ad82a009082b738b4acd2984e30886388bc09a040c12a6",
+        "type": "∀ (n m k : ℕ), n + m + k = n + (m + k)",
+        "type_repr_sha256": "2ea1fc2ec6dc48eb1516f68961c4ba2db1fbc847c80bac2a3c30287efe7281b6",
+        "type_sha256": "16779984a60ab80bf37a3495a2ba7e4e71a033d231e346f6c4d10d47142f5d00"
+      },
+      {
+        "module": "Init.Data.Nat.Basic",
+        "name": "Nat.add_comm",
+        "source_row_sha256": "0b8f9216ccce19ee415e0e86158fd39f2748bc88064a3f9ca7190655aa1a8b5e",
+        "type": "∀ (n m : ℕ), n + m = m + n",
+        "type_repr_sha256": "532e80544e1deed1aa4c7d65083e02a8bd19f7e65e88c62f9466923d7ad173b0",
+        "type_sha256": "50cf83163399903358d23447f8d7bb955a5c71844f2e1b210dcdc474663648a2"
+      },
+      {
+        "module": "Init.Data.Nat.Div.Basic",
+        "name": "Nat.div_add_mod",
+        "source_row_sha256": "27e257330698cbdccdeaf15707b11969451d36760885820c78461215b8c70bf5",
+        "type": "∀ (m n : ℕ), n * (m / n) + m % n = m",
+        "type_repr_sha256": "0a0c92fdac6e526a524d7883d9676e19dc679fca46ebb25ea049df56f0d4ccbb",
+        "type_sha256": "400e186d45e22fc5e595301292fec6ca7191ad435e6efa107af59334e6d942c6"
+      },
+      {
+        "module": "Init.Data.Nat.Div.Basic",
+        "name": "Nat.div_eq",
+        "source_row_sha256": "ff9c2595dac7d9ccb98420f80b981d6a9f19e77d331432a8f0b9e66776695911",
+        "type": "∀ (x y : ℕ), x / y = if 0 < y ∧ y ≤ x then (x - y) / y + 1 else 0",
+        "type_repr_sha256": "13acb513e41c270a1d7d5eacca849667937a02932b3db4176ae1e84370e15c94",
+        "type_sha256": "c7342c1483b6d8cb1599d2d73f3f7f9ce387025ca35eda685e874b565b089e04"
+      },
+      {
+        "module": "Init.Prelude",
+        "name": "Nat.le_of_succ_le_succ",
+        "source_row_sha256": "4468a030297b5445e92fd622e70802c060e4ffbc4d18cf2ae9496ab1ae590dd5",
+        "type": "∀ {n m : ℕ}, n.succ ≤ m.succ → n ≤ m",
+        "type_repr_sha256": "bb084f4b636de926fb35dfbd3c185ca4ef995722d68f0e887a8f1289aa918422",
+        "type_sha256": "a018b6be03497f82e60e910dcdd52820cbf272b806f543904ccbdbd6352cac73"
+      },
+      {
+        "module": "Init.Prelude",
+        "name": "Nat.lt_of_lt_of_le",
+        "source_row_sha256": "25e8c4994b44f5d0aff3d6eeb7291de40137514d2938dc0a8fdd4d3beb29c9d9",
+        "type": "∀ {n m k : ℕ}, n < m → m ≤ k → n < k",
+        "type_repr_sha256": "6624114f088d1e34806148bdbced36f32e77aff022b94e1363562137c29c4039",
+        "type_sha256": "b3b8bbf904f0f933e079873a6757144719146f7e6c0076f2ee9047af93ea98a1"
+      },
+      {
+        "module": "Init.Data.Nat.Div.Basic",
+        "name": "Nat.mod_eq",
+        "source_row_sha256": "0b299051b0607ddad31cda61a34ab4228970a40c3e5de7ae0778557bdb74b263",
+        "type": "∀ (x y : ℕ), x % y = if 0 < y ∧ y ≤ x then (x - y) % y else x",
+        "type_repr_sha256": "b871c3345e1978cdfba0ed487805f40f7ce937b2caa2f2bf14929a84dafe625a",
+        "type_sha256": "bb973c7116d8722cec2508247193f94b2296b35ed67e88bb14add9b64b84737f"
+      },
+      {
+        "module": "Init.Data.Nat.Basic",
+        "name": "Nat.mul_add",
+        "source_row_sha256": "28ac19b00c241817c7fb90432e1a658e251d99a4a925c722b92e3938025df640",
+        "type": "∀ (n m k : ℕ), n * (m + k) = n * m + n * k",
+        "type_repr_sha256": "e34ec9c4fc067b6bbf546b5026f9dd1211d17f8e1c60c298a11c80ab12bf4aa2",
+        "type_sha256": "260cba0d91b06bb037eec4afda7d792e2db72cff4a737f786070daeb109d4b15"
+      },
+      {
+        "module": "Init.Data.Nat.Basic",
+        "name": "Nat.mul_one",
+        "source_row_sha256": "92cb04201b57386bd602a6df3fe47ce6b6c8e2f36ed105178cc334efbc6f71a8",
+        "type": "∀ (n : ℕ), n * 1 = n",
+        "type_repr_sha256": "cff1dac15ed6e0cab0a894d3dc8d3b165ff2f4ee34a35728f14c350e8b4005ff",
+        "type_sha256": "61b6b7947eaf1d8aab1ee1bab031997ba577f31151e510e6cf63075fe8a54be7"
+      },
+      {
+        "module": "Init.Prelude",
+        "name": "Nat.not_succ_le_zero",
+        "source_row_sha256": "b41e44b355cc739b5572a86cd688e1fe32b4d5080674291d9f7cc43a969d85d2",
+        "type": "∀ (n : ℕ), n.succ ≤ 0 → False",
+        "type_repr_sha256": "91c4f965edd28d64e333f4355a571972e4b6bb7ca3b81ee56ad46506baa52b74",
+        "type_sha256": "0e738806cb33fc8746b3212a5f63a057b056c3c22165489d6007a885f9b0bced"
+      },
+      {
+        "module": "Init.Prelude",
+        "name": "Nat.sub_lt",
+        "source_row_sha256": "e2dec60193541f2b04eff010b8ea2437d020406abd21be91cc8a9554b4abd368",
+        "type": "∀ {n m : ℕ}, 0 < n → 0 < m → n - m < n",
+        "type_repr_sha256": "b3f7bbace0186a7f92207e679f8ef0e3d9634c60b4a1fa6c9465d60cbd1b2037",
+        "type_sha256": "f34e0b9a81b142f5291039760d5fb48ce0750544f1355759db0df7ee46bbe016"
+      },
+      {
+        "module": "Init.Prelude",
+        "name": "Nat.succ_sub_succ_eq_sub",
+        "source_row_sha256": "898d1ff7c17c268a9323d0fdd0fc55a753d43f58c0d0c0db6741dceef21b0045",
+        "type": "∀ (n m : ℕ), n.succ - m.succ = n - m",
+        "type_repr_sha256": "5ccab900ba0a1faf682bc498f34ddd1fdf0c20c4fb0f39cd4841522f383696c3",
+        "type_sha256": "8385e10288e30a041b9d2a2e35552dc76171966d22110b03521e313da78bf850"
+      }
+    ],
+    "statement_inventory": {
+      "mode": "0444",
+      "path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-nat-int-statement-inventory-v2.ndjson",
+      "sha256": "4285e551680abf3b0cafb11709015f04b3aef3eb05ce23af2392b12cec31aecc"
+    },
+    "transparent_wrapper_decline": {
+      "kernel_theorem_submissions": 0,
+      "path": "artifacts/autogenesis/euclidean-public-div-add-mod-lift-decline-v1.json",
+      "sha256": "06f9250a3491e27106c447eb06bdd2f0292f454e3499fc2da0308f90463bda0f"
+    }
+  },
+  "kind": "axeyum-autogenesis-euclidean-public-recursion-plan",
+  "limitations": "The plan replaces the failed wrapper route with a public recursive proof. It does not authorize downstream Bezout, cancellation, or target work.",
+  "policy_version": "euclidean-public-synchronized-recursion-v1",
+  "schema_version": 1,
+  "state": "preregistered-before-recursive-source-or-kernel-submission",
+  "target": {
+    "authored_name": "Axeyum.Autogenesis.divAddModPublicRecursion",
+    "fresh_reconstructions": 2,
+    "required_axiom_footprint": [],
+    "required_type_relation": "exact-lean-expression-representation",
+    "second_run_requires_first_run_acceptance": true,
+    "source_name": "Nat.div_add_mod",
+    "statement": "∀ (m n : ℕ), n * (m / n) + m % n = m",
+    "type_repr_sha256": "0a0c92fdac6e526a524d7883d9676e19dc679fca46ebb25ea049df56f0d4ccbb",
+    "type_sha256": "400e186d45e22fc5e595301292fec6ca7191ad435e6efa107af59334e6d942c6"
+  },
+  "verification": "python3 scripts/gen-autogenesis-euclidean-public-recursion-plan.py --check"
+}

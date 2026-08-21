@@ -192,6 +192,7 @@ compounding, not automation theatre.
 | [Local subtraction-restoration replacement result](93-local-subtraction-restoration-replacement-result.md) | Did replacing the sole assumption-bearing edge make the private joint Euclidean invariant reconstruct twice with an empty footprint? |
 | [Public Euclidean wrapper-lift plan](94-public-euclidean-wrapper-lift-plan.md) | How should the private fuel invariant become exact public `Nat.div_add_mod` without importing its assumption-bearing proof? |
 | [Public Euclidean wrapper-lift decline](95-public-euclidean-wrapper-lift-decline.md) | Why does the private `div.go` invariant not transparently reach public division, and which representation seam forces a new route? |
+| [Public Euclidean recursion plan](96-public-euclidean-recursion-plan.md) | How can synchronized public `/` and `%` recursion prove exact `Nat.div_add_mod` without reusing the failed wrapper route? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
