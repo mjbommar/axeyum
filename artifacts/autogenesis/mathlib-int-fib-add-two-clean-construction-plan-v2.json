@@ -1,0 +1,43 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-int-fib-add-two-clean-construction-plan",
+  "state": "preregistered-after-v1-normalization-failure-before-v2-source",
+  "prior_result": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-add-two-clean-construction-result-v1.json",
+    "required_state": "first-source-stops-at-negative-successor-normalization-no-export"
+  },
+  "target": {
+    "fact_id": "F:ml430-int-fib-add-two-739358dd",
+    "theorem": "Int.fib_add_two"
+  },
+  "repair": {
+    "negative_successor_goal": "change constructor-level additions to fib (negSucc k), fib (negSucc (k+1)), and fib (negSucc (k+2)) before unfolding",
+    "parity_hypothesis": "normalize the selected mod-two hypothesis with Nat.add_mod before simplifying the goal",
+    "proof_route_unchanged": true,
+    "new_automation": false
+  },
+  "execution": {
+    "host": "s5",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean_version": "4.30.0",
+    "source": "artifacts/autogenesis/sources/int-fib-add-two-clean-v2.lean",
+    "source_present_at_plan_commit": false,
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-clean-v2",
+    "pack_present_at_plan_commit": false
+  },
+  "budget": {
+    "max_compiler_invocations": 1,
+    "max_exporter_invocations": 1,
+    "max_importer_runs": 2,
+    "max_retries": 0,
+    "max_target_theorem_submissions": 1,
+    "max_search_invocations": 0,
+    "max_ledger_writes": 0
+  },
+  "acceptance": {
+    "two_import_observations_byte_identical": true,
+    "axiom_footprint": [],
+    "fact_admission_separate": true
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-add-two-clean-construction-result-v2.json"
+}
