@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-theorem-goal-identity-audit",
+  "state": "exact-goal-identity-bound-without-rendering",
+  "plan_sha256": "0e5bc2844a886b843198cc609e634e9a2b0c4daca1d82604c26fadc94b05991d",
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-exact-composition-v2/int-fib-add-two-1.ndjson", "bytes": 771121, "sha256": "0fbbb4d55ed862f7feb1b8efa3bf45eed24269067b3702c727d05e45c8947219"},
+  "theorem": {"name": "Int.fib_add_two", "canonical_type_sha256": "acd1e0af4faea9717102d1a977fa510295245969d95f86f64cbfcdacd33f3508", "canonical_declaration_sha256": "cd1612aa68107d4b35b842f4ad2798f07d15256462d49236b8d34ab852de805f", "axiom_footprint": [], "direct_theorem_dependencies": ["Axeyum.Autogenesis.fibAddTwo", "Axeyum.IntFib.castAdd", "Axeyum.IntFib.evenAdd", "Axeyum.IntFib.modCases", "Axeyum.IntFib.oddAdd", "Axeyum.IntFib.succOne", "Axeyum.IntFib.succZero", "Int.fib_add_two_residual"]},
+  "execution": {"importer_runs": 1, "stream_reads": 1, "retries": 0, "rendered_proof_terms": 0, "rendered_theorem_types": 0, "rendered_theorem_values": 0, "ledger_writes": 0},
+  "authority": {"identity_credit": 1, "fact_status_changes": 0, "ledger_writes": 0}
+}

@@ -1,0 +1,11 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-clean-reconstruction-plan",
+  "state": "preregistered-after-dependent-match-carrier-before-v3-source",
+  "predecessor": {"path": "artifacts/autogenesis/int-fib-clean-parity-leaves-result-v2.json", "required_state": "three-clean-parity-roots-one-dependent-match-carrier"},
+  "targets": ["Axeyum.IntFib.modStepTwo", "Axeyum.IntFib.modCases", "Axeyum.IntFib.succOne", "Axeyum.IntFib.succZero"],
+  "repair": {"only_change": "replace modCases's dependent match with explicit cases on hmod : n % 2, return zero and one directly, and eliminate k + 2 using Nat.mod_lt plus Nat.not_lt_of_ge and Nat.le_add_left", "other_roots_unchanged": true, "support_unchanged": true},
+  "forbidden": ["Nat.mod_two_eq_zero_or_one", "dependent match over Nat.mod_lt", "omega", "simp in new parity targets", "simpa", "native_decide", "propext"],
+  "execution": {"source": "artifacts/autogenesis/sources/int-fib-clean-parity-leaves-v3.lean", "source_present_at_plan_commit": false, "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-clean-parity-leaves-v3", "max_compiler_invocations": 1, "max_exporter_invocations": 1, "max_importer_runs": 1, "max_retries": 0, "max_theorem_submissions": 9, "max_ledger_writes": 0},
+  "output": "artifacts/autogenesis/int-fib-clean-parity-leaves-result-v3.json"
+}

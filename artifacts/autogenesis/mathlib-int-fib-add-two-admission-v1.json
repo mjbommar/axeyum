@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-sealed-kernel-capsule-admission",
+  "state": "durably-admitted-archived-and-clean-replayed",
+  "fact_id": "F:ml430-int-fib-add-two-739358dd",
+  "operation_id": "authoritative-mathlib-int-fib-add-two-kernel-capsule-v1",
+  "registration_commit": "0441c00132a5a5318ab086b07a6e2295ffa9c8c6",
+  "external_root": "/nas3/data/axeyum/autogenesis/admissions/0441c0013-mathlib-int-fib-add-two-v1",
+  "external_index_sha256": "db1d7980ae28ac460166f95388f6f1f6ef926ce402cf7c9bd51bfaa86b9c84f4",
+  "source_bundle_sha256": "a5193b9797e3b3d5e29c12a74a37f3d63d23112fd5ccd6dce4c73c91577f0c76",
+  "identities": {
+    "frontier_before_sha256": "bd463349683e75e30a4c9fc3300996794342383502eb9853a7af59dd468bd2cb",
+    "execution_sha256": "71a8ca5e0bb2203660d15121d6daddc57636deb87eacaf38e4e295d7145e2c1a",
+    "transaction_sha256": "44c5e60d918d3be5fdfb8bac4bb351b6e7cfb2df44b28bcdbe0a10c23b342ca3",
+    "admission_event_sha256": "8279cf75f976362b97ae1f0721047a4ebc49560f68552d69159c2aed9cab56e7",
+    "frontier_after_sha256": "b4d038e6ebf1464dcf215efaee1532fff1a801ab0fbf06a9b719bc392b2b8e53",
+    "readiness_delta_sha256": "f404004ad92ab1d71e1b24b212173823c6b4a3e7672dfb45a229c0dcd302b048",
+    "before_fact_sha256": "94b475868188bbb04348e283144ca0178090bc25ec2f08b22774d932eb09dc2a",
+    "after_fact_sha256": "c4a07c2332126940a3ad24354dd89f3bc0d234f48d284e05e954bf5c7b4a0b86"
+  },
+  "external_files": {
+    "frontier-before.json": "d27f9cb685a447f236f15af186bfdece8c5f1ab2927bcc687a0a79609a3c63a7",
+    "execution.json": "15b01ee6959f7fbbe729ab13da7b851242058f18e4bec6482efcd17fdb090d37",
+    "transaction.json": "98c7000275b90056c5252b90f70c39519452bf31eb430bdcb7bd0cd1aa804b83",
+    "admission-event.json": "6b7850bd8eb39a0cb85f9f6dc61f98bc597626867655aa2cf6fd4a67b56d7a80",
+    "frontier-after.json": "b85f874a0b88ba4fdf8d3feaa7dd6e0176fda49752621f9ef2b437f6c7433bfb",
+    "readiness.json": "074ae6d7b77d69af2695e8edb0806676681eb9e700df2a9efbdff4fc0f5a4473",
+    "before-fact.json": "ac1a670e6bfe9e6dc49baeef6d6996b1af237bdd06b0e23a08fccb2f6537ec07",
+    "after-fact.json": "e3b3ee3f8a45db6145ad30dbc5de54a0a6d63b0a73b505582d766782edaeb6ff"
+  },
+  "fault_injection": {
+    "boundary": "after-intent",
+    "exit_status": 75,
+    "fact_unchanged_before_recovery": true
+  },
+  "result": {
+    "authoritative_ledger_writes": 1,
+    "fixture_writes": 0,
+    "newly_ready": [
+      "F:ml430-int-fib-add-one-33f1b748",
+      "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d"
+    ],
+    "axiom_footprint": [],
+    "theorem_dependencies": [
+      "Axeyum.Autogenesis.fibAddTwo",
+      "Axeyum.IntFib.castAdd",
+      "Axeyum.IntFib.evenAdd",
+      "Axeyum.IntFib.modCases",
+      "Axeyum.IntFib.oddAdd",
+      "Axeyum.IntFib.succOne",
+      "Axeyum.IntFib.succZero",
+      "Int.fib_add_two_residual"
+    ],
+    "target_dependency": null
+  },
+  "clean_replay": {
+    "source_commit": "c254e3c9a92a8461274f4969b360c43a7fdba13d",
+    "external_root": "/nas3/data/axeyum/autogenesis/replays/c254e3c9a-int-fib-add-two-v1",
+    "external_index_sha256": "b15377154d786c82d17594c083a48e2cc170bb93896e44423cca9a4adcf66104",
+    "replay_file_sha256": "6e70be4dfe954996fad9bc393f950dafa0dcf697253370b1fb5679a61018e59d",
+    "replay_sha256": "7fcb560476dda8f7abf60799eb7179d76457ecb6c6eb8c4ec8942ec861d881c3",
+    "fresh_execution_sha256": "5d318f77730f3ec47b9ebea5c984e602932b9187a4011a7264948a99fdc4d843",
+    "fresh_transaction_sha256": "09db9d542a6ccfe370cdf8bbf95afa65c39775c1795b5ebf4d05f33a31ac9dfd",
+    "fresh_event_sha256": "4f124d6d5209bf2b8729c9f78fabcdb00b01f17c4d700a3f3070c446f629f3c1",
+    "fresh_readiness_delta_sha256": "41601e46cd43d29fb7761d2e0c596ebec0b2381fed699691b3e40018e4aa3c76"
+  },
+  "reproduction": "python3 scripts/check-autogenesis-statement-reflexivity-admission.py --manifest artifacts/autogenesis/mathlib-int-fib-add-two-admission-v1.json",
+  "limitations": "This admits one exact Mathlib v4.30 integer Fibonacci recurrence from a fixed eight-root target-owned composition. It grants no authority to close either newly ready descendant or any other proposition."
+}

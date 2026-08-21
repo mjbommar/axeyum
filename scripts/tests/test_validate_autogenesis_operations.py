@@ -24,9 +24,9 @@ class OperationRegistryTests(unittest.TestCase):
             (ROOT / "artifacts/autogenesis/operations.json").read_text()
         )
 
-    def test_committed_registry_has_one_fixture_and_twelve_authoritative_operations(self) -> None:
+    def test_committed_registry_has_one_fixture_and_thirteen_authoritative_operations(self) -> None:
         registry_module.validate_registry(self.registry, ROOT)
-        self.assertEqual(len(self.registry["operations"]), 13)
+        self.assertEqual(len(self.registry["operations"]), 14)
         self.assertEqual(
             self.registry["operations"][0]["scope"], "counterfactual-fixture-only"
         )
@@ -126,6 +126,16 @@ class OperationRegistryTests(unittest.TestCase):
         self.assertEqual(int_fib_natcast["applicability"]["fragments"], ["Int"])
         self.assertEqual(
             int_fib_natcast["executor"]["driver"],
+            "axeyum-lean-import/sealed-kernel-capsule-v1",
+        )
+        int_fib_add_two = self.registry["operations"][13]
+        self.assertEqual(
+            int_fib_add_two["applicability"]["fact_ids"],
+            ["F:ml430-int-fib-add-two-739358dd"],
+        )
+        self.assertEqual(int_fib_add_two["applicability"]["fragments"], ["Int"])
+        self.assertEqual(
+            int_fib_add_two["executor"]["driver"],
             "axeyum-lean-import/sealed-kernel-capsule-v1",
         )
 
@@ -265,7 +275,7 @@ class OperationRegistryTests(unittest.TestCase):
                     registry_module.validate_registry(mutated, ROOT)
 
     def test_sealed_kernel_capsule_driver_is_exactly_manifest_bound(self) -> None:
-        for operation_index in (8, 9):
+        for operation_index in (8, 9, 13):
             for field, value in (
                 ("capsule_sha256", "0" * 64),
                 ("target_theorem", "Nat.wrong"),

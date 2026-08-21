@@ -1,0 +1,11 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-clean-reconstruction-plan",
+  "state": "preregistered-after-elaboration-diagnostics-before-v2-source",
+  "predecessor": {"path": "artifacts/autogenesis/nat-mod-core-clean-reconstruction-result-v1.json", "required_state": "manual-branch-proof-needs-three-elaboration-corrections"},
+  "target": {"name": "Axeyum.NatMod.modCoreEq", "statement_unchanged": true},
+  "repair": {"only_changes": ["remove lines that redundantly unfold Nat.modCore and rewrite dif_pos in the already-reduced recursive branch", "spell the private theorem as «_private.Init.Data.Nat.Div.Basic.0.Nat.modCore.go.fuel_congr»", "replace each false-branch rw with exact (if_neg ...).symm"]},
+  "forbidden": ["simp", "simpa", "propext", "and_false", "and_self", "eq_false", "eq_self", "eq_true", "false_and", "ite_cond_eq_false", "ite_cond_eq_true", "omega", "native_decide"],
+  "execution": {"source": "artifacts/autogenesis/sources/nat-mod-core-clean-reconstruction-v2.lean", "source_present_at_plan_commit": false, "pack": "/nas3/data/axeyum/autogenesis/reference-packs/nat-mod-core-clean-reconstruction-v2", "max_compiler_invocations": 1, "max_exporter_invocations": 1, "max_importer_runs": 1, "max_retries": 0, "max_theorem_submissions": 1, "max_ledger_writes": 0},
+  "output": "artifacts/autogenesis/nat-mod-core-clean-reconstruction-result-v2.json"
+}

@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-add-two-admission-plan-v1",
+  "state": "preregistered-sealed-capsule-admission-before-operation-code-or-ledger-write",
+  "target": {"fact_id": "F:ml430-int-fib-add-two-739358dd", "fact_sha256": "ac1a670e6bfe9e6dc49baeef6d6996b1af237bdd06b0e23a08fccb2f6537ec07", "name": "Int.fib_add_two"},
+  "evidence": {"construction_result": "artifacts/autogenesis/int-fib-add-two-exact-composition-result-v2.json", "construction_result_sha256": "4a83b16e91c30fcef985b10a0694f76c61318927fbeae049acbc82277daa321b", "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-exact-composition-v2/int-fib-add-two-1.ndjson", "capsule_sha256": "0fbbb4d55ed862f7feb1b8efa3bf45eed24269067b3702c727d05e45c8947219", "capsule_bytes": 771121, "declaration_sha256": "cd1612aa68107d4b35b842f4ad2798f07d15256462d49236b8d34ab852de805f", "axiom_footprint": [], "direct_theorem_dependencies": ["Axeyum.Autogenesis.fibAddTwo", "Axeyum.IntFib.castAdd", "Axeyum.IntFib.evenAdd", "Axeyum.IntFib.modCases", "Axeyum.IntFib.oddAdd", "Axeyum.IntFib.succOne", "Axeyum.IntFib.succZero", "Int.fib_add_two_residual"]},
+  "protocol": {"register_exact_operation": true, "derive_transaction_from_clean_commit": true, "fault_injection_after_intent_exit": 75, "require_fact_unchanged_before_recovery": true, "authoritative_ledger_writes": 1, "fixture_writes": 0, "archive_primary_run": true, "isolated_clean_replay": true},
+  "budget": {"max_operation_registrations": 1, "max_fault_injection_executions": 1, "max_authoritative_ledger_writes": 1, "max_recovery_executions": 1, "max_clean_replays": 1, "max_search_invocations": 0, "max_evaluations": 0},
+  "expected_newly_ready": ["F:ml430-int-fib-add-one-33f1b748", "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d"],
+  "next_on_accept": "measure the newly ready frontier and select the next integer Fibonacci child without assuming either child is already proved",
+  "limitations": "This authorizes only one exact fact transition from the named immutable capsule and grants no authority to close either newly ready proposition."
+}
