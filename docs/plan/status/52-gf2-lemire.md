@@ -132,8 +132,16 @@ complete-intersection geometry is valid in characteristic two and is the
 natural carrier for this paired phase, but its published untwisted
 large-field covariance has degree-dependent constants.  The selected
 geometric continuation is now a degree-uniform principal-unit/Witt
-local-system trace bound after coarse-character subtraction; no such bound or
-canonical ordered-root lift is yet proved, so `(REL)` remains open.
+local-system trace bound after coarse-character subtraction.  Sawin's joint
+Witt monodromy theorem applies to the fixed pair `1,L_(eta^(-1))` without a
+characteristic-two exclusion.  The hook expansion of `trace(U^n)` has no
+special-linear invariant at the Lemire endpoints, so the entire top compactly
+supported cohomology term of every nontrivial shift now vanishes.  This is one
+proved weight rung.  The remaining lower-cohomology trace is still multiplied
+by conductor- and Adams-power-dependent Betti complexity; Sawin's theorem
+fixes those inputs and sends `q` to infinity.  A fixed-`q=2`, degree-uniform
+bound for that signed lower trace `(WITT-LOW)` remains unproved, so `(REL)`
+remains open.
 The companion characteristic-two Newton-over-Hodge result has also been
 priced conditionally: it forces only divisibility of the connected endpoint
 trace by eight.  At `ell=200` the existing envelope is already divisible by
@@ -836,6 +844,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-21 | `396dc81aa` | Matched the shifted high-character family to Sawin's joint Witt monodromy, proved its power-sum representation has no top-cohomology invariant at either endpoint, and isolated the fixed-binary lower-cohomology trace `(WITT-LOW)` as the remaining geometric estimate. |
 | 2026-08-21 | `8e8196f7a` | Expanded each high-conductor aggregate split into one signed two-Mobius order-pair correlation, proved translation kills every order cell at its forced layer, and isolated the missing characteristic-two Witt-local-system refinement of Hast--Matei `m=2`. |
 | 2026-08-21 | `231a3992e` | Combined every retained Haar level before identity-path localization, reducing the sharp first-endpoint price to one aggregate path with 17 odd or 18 even half-contractions still unproved after the exact translation split. |
 | 2026-08-21 | `79e1c4a6e` | Proved that translation `f(x)->f(x+1)` forces exact half balance at identity-path level `2^v_2(n)`, spent that split in the endpoint ledger, and retained the remaining 19-split obligation and power-of-two boundary explicitly. |
