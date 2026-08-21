@@ -600,6 +600,26 @@ fn canonical_recursive_acc_is_regenerated_exactly_and_reverified() {
 }
 
 #[test]
+fn official_acc_authority_is_exactly_three_declaration_identities() {
+    let accepted = OFFICIAL_LEAN_4_30_ACC_PACKAGE_SHA256.map(str::to_owned);
+    assert!(acc_package_identity_is_authorized(&accepted));
+
+    for index in 0..accepted.len() {
+        let mut mutated = accepted.clone();
+        mutated[index].replace_range(
+            ..1,
+            if mutated[index].starts_with('0') {
+                "1"
+            } else {
+                "0"
+            },
+        );
+        assert!(!acc_package_identity_is_authorized(&mutated));
+    }
+    assert!(!acc_package_identity_is_authorized(&accepted[..2]));
+}
+
+#[test]
 fn incomplete_acc_package_declines_before_admission() {
     let mut source = Kernel::new();
     build_logic_prelude(&mut source).unwrap();
