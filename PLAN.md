@@ -119,6 +119,7 @@ now. Nothing was deleted.
 |---|---|---|
 | 2026-08-21 | (pending) | All 35 dominance audits re-run at `496288979` from a `lane-snapshot` tree; `dominant_unsat` 262 / 324 → **269 / 326**, `lean-reconstruction-gap` 15 → **10**, certified/checked 278 → 280. Four rows moved: QF_NRA cvc5 (+3, `RealProduct`×2 + `MonomialBound`), QF_S (+2, `StringLength`), QF_NRA synthetic (+2, the prelude-warm instrument fix, proved by an A/B with the warm suppressed at two revisions), QF_SEQ (a `parse-error` became `sat`, no dominance change). `gen-proof-gap-matrix`, `gen-proof-gap-shape-census`, `gen-dominance-scoreboard` and `gen-autogenesis-baseline` regenerated; the six moved markers in `PROJECT-STATE.md` and the gap analysis renumbered **with** the account of what moved them, and the ten remaining Lean-reconstruction gaps recorded one line each with the fragment's own decline reason rather than the fallback route's. |
 | 2026-08-21 | `a3799dca2` | **`QF_FP/fp_misc`'s "timeout" was an unmemoized DAG walk in the classifier.** `array_bv_abs::abstract_term` re-explored shared subterms once per path; 8/8 `gdb` samples sat in it. Memo + visit budget, each guard mutation-verified to kill exactly one test: **124.7 s timeout → 314 ms**, 4,194,309 visits → 4,365 over 5,762 nodes. QF_FP `timeouts 1 → 0`, certified/checked 15/16 → **16/16**; `dominant` stays 15/16 and the row now declares `bit-blast` instead of `timeout`, because `887b52e64` withdrew its term-level FP route on purpose. Also measured and pinned: `QF_BVFP/Float-no-simp3-main` is not the "evidence exceeds 120 s" it was recorded as — its reduction certificate is `proved` in **28.3 ms** and is withheld only by `produce_evidence`'s blanket "timeout set → skip", whose deadline covers the SAT search and none of `lower_terms` / `tseitin_encode` / `check_drat` / LRAT. QF_FP and QF_BVFP audits re-run at `a3799dca2`; `proof_errors` 4 → **3**, certified/checked 280 → **281**, and the four moved markers in `PROJECT-STATE.md` and the gap analysis renumbered with the account of what moved them. |
+| 2026-08-21 | `17079b33d` | `:pattern` was parsed and dropped; the author's trigger now decides. Arena side table, alternatives unioned, multi-patterns joined, declines explicit. ADR-0537. |
 | 2026-08-21 | `fc191b3e5` | Full stable statement-survival atlas is preregistered before the one authorized comparison pass |
 | 2026-08-21 | `7edebb579` | Full Nat/Int atlas classifies all 9,839 v4.30/v4.32.1 union names and isolates representation-wide drift |
 | 2026-08-21 | `030d82adb` | First proof-isolated joint quotient/remainder reconstruction fails closed with a measured `propext` footprint |
@@ -1075,6 +1076,36 @@ budget guard to a real remaining-time attempt (this alone would move
 `Float-no-simp3-main` and any other BV-reducible bare `unsat` to certified);
 then `Fpa2Bv` certification, which is what both FP rows actually need for
 dominance.
+
+**Gap #7 closed for `:pattern`, declined for `:weight` (`DONE`,
+agent-quantifier-triggers, 2026-08-21).**
+[Gap analysis](docs/plan/gap-analysis-smt-solvers-2026-08-21.md) §9 row 7. `:pattern`
+was parsed and dropped; it is now threaded parse → IR → the E-matching loop and
+a usable annotation **replaces** auto-selection ([ADR-0537](docs/research/09-decisions/adr-0537-user-triggers-are-a-hint-channel-on-the-arena-and-replace-auto-selection.md)).
+Alternatives are unioned, multi-patterns joined, and everything the matcher
+cannot fire is declined whole and falls back to auto-selection.
+
+The measurement that motivated it, z3 4.13.3 with its own fallbacks off
+(`smt.mbqi=false smt.auto_config=false`): `unsat` unannotated, `unknown` with
+`:pattern ((h x))`. Axeyum answered `unsat` for both, in both configurations.
+
+Two findings worth carrying forward rather than re-deriving:
+
+- **The corpus cannot measure this.** 0 of 1430 tracked `.smt2` files contain
+  `:pattern` and 0 contain `:weight` (positive control, same command: `assert`
+  1419, `forall` 82). The capability delta is zero by construction, and any
+  claim about this feature's value has to say so.
+- **A verdict is a blunt instrument for "was the trigger obeyed".** Honouring a
+  useless trigger did *not* cost the refutation through the front door: term
+  invention seeds ground instances of the trigger itself and reaches the witness
+  anyway, where z3 with mbqi off has no analogue. The tests measure the proposed
+  *instance set* instead.
+
+Next, if this is picked up again: `:weight` needs a corpus that moves under it
+before the flood-control cost function is touched (ADR-0537 §5); and the parser
+declines any trigger outside an application tree over declared uninterpreted
+functions, which rules out arithmetic subterms — the first real workload with
+`(f (+ x 1))` as a pattern will want that.
 
 **Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. The exact-target decline remains sealed with zero credit. V4 verified exact empty-footprint `Nat.mod_lt` target-leaf reuse, but cancellation composition still found a different transitive path to missing `Acc`; no support was submitted and run 2 was skipped. A bounded read-only audit is now frozen to enumerate the cancellation-to-`Acc` declaration path, nearest carriers first, with source identities and r091 compatibility but no proof rendering.
 
