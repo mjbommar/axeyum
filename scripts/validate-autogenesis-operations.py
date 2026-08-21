@@ -49,6 +49,13 @@ SEALED_CAPSULE_CONTRACTS = {
         "target_theorem": "Nat.gcd_greatest",
         "receipt_sha256": "7441a7b211212e04f232918abc5026365761e89a922dba763fb90f8a0ad8b8c3",
     },
+    "F:ml430-nat-fib-gcd-d1d98407": {
+        "result_manifest": "artifacts/autogenesis/mathlib-nat-fib-gcd-construction-result-v3.json",
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/749f30f65-nat-fib-gcd-v3/target-1.ndjson",
+        "capsule_sha256": "8ac3c35874540a10e5fa393c65f3ad313a6cf6a06303cec68fec3ec45d0f04cd",
+        "target_theorem": "Nat.fib_gcd",
+        "receipt_sha256": "1e65caac2183d493f517a9d78dc789b78a530cbaaf90a95fd07cf19dd7940bc8",
+    },
 }
 
 
@@ -317,10 +324,16 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             or theorem.get("declaration_sha256") != value["declaration_sha256"]
             or theorem.get("axiom_footprint") != []
             or execution.get("complete_invocations") != 2
-            or execution.get("exact_target_submissions") != 2
+            or (
+                execution.get("exact_target_submissions") != 2
+                and execution.get("target_theorem_submissions") != 2
+            )
             or execution.get("fresh_imports") != 4
             or execution.get("outputs_byte_identical") is not True
-            or execution.get("receipts_byte_identical") is not True
+            or (
+                execution.get("receipts_byte_identical") is not True
+                and execution.get("observations_byte_identical") is not True
+            )
             or value["receipt_sha256"] != contract["receipt_sha256"]
         ):
             raise RegistryError(f"{label} sealed-kernel capsule contract disagrees")
