@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, and now `Int.fib_add_two` are durably proved. The recurrence composes eight exact target-owned roots into an empty-footprint kernel theorem; crash-safe recovery performed one authoritative write and made two integer Fibonacci descendants newly ready.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, and `Int.fib_eq_fib_add_two_sub_fib_add_one` are durably proved with empty kernel footprints. The first recurrence corollary has a complete immutable primary archive and an isolated clean replay; its admission produced no further readiness delta.
 
-**Next:** qualify the two newly ready descendants, select the one that advances the sign/parity route most directly, and continue toward `Int.fib_neg_natCast` without importing official proof terms.
+**Next:** close the remaining ready recurrence orientation `Int.fib_add_one` from admitted recurrence plus native right cancellation, then use both checked orientations to continue the target-owned sign/parity induction toward `Int.fib_neg_natCast` without importing official proof terms.
 
 <!-- plan-section: landed-changes -->
 
@@ -25,6 +25,7 @@
 | 2026-08-21 | `6dd5cd1c2` | V4 stops after durable intent with exit 75, recovery performs one write, and the exact corollary settles axiom-free with no newly ready descendants |
 | 2026-08-21 | `f6937f80d` | Complete immutable archive v4 binds all primary identities; one isolated clean semantic replay is frozen before execution |
 | 2026-08-21 | (pending) | Isolated replay repeats selection, exit-75 recovery, exact checked result, one write, and the empty readiness delta from source commit `6dd5cd1c2` |
+| 2026-08-21 | (pending) | The remaining `Int.fib_add_one` orientation is frozen as a function-parameterized right-cancellation residual before source construction or trusted execution |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |

@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-parameterized-residual-plan",
+  "state": "preregistered-before-source-construction",
+  "inputs": {
+    "target_fact": "F:ml430-int-fib-add-one-33f1b748",
+    "recurrence_fact": "F:ml430-int-fib-add-two-739358dd",
+    "recurrence_admission": "artifacts/autogenesis/mathlib-int-fib-add-two-admission-v1.json",
+    "cancellation_result": "artifacts/autogenesis/mathlib-int-add-neg-cancel-right-native-capsule-result-v1.json"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-add-one-residual-v1.lean",
+    "theorem": "Axeyum.Autogenesis.intFibAddOneResidualV1",
+    "must_not_exist_before_execution": true
+  },
+  "contract": {
+    "parameters": [
+      "fibFn : Int -> Int",
+      "forall n, fibFn (n+2) = fibFn (n+1) + fibFn n",
+      "forall a b, a+b+(-b)=a"
+    ],
+    "conclusion": "forall n, fibFn (n+1) = fibFn (n+2) - fibFn n"
+  },
+  "method": "specialize right cancellation with a = fibFn (n+1) and b = fibFn n after transporting the recurrence equality under addition of -fibFn n",
+  "strategic_role": "supply the recurrence orientation selected by the negative-index Fibonacci induction without importing the official Int.fib_add_one proof",
+  "budget": {
+    "source_constructions": 1,
+    "compiler_invocations": 1,
+    "exporter_invocations": 1,
+    "importer_runs": 2,
+    "retries": 0,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "source_must_compile": true,
+    "residual_axiom_footprint_must_be_empty": true,
+    "direct_theorem_dependencies": [
+      "Eq.trans",
+      "congrArg"
+    ],
+    "official_fibonacci_declarations_forbidden": true,
+    "official_corollary_dependency_forbidden": true,
+    "two_fresh_imports_must_preserve_evidence": true
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-add-one-residual-result-v1.json",
+  "next_on_accept": "preregister exact specialization over the admitted Int.fib_add_two capsule and native Int.add_neg_cancel_right capsule",
+  "limitations": "The residual remains parameterized and grants no exact theorem, fact transition, or ledger authority."
+}
