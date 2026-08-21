@@ -1091,7 +1091,16 @@ def baseline_and_mutants(name: str, quiet: bool = False) -> tuple[int, list[tupl
             ROOT,
             work,
             ignore=shutil.ignore_patterns(
-                ".git", "target", "references", "corpus", "bench-results", "__pycache__"
+                # `corpus` is NOT excluded, and the omission cost a whole class
+                # of suite. It is 23 MB / 1,154 files against `references` at
+                # 219 MB and `bench-results` at 206 MB, and every solver test
+                # that `include_str!`s a `.smt2` file — which is how the
+                # certificate checkers pin their fixtures to real queries —
+                # fails to COMPILE without it. Measured 2026-08-20: the first
+                # certificate-checker suite registered here reported `BASELINE
+                # DID NOT BUILD` with 99 errors, all of them missing corpus
+                # paths, and no mutation was measurable at all.
+                ".git", "target", "references", "bench-results", "__pycache__"
             ),
             symlinks=True,
         )
@@ -1190,6 +1199,84 @@ SUITES["fp-width-guard"] = (
             "128 itself is representable (the boundary, not the guard)",
             "        if self.width() > 128 {",
             "        if self.width() >= 128 {",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
+# `nra-monomial-bound-cert` — an independent re-validator for a route that
+# ships `unsat`.
+#
+# This module had a REAL soundness hole on 2026-08-20: the producer
+# distinguished `M < k` from `M <= k` (the second is refuted only by the
+# strictly stronger `M > k`) and the certificate recorded only the constant, so
+# `check_monomial_bound_refutation` returned `true` for a certificate refuting
+# `a >= 1 and b >= 1 and a*b <= 1` — satisfiable at a = b = 1. No wrong `unsat`
+# shipped, because the producer declines that query; but the independent
+# re-validator, whose entire job is to catch a producer that is wrong, would
+# have accepted a forged refutation of a SAT query.
+#
+# The guards below are the fix and its neighbours. They were mutation-checked by
+# hand when they landed, in a commit message — which is not a gate, and a guard
+# that rots back to survivable would be found by nobody. That is what this entry
+# is for. Note what it still cannot do: mutation deletes guards that EXIST, and
+# the hole above was a guard that was never written, in a certificate field that
+# did not exist. See CLAUDE.md.
+# --------------------------------------------------------------------------
+
+SUITES["nra-monomial-bound-cert"] = (
+    "crates/axeyum-solver/src/nra_monomial_bound_cert.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--lib", "nra_monomial_bound_cert"),
+        "nra-monomial-bound-cert",
+    ),
+    [
+        (
+            # THE 2026-08-20 HOLE. `M <= k` needs `M > k`; accepting `M >= k`
+            # certifies a satisfiable query.
+            "a non-strict atom may be refuted by a non-strict bound",
+            "            claimed == derived && claimed > against",
+            "            claimed == derived && claimed >= against",
+        ),
+        (
+            "the carried bound must be the one the arithmetic re-derives",
+            "            let derived = if any_unbounded { zero } else { product };\n            claimed == derived && claimed >= against",
+            "            let derived = if any_unbounded { zero } else { product };\n            let _ = derived;\n            claimed >= against",
+        ),
+        (
+            # `x^2 >= 0` for every real x, but an ODD power of an unbounded
+            # variable is unbounded below and the refutation is false.
+            "an unbounded factor needs an even exponent",
+            "            if exp % 2 != 0 {\n                return false;\n            }",
+            "            if false {\n                return false;\n            }",
+        ),
+        (
+            # Multiplying bounds is monotone only on the nonnegative orthant:
+            # (-2)*(-3) = 6 is not a lower bound for a*b.
+            "a negative lower bound may not be multiplied",
+            "        if value < zero {\n            return false;\n        }",
+            "        if false {\n            return false;\n        }",
+        ),
+        (
+            "the refuted atom's COMPARISON must match the query's",
+            "        let kind_ok = refuted.kind() == certificate.refuted_kind;",
+            "        let kind_ok = true;",
+        ),
+        (
+            "the refuted atom's CONSTANT must match the query's",
+            "        if kind_ok && constant_ok {",
+            "        if kind_ok {",
+        ),
+        (
+            "the query must actually state the atom being refuted",
+            "    if !atom_matches {\n        return false;\n    }",
+            "    if false {\n        return false;\n    }",
+        ),
+        (
+            "a carried per-variable bound must be the query's own",
+            "        Some(w) => rat(*w).is_some_and(|value| bounds.lower.get(name) == Some(&value)),",
+            "        Some(w) => rat(*w).is_some(),",
         ),
     ],
 )
@@ -1331,7 +1418,51 @@ def run_demo() -> int:
     return 0
 
 
+def check_anchors() -> int:
+    """Every registered anchor still matches its subject exactly once.
+
+    Builds nothing and runs no test, so this is cheap enough to be a gate — and
+    it catches the rot that actually happens. No gate runs any real mutation
+    suite: `scripts/check.sh` and the `justfile` run the harness's OWN controls
+    and `self-demo`, so the harness is verified continuously and every SUBJECT
+    is verified once, by hand, at commit time. When the source then drifts, the
+    anchor stops matching, the mutation reports `NOT APPLIED` — and nobody is
+    looking, so a suite can decay to measuring nothing while its commit message
+    still claims "each guard killed exactly one test".
+
+    `NOT APPLIED` and `AMBIGUOUS ANCHOR` are both failures here for the reason
+    `_apply` gives: an anchor matching twice would be resolved by
+    `str.replace(..., 1)` picking whichever came first, and the report could not
+    say which guard was deleted.
+
+    This does NOT say the guards still kill anything. That needs the builds.
+    It says the suites are still POINTED at real code, which is the difference
+    between a stale suite and a green one.
+    """
+    failed = 0
+    for name in sorted(set(SUITES) - DEMOS):
+        suite = normalize(name)
+        for mutation in suite.mutations:
+            target = mutation.target or suite.subject
+            path = ROOT / target
+            if not path.exists():
+                print(f"MISSING SUBJECT {name}: {target}")
+                failed = 1
+                continue
+            text = path.read_text(encoding="utf-8")
+            occurrences = text.count(mutation.find)
+            if occurrences != 1:
+                verdict = "NOT APPLIED" if occurrences == 0 else "AMBIGUOUS ANCHOR"
+                print(f"{verdict} {name}: {mutation.label!r} matches {occurrences} places in {target}")
+                failed = 1
+    total = sum(len(normalize(n).mutations) for n in sorted(set(SUITES) - DEMOS))
+    print(f"MUTATION_ANCHORS|suites={len(set(SUITES) - DEMOS)}|anchors={total}|stale={failed}")
+    return failed
+
+
 def main(argv: list[str]) -> int:
+    if argv[1:2] == ["--check-anchors"]:
+        return check_anchors()
     names = argv[1:] or sorted(set(SUITES) - DEMOS)
     failed = 0
     for name in names:

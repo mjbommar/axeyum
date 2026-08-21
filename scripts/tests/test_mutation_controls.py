@@ -302,6 +302,58 @@ class StaleBytecodeTests(unittest.TestCase):
         self.assertEqual(self._verdict(work, self._COMMENT_ONLY), MC.SURVIVED)
 
 
+class AnchorFreshnessTests(unittest.TestCase):
+    """`--check-anchors` must be able to FAIL, and must pass on the real tree.
+
+    No gate runs any real mutation suite — `scripts/check.sh` and the `justfile`
+    run this harness's own controls and `self-demo`. So each SUBJECT is
+    mutation-checked once, by hand, at commit time, and then nothing looks
+    again. When the source drifts the anchor stops matching, the mutation
+    reports `NOT APPLIED`, and the suite decays to measuring nothing while its
+    commit message still says "each guard killed exactly one test".
+
+    This check builds nothing, so it is cheap enough to gate. The control below
+    is a positive one: an anchor that has never been shown to fail is the
+    unfalsifiable checker CLAUDE.md warns about.
+    """
+
+    def test_the_committed_anchors_are_all_fresh(self) -> None:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            status = MC.check_anchors()
+        self.assertEqual(status, 0, buf.getvalue())
+        self.assertIn("|stale=0", buf.getvalue())
+
+    def test_an_anchor_that_no_longer_matches_is_reported(self) -> None:
+        drifted = MC.Mutation("drifted", "text that no subject contains", "x")
+        suite = MC.SUITES["fp-width-guard"]
+        MC.SUITES["drift-probe"] = (suite[0], suite[1], [("drifted", drifted.find, drifted.replace)])
+        try:
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                status = MC.check_anchors()
+            self.assertEqual(status, 1)
+            self.assertIn("NOT APPLIED", buf.getvalue())
+        finally:
+            del MC.SUITES["drift-probe"]
+
+    def test_an_anchor_matching_twice_is_reported(self) -> None:
+        """`str.replace(..., 1)` would pick whichever came first and the report
+        could not say which guard was deleted, so two matches is a failure."""
+        suite = MC.SUITES["fp-width-guard"]
+        text = (MC.ROOT / suite[0]).read_text(encoding="utf-8")
+        repeated = next(line.strip() for line in text.splitlines() if text.count(line.strip()) > 1 and len(line.strip()) > 8)
+        MC.SUITES["ambiguous-probe"] = (suite[0], suite[1], [("ambiguous", repeated, "x")])
+        try:
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                status = MC.check_anchors()
+            self.assertEqual(status, 1)
+            self.assertIn("AMBIGUOUS ANCHOR", buf.getvalue())
+        finally:
+            del MC.SUITES["ambiguous-probe"]
+
+
 # -------------------------------------------------------- end-to-end guards
 
 

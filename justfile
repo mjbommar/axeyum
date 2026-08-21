@@ -248,6 +248,7 @@ facts:
     # reporting a number nobody measured.
     python3 -m unittest scripts.tests.test_mutation_controls
     python3 scripts/tests/mutation_controls.py self-demo
+    python3 scripts/tests/mutation_controls.py --check-anchors
     # 44 controls that were already written and already correct, but which no
     # gate ran. 257 tests, ~31s. The seven not adopted are listed in the script.
     scripts/check-adopted-controls.sh
