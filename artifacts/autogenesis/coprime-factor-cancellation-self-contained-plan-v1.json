@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-coprime-factor-cancellation-self-contained-plan",
+  "state": "preregistered-self-contained-certificate-definition-before-source-change",
+  "predecessor": {"path": "artifacts/autogenesis/coprime-factor-cancellation-generic-result-v1.json", "sha256": "504a56d803e1e8ebe7f5675fb50c8d51715c2050a2edf873bdfc9542ebb35402", "failure": "unknown module prefix AxeyumAutogenesisBalancedBezoutEuclideanUpdateV2"},
+  "source": {"path": "scripts/lean/autogenesis_coprime_factor_cancellation_generic_v2.lean", "module": "AxeyumAutogenesisCoprimeFactorCancellationGenericV2", "target": "Axeyum.Autogenesis.coprimeFactorDivisibilityCancellationGenericV2", "only_import": "Mathlib.Data.Int.GCD", "inlined_definition": "BalancedBezoutCancellationV2", "inlined_definition_contract": "exists mp mn np nn, g + a*mn + c*nn = a*mp + c*np", "proof_argument_unchanged_from_v1": true, "proof_search_allowed": false, "proof_terms_types_or_values_may_be_rendered": false},
+  "environment": {"ssh_alias": "s5", "mathlib_checkout": "/home/mjbommar/lean-import-scale/mathlib4", "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f", "lean_version": "4.30.0", "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622", "lean4export_binary_sha256": "8e763913b03762488571a93ced6ec1a4e04f7d8eebbe40bd1215ba41a6bd4449"},
+  "execution": {"evidence_pack": "/nas3/data/axeyum/autogenesis/reference-packs/9140114b6-coprime-factor-cancellation-self-contained-v1", "remote_source": "/home/mjbommar/lean-import-scale/mathlib4/AxeyumAutogenesisCoprimeFactorCancellationGenericV2.lean", "temporary_output_stem": "/home/mjbommar/lean-import-scale/mathlib4/.lake/build/lib/lean/AxeyumAutogenesisCoprimeFactorCancellationGenericV2", "preexisting_status_baseline_must_match_v1": true, "all_three_temporary_paths_must_be_absent_before_copy": true, "baseline_must_be_restored_after_cleanup": true},
+  "acceptance": {"source_must_compile": true, "root_selected_stream_max_bytes": 2000000, "fresh_kernel_imports_required": 2, "audits_must_be_byte_identical": true, "axiom_footprint_must_be_empty": true, "balanced_certificate_must_remain_an_explicit_parameter": true, "failed_compilation_export_or_first_import_ends_increment": true},
+  "budget": {"max_source_copies": 1, "max_compiler_invocations": 1, "max_exporter_invocations": 1, "max_importer_runs": 2, "max_proof_bearing_stream_reads": 2, "max_retries": 0, "max_generic_cancellation_submissions": 1, "max_official_specializations": 0, "max_exact_fibonacci_target_submissions": 0, "max_executor_invocations": 0},
+  "authority": {"generic_cancellation_credit": 0, "official_cancellation_credit": 0, "target_specialization_credit": 0, "exact_fibonacci_target_submissions": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_on_accept": "Preregister checked definition/theorem composition and specialization over the accepted official balanced-Bezout theorem.",
+  "output": "artifacts/autogenesis/coprime-factor-cancellation-self-contained-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-coprime-factor-cancellation-self-contained-plan.py",
+  "limitations": "Inlining the certificate definition fixes only source packaging. It grants no theorem credit until two imports pass and no official specialization or Fibonacci authority."
+}
