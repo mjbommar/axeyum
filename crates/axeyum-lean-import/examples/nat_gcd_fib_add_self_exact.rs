@@ -168,6 +168,10 @@ fn run() -> Result<(), String> {
         return run_target_native_exact_capsule(args);
     }
     let mut args = std::env::args_os().skip(1);
+    if args.next().as_deref() == Some(std::ffi::OsStr::new("--target-native-goal-audit")) {
+        return run_target_native_goal_audit(args);
+    }
+    let mut args = std::env::args_os().skip(1);
     let r091_path = path(&mut args)?;
     let capsules = [
         (CLEAN_ANTISYMM, path(&mut args)?, CLEAN_ANTISYMM_CAPSULE),
@@ -902,6 +906,90 @@ fn run_target_native_exact_capsule(
             "capsule":{"bytes":bytes.len(),"sha256":hex_sha256(bytes.as_bytes()),"fresh_imports":2},
             "execution":{"local_gcd_comm_submissions":1,"exact_target_submissions":1,"exports":1,"fresh_imports":2,"retries":0},
             "rendered_material":{"proof_terms":0,"theorem_types":0,"theorem_values":0},
+            "fact_status_changes":0,
+            "evaluation_credit":0,
+            "ledger_writes":0
+        }))
+        .map_err(|error| error.to_string())?
+    );
+    Ok(())
+}
+
+#[allow(clippy::too_many_lines)]
+fn run_target_native_goal_audit(
+    mut args: impl Iterator<Item = std::ffi::OsString>,
+) -> Result<(), String> {
+    let r091_path = path(&mut args)?;
+    let inputs = [
+        (
+            path(&mut args)?,
+            CLEAN_ANTISYMM_CAPSULE,
+            vec![CLEAN_ANTISYMM],
+        ),
+        (path(&mut args)?, CANCELLATION_CAPSULE, vec![CANCELLATION]),
+        (path(&mut args)?, ADDITION_CAPSULE, vec![ADDITION]),
+        (
+            path(&mut args)?,
+            "9ecf0b10d1390f880040790fb1845a11d7987b94c0d3a71acf4ad8dca0c5a304",
+            vec![TARGET_GCD_DVD_LEFT, TARGET_GCD_DVD_RIGHT, TARGET_DVD_GCD],
+        ),
+        (
+            path(&mut args)?,
+            "e7933242c5caeb90a17bb7141656fe12a1c78780a83e82958c9ddd38ccd85d3f",
+            vec![TARGET_FIB_COPRIME],
+        ),
+    ];
+    if args.next().is_some() {
+        return Err("usage: nat_gcd_fib_add_self_exact --target-native-goal-audit <r091> <official-clean-order> <cancellation> <addition> <gcd-divisibility> <target-native-coprimality>".to_owned());
+    }
+    let r091 = import_bound(&r091_path, R091_SHA256, "r091")?;
+    let mut kernel = r091.kernel().clone();
+    for (source_path, expected_sha256, roots) in inputs {
+        let source = import_bound(&source_path, expected_sha256, roots[0])?;
+        let completed = compose_checked_theorem_slice(source.kernel(), &kernel, &roots)
+            .map_err(|error| format!("target-native goal audit setup declined: {error:?}"))?;
+        verify_checked_theorem_composition(
+            source.kernel(),
+            &kernel,
+            completed.kernel(),
+            completed.receipt(),
+        )
+        .map_err(|error| format!("target-native goal audit setup did not replay: {error:?}"))?;
+        kernel = completed.kernel().clone();
+    }
+    let goal_name = find_name(&kernel, GOAL_DEFINITION)?;
+    let carrier = match kernel.environment().get(goal_name) {
+        Some(Declaration::Definition { value, .. }) => *value,
+        _ => return Err("r091 goal carrier is not a definition".to_owned()),
+    };
+    let constructed = {
+        let mut d = Dev::new(&mut kernel)?;
+        let nat = d.nat_ty();
+        let m_fv = d.fresh();
+        let m = d.kernel.fvar(m_fv);
+        let n_fv = d.fresh();
+        let n = d.kernel.fvar(n_fv);
+        let body = statement(&mut d, m, n);
+        let body = d.pi(n_fv, nat, body);
+        d.pi(m_fv, nat, body)
+    };
+    let carrier_sha256 = canonical_expression_sha256(&kernel, carrier)?;
+    let constructed_sha256 = canonical_expression_sha256(&kernel, constructed)?;
+    let carrier_shape = canonical_kernel_type_shape_sha256(&kernel, carrier)?;
+    let constructed_shape = canonical_kernel_type_shape_sha256(&kernel, constructed)?;
+    let definitionally_equal = kernel.def_eq(carrier, constructed);
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "schema_version":1,
+            "kind":"axeyum-autogenesis-target-native-exact-goal-audit",
+            "state":"carrier-compared-to-independently-constructed-statement",
+            "carrier":{"name":GOAL_DEFINITION,"canonical_expression_sha256":carrier_sha256,"kernel_type_shape_sha256":carrier_shape},
+            "constructed":{"canonical_expression_sha256":constructed_sha256,"kernel_type_shape_sha256":constructed_shape},
+            "definitionally_equal":definitionally_equal,
+            "execution":{"complete_audits":1,"kernel_submissions":0,"exports":0,"retries":0},
+            "rendered_material":{"proof_terms":0,"theorem_types":0,"theorem_values":0},
+            "exact_target_submissions":0,
             "fact_status_changes":0,
             "evaluation_credit":0,
             "ledger_writes":0
