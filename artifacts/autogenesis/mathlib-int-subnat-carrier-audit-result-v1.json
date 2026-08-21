@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-subnat-carrier-audit-result",
+  "state": "three-subnat-convenience-carriers-remain-propext-bearing",
+  "plan": {"path": "artifacts/autogenesis/mathlib-int-subnat-carrier-audit-plan-v1.json", "sha256": "6f05e8ce8f452306d1482d2837de3ba8c3d71b8820df7e11f3b53b54c0574169"},
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-algebra-leaves-v2/leaves.ndjson", "bytes": 1428492, "sha256": "205bb2dcf8ec703d912380bad0f8f2749379d23192d97af5a2422ad6f6ab4a53"},
+  "observation_sha256": "aa45373ed395e3037a72e2f9afe32d5364c25547e54dedf15f45a76474f0df43",
+  "propext_bearing": {
+    "Int.subNatNat_add": ["Eq.symm", "Eq.trans", "Int.subNatNat_add_add", "Int.subNatNat_of_le", "Int.subNatNat_of_lt", "Nat.add_sub_assoc", "Nat.le_add_left", "Nat.le_of_lt", "Nat.le_trans", "Nat.lt_or_ge", "Nat.sub_add_cancel", "Nat.sub_one_add_one_eq_of_pos", "Nat.sub_pos_of_lt", "congr", "congrArg", "eq_self", "of_eq_true"],
+    "Int.subNatNat_add_negSucc": ["Eq.symm", "Int.negSucc.injEq", "Int.subNatNat_of_le", "Int.subNatNat_of_lt", "Int.subNatNat_sub", "Nat.add_assoc", "Nat.add_comm", "Nat.add_right_comm", "Nat.add_sub_assoc", "Nat.le_add_right", "Nat.le_of_lt", "Nat.lt_of_lt_of_le", "Nat.lt_or_ge", "Nat.sub_one_add_one_eq_of_pos", "Nat.sub_pos_of_lt", "Nat.sub_sub", "Nat.succ_sub_succ_eq_sub", "congrArg"],
+    "Int.subNat_eq_zero_iff": ["Eq.trans", "Int.negSucc_ne_zero._simp_1", "Int.ofNat_inj._simp_1", "Int.subNatNat_of_le", "Int.subNatNat_of_lt", "Nat.lt_or_ge", "Nat.ne_of_lt", "Nat.sub_eq_iff_eq_add'", "congrArg", "congrFun'", "false_iff", "iff_self", "of_eq_true"]
+  },
+  "execution": {"importer_runs": 1, "proof_bearing_stream_reads": 1, "theorem_submissions": 0, "ledger_writes": 0},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}

@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-subnat-branch-audit-plan",
+  "state": "preregistered-before-lowest-branch-single-read",
+  "predecessor": {"path": "artifacts/autogenesis/mathlib-int-subnat-carrier-audit-result-v1.json", "required_state": "three-subnat-convenience-carriers-remain-propext-bearing"},
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-algebra-leaves-v2/leaves.ndjson", "bytes": 1428492, "sha256": "205bb2dcf8ec703d912380bad0f8f2749379d23192d97af5a2422ad6f6ab4a53"},
+  "roots": ["Int.subNatNat_of_le", "Int.subNatNat_of_lt", "Int.subNatNat_add_add", "Int.subNatNat_sub", "Int.negSucc.injEq", "Int.negSucc_ne_zero._simp_1", "Int.ofNat_inj._simp_1", "false_iff", "iff_self"],
+  "budget": {"max_importer_runs": 1, "max_proof_bearing_stream_reads": 1, "max_compiler_invocations": 0, "max_exporter_invocations": 0, "max_theorem_submissions": 0, "max_ledger_writes": 0},
+  "output": "artifacts/autogenesis/mathlib-int-subnat-branch-audit-result-v1.json",
+  "decision_rule": "Use empty-footprint branch theorems as the kernel composition substrate; replace rather than descend through proposition-equality simp declarations.",
+  "limitations": "This branch audit grants no integer algebra or Fibonacci theorem credit."
+}
