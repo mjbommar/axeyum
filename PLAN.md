@@ -128,6 +128,8 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Negative-natural classification preserves 18 clean transport supports and localizes the Fibonacci core to `Int.fib_of_odd` |
 | 2026-08-21 | `e9817256a` | The sole private `Int.fib_of_odd` dependency is frozen for one final non-rendering qualification |
 | 2026-08-21 | (pending) | Private-root audit exposes 37 automation dependencies and selects direct target-owned recurrence instead of solver-internal descent |
+| 2026-08-21 | `a01ee6d07` | Two open recurrence supports are frozen for qualification before they may enter the negative-index proof |
+| 2026-08-21 | (pending) | Parent-closure batch fails with zero completed audit and selects a fresh root export for dependency-free `Int.fib_natCast` |
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
 | 2026-08-21 | `a9610560c` | The durable construction checker binds the separately stored target goal identity without weakening capsule checks |
@@ -1150,9 +1152,9 @@ declines any trigger outside an application tree over declared uninterpreted
 functions, which rules out arithmetic subterms — the first real workload with
 `(f (+ x 1))` as a pattern will want that.
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd` and `Nat.fib_dvd` remain durably proved. The `Int.fib_neg` descent retains a clean outer integer split and 18 clean negative-natural transport supports. The sole private dependency beneath `Int.fib_of_odd` is now measured as a 37-root `Int.Linear`/`Lean.Grind` automation expansion, so it is rejected as a mathematical boundary.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd` and `Nat.fib_dvd` remain durably proved. The `Int.fib_neg` descent rejected its automation expansion and selected direct recurrence, then caught two proposed premises (`Int.fib_natCast`, `Int.fib_add_two`) still open in the ledger. Their first two-root audit failed closed because the parent export did not yield a complete batch; no retry or theorem credit occurred.
 
-**Next:** preregister a target-owned `Int.fib_neg_natCast` proof from `Int.fib_add_two`, `Int.fib_natCast`, clean integer transport, and explicit parity/sign induction; do not descend into the rejected automation internals.
+**Next:** preregister a fresh root-selected export and footprint audit for dependency-free `Int.fib_natCast`, then construct/admit it before using it to close `Int.fib_add_two` and the negative-index recurrence.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
