@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-exists-rec-prefix-diagnostic-plan-v1",
+  "state": "preregistered-exists-rec-prefix-inference-before-code",
+  "input": {
+    "result": "artifacts/autogenesis/mathlib-nat-fib-gcd-witness-elim-diagnostic-result-v1.json",
+    "sha256": "ebe369e092a684a29714c2aa296860707289c516ee5b0012e11beed8f3f1260a"
+  },
+  "implementation_prestate": {
+    "path": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+    "sha256": "d5cb23910bcc90db0f4ee3dd4feb9a81221152f802178394c2f44da0e2cebfd9"
+  },
+  "diagnostic": {
+    "mode": "--target-native-fib-gcd-exists-rec-prefix-diagnostic",
+    "ordered_arguments": ["Nat", "predicate", "motive", "minor", "witness"],
+    "operation": "infer each successively applied and appropriately closed Exists.rec prefix, stopping at the first mismatch",
+    "proof_values_rendered": 0,
+    "theorem_statement_changes": 0,
+    "proof_route_changes": 0
+  },
+  "budget": {
+    "complete_diagnostics": 1,
+    "helper_theorem_submissions": 1,
+    "prefix_inferences": 5,
+    "target_theorem_submissions": 0,
+    "capsule_writes": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "next_on_accept": "localize the mismatch to successor-branch binder assembly",
+  "next_on_decline": "retain the first rejected Exists.rec argument and preregister one type-shape comparison or repair there",
+  "limitations": "This diagnoses the existing eliminator application only and grants no theorem or ledger credit."
+}
