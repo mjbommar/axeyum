@@ -336,6 +336,26 @@ that is hidden. What was missing is that the **dominance metric does not make
 the distinction**, so "269/326 Lean-reconstructed" reads as a much stronger claim
 than it is — for 127 of them, Lean confirmed a tautology.
 
+> **Caveat on the counts below, added the same day.** They were computed by
+> classifying each instance's `lean_fragment` against
+> `ProofFragment::lean_module_content()` — a **table**. The string and regex
+> routes are not `ProofFragment` variants, so 13 instances (11 `RegexEmptiness`,
+> 2 `StringLength`) fell through as unclassified, and `lean_theory_unsat` read
+> 129 where the reasoning half is 142. The undercount is on the **reasoning**
+> side, i.e. in the direction that makes the claim look weaker — which is why
+> being suspicious of flattering numbers would not have caught it.
+>
+> `ab11d6fc5` replaces the table lookup with a read of
+> `STRUCTURAL_ATTESTATION_MARKER` **out of the emitted module**: only the shared
+> structural emitter writes that marker, so the class is now a property of the
+> artifact rather than an assumption about the route. That is the same rule that
+> made `portable_artifact()` correct, applied in one place and not the other.
+>
+> The **shape** below is not in doubt — QF_ABV and the string logics near 100%,
+> seven logics at exactly 0 — but treat the exact counts as superseded by the
+> in-flight refresh, which carries a positive control (QF_S must read
+> `11 reason and 0 attest`).
+
 **And "roughly half" is misleading in both directions, because the split is
 almost bimodal by logic.** Per-theory, over the same 269:
 
