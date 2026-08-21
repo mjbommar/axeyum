@@ -317,6 +317,16 @@ published theorem is odd-characteristic and fixed-band. A binary proof would
 need a growing-depth Galois-ring replacement and an endpoint ledger for
 `(HWO)`; no credit is claimed.
 
+The graph audit also closes a possible misreading of that bridge. The native
+inverse-additive Fourier identity is already exact, including every reciprocal
+and ramified term, and the prior characteristic-two Bagshaw ledger already
+prices its full loss-aware Type-I/II consequence. It reaches only the far
+pointwise tail and has no strict uniform row at `ell=300`; meanwhile the
+dyadic phase has maximal global Boolean degree and explicit nonquadratic
+fibres. Thus neither a direct quadratic-digit identification nor a better
+Fourier bookkeeping step can establish `(HWO)`. The surviving requirement is
+genuine collective signed cancellation in the high-Witt exact-order family.
+
 **Next:** prove `(REL)`, encode it as replayable evidence, remove the
 manuscript's fail-visible warning, and perform the final source audit.  The
 active geometric form is the complete signed lower Witt trace `(WITT-LOW)`,

@@ -60,6 +60,37 @@ present phase is already Cheng's quadratic digit phase. Any successful bridge
 must first identify a different Galois-ring or higher-degree complete-sum
 structure.
 
+## Closed edges: what the graph does and does not reduce
+
+The reciprocal/Fourier translation itself is not an open gap.  The native
+`inverse_additive_mobius_spectrum` checks, for every admitted finite row,
+
+```text
+sum_(u in V_d) M_k(u^(-1))
+  = 2^(d-ell) sum_(a in W_d^perp) H_k(a),
+```
+
+including inversion as a permutation, Walsh Parseval, every convolution order,
+and the ramified reciprocal convention.  The exact order-by-order regrouping
+also retains the signed cancellation that would be destroyed by absolute
+values.  This closes the change-of-variables edge to the inverse-additive
+literature, but proves no uniform bound.
+
+The existing characteristic-two Bagshaw audit closes the next tempting edge:
+the proven inverse-energy and wild-Kloosterman inputs give genuine savings in
+some Type-I/II ranges, but pointwise estimates reach only the far tail (even
+the ideal zero-epsilon exponent pair begins at `d > 14 ell / 15 + O(1)`).
+The full loss-aware endpoint ledger has no strict uniform row at `ell=300`.
+So a direct Vaughan port cannot be upgraded to `(HWO)` by improving the
+reciprocal bookkeeping or by treating the Fourier identity as an asymptotic
+theorem.
+
+Accordingly the remaining bridge has a sharply delimited form: establish
+collective cancellation across the high-Witt, exact-order signed family before
+absolute values.  It must be a new theorem about that family, rather than a
+quadratic-form identification, a fixed-field pointwise estimate, or a
+rephrasing of the inverse-energy bound.
+
 ## Use
 
 For every new source, first classify its asymptotic axis, translate its
