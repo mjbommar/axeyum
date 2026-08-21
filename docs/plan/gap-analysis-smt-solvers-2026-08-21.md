@@ -336,25 +336,20 @@ that is hidden. What was missing is that the **dominance metric does not make
 the distinction**, so "269/326 Lean-reconstructed" reads as a much stronger claim
 than it is — for 127 of them, Lean confirmed a tautology.
 
-> **Caveat on the counts below, added the same day.** They were computed by
-> classifying each instance's `lean_fragment` against
-> `ProofFragment::lean_module_content()` — a **table**. The string and regex
-> routes are not `ProofFragment` variants, so 13 instances (11 `RegexEmptiness`,
-> 2 `StringLength`) fell through as unclassified, and `lean_theory_unsat` read
-> 129 where the reasoning half is 142. The undercount is on the **reasoning**
-> side, i.e. in the direction that makes the claim look weaker — which is why
-> being suspicious of flattering numbers would not have caught it.
+> **Confirmed by re-measurement, 2026-08-21.** The counts below were first
+> computed by classifying `lean_fragment` against a table, which left 13
+> instances (11 `RegexEmptiness`, 2 `StringLength`) unclassified because the
+> string routes are not `ProofFragment` variants. `ab11d6fc5` replaced that with
+> a read of `STRUCTURAL_ATTESTATION_MARKER` **out of the emitted module** — only
+> the shared structural emitter writes it, so the class is a property of the
+> artifact rather than an assumption about the route.
 >
-> `ab11d6fc5` replaces the table lookup with a read of
-> `STRUCTURAL_ATTESTATION_MARKER` **out of the emitted module**: only the shared
-> structural emitter writes that marker, so the class is now a property of the
-> artifact rather than an assumption about the route. That is the same rule that
-> made `portable_artifact()` correct, applied in one place and not the other.
->
-> The **shape** below is not in doubt — QF_ABV and the string logics near 100%,
-> seven logics at exactly 0 — but treat the exact counts as superseded by the
-> in-flight refresh, which carries a positive control (QF_S must read
-> `11 reason and 0 attest`).
+> All 35 rows were then re-audited from a clean snapshot (`lane-snapshot`,
+> `dirty=false`, on a box at load 0.43). **Unclassified: 0. Reasoning 142,
+> attestation 127** — identical to what is published here. The original table
+> was right, but its QF_S cell was right by an accident of the classifier's
+> default rather than by measurement; the positive control (QF_S must read
+> `11 reason and 0 attest`) is what separated those two states, and it fired.
 
 **And "roughly half" is misleading in both directions, because the split is
 almost bimodal by logic.** Per-theory, over the same 269:
@@ -471,6 +466,17 @@ axis where the grammar has a rule.
 
 Three of this document's corrections exist because a measurement instrument
 could not fail. This is the part most likely to repeat.
+
+0. **MEASURED: 73 instances across the 35 rows were invisible to the audit.**
+   The full refresh landed 2026-08-21 from a clean snapshot on a quiet box. Every
+   row now re-probes what its baseline recorded as undecided, and the total is
+   **`newly_decided` = 73** — capability the artifacts could not report, spread
+   across the board rather than confined to a degenerate row. The headline
+   denominators are unchanged (326 / 281 / 281 / 269), so the refresh
+   *confirms* them; the 73 sit outside those counts because `baseline_unsat`
+   only counts what the baseline decided. Reading the pipeline table as a
+   measurement of capability therefore still understates it, and by a known
+   amount now rather than an unknown one.
 
 0. **The frozen zero was not confined to the quantified rows, and that is worse
    than it was reported.** The fix landed for a row that decided *nothing*

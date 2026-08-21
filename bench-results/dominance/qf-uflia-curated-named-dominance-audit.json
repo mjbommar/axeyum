@@ -9,7 +9,7 @@
       "baseline_outcome": "unsat",
       "decision_backend": "arith-dpll-exact-theory-enumeration",
       "dominant_candidate": true,
-      "elapsed_ms": 10.236042000000001,
+      "elapsed_ms": 7.642142,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -19,13 +19,14 @@
       "lean_error": null,
       "lean_fragment": "ArithDpll",
       "lean_module_bytes": 3151,
+      "lean_module_content": "attestation",
       "phase_timings_ms": {
-        "check_evidence": 0.113077,
-        "lean_reconstruction": 2.937131,
-        "parse_evidence": 0.105998,
-        "parse_lean": 0.025363,
-        "produce_evidence": 0.68015,
-        "read": 0.034341
+        "check_evidence": 0.064517,
+        "lean_reconstruction": 2.2506150000000003,
+        "parse_evidence": 0.126633,
+        "parse_lean": 0.033984,
+        "produce_evidence": 0.610858,
+        "read": 0.036475
       },
       "trust_holes": [],
       "trust_steps": []
@@ -37,7 +38,7 @@
       "baseline_outcome": "unsat",
       "decision_backend": "arith-dpll-exact-theory-enumeration",
       "dominant_candidate": true,
-      "elapsed_ms": 67.421926,
+      "elapsed_ms": 60.229865000000004,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -47,13 +48,14 @@
       "lean_error": null,
       "lean_fragment": "ArithDpll",
       "lean_module_bytes": 3151,
+      "lean_module_content": "attestation",
       "phase_timings_ms": {
-        "check_evidence": 9.789086000000001,
-        "lean_reconstruction": 30.504572,
-        "parse_evidence": 0.12837800000000002,
-        "parse_lean": 0.086365,
-        "produce_evidence": 16.393967,
-        "read": 0.036474
+        "check_evidence": 10.24732,
+        "lean_reconstruction": 29.390449,
+        "parse_evidence": 0.12716999999999998,
+        "parse_lean": 0.082568,
+        "produce_evidence": 10.626834,
+        "read": 0.03449
       },
       "trust_holes": [],
       "trust_steps": []
@@ -61,12 +63,12 @@
   ],
   "limit": 1000,
   "logic": "QF_UFLIA",
-  "prelude_warm_ms": 13041.367683,
+  "prelude_warm_ms": 6268.351696,
   "prelude_warmed": true,
   "slice": "qf-uflia-curated-named-solver-vs-z3-10s.json",
   "source_revision": {
     "dirty": false,
-    "sha": "496288979",
+    "sha": "0d639f771",
     "source": "lane-snapshot"
   },
   "summary": {
@@ -75,13 +77,16 @@
     "audited_unsat": 2,
     "baseline_decided": 2,
     "baseline_mismatches": 0,
+    "baseline_undecided_reprobed": 0,
     "dominant_candidates": 2,
     "dominant_pct_audited": 100.0,
     "evidence_certified": 2,
     "evidence_checked": 2,
     "instances": 2,
     "lean_checked_unsat": 2,
+    "lean_theory_unsat": 0,
     "lean_unsat_pct": 100.0,
+    "newly_decided": 0,
     "timeouts": 0
   },
   "timeout_ms": 10000,

@@ -9,7 +9,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 1.117302,
+      "elapsed_ms": 1.172505,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -19,13 +19,14 @@
       "lean_error": null,
       "lean_fragment": null,
       "lean_module_bytes": null,
+      "lean_module_content": null,
       "phase_timings_ms": {
-        "check_evidence": 0.0076359999999999996,
+        "check_evidence": 0.009768,
         "lean_reconstruction": null,
-        "parse_evidence": 0.136102,
+        "parse_evidence": 0.157114,
         "parse_lean": null,
-        "produce_evidence": 0.93448,
-        "read": 0.036037
+        "produce_evidence": 0.977829,
+        "read": 0.025230000000000002
       },
       "trust_holes": [],
       "trust_steps": []
@@ -37,7 +38,7 @@
       "baseline_outcome": "unsat",
       "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 0.593509,
+      "elapsed_ms": 0.636333,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -47,13 +48,14 @@
       "lean_error": null,
       "lean_fragment": "BoolUfExhaustive",
       "lean_module_bytes": 3167,
+      "lean_module_content": "attestation",
       "phase_timings_ms": {
-        "check_evidence": 0.00294,
-        "lean_reconstruction": 0.42160400000000003,
-        "parse_evidence": 0.046862,
-        "parse_lean": 0.020927,
-        "produce_evidence": 0.025571999999999998,
-        "read": 0.020135
+        "check_evidence": 0.003279,
+        "lean_reconstruction": 0.450382,
+        "parse_evidence": 0.045334000000000006,
+        "parse_lean": 0.020778,
+        "produce_evidence": 0.035278,
+        "read": 0.023037
       },
       "trust_holes": [],
       "trust_steps": []
@@ -61,12 +63,12 @@
   ],
   "limit": 1000,
   "logic": "QF_UFBV",
-  "prelude_warm_ms": 14288.080480999999,
+  "prelude_warm_ms": 6281.084482,
   "prelude_warmed": true,
   "slice": "qf-ufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json",
   "source_revision": {
     "dirty": false,
-    "sha": "496288979",
+    "sha": "0d639f771",
     "source": "lane-snapshot"
   },
   "summary": {
@@ -75,13 +77,16 @@
     "audited_unsat": 1,
     "baseline_decided": 2,
     "baseline_mismatches": 0,
+    "baseline_undecided_reprobed": 0,
     "dominant_candidates": 2,
     "dominant_pct_audited": 100.0,
     "evidence_certified": 2,
     "evidence_checked": 2,
     "instances": 2,
     "lean_checked_unsat": 1,
+    "lean_theory_unsat": 0,
     "lean_unsat_pct": 100.0,
+    "newly_decided": 0,
     "timeouts": 0
   },
   "timeout_ms": 10000,

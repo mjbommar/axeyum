@@ -9,7 +9,7 @@
       "baseline_outcome": "unsat",
       "decision_backend": "auto-solve",
       "dominant_candidate": false,
-      "elapsed_ms": 6740.497012,
+      "elapsed_ms": 6095.955824,
       "evidence_certified": false,
       "evidence_check_mode": "not-applicable-uncertified",
       "evidence_checked": false,
@@ -19,13 +19,14 @@
       "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
       "lean_fragment": null,
       "lean_module_bytes": null,
+      "lean_module_content": null,
       "phase_timings_ms": {
-        "check_evidence": 0.000103,
-        "lean_reconstruction": 587.245583,
-        "parse_evidence": 20.427612,
-        "parse_lean": 18.745586000000003,
-        "produce_evidence": 5521.684499,
-        "read": 0.190126
+        "check_evidence": 0.000106,
+        "lean_reconstruction": 535.500738,
+        "parse_evidence": 17.730615,
+        "parse_lean": 15.623652,
+        "produce_evidence": 4993.803736,
+        "read": 0.198486
       },
       "trust_holes": [],
       "trust_steps": []
@@ -37,7 +38,7 @@
       "baseline_outcome": "unsat",
       "decision_backend": "auto-solve",
       "dominant_candidate": false,
-      "elapsed_ms": 6834.458935,
+      "elapsed_ms": 6086.903625999999,
       "evidence_certified": false,
       "evidence_check_mode": "not-applicable-uncertified",
       "evidence_checked": false,
@@ -47,13 +48,14 @@
       "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
       "lean_fragment": null,
       "lean_module_bytes": null,
+      "lean_module_content": null,
       "phase_timings_ms": {
-        "check_evidence": 0.000116,
-        "lean_reconstruction": 589.0907,
-        "parse_evidence": 18.215512999999998,
-        "parse_lean": 16.492663,
-        "produce_evidence": 5610.097647,
-        "read": 0.08028400000000001
+        "check_evidence": 0.00010400000000000001,
+        "lean_reconstruction": 533.763598,
+        "parse_evidence": 14.751608,
+        "parse_lean": 14.598666,
+        "produce_evidence": 4988.342291,
+        "read": 0.091365
       },
       "trust_holes": [],
       "trust_steps": []
@@ -61,12 +63,12 @@
   ],
   "limit": 1000,
   "logic": "QF_UFLIA",
-  "prelude_warm_ms": 14534.903736,
+  "prelude_warm_ms": 6274.684298,
   "prelude_warmed": true,
   "slice": "qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts-solver-vs-z3-10s.json",
   "source_revision": {
     "dirty": false,
-    "sha": "496288979",
+    "sha": "0d639f771",
     "source": "lane-snapshot"
   },
   "summary": {
@@ -75,13 +77,16 @@
     "audited_unsat": 2,
     "baseline_decided": 2,
     "baseline_mismatches": 0,
+    "baseline_undecided_reprobed": 0,
     "dominant_candidates": 0,
     "dominant_pct_audited": 0.0,
     "evidence_certified": 0,
     "evidence_checked": 0,
     "instances": 2,
     "lean_checked_unsat": 0,
+    "lean_theory_unsat": 0,
     "lean_unsat_pct": 0.0,
+    "newly_decided": 0,
     "timeouts": 0
   },
   "timeout_ms": 10000,
