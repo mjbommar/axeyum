@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction includes an accepted generic official-gcd balanced-Bézout theorem. The twice-reproduced representation audit selects reconstruction inside its complete official `WellFounded` kernel. A pointwise official-representation `Nat.gcd_zero_left` source is now preregistered as the exact accepted gcd model plus two theorem/two print insertions. One compile/export, two empty-footprint audits, exact baseline cleanup, and zero closed-theorem/cancellation/target/ledger authority are frozen before execution.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction includes an accepted generic official-gcd balanced-Bézout theorem. The pointwise official-representation zero-left source compiles on pinned Lean 4.30, but its unbounded complete-module export is 340,033,933 bytes and the first independent import fails closed at `RecordLimit { limit: 2000000 }`. No theorem or partial kernel was published; the second import did not run, exact cleanup restored the `s5` baseline, and all downstream authority remains zero.
 
-**Next:** compile the frozen V2 gcd-model source once on pinned `s5`, export once, and audit only `Axeyum.Autogenesis.nat_gcd_zero_left` twice without proof rendering. Accept only byte-identical empty footprints containing the local model theorem and no official zero-left/fix-equality/extensionality roots. On acceptance, separately preregister official-kernel composition with the accepted successor leaf and generic balanced-Bézout theorem.
+**Next:** preregister the exact lean4export theorem-root invocation for `Axeyum.Autogenesis.nat_gcd_zero_left`, retaining the unchanged source, importer limits, zero-retry rule, and exact `s5` cleanup. Recompile and export only the selected dependency closure; accept only two byte-identical empty-footprint audits before any official-kernel composition or closed balanced-Bézout retry.
 
 <!-- plan-section: landed-changes -->
 
@@ -117,4 +117,5 @@
 | 2026-08-21 | `496e916b8` | First closed specialization declines at an exact `WellFounded.fix` type-shape mismatch with zero retry or theorem credit |
 | 2026-08-21 | `7550b31c4` | Proof-free `WellFounded.fix` closure audit is frozen before code or stream access |
 | 2026-08-21 | `96a6a4c34` | Twice-reproduced audit selects official-kernel gcd-leaf reconstruction over native representation transport |
-| 2026-08-21 | (pending) | Pointwise official-representation gcd zero-left reconstruction is frozen before compilation |
+| 2026-08-21 | `3e6373de5` | Pointwise official-representation gcd zero-left reconstruction is frozen before compilation |
+| 2026-08-21 | (pending) | Source compiles but unbounded 340 MB export hits the unchanged two-million-record importer ceiling |
