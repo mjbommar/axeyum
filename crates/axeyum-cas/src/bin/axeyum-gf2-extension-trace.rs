@@ -5,7 +5,8 @@ use std::fs;
 use axeyum_cas::gf2_extension::{
     BinaryExtensionConnectedAdamsTraceShardReport, BinaryExtensionLongCycleTraceShardReport,
     BinaryExtensionTraceLimits, binary_extension_connected_adams_trace_shard,
-    binary_extension_long_cycle_trace_shard, collapse_binary_extension_long_cycle_trace_subshards,
+    binary_extension_long_cycle_trace_shard, binary_extension_witt_shifted_trace,
+    collapse_binary_extension_long_cycle_trace_subshards,
     combine_binary_extension_connected_adams_trace_shards,
     combine_binary_extension_long_cycle_trace_shards, extension_trace_hankel_minor,
 };
@@ -30,6 +31,12 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         .is_some_and(|argument| argument == "--connected-shard")
     {
         return run_connected_shard(&arguments[1..]);
+    }
+    if arguments
+        .first()
+        .is_some_and(|argument| argument == "--witt-shifted")
+    {
+        return run_witt_shifted(&arguments[1..]);
     }
     if arguments
         .first()
@@ -111,6 +118,58 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         limits,
     )?;
     println!("{}", serde_json::to_string(&report)?);
+    Ok(())
+}
+
+fn run_witt_shifted(arguments: &[String]) -> Result<(), Box<dyn std::error::Error>> {
+    if arguments.len() != 5 {
+        return Err("usage: axeyum-gf2-extension-trace --witt-shifted <field-modulus> <ell> <polynomial-degree> <coarse-level> <max-candidates>".into());
+    }
+    let field_modulus = parse_u64(&arguments[0])?;
+    let ell = arguments[1].parse::<usize>()?;
+    let polynomial_degree = arguments[2].parse::<usize>()?;
+    let coarse_level = arguments[3].parse::<usize>()?;
+    let max_candidates = arguments[4].parse::<u64>()?;
+    let limits = BinaryExtensionTraceLimits {
+        max_field_degree: 16,
+        max_polynomial_degree: 32,
+        max_candidates,
+    };
+    let report = binary_extension_witt_shifted_trace(
+        field_modulus,
+        ell,
+        polynomial_degree,
+        coarse_level,
+        limits,
+    )?;
+    let layers = report
+        .layers
+        .iter()
+        .map(|layer| {
+            serde_json::json!({
+                "layer": layer.layer,
+                "identity_aggregate_mass": layer.identity_aggregate_mass.to_string(),
+                "parent_aggregate_mass": layer.parent_aggregate_mass.to_string(),
+                "signed_spatial_layer": layer.signed_spatial_layer.to_string(),
+                "signed_high_character_trace": layer.signed_high_character_trace.to_string(),
+                "average_contraction_holds": layer.average_contraction_holds,
+            })
+        })
+        .collect::<Vec<_>>();
+    println!(
+        "{}",
+        serde_json::json!({
+            "field_modulus": report.field_modulus,
+            "field_degree": report.field_degree,
+            "field_order": report.field_order,
+            "ell": report.ell,
+            "polynomial_degree": report.polynomial_degree,
+            "coarse_level": report.coarse_level,
+            "descendant_count": report.descendant_count,
+            "aggregate_global_mass": report.aggregate_global_mass.to_string(),
+            "layers": layers,
+        })
+    );
     Ok(())
 }
 

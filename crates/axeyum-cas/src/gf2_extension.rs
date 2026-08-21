@@ -7,7 +7,7 @@
 
 use core::fmt;
 
-use num_bigint::{BigInt, BigUint};
+use num_bigint::{BigInt, BigUint, Sign};
 use serde::{Deserialize, Serialize};
 
 use crate::gf2::{
@@ -97,6 +97,72 @@ pub struct BinaryExtensionConnectedAdamsTraceReport {
     pub minimum_normalized_betti_ceiling: BigUint,
     /// Whether this bounded row satisfies the candidate allowance.
     pub satisfies_candidate_bound: bool,
+}
+
+/// One exact-conductor layer in the extension-field Witt shifted trace.
+///
+/// This is the varying-base-field analogue of one row of the aggregate
+/// identity-energy path in [`crate::gf2_hayes`].  It combines every high
+/// conductor before taking a sign, and it combines every low twist of exact
+/// conductor `layer` before taking an absolute value.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct BinaryExtensionWittShiftedLayerTrace {
+    /// Exact low-twist conductor layer.
+    pub layer: usize,
+    /// Aggregate conditional-covariance mass above the identity child.
+    pub identity_aggregate_mass: BigUint,
+    /// Aggregate mass above its parent cylinder.
+    pub parent_aggregate_mass: BigUint,
+    /// Spatial/Fourier layer `q^i A_i-q^(i-1) A_(i-1)`.
+    pub signed_spatial_layer: BigInt,
+    /// Unnormalised high-character trace `q^coarse_level signed_spatial_layer`.
+    pub signed_high_character_trace: BigInt,
+    /// Whether this exact row contracts by at least the q-ary average:
+    /// `q A_i<=A_(i-1)`.
+    pub average_contraction_holds: bool,
+}
+
+/// Exact joint `(high character, low twist)` trace over `GF(2^r)`.
+///
+/// If `D` is the centered degree-`n` Mangoldt population on the `q^ell`
+/// leading-coefficient classes, `c` is the coarse level, and
+/// `R=q^(ell-c)`, put
+///
+/// ```text
+/// w(a)=R sum_(g above a) D(g)^2-(sum_(g above a)D(g))^2,
+/// A_i=sum_(a whose first i coordinates vanish) w(a).
+/// ```
+///
+/// The layer trace is exactly
+///
+/// ```text
+/// q^c (q^i A_i-q^(i-1)A_(i-1)),
+/// ```
+///
+/// the sum of the shifted high-character correlation over every twist of
+/// exact conductor `i`.  Varying `r` therefore gives a Frobenius-trace
+/// sequence for the connected `(WITT-LOW)` family.  Bounded rows are
+/// diagnostics only; they do not certify a cohomological bound.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct BinaryExtensionWittShiftedTraceReport {
+    /// Packed monic irreducible modulus defining `GF(2^r)`.
+    pub field_modulus: u64,
+    /// Extension degree `r`.
+    pub field_degree: usize,
+    /// Field order `q=2^r`.
+    pub field_order: u64,
+    /// Leading-coefficient prefix length.
+    pub ell: usize,
+    /// Degree of every monic polynomial.
+    pub polynomial_degree: usize,
+    /// Coarse high-character cutoff `c`.
+    pub coarse_level: usize,
+    /// Number `q^(ell-c)` of fine classes above each coarse class.
+    pub descendant_count: u64,
+    /// Aggregate mass `A_0` before identity-path localization.
+    pub aggregate_global_mass: BigUint,
+    /// Exact layers `1..=c` in increasing order.
+    pub layers: Vec<BinaryExtensionWittShiftedLayerTrace>,
 }
 
 /// One deterministic shard of the connected extension-field class vector.
@@ -196,6 +262,34 @@ pub struct BinaryExtensionEllThreeDegreeSevenClosedForm {
     pub one_extra_q_normalized_degree: usize,
     /// Two-degree excess over the original proposed cutoff.
     pub normalized_q_degree_excess: usize,
+}
+
+/// Closed form for the joint Witt shifted trace at `(ell,n,c)=(3,7,2)`.
+///
+/// The exact-conductor-one layer vanishes.  The conductor-two layer is
+/// `q^9(q-1)^2`, of q-degree 11 after restoring the high-character
+/// normalisation.  The formal top degree is `n+ell+layer=12`, so joint
+/// low-twist summation removes only one full q-degree in this family.  This
+/// rules out obtaining an arbitrary number of weight drops merely from the
+/// dimension of the low-twist affine shell.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct BinaryExtensionEllThreeDegreeSevenWittShiftedClosedForm {
+    /// Extension degree `r` in `q=2^r`.
+    pub field_degree: usize,
+    /// Field order `q`.
+    pub field_order: BigUint,
+    /// The common nonzero coarse covariance mass `q^6(q-1)`.
+    pub supported_coarse_mass: BigUint,
+    /// Exact vanishing conductor-one high-character trace.
+    pub conductor_one_high_character_trace: BigInt,
+    /// Conductor-two high-character trace `q^9(q-1)^2`.
+    pub conductor_two_high_character_trace: BigInt,
+    /// Leading q-degree 11 of the conductor-two trace.
+    pub conductor_two_trace_q_degree: usize,
+    /// Formal top q-degree `n+ell+layer=12` before monodromy cancellation.
+    pub formal_top_q_degree: usize,
+    /// Exactly one full q-degree removed in the closed form.
+    pub q_degree_drop: usize,
 }
 
 /// One deterministic interval of an extension-field long-cycle trace.
@@ -451,6 +545,189 @@ pub fn binary_extension_connected_adams_trace(
         limits,
     )?;
     combine_binary_extension_connected_adams_trace_shards(&[shard])
+}
+
+/// Compute the complete signed low-twist layer sequence over one extension
+/// field.
+///
+/// This operation deliberately works from coefficient cylinders, not from a
+/// numerical character table.  The q-ary finite-group Fourier identities are
+/// therefore reconstructed with exact integer arithmetic and remain valid for
+/// every binary extension field admitted by the resource limits.
+///
+/// # Errors
+///
+/// Rejects a non-endpoint degree, `c` outside `1..ell`, an inadmissible field
+/// or population, checked-arithmetic overflow, and any negative conditional
+/// covariance or failed population invariant.
+pub fn binary_extension_witt_shifted_trace(
+    field_modulus: u64,
+    ell: usize,
+    polynomial_degree: usize,
+    coarse_level: usize,
+    limits: BinaryExtensionTraceLimits,
+) -> Result<BinaryExtensionWittShiftedTraceReport, BinaryExtensionTraceError> {
+    if coarse_level == 0 || coarse_level >= ell {
+        return Err(BinaryExtensionTraceError::InvalidParameter(
+            "Witt shifted trace requires 1 <= coarse level < ell".to_owned(),
+        ));
+    }
+    let shard = binary_extension_connected_adams_trace_shard(
+        field_modulus,
+        ell,
+        polynomial_degree,
+        0,
+        1,
+        limits,
+    )?;
+    // Reuse the independently maintained moment constructor as a fail-closed
+    // conservation check before interpreting the vector geometrically.
+    let _ = connected_adams_report_from_populations(&shard, &shard.class_mangoldt_populations)?;
+    witt_shifted_report_from_populations(&shard, coarse_level)
+}
+
+fn witt_shifted_report_from_populations(
+    metadata: &BinaryExtensionConnectedAdamsTraceShardReport,
+    coarse_level: usize,
+) -> Result<BinaryExtensionWittShiftedTraceReport, BinaryExtensionTraceError> {
+    if coarse_level == 0 || coarse_level >= metadata.ell {
+        return Err(BinaryExtensionTraceError::InvalidParameter(
+            "Witt shifted trace requires 1 <= coarse level < ell".to_owned(),
+        ));
+    }
+    let q = metadata.field_order;
+    let descendant_exponent = u32::try_from(metadata.ell - coarse_level).map_err(|_| {
+        BinaryExtensionTraceError::ResourceLimit("Witt descendant exponent exceeds u32".to_owned())
+    })?;
+    let descendant_count = q.checked_pow(descendant_exponent).ok_or_else(|| {
+        BinaryExtensionTraceError::ResourceLimit("Witt descendant count overflow".to_owned())
+    })?;
+    let coarse_exponent = u32::try_from(coarse_level).map_err(|_| {
+        BinaryExtensionTraceError::ResourceLimit("Witt coarse exponent exceeds u32".to_owned())
+    })?;
+    let coarse_count = q.checked_pow(coarse_exponent).ok_or_else(|| {
+        BinaryExtensionTraceError::ResourceLimit("Witt coarse count overflow".to_owned())
+    })?;
+    let coarse_len = usize::try_from(coarse_count).map_err(|_| {
+        BinaryExtensionTraceError::ResourceLimit("Witt coarse count exceeds host size".to_owned())
+    })?;
+    let descendant_len = usize::try_from(descendant_count).map_err(|_| {
+        BinaryExtensionTraceError::ResourceLimit(
+            "Witt descendant count exceeds host size".to_owned(),
+        )
+    })?;
+    if coarse_len.checked_mul(descendant_len) != Some(metadata.class_mangoldt_populations.len()) {
+        return Err(BinaryExtensionTraceError::Invariant(
+            "Witt coarse blocks do not partition the class vector".to_owned(),
+        ));
+    }
+    let coarse_masses = witt_conditional_coarse_masses(metadata, descendant_len, coarse_len)?;
+    let aggregate_global_mass = coarse_masses.iter().cloned().sum::<BigUint>();
+    let layers = witt_shifted_layers(q, coarse_level, &coarse_masses, &aggregate_global_mass)?;
+
+    Ok(BinaryExtensionWittShiftedTraceReport {
+        field_modulus: metadata.field_modulus,
+        field_degree: metadata.field_degree,
+        field_order: q,
+        ell: metadata.ell,
+        polynomial_degree: metadata.polynomial_degree,
+        coarse_level,
+        descendant_count,
+        aggregate_global_mass,
+        layers,
+    })
+}
+
+fn witt_conditional_coarse_masses(
+    metadata: &BinaryExtensionConnectedAdamsTraceShardReport,
+    descendant_len: usize,
+    coarse_len: usize,
+) -> Result<Vec<BigUint>, BinaryExtensionTraceError> {
+    let mean = BigInt::from(metadata.uniform_mean);
+    let descendant_scale = BigUint::from(descendant_len);
+    let mut coarse_masses = Vec::with_capacity(coarse_len);
+    for block in metadata
+        .class_mangoldt_populations
+        .chunks_exact(descendant_len)
+    {
+        let mut sum = BigInt::from(0_u8);
+        let mut square_sum = BigUint::from(0_u8);
+        for population in block {
+            let delta = BigInt::from(*population) - &mean;
+            square_sum += delta.magnitude().pow(2);
+            sum += delta;
+        }
+        let covariance = BigInt::from(&descendant_scale * square_sum) - sum.pow(2);
+        if covariance.sign() == Sign::Minus {
+            return Err(BinaryExtensionTraceError::Invariant(
+                "Witt conditional covariance became negative".to_owned(),
+            ));
+        }
+        coarse_masses.push(covariance.magnitude().clone());
+    }
+    Ok(coarse_masses)
+}
+
+fn witt_shifted_layers(
+    q: u64,
+    coarse_level: usize,
+    coarse_masses: &[BigUint],
+    aggregate_global_mass: &BigUint,
+) -> Result<Vec<BinaryExtensionWittShiftedLayerTrace>, BinaryExtensionTraceError> {
+    let q_big = BigUint::from(q);
+    let coarse_exponent = u32::try_from(coarse_level).map_err(|_| {
+        BinaryExtensionTraceError::ResourceLimit("Witt coarse exponent exceeds u32".to_owned())
+    })?;
+    let coarse_character_scale = q_big.pow(coarse_exponent);
+    let mut parent_mass = aggregate_global_mass.clone();
+    let mut layers = Vec::with_capacity(coarse_level);
+    for layer in 1..=coarse_level {
+        let identity_exponent = u32::try_from(coarse_level - layer).map_err(|_| {
+            BinaryExtensionTraceError::ResourceLimit(
+                "Witt identity-cylinder exponent exceeds u32".to_owned(),
+            )
+        })?;
+        let identity_count = q.checked_pow(identity_exponent).ok_or_else(|| {
+            BinaryExtensionTraceError::ResourceLimit(
+                "Witt identity-cylinder count overflow".to_owned(),
+            )
+        })?;
+        let identity_len = usize::try_from(identity_count).map_err(|_| {
+            BinaryExtensionTraceError::ResourceLimit(
+                "Witt identity-cylinder count exceeds host size".to_owned(),
+            )
+        })?;
+        let identity_aggregate_mass = coarse_masses
+            .iter()
+            .take(identity_len)
+            .cloned()
+            .sum::<BigUint>();
+        if identity_aggregate_mass > parent_mass {
+            return Err(BinaryExtensionTraceError::Invariant(
+                "Witt identity aggregate mass grew under localization".to_owned(),
+            ));
+        }
+        let layer_exponent = u32::try_from(layer).map_err(|_| {
+            BinaryExtensionTraceError::ResourceLimit("Witt layer exceeds u32".to_owned())
+        })?;
+        let parent_exponent = layer_exponent - 1;
+        let signed_spatial_layer =
+            BigInt::from(q_big.pow(layer_exponent) * &identity_aggregate_mass)
+                - BigInt::from(q_big.pow(parent_exponent) * &parent_mass);
+        let signed_high_character_trace =
+            BigInt::from(coarse_character_scale.clone()) * &signed_spatial_layer;
+        let average_contraction_holds = &q_big * &identity_aggregate_mass <= parent_mass;
+        layers.push(BinaryExtensionWittShiftedLayerTrace {
+            layer,
+            identity_aggregate_mass: identity_aggregate_mass.clone(),
+            parent_aggregate_mass: parent_mass,
+            signed_spatial_layer,
+            signed_high_character_trace,
+            average_contraction_holds,
+        });
+        parent_mass = identity_aggregate_mass;
+    }
+    Ok(layers)
 }
 
 fn connected_adams_domain(
@@ -868,6 +1145,52 @@ pub fn binary_extension_ell_three_degree_seven_closed_form(
         proposed_normalized_q_degree: 6,
         one_extra_q_normalized_degree: 7,
         normalized_q_degree_excess: 2,
+    })
+}
+
+/// Evaluate the joint low-twist layer closed form at `(ell,n,c)=(3,7,2)`.
+///
+/// The degree-seven population formula has centered value `-q` off the curve
+///
+/// ```text
+/// t_2=t_1^2,  t_3=t_1^3,
+/// ```
+///
+/// and `q(q^2-1)` on it.  In each coarse `(t_1,t_2)` fibre, conditional
+/// covariance is consequently zero off `t_2=t_1^2` and `q^6(q-1)` on it.
+/// The two identity-path layers then follow by counting this graph.
+///
+/// # Errors
+///
+/// Rejects zero extension degree or a degree above the configured bound.
+pub fn binary_extension_ell_three_degree_seven_witt_shifted_closed_form(
+    field_degree: usize,
+    limits: BinaryExtensionTraceLimits,
+) -> Result<BinaryExtensionEllThreeDegreeSevenWittShiftedClosedForm, BinaryExtensionTraceError> {
+    if field_degree == 0 {
+        return Err(BinaryExtensionTraceError::InvalidParameter(
+            "extension degree must be positive".to_owned(),
+        ));
+    }
+    if field_degree > limits.max_field_degree {
+        return Err(BinaryExtensionTraceError::ResourceLimit(format!(
+            "field degree {field_degree} exceeds limit {}",
+            limits.max_field_degree
+        )));
+    }
+    let q = BigUint::from(1_u8) << field_degree;
+    let q_minus_one = &q - BigUint::from(1_u8);
+    let supported_coarse_mass = q.pow(6) * &q_minus_one;
+    let conductor_two_high_character_trace = BigInt::from(q.pow(9) * q_minus_one.pow(2));
+    Ok(BinaryExtensionEllThreeDegreeSevenWittShiftedClosedForm {
+        field_degree,
+        field_order: q,
+        supported_coarse_mass,
+        conductor_one_high_character_trace: BigInt::from(0_u8),
+        conductor_two_high_character_trace,
+        conductor_two_trace_q_degree: 11,
+        formal_top_q_degree: 12,
+        q_degree_drop: 1,
     })
 }
 
@@ -1867,6 +2190,58 @@ mod tests {
             binary_extension_ell_three_degree_seven_closed_form(4, field_tight),
             Err(BinaryExtensionTraceError::ResourceLimit(_))
         ));
+    }
+
+    #[test]
+    fn witt_shifted_trace_matches_degree_seven_closed_form() {
+        let limits = BinaryExtensionTraceLimits::default();
+        for (modulus, field_degree) in [(0b11_u64, 1_usize), (0b111, 2)] {
+            let report = binary_extension_witt_shifted_trace(modulus, 3, 7, 2, limits).unwrap();
+            let closed = binary_extension_ell_three_degree_seven_witt_shifted_closed_form(
+                field_degree,
+                limits,
+            )
+            .unwrap();
+            let q = &closed.field_order;
+            assert_eq!(report.field_degree, field_degree);
+            assert_eq!(report.layers.len(), 2);
+            assert_eq!(
+                report.aggregate_global_mass,
+                q * &closed.supported_coarse_mass
+            );
+            assert_eq!(
+                report.layers[0].identity_aggregate_mass,
+                closed.supported_coarse_mass
+            );
+            assert_eq!(
+                report.layers[0].signed_high_character_trace,
+                closed.conductor_one_high_character_trace
+            );
+            assert!(report.layers[0].average_contraction_holds);
+            assert_eq!(
+                report.layers[1].identity_aggregate_mass,
+                closed.supported_coarse_mass
+            );
+            assert_eq!(
+                report.layers[1].signed_high_character_trace,
+                closed.conductor_two_high_character_trace
+            );
+            assert!(!report.layers[1].average_contraction_holds);
+            assert_eq!(closed.conductor_two_trace_q_degree, 11);
+            assert_eq!(closed.formal_top_q_degree, 12);
+            assert_eq!(closed.q_degree_drop, 1);
+        }
+    }
+
+    #[test]
+    fn witt_shifted_trace_declines_outside_its_exact_domain() {
+        let limits = BinaryExtensionTraceLimits::default();
+        assert!(binary_extension_witt_shifted_trace(0b11, 3, 7, 0, limits).is_err());
+        assert!(binary_extension_witt_shifted_trace(0b11, 3, 7, 3, limits).is_err());
+        assert!(binary_extension_witt_shifted_trace(0b11, 3, 6, 2, limits).is_err());
+        assert!(
+            binary_extension_ell_three_degree_seven_witt_shifted_closed_form(0, limits).is_err()
+        );
     }
 
     #[test]

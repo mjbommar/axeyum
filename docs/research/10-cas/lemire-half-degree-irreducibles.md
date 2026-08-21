@@ -4694,6 +4694,49 @@ dependence required here. ADR-0532 therefore records the exact domain
 mismatch: the theorem is a model for a new fixed-wild-modulus trace formula,
 not an input to the current endpoint ledger.
 
+### Complete low-twist shells do not force repeated weight drops
+
+Sawin's joint Witt monodromy kills the top cohomology of each nontrivial
+shifted high-character trace, but the remaining lower trace is at fixed
+`q=2`.  The possible refinement of summing the whole exact-conductor twist
+shell has now been tested as a genuine Frobenius sequence.  Over `GF(q)`, put
+`R=q^(ell-c)` and form the conditional-covariance masses
+
+```text
+w(a)=R sum_(g above a)D(g)^2-(sum_(g above a)D(g))^2,
+A_i=sum_(a whose first i coordinates vanish)w(a).
+```
+
+The exact unnormalised joint trace is
+
+```text
+T_i(q)=q^c(q^i A_i-q^(i-1)A_(i-1)).
+```
+
+The bounded `binary_extension_witt_shifted_trace` operation reconstructs
+every term from the extension-field Mangoldt class vector, after an
+independent conservation check.  At `(ell,n,c)=(3,7,2)`, the exact
+degree-seven population formula gives conditional covariance `q^6(q-1)` on
+the graph `t_2=t_1^2` and zero off it.  Hence, for every `q=2^r`,
+
+```text
+T_1(q)=0,                 T_2(q)=q^9(q-1)^2.
+```
+
+The nonzero trace has q-degree `11`, while the two Adams traces and the joint
+character/twist parameter space permit formal top degree `12`.  Thus the full
+low-twist shell realizes only one full q-degree of cancellation, not one drop
+per affine parameter.  Exhaustive `GF(2)` and `GF(4)` reconstruction gives
+`T_2=512` and `2359296`.  At the next endpoint pair, unforced layer signs can
+even change under extension, while only the translation-selected layer stays
+zero.
+
+This rejects generic affine/perverse concentration as the missing bridge.
+The surviving `(WITT-LOW)` theorem must exploit the alternating lower trace,
+the two-Mobius virtual representation, or cancellation across conductor
+orders; dimension, lissity, and top-invariant vanishing alone cannot supply
+the required repeated contractions (ADR-0586).
+
 The exact algebra is no longer trapped in that executable. ADR-0486 extracts a
 bounded `axeyum_cas::gf2_hayes` API for the principal-unit cyclic structure,
 identity-class populations, endpoint discrepancies, conductor layers, and the
