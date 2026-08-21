@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction now has the accepted generic official-gcd balanced-Bézout theorem plus both official-representation gcd computation leaves. The successor root reconstructs twice with an empty footprint and only `gcdModel_succ`; the pair has not yet been composed, so closed theorem and downstream authority remain zero.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction has the accepted generic official-gcd balanced-Bézout theorem plus both official-representation gcd computation leaves. A five-stream, official-only composition is preregistered to specialize modulo decrease and close the generic theorem without reintroducing the measured native `WellFounded` mismatch; closed and downstream authority remain zero before execution.
 
-**Next:** preregister a bounded official-kernel composition that imports the accepted zero-left stream, successor stream, modulo-decrease support, and generic balanced-Bezout stream; specializes the successor leaf with accepted `Nat.mod_lt`; then applies both leaves to the generic theorem. Require two fresh axiom-free closed-theorem reconstructions before any cancellation or target use.
+**Next:** implement the dedicated official-kernel composition driver, run its focused tests and full Rust gate, then execute exactly two complete five-stream invocations. Accept only byte-identical output with replayed receipts, empty footprints, exact argument identities, and no native gcd/fix/extensionality dependencies.
 
 <!-- plan-section: landed-changes -->
 
@@ -122,4 +122,5 @@
 | 2026-08-21 | `b866b31ee` | Exact theorem-root exporter retry is frozen with unchanged proof and importer limit |
 | 2026-08-21 | `dfcff00d1` | Root-selected zero-left gcd reconstructs twice with an empty footprint and only its local model dependency |
 | 2026-08-21 | `fb1a3613e` | Official-representation successor gcd root export is frozen without double-counting the native-support theorem |
-| 2026-08-21 | (pending) | Official-representation successor gcd reconstructs twice empty-footprint, completing the leaf pair for composition |
+| 2026-08-21 | `9ec4bcfa1` | Official-representation successor gcd reconstructs twice empty-footprint, completing the leaf pair for composition |
+| 2026-08-21 | (pending) | Five-stream official-kernel balanced-Bézout composition is frozen before implementation |
