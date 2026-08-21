@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-definition-blocker-path-audit-plan",
+  "state": "preregistered-before-single-nonrendering-definition-path-read",
+  "policy_version": "int-fib-definition-blocker-path-v1",
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-natcast-rooted-v2/int-fib-natcast.ndjson", "bytes": 9835690, "sha256": "70311503a7c3c167972c03b921418608b1295445e1615e30a3f80b8f218d6706", "mode": "0444", "textual_read_allowed": false},
+  "parent_result": {"path": "artifacts/autogenesis/mathlib-int-fib-natcast-rooted-construction-result-v2.json", "sha256": "25fad7fcfd38ceb4399139aefbc4078ec3310ddc860a5f94774b66a8304d7407"},
+  "root": "Int.fib",
+  "ordered_blockers": ["Classical.choice", "Lean.opaqueId", "Quot", "Quot.ind", "Quot.lift", "Quot.mk", "Quot.sound", "String.Internal.append", "propext"],
+  "measurement": {"tool_path": "crates/axeyum-lean-import/examples/declaration_blocker_path_batch_audit.rs", "tool_sha256": "635e27dc808639b4603fcd7e58f3df129d902d2430711f8fb9c4cc8ef01feef8", "proof_terms_types_or_values_may_be_rendered": false},
+  "budget": {"max_importer_runs": 1, "max_proof_bearing_stream_reads": 1, "max_retries": 0, "max_theorem_submissions": 0, "max_ledger_writes": 0},
+  "authority": {"reconstruction_allowed": false, "proof_bodies_readable_by_model": false, "definition_bodies_readable_by_model": false, "theorem_credit": 0, "fact_status_changes": 0, "ledger_writes": 0},
+  "decision_rule": {"next": "select the nearest shared declaration carriers and preregister the smallest target-owned Int.fib representation replacement", "authorize_successor_in_this_increment": false},
+  "output": "artifacts/autogenesis/mathlib-int-fib-definition-blocker-path-audit-result-v1.json"
+}
