@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction has the accepted generic official-gcd balanced-Bézout theorem plus both official-representation gcd computation leaves. The exact-reuse driver now checks canonical `Nat.mod_lt` identity plus kernel-type-shape compatibility and composes only the three absent roots; focused compilation, Clippy, and the full importer suite pass with zero new stream reads or theorem submissions.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction now has an unconditional official-representation balanced-Bézout theorem: two byte-identical empty-footprint runs reuse canonically identical `Nat.mod_lt`, replay all six remaining composition receipts and six specializations, and close with exactly the three frozen direct dependencies.
 
-**Next:** pass the full Rust push gate for the exact-reuse driver, retain its source and binary identities, then execute exactly two five-stream invocations. Accept only byte-identical output with exact `Nat.mod_lt` reuse, all remaining receipts replayed, and an empty-footprint closed theorem.
+**Next:** preregister reconstruction of the retained coprime-factor cancellation theorem using the unconditional official-kernel balanced-Bézout result. Keep the Fibonacci target, fact transition, evaluation, and ledger authority at zero until that support theorem independently closes and replays.
 
 <!-- plan-section: landed-changes -->
 
@@ -130,4 +130,5 @@
 | 2026-08-21 | `c4bf44f90` | Reverse-direction driver compiles Clippy-clean with generic composition removed and no execution |
 | 2026-08-21 | (pending) | First generic-base run finds `Nat.mod_lt` already present; exact reuse replaces a zero-addition composition |
 | 2026-08-21 | `7e4af7cde` | Exact `Nat.mod_lt` identity reuse and the remaining three-root composition are frozen before code or stream access |
-| 2026-08-21 | (pending) | Exact-reuse driver compiles Clippy-clean and passes the full importer suite without stream execution |
+| 2026-08-21 | `384826f41` | Exact-reuse driver compiles Clippy-clean, passes the full importer suite, and clears both full remote push gates without stream execution |
+| 2026-08-21 | (pending) | Exact `Nat.mod_lt` reuse closes official-representation balanced Bézout twice with byte-identical empty-footprint evidence |
