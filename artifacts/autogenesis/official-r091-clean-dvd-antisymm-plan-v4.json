@@ -1,0 +1,49 @@
+{
+    "schema_version": 1,
+    "kind": "axeyum-autogenesis-official-r091-clean-dvd-antisymm-plan-v4",
+    "state": "preregistered-existing-mod-lt-target-leaf-reuse-before-clean-order",
+    "predecessor": {
+        "path": "artifacts/autogenesis/official-r091-clean-dvd-antisymm-result-v3.json",
+        "sha256": "e4b7b43291c6bbd363d880a5656059adb3fd3b33b5b4a89831c6ee1dd6a036ca"
+    },
+    "reuse": {
+        "name": "Nat.mod_lt",
+        "requirements": [
+            "source and r091 canonical declaration SHA-256 identities equal",
+            "source and r091 kernel type-shape SHA-256 identities equal",
+            "r091 complete axiom footprint empty",
+            "checked_reused_declaration_compatibility authorizes the exact pair"
+        ],
+        "composition": "compose official cancellation with Nat.mod_lt as the sole explicit target theorem leaf and replay with the target-leaf verifier"
+    },
+    "then": "construct the unchanged three official clean-order supports, require empty footprints, export antisymmetry twice, and independently import each output twice",
+    "acceptance": {
+        "fresh_complete_invocations": 2,
+        "checked_target_leaf_reuses": 2,
+        "cancellation_compositions": 2,
+        "support_submissions": 6,
+        "outputs_byte_identical": true,
+        "fresh_imports": 4,
+        "all_axiom_footprints": [],
+        "exact_target_submissions": 0
+    },
+    "budget": {
+        "max_driver_builds": 1,
+        "max_complete_invocations": 2,
+        "max_compatibility_checks": 2,
+        "max_compositions": 2,
+        "max_support_submissions": 6,
+        "max_exports": 2,
+        "max_imports": 4,
+        "max_exact_target_submissions": 0,
+        "max_retries": 0
+    },
+    "authority": {
+        "support_credit_before_acceptance": 0,
+        "target_credit": 0,
+        "fact_status_changes": 0,
+        "evaluation_credit": 0,
+        "ledger_writes": 0
+    },
+    "limitations": "V4 authorizes exact Nat.mod_lt target-leaf reuse only; it does not weaken compatibility or authorize the GCD-shift target."
+}
