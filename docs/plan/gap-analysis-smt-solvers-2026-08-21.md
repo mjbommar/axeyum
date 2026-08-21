@@ -266,9 +266,21 @@ measured trusted base*, which is a different and narrower thing.
 
 Two measured numbers that should temper the claim further:
 
-- **Only 11 of 129 `unsat` (8.5%) produce an artifact an external checker can
-  read** (5 DRAT + 6 Alethe). Everything else re-validates by calling back into
-  axeyum's own Rust.
+- **CORRECTED 2026-08-21 — 44 of 281 certified `unsat` (15.7%) carry an
+  artifact an external checker can read** (30 DRAT + 14 Alethe). This document
+  first published "11 of 129 (8.5%)", which was counted from `kind_label`
+  strings — and labels are not artifacts.
+  `BoundedIntBlastCertificate` had been carrying a full DRAT refutation of its
+  bit-blasted CNF in `bv_proof` all along, under the label
+  `unsat-bounded-int-blast`; so do `ArithDpllRefutation` and three quantified-BV
+  certificates. The metric undercounted the thing it existed to measure, in the
+  direction that made the project look worse.
+  `Evidence::portable_artifact()` now decides it from the certificate rather than
+  from its name, and `every_proof_carrying_variant_is_listed_as_portable` reads
+  the source and fails when a certificate gains an `UnsatProof` without an arm —
+  because the wildcard in that function undercounts by construction, which is the
+  same defect one level down. Still: **84% re-validates only by calling back into
+  axeyum's own Rust**, and that is the real number to move.
 - **~30 of 34 structural evidence checkers re-run the producer and compare for
   equality** — `producer(arena, assertions).is_some_and(|fresh| fresh == *cert)`.
   That is a determinism check, not a soundness check: if the recognizer is
@@ -390,7 +402,7 @@ Ordered by *measured* cost, not by how large the hole feels.
 | 2 | **Re-measure, then gate the measurement** | §2.1, §8 | 15 days dark on the headline; cheap, and everything else is priced off it |
 | 3 | **Consumer interface** — single-query CLI, inert `set-option`, no-op `get-*` | §6.3 | Nothing here is research; it is the difference between a library and a solver a stranger can run |
 | 4 | **QF_NIA at 38.2%** | §2 | The genuine multi-year catch-up; still correctly last among decision work |
-| 5 | **Externally-portable evidence — 8.5%** | §6.2 | The moat is claimed broader than it measures; raising DRAT/Alethe emission raises the claim we can actually defend |
+| 5 | **Externally-portable evidence — 15.7%, not the 8.5% first published** | §6.2 | The metric was counted from labels and undercounted by 1.75x; it is now decided from the certificate and guarded by a test that reads the source. The remaining 84% re-validates only inside axeyum, and that is the real target |
 | 6 | **~30 checkers that re-run the producer** | §6.2 | A determinism check sold as a soundness check, over the highest-volume family |
 | 7 | **User triggers (`:pattern`, `:weight`)** | §5 | The one quantifier gap that is real vs Z3, now that the sat-direction is closed |
 | 8 | **Memory bound is inert** | §7 | Operational, and this box has already been OOM-killed once |
