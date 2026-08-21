@@ -1,0 +1,539 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:no-integer-square-is-minus-one",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-no-integer-square-is-minus-one.json",
+            "sha256": "7b330f7cf02ca1cc9396cbec16257e2585116ebba7f9cf1761b1566988bb1d7d"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "No integer squares to minus one"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "1 of 1 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-no-integer-square-is-minus-one.json",
+              "sha256": "7b330f7cf02ca1cc9396cbec16257e2585116ebba7f9cf1761b1566988bb1d7d"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-no-integer-square-is-minus-one.json",
+            "sha256": "7b330f7cf02ca1cc9396cbec16257e2585116ebba7f9cf1761b1566988bb1d7d"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "smt-term-level"
+          ],
+          [
+            "axiom_footprint",
+            "axeyum-ir.integer-arithmetic-semantics; axeyum-solver.single-variable-polynomial-collector; negative-discriminant-quadratic-root-theorem"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-no-integer-square-is-minus-one.json",
+              "sha256": "7b330f7cf02ca1cc9396cbec16257e2585116ebba7f9cf1761b1566988bb1d7d"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-no-integer-square-is-minus-one.json",
+            "sha256": "7b330f7cf02ca1cc9396cbec16257e2585116ebba7f9cf1761b1566988bb1d7d"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "unsat-drat",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "python3 scripts/check-autogenesis-fact-operation.py --fact artifacts/facts/F-no-integer-square-is-minus-one.json"
+        },
+        "summary": {
+          "text": "There is no integer x with x * x = -1."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-no-integer-square-is-minus-one.json",
+            "sha256": "7b330f7cf02ca1cc9396cbec16257e2585116ebba7f9cf1761b1566988bb1d7d"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: autogenesis-operation-0cb40006d9fc2a83"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row autogenesis-operation-0cb40006d9fc2a83 as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "autogenesis-operation-0cb40006d9fc2a83"
+          ],
+          [
+            "ledger kind",
+            "unsat-certificate"
+          ],
+          [
+            "cert_kind",
+            "unsat-drat"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-solver/int-quadratic-negative-discriminant-v1, axeyum-solver/check-int-quadratic-negative-discriminant-v1, axeyum-bench/smtcomp-evidence-v1"
+          ],
+          [
+            "supports",
+            "There is no integer x with x * x = -1."
+          ],
+          [
+            "artifact",
+            "sha256:0cb40006d9fc2a832db09dcdb95159f65cf4303c933a705d24f100f14502b316"
+          ],
+          [
+            "artifact state",
+            "content-hash-only"
+          ],
+          [
+            "artifact sha256",
+            "0cb40006d9fc2a832db09dcdb95159f65cf4303c933a705d24f100f14502b316"
+          ],
+          [
+            "checker_operation",
+            "{'execution_sha256': '0cb40006d9fc2a832db09dcdb95159f65cf4303c933a705d24f100f14502b316', 'frontier_sha256': 'f822e6c6c1b6cddeb1482628ea1192bff8372b503aa0d61919f120e08fa096a8', 'id': 'smt-int-quadratic-negative-discriminant-v1', 'input_artifact': 'artifacts/facts/smt2/neg-no-integer-square-is-minus-one.smt2', 'input_artifact_sha256': 'b2231100fb02e835e0bcbc42ff7bf2c34f80f4cbf7ed606c643a522c01d28372', 'operation_sha256': 'a251b683792582a19613a3e1d6c22220c2e63d99207d678d7917d8ae2156ea79', 'registry_sha256_at_execution': '2bf6c209e7b303ba6982c911d35f84f86b07e5c052e56f75f20fe3af5c4ad062'}"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-no-integer-square-is-minus-one.json",
+              "sha256": "7b330f7cf02ca1cc9396cbec16257e2585116ebba7f9cf1761b1566988bb1d7d"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-no-integer-square-is-minus-one.json",
+            "sha256": "7b330f7cf02ca1cc9396cbec16257e2585116ebba7f9cf1761b1566988bb1d7d"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Derived from a clean-commit typed execution receipt. The registered fact-operation checker replays the exact source artifact and requires its fresh-arena certified result; no caller-authored route, footprint, checker, or shell command is accepted.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-no-integer-square-is-minus-one.json",
+            "sha256": "7b330f7cf02ca1cc9396cbec16257e2585116ebba7f9cf1761b1566988bb1d7d"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-17"
+          ],
+          [
+            "established_by",
+            "axeyum-autogenesis execution 87a53dd4bc892ad6da1331fb41d5afba732d80485037b4ed5b1f33c387f9f519"
+          ],
+          [
+            "source",
+            "authored by the skolem-cert lane as the replacement negative control for scripts/check-smt-evidence-certified.py; statement written here, not copied"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-no-integer-square-is-minus-one.json",
+              "sha256": "7b330f7cf02ca1cc9396cbec16257e2585116ebba7f9cf1761b1566988bb1d7d"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-no-integer-square-is-minus-one.json",
+            "sha256": "7b330f7cf02ca1cc9396cbec16257e2585116ebba7f9cf1761b1566988bb1d7d"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "date",
+            "key": "date"
+          },
+          {
+            "header": "establishes",
+            "key": "establishes"
+          },
+          {
+            "header": "oracle",
+            "key": "oracle"
+          },
+          {
+            "header": "result",
+            "key": "result"
+          }
+        ],
+        "rows": [
+          [
+            "2026-08-17",
+            "the proposition is valid",
+            "z3 -smt2 artifacts/facts/smt2/neg-no-integer-square-is-minus-one.smt2",
+            "unsat"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-no-integer-square-is-minus-one.json",
+              "sha256": "7b330f7cf02ca1cc9396cbec16257e2585116ebba7f9cf1761b1566988bb1d7d"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-no-integer-square-is-minus-one.json",
+            "sha256": "7b330f7cf02ca1cc9396cbec16257e2585116ebba7f9cf1761b1566988bb1d7d"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "CLOSED BY AXEYUM AUTOGENESIS. The machine frontier selected this exact fact for registered operation `smt-int-quadratic-negative-discriminant-v1`; execution receipt `0cb40006d9fc2a832db09dcdb95159f65cf4303c933a705d24f100f14502b316` produced a source-bound certified refutation, and the typed transaction derived this status, route, footprint, evidence row, checker, and provenance without caller-authored admission metadata.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOPEN IN THIS LEDGER, NOT IN MATHEMATICS, and open for exactly one reason: axeyum gets the right VERDICT and attaches no checkable object. Measured 2026-08-17 with `./target/release/examples/smtcomp_cli --evidence artifacts/facts/smt2/neg-no-integer-square-is-minus-one.smt2`: `; evidence kind=unsat-uncertified certified=0 recheck=na arena=none:uncertified-unsat ms=0`, then `unsat`. An uncertified unsat is not evidence under this schema, so the status stays `open`.\n\nTHIS INSTANCE IS THE NEGATIVE CONTROL of `scripts/check-smt-evidence-certified.py`. That check requires every settled smt-term-level / smt-clausal fact to report `certified=1`, and it needs one case where it can demonstrate it would notice `certified=0` -- otherwise a check that only ever confirms health cannot show it can see illness. The control must be genuinely unsat (so the ledger's usual verdict-only command shape passes it) and genuinely uncertified (so a certification-aware check must not). This one is both, and it is cheap: 0 ms, so it costs the gate nothing.\n\nIt took this role on 2026-08-17 from `artifacts/facts/smt2/neg-barber-no-such-barber.smt2`, which had held it since the check was written and stopped discriminating the same day: the `skolem-cert` lane made a skolemised refutation certify, the barber began reporting `kind=unsat-quant-instance-set certified=1 arena=ok`, the control failed ON PURPOSE with the message it was written to emit, and `F:barber-no-such-barber` was closed. That is the intended life cycle of this fact too. If it ever reports `certified=1`, that check FAILS on purpose, saying this fact can now be closed and the control must be repointed again.\n\nWHY IT IS UNCERTIFIED, as far as measured: the refutation is a `QF_NIA` sign argument (a square is non-negative, so it cannot equal -1) reached after the exact integer refuters decline, and it lands on the bare `Evidence::Unsat(None)` fallback. Certifying it needs a nonlinear-sign certificate over the integers -- the `unsat-sos` route already certifies the REAL analogue (`(assert (< (* x x) 0.0))` in QF_NRA reports `kind=unsat-sos certified=1 arena=ok`, measured the same day), so the gap is the integer route, not the mathematics.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-no-integer-square-is-minus-one.json",
+            "sha256": "7b330f7cf02ca1cc9396cbec16257e2585116ebba7f9cf1761b1566988bb1d7d"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-no-integer-square-is-minus-one",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#index",
+        "label": "Unconnected: see the index",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:no-integer-square-is-minus-one",
+    "title": "No integer squares to minus one"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-no-integer-square-is-minus-one.json",
+        "sha256": "7b330f7cf02ca1cc9396cbec16257e2585116ebba7f9cf1761b1566988bb1d7d"
+      }
+    ]
+  },
+  "schema_version": 1
+}

@@ -1,0 +1,761 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:geometry-varignon-midpoint-parallelogram",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-varignon-midpoint-parallelogram.json",
+            "sha256": "80372e6733682a30d4e1a9d9e415f6dfcbac32ffa425d7ea8b33ea5c54bddc15"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Varignon's theorem: the midpoint quadrilateral is a parallelogram"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "2 of 2 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-varignon-midpoint-parallelogram.json",
+              "sha256": "80372e6733682a30d4e1a9d9e415f6dfcbac32ffa425d7ea8b33ea5c54bddc15"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-varignon-midpoint-parallelogram.json",
+            "sha256": "80372e6733682a30d4e1a9d9e415f6dfcbac32ffa425d7ea8b33ea5c54bddc15"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "cas-certificate"
+          ],
+          [
+            "axiom_footprint",
+            "cas.exact-rational-polynomial-normal-form; geometry.cartesian-coordinatisation-of-the-euclidean-plane; geometry.characteristic-zero-specialisation"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-varignon-midpoint-parallelogram.json",
+              "sha256": "80372e6733682a30d4e1a9d9e415f6dfcbac32ffa425d7ea8b33ea5c54bddc15"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-varignon-midpoint-parallelogram.json",
+            "sha256": "80372e6733682a30d4e1a9d9e415f6dfcbac32ffa425d7ea8b33ea5c54bddc15"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 1310,
+            "path": "artifacts/geometry-certificates/varignon-midpoint-parallelogram.json",
+            "sha256": "14e1707e07395faccac8d0c511b76eb88b2c7da2d96d5b35cf93c2bc0a1c70e9"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-cas --test geometry_certificate_artifacts"
+        },
+        "summary": {
+          "text": "the cofactor certificate, re-checked from the committed artifact by a checker that shares no code with the search that produced it"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-varignon-midpoint-parallelogram.json",
+            "sha256": "80372e6733682a30d4e1a9d9e415f6dfcbac32ffa425d7ea8b33ea5c54bddc15"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: geometry-certificate-varignon-midpoint-parallelogram"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row geometry-certificate-varignon-midpoint-parallelogram as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "geometry-certificate-varignon-midpoint-parallelogram"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "geometry_check::check_certificate shape pass (saturation generators rebuilt from the stated conditions and compared with the generator list), geometry_check::check_certificate symbolic pass (the identity target = sum of cofactor times generator expanded with MvPoly add/mul alone -- no Groebner machinery, no monomial order, no S-polynomials), geometry_check::check_certificate numeric pass (the same identity re-evaluated at 24 deterministic integer points through MvPoly::evaluate, a different code path from the symbolic expansion), geometry_check::check_certificate configuration pass (every generic configuration in the file replayed at exact rational coordinates)"
+          ],
+          [
+            "supports",
+            "the cofactor certificate, re-checked from the committed artifact by a checker that shares no code with the search that produced it"
+          ],
+          [
+            "artifact",
+            "artifacts/geometry-certificates/varignon-midpoint-parallelogram.json"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "14e1707e07395faccac8d0c511b76eb88b2c7da2d96d5b35cf93c2bc0a1c70e9"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-varignon-midpoint-parallelogram.json",
+              "sha256": "80372e6733682a30d4e1a9d9e415f6dfcbac32ffa425d7ea8b33ea5c54bddc15"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-varignon-midpoint-parallelogram.json",
+            "sha256": "80372e6733682a30d4e1a9d9e415f6dfcbac32ffa425d7ea8b33ea5c54bddc15"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "The certificate is degenerate in an informative way: the generator list is EMPTY and both conclusion polynomials are identically zero, so the cofactor vector is empty and the identity is `0 = 0`. That is not a gap -- it is what Varignon's theorem IS in coordinates, and it is why the theorem needs no hypothesis and no non-degeneracy condition. The suite's tamper controls (a conclusion edited by one, a truncated file, a foreign format tag, a decimal where an exact integer belongs) all reject.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-varignon-midpoint-parallelogram.json",
+            "sha256": "80372e6733682a30d4e1a9d9e415f6dfcbac32ffa425d7ea8b33ea5c54bddc15"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence geometry-certificate-varignon-midpoint-parallelogram"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/geometry-certificates/varignon-midpoint-parallelogram.json",
+        "render_hint": "json",
+        "sha256": "14e1707e07395faccac8d0c511b76eb88b2c7da2d96d5b35cf93c2bc0a1c70e9",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-varignon-midpoint-parallelogram.json",
+            "sha256": "80372e6733682a30d4e1a9d9e415f6dfcbac32ffa425d7ea8b33ea5c54bddc15"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 10079,
+            "path": "crates/axeyum-cas/tests/geometry_encoding_agreement.rs",
+            "sha256": "b51268f90e5f54fbb332d5f7d115212da016c4869c027c7bb10ee16d80ee393b"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-cas --test geometry_encoding_agreement"
+        },
+        "summary": {
+          "text": "that the polynomials in the certificate mean the geometric predicates they are named after"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-varignon-midpoint-parallelogram.json",
+            "sha256": "80372e6733682a30d4e1a9d9e415f6dfcbac32ffa425d7ea8b33ea5c54bddc15"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: geometry-coordinatisation-control-varignon"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row geometry-coordinatisation-control-varignon as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "geometry-coordinatisation-control-varignon"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum_cas::geometry::Point::midpoint (a separate, older module that decides the same constructions at concrete rational coordinates, written against a cross-product helper rather than against MvPoly) agreed with the constructed midpoint on 244 integer configurations including coincident and collinear ones"
+          ],
+          [
+            "supports",
+            "that the polynomials in the certificate mean the geometric predicates they are named after"
+          ],
+          [
+            "artifact",
+            "crates/axeyum-cas/tests/geometry_encoding_agreement.rs"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "b51268f90e5f54fbb332d5f7d115212da016c4869c027c7bb10ee16d80ee393b"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-varignon-midpoint-parallelogram.json",
+              "sha256": "80372e6733682a30d4e1a9d9e415f6dfcbac32ffa425d7ea8b33ea5c54bddc15"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-varignon-midpoint-parallelogram.json",
+            "sha256": "80372e6733682a30d4e1a9d9e415f6dfcbac32ffa425d7ea8b33ea5c54bddc15"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "The coordinatisation is the one assumption on this route that no amount of exact arithmetic verifies, so it is attacked from outside instead: a second implementation of the same predicates, written for concrete rational points, must decide identically on a sweep that deliberately includes the degenerate shapes.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-varignon-midpoint-parallelogram.json",
+            "sha256": "80372e6733682a30d4e1a9d9e415f6dfcbac32ffa425d7ea8b33ea5c54bddc15"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence geometry-coordinatisation-control-varignon"
+        },
+        "max_bytes": 65536,
+        "path": "crates/axeyum-cas/tests/geometry_encoding_agreement.rs",
+        "render_hint": "link",
+        "sha256": "b51268f90e5f54fbb332d5f7d115212da016c4869c027c7bb10ee16d80ee393b",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-varignon-midpoint-parallelogram.json",
+            "sha256": "80372e6733682a30d4e1a9d9e415f6dfcbac32ffa425d7ea8b33ea5c54bddc15"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-14"
+          ],
+          [
+            "established_by",
+            "lane geometry: axeyum_cas::geometry_certify (untrusted cofactor-tracked Buchberger search) + axeyum_cas::geometry_check (independent re-derivation)"
+          ],
+          [
+            "source",
+            "classical; coordinatised by this lane"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-varignon-midpoint-parallelogram.json",
+              "sha256": "80372e6733682a30d4e1a9d9e415f6dfcbac32ffa425d7ea8b33ea5c54bddc15"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-varignon-midpoint-parallelogram.json",
+            "sha256": "80372e6733682a30d4e1a9d9e415f6dfcbac32ffa425d7ea8b33ea5c54bddc15"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "what",
+            "key": "what"
+          },
+          {
+            "header": "where",
+            "key": "where"
+          },
+          {
+            "header": "who",
+            "key": "who"
+          },
+          {
+            "header": "year",
+            "key": "year"
+          }
+        ],
+        "rows": [
+          [
+            "standard textbook attribution; this lane did not consult the primary source",
+            "the midpoint quadrilateral of an arbitrary quadrilateral is a parallelogram",
+            "Elemens de mathematique (posthumous, 1731)",
+            "Pierre Varignon",
+            "1731"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-varignon-midpoint-parallelogram.json",
+              "sha256": "80372e6733682a30d4e1a9d9e415f6dfcbac32ffa425d7ea8b33ea5c54bddc15"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-varignon-midpoint-parallelogram.json",
+            "sha256": "80372e6733682a30d4e1a9d9e415f6dfcbac32ffa425d7ea8b33ea5c54bddc15"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "Established on the `cas-certificate` route, in the geometry family: a Nullstellensatz-style cofactor identity `conclusion = sum_i cofactor_i * generator_i` over the hypothesis ideal, re-derived by polynomial addition and multiplication alone. This fact is filed deliberately alongside F:geometry-centroid-divides-medians and F:geometry-parallelogram-diagonals-bisect, which DO need a non-degeneracy condition. The distinction is measured by the certifier (it tries the empty condition set first and reports what it used), not asserted in prose -- which is the point, because a mechanised geometry proof that silently assumes non-degeneracy is wrong in the direction that manufactures theorems.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-varignon-midpoint-parallelogram.json",
+            "sha256": "80372e6733682a30d4e1a9d9e415f6dfcbac32ffa425d7ea8b33ea5c54bddc15"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-geometry-varignon-midpoint-parallelogram",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#index",
+        "label": "Unconnected: see the index",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:geometry-varignon-midpoint-parallelogram",
+    "title": "Varignon's theorem: the midpoint quadrilateral is a parallelogram"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-geometry-varignon-midpoint-parallelogram.json",
+        "sha256": "80372e6733682a30d4e1a9d9e415f6dfcbac32ffa425d7ea8b33ea5c54bddc15"
+      }
+    ]
+  },
+  "schema_version": 1
+}

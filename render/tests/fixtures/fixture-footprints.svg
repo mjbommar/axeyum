@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="170" viewBox="0 0 520 170" role="img" aria-label="axiom footprint and evidence rows per fixture fact">
+<title>Axiom footprint and evidence rows per fixture fact</title>
+<text x="8" y="20" font-family="monospace" font-size="13">axiom footprint (dark) and evidence rows (light), per fact</text>
+<text x="8" y="47" font-family="monospace" font-size="11">F:bool-and-comm footprint</text>
+<rect x="190" y="34" width="78" height="18" fill="#333333" />
+<text x="274" y="47" font-family="monospace" font-size="11">3</text>
+<text x="8" y="75" font-family="monospace" font-size="11">imported-kernel-lean evidence</text>
+<rect x="190" y="62" width="52" height="18" fill="#999999" />
+<text x="248" y="75" font-family="monospace" font-size="11">2</text>
+<text x="8" y="103" font-family="monospace" font-size="11">F:excluded-middle footprint</text>
+<rect x="190" y="90" width="52" height="18" fill="#333333" />
+<text x="248" y="103" font-family="monospace" font-size="11">2</text>
+<text x="8" y="131" font-family="monospace" font-size="11">smt-term-level evidence</text>
+<rect x="190" y="118" width="26" height="18" fill="#999999" />
+<text x="222" y="131" font-family="monospace" font-size="11">1</text>
+</svg>

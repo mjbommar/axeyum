@@ -1,0 +1,700 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axeyum.dev/ontology/docir.schema.json",
+  "title": "Doc-IR Document",
+  "description": "A renderable document as data: the single source every reader-facing artifact (Markdown, LaTeX, self-contained HTML) is emitted from.\n\nWHY THIS EXISTS. Documents in this project were produced by hand-transcribing machine-checked numbers into prose and LaTeX. That is the drift class the whole stack exists to kill, reintroduced at the last step: the NoH-p2 paper needed three normalization corrections across documents in one project because the same number lived in four places and only one of them was computed. A Doc-IR document holds NO number, statement, table cell, badge or figure that was typed by a human; it holds prose plus REFERENCES, and assembly resolves the references against the fact ledger, the kernel inventory and recorded runs before any emitter sees a block.\n\nTHE FAIL-CLOSED LAW (docs/render-2026-08/01-goals-and-requirements.md). This schema is only the shape; the law is enforced by assembly and is the reason the shape looks like this.\n  1. A `claim` block MUST carry at least one `evidence` reference. `minItems: 1` here, a build error there.\n  2. An `EvidenceRef` resolves to a RUN RECORD carrying its own `Provenance` with an `exit_status`. Nonzero exit status can only DEMOTE a claim's rendered status; there is no styling path from red evidence to a green claim, because the emitters cannot compute status at all.\n  3. A `statement` block, and the `ref` form of a claim statement, carry a `FormalRef` -- a fact id or a kernel name -- never inlined prose. A dangling reference is a build error (Isabelle antiquotation semantics).\n  4. Determinism: no wall clock anywhere. `Epoch` is derived from a pinned commit or SOURCE_DATE_EPOCH, and is INPUT to the build, not observed during it.\n\nEMITTERS ARE TOTAL AND DUMB. Every judgment -- resolving a reference, hashing an input, deciding what status a claim renders at -- happens in assembly. An emitter is a pure function from a resolved document to bytes and has no failure mode of its own. That is what keeps the trusted part of this pipeline small enough to audit, and it is why `EvidenceStatus` is a closed enum on the block rather than something computed downstream.\n\nWHY A SCHEMA FILE AND NOT JUST THE RUST STRUCTS. Producers are Rust AND Python (the fact-ledger reader is Python), and the two-implementation discipline that `validate-facts.py` applies to the fact ledger applies here: a serde model in `render/src/ir.rs` plus an independent Python validator in `scripts/validate-docir.py`. Neither is allowed to be the only definition.\n\nCOMPATIBILITY. `schema_version` is an integer, currently 1. Within a version this file evolves ADDITIVELY only (new optional properties, new enum members appended); anything that would reject a document that validated yesterday is a version bump.",
+  "type": "object",
+  "required": ["schema_version", "meta", "blocks"],
+  "additionalProperties": false,
+
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+
+    "meta": { "$ref": "#/$defs/DocMeta" },
+
+    "blocks": {
+      "type": "array",
+      "description": "The document body, in reading order. Order is the ONLY structure: there is no nesting, because a flat list with an explicit `tag` per block is what makes the three verbosity renderings (fold, appendix, live toggle) mechanical rather than a layout decision an emitter has to make.",
+      "items": { "$ref": "#/$defs/Block" }
+    },
+
+    "provenance": {
+      "$ref": "#/$defs/Provenance",
+      "description": "How this document itself was produced, when a producer generated it rather than a human writing the manifest. Optional: a hand-written assembly manifest legitimately has none, and pretending otherwise would put a fabricated command in the record."
+    }
+  },
+
+  "$defs": {
+
+    "DocMeta": {
+      "type": "object",
+      "description": "Document identity and build-wide settings. Everything here is INPUT; nothing is observed at build time.",
+      "required": ["doc_id", "title", "epoch"],
+      "additionalProperties": false,
+      "properties": {
+        "doc_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "description": "Stable slug identifying this document. Used for output file names and as the anchor namespace, so it must not encode a status or a date -- both change while the document stays the same document."
+        },
+        "title": { "type": "string", "minLength": 1 },
+        "subtitle": { "type": "string" },
+        "genre": {
+          "enum": ["system", "result", "paper"],
+          "default": "system",
+          "description": "Which of the two rendering products this is (01, section `Two products, one machinery`). `system` renders what Axeyum DID (a derivation, a certificate run); `result` renders what is ESTABLISHED (fact cards, an atlas); `paper` is an integrated project whose claim-bearing content is generated rather than transcribed. Genres are emitter CONFIGURATION, not separate systems -- they select a template and defaults, never a different truth."
+        },
+        "authors": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Human authors of the PROSE. Machine-produced blocks are attributed by their `Provenance.generator`, which is a different kind of authorship and must not be collapsed into this list."
+        },
+        "abstract": { "$ref": "#/$defs/RichText" },
+        "epoch": { "$ref": "#/$defs/Epoch" },
+        "repo": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "The repository state the document is pinned to, so `archive`-tier links resolve to the bytes the claims were checked against rather than to a moving branch head.",
+          "properties": {
+            "url": { "type": "string" },
+            "commit": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" },
+            "root": { "type": "string", "description": "Path prefix, relative to the repository root, that `Include.path` and artifact paths are resolved against." }
+          }
+        },
+        "options": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Per-format rendering options. Emitters read these; they never write them and never infer a default that changes a claim. Known keys: `latex.detail` (`inline` | `appendix` | `drop-with-href`), `latex.package` (name of the style file to \\usepackage), `markdown.badge_style` (`text` | `shield`), `html.*` (owned by the HTML emitter).",
+          "properties": {
+            "latex": { "type": "object", "additionalProperties": true },
+            "markdown": { "type": "object", "additionalProperties": true },
+            "html": { "type": "object", "additionalProperties": true }
+          }
+        },
+        "nav": {
+          "type": "array",
+          "default": [],
+          "description": "Cross-document navigation, in reading order: where this document sits among its siblings. Empty for a document that stands alone, which is why it defaults rather than being required. A target naming a Doc-IR source file (`*.doc.json`) resolves to that document's RENDERED PAGE; anything else renders as plain text, so a broken reference looks broken instead of looking live. Assembly resolves nothing here -- a link to a sibling document is not evidence and carries no status -- so what keeps these honest is `render/tests/link_integrity.rs`, which renders the whole site and fails if one does not resolve to an emitted file.",
+          "items": {
+            "type": "object",
+            "required": ["label", "href"],
+            "additionalProperties": false,
+            "properties": {
+              "label": { "type": "string", "minLength": 1 },
+              "href": { "type": "string", "minLength": 1, "description": "Relative to THIS document's own output file, not to the repository root." },
+              "rel": { "type": "string", "description": "Optional short relation: `up`, `prev`, `next`, `component`." }
+            }
+          }
+        }
+      }
+    },
+
+    "Epoch": {
+      "type": "object",
+      "description": "The document's notion of `now`, supplied as data.\n\nWHY IT IS NOT A TIMESTAMP FIELD. Determinism is a repository-wide API promise, and a renderer that calls the clock breaks byte-identical rebuilds for every downstream golden test. So the epoch is an INPUT with a declared SOURCE: a pinned commit's time, or SOURCE_DATE_EPOCH, or an explicitly fixed value in a fixture. `source` exists so a reader can tell a real commit time from a fixture constant without diffing two builds.",
+      "required": ["unix", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "unix": { "type": "integer", "minimum": 0, "description": "Seconds since the Unix epoch, UTC." },
+        "source": {
+          "enum": ["commit", "source-date-epoch", "fixed"],
+          "description": "`commit` -- the pinned commit's committer time. `source-date-epoch` -- the reproducible-builds environment variable. `fixed` -- a constant written into a manifest or fixture, which is honest for a test and dishonest for a published document."
+        },
+        "commit": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" }
+      }
+    },
+
+    "Verbosity": {
+      "enum": ["essential", "detail", "archive"],
+      "description": "How much of a block reaches the reader (01, `Verbosity model`). `essential` is always shown. `detail` is shown folded: `<details>` in Markdown, appendix or fold in LaTeX, a live toggle in HTML. `archive` is DROPPED from the document body and rendered as a link to the file or artifact that holds it.\n\nThe tag is data on the block, set by the producer and overridable by document assembly, so one source can emit a terse README and a full report without either being a different document. An emitter must honour the tag mechanically; choosing what a reader may skip is an editorial decision and belongs in the manifest, not in the renderer."
+    },
+
+    "Block": {
+      "type": "object",
+      "required": ["id", "tag", "kind"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "description": "Document-unique block id. Stable across rebuilds because it is the anchor target, the cross-reference key and the name a golden diff reports; generated ids that renumber on insert would make every diff useless."
+        },
+        "tag": { "$ref": "#/$defs/Verbosity" },
+        "kind": { "$ref": "#/$defs/BlockKind" },
+        "provenance": {
+          "$ref": "#/$defs/Provenance",
+          "description": "How THIS block's content was produced, when it was produced by a machine. Absent for hand-written prose -- and that absence is the honest signal that a human wrote it."
+        },
+        "title": { "type": "string", "description": "Optional heading shown above the block (and used as the `<summary>` text when the block folds)." },
+        "anchor": { "type": "string", "description": "Optional human-facing anchor slug overriding `id` in output. Emitters must still keep `id` unique internally." }
+      }
+    },
+
+    "BlockKind": {
+      "description": "The block payload, discriminated by `type`. This is a CLOSED set: adding a kind means an emitter can encounter something it cannot render, so a new kind lands in every emitter in the same change or not at all. (An emitter is total; it has no error path to fall back to.)",
+      "oneOf": [
+        { "$ref": "#/$defs/BlockProse" },
+        { "$ref": "#/$defs/BlockClaim" },
+        { "$ref": "#/$defs/BlockStatement" },
+        { "$ref": "#/$defs/BlockSteps" },
+        { "$ref": "#/$defs/BlockTable" },
+        { "$ref": "#/$defs/BlockCertificate" },
+        { "$ref": "#/$defs/BlockFigure" },
+        { "$ref": "#/$defs/BlockInclude" }
+      ]
+    },
+
+    "BlockProse": {
+      "type": "object",
+      "description": "Human narrative. The ONLY block kind whose content a person writes, and deliberately the only one: the system owns every number, statement, table, figure and badge, and prose is what is left. A number that appears here is a transcription and the renderer cannot protect it -- put it in a claim, a table or a statement instead.",
+      "required": ["type", "text"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "prose" },
+        "text": { "$ref": "#/$defs/RichTextInline" },
+        "latex": { "type": "string", "description": "Optional LaTeX override for this prose, used verbatim by the LaTeX emitter when present." },
+        "heading_level": { "type": "integer", "minimum": 1, "maximum": 6, "description": "When present the prose renders as a section heading at this level rather than a paragraph." }
+      }
+    },
+
+    "BlockClaim": {
+      "type": "object",
+      "description": "An assertion the document makes, bound to the evidence that establishes it.\n\nTHE CENTRAL OBJECT OF THE FAIL-CLOSED LAW. `evidence` has `minItems: 1` in the schema and assembly rejects a claim whose evidence list is empty or unresolvable, because a claim with no evidence is exactly the transcription this pipeline exists to prevent -- prose asserting a result with nothing behind it.\n\n`status` is the status the PRODUCER declares. It is a ceiling, not a result: assembly computes the RENDERED status from the resolved evidence and may only lower it (a run record that exited nonzero demotes the claim; a run record that exited zero never raises it). Emitters render the computed status and cannot compute one themselves.",
+      "required": ["type", "label", "statement", "status", "evidence"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "claim" },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Short human-facing name, e.g. `Theorem 3 (weight bound)`. Also the key of the cross-format property test: the set of (label, rendered status) pairs must be identical across the Markdown, LaTeX and HTML emissions of one document."
+        },
+        "statement": { "$ref": "#/$defs/StatementSource" },
+        "status": { "$ref": "#/$defs/EvidenceStatus" },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/EvidenceRef" },
+          "description": "At least one. The schema-level `minItems` is a convenience: the real guard is in assembly, because a reference can also be present and dangling, which schema validation cannot see."
+        },
+        "note": { "$ref": "#/$defs/RichText" }
+      }
+    },
+
+    "BlockStatement": {
+      "type": "object",
+      "description": "A statement of record -- a fact-ledger entry or a kernel theorem -- pulled by CHECKED REFERENCE. The document says which statement it means; assembly fetches the text and the status axes from the ledger or the kernel inventory. Inlining the statement text here instead is the failure mode this block kind exists to remove, so there is no `text` property to fall back to.",
+      "required": ["type", "ref"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "statement" },
+        "ref": { "$ref": "#/$defs/FormalRef" },
+        "show": {
+          "type": "array",
+          "items": { "enum": ["title", "prose", "formal", "status", "axiom_footprint", "proof_route", "depends_on", "evidence_count"] },
+          "description": "Which resolved parts of the referenced statement to render, in this order. Omitted means the emitter's genre default. This selects a PROJECTION of resolved data; it can never introduce text that is not in the referenced record."
+        },
+        "note": { "$ref": "#/$defs/RichText" }
+      }
+    },
+
+    "BlockSteps": {
+      "type": "object",
+      "description": "A derivation as a sequence of (input, operation, output) triples: a rewrite trace, a lowering chain, a hand-checked algebraic reduction. The Alectryon-shaped block -- prose interleaved with captured machine steps -- and the reason `detail` exists as a verbosity tier, since a trace is usually the first thing a reader wants folded away.",
+      "required": ["type", "steps"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "steps" },
+        "caption": { "$ref": "#/$defs/RichText" },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Step" }
+        }
+      }
+    },
+
+    "BlockTable": {
+      "type": "object",
+      "description": "Tabular data with the provenance of the run behind it. Every table in a rendered document came out of a run; a table without a recorded command that produced it is a transcription, which is how the numbers drifted in the first place. Rows are arrays, not objects, so that column order is fixed by the document and cannot vary with map iteration order.\n\nTWO WAYS TO SUPPLY THE DATA, and they are not equally good. `from_run` names a run record and one of its `tables`, and assembly copies the columns, rows and provenance out of the record -- so the document holds a REFERENCE and the numbers exist in exactly one place. The literal form (`columns` + `rows` + `source`) puts the numbers in the manifest, where a human typed them; it is supported because a producer may legitimately assemble a table from several runs, and it is the weaker form. Prefer `from_run`.",
+      "required": ["type"],
+      "anyOf": [
+        { "required": ["from_run"] },
+        { "required": ["columns", "rows", "source"] }
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "table" },
+        "from_run": {
+          "type": "object",
+          "description": "Take the table out of a run record instead of writing it here. The columns, the rows and the `source` provenance all come from the record, so a changed number changes the rendered table and nothing has to be kept in step by hand.",
+          "required": ["run_record", "table"],
+          "additionalProperties": false,
+          "properties": {
+            "run_record": { "type": "string", "minLength": 1, "description": "Path to the run-record JSON, resolved like an `EvidenceRef`." },
+            "table": { "type": "string", "minLength": 1, "description": "Key in the record's `tables` map. A key the record does not carry is a build error." },
+            "record_id": { "type": "string", "description": "Expected record id; a mismatch is a build error." }
+          }
+        },
+        "caption": { "$ref": "#/$defs/RichText" },
+        "columns": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Required unless `from_run` supplies them.",
+          "items": {
+            "type": "object",
+            "required": ["key", "header"],
+            "additionalProperties": false,
+            "properties": {
+              "key": { "type": "string", "minLength": 1 },
+              "header": { "type": "string" },
+              "align": { "enum": ["left", "center", "right"], "default": "left" },
+              "note": { "type": "string" }
+            }
+          }
+        },
+        "rows": {
+          "type": "array",
+          "description": "Required unless `from_run` supplies them.",
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/Cell" },
+            "description": "One row; length MUST equal the number of columns (checked by assembly, since JSON Schema cannot tie the two lengths together)."
+          }
+        },
+        "source": {
+          "$ref": "#/$defs/Provenance",
+          "description": "Required unless `from_run` supplies it, in which case it is the record's own provenance."
+        }
+      }
+    },
+
+    "BlockCertificate": {
+      "type": "object",
+      "description": "A checkable artifact presented as such: a model, a DRAT refutation, a kernel admission, a report run. The block carries the artifact references and the REPLAY COMMAND, because the reader test for this whole strand is that someone can say what was proved, what checked it, and how to replay it without opening the repository.",
+      "required": ["type", "cert_kind", "summary", "replay"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "certificate" },
+        "cert_kind": {
+          "enum": ["sat", "unsat-drat", "kernel-admission", "report-run", "witness-replay", "cube-cover"],
+          "description": "What kind of thing is being certified, which fixes what a reader must trust: a `sat` model is checked by evaluating the original term, an `unsat-drat` refutation by an independent proof checker, a `kernel-admission` by re-deriving the type from the proof term. These are different trust bases and the badge must not blur them."
+        },
+        "summary": { "$ref": "#/$defs/RichText" },
+        "artifact_refs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ArtifactRef" },
+          "default": []
+        },
+        "replay": { "$ref": "#/$defs/Command" },
+        "evidence": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/EvidenceRef" },
+          "description": "Optional run records for this certificate. Unlike a claim's evidence this may be empty: a certificate block can present an artifact for the reader to check themselves without asserting that anyone has."
+        },
+        "no_exit_reason": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Why this certificate carries no recorded run. A certificate box with NEITHER an exit status NOR a reason implies a run that nothing records, and the HTML emitter reports exactly that as a diagnostic. Some certificates legitimately have none: a fact-ledger evidence row asserts `check_status: checked` and offers a command a reader may run, but nothing recorded an execution, and a four-hour re-check cannot be a per-commit gate. The honest form of that is a STATED REASON, never a blank. Assembly REFUSES a block that sets this and also cites a run record: those are two contradictory statements about one box."
+        }
+      }
+    },
+
+    "BlockFigure": {
+      "type": "object",
+      "description": "A figure, specified as DATA rather than as an image file wherever possible, so the same specification renders as inline SVG in HTML, an included SVG in Markdown and TikZ or an included graphic in LaTeX -- and so a changed number changes the picture. A pre-rendered image is still allowed (`svg` with `src`), but it is the tier where the renderer stops being able to protect the content.",
+      "required": ["type", "spec"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "figure" },
+        "caption": { "$ref": "#/$defs/RichText" },
+        "alt": { "type": "string", "description": "Text alternative. Required in practice by the HTML lint; kept optional here so a producer can be corrected rather than rejected at parse time." },
+        "spec": { "$ref": "#/$defs/FigureSpec" }
+      }
+    },
+
+    "BlockInclude": {
+      "type": "object",
+      "description": "An external artifact referenced from the document: the `archive` tier's natural home. `render_hint` says how a format that CAN inline it should do so; a format that cannot renders a link. The path is resolved against the pinned commit in `meta.repo`, never against a branch head.",
+      "required": ["type", "path", "render_hint"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "include" },
+        "path": { "type": "string", "minLength": 1 },
+        "render_hint": { "enum": ["link", "code", "text", "image", "json", "table"] },
+        "language": { "type": "string", "description": "Syntax-highlighting language for `code`." },
+        "caption": { "$ref": "#/$defs/RichText" },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Digest of the included file. When present, assembly verifies it and a mismatch is a build error -- the same guard that keeps a run record from drifting away from the artifact it describes."
+        },
+        "max_bytes": { "type": "integer", "minimum": 0, "description": "Inlining budget; a larger file degrades to a link rather than swallowing the document." }
+      }
+    },
+
+    "Step": {
+      "type": "object",
+      "description": "One (input, op, output) triple of a derivation. `op` names the transformation -- a rewrite rule, a lowering stage, an algebraic identity -- and is what makes a trace readable as an argument rather than as a log.",
+      "required": ["op", "output"],
+      "additionalProperties": false,
+      "properties": {
+        "index": { "type": "integer", "minimum": 0 },
+        "input": { "$ref": "#/$defs/RichText" },
+        "op": { "type": "string", "minLength": 1 },
+        "output": { "$ref": "#/$defs/RichText" },
+        "note": { "$ref": "#/$defs/RichText" },
+        "justification": {
+          "$ref": "#/$defs/FormalRef",
+          "description": "Optional checked reference to the fact or theorem that licenses this step. When present it is resolved like any other FormalRef, so a dangling justification is a build error rather than a plausible-looking rule name."
+        }
+      }
+    },
+
+    "RichText": {
+      "type": "object",
+      "description": "A span of human text with an optional per-format override.\n\nWHY AN OBJECT AND NOT A STRING. Markdown and LaTeX disagree about almost every metacharacter, and a mechanical conversion is fine for the common case and wrong for the interesting one. So `text` is the CommonMark-flavoured source that the Markdown emitter passes through and the LaTeX emitter converts mechanically, and `latex` is an explicit override for the cases where that conversion is not good enough. The override changes typography only: it cannot introduce a claim, because claims are not prose.",
+      "required": ["text"],
+      "additionalProperties": false,
+      "properties": {
+        "text": { "type": "string", "description": "CommonMark-flavoured source. Inline math in `$...$` survives both emitters unmodified." },
+        "latex": { "type": "string", "description": "Verbatim LaTeX replacing the mechanical conversion of `text`." },
+        "html": { "type": "string", "description": "Verbatim HTML replacing the mechanical conversion of `text`. Owned by the HTML emitter; the Markdown and LaTeX emitters ignore it." }
+      }
+    },
+
+    "RichTextInline": {
+      "description": "A `RichText`, or a bare string as shorthand for `{ \"text\": ... }`. The shorthand exists because prose blocks are the one place a human types into this format by hand, and making the common case a string keeps a hand-written manifest readable.",
+      "oneOf": [
+        { "type": "string" },
+        { "$ref": "#/$defs/RichText" }
+      ]
+    },
+
+    "StatementSource": {
+      "description": "What a claim asserts: either prose written for this document, or a checked reference to a statement of record. Tagged rather than inferred, so that `ref` cannot silently degrade to `text` when resolution fails.",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["source", "text"],
+          "additionalProperties": false,
+          "properties": {
+            "source": { "const": "text" },
+            "text": { "type": "string", "minLength": 1 },
+            "latex": { "type": "string" },
+            "html": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["source", "ref"],
+          "additionalProperties": false,
+          "properties": {
+            "source": { "const": "ref" },
+            "ref": { "$ref": "#/$defs/FormalRef" }
+          }
+        }
+      ]
+    },
+
+    "FormalRef": {
+      "description": "A checked reference to a statement of record. Resolved by assembly BEFORE emission; dangling is a build error.\n\nTHE KERNEL FORM IS NOT A GREP. Kernel declarations go through a `.theorem(name, ...)` helper over interned name ids, so the theorem inventory is not readable from source text and three separate counts of this repository's theorems were wrong before anyone built the environment to look. A `kernel` reference resolves against an INVENTORY snapshot produced by the `nat_theorem_inventory`-style examples, never by searching source.",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["kind", "id"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "const": "fact" },
+            "id": { "type": "string", "pattern": "^F:[a-z0-9]+(-[a-z0-9]+)*$", "description": "Fact-ledger id; the file is `artifacts/facts/F-<rest>.json`." }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["kind", "name"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "const": "kernel" },
+            "name": { "type": "string", "minLength": 1, "description": "Kernel declaration name as the inventory prints it, e.g. `Nat.add_comm`." },
+            "inventory": { "type": "string", "description": "Path to the inventory snapshot JSON this name is resolved against. Required in practice; a reference with no inventory to check against is not a checked reference." }
+          }
+        }
+      ]
+    },
+
+    "EvidenceRef": {
+      "type": "object",
+      "description": "A pointer from a claim to a RECORDED RUN. Not to a log, not to a description of a run: to a run-record JSON (see `RunRecord`) carrying its own `Provenance` with input hashes and an exit status.\n\nThis indirection is the whole fail-closed mechanism. Because a claim's rendered status is computed from the resolved record, a producer cannot assert a green claim over a red run, and a document cannot be repaired into looking correct by editing the document.",
+      "required": ["run_record"],
+      "additionalProperties": false,
+      "properties": {
+        "run_record": { "type": "string", "minLength": 1, "description": "Path to the run-record JSON, resolved relative to the manifest's directory unless absolute." },
+        "record_id": { "type": "string", "description": "Expected `id` of the record. When present, assembly checks it and a mismatch is a build error -- this catches a manifest pointed at a rebuilt-but-different record." },
+        "claim_key": { "type": "string", "description": "Key of the entry in the record's `claims` list this reference means. Absent means the record as a whole establishes the claim." },
+        "role": {
+          "enum": ["primary", "replication", "replay", "cross-oracle", "negative-control"],
+          "default": "primary",
+          "description": "What this reference contributes. Independence is the value here, not count: two references to runs sharing an implementation are one check wearing two names, the same discipline `fact.schema.json` applies to `checkers`.\n\n`negative-control` is different in kind from the other four: it does not say what the reference contributes, it says that citing a deliberately-failing run here is DELIBERATE. Assembly enforces the pairing in both directions -- a record with `role: negative-control` may be cited ONLY under this role, and this role may cite ONLY such a record -- so a mutant's red run can neither be quoted as support nor be impossible to quote at all."
+        },
+        "note": { "type": "string" }
+      }
+    },
+
+    "EvidenceStatus": {
+      "enum": ["proved", "checked", "evidence", "advisory", "refuted", "open"],
+      "description": "The renderable badge vocabulary (01, `Epistemic status vocabulary`), ordered here from strongest to weakest and consumed as DATA -- the renderer never infers or upgrades a status.\n\n`proved` -- kernel-admitted, or a complete written proof. `checked` -- evidence independently replayed. `evidence` -- a finite computation, carrying no universal credit. `advisory` -- a run that was not comparable (contended machine, unpinned budget) and from which no baseline may be raised. `refuted` -- a witness against the statement. `open` -- not established here.\n\nDISTINCT FROM the fact ledger's two axes: a fact carries `epistemic_status` (what we established) and `external_status` (what mathematics knows), and a `statement` block renders both when asked. A claim in a document has one status, and it is always the first axis."
+    },
+
+    "Provenance": {
+      "type": "object",
+      "description": "How a piece of machine-produced content came to exist, in the form a reader can act on: what ran, over which bytes, and whether it succeeded.\n\n`inputs` carries a SHA-256 per path, and assembly re-hashes every one of them on every build. That is deliberately redundant with `cargo`'s freshness logic, because this repository's cargo freshness is mtime-based and a file older than the cached artifact is invisible to it -- a stale render is exactly the failure this field exists to make impossible.",
+      "required": ["generator", "command", "inputs", "exit_status", "epoch"],
+      "additionalProperties": false,
+      "properties": {
+        "generator": { "type": "string", "minLength": 1, "description": "What produced the content, named specifically enough to find: an example binary, a script path, a crate plus function." },
+        "command": { "type": "string", "minLength": 1, "description": "The command line as run, verbatim. A reader must be able to paste it." },
+        "inputs": {
+          "type": "array",
+          "description": "Every file the run depended on, with its digest. May be empty ONLY when the run genuinely read nothing.",
+          "items": {
+            "type": "object",
+            "required": ["path", "sha256"],
+            "additionalProperties": false,
+            "properties": {
+              "path": { "type": "string", "minLength": 1 },
+              "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+              "role": { "type": "string", "description": "Optional label, e.g. `corpus`, `manifest`, `binary`." }
+            }
+          }
+        },
+        "exit_status": {
+          "type": "integer",
+          "description": "Process exit status. THE load-bearing field: nonzero demotes every claim that rests on this run. A producer that always records 0 because the run completed -- rather than because the run found what it was looking for -- has built a checker that cannot fail, which this repository has shipped 40 times and must not ship again."
+        },
+        "epoch": { "$ref": "#/$defs/Epoch" },
+        "host": { "type": "string", "description": "Optional machine identifier. Advisory only -- it never affects a status, because a run's verdict must not depend on where it ran." },
+        "duration_ms": { "type": "integer", "minimum": 0, "description": "Optional measured duration. Advisory: recorded for cost, never compared for correctness, and not part of any golden output because it is not reproducible." }
+      }
+    },
+
+    "Command": {
+      "type": "object",
+      "description": "A command a reader can run. `line` is what gets printed; `cwd` and `expected_exit_status` are what makes it checkable rather than decorative.",
+      "required": ["line"],
+      "additionalProperties": false,
+      "properties": {
+        "line": { "type": "string", "minLength": 1 },
+        "cwd": { "type": "string" },
+        "expected_exit_status": { "type": "integer", "default": 0 },
+        "expected_seconds": { "type": "integer", "minimum": 0, "description": "Measured typical wall-clock seconds on a quiet machine. Record what was MEASURED: this exists so an expensive-but-honest replay is distinguishable from a hung one." }
+      }
+    },
+
+    "ArtifactRef": {
+      "type": "object",
+      "description": "A file a certificate points at -- a model, a DRAT trace, a proof term, a JSON report.",
+      "required": ["path"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Verified by assembly when present; a mismatch is a build error." },
+        "label": { "type": "string" },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "media_type": { "type": "string" }
+      }
+    },
+
+    "Cell": {
+      "description": "One table cell. Scalars only: a cell is a value that came out of a run, and anything richer would be a place to hide prose in a table.\n\nWritten as a type union rather than a `oneOf` on purpose -- an integer satisfies both `integer` and `number`, so the `oneOf` spelling of this exact list rejects every whole number in the ledger.",
+      "type": ["string", "number", "boolean", "null"]
+    },
+
+    "FigureSpec": {
+      "description": "A figure as data, discriminated by `figure_type`. Emitters render what they can and degrade to a link otherwise; the specification never carries a rendered image AND its data, because then the two could disagree.",
+      "oneOf": [
+        { "$ref": "#/$defs/FigureSvg" },
+        { "$ref": "#/$defs/FigurePlot" },
+        { "$ref": "#/$defs/FigureDepGraph" },
+        { "$ref": "#/$defs/FigurePolygon" }
+      ]
+    },
+
+    "FigureSvg": {
+      "type": "object",
+      "description": "Pre-rendered SVG, either inline (`svg`) or by path (`src`). Exactly one of the two: an inline copy plus a file is two sources of truth for one picture.",
+      "required": ["figure_type"],
+      "additionalProperties": false,
+      "properties": {
+        "figure_type": { "const": "svg" },
+        "svg": { "type": "string", "description": "Complete `<svg>...</svg>` element, ASCII, no external references (the HTML self-containment lint rejects any `src=`/`href=` outside `#`, `data:`, `mailto:`)." },
+        "src": { "type": "string", "description": "Path to a checked-in SVG, resolved against the pinned commit." },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 }
+      }
+    },
+
+    "FigurePlot": {
+      "type": "object",
+      "description": "A plot from its underlying points, so the picture is generated from the same numbers the tables and claims use and cannot drift from them.",
+      "required": ["figure_type", "series"],
+      "additionalProperties": false,
+      "properties": {
+        "figure_type": { "const": "plot" },
+        "plot_type": { "enum": ["steps", "line", "scatter", "bar"], "default": "line" },
+        "x_label": { "type": "string" },
+        "y_label": { "type": "string" },
+        "x_range": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+        "y_range": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+        "series": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["label", "points"],
+            "additionalProperties": false,
+            "properties": {
+              "label": { "type": "string" },
+              "points": {
+                "type": "array",
+                "items": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
+              },
+              "style": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+
+    "FigureDepGraph": {
+      "type": "object",
+      "description": "A dependency DAG -- over fact `depends_on` edges, or over any other explicit relation. Nodes may carry a status so the atlas can colour a node by what is established, which is the one place a figure legitimately encodes a badge; the status must come from resolved data, never from the figure author.",
+      "required": ["figure_type", "nodes", "edges"],
+      "additionalProperties": false,
+      "properties": {
+        "figure_type": { "const": "dep-graph" },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "label"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "label": { "type": "string", "description": "What the node BOX says. A drawn box holds about fifteen characters on each of two lines, so this is a short handle -- the fact's own short id reads well -- and not a sentence. A label that does not fit is truncated with a visible marker, never silently." },
+              "tooltip": { "type": "string", "description": "The full text a reader gets on hover and on keyboard focus. Optional, and it exists because `label` cannot be long: nine of the ledger's Fibonacci facts are titled `Mathlib v4.30 source proposition Nat.fib_...`, which truncates to nine identical boxes. Absent means the tooltip repeats the label." },
+              "status": { "$ref": "#/$defs/EvidenceStatus" },
+              "href": { "type": "string" },
+              "group": { "type": "string" }
+            }
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["from", "to"],
+            "additionalProperties": false,
+            "properties": {
+              "from": { "type": "string", "minLength": 1 },
+              "to": { "type": "string", "minLength": 1 },
+              "label": { "type": "string" }
+            }
+          }
+        },
+        "rankdir": { "enum": ["TB", "LR"], "default": "TB" }
+      }
+    },
+
+    "FigurePolygon": {
+      "type": "object",
+      "description": "An explicit polygon / point-set figure (Newton polygons, lattice pictures). Kept distinct from `plot` because the reader is meant to see the hull and the lattice, not a curve through samples.",
+      "required": ["figure_type", "vertices"],
+      "additionalProperties": false,
+      "properties": {
+        "figure_type": { "const": "polygon" },
+        "vertices": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
+        },
+        "points": {
+          "type": "array",
+          "items": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+          "description": "Additional marked points that are not hull vertices."
+        },
+        "closed": { "type": "boolean", "default": true },
+        "x_label": { "type": "string" },
+        "y_label": { "type": "string" }
+      }
+    },
+
+    "RunRecord": {
+      "type": "object",
+      "description": "THE EVIDENCE ARTIFACT. A JSON file a producer writes with `--emit-run`, recording one execution: what ran, over which bytes, whether it succeeded, and which claims it establishes.\n\nWHY IT IS A SEPARATE FILE AND NOT A FIELD IN THE DOCUMENT. Because the document must not be able to repair itself. A claim references a record; assembly loads the record, re-hashes its declared inputs, and computes the claim's rendered status from what it finds. Editing the document cannot change any of that, and that asymmetry is the entire fail-closed guarantee.\n\nTHE EXIT STATUS MUST DEPEND ON THE FINDING. `provenance.exit_status` is the field every claim's status flows through. A producer that exits 0 on COMPLETION -- rather than on having found what it was looking for -- turns this whole pipeline into a device for manufacturing unfalsifiable claims at full speed. This repository audited 40 of 162 checker runs doing exactly that on 2026-08-15, including the one asserting its headline metric. Make the exit status depend on the finding.\n\nVALIDATE a standalone record against `#/$defs/RunRecord`; it is not a `Document` and the two are never interchangeable.",
+      "required": ["schema_version", "id", "provenance", "summary"],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": { "type": "integer", "const": 1 },
+        "id": {
+          "type": "string",
+          "pattern": "^R:[a-z0-9]+(-[a-z0-9]+)*$",
+          "description": "Stable identifier, `R:` prefixed, mirroring the `F:` convention of the fact ledger so the two can be cited side by side."
+        },
+        "provenance": { "$ref": "#/$defs/Provenance" },
+        "summary": { "type": "string", "minLength": 1, "description": "One line a human can read: what this run did and what it found." },
+        "role": {
+          "enum": ["production", "negative-control"],
+          "default": "production",
+          "description": "WHAT THIS RECORD IS, as distinct from what its run found (`outcome`) and from whether the run completed (`provenance.exit_status`).\n\nA `negative-control` record is a recording of a DELIBERATELY BROKEN variant -- a mutant, a tampered input -- kept to show that the checker catches it. It is evidence about the checker's sensitivity, never evidence for the mathematics, so assembly refuses a claim that cites one as support (see `EvidenceRef.role`).\n\nThe field exists because round 1 could only say this in `notes` and in the record `id`, which is prose, and a checker cannot read prose. Absent means `production`: every record written before this field existed keeps its meaning."
+        },
+        "outcome": {
+          "enum": ["established", "refuted", "inconclusive"],
+          "default": "established",
+          "description": "What the run FOUND, as distinct from whether it completed (that is `provenance.exit_status`). The two are separate on purpose: a run that completes normally and finds a counterexample is `exit_status: 0`-eligible only if its producer treats a counterexample as success, and a reader must be able to tell those cases apart. Assembly uses this to choose between `refuted` and `open` when demoting a claim."
+        },
+        "claims": {
+          "type": "array",
+          "description": "The claims this run establishes, keyed so a document can reference one of them. Each carries its OWN status, which caps the rendered status of any document claim referencing it.",
+          "items": {
+            "type": "object",
+            "required": ["key", "status", "statement"],
+            "additionalProperties": false,
+            "properties": {
+              "key": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+              "status": { "$ref": "#/$defs/EvidenceStatus" },
+              "statement": { "type": "string", "minLength": 1 },
+              "supports": { "$ref": "#/$defs/FormalRef", "description": "Optional fact or kernel statement this run's claim supports; resolved and checked like any other FormalRef." },
+              "note": { "type": "string" }
+            }
+          }
+        },
+        "stats": {
+          "type": "object",
+          "description": "Named scalar measurements the run produced, e.g. row counts, bounds, witness sizes. Scalars only, for the same reason table cells are scalars.",
+          "additionalProperties": { "$ref": "#/$defs/Cell" }
+        },
+        "tables": {
+          "type": "object",
+          "description": "Named tabular results the run produced, so a document's table block can be built from a record rather than transcribed. Keys are table names; each value has the same `columns`/`rows` shape as a table block.",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["columns", "rows"],
+            "additionalProperties": false,
+            "properties": {
+              "columns": { "type": "array", "items": { "type": "string" } },
+              "rows": { "type": "array", "items": { "type": "array", "items": { "$ref": "#/$defs/Cell" } } }
+            }
+          }
+        },
+        "artifacts": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ArtifactRef" },
+          "description": "Files the run wrote that a reader may want: models, proof traces, generated SVG."
+        },
+        "replay": { "$ref": "#/$defs/Command" },
+        "notes": { "type": "string" }
+      }
+    }
+  }
+}

@@ -1,0 +1,936 @@
+{
+  "schema_version": 1,
+  "meta": {
+    "kicker": "axeyum fact atlas / render preview",
+    "title": "The Nat prelude, and what stands on it",
+    "subtitle": "One connected component of the fact ledger, rendered. Every badge, statement, hash and replay command on this page was read out of `artifacts/facts/` at build time; only the narrative was written by a person.",
+    "doc_id": "preview-nat-atlas",
+    "genre": "result (R2)",
+    "generator": "`render/assets/preview/build-preview-doc.py`",
+    "footer_note": "Rendered by `render/src/emit_html.rs`. Regenerate with the command in the document header, then `cargo test --features html -- preview`."
+  },
+  "blocks": [
+    {
+      "id": "intro",
+      "tag": "essential",
+      "kind": {
+        "Prose": {
+          "text": "A rendered document here is a checker output, not prose about one. That distinction is the whole design, and it is visible on this page: nothing below carries a green badge because a person decided it deserved one. Each badge is the `epistemic_status` field of a file in `artifacts/facts/`, each replay command is that file's `checker_command`, and a claim that arrived without evidence renders saying so.\n\nWhat follows is one connected component of the ledger's dependency graph -- the naturals, the integers, the rationals built over them, and Euclid's theorem at the bottom of the chain -- with two deliberately unrelated facts alongside it for contrast. Read it at *summary* to see only the argument, at *full* for the evidence, at *forensic* for everything the ledger carries."
+        }
+      }
+    },
+    {
+      "id": "fig-dag",
+      "tag": "essential",
+      "kind": {
+        "Figure": {
+          "DepGraph": {
+            "caption": "**The prelude component.** An edge runs from a prerequisite to the result that uses it, so everything a node rests on is what sits above it. The four nodes with cards below link to them. Layered in Rust -- longest-path ranking, median sweeps, isotonic coordinates -- and drawn as inline SVG; no graph library is involved, and none could be, since the page may not fetch one.",
+            "nodes": [
+              {
+                "key": "F:int-add-assoc",
+                "label": "int add assoc",
+                "status": "proved",
+                "href": null
+              },
+              {
+                "key": "F:int-add-comm",
+                "label": "int add comm",
+                "status": "proved",
+                "href": null
+              },
+              {
+                "key": "F:int-add-le-add",
+                "label": "int add le add",
+                "status": "proved",
+                "href": null
+              },
+              {
+                "key": "F:int-add-lt-add-of-le-of-lt",
+                "label": "int add lt add of le of lt",
+                "status": "proved",
+                "href": null
+              },
+              {
+                "key": "F:int-euclidean-decomposition",
+                "label": "int euclidean decomposition",
+                "status": "proved",
+                "href": null
+              },
+              {
+                "key": "F:int-left-distrib",
+                "label": "int left distrib",
+                "status": "proved",
+                "href": null
+              },
+              {
+                "key": "F:int-mul-assoc",
+                "label": "int mul assoc",
+                "status": "proved",
+                "href": null
+              },
+              {
+                "key": "F:int-mul-comm",
+                "label": "int mul comm",
+                "status": "proved",
+                "href": null
+              },
+              {
+                "key": "F:int-sq-nonneg",
+                "label": "int sq nonneg",
+                "status": "proved",
+                "href": null
+              },
+              {
+                "key": "F:nat-add-assoc",
+                "label": "nat add assoc",
+                "status": "proved",
+                "href": null
+              },
+              {
+                "key": "F:nat-add-comm",
+                "label": "nat add comm",
+                "status": "proved",
+                "href": null
+              },
+              {
+                "key": "F:nat-add-sub-cancel-left",
+                "label": "nat add sub cancel left",
+                "status": "proved",
+                "href": null
+              },
+              {
+                "key": "F:nat-div-mod-exists",
+                "label": "nat div mod exists",
+                "status": "proved",
+                "href": null
+              },
+              {
+                "key": "F:nat-div-mod-unique",
+                "label": "nat div mod unique",
+                "status": "proved",
+                "href": null
+              },
+              {
+                "key": "F:nat-dvd-add",
+                "label": "nat dvd add",
+                "status": "proved",
+                "href": null
+              },
+              {
+                "key": "F:nat-dvd-gcd-iff",
+                "label": "nat dvd gcd iff",
+                "status": "proved",
+                "href": null
+              },
+              {
+                "key": "F:nat-euclid-lemma",
+                "label": "nat euclid lemma",
+                "status": "proved",
+                "href": null
+              },
+              {
+                "key": "F:nat-exists-prime-dvd",
+                "label": "nat exists prime dvd",
+                "status": "proved",
+                "href": null
+              },
+              {
+                "key": "F:nat-exists-prime-gt",
+                "label": "nat exists prime gt",
+                "status": "proved",
+                "href": "card-nat-exists-prime-gt"
+              },
+              {
+                "key": "F:nat-gcd-bezout",
+                "label": "nat gcd bezout",
+                "status": "proved",
+                "href": "card-nat-gcd-bezout"
+              },
+              {
+                "key": "F:nat-gcd-succ",
+                "label": "nat gcd succ",
+                "status": "proved",
+                "href": null
+              },
+              {
+                "key": "F:nat-left-distrib",
+                "label": "nat left distrib",
+                "status": "proved",
+                "href": null
+              },
+              {
+                "key": "F:nat-mul-assoc",
+                "label": "nat mul assoc",
+                "status": "proved",
+                "href": null
+              },
+              {
+                "key": "F:nat-mul-comm",
+                "label": "nat mul comm",
+                "status": "proved",
+                "href": null
+              },
+              {
+                "key": "F:nat-mul-one",
+                "label": "nat mul one",
+                "status": "proved",
+                "href": null
+              },
+              {
+                "key": "F:nat-pow-add",
+                "label": "nat pow add",
+                "status": "proved",
+                "href": null
+              },
+              {
+                "key": "F:nat-succ-add",
+                "label": "nat succ add",
+                "status": "proved",
+                "href": null
+              },
+              {
+                "key": "F:nat-zero-add",
+                "label": "nat zero add",
+                "status": "proved",
+                "href": null
+              },
+              {
+                "key": "F:rat-add-neg-inverse",
+                "label": "rat add neg inverse",
+                "status": "proved",
+                "href": null
+              },
+              {
+                "key": "F:rat-mul-renormalises",
+                "label": "rat mul renormalises",
+                "status": "proved",
+                "href": null
+              },
+              {
+                "key": "F:rat-normalize-reduces",
+                "label": "rat normalize reduces",
+                "status": "proved",
+                "href": null
+              },
+              {
+                "key": "F:rado-r4-a5-b3",
+                "label": "rado r4 a5 b3",
+                "status": "computed",
+                "href": "card-rado-r4-a5-b3"
+              },
+              {
+                "key": "F:fp8-add-not-associative",
+                "label": "fp8 add not associative",
+                "status": "refuted",
+                "href": "card-fp8-add-not-associative"
+              }
+            ],
+            "edges": [
+              {
+                "from": "F:nat-add-assoc",
+                "to": "F:int-add-assoc"
+              },
+              {
+                "from": "F:nat-succ-add",
+                "to": "F:int-add-assoc"
+              },
+              {
+                "from": "F:nat-add-comm",
+                "to": "F:int-add-assoc"
+              },
+              {
+                "from": "F:nat-add-comm",
+                "to": "F:int-add-comm"
+              },
+              {
+                "from": "F:int-add-assoc",
+                "to": "F:int-add-le-add"
+              },
+              {
+                "from": "F:int-add-comm",
+                "to": "F:int-add-le-add"
+              },
+              {
+                "from": "F:int-add-assoc",
+                "to": "F:int-add-lt-add-of-le-of-lt"
+              },
+              {
+                "from": "F:int-add-comm",
+                "to": "F:int-add-lt-add-of-le-of-lt"
+              },
+              {
+                "from": "F:int-add-le-add",
+                "to": "F:int-add-lt-add-of-le-of-lt"
+              },
+              {
+                "from": "F:nat-div-mod-exists",
+                "to": "F:int-euclidean-decomposition"
+              },
+              {
+                "from": "F:nat-div-mod-unique",
+                "to": "F:int-euclidean-decomposition"
+              },
+              {
+                "from": "F:nat-left-distrib",
+                "to": "F:int-left-distrib"
+              },
+              {
+                "from": "F:nat-succ-add",
+                "to": "F:int-left-distrib"
+              },
+              {
+                "from": "F:int-add-assoc",
+                "to": "F:int-left-distrib"
+              },
+              {
+                "from": "F:nat-mul-assoc",
+                "to": "F:int-mul-assoc"
+              },
+              {
+                "from": "F:nat-mul-comm",
+                "to": "F:int-mul-comm"
+              },
+              {
+                "from": "F:int-mul-comm",
+                "to": "F:int-sq-nonneg"
+              },
+              {
+                "from": "F:nat-zero-add",
+                "to": "F:nat-add-comm"
+              },
+              {
+                "from": "F:nat-succ-add",
+                "to": "F:nat-add-comm"
+              },
+              {
+                "from": "F:nat-add-comm",
+                "to": "F:nat-add-sub-cancel-left"
+              },
+              {
+                "from": "F:nat-div-mod-exists",
+                "to": "F:nat-div-mod-unique"
+              },
+              {
+                "from": "F:nat-left-distrib",
+                "to": "F:nat-dvd-add"
+              },
+              {
+                "from": "F:nat-add-assoc",
+                "to": "F:nat-euclid-lemma"
+              },
+              {
+                "from": "F:nat-add-comm",
+                "to": "F:nat-euclid-lemma"
+              },
+              {
+                "from": "F:nat-dvd-add",
+                "to": "F:nat-euclid-lemma"
+              },
+              {
+                "from": "F:nat-dvd-gcd-iff",
+                "to": "F:nat-euclid-lemma"
+              },
+              {
+                "from": "F:nat-gcd-bezout",
+                "to": "F:nat-euclid-lemma"
+              },
+              {
+                "from": "F:nat-mul-assoc",
+                "to": "F:nat-euclid-lemma"
+              },
+              {
+                "from": "F:nat-mul-comm",
+                "to": "F:nat-euclid-lemma"
+              },
+              {
+                "from": "F:nat-div-mod-exists",
+                "to": "F:nat-exists-prime-dvd"
+              },
+              {
+                "from": "F:nat-dvd-add",
+                "to": "F:nat-exists-prime-dvd"
+              },
+              {
+                "from": "F:nat-dvd-add",
+                "to": "F:nat-exists-prime-gt"
+              },
+              {
+                "from": "F:nat-exists-prime-dvd",
+                "to": "F:nat-exists-prime-gt"
+              },
+              {
+                "from": "F:nat-add-assoc",
+                "to": "F:nat-gcd-bezout"
+              },
+              {
+                "from": "F:nat-add-comm",
+                "to": "F:nat-gcd-bezout"
+              },
+              {
+                "from": "F:nat-gcd-succ",
+                "to": "F:nat-gcd-bezout"
+              },
+              {
+                "from": "F:nat-left-distrib",
+                "to": "F:nat-gcd-bezout"
+              },
+              {
+                "from": "F:nat-mul-assoc",
+                "to": "F:nat-gcd-bezout"
+              },
+              {
+                "from": "F:nat-mul-one",
+                "to": "F:nat-gcd-bezout"
+              },
+              {
+                "from": "F:nat-zero-add",
+                "to": "F:nat-gcd-bezout"
+              },
+              {
+                "from": "F:nat-add-assoc",
+                "to": "F:nat-left-distrib"
+              },
+              {
+                "from": "F:nat-left-distrib",
+                "to": "F:nat-mul-assoc"
+              },
+              {
+                "from": "F:nat-zero-add",
+                "to": "F:nat-mul-one"
+              },
+              {
+                "from": "F:nat-mul-assoc",
+                "to": "F:nat-pow-add"
+              },
+              {
+                "from": "F:nat-mul-comm",
+                "to": "F:nat-pow-add"
+              },
+              {
+                "from": "F:nat-mul-one",
+                "to": "F:nat-pow-add"
+              },
+              {
+                "from": "F:rat-mul-renormalises",
+                "to": "F:rat-add-neg-inverse"
+              },
+              {
+                "from": "F:rat-normalize-reduces",
+                "to": "F:rat-mul-renormalises"
+              },
+              {
+                "from": "F:int-euclidean-decomposition",
+                "to": "F:rat-normalize-reduces"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "cards-head",
+      "tag": "essential",
+      "kind": {
+        "Prose": {
+          "heading": "Four facts, four kinds of standing",
+          "text": "The ledger keeps two status axes on purpose: what *this system* established, and what mathematics knows. They are different questions, and their disagreement in our favour is a result rather than a bookkeeping error. The four cards below are one of each interesting case."
+        }
+      }
+    },
+    {
+      "id": "card-nat-exists-prime-gt",
+      "tag": "essential",
+      "kind": {
+        "Claim": {
+          "label": "There is no largest prime",
+          "ref": "F:nat-exists-prime-gt",
+          "statement": "For every natural number n there is a prime p with n < p. Equivalently, there are infinitely many primes.",
+          "status": "proved",
+          "evidence": [
+            {
+              "id": "kernel-Nat.exists_prime_gt",
+              "kind": "kernel-term",
+              "supports": "For every natural number n there is a prime p with n < p.",
+              "check_status": "checked",
+              "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- exists_prime_gt 2>/dev/null | grep -qxF 'Nat.exists_prime_gt\t3\t((x0 : AxNat) -> Exists.{1} AxNat (fun (x1 : AxNat) => And (AxNat.lt x0 x1) (And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x1) (((x2 : AxNat) -> ((x3 : AxNat.dvd x2 x1) -> Or (Eq.{1} AxNat x2 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x2 x1)))))))'",
+              "notes": "`build_nat_prelude` admits this through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type. Euclid's argument, done over N with no subtraction: take m = n! + 1, which is >= 2 because 1 <= n! (`one_le_factorial`), and let q be a prime dividing it (`exists_prime_dvd`). If q <= n then `dvd_factorial_of_le` gives q | n!, and with q | n!+1 `dvd_add_right_cancel_of_pos` yields q | 1, refuted by `not_dvd_one_of_two_le`. So n <= q, and the n = q case falls to the same contradiction after transporting n <= n along the equality, leaving n < q. The command matches the FULL RENDERED TYPE (grep -qxF), not the theorem name: lane `nat-prime-divisor` measured that a name-only checker survives a weakened statement -- spelling a primality bound `1 <= p` instead of `2 <= p` still type-checks, still admits, and is satisfied by p = 1. The kernel cannot see a weaker statement; only the type can."
+            },
+            {
+              "id": "footprint-Nat.exists_prime_gt",
+              "kind": "exhaustive-enumeration",
+              "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+              "check_status": "checked",
+              "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+              "notes": "`theorem_axiom_footprint` reports `nat Nat.exists_prime_gt 0` and `integer Nat.exists_prime_gt 0`. `nat_axiom_inventory` bounds it by enumerating the whole trusted surface: a theorem cannot depend on a trusted declaration the environment does not contain. Counting `Declaration::Axiom` alone would not suffice -- `Opaque` has no proof body and `Quotient` admits `Quot.sound` -- so all three kinds are covered."
+            }
+          ],
+          "formal": {
+            "language": "lean4",
+            "statement": "theorem Nat.exists_prime_gt : ((n : AxNat) -> Exists.{1} AxNat (fun (p : AxNat) => And (AxNat.lt n p) (And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) p) ((d : AxNat) -> ((hd : AxNat.dvd d p) -> Or (Eq.{1} AxNat d (AxNat.succ AxNat.zero)) (Eq.{1} AxNat d p))))))",
+            "fragment": "Nat"
+          },
+          "external_status": "proved",
+          "proof_route": "kernel-lean",
+          "axiom_footprint": [],
+          "notes": "`open` here means NOT ESTABLISHED IN THIS LEDGER; it is not mathematically open, Euclid settled it. It is recorded because it is a live target rather than a curiosity: the prelude already carries `Nat.not_dvd_one_add_mul_of_two_le`, which is exactly the step `no a >= 2 divides 1 + a*t` -- the contradiction at the end of Euclid's argument. 2026-08-17: BOTH missing ingredients have now landed and this fact is one slice from closing. `Nat.factorial` is declared (computation rules definitional, like `Nat.pow`) together with `Nat.dvd_factorial_of_le : (d n : AxNat) -> AxNat.le 1 d -> AxNat.le d n -> AxNat.dvd d (AxNat.factorial n)`, so the number that every positive `d <= n` divides exists in the kernel and `1 + n!` is a witness with no divisor in `[2, n]`. The second ingredient is `F:nat-exists-prime-dvd`: `Nat.exists_prime_dvd : (m : AxNat) -> AxNat.le 2 m -> Exists p, (2 <= p AND forall d, d | p -> d = 1 OR d = p) AND p | m`, admitted axiom-free. Note it did NOT go through `lt_well_founded` as this note previously predicted -- strong induction on `m` would have to DECIDE primality of `m`, a bounded universal quantification whose constructive decision is itself a bounded search, so the search (`Nat.least_divisor_search`) is done directly by ordinary `Nat.rec` on the bound and returns the LEAST divisor >= 2, which is prime for free. WHAT REMAINS is exactly two steps, both small: (1) `1 <= Nat.factorial n` -- factorial is positive, by induction with `one_le_mul` at the successor -- which is what makes `2 <= 1 + n!` and so lets `exists_prime_dvd` be applied to it at all; and (2) the assembly. The assembly: take `p` prime with `p | 1 + n!`; if `p <= n` then `dvd_factorial_of_le` gives `p | n!`, `add_comm` reshapes `1 + n!` to `n! + 1`, `dvd_add_right_cancel_of_pos` yields `p | 1`, and `not_dvd_one_of_two_le` refutes it; so `le_total` leaves `n <= p`, and `lt_or_eq_of_le` turns that into `n < p` once `n = p` is ruled out by the same contradiction. Every lemma named in that paragraph is already admitted axiom-free. formal.statement is written in the SAME core rendering the kernel emits for its own theorems, and uses ONLY symbols `build_nat_prelude` actually declares (checked against the 119-theorem inventory dumped on 2026-08-14), so it can be dispatched without inventing vocabulary. Primality is spelled out inline because the prelude has no `Prime` predicate. Binders carry readable names rather than the kernel's `x0, x1, ...`; that is a pretty-printing difference only, and any admitted proof would render with positional names."
+        }
+      },
+      "provenance": {
+        "generator": "artifacts/facts/F-nat-exists-prime-gt.json"
+      }
+    },
+    {
+      "id": "note-euclid",
+      "tag": "detail",
+      "kind": {
+        "Prose": {
+          "text": "The empty axiom footprint above is the strong claim, not a missing field: `Kernel::axiom_footprint` walked this declaration's transitive dependencies and found no `Axiom`, `Opaque` or `Quotient` in the closure. The schema requires the field when a fact is `proved` precisely so that absence and emptiness cannot be confused."
+        }
+      }
+    },
+    {
+      "id": "card-nat-gcd-bezout",
+      "tag": "essential",
+      "kind": {
+        "Claim": {
+          "label": "Bezout's identity holds for the natural gcd",
+          "ref": "F:nat-gcd-bezout",
+          "statement": "For all natural numbers m and n there exist natural numbers mp, mn, np, nn with gcd(m, n) + m*mn + n*nn = m*mp + n*np. This is Bezout's identity in balanced form: the usual `gcd(m,n) = m*x + n*y` with integer x, y, rearranged so both sides are natural numbers.",
+          "status": "proved",
+          "evidence": [
+            {
+              "id": "kernel-Nat.gcd_bezout",
+              "kind": "kernel-term",
+              "supports": "For all natural numbers m and n there exist natural numbers mp, mn, np, nn with gcd(m, n) + m*mn + n*nn = m*mp + n*np. This is Bezout's identity in balanced form: the usual `gcd(m,n) = m*x + n*y` with integer x, y, rearranged so both sides are natural numbers.",
+              "check_status": "checked",
+              "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- gcd_bezout 2>/dev/null | grep -qE '^Nat\\.gcd_bezout[[:space:]]'",
+              "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing the row at all is a machine-checked proof. TIGHTENED 2026-08-16: the command was `cargo test -p axeyum-lean-kernel --lib nat_prelude`, a whole-suite run that passes or fails identically for every fact citing it and would stay green if THIS theorem were deleted. It now names its own subject twice over -- `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -q` requires the admitted declaration to be printed."
+            },
+            {
+              "id": "footprint-Nat.gcd_bezout",
+              "kind": "exhaustive-enumeration",
+              "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+              "check_status": "checked",
+              "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+              "notes": "`nat_axiom_inventory` enumerates the built Nat environment and reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0` (re-run 2026-08-14 by this lane). That is the whole environment, not this theorem, and that is what makes it sound as a footprint: a theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual footprint by []. Counting `Declaration::Axiom` alone would NOT have sufficed -- `Opaque` has no proof body and `Quotient` admits `Quot.sound`, one of Lean's own axioms -- so the enumeration covers all three."
+            }
+          ],
+          "formal": {
+            "language": "lean4",
+            "statement": "theorem Nat.gcd_bezout : ((x0 : AxNat) -> ((x1 : AxNat) -> AxNat.bezout x0 x1 (AxNat.gcd x0 x1)))",
+            "fragment": "Nat"
+          },
+          "external_status": "proved",
+          "proof_route": "kernel-lean",
+          "axiom_footprint": [],
+          "notes": "`AxNat.bezout m n g` abbreviates the balanced form. The balancing is forced: the naturals have no negatives, so a Bezout coefficient that would be negative is moved to the other side of the equation instead. formal.statement is the type the kernel admitted, taken verbatim from Kernel::render_lean over the environment build_nat_prelude produces; it was not transcribed by hand. The sort renders as `AxNat` (the prelude's own inductive) while declarations are rooted at `Nat`."
+        }
+      },
+      "provenance": {
+        "generator": "artifacts/facts/F-nat-gcd-bezout.json"
+      }
+    },
+    {
+      "id": "card-rado-r4-a5-b3",
+      "tag": "essential",
+      "kind": {
+        "Claim": {
+          "label": "The four-colour Rado number of 5(x-y) = 3z is 625",
+          "ref": "F:rado-r4-a5-b3",
+          "statement": "R_4(5(x-y)=3z) = 625. The lower bound is the a-adic valuation colouring of Chang-De Loera-Wesley's Lemma 4.1 (R_k >= a^k), replayed and verified three ways; the upper bound is a refutation at n = 625 with a self-checked DRAT certificate.",
+          "status": "computed",
+          "evidence": [
+            {
+              "id": "claim-rado-r4-a5-b3",
+              "kind": "claim-ref",
+              "supports": "R_4(5(x-y)=3z) = 625, both bounds, with pinned deciding instance and regeneration recipe",
+              "check_status": "checked",
+              "checker_command": "python3 scripts/validate-claims.py",
+              "checkers": [
+                "validate-claims-schema-and-semantics"
+              ],
+              "artifact": "artifacts/claims/rado/rado-r4-a5-b3/claim.json",
+              "notes": "The claim carries the pinned CNF, the replayable lower-bound colouring, and the DRAT regeneration recipe."
+            },
+            {
+              "id": "lower-bound-replay",
+              "kind": "witness-replay",
+              "supports": "R_4(5(x-y)=3z) > 624",
+              "check_status": "checked",
+              "checker_command": "cargo run --release -q -p axeyum-search --example akb2_frontier -- verify 5 3 4 artifacts/claims/rado/rado-r4-a5-b3/witness.txt",
+              "checkers": [
+                "akb2_frontier-encoder-view",
+                "akb2_frontier-independent-enumerator"
+              ],
+              "artifact": "artifacts/claims/rado/rado-r4-a5-b3/witness.txt",
+              "notes": "Cheap and real: re-verifies the colouring three ways from the stored file in ~0.1s."
+            },
+            {
+              "id": "deciding-instance-regeneration",
+              "kind": "instance-pin",
+              "supports": "the refutation's verdict names this exact formula",
+              "check_status": "checked",
+              "checker_command": "test \"$(cargo run --release -q -p axeyum-search --example rado_dump_cnf -- a=5 b=3 k=4 n=625 out=/tmp/rb3.cnf >/dev/null 2>&1; sha256sum /tmp/rb3.cnf | cut -d' ' -f1)\" = \"$(sha256sum artifacts/claims/rado/rado-r4-a5-b3/F_625.cnf | cut -d' ' -f1)\"",
+              "checkers": [
+                "rado_dump_cnf-regeneration"
+              ],
+              "artifact": "artifacts/claims/rado/rado-r4-a5-b3/F_625.cnf",
+              "notes": "Regeneration, not storage comparison: the bytes must come back out of the same encoder."
+            }
+          ],
+          "formal": {
+            "language": "smtlib2",
+            "statement": "(assert (forall-colourings 625 4 (exists-mono-solution (= (* 5 (- x y)) (* 3 z)))))",
+            "fragment": "QF_BV"
+          },
+          "external_status": "open",
+          "proof_route": "search-certificate",
+          "axiom_footprint": [
+            "rado.encoder-faithfulness",
+            "rado.drat-checker-check_drat_backward",
+            "rado.certificate-not-re-checked-per-commit"
+          ],
+          "notes": "The last blank cell of the a >= b+2 row at a=5, k=4, and the interesting one: b=3 is the LAST cell still INSIDE Chang-De Loera-Wesley's hypothesis (gcd(5,3)=1 and 5 >= 3+2 holds exactly), so 625 = a^4 confirms the k>=4 generalisation where it should hold. b=4 sits outside the hypothesis and breaks to 741, which is consistent rather than contradictory.\n\nThe certificate is NOT re-checked per commit -- a 4-hour re-check cannot be a gate -- and the axiom_footprint says so rather than implying the proof is re-derived on every run. The three checkers that DO run are cheap and real: the claim's schema and semantics, the lower-bound colouring replayed from its stored file, and the deciding CNF re-derived from the encoder and compared by hash."
+        }
+      },
+      "provenance": {
+        "generator": "artifacts/facts/F-rado-r4-a5-b3.json"
+      }
+    },
+    {
+      "id": "card-fp8-add-not-associative",
+      "tag": "essential",
+      "kind": {
+        "Claim": {
+          "label": "fp8 E5M2 addition under roundNearestTiesToEven is associative",
+          "ref": "F:fp8-add-not-associative",
+          "statement": "Let F be the IEEE-754-conformant 8-bit format OCP fp8 E5M2, SMT-LIB `(_ FloatingPoint 5 3)`, and let RNE denote roundNearestTiesToEven. For all values a, b, c of F: fp.add(RNE, fp.add(RNE, a, b), c) equals fp.add(RNE, a, fp.add(RNE, b, c)), where equality is SMT-LIB `=` on the FloatingPoint sort. THIS PROPOSITION IS FALSE. The fact is recorded with status `refuted` and carries a concrete counterexample triple, together with the exact number of triples at which it fails.",
+          "status": "refuted",
+          "evidence": [
+            {
+              "id": "fp8-assoc-counterexample-model",
+              "kind": "witness-replay",
+              "supports": "The negation of formal.statement is satisfiable over fp8 E5M2, so the proposition does not hold for all triples.",
+              "check_status": "checked",
+              "checker_command": "test \"$(cargo run --release -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/fp8-add-not-associative.smt2 | tail -1)\" = sat",
+              "checkers": [
+                "axeyum-smtcomp-cli-producing-solve",
+                "axeyum-Evidence::check-fresh-parse-model-replay"
+              ],
+              "artifact": "artifacts/facts/smt2/fp8-add-not-associative.smt2",
+              "notes": "Ran 2026-08-14: `; evidence kind=sat-model certified=1 recheck=na arena=ok ms=27`, verdict `sat`. `arena=ok` is `Evidence::check` evaluating the produced model against a FRESH PARSE of the original assertions, so the witness is checked against the source formula, not the lowered form. NOT cross-checked by either external oracle, and that is the finding recorded in this fact's notes: neither z3 4.13.3 nor bitwuzla 0.9.1 can decide any fp8 E5M2 addition query at all."
+            },
+            {
+              "id": "fp8-assoc-ground-witness",
+              "kind": "instance-pin",
+              "supports": "The specific triple a = b = 0x01 (the E5M2 subnormal 2^-16), c = 0x08 (the normal 2^-13), pinned as a GROUND formula: (a+b)+c = 0x09 while a+(b+c) = 0x08.",
+              "check_status": "checked",
+              "checker_command": "test \"$(cargo run --release -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/fp8-add-not-associative-witness.smt2 | tail -1)\" = sat",
+              "checkers": [
+                "axeyum-smtcomp-cli-ground-evaluation",
+                "axeyum-Evidence::check-fresh-parse",
+                "z3-4.13.3-ground-instance"
+              ],
+              "artifact": "artifacts/facts/smt2/fp8-add-not-associative-witness.smt2",
+              "notes": "Ran 2026-08-14: `sat`, 2ms. The file has NO free symbols -- it asserts the disequality AND both concrete results -- so a `sat` verdict is direct evaluation of fp8 E5M2 arithmetic rather than a search, and it pins the witness so the fact cannot drift from the solver. Cross-checked: `z3 -smt2` also reports `sat` on this file. That z3 can settle the GROUND instance while returning `unknown` on the quantifier-free SEARCH is not a contradiction: z3's refusal is in its symbolic fpa2bv tactic, and a closed term is constant-folded before that tactic is reached. bitwuzla 0.9.1 refuses the file outright (unsupported format).\n\nArithmetic, for a reader: a+b = 2^-15 exactly; (a+b)+c = 2^-13 * 1.25 = 0x09 exactly; but b+c = 2^-13 * 1.125 is a tie between 0x08 and 0x09 that RNE breaks toward the even significand, giving 0x08, and a + 0x08 ties again to 0x08. Two ties in one direction is what separates the two bracketings."
+            },
+            {
+              "id": "fp8-assoc-exhaustive-apfloat",
+              "kind": "exhaustive-enumeration",
+              "supports": "All 2^24 = 16777216 fp8 E5M2 triples enumerated by LLVM's APFloat: the two bracketings disagree at 427036 of them under RNE (2.55%).",
+              "check_status": "checked",
+              "checker_command": "cargo run --release -q -p axeyum-fp --example kernel_equivalence -- assoc",
+              "checkers": [
+                "rustc_apfloat-0.2.3-llvm-apfloat-exhaustive-enumeration"
+              ],
+              "artifact": "crates/axeyum-fp/examples/kernel_equivalence.rs",
+              "notes": "Ran 2026-08-14, 2.2s. Independent of axeyum's bit-blaster, CNF encoder and SAT core: `rustc_apfloat` 0.2.3 (LLVM APFloat), comparing SMT-LIB value classes. The failure count is mode-dependent and was measured for all five SMT-LIB rounding modes: RNE 427036, RNA 419652, RTP 4825040, RTN 4825040, RTZ 5375600 -- of 16777216 triples each. The directed modes fail an order of magnitude more often, and RTP/RTN fail equally often, which is the sign symmetry of the format. The first witness in enumeration order is the same triple under every mode. The binary exits non-zero if the claim ever stops failing."
+            }
+          ],
+          "formal": {
+            "language": "smtlib2",
+            "statement": "(assert (= (fp.add RNE (fp.add RNE a b) c) (fp.add RNE a (fp.add RNE b c))))",
+            "fragment": "QF_FP"
+          },
+          "external_status": "refuted",
+          "proof_route": "search-certificate",
+          "axiom_footprint": [
+            "ieee754-2019-arithmetic-semantics-for-the-OCP-fp8-E5M2-layout",
+            "rounding-mode-roundNearestTiesToEven-for-the-headline-witness",
+            "smtlib2-floatingpoint-sort-equality-one-nan-value-signed-zeros-distinct",
+            "the-witness-replay-semantics-of-axeyum-Evidence::check-and-of-rustc_apfloat"
+          ],
+          "notes": "WHY A REFUTATION IS THE VALUABLE RESULT HERE. Every reduction kernel, every tensor-parallel all-reduce and every reordering optimizer relies on being allowed to re-bracket a sum. This fact says precisely how often that is wrong at fp8 E5M2: 427036 of 16777216 triples under RNE, and 5375600 -- nearly a third -- under round-toward-zero. That is a measured density with a named witness, not an aphorism.\n\nTHE FINDING ABOUT THE ORACLES. This claim could not be cross-checked against either industrial FP solver, for two DIFFERENT reasons, and both were measured on 2026-08-14 rather than assumed:\n  * z3 4.13.3 returns `unknown` with `(:reason-unknown \"addition/subtract with ebits > sbits not supported\")`. E5M2 has 5 exponent bits and 3 significand bits, so every fp8 addition query is outside its fpa2bv tactic.\n  * bitwuzla 0.9.1 errors out: \"Unsupported experimental floating-point format (non-experimental: Float16, Float32, Float64, Float128)\". The `--fpexp` escape named in that message is a BUILD option, not a runtime flag -- passing it to the binary is rejected as an invalid option, so this build cannot be talked into it.\nSo at exactly the width where a claim can be settled by brute force, the two solvers a practitioner would reach for decline. axeyum decides it, and the LLVM-APFloat enumeration is what independently confirms the answer. Note the complementary gap in the other direction: axeyum REFUSES fp8 E4M3, correctly, because E4M3 has no infinities and an all-ones NaN and is therefore not an IEEE format -- `arithmetic_format_supported` gates it out, while z3 accepts (_ FloatingPoint 4 4) happily.\n\nROUTE. `search-certificate`: the settlement is a replayable witness, matching the precedent of F:affirming-the-consequent. Refuting a universally quantified claim costs one triple; establishing one costs the whole space -- and here we paid both, because the enumeration also gives the density."
+        }
+      },
+      "provenance": {
+        "generator": "artifacts/facts/F-fp8-add-not-associative.json"
+      }
+    },
+    {
+      "id": "argument",
+      "tag": "detail",
+      "kind": {
+        "Steps": {
+          "heading": "The argument for the bottom node",
+          "caption": "This block carries **no provenance**, which is the schema's signal that a person wrote it: it is the human argument, not a captured machine trace. The machine's version of it is the proof term the kernel checked, and the card above is where that is recorded.",
+          "steps": [
+            {
+              "op": "suppose",
+              "input": "n : Nat",
+              "output": "consider N = n! + 1",
+              "note": "Any prime dividing N is larger than n, if one exists."
+            },
+            {
+              "op": "apply",
+              "input": "N >= 2",
+              "output": "N has a prime divisor p",
+              "note": "This is `F:nat-exists-prime-dvd`, one layer up in the graph."
+            },
+            {
+              "op": "suppose for contradiction",
+              "input": "p <= n",
+              "output": "p divides n!",
+              "note": "p is one of the factors of n!."
+            },
+            {
+              "op": "apply",
+              "input": "p | n! and p | n! + 1",
+              "output": "p | 1",
+              "note": "This is `F:nat-dvd-add`, which is why that node is an ancestor of this one and not merely nearby."
+            },
+            {
+              "op": "conclude",
+              "input": "p | 1 and p prime",
+              "output": "contradiction; so p > n",
+              "note": "There is no largest prime."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "tbl-cone",
+      "tag": "detail",
+      "kind": {
+        "Table": {
+          "heading": "The trust base of Euclid's theorem, row by row",
+          "caption": "Every fact in the upward cone of `F:nat-exists-prime-gt`. Generated from the ledger files; the `axioms` column counts `axiom_footprint` entries, so a zero is a measured claim.",
+          "columns": [
+            {
+              "label": "fact"
+            },
+            {
+              "label": "status"
+            },
+            {
+              "label": "route"
+            },
+            {
+              "label": "depends on",
+              "align": "right"
+            },
+            {
+              "label": "axioms",
+              "align": "right"
+            },
+            {
+              "label": "evidence rows",
+              "align": "right"
+            }
+          ],
+          "rows": [
+            [
+              "nat add assoc",
+              "proved",
+              "kernel-lean",
+              0,
+              0,
+              2
+            ],
+            [
+              "nat div mod exists",
+              "proved",
+              "kernel-lean",
+              0,
+              0,
+              2
+            ],
+            [
+              "nat dvd add",
+              "proved",
+              "kernel-lean",
+              1,
+              0,
+              2
+            ],
+            [
+              "nat exists prime dvd",
+              "proved",
+              "kernel-lean",
+              2,
+              0,
+              2
+            ],
+            [
+              "nat exists prime gt",
+              "proved",
+              "kernel-lean",
+              2,
+              0,
+              2
+            ],
+            [
+              "nat left distrib",
+              "proved",
+              "kernel-lean",
+              1,
+              0,
+              2
+            ]
+          ],
+          "source": {
+            "generator": "artifacts/facts/*.json"
+          }
+        }
+      }
+    },
+    {
+      "id": "cert-ledger",
+      "tag": "essential",
+      "kind": {
+        "Certificate": {
+          "kind": "ReportRun",
+          "summary": "The fact-ledger validator, run while this page was built",
+          "generator": "scripts/validate-facts.py",
+          "exit_status": 0,
+          "verdict": "checked",
+          "replay": "python3 scripts/validate-facts.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/",
+              "sha256": "077da42c5db7990fed63b48a223096b784349641c55ec7ae1efe1dba3f529154"
+            },
+            {
+              "path": "artifacts/ontology/fact.schema.json",
+              "sha256": "ca3d41c6386a4d75424052a0f44ea4d794a8d139b8f98bd4d1c14e32913a19aa"
+            }
+          ],
+          "raw": {
+            "command": "python3 scripts/validate-facts.py",
+            "exit_status": 0,
+            "novel_lines": [
+              "NOVEL -- established here, not settled in the literature: F:rado-r4-a5-b3, F:rado-r4-a5-b4"
+            ],
+            "stdout_tail": [
+              "324 facts checked, 0 errors  (computed=2 conjectured=3 open=217 proved=99 refuted=3)",
+              "  routes: cas-certificate=19 imported-kernel-lean=5 kernel-lean=43 search-certificate=12 smt-clausal=9 smt-term-level=16; 42 axiom-free on kernel-lean (not comparable across routes)",
+              "  5 fact(s) on an IMPORTED route -- proof term checked here, authored elsewhere; not evidence of construction",
+              "  127 evidence row(s) re-derived by 2+ independent checkers",
+              "  external: 205 settled elsewhere but not here (import backlog), 8 unclassified",
+              "  NOVEL -- established here, not settled in the literature: F:rado-r4-a5-b3, F:rado-r4-a5-b4"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "cert-rado",
+      "tag": "detail",
+      "kind": {
+        "Certificate": {
+          "kind": "SearchCertificate",
+          "summary": "The pinned artifacts behind R_4(5(x-y)=3z) = 625",
+          "generator": "axeyum native proof-producing CDCL (ADR-0002)",
+          "verdict": "checked",
+          "no_exit_reason": "a four-hour re-check cannot be a gate; the three cheap checkers on the card above are the ones that run",
+          "replay": "cargo run --release -q -p axeyum-search --example akb2_frontier -- verify 5 3 4 artifacts/claims/rado/rado-r4-a5-b3/witness.txt",
+          "inputs": [
+            {
+              "path": "artifacts/claims/rado/rado-r4-a5-b3/claim.json",
+              "sha256": "a3f6de260c858473355b2bf29f458b884174be7188d72d48fd5e572588d60834"
+            },
+            {
+              "path": "artifacts/claims/rado/rado-r4-a5-b3/witness.txt",
+              "sha256": "eaf9ab5ca456b91ed8304fe241990c01ae34674c709b322290c8458d3f06990f"
+            },
+            {
+              "path": "artifacts/claims/rado/rado-r4-a5-b3/F_625.cnf",
+              "sha256": "a59d88ed13b8256d1bcfdf247139beede7f93945129c8d607ac3410c391cb623"
+            }
+          ],
+          "raw": {
+            "note": "Hashes computed from the checked-in artifacts at build time. There is deliberately no exit status here: this certificate is not re-run per commit, and the fact says so in its axiom_footprint rather than implying it is.",
+            "axiom_footprint": [
+              "rado.encoder-faithfulness",
+              "rado.drat-checker-check_drat_backward",
+              "rado.certificate-not-re-checked-per-commit"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "fig-growth",
+      "tag": "detail",
+      "kind": {
+        "Figure": {
+          "Plot": {
+            "caption": "**Proved facts in the ledger, cumulative.** One point per day on which at least one fact reached `proved`, taken from each file's `provenance.date`. The x axis is days since the first such date. Vertices carry their value as a native tooltip, so it works with scripting disabled.",
+            "x_label": "days since the first proved fact",
+            "y_label": "facts at status proved",
+            "series": [
+              {
+                "name": "proved",
+                "kind": "step",
+                "points": [
+                  [
+                    0,
+                    68
+                  ],
+                  [
+                    1,
+                    90
+                  ],
+                  [
+                    2,
+                    94
+                  ],
+                  [
+                    3,
+                    96
+                  ],
+                  [
+                    4,
+                    99
+                  ]
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "archive-ledger",
+      "tag": "archive",
+      "kind": {
+        "Include": {
+          "path": "artifacts/facts/",
+          "note": "the whole ledger, 324 files, of which this page renders 33"
+        }
+      }
+    },
+    {
+      "id": "outro",
+      "tag": "essential",
+      "kind": {
+        "Prose": {
+          "heading": "What this file is",
+          "text": "One file. The stylesheet, the script, both figures and every glyph are inside it, and opening it makes no network request -- a property checked by `lint_self_contained`, which has a unit test per violation class so that it can actually fail. Print it and the reading-level control disappears, every fold opens, and the badges stay distinguishable because each one carries a shape as well as a colour."
+        }
+      }
+    }
+  ]
+}

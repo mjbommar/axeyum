@@ -1,0 +1,53 @@
+{
+  "claims": [
+    {
+      "key": "nat-add-assoc-kernel-nat-add-assoc",
+      "note": "NAME-ONLY CHECK. The checker matches the theorem's NAME in the kernel inventory and does not look at its type, so a theorem restated under the same name would still pass. Deliberately capped at `checked`: this run establishes that the kernel admits a theorem called this, not that it admits this proposition.",
+      "statement": "Fact-ledger evidence row `kernel-Nat.add_assoc` of `F:nat-add-assoc` (kind `kernel-term`) was replayed by running its recorded `checker_command`; the command exited 0.",
+      "status": "checked",
+      "supports": {
+        "id": "F:nat-add-assoc",
+        "kind": "fact"
+      }
+    }
+  ],
+  "id": "R:nat-add-assoc-kernel-nat-add-assoc",
+  "notes": "Produced by replaying fact-ledger evidence rows, not by re-deriving the mathematics. The command is the ledger's `checker_command` verbatim; this record asserts only that it was run, from the repository root, and exited with the status recorded here. Cited by: F:nat-add-assoc/kernel-Nat.add_assoc. NOT PINNED: `inputs` pins the example source, not the rest of `axeyum-lean-kernel` that it links; a change inside the crate would not trip the render's input-hash guard.",
+  "outcome": "established",
+  "provenance": {
+    "command": "cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- add_assoc 2>/dev/null | grep -qE '^Nat\\.add_assoc[[:space:]]'",
+    "duration_ms": 345,
+    "epoch": {
+      "commit": "839d1e50a287fa816490dd2ee7ec19d6a202c25d",
+      "source": "commit",
+      "unix": 1787319265
+    },
+    "exit_status": 0,
+    "generator": "crates/axeyum-lean-kernel/examples/nat_theorem_inventory.rs (via `cargo run --example`), invoked by render/producers-runrec/facts_to_runrec.py",
+    "inputs": [
+      {
+        "path": "crates/axeyum-lean-kernel/examples/nat_theorem_inventory.rs",
+        "role": "checker",
+        "sha256": "5253659a178bf67a42d236c4ba674e3ae1d91189bcb7309b2791e1ea64eea5a5"
+      }
+    ]
+  },
+  "replay": {
+    "cwd": ".",
+    "expected_exit_status": 0,
+    "expected_seconds": 1,
+    "line": "cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- add_assoc 2>/dev/null | grep -qE '^Nat\\.add_assoc[[:space:]]'"
+  },
+  "role": "production",
+  "schema_version": 1,
+  "stats": {
+    "exact_type_pinned": false,
+    "rows_covered": 1,
+    "stderr_bytes": 0,
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stdout_bytes": 0,
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "wall_seconds": 0.345
+  },
+  "summary": "GREEN: `cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- add_assoc 2>/dev/...` exited 0 in 0.3s, replaying 1 fact-ledger evidence row(s)."
+}

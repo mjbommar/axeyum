@@ -1,0 +1,57 @@
+{
+  "claims": [
+    {
+      "key": "rado-r4-a5-b4-claim-741",
+      "statement": "Fact-ledger evidence row `claim-741` of `F:rado-r4-a5-b4` (kind `claim-ref`) was replayed by running its recorded `checker_command`; the command exited 0.",
+      "status": "evidence",
+      "supports": {
+        "id": "F:rado-r4-a5-b4",
+        "kind": "fact"
+      }
+    }
+  ],
+  "id": "R:rado-r4-a5-b4-claim-741",
+  "notes": "Produced by replaying fact-ledger evidence rows, not by re-deriving the mathematics. The command is the ledger's `checker_command` verbatim; this record asserts only that it was run, from the repository root, and exited with the status recorded here. Cited by: F:rado-r4-a5-b4/claim-741. NOT PINNED: This checker SWEEPS the whole claim ledger (104 `claim.json` files under `artifacts/claims/`), so its verdict depends on far more bytes than the row's own artifact; pinning all of them would make every unrelated ledger edit break every render, so only the row's artifact and the script are pinned.",
+  "outcome": "established",
+  "provenance": {
+    "command": "python3 scripts/check-claim-certificates.py",
+    "duration_ms": 61199,
+    "epoch": {
+      "commit": "839d1e50a287fa816490dd2ee7ec19d6a202c25d",
+      "source": "commit",
+      "unix": 1787319265
+    },
+    "exit_status": 0,
+    "generator": "scripts/check-claim-certificates.py, invoked by render/producers-runrec/facts_to_runrec.py",
+    "inputs": [
+      {
+        "path": "artifacts/claims/rado/rado-r4-a5-b4-frontier/claim.json",
+        "role": "artifact",
+        "sha256": "e6578b7118c93ff4cc9bcdfc5f4b8f42a0d6f22bb2668947af11c67520890639"
+      },
+      {
+        "path": "scripts/check-claim-certificates.py",
+        "role": "checker",
+        "sha256": "293f5ceec99fbbdab96ec351cfb5a429c6dc9c7fdb34d9d057a5c7a7ad9f0ea5"
+      }
+    ]
+  },
+  "replay": {
+    "cwd": ".",
+    "expected_exit_status": 0,
+    "expected_seconds": 62,
+    "line": "python3 scripts/check-claim-certificates.py"
+  },
+  "role": "production",
+  "schema_version": 1,
+  "stats": {
+    "exact_type_pinned": false,
+    "rows_covered": 1,
+    "stderr_bytes": 0,
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stdout_bytes": 37428,
+    "stdout_sha256": "6322db43b6ab98b809c32e53016152e6d2bb65edbe639327c4d81109e57466c2",
+    "wall_seconds": 61.199
+  },
+  "summary": "GREEN: `python3 scripts/check-claim-certificates.py` exited 0 in 61.2s, replaying 1 fact-ledger evidence row(s)."
+}

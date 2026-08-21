@@ -1,0 +1,687 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:loadplan-hazmat-iis",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-loadplan-hazmat-iis.json",
+            "sha256": "63c97f1fb5e3dae37d2470efe4486c8f11c5a65bcde769788f54a21c2e1cb73e"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Fourteen rows of a 90-row outbound load plan are an irreducible infeasible subsystem"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "2 of 2 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "unclassified",
+            "unclassified",
+            "field absent: nobody has looked (distinct from `unknown`, which means we checked)"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-loadplan-hazmat-iis.json",
+              "sha256": "63c97f1fb5e3dae37d2470efe4486c8f11c5a65bcde769788f54a21c2e1cb73e"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-loadplan-hazmat-iis.json",
+            "sha256": "63c97f1fb5e3dae37d2470efe4486c8f11c5a65bcde769788f54a21c2e1cb73e"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "search-certificate"
+          ],
+          [
+            "axiom_footprint",
+            "smtlib2-linear-arithmetic-semantics; axeyum-smtlib.parser-faithfulness-of-the-committed-instance; axeyum-ir.ground-evaluator-model-replay-semantics; axeyum-solver.alethe-lia-generic-refutation-checker"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-loadplan-hazmat-iis.json",
+              "sha256": "63c97f1fb5e3dae37d2470efe4486c8f11c5a65bcde769788f54a21c2e1cb73e"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-loadplan-hazmat-iis.json",
+            "sha256": "63c97f1fb5e3dae37d2470efe4486c8f11c5a65bcde769788f54a21c2e1cb73e"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 9504,
+            "path": "artifacts/instances/infeasibility/loadplan-hazmat.smt2",
+            "sha256": "42c73e3924ea7ece3656f08a6b23e78d2fb97b14575428d04ec1d84e84e61dc0"
+          }
+        ],
+        "cert_kind": "unsat-drat",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run --release -q -p axeyum-solver --features full --example infeasibility_iis -- artifacts/instances/infeasibility/loadplan-hazmat.smt2 --expect-rows 90 --expect-core 14"
+        },
+        "summary": {
+          "text": "The fourteen named rows are jointly unsatisfiable."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-loadplan-hazmat-iis.json",
+            "sha256": "63c97f1fb5e3dae37d2470efe4486c8f11c5a65bcde769788f54a21c2e1cb73e"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: loadplan-core-refutation"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row loadplan-core-refutation as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "loadplan-core-refutation"
+          ],
+          [
+            "ledger kind",
+            "unsat-certificate"
+          ],
+          [
+            "cert_kind",
+            "unsat-drat"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-deletion-minimizer-producing-solve, axeyum-alethe-lia-generic-checker-fresh-re-derivation, z3-4.13.3-independent-core-extraction"
+          ],
+          [
+            "supports",
+            "The fourteen named rows are jointly unsatisfiable."
+          ],
+          [
+            "artifact",
+            "artifacts/instances/infeasibility/loadplan-hazmat.smt2"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "42c73e3924ea7ece3656f08a6b23e78d2fb97b14575428d04ec1d84e84e61dc0"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-loadplan-hazmat-iis.json",
+              "sha256": "63c97f1fb5e3dae37d2470efe4486c8f11c5a65bcde769788f54a21c2e1cb73e"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-loadplan-hazmat-iis.json",
+            "sha256": "63c97f1fb5e3dae37d2470efe4486c8f11c5a65bcde769788f54a21c2e1cb73e"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Ran 2026-08-14 in 0.94s. `produce_evidence` on the fourteen reports `Evidence::UnsatArithAletheProof`, `check_outcome` = `verified`, trust step `farkas` CERTIFIED THIS RUN. z3 4.13.3 independently returns the same fourteen names. The five weight-capacity rows appear in NO core: total payload is 3500 kg against 6000 kg of capacity, so the model is not short of anything -- which is the point of including them.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-loadplan-hazmat-iis.json",
+            "sha256": "63c97f1fb5e3dae37d2470efe4486c8f11c5a65bcde769788f54a21c2e1cb73e"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence loadplan-core-refutation"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/instances/infeasibility/loadplan-hazmat.smt2",
+        "render_hint": "code",
+        "sha256": "42c73e3924ea7ece3656f08a6b23e78d2fb97b14575428d04ec1d84e84e61dc0",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-loadplan-hazmat-iis.json",
+            "sha256": "63c97f1fb5e3dae37d2470efe4486c8f11c5a65bcde769788f54a21c2e1cb73e"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 9504,
+            "path": "artifacts/instances/infeasibility/loadplan-hazmat.smt2",
+            "sha256": "42c73e3924ea7ece3656f08a6b23e78d2fb97b14575428d04ec1d84e84e61dc0"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run --release -q -p axeyum-solver --features full --example infeasibility_iis -- artifacts/instances/infeasibility/loadplan-hazmat.smt2 --expect-rows 90 --expect-core 14"
+        },
+        "summary": {
+          "text": "Dropping any single one of the fourteen leaves a satisfiable set -- the core is irreducible."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-loadplan-hazmat-iis.json",
+            "sha256": "63c97f1fb5e3dae37d2470efe4486c8f11c5a65bcde769788f54a21c2e1cb73e"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: loadplan-leave-one-out-witnesses"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row loadplan-leave-one-out-witnesses as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "loadplan-leave-one-out-witnesses"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-ir-ground-evaluator-model-replay-per-subset, z3-4.13.3-independent-leave-one-out-sweep"
+          ],
+          [
+            "supports",
+            "Dropping any single one of the fourteen leaves a satisfiable set -- the core is irreducible."
+          ],
+          [
+            "artifact",
+            "artifacts/instances/infeasibility/loadplan-hazmat.smt2"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "42c73e3924ea7ece3656f08a6b23e78d2fb97b14575428d04ec1d84e84e61dc0"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-loadplan-hazmat-iis.json",
+              "sha256": "63c97f1fb5e3dae37d2470efe4486c8f11c5a65bcde769788f54a21c2e1cb73e"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-loadplan-hazmat-iis.json",
+            "sha256": "63c97f1fb5e3dae37d2470efe4486c8f11c5a65bcde769788f54a21c2e1cb73e"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "All fourteen leave-one-out subsets re-solved to `sat`, each model replayed against its own subset by the IR ground evaluator; the instance minus the core is likewise `sat` with a replayed model. z3 agrees on all fourteen. A pigeonhole core is IRREDUCIBLE BUT NOT SMALL: 14 of 90 rows is 15.6%, three times the roster's ratio, and that is a property of the contradiction rather than of the minimizer. Every one of the fourteen is load-bearing -- drop one exclusion and the offending pallet escapes to an uncertified truck; drop one segregation row and two class-3 pallets share a truck. This is the honest shape of a counting argument: an IIS explains WHICH rows collide, not WHY, and 'three into two' is the reader's inference, not the certificate's content.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-loadplan-hazmat-iis.json",
+            "sha256": "63c97f1fb5e3dae37d2470efe4486c8f11c5a65bcde769788f54a21c2e1cb73e"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence loadplan-leave-one-out-witnesses"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/instances/infeasibility/loadplan-hazmat.smt2",
+        "render_hint": "code",
+        "sha256": "42c73e3924ea7ece3656f08a6b23e78d2fb97b14575428d04ec1d84e84e61dc0",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-loadplan-hazmat-iis.json",
+            "sha256": "63c97f1fb5e3dae37d2470efe4486c8f11c5a65bcde769788f54a21c2e1cb73e"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-14"
+          ],
+          [
+            "established_by",
+            "axeyum lane `infeasibility`, 2026-08-14: crates/axeyum-solver/examples/infeasibility_iis.rs over the committed instance"
+          ],
+          [
+            "source",
+            "instance authored by this lane (scripts/gen-infeasibility-instances.py); not extracted from any corpus"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-loadplan-hazmat-iis.json",
+              "sha256": "63c97f1fb5e3dae37d2470efe4486c8f11c5a65bcde769788f54a21c2e1cb73e"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-loadplan-hazmat-iis.json",
+            "sha256": "63c97f1fb5e3dae37d2470efe4486c8f11c5a65bcde769788f54a21c2e1cb73e"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "14 of 90 rows, 15.6%. Kept in the ledger precisely BECAUSE the ratio is worse than the roster's: a lane that reported only its best instance would be selecting on the outcome. The two shapes are the two things an IIS can be -- a local collision of a handful of independent rows (roster, 4.9%) and a global counting argument whose every participant is necessary (here, 15.6%) -- and a consumer choosing between an IIS and a commercial one should know both exist. WHY `search-certificate`: see F:roster-icu-night-iis, same reasoning.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-loadplan-hazmat-iis.json",
+            "sha256": "63c97f1fb5e3dae37d2470efe4486c8f11c5a65bcde769788f54a21c2e1cb73e"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-loadplan-hazmat-iis",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#index",
+        "label": "Unconnected: see the index",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:loadplan-hazmat-iis",
+    "title": "Fourteen rows of a 90-row outbound load plan are an irreducible infeasible subsystem"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-loadplan-hazmat-iis.json",
+        "sha256": "63c97f1fb5e3dae37d2470efe4486c8f11c5a65bcde769788f54a21c2e1cb73e"
+      }
+    ]
+  },
+  "schema_version": 1
+}

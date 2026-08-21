@@ -1,0 +1,1402 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:shipped-front-door-reaches-no-real-axiom",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+            "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "No shipped reconstruction route BUILDS the AxReal axiom package: the trusted surface is declared but never reached"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "7 of 7 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "unknown",
+            "unknown",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+              "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+            "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "kernel-lean"
+          ],
+          [
+            "axiom_footprint",
+            "[] -- axiom-free; only kernel-lean can deliver this"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+              "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+            "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo test -q -p axeyum-solver --features full --test front_door_reaches_no_real_axiom -- --nocapture 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'FRONT_DOOR_REACH control \\| arith_prelude_builds=1$'"
+        },
+        "summary": {
+          "text": "The negative control: the counter DOES move. After the four measurements the same process builds the AxReal package on purpose and the counter reads 1."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+            "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: shipped-front-door-reaches-no-real-axiom-1"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row shipped-front-door-reaches-no-real-axiom-1 as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "shipped-front-door-reaches-no-real-axiom-1"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "The negative control: the counter DOES move. After the four measurements the same process builds the AxReal package on purpose and the counter reads 1."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+              "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+            "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Without this row every other row here would pass just as happily against an arith_prelude_builds() wired to return 0. This is the row that makes the four zeros a finding rather than a broken instrument, and it is anchored on the value 1 -- not on `nonzero` -- because the control builds the package exactly once.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+            "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo test -q -p axeyum-solver --features full --test front_door_reaches_no_real_axiom -- --nocapture 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'fragment=Lra module=[0-9]+ arith_prelude_builds=0$'"
+        },
+        "summary": {
+          "text": "The purely conjunctive real Farkas arm reaches no AxReal axiom."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+            "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: shipped-front-door-reaches-no-real-axiom-2"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row shipped-front-door-reaches-no-real-axiom-2 as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "shipped-front-door-reaches-no-real-axiom-2"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "The purely conjunctive real Farkas arm reaches no AxReal axiom."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+              "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+            "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "Anchored on the fragment AND the counter value on the same line, so a fixture that silently stopped routing to Lra cannot satisfy it. `module=[0-9]+` is left free because the module size is not the claim.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+            "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-002",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo test -q -p axeyum-solver --features full --test front_door_reaches_no_real_axiom -- --nocapture 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'fragment=Sos module=[0-9]+ arith_prelude_builds=0$'"
+        },
+        "summary": {
+          "text": "The sum-of-squares arm -- the only one that touches the multiplicative laws and sq_nonneg -- reaches no AxReal axiom."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+            "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: shipped-front-door-reaches-no-real-axiom-3"
+    },
+    {
+      "id": "evidence-002-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row shipped-front-door-reaches-no-real-axiom-3 as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "shipped-front-door-reaches-no-real-axiom-3"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "The sum-of-squares arm -- the only one that touches the multiplicative laws and sq_nonneg -- reaches no AxReal axiom."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+              "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+            "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-002-notes",
+      "kind": {
+        "text": "Same anchoring. Sos is listed separately from Lra because it is a different reconstructor (reconstruct_sos_to_lean_module), not a different fixture through the same one.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+            "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-003",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo test -q -p axeyum-solver --features full --test front_door_reaches_no_real_axiom -- --nocapture 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'fragment=DisjunctiveLra module=[0-9]+ arith_prelude_builds=0$'"
+        },
+        "summary": {
+          "text": "The Or.rec case-split arm reaches no AxReal axiom."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+            "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: shipped-front-door-reaches-no-real-axiom-4"
+    },
+    {
+      "id": "evidence-003-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row shipped-front-door-reaches-no-real-axiom-4 as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "shipped-front-door-reaches-no-real-axiom-4"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "The Or.rec case-split arm reaches no AxReal axiom."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+              "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+            "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-003-notes",
+      "kind": {
+        "text": "Same anchoring. `fragment=DisjunctiveLra` cannot be matched by the Lra pattern only because that pattern requires the space after `Lra`; both are pinned separately so a collapse of one arm into the other is visible.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+            "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-004",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo test -q -p axeyum-solver --features full --test front_door_reaches_no_real_axiom -- --nocapture 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'fragment=IntFarkas module=[0-9]+ arith_prelude_builds=0$'"
+        },
+        "summary": {
+          "text": "The integer Farkas arm -- the one that DID build all 30 until 2026-08-18 -- reaches no AxReal axiom."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+            "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: shipped-front-door-reaches-no-real-axiom-5"
+    },
+    {
+      "id": "evidence-004-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row shipped-front-door-reaches-no-real-axiom-5 as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "shipped-front-door-reaches-no-real-axiom-5"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "The integer Farkas arm -- the one that DID build all 30 until 2026-08-18 -- reaches no AxReal axiom."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+              "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+            "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-004-notes",
+      "kind": {
+        "text": "The row this fact exists for. Restore the pre-2026-08-18 body of reconstruct_int_farkas_to_lean_module and this row is the one that fails -- mutation-checked, and all nine tests of tests/farkas_over_the_integers.rs, the suite named for this route, pass under that mutation because they assert on the module and the footprint, both of which were already clean.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+            "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-005",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo test -q -p axeyum-solver --features full --test front_door_reaches_no_real_axiom -- --nocapture 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'test result: ok\\. 1 passed'"
+        },
+        "summary": {
+          "text": "The measurement ran to completion: the single test in this binary passed, so no fixture was skipped and no assertion was left unevaluated."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+            "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: shipped-front-door-reaches-no-real-axiom-6"
+    },
+    {
+      "id": "evidence-005-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row shipped-front-door-reaches-no-real-axiom-6 as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "shipped-front-door-reaches-no-real-axiom-6"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "The measurement ran to completion: the single test in this binary passed, so no fixture was skipped and no assertion was left unevaluated."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+              "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+            "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-005-notes",
+      "kind": {
+        "text": "Completion alone is not a finding, which is why this row is not the only one. It is here because the counter rows are printed BEFORE they are asserted: an output carrying four `arith_prelude_builds=0` lines and a failed assertion afterwards would satisfy the pattern rows on its own.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+            "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-006",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo test -q -p axeyum-solver --features full --test front_door_reaches_no_real_axiom -- --nocapture 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'FRONT_DOOR_REACH .*arith_prelude_builds=0$')\" = 4"
+        },
+        "summary": {
+          "text": "The POPULATION: exactly four fixtures reported zero. A row that stopped being measured -- deleted, renamed, or routed to a different fragment -- fails this count instead of shrinking the evidence silently."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+            "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: shipped-front-door-reaches-no-real-axiom-7"
+    },
+    {
+      "id": "evidence-006-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row shipped-front-door-reaches-no-real-axiom-7 as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "shipped-front-door-reaches-no-real-axiom-7"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "The POPULATION: exactly four fixtures reported zero. A row that stopped being measured -- deleted, renamed, or routed to a different fragment -- fails this count instead of shrinking the evidence silently."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+              "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+            "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-006-notes",
+      "kind": {
+        "text": "The count is 4 and not `at least one`. `grep -q` over the same pattern would pass on a single surviving fixture, which is exactly how the previous gate for this claim (examples/front_door_carrier.rs, three real-typed fixtures) reported an axiom-free front door while the integer arm built all 30: it was never pointed at that arm.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+            "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "dependency-graph",
+      "kind": {
+        "alt": "Dependency graph around F:shipped-front-door-reaches-no-real-axiom: 1 dependencies, 0 dependents",
+        "caption": {
+          "text": "Immediate dependencies and dependents of this fact"
+        },
+        "spec": {
+          "edges": [
+            {
+              "from": "F:shipped-front-door-reaches-no-real-axiom",
+              "label": "depends_on",
+              "to": "F:shipped-front-door-refutes-over-constructed-reals"
+            }
+          ],
+          "figure_type": "dep-graph",
+          "nodes": [
+            {
+              "group": "focus",
+              "href": "F-shipped-front-door-reaches-no-real-axiom.doc.json",
+              "id": "F:shipped-front-door-reaches-no-real-axiom",
+              "label": "shipped-front-door-reaches-no-real-axiom",
+              "status": "proved",
+              "tooltip": "No shipped reconstruction route BUILDS the AxReal axiom package: the trusted surface is declared but never reached"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "F-shipped-front-door-refutes-over-constructed-reals.doc.json",
+              "id": "F:shipped-front-door-refutes-over-constructed-reals",
+              "label": "shipped-front-door-refutes-over-constructed-reals",
+              "status": "proved",
+              "tooltip": "The shipped LRA/SOS front door reconstructs over the constructed reals, and the refutation it returns rests on zero carrier axioms"
+            }
+          ],
+          "rankdir": "TB"
+        },
+        "type": "figure"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+            "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Dependency neighbourhood"
+    },
+    {
+      "id": "depends-on",
+      "kind": {
+        "caption": {
+          "text": "Depends on"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:shipped-front-door-refutes-over-constructed-reals",
+            "The shipped LRA/SOS front door reconstructs over the constructed reals, and the refutation it returns rests on zero carrier axioms",
+            "proved",
+            "F-shipped-front-door-refutes-over-constructed-reals.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+              "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+            "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depends on"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-18"
+          ],
+          [
+            "established_by",
+            "axeyum-lean-kernel arith_prelude::arith_prelude_builds + axeyum-solver tests/front_door_reaches_no_real_axiom.rs (agent-retire-real lane, commit b20720e9f)"
+          ],
+          [
+            "source",
+            "measured in this repository; no external source"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+              "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+            "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "WHAT THIS DOES NOT SAY. It does not retire the 30 AxReal axioms: `nat_axiom_inventory --include-constructed` still reports `real: axiom=30` and the Lean axiom ledger is still 30 of 30 real, because that ledger publishes what is DECLARED. This fact is about what is REACHED, and the gap between the two is now the whole of the trusted surface. Nor does it say the package is unused: LraReconstructCtx::try_new() still builds it in tests, in examples/front_door_carrier.rs and examples/ordered_ring_refutation.rs -- where it is the NEGATIVE CONTROL that keeps every axiom-freedom measurement in this repository from being vacuous -- and in the three relative-consistency models (Int, Rat, CReal), which are statements ABOUT the package and would be unstatable without it. Nor does it cover every public entry point: the fixtures drive prove_unsat_to_lean_module, and a route reachable only from some other entry point is outside what was measured. RENAMED 2026-08-19 (ADR-0522): the package's kernel declarations are now `AxReal`/`AxReal.*`, so this fact spells them that way. Nothing about the measurement moved -- `arith_prelude_builds()` counts calls to `build_arith_prelude`, not names, and every checker_command below is anchored on the counter line rather than on a declaration name.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+            "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-shipped-front-door-reaches-no-real-axiom",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c01",
+        "label": "Component 1 of 38 (43 facts)",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:shipped-front-door-reaches-no-real-axiom",
+    "title": "No shipped reconstruction route BUILDS the AxReal axiom package: the trusted surface is declared but never reached"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+        "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+      }
+    ]
+  },
+  "schema_version": 1
+}

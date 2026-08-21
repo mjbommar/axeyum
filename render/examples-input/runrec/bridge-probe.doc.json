@@ -1,0 +1,108 @@
+{
+  "blocks": [
+    {
+      "id": "why",
+      "kind": {
+        "text": "PROBE, NOT A DELIVERABLE. This one-page document exists to prove that the run records in this directory are citable by a Doc-IR `claim` -- that the bridge described in `docs/render-2026-08/18-runrec-diary.md` under \"Claims on fact cards\" is a wiring job and not a research problem. It is hand-written because the producer that will emit these blocks (`facts_to_docir.py`) is owned by another lane; nothing here is generated, and nothing here should be treated as the shape a fact card will finally have. Every number and status on this page comes from a record, not from this file.",
+        "type": "prose"
+      },
+      "tag": "essential"
+    },
+    {
+      "id": "claim-nat-add-comm",
+      "kind": {
+        "evidence": [
+          {
+            "claim_key": "nat-add-comm-kernel-add-comm",
+            "record_id": "R:nat-add-comm-kernel-add-comm",
+            "role": "primary",
+            "run_record": "R-nat-add-comm-kernel-add-comm.json"
+          },
+          {
+            "claim_key": "nat-add-comm-footprint-add-comm",
+            "record_id": "R:shared-nat-axiom-inventory-b5515894",
+            "role": "replication",
+            "run_record": "R-shared-nat-axiom-inventory-b5515894.json"
+          }
+        ],
+        "label": "F:nat-add-comm, evidence replayed",
+        "note": {
+          "text": "The declared status is `proved`, which is the fact ledger's `epistemic_status` for this entry. Assembly may only lower it, and it does: the first record caps the claim at `checked` because that row's checker matches the theorem's NAME and not its type. The visible gap between the ledger's badge and the rendered badge is the point of the exercise."
+        },
+        "statement": {
+          "source": "text",
+          "text": "Addition on the naturals is commutative -- `Nat.add_comm`, admitted by the Lean-style kernel with an empty axiom footprint. Both of the fact ledger's evidence rows for this entry were re-run from the repository root and both exited 0."
+        },
+        "status": "proved",
+        "type": "claim"
+      },
+      "tag": "essential"
+    },
+    {
+      "id": "claim-rado-lower-bound",
+      "kind": {
+        "evidence": [
+          {
+            "claim_key": "rado-r4-a5-b3-lower-bound-replay",
+            "record_id": "R:rado-r4-a5-b3-lower-bound-replay",
+            "role": "primary",
+            "run_record": "R-rado-r4-a5-b3-lower-bound-replay.json"
+          },
+          {
+            "claim_key": "rado-r4-a5-b3-deciding-instance-regeneration",
+            "record_id": "R:rado-r4-a5-b3-deciding-instance-regeneration",
+            "role": "replay",
+            "run_record": "R-rado-r4-a5-b3-deciding-instance-regeneration.json"
+          }
+        ],
+        "label": "F:rado-r4-a5-b3, witness and deciding instance replayed",
+        "note": {
+          "text": "The witness replay and the CNF regeneration are genuinely different checks over different bytes, so they are cited under different roles. Neither of them re-checks the DRAT refutation that carries the upper bound: the fact's own `axiom_footprint` says `rado.certificate-not-re-checked-per-commit`, and no run record here changes that."
+        },
+        "statement": {
+          "source": "text",
+          "text": "The stored colouring for R_4(5(x-y)=3z) > 624 re-verifies from its file, and the deciding CNF at n = 625 comes back byte-identical out of the encoder that produced it."
+        },
+        "status": "evidence",
+        "type": "claim"
+      },
+      "tag": "essential"
+    },
+    {
+      "id": "claim-control",
+      "kind": {
+        "evidence": [
+          {
+            "claim_key": "name-only-row-is-blind-to-the-type",
+            "record_id": "R:control-nat-add-comm-name-only-blind",
+            "role": "negative-control",
+            "run_record": "R-control-nat-add-comm-name-only-blind.json"
+          }
+        ],
+        "label": "Control: the name-only kernel row notices a restated theorem",
+        "note": {
+          "text": "This claim is DELIBERATELY FALSE and is here to be rendered red. The control record exited 0 with `outcome: refuted` -- the mutation was not caught -- and assembly's `refuted` outcome is absorbing, so this claim can only render `refuted` no matter what status this file declares. It is also the only role under which that record may be cited at all."
+        },
+        "statement": {
+          "source": "text",
+          "text": "`F:nat-add-comm`'s `kernel-add-comm` row would fail if the kernel admitted a theorem of that name with a different type."
+        },
+        "status": "checked",
+        "type": "claim"
+      },
+      "tag": "essential"
+    }
+  ],
+  "meta": {
+    "doc_id": "runrec-bridge-probe",
+    "epoch": {
+      "commit": "839d1e50a287fa816490dd2ee7ec19d6a202c25d",
+      "source": "commit",
+      "unix": 1787319265
+    },
+    "genre": "result",
+    "subtitle": "Do the fact-ledger run records in this directory support Doc-IR claims?",
+    "title": "Run-record bridge probe"
+  },
+  "schema_version": 1
+}

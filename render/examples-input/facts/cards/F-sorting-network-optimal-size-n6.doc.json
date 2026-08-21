@@ -1,0 +1,728 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:sorting-network-optimal-size-n6",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-sorting-network-optimal-size-n6.json",
+            "sha256": "44ce2586e03b3999c012ada6d320abcd4abf038aeeafe03023341fa8d5073b02"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "The optimal sorting network on 6 channels has exactly 12 comparators"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "2 of 2 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-sorting-network-optimal-size-n6.json",
+              "sha256": "44ce2586e03b3999c012ada6d320abcd4abf038aeeafe03023341fa8d5073b02"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-sorting-network-optimal-size-n6.json",
+            "sha256": "44ce2586e03b3999c012ada6d320abcd4abf038aeeafe03023341fa8d5073b02"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "smt-clausal"
+          ],
+          [
+            "axiom_footprint",
+            "sortnet.encoder-faithfulness; sortnet.zero-one-principle; sortnet.symmetry-breaking-soundness"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-sorting-network-optimal-size-n6.json",
+              "sha256": "44ce2586e03b3999c012ada6d320abcd4abf038aeeafe03023341fa8d5073b02"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-sorting-network-optimal-size-n6.json",
+            "sha256": "44ce2586e03b3999c012ada6d320abcd4abf038aeeafe03023341fa8d5073b02"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "unsat-drat",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "expected_seconds": 490,
+          "line": "test \"$(cargo run --release -q -p axeyum-cnf --example sorting_network -- --n 6 --size 11 --cubes \"${TMPDIR:-/tmp}/sortnet-n6-$$\" --depth 3 --jobs 4 --cube-sym full 2>/dev/null | grep -oE 'all 51 cubes refuted')\" = 'all 51 cubes refuted'"
+        },
+        "summary": {
+          "text": "no network of 11 comparators sorts all 6-input sequences"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-sorting-network-optimal-size-n6.json",
+            "sha256": "44ce2586e03b3999c012ada6d320abcd4abf038aeeafe03023341fa8d5073b02"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: lower-unsat-n6"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row lower-unsat-n6 as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "lower-unsat-n6"
+          ],
+          [
+            "ledger kind",
+            "unsat-certificate"
+          ],
+          [
+            "cert_kind",
+            "unsat-drat"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-cdcl-monolithic-sym-full, axeyum-cdcl-cube-depth3, axeyum-cdcl-cube-depth4, axeyum-cdcl-cube-sym-none-independent"
+          ],
+          [
+            "supports",
+            "no network of 11 comparators sorts all 6-input sequences"
+          ],
+          [
+            "checker_seconds",
+            "490"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-sorting-network-optimal-size-n6.json",
+              "sha256": "44ce2586e03b3999c012ada6d320abcd4abf038aeeafe03023341fa8d5073b02"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-sorting-network-optimal-size-n6.json",
+            "sha256": "44ce2586e03b3999c012ada6d320abcd4abf038aeeafe03023341fa8d5073b02"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Four routes, and they do not share a search. Monolithic --sym full: Unsat in 1195s single-core. Cube split depth 3 (51 branches) 151s and depth 4 (322 branches) 138s on 16 cores -- different partitions of the same space, so their agreement is not a re-run. The control that matters is the fourth: --cube-sym none, where every prefix position ranges over EVERY comparator and the suffix gets no symmetry break, leaving output-set equality as the only reduction -- 1441 branches, same UNSAT, 1446.61s. An unsound symmetry break manufactures a wrong UNSAT, so a verdict that survives having every relabelling argument removed is the one worth believing. Every branch streams its own DRAT proof to disk and is read back and re-checked by this repository's backward checker before it counts as refuted. RESOURCE NOTE: this checker needs writable scratch under $TMPDIR -- each of the 4 concurrent branches streams a 30-75 MB certificate, which is deleted as soon as the backward checker accepts it. One observed run exited 1 on a shared box whose /tmp tmpfs was at 80% and climbing under other work; the same command passed immediately before and after. A failure here is far more likely to be a full scratch filesystem than a mathematical one, and stderr (suppressed above) names the failing branch.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-sorting-network-optimal-size-n6.json",
+            "sha256": "44ce2586e03b3999c012ada6d320abcd4abf038aeeafe03023341fa8d5073b02"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "report-run",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run --release -q -p axeyum-cnf --example sorting_network -- --n 6 --size 12 --sym full 2>/dev/null | grep -q ': SORTS'"
+        },
+        "summary": {
+          "text": "an explicit 12-comparator network sorts every input"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-sorting-network-optimal-size-n6.json",
+            "sha256": "44ce2586e03b3999c012ada6d320abcd4abf038aeeafe03023341fa8d5073b02"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: upper-sorts-n6"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row upper-sorts-n6 as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "upper-sorts-n6"
+          ],
+          [
+            "ledger kind",
+            "exhaustive-enumeration"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-cdcl-model, independent-0-1-enumeration"
+          ],
+          [
+            "supports",
+            "an explicit 12-comparator network sorts every input"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-sorting-network-optimal-size-n6.json",
+              "sha256": "44ce2586e03b3999c012ada6d320abcd4abf038aeeafe03023341fa8d5073b02"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-sorting-network-optimal-size-n6.json",
+            "sha256": "44ce2586e03b3999c012ada6d320abcd4abf038aeeafe03023341fa8d5073b02"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "The witness network is replayed over all 2^6 zero-one inputs by a checker that shares no code with the SAT search. The 0-1 principle makes that sufficient for all totally ordered inputs. The size-12 network was also rediscovered independently by the SAT search under all three cube modes, each time passing the same 0-1 replay.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-sorting-network-optimal-size-n6.json",
+            "sha256": "44ce2586e03b3999c012ada6d320abcd4abf038aeeafe03023341fa8d5073b02"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-14"
+          ],
+          [
+            "established_by",
+            "axeyum SAT core via the prefix/suffix cube split; symmetry-breaking soundness controlled by re-refuting under --cube-sym none"
+          ],
+          [
+            "source",
+            "lane `sorting-networks-2`"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-sorting-network-optimal-size-n6.json",
+              "sha256": "44ce2586e03b3999c012ada6d320abcd4abf038aeeafe03023341fa8d5073b02"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-sorting-network-optimal-size-n6.json",
+            "sha256": "44ce2586e03b3999c012ada6d320abcd4abf038aeeafe03023341fa8d5073b02"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "what",
+            "key": "what"
+          },
+          {
+            "header": "who",
+            "key": "who"
+          }
+        ],
+        "rows": [
+          [
+            "standard textbook attribution; this lane did not consult the primary source",
+            "S(n) for n <= 8 is 0,1,3,5,9,12,16,19",
+            "Floyd and Knuth (1966); Knuth, TAOCP vol. 3"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-sorting-network-optimal-size-n6.json",
+              "sha256": "44ce2586e03b3999c012ada6d320abcd4abf038aeeafe03023341fa8d5073b02"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-sorting-network-optimal-size-n6.json",
+            "sha256": "44ce2586e03b3999c012ada6d320abcd4abf038aeeafe03023341fa8d5073b02"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "concept-refs",
+      "kind": {
+        "caption": {
+          "text": "Concept references (gloss and provenance only, never substance)"
+        },
+        "columns": [
+          {
+            "header": "graph",
+            "key": "graph"
+          },
+          {
+            "header": "ref",
+            "key": "ref"
+          },
+          {
+            "header": "relation",
+            "key": "relation"
+          },
+          {
+            "header": "resolved",
+            "key": "resolved"
+          }
+        ],
+        "rows": [
+          [
+            "math-education",
+            "C:sorting-algorithm",
+            "instance-of",
+            false
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-sorting-network-optimal-size-n6.json",
+              "sha256": "44ce2586e03b3999c012ada6d320abcd4abf038aeeafe03023341fa8d5073b02"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-sorting-network-optimal-size-n6.json",
+            "sha256": "44ce2586e03b3999c012ada6d320abcd4abf038aeeafe03023341fa8d5073b02"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "The cell the previous lane could not reach: size 11 exceeded ten minutes monolithically and was left at S(6) >= 11. The prefix/suffix reduction closed it -- fixing a prefix and encoding only the suffix against the prefix's output set took the refutation from 1195s to 151s. This is validation, not a frontier result: S(n) for optimal SIZE is settled through n = 12 (Harder 2020, arXiv:2012.04400, Isabelle/HOL-verified), and the smallest genuinely open cell is S(13).",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-sorting-network-optimal-size-n6.json",
+            "sha256": "44ce2586e03b3999c012ada6d320abcd4abf038aeeafe03023341fa8d5073b02"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-sorting-network-optimal-size-n6",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#index",
+        "label": "Unconnected: see the index",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:sorting-network-optimal-size-n6",
+    "title": "The optimal sorting network on 6 channels has exactly 12 comparators"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-sorting-network-optimal-size-n6.json",
+        "sha256": "44ce2586e03b3999c012ada6d320abcd4abf038aeeafe03023341fa8d5073b02"
+      }
+    ]
+  },
+  "schema_version": 1
+}

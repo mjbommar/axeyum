@@ -1,0 +1,1208 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:real-lattice-is-constructed-axiom-free",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+            "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "The constructed reals carry max, min and a total absolute value, built with no index shift and no decision procedure"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "5 of 5 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+              "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+            "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "kernel-lean"
+          ],
+          [
+            "axiom_footprint",
+            "[] -- axiom-free; only kernel-lean can deliver this"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+              "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+            "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(scripts/cargo-serialized.sh run -q -p axeyum-lean-kernel --example creal_setoid_witness 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE '94 declarations admitted, trusted surface = 0 [(]empty[)]'"
+        },
+        "summary": {
+          "text": "94 CReal declarations admitted (76 before this lane), every one a checked Definition or Theorem with an empty axiom_footprint, and the whole environment's trusted surface still EMPTY -- read out of the kernel, with the exit status depending on both values."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+            "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: real-lattice-is-constructed-axiom-free-1"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row real-lattice-is-constructed-axiom-free-1 as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "real-lattice-is-constructed-axiom-free-1"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "94 CReal declarations admitted (76 before this lane), every one a checked Definition or Theorem with an empty axiom_footprint, and the whole environment's trusted surface still EMPTY -- read out of the kernel, with the exit status depending on both values."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+              "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+            "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Anchored on TWO values on one line -- the count 94 and `trusted surface = 0 (empty)` -- so a dropped declaration and a leaked axiom each flip it. Verified discriminating by scripts/new-fact.py. This is the row that carries the axiom-freedom claim; the example exits 1 with a named FAIL line if any admitted declaration is an Axiom or Opaque, or if any footprint is non-empty.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+            "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(scripts/cargo-serialized.sh run -q -p axeyum-lean-kernel --example creal_setoid_witness 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'abs is not the identity = true'"
+        },
+        "summary": {
+          "text": "`abs is not the identity` -- CReal.not_equiv_abs_neg_one and CReal.not_le_zero_neg_one are both present as checked theorems, which is what stops the four abs laws being satisfied by `abs x := x`."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+            "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: real-lattice-is-constructed-axiom-free-2"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row real-lattice-is-constructed-axiom-free-2 as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "real-lattice-is-constructed-axiom-free-2"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "`abs is not the identity` -- CReal.not_equiv_abs_neg_one and CReal.not_le_zero_neg_one are both present as checked theorems, which is what stops the four abs laws being satisfied by `abs x := x`."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+              "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+            "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "This is the NON-TRIVIALITY row and it exists because nothing in this fact carries a side condition: the failure mode here is not an uninhabited guard but a DEGENERATE OPERATION. `max x y := x` satisfies le_max_left by reflexivity; `abs x := x` satisfies le_abs_self, neg_le_abs and abs_le -- footprint-free, statements verbatim. Verified discriminating by scripts/new-fact.py (`true` -> `false` kills it). The example's exit status depends on it: witness clause (10).",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+            "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-002",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(scripts/cargo-serialized.sh run -q -p axeyum-lean-kernel --example creal_setoid_witness 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^CReal[.](max|min|abs|le_max_left|le_max_right|max_le|min_le_left|min_le_right|le_min|max_congr|min_congr|abs_congr|le_abs_self|neg_le_abs|abs_le|abs_nonneg|not_le_zero_neg_one|not_equiv_abs_neg_one)[[:space:]]+(definition|theorem)[[:space:]]+-$')\" = 18"
+        },
+        "summary": {
+          "text": "All 18 new declarations -- 3 definitions and 15 theorems -- appear in the witness's inventory with an EMPTY footprint column."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+            "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: real-lattice-is-constructed-axiom-free-3"
+    },
+    {
+      "id": "evidence-002-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row real-lattice-is-constructed-axiom-free-3 as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "real-lattice-is-constructed-axiom-free-3"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "All 18 new declarations -- 3 definitions and 15 theorems -- appear in the witness's inventory with an EMPTY footprint column."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+              "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+            "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-002-notes",
+      "kind": {
+        "text": "A POPULATION check: it catches a declaration disappearing, but no mutation of a surviving row changes the count, which is why it was written with --allow-population-only and is the weakest of the three. It is not load-bearing on its own; row 1 is.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+            "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-003",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal::creal_tests::the_lattice 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'test result: ok\\. 3 passed; 0 failed'"
+        },
+        "summary": {
+          "text": "The fifteen lattice statements are asserted VERBATIM as rendered types (not by footprint); max idempotence, `max 0 1 is not 0`, `min 0 1 is not 1` and `|-1| is not -1` are all admitted THROUGH THE KERNEL from the laws alone; and three one-token mutations are REFUSED."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+            "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: real-lattice-statements-verbatim-and-mutations-refused"
+    },
+    {
+      "id": "evidence-003-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row real-lattice-statements-verbatim-and-mutations-refused as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "real-lattice-statements-verbatim-and-mutations-refused"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "The fifteen lattice statements are asserted VERBATIM as rendered types (not by footprint); max idempotence, `max 0 1 is not 0`, `min 0 1 is not 1` and `|-1| is not -1` are all admitted THROUGH THE KERNEL from the laws alone; and three one-token mutations are REFUSED."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+              "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+            "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-003-notes",
+      "kind": {
+        "text": "Anchored on a NONZERO test count (3), because a filter matching nothing prints 'ok. 0 passed' and exits 0 -- and on `0 failed`, so a green-looking partial run cannot pass. Verified discriminating by scripts/new-fact.py. The three refused mutations are `max x y <= x` (from le_max_left, FALSE at x=0,y=1), `|x| <= 0` (from abs_nonneg, FALSE at x=1), and `not (|1| ~ 1)` -- the abs discrimination's own script with `neg one` replaced by `one`, which is FALSE and must not go through, or the discrimination would be proving nothing about the sign.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+            "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-004",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::the_rational_lattice 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'test result: ok\\. 3 passed; 0 failed'"
+        },
+        "summary": {
+          "text": "Rat.max and Rat.min REDUCE by Eq.refl at four concrete pairs, including one whose argument is negative, and the wrong answer is REFUSED. Every Rat lattice declaration is checked and footprint-free."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+            "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: rational-lattice-computes-on-both-branches"
+    },
+    {
+      "id": "evidence-004-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row rational-lattice-computes-on-both-branches as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "rational-lattice-computes-on-both-branches"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "Rat.max and Rat.min REDUCE by Eq.refl at four concrete pairs, including one whose argument is negative, and the wrong answer is REFUSED. Every Rat lattice declaration is checked and footprint-free."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+              "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+            "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-004-notes",
+      "kind": {
+        "text": "This is the row that pins the OPERATION rather than its laws, one level down: all nine Rat lattice laws are one-sided consequences of max_cases and would hold, footprint-free, of a max that always returned its first argument. Reduction cannot. The negative control (`Rat.max 3 1 = 1` and `Rat.min 3 1 = 3` both REFUSED) is what makes the positive reductions mean anything -- a conversion checker that accepted everything would otherwise make them pass. Anchored on a NONZERO count and `0 failed`; verified discriminating by scripts/new-fact.py.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+            "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "dependency-graph",
+      "kind": {
+        "alt": "Dependency graph around F:real-lattice-is-constructed-axiom-free: 1 dependencies, 0 dependents",
+        "caption": {
+          "text": "Immediate dependencies and dependents of this fact"
+        },
+        "spec": {
+          "edges": [
+            {
+              "from": "F:real-lattice-is-constructed-axiom-free",
+              "label": "depends_on",
+              "to": "F:real-axioms-modelled-by-constructed-setoid"
+            }
+          ],
+          "figure_type": "dep-graph",
+          "nodes": [
+            {
+              "group": "kernel-lean",
+              "href": "F-real-axioms-modelled-by-constructed-setoid.doc.json",
+              "id": "F:real-axioms-modelled-by-constructed-setoid",
+              "label": "real-axioms-modelled-by-constructed-setoid",
+              "status": "proved",
+              "tooltip": "The 30 AxReal axioms are satisfiable: a Bishop setoid over the constructed rationals models all 22 laws at zero trusted declarations"
+            },
+            {
+              "group": "focus",
+              "href": "F-real-lattice-is-constructed-axiom-free.doc.json",
+              "id": "F:real-lattice-is-constructed-axiom-free",
+              "label": "real-lattice-is-constructed-axiom-free",
+              "status": "proved",
+              "tooltip": "The constructed reals carry max, min and a total absolute value, built with no index shift and no decision procedure"
+            }
+          ],
+          "rankdir": "TB"
+        },
+        "type": "figure"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+            "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Dependency neighbourhood"
+    },
+    {
+      "id": "depends-on",
+      "kind": {
+        "caption": {
+          "text": "Depends on"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:real-axioms-modelled-by-constructed-setoid",
+            "The 30 AxReal axioms are satisfiable: a Bishop setoid over the constructed rationals models all 22 laws at zero trusted declarations",
+            "proved",
+            "F-real-axioms-modelled-by-constructed-setoid.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+              "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+            "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depends on"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-19"
+          ],
+          [
+            "established_by",
+            "axeyum-lean-kernel rat_prelude::lattice and creal::lattice (ADR-0519; agent-creal-order lane)"
+          ],
+          [
+            "source",
+            "Bishop-style constructive analysis: the lattice operations are the ones that need no completeness, and over a setoid of regular sequences they are the ones that need no index shift either"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+              "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+            "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "concept-refs",
+      "kind": {
+        "caption": {
+          "text": "Concept references (gloss and provenance only, never substance)"
+        },
+        "columns": [
+          {
+            "header": "graph",
+            "key": "graph"
+          },
+          {
+            "header": "ref",
+            "key": "ref"
+          },
+          {
+            "header": "relation",
+            "key": "relation"
+          },
+          {
+            "header": "resolved",
+            "key": "resolved"
+          }
+        ],
+        "rows": [
+          [
+            "math-education",
+            "C:real-numbers",
+            "about",
+            false
+          ],
+          [
+            "math-education",
+            "C:constructive-analysis",
+            "uses",
+            false
+          ],
+          [
+            "math-education",
+            "C:order-theory",
+            "uses",
+            false
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+              "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+            "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "WHAT THIS DOES NOT SAY. It does not say the order on the reals is decidable: max_cases eliminates into Prop, it is a ONE-LEVEL-DOWN fact about Rat, and `forall x y, CReal.le x y or CReal.le y x` is neither proved nor assumed. It does not say `Equiv (abs x) x or Equiv (abs x) (neg x)`: that is a decision on the sign of a real and is not available; everything proved here is one-sided. It does not give max_comm, max_assoc, `max a a = a` as a Rat identity, or `max (a+q) (b+q) = max a b + q` -- nothing consumes them, and each is one more max_cases when something does. It does not introduce Rat.abs: ADR-0512's `-q <= r and r <= q` encoding is still how every bound in the real construction is written, and CReal.abs is `max x (neg x)` one level up. It does not assume or use Markov's principle in any disguise: `not (x ~ 0) -> x # 0` is neither proved nor assumed. And it does not make sqrt, suprema or completeness any cheaper -- abs is the SHAPE those statements take, not a step toward proving them.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+            "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-real-lattice-is-constructed-axiom-free",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c01",
+        "label": "Component 1 of 38 (43 facts)",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:real-lattice-is-constructed-axiom-free",
+    "title": "The constructed reals carry max, min and a total absolute value, built with no index shift and no decision procedure"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+        "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+      }
+    ]
+  },
+  "schema_version": 1
+}

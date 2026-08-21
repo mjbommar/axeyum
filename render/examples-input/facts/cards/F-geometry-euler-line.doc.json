@@ -1,0 +1,949 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:geometry-euler-line",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-euler-line.json",
+            "sha256": "bdf9a1eca3d88b2b66d45643cea322fd709b60255cea0028b28bdabb14b4dbbc"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Euler's line: the circumcentre, the centroid and the orthocentre of a non-degenerate triangle are collinear"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "3 of 3 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-euler-line.json",
+              "sha256": "bdf9a1eca3d88b2b66d45643cea322fd709b60255cea0028b28bdabb14b4dbbc"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-euler-line.json",
+            "sha256": "bdf9a1eca3d88b2b66d45643cea322fd709b60255cea0028b28bdabb14b4dbbc"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "cas-certificate"
+          ],
+          [
+            "axiom_footprint",
+            "cas.exact-rational-polynomial-normal-form; geometry.cartesian-coordinatisation-of-the-euclidean-plane; geometry.characteristic-zero-specialisation; geometry.rabinowitsch-inverse-specialisation; geometry.nondegeneracy.abc-not-collinear"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-euler-line.json",
+              "sha256": "bdf9a1eca3d88b2b66d45643cea322fd709b60255cea0028b28bdabb14b4dbbc"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-euler-line.json",
+            "sha256": "bdf9a1eca3d88b2b66d45643cea322fd709b60255cea0028b28bdabb14b4dbbc"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 32375,
+            "path": "artifacts/geometry-certificates/euler-line.json",
+            "sha256": "59cd8513e4e48c7d4e4d5c19b43c7938b2ab285258cadbb43d1fa0aa3f864269"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-cas --test geometry_certificate_artifacts"
+        },
+        "summary": {
+          "text": "the saturated cofactor certificate, re-checked from the committed artifact by a checker that shares no code with the search that produced it -- and, on this theorem, no code with EITHER of the two searches that can produce it"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-euler-line.json",
+            "sha256": "bdf9a1eca3d88b2b66d45643cea322fd709b60255cea0028b28bdabb14b4dbbc"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: geometry-certificate-euler-line"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row geometry-certificate-euler-line as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "geometry-certificate-euler-line"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "geometry_check::check_certificate shape pass (the saturation generator is REBUILT here as `collinear(A,B,C) * Zinv0 - 1` from the condition polynomial the file declares, and compared with the generator the cofactors are taken against; the four hypothesis generators are compared against the stated hypotheses unchanged, which is what stops a solved-form substitution from being passed off as a proof of the original statement), geometry_check::check_certificate symbolic pass (the identity target = sum of cofactor times generator expanded with MvPoly add/mul alone -- no Groebner machinery, no monomial order, no S-polynomials, and equally no linear algebra; 278 cofactor terms over 5 generators), geometry_check::check_certificate numeric pass (the same identity re-evaluated at 24 deterministic integer points through MvPoly::evaluate, a different code path from the symbolic expansion), geometry_check::check_certificate usage pass (the saturation generator must carry a NONZERO cofactor, or the certificate would be advertising a weaker theorem than it proved), geometry_check::check_certificate degenerate-witness pass (A = B = (0,0), C = (1,0), O = (1/2,0), H = (0,1) replayed: all four hypotheses vanish, the condition polynomial vanishes, and the conclusion does NOT), geometry_check::check_certificate configuration pass (A = (0,0), B = (4,0), C = (1,3) with O = (2,1), H = (1,1), G = (5/3,1) replayed: hypotheses vanish, the condition does not, the conclusion does)"
+          ],
+          [
+            "supports",
+            "the saturated cofactor certificate, re-checked from the committed artifact by a checker that shares no code with the search that produced it -- and, on this theorem, no code with EITHER of the two searches that can produce it"
+          ],
+          [
+            "artifact",
+            "artifacts/geometry-certificates/euler-line.json"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "59cd8513e4e48c7d4e4d5c19b43c7938b2ab285258cadbb43d1fa0aa3f864269"
+          ],
+          [
+            "measurement",
+            "certified 2026-08-15 in 4-6 ms by linear elimination (`certify_by_linear_elimination`), with NO Groebner handover: 0 S-pairs processed, 0 queued, no intermediate basis, and a residue of exactly zero. The two 2x2 systems have determinants 4*collinear(A,B,C) and collinear(A,B,C), so the multiplier is 4*collinear(A,B,C)^2 and divides back out through the Rabinowitsch generator. For contrast, the same theorem on the cofactor-tracked Buchberger route does not return: measured under grevlex by the `geometry-frontier` lane, 65 S-pairs processed left 528 queued with a 33-element basis still growing..."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-euler-line.json",
+              "sha256": "bdf9a1eca3d88b2b66d45643cea322fd709b60255cea0028b28bdabb14b4dbbc"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-euler-line.json",
+            "sha256": "bdf9a1eca3d88b2b66d45643cea322fd709b60255cea0028b28bdabb14b4dbbc"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "The certificate uses the Rabinowitsch trick: a fresh variable Zinv0 and the generator `collinear(A,B,C) * Zinv0 - 1`. Specialising Zinv0 := 1/collinear(A,B,C) is legitimate exactly when A, B, C are not collinear, and that is the ONLY place the side condition enters. Because the multiplier this route divides out is the SQUARE of the condition polynomial, the saturation cofactor is not the familiar minus-the-conclusion of the other saturated certificates but exactly -conclusion*(1 + collinear(A,B,C)*Zinv0) -- the N = 2 case of 1 = z^N d^N - g * sum_{i=1..N} C(N,i) g^{i-1}, asserted term for term by `the_squared_multiplier_produces_the_expected_rabinowitsch_cofactor`. Four tamper controls in the cited suite bear on this fact and every one runs against EVERY saturated certificate: deleting the degenerate counterexample is rejected; replacing it with a generic configuration is rejected; replacing it with A = B = (0,0), C = (1,0), O = (1/2,0), H = (0,0) -- which genuinely violates `abc-not-collinear` and yet leaves O, G, H collinear -- is also rejected; and an unused saturation is rejected.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-euler-line.json",
+            "sha256": "bdf9a1eca3d88b2b66d45643cea322fd709b60255cea0028b28bdabb14b4dbbc"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence geometry-certificate-euler-line"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/geometry-certificates/euler-line.json",
+        "render_hint": "json",
+        "sha256": "59cd8513e4e48c7d4e4d5c19b43c7938b2ab285258cadbb43d1fa0aa3f864269",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-euler-line.json",
+            "sha256": "bdf9a1eca3d88b2b66d45643cea322fd709b60255cea0028b28bdabb14b4dbbc"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 32375,
+            "path": "artifacts/geometry-certificates/euler-line.json",
+            "sha256": "59cd8513e4e48c7d4e4d5c19b43c7938b2ab285258cadbb43d1fa0aa3f864269"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-cas --test geometry_certificate_artifacts"
+        },
+        "summary": {
+          "text": "that the single non-degeneracy condition this certificate consumes is minimal ABSOLUTELY rather than budget-relative (ADR-0455)"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-euler-line.json",
+            "sha256": "bdf9a1eca3d88b2b66d45643cea322fd709b60255cea0028b28bdabb14b4dbbc"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: geometry-condition-minimality-euler-line"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row geometry-condition-minimality-euler-line as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "geometry-condition-minimality-euler-line"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "`every_used_condition_set_is_minimal_absolutely` replays, for every PROPER subset S of the conditions a committed certificate uses, a configuration that satisfies every hypothesis, keeps every condition in S nonzero, and FALSIFIES a conclusion -- which refutes membership in the saturated ideal of S outright, since a member would have to vanish at every common zero of those generators, the same configuration is independently replayed by geometry_check::check_certificate's degenerate-witness pass, from the artifact, by code that knows nothing about minimality"
+          ],
+          [
+            "supports",
+            "that the single non-degeneracy condition this certificate consumes is minimal ABSOLUTELY rather than budget-relative (ADR-0455)"
+          ],
+          [
+            "artifact",
+            "artifacts/geometry-certificates/euler-line.json"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "59cd8513e4e48c7d4e4d5c19b43c7938b2ab285258cadbb43d1fa0aa3f864269"
+          ],
+          [
+            "measurement",
+            "1 proper subset of 1 condition refuted for this fact; 4 proper subsets across the 4 saturated certificates in the corpus (each uses exactly one condition, so each has exactly one proper subset -- the empty one), 0 undecided."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-euler-line.json",
+              "sha256": "bdf9a1eca3d88b2b66d45643cea322fd709b60255cea0028b28bdabb14b4dbbc"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-euler-line.json",
+            "sha256": "bdf9a1eca3d88b2b66d45643cea322fd709b60255cea0028b28bdabb14b4dbbc"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "The distinction ADR-0455 draws matters here more than on the six older facts, because the route that reached this theorem CANNOT establish minimality the way `geometry_order_audit` does for those: the multiplier a linear elimination divides out is an artifact of the decomposition it chose, so the route could in principle consume a condition the theorem does not need. It does not, and the proof is the counterexample rather than a search. The only proper subset of a one-element condition set is the empty one, and A = B = (0,0), C = (1,0), O = (1/2,0), H = (0,1) satisfies all four hypotheses while falsifying the conclusion -- so the conclusion is not in the plain hypothesis ideal, decided, with no budget, no monomial order and no algorithm anywhere in the argument. No larger budget, faster order or better algorithm can report this theorem as unconditional.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-euler-line.json",
+            "sha256": "bdf9a1eca3d88b2b66d45643cea322fd709b60255cea0028b28bdabb14b4dbbc"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence geometry-condition-minimality-euler-line"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/geometry-certificates/euler-line.json",
+        "render_hint": "json",
+        "sha256": "59cd8513e4e48c7d4e4d5c19b43c7938b2ab285258cadbb43d1fa0aa3f864269",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-euler-line.json",
+            "sha256": "bdf9a1eca3d88b2b66d45643cea322fd709b60255cea0028b28bdabb14b4dbbc"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-002",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 74746,
+            "path": "crates/axeyum-cas/src/geometry_corpus.rs",
+            "sha256": "addc6009e2af55f050ef63081cfdf70e2ec6d11585a465ce2fafe67a775b3987"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-cas --lib geometry && cargo test -p axeyum-cas --test geometry_encoding_agreement"
+        },
+        "summary": {
+          "text": "that the polynomials in the certificate mean the geometric predicates they are named after -- specifically that the equidistance polynomials really do locate a circumcentre and the perpendicularity polynomials an orthocentre"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-euler-line.json",
+            "sha256": "bdf9a1eca3d88b2b66d45643cea322fd709b60255cea0028b28bdabb14b4dbbc"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: geometry-coordinatisation-control-euler-line"
+    },
+    {
+      "id": "evidence-002-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row geometry-coordinatisation-control-euler-line as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "geometry-coordinatisation-control-euler-line"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "`euler_line_holds_at_exactly_constructed_circumcentres` constructs O and H EXACTLY by Cramer's rule over the rationals, in a helper that shares no code with the certifier, for a deterministic sweep of 8 triangles (obtuse, right, isosceles and generic), and asserts on each that all four hypothesis polynomials vanish, the condition polynomial does not, and the conclusion polynomial does, the same test carries a control on itself: moving the constructed circumcentre one unit along x or along y must break the conclusion for at least one of the two axes, so the sweep cannot be passed by the zero polynomial. Only one axis is required because a unit step ALONG the Euler line keeps the three points collinear -- the first triangle in the sweep has a horizontal Euler line and is exactly that case, axeyum_cas::geometry::Point::collinear (a cross product over concrete rationals, from an older module written against ax + by + c = 0 line normals) agreed with the collinearity polynomial used both as the conclusion and as the non-degeneracy condition, over the 244-configuration integer sweep in geometry_encoding_agreement, axeyum_cas::geometry::Point::distance equality -- computed as EXACT SURDS through simplify_radicals over CasExpr, a completely different route from the squared-distance polynomial -- agreed with the `equidistant` polynomial on the same sweep, axeyum_cas::geometry::Line::is_perpendicular (orthogonal normals rather than a dot product) agreed with the perpendicularity polynomial on the same sweep"
+          ],
+          [
+            "supports",
+            "that the polynomials in the certificate mean the geometric predicates they are named after -- specifically that the equidistance polynomials really do locate a circumcentre and the perpendicularity polynomials an orthocentre"
+          ],
+          [
+            "artifact",
+            "crates/axeyum-cas/src/geometry_corpus.rs"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "addc6009e2af55f050ef63081cfdf70e2ec6d11585a465ce2fafe67a775b3987"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-euler-line.json",
+              "sha256": "bdf9a1eca3d88b2b66d45643cea322fd709b60255cea0028b28bdabb14b4dbbc"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-euler-line.json",
+            "sha256": "bdf9a1eca3d88b2b66d45643cea322fd709b60255cea0028b28bdabb14b4dbbc"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-002-notes",
+      "kind": {
+        "text": "This control was written while the theorem was on the FRONTIER -- to keep it unproved rather than unchecked -- and is kept now that it is proved because it checks something the certificate cannot. The certificate establishes a polynomial identity; nothing inside a polynomial identity can tell you that `equidistant` means equidistant. It also is the diagnosis the linear route acts on, in miniature: the exact construction it performs IS Cramer's rule on the two 2x2 systems, and its determinant is a multiple of the very collinearity polynomial named as the non-degeneracy condition.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-euler-line.json",
+            "sha256": "bdf9a1eca3d88b2b66d45643cea322fd709b60255cea0028b28bdabb14b4dbbc"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-002-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence geometry-coordinatisation-control-euler-line"
+        },
+        "max_bytes": 65536,
+        "path": "crates/axeyum-cas/src/geometry_corpus.rs",
+        "render_hint": "link",
+        "sha256": "addc6009e2af55f050ef63081cfdf70e2ec6d11585a465ce2fafe67a775b3987",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-euler-line.json",
+            "sha256": "bdf9a1eca3d88b2b66d45643cea322fd709b60255cea0028b28bdabb14b4dbbc"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-15"
+          ],
+          [
+            "established_by",
+            "lane euler-linearity: axeyum_cas::linear_elim (untrusted adjugate-based elimination producing cofactors in the ORIGINAL generators) + axeyum_cas::geometry_certify::certify_by_linear_elimination (multiplier division through the Rabinowitsch generator, minimal condition subset) + axeyum_cas::geometry_check (independent re-derivation)"
+          ],
+          [
+            "source",
+            "classical; coordinatised by the `geometry` lane, measured as divergent rather than slow by the `geometry-frontier` lane, and reached by the `euler-linearity` lane after that lane's structural observation -- that all four hypotheses are affine in the four unknown coordinates -- was turned into an algorithm"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-euler-line.json",
+              "sha256": "bdf9a1eca3d88b2b66d45643cea322fd709b60255cea0028b28bdabb14b4dbbc"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-euler-line.json",
+            "sha256": "bdf9a1eca3d88b2b66d45643cea322fd709b60255cea0028b28bdabb14b4dbbc"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "what",
+            "key": "what"
+          },
+          {
+            "header": "where",
+            "key": "where"
+          },
+          {
+            "header": "who",
+            "key": "who"
+          }
+        ],
+        "rows": [
+          [
+            "standard historical attribution; this lane did not consult the primary source",
+            "the circumcentre, centroid and orthocentre of a triangle are collinear, with OG : GH = 1 : 2",
+            "Solutio facilis problematum quorundam geometricorum difficillimorum, Novi Commentarii academiae scientiarum Petropolitanae 11 (1767), 103-123",
+            "Leonhard Euler"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-euler-line.json",
+              "sha256": "bdf9a1eca3d88b2b66d45643cea322fd709b60255cea0028b28bdabb14b4dbbc"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-euler-line.json",
+            "sha256": "bdf9a1eca3d88b2b66d45643cea322fd709b60255cea0028b28bdabb14b4dbbc"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "Established on the `cas-certificate` route, in the geometry family, and it is the first fact here reached by changing the ALGORITHM rather than a budget or a search parameter. The six oldest geometry facts were reached by Buchberger's algorithm; the rhombus was reached by changing the monomial order; this one was reached because a Groebner engine was being asked to rediscover Cramer's rule by monomial reduction, and was given the rule instead. What matters for the ledger is that the change is confined to the SEARCH: `linear_elim` emits cofactors against the original hypothesis polynomials -- the adjugate identity adj(M)*(M*u + k) = det(M)*u + adj(M)*k expresses det(M)*u_j as a polynomial free of the unknowns plus a combination of the original rows -- so the artifact is the same object, over the same generator list, re-derived by the same independent checker, which knows about neither route. The generator-identity assertion in the shape pass is what makes that auditable rather than asserted: a route that had substituted solved forms into the generator list would have proved a different theorem, and the checker would reject it. `geometry.nondegeneracy.abc-not-collinear` is listed in the footprint even though it also appears as a hypothesis of `formal.statement`, deliberately: on this route the footprint is the field a reader scans to see what a proof rests on, and a side condition invisible there is precisely how a mechanised geometry proof comes to be quoted as unconditional. The SMT-LIB transcription above was cross-evaluated against the certificate's own polynomials at 400 random rational configurations, 2400 comparisons, zero mismatches -- prose review does not catch a transposed sign, and a fact whose formal statement drifts from the artifact it cites is exactly the failure this ledger exists to prevent.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-euler-line.json",
+            "sha256": "bdf9a1eca3d88b2b66d45643cea322fd709b60255cea0028b28bdabb14b4dbbc"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-geometry-euler-line",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#index",
+        "label": "Unconnected: see the index",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:geometry-euler-line",
+    "title": "Euler's line: the circumcentre, the centroid and the orthocentre of a non-degenerate triangle are collinear"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-geometry-euler-line.json",
+        "sha256": "bdf9a1eca3d88b2b66d45643cea322fd709b60255cea0028b28bdabb14b4dbbc"
+      }
+    ]
+  },
+  "schema_version": 1
+}

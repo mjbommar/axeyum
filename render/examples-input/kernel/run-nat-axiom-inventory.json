@@ -1,0 +1,283 @@
+{
+  "claims": [
+    {
+      "key": "nat-axiom-free",
+      "note": "--require-axiom-free nat turns the printed zero into a check, and a prelude the tool does not enumerate is an ERROR rather than a silent pass -- so this zero means `enumerated and found empty`, not `never enumerated`.",
+      "statement": "The Nat prelude's trusted surface is empty: 0 axioms, 0 opaque declarations, 0 quotient declarations.",
+      "status": "evidence"
+    },
+    {
+      "key": "logic-axiom-free",
+      "note": "--require-axiom-free logic.",
+      "statement": "The logic prelude's trusted surface is empty, enumerated separately from Nat so its share is attributable rather than folded in.",
+      "status": "evidence"
+    },
+    {
+      "key": "integer-axiom-free",
+      "note": "--expect-axioms integer=0. This number was 34, then 1; the expectation is re-asserted on every run precisely because it moves.",
+      "statement": "The integer prelude's trusted surface is empty: the Int development is derived, not assumed.",
+      "status": "evidence"
+    },
+    {
+      "key": "real-assumes-thirty",
+      "note": "--expect-axioms real=30 fails on drift in either direction; the honest expectation for a prelude that assumes by design is the committed number, not zero.",
+      "statement": "The Real prelude asserts 30 declarations outright. It is NOT axiom-free, by design, and every one of them is named in the assumptions table.",
+      "status": "evidence"
+    },
+    {
+      "key": "string-assumes-one",
+      "note": "--expect-axioms string=1; width 2 is the enumerated width.",
+      "statement": "The string prelude, built at width 2, asserts one declaration.",
+      "status": "evidence"
+    }
+  ],
+  "id": "R:kernel-nat-axiom-inventory",
+  "outcome": "established",
+  "provenance": {
+    "command": "cargo run --release -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free logic --require-axiom-free nat --expect-axioms axreal=30 --expect-axioms integer=0 --expect-axioms rat=0 --expect-axioms string=0",
+    "epoch": {
+      "commit": "7805ef8b3187468be75109ed94d97fb9e9df2abd",
+      "source": "commit",
+      "unix": 1787288415
+    },
+    "exit_status": 0,
+    "generator": "crates/axeyum-lean-kernel/examples/nat_axiom_inventory.rs",
+    "inputs": [
+      {
+        "path": "crates/axeyum-lean-kernel/examples/nat_axiom_inventory.rs",
+        "role": "source",
+        "sha256": "e03de885f92ffde076a2a09a7e7d7a894679e73d93161b59e938a9135b9ba6b6"
+      }
+    ]
+  },
+  "replay": {
+    "cwd": ".",
+    "expected_exit_status": 0,
+    "expected_seconds": 1,
+    "line": "cargo run --release -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free logic --require-axiom-free nat --expect-axioms axreal=30 --expect-axioms integer=0 --expect-axioms rat=0 --expect-axioms string=0"
+  },
+  "schema_version": 1,
+  "stats": {
+    "axreal_trusted": 30,
+    "integer_trusted": 0,
+    "logic_trusted": 0,
+    "nat_trusted": 0,
+    "rat_trusted": 0,
+    "string_trusted": 0
+  },
+  "summary": "The trusted surface (axiom + opaque + quotient) of all five prelude builders: logic 0, nat 0, integer 0, string 1, real 30 -- each number pinned by a flag that fails on drift.",
+  "tables": {
+    "assumptions": {
+      "columns": [
+        "prelude",
+        "kind",
+        "declaration"
+      ],
+      "rows": [
+        [
+          "axreal",
+          "axiom",
+          "AxReal"
+        ],
+        [
+          "axreal",
+          "axiom",
+          "AxReal.add"
+        ],
+        [
+          "axreal",
+          "axiom",
+          "AxReal.add_assoc"
+        ],
+        [
+          "axreal",
+          "axiom",
+          "AxReal.add_comm"
+        ],
+        [
+          "axreal",
+          "axiom",
+          "AxReal.add_le_add"
+        ],
+        [
+          "axreal",
+          "axiom",
+          "AxReal.add_lt_add_of_le_of_lt"
+        ],
+        [
+          "axreal",
+          "axiom",
+          "AxReal.add_neg"
+        ],
+        [
+          "axreal",
+          "axiom",
+          "AxReal.add_zero"
+        ],
+        [
+          "axreal",
+          "axiom",
+          "AxReal.le"
+        ],
+        [
+          "axreal",
+          "axiom",
+          "AxReal.le_of_lt"
+        ],
+        [
+          "axreal",
+          "axiom",
+          "AxReal.le_refl"
+        ],
+        [
+          "axreal",
+          "axiom",
+          "AxReal.le_trans"
+        ],
+        [
+          "axreal",
+          "axiom",
+          "AxReal.left_distrib"
+        ],
+        [
+          "axreal",
+          "axiom",
+          "AxReal.lt"
+        ],
+        [
+          "axreal",
+          "axiom",
+          "AxReal.lt_irrefl"
+        ],
+        [
+          "axreal",
+          "axiom",
+          "AxReal.lt_of_le_of_lt"
+        ],
+        [
+          "axreal",
+          "axiom",
+          "AxReal.lt_of_lt_of_le"
+        ],
+        [
+          "axreal",
+          "axiom",
+          "AxReal.lt_trans"
+        ],
+        [
+          "axreal",
+          "axiom",
+          "AxReal.mul"
+        ],
+        [
+          "axreal",
+          "axiom",
+          "AxReal.mul_assoc"
+        ],
+        [
+          "axreal",
+          "axiom",
+          "AxReal.mul_comm"
+        ],
+        [
+          "axreal",
+          "axiom",
+          "AxReal.mul_le_mul_of_nonneg_left"
+        ],
+        [
+          "axreal",
+          "axiom",
+          "AxReal.mul_nonneg"
+        ],
+        [
+          "axreal",
+          "axiom",
+          "AxReal.mul_one"
+        ],
+        [
+          "axreal",
+          "axiom",
+          "AxReal.mul_zero"
+        ],
+        [
+          "axreal",
+          "axiom",
+          "AxReal.neg"
+        ],
+        [
+          "axreal",
+          "axiom",
+          "AxReal.one"
+        ],
+        [
+          "axreal",
+          "axiom",
+          "AxReal.sq_nonneg"
+        ],
+        [
+          "axreal",
+          "axiom",
+          "AxReal.zero"
+        ],
+        [
+          "axreal",
+          "axiom",
+          "AxReal.zero_lt_one"
+        ]
+      ]
+    },
+    "trusted-surface": {
+      "columns": [
+        "prelude",
+        "axiom",
+        "opaque",
+        "quotient",
+        "total trusted"
+      ],
+      "rows": [
+        [
+          "logic",
+          "0",
+          "0",
+          "0",
+          "0"
+        ],
+        [
+          "nat",
+          "0",
+          "0",
+          "0",
+          "0"
+        ],
+        [
+          "axreal",
+          "30",
+          "0",
+          "0",
+          "30"
+        ],
+        [
+          "integer",
+          "0",
+          "0",
+          "0",
+          "0"
+        ],
+        [
+          "rat",
+          "0",
+          "0",
+          "0",
+          "0"
+        ],
+        [
+          "string",
+          "0",
+          "0",
+          "0",
+          "0"
+        ]
+      ]
+    }
+  }
+}

@@ -1,0 +1,1120 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:real-axioms-modelled-by-constructed-setoid",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
+            "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "The 30 AxReal axioms are satisfiable: a Bishop setoid over the constructed rationals models all 22 laws at zero trusted declarations"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "3 of 3 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
+              "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
+            "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "kernel-lean"
+          ],
+          [
+            "axiom_footprint",
+            "[] -- axiom-free; only kernel-lean can deliver this"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
+              "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
+            "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo run -q -p axeyum-lean-kernel --example creal_model_witness 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^law[[:space:]]+AxReal[.]add_comm[[:space:]]+CReal[.]add_comm[[:space:]]+\\[\\][[:space:]]'"
+        },
+        "summary": {
+          "text": "The additive-commutativity law of the AxReal package is modelled by CReal.add_comm, with an empty axiom footprint."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
+            "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: creal-model-add_comm"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row creal-model-add_comm as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "creal-model-add_comm"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "The additive-commutativity law of the AxReal package is modelled by CReal.add_comm, with an empty axiom footprint."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
+              "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
+            "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Anchored on the AxReal law name, the CReal witness name AND the empty footprint column, so a rename, a swapped pairing, or a witness that grew a dependency on a trusted declaration all fail. Verified to fail when the subject is mangled.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
+            "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo run -q -p axeyum-lean-kernel --example creal_model_witness 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^law[[:space:]]+AxReal[.]mul_comm[[:space:]]+CReal[.]mul_comm[[:space:]]+\\[\\][[:space:]]'"
+        },
+        "summary": {
+          "text": "A multiplicative law is modelled too -- multiplication is the half that needed a canonical bound derived from regularity."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
+            "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: creal-model-mul_comm"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row creal-model-mul_comm as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "creal-model-mul_comm"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "A multiplicative law is modelled too -- multiplication is the half that needed a canonical bound derived from regularity."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
+              "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
+            "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "Second law from the other half of the ring structure, so the pair cannot both pass on additive-only work.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
+            "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-002",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo run -q -p axeyum-lean-kernel --example creal_model_witness 2>&1) && printf '%s\\n' \"$out\" | grep -qE '22/22 witnesses have an EMPTY axiom footprint'"
+        },
+        "summary": {
+          "text": "All 22 laws are modelled, all footprints empty, and the seven discrimination witnesses hold -- the example exits non-zero otherwise."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
+            "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: creal-model-population"
+    },
+    {
+      "id": "evidence-002-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row creal-model-population as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "creal-model-population"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "All 22 laws are modelled, all footprints empty, and the seven discrimination witnesses hold -- the example exits non-zero otherwise."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
+              "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
+            "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-002-notes",
+      "kind": {
+        "text": "Captures BOTH streams: the per-law rows go to stdout and the summary to stderr, so the obvious `2>/dev/null` form silently matches nothing and passes for the wrong reason. Found by running this row before committing it. The population comes from the environment rather than a hand-written table, so dropping a law fails the coverage check instead of shrinking a count.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
+            "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "dependency-graph",
+      "kind": {
+        "alt": "Dependency graph around F:real-axioms-modelled-by-constructed-setoid: 3 dependencies, 4 dependents",
+        "caption": {
+          "text": "Immediate dependencies and dependents of this fact"
+        },
+        "spec": {
+          "edges": [
+            {
+              "from": "F:complex-ring-constructed-axiom-free",
+              "label": "depends_on",
+              "to": "F:real-axioms-modelled-by-constructed-setoid"
+            },
+            {
+              "from": "F:farkas-refutation-over-constructed-reals",
+              "label": "depends_on",
+              "to": "F:real-axioms-modelled-by-constructed-setoid"
+            },
+            {
+              "from": "F:rat-add-neg-inverse",
+              "label": "depends_on",
+              "to": "F:rat-mul-renormalises"
+            },
+            {
+              "from": "F:rat-mul-renormalises",
+              "label": "depends_on",
+              "to": "F:rat-normalize-reduces"
+            },
+            {
+              "from": "F:real-axioms-modelled-by-constructed-setoid",
+              "label": "depends_on",
+              "to": "F:rat-add-neg-inverse"
+            },
+            {
+              "from": "F:real-axioms-modelled-by-constructed-setoid",
+              "label": "depends_on",
+              "to": "F:rat-mul-renormalises"
+            },
+            {
+              "from": "F:real-axioms-modelled-by-constructed-setoid",
+              "label": "depends_on",
+              "to": "F:rat-normalize-reduces"
+            },
+            {
+              "from": "F:real-lattice-is-constructed-axiom-free",
+              "label": "depends_on",
+              "to": "F:real-axioms-modelled-by-constructed-setoid"
+            },
+            {
+              "from": "F:shipped-front-door-refutes-over-constructed-reals",
+              "label": "depends_on",
+              "to": "F:farkas-refutation-over-constructed-reals"
+            },
+            {
+              "from": "F:shipped-front-door-refutes-over-constructed-reals",
+              "label": "depends_on",
+              "to": "F:real-axioms-modelled-by-constructed-setoid"
+            }
+          ],
+          "figure_type": "dep-graph",
+          "nodes": [
+            {
+              "group": "kernel-lean",
+              "href": "F-complex-ring-constructed-axiom-free.doc.json",
+              "id": "F:complex-ring-constructed-axiom-free",
+              "label": "complex-ring-constructed-axiom-free",
+              "status": "proved",
+              "tooltip": "The complex numbers are constructible in this kernel at zero trusted declarations, as a pair setoid over the constructed reals"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "F-farkas-refutation-over-constructed-reals.doc.json",
+              "id": "F:farkas-refutation-over-constructed-reals",
+              "label": "farkas-refutation-over-constructed-reals",
+              "status": "proved",
+              "tooltip": "A Farkas refutation closes over the constructed reals resting on zero carrier axioms, where the same refutation over the axiomatized AxReal package rests on 30"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "F-rat-add-neg-inverse.doc.json",
+              "id": "F:rat-add-neg-inverse",
+              "label": "rat-add-neg-inverse",
+              "status": "proved",
+              "tooltip": "Rational addition renormalises and negation is an additive inverse"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "F-rat-mul-renormalises.doc.json",
+              "id": "F:rat-mul-renormalises",
+              "label": "rat-mul-renormalises",
+              "status": "proved",
+              "tooltip": "Rational multiplication renormalises"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "F-rat-normalize-reduces.doc.json",
+              "id": "F:rat-normalize-reduces",
+              "label": "rat-normalize-reduces",
+              "status": "proved",
+              "tooltip": "The rational smart constructor normalises"
+            },
+            {
+              "group": "focus",
+              "href": "F-real-axioms-modelled-by-constructed-setoid.doc.json",
+              "id": "F:real-axioms-modelled-by-constructed-setoid",
+              "label": "real-axioms-modelled-by-constructed-setoid",
+              "status": "proved",
+              "tooltip": "The 30 AxReal axioms are satisfiable: a Bishop setoid over the constructed rationals models all 22 laws at zero trusted declarations"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "F-real-lattice-is-constructed-axiom-free.doc.json",
+              "id": "F:real-lattice-is-constructed-axiom-free",
+              "label": "real-lattice-is-constructed-axiom-free",
+              "status": "proved",
+              "tooltip": "The constructed reals carry max, min and a total absolute value, built with no index shift and no decision procedure"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "F-shipped-front-door-refutes-over-constructed-reals.doc.json",
+              "id": "F:shipped-front-door-refutes-over-constructed-reals",
+              "label": "shipped-front-door-refutes-over-constructed-reals",
+              "status": "proved",
+              "tooltip": "The shipped LRA/SOS front door reconstructs over the constructed reals, and the refutation it returns rests on zero carrier axioms"
+            }
+          ],
+          "rankdir": "TB"
+        },
+        "type": "figure"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
+            "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Dependency neighbourhood"
+    },
+    {
+      "id": "depends-on",
+      "kind": {
+        "caption": {
+          "text": "Depends on"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:rat-add-neg-inverse",
+            "Rational addition renormalises and negation is an additive inverse",
+            "proved",
+            "F-rat-add-neg-inverse.doc.json"
+          ],
+          [
+            "F:rat-mul-renormalises",
+            "Rational multiplication renormalises",
+            "proved",
+            "F-rat-mul-renormalises.doc.json"
+          ],
+          [
+            "F:rat-normalize-reduces",
+            "The rational smart constructor normalises",
+            "proved",
+            "F-rat-normalize-reduces.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
+              "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
+            "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depends on"
+    },
+    {
+      "id": "depended-on-by",
+      "kind": {
+        "caption": {
+          "text": "Depended on by"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:complex-ring-constructed-axiom-free",
+            "The complex numbers are constructible in this kernel at zero trusted declarations, as a pair setoid over the constructed reals",
+            "proved",
+            "F-complex-ring-constructed-axiom-free.doc.json"
+          ],
+          [
+            "F:farkas-refutation-over-constructed-reals",
+            "A Farkas refutation closes over the constructed reals resting on zero carrier axioms, where the same refutation over the axiomatized AxReal package rests on 30",
+            "proved",
+            "F-farkas-refutation-over-constructed-reals.doc.json"
+          ],
+          [
+            "F:real-lattice-is-constructed-axiom-free",
+            "The constructed reals carry max, min and a total absolute value, built with no index shift and no decision procedure",
+            "proved",
+            "F-real-lattice-is-constructed-axiom-free.doc.json"
+          ],
+          [
+            "F:shipped-front-door-refutes-over-constructed-reals",
+            "The shipped LRA/SOS front door reconstructs over the constructed reals, and the refutation it returns rests on zero carrier axioms",
+            "proved",
+            "F-shipped-front-door-refutes-over-constructed-reals.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
+              "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
+            "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depended on by"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-18"
+          ],
+          [
+            "established_by",
+            "axeyum-lean-kernel creal + creal_model modules (ADR-0512 phases R2 and R4; agent-creal-*, agent-r4-model lanes)"
+          ],
+          [
+            "source",
+            "hand-built from the constructed rationals; Bishop's regular-sequence construction"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
+              "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
+            "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "concept-refs",
+      "kind": {
+        "caption": {
+          "text": "Concept references (gloss and provenance only, never substance)"
+        },
+        "columns": [
+          {
+            "header": "graph",
+            "key": "graph"
+          },
+          {
+            "header": "ref",
+            "key": "ref"
+          },
+          {
+            "header": "relation",
+            "key": "relation"
+          },
+          {
+            "header": "resolved",
+            "key": "resolved"
+          }
+        ],
+        "rows": [
+          [
+            "math-education",
+            "C:real-numbers",
+            "about",
+            false
+          ],
+          [
+            "math-education",
+            "C:cauchy-sequence",
+            "uses",
+            false
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
+              "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
+            "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "WHAT THIS DOES NOT SAY. It does not retire the 30 AxReal axioms, and `nat_axiom_inventory` still reports real: axiom=30. Satisfiable by a constructed object is not the same as unnecessary: 57 files name the AxReal symbols, 13 are rewrite-required consumers, LraReconstructCtx and the ordered-ring telescope touch all 30 fields across 158 accesses, and the axiom ledger is 30 of 30 real. Retiring them is a migration, not a deletion. What it DOES discharge is ADR-0456's caveat that the only model was Int -- 'Int is not R' was the honest limit of that relative-consistency result and no longer applies. Nor is Eq CReal on offer as real equality; it is CReal.Equiv, and the nine restated laws say so in their own statements.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
+            "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-real-axioms-modelled-by-constructed-setoid",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c01",
+        "label": "Component 1 of 38 (43 facts)",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:real-axioms-modelled-by-constructed-setoid",
+    "title": "The 30 AxReal axioms are satisfiable: a Bishop setoid over the constructed rationals models all 22 laws at zero trusted declarations"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
+        "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+      }
+    ]
+  },
+  "schema_version": 1
+}

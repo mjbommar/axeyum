@@ -1,0 +1,724 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:fp8-add-monotone-rne",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-monotone-rne.json",
+            "sha256": "2d6086c6bf2d252a7dc288231a4181652933cfff76a6ee85ac46feaa25c7c48f"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "fp8 E5M2 addition under roundNearestTiesToEven is monotone in its first argument"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "2 of 2 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-fp8-add-monotone-rne.json",
+              "sha256": "2d6086c6bf2d252a7dc288231a4181652933cfff76a6ee85ac46feaa25c7c48f"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-monotone-rne.json",
+            "sha256": "2d6086c6bf2d252a7dc288231a4181652933cfff76a6ee85ac46feaa25c7c48f"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "smt-clausal"
+          ],
+          [
+            "axiom_footprint",
+            "ieee754-2019-arithmetic-semantics-for-the-OCP-fp8-E5M2-layout-as-encoded-by-axeyum-fp-fpa2bv-lowering-and-as-implemented-by-rustc_apfloat; axeyum-fp.add-is-a-differentially-VALIDATED-not-proven-bit-blaster; rounding-mode-roundNearestTiesToEven-only-for-this-fact-though-all-five-were-swept-on-the-enumeration-route; smtlib2-fp.leq-ordering-nan-unordered-plus-zero-equals-minus-zero; tseitin-cnf-encoding-preserves-satisfiability; drat-refutation-semantics-as-implemented-by-axeyum-cnf-check-drat; the-enumeration-covers-the-domain-exactly-2^24-triples-is-every-triple-of-an-8-bit-format; format-fp8-E5M2-only-this-fact-is-not-format-generic-and-says-nothing-about-E4M3"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-fp8-add-monotone-rne.json",
+              "sha256": "2d6086c6bf2d252a7dc288231a4181652933cfff76a6ee85ac46feaa25c7c48f"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-monotone-rne.json",
+            "sha256": "2d6086c6bf2d252a7dc288231a4181652933cfff76a6ee85ac46feaa25c7c48f"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 19845,
+            "path": "crates/axeyum-fp/examples/kernel_equivalence.rs",
+            "sha256": "c5e139f8a11fdf0c7ec88871b8297800e714da9afa98b69fcf34a2d403c3c88a"
+          }
+        ],
+        "cert_kind": "report-run",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run --release -q -p axeyum-fp --example kernel_equivalence -- monotone --all-modes"
+        },
+        "summary": {
+          "text": "Every fp8 E5M2 triple (a, b, c) satisfying the antecedent was enumerated -- 7843500 of the 16777216 triples -- and the consequent held at all of them, under RNE and under each of the other four SMT-LIB rounding modes."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-monotone-rne.json",
+            "sha256": "2d6086c6bf2d252a7dc288231a4181652933cfff76a6ee85ac46feaa25c7c48f"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: fp8-monotone-exhaustive-apfloat"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row fp8-monotone-exhaustive-apfloat as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "fp8-monotone-exhaustive-apfloat"
+          ],
+          [
+            "ledger kind",
+            "exhaustive-enumeration"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "rustc_apfloat-0.2.3-llvm-apfloat-exhaustive-enumeration"
+          ],
+          [
+            "supports",
+            "Every fp8 E5M2 triple (a, b, c) satisfying the antecedent was enumerated -- 7843500 of the 16777216 triples -- and the consequent held at all of them, under RNE and under each of the other four SMT-LIB rounding modes."
+          ],
+          [
+            "artifact",
+            "crates/axeyum-fp/examples/kernel_equivalence.rs"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "c5e139f8a11fdf0c7ec88871b8297800e714da9afa98b69fcf34a2d403c3c88a"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-fp8-add-monotone-rne.json",
+              "sha256": "2d6086c6bf2d252a7dc288231a4181652933cfff76a6ee85ac46feaa25c7c48f"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-monotone-rne.json",
+            "sha256": "2d6086c6bf2d252a7dc288231a4181652933cfff76a6ee85ac46feaa25c7c48f"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Ran 2026-08-14. examined=7843500 failures=0 at RNE, and identically at RNA, RTP, RTN and RTZ. The enumeration is over all 2^24 = 16777216 triples of the 8-bit format; 7843500 of them pass the guard (fp.leq(a,b) holds and neither result is NaN) and are the ones the claim speaks about. `rustc_apfloat` 0.2.3 (LLVM APFloat) shares no code with axeyum's bit-blaster, CNF encoder or SAT core. Ordering is APFloat's PartialOrd, which is SMT-LIB fp.leq: NaN unordered, +0 and -0 equal. The binary exits non-zero on any violation.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-monotone-rne.json",
+            "sha256": "2d6086c6bf2d252a7dc288231a4181652933cfff76a6ee85ac46feaa25c7c48f"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence fp8-monotone-exhaustive-apfloat"
+        },
+        "max_bytes": 65536,
+        "path": "crates/axeyum-fp/examples/kernel_equivalence.rs",
+        "render_hint": "link",
+        "sha256": "c5e139f8a11fdf0c7ec88871b8297800e714da9afa98b69fcf34a2d403c3c88a",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-monotone-rne.json",
+            "sha256": "2d6086c6bf2d252a7dc288231a4181652933cfff76a6ee85ac46feaa25c7c48f"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row fp8-monotone-unsat-drat as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "fp8-monotone-unsat-drat"
+          ],
+          [
+            "ledger kind",
+            "unsat-certificate"
+          ],
+          [
+            "cert_kind",
+            "unsat-drat"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-smtcomp-cli-producing-solve, axeyum-check_drat-independent-proof-check, axeyum-Evidence::check-fresh-parse"
+          ],
+          [
+            "supports",
+            "The negation of formal.statement is unsatisfiable over fp8 E5M2, decided symbolically -- without enumerating the 2^24 triples."
+          ],
+          [
+            "artifact",
+            "artifacts/facts/smt2/neg-fp8-add-monotone-rne.smt2"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "bb5ad973afa0cb27fd3f507da6c41179e6dcdb8d5a31080e546d7acf111cc20a"
+          ],
+          [
+            "replay command",
+            "(absent from the ledger row)"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-fp8-add-monotone-rne.json",
+              "sha256": "2d6086c6bf2d252a7dc288231a4181652933cfff76a6ee85ac46feaa25c7c48f"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-monotone-rne.json",
+            "sha256": "2d6086c6bf2d252a7dc288231a4181652933cfff76a6ee85ac46feaa25c7c48f"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "Ran 2026-08-14: `; evidence kind=unsat-drat certified=1 recheck=ok arena=ok ms=928629`, verdict `unsat`, 25m46.4s wall in a release build on a machine at load 16-25. `recheck=ok` is axeyum's own `check_drat` (RUP+RAT, ADR-0011) re-checking the emitted refutation; `arena=ok` is `Evidence::check` against a fresh parse.\n\nNO EXTERNAL ORACLE AGREES OR DISAGREES, because neither can read the query: z3 4.13.3 returns `unknown` with `(:reason-unknown \"addition/subtract with ebits > sbits not supported\")` -- E5M2 is (_ FloatingPoint 5 3) and 5 > 3 -- and bitwuzla 0.9.1 rejects the format as experimental, its own suggested `--fpexp` escape being a BUILD option that the binary refuses as an invalid runtime flag. The independent confirmation is the exhaustive row above, not a second solver.\n\nTHIS ROW CARRIES NO `checker_command` ON PURPOSE. At 25m46s it would blow any per-checker budget scripts/check-fact-evidence-replay.sh runs with. The fact stays covered by the exhaustive row, which re-runs in about three seconds. To re-derive this row by hand:\n  cargo run --release -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/neg-fp8-add-monotone-rne.smt2",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-monotone-rne.json",
+            "sha256": "2d6086c6bf2d252a7dc288231a4181652933cfff76a6ee85ac46feaa25c7c48f"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence fp8-monotone-unsat-drat"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/facts/smt2/neg-fp8-add-monotone-rne.smt2",
+        "render_hint": "code",
+        "sha256": "bb5ad973afa0cb27fd3f507da6c41179e6dcdb8d5a31080e546d7acf111cc20a",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-monotone-rne.json",
+            "sha256": "2d6086c6bf2d252a7dc288231a4181652933cfff76a6ee85ac46feaa25c7c48f"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-14"
+          ],
+          [
+            "established_by",
+            "fp-kernels lane; an exhaustive LLVM-APFloat enumeration of all 2^24 fp8 E5M2 triples, and independently a symbolic CNF/DRAT refutation from axeyum"
+          ],
+          [
+            "source",
+            "authored here. The proposition is the one a bound-propagation or interval-arithmetic pass over a quantized kernel silently assumes."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-fp8-add-monotone-rne.json",
+              "sha256": "2d6086c6bf2d252a7dc288231a4181652933cfff76a6ee85ac46feaa25c7c48f"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-monotone-rne.json",
+            "sha256": "2d6086c6bf2d252a7dc288231a4181652933cfff76a6ee85ac46feaa25c7c48f"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "what",
+            "key": "what"
+          },
+          {
+            "header": "where",
+            "key": "where"
+          },
+          {
+            "header": "who",
+            "key": "who"
+          },
+          {
+            "header": "year",
+            "key": "year"
+          }
+        ],
+        "rows": [
+          [
+            "standard textbook attribution; this lane did not consult the primary source, and records the citation as the received one. Nothing in the evidence above depends on it -- the property is enumerated here, not derived.",
+            "That each rounding-direction attribute defines a monotone (non-decreasing) map from the extended reals to the format, so a correctly-rounded operation inherits the monotonicity of the exact operation it rounds.",
+            "IEEE Standard for Floating-Point Arithmetic",
+            "IEEE 754-2019, clause 4.3 (rounding-direction attributes)",
+            "2019"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-fp8-add-monotone-rne.json",
+              "sha256": "2d6086c6bf2d252a7dc288231a4181652933cfff76a6ee85ac46feaa25c7c48f"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-monotone-rne.json",
+            "sha256": "2d6086c6bf2d252a7dc288231a4181652933cfff76a6ee85ac46feaa25c7c48f"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "TWO ROUTES, AND NEITHER IS AN EXTERNAL SOLVER. This fact is settled twice: by enumerating every one of the 2^24 fp8 E5M2 triples in about three seconds, and by bit-blasting the guarded miter to CNF and refuting it in 25m46s with a re-checked DRAT proof. Alone in this batch, NEITHER settlement could be cross-checked against z3 or bitwuzla, and that is a measured fact about the field rather than an omission: z3 4.13.3 returns `unknown` on the file with `(:reason-unknown \"addition/subtract with ebits > sbits not supported\")`, because E5M2 is (_ FloatingPoint 5 3) and 5 > 3; bitwuzla 0.9.1 rejects the format outright as experimental, and the `--fpexp` escape named in its own error message is a BUILD option that the binary refuses as an invalid runtime flag. So axeyum decides, at this width, a claim that neither industrial FP solver can read -- which is the direct consequence of ADR-0023 making the FP builders generic over (exp_bits, sig_bits).\n\nWHY THE EXHAUSTIVE ROW CARRIES THE CHECKER AND THE SYMBOLIC ONE DOES NOT. 3s against 25m46s. The cheap row is also the one that rests on less: it does not go through axeyum's fpa2bv lowering, whose `add` is documented in its own source as a validated rather than proven bit-blaster, nor through Tseitin, nor through the SAT core. The footprint has to assume all three for the symbolic row, and none of them for the enumeration. Two routes agreeing across that gap is the evidence.\n\nTHE ARITY WALL. This claim is exhaustive at fp8 and nowhere else. 2^24 triples is seconds; the same claim at binary16 is 2^48 triples and at binary32 is 2^96. Unary claims escape it -- F:fp32-doubling-add-equals-mul-two is enumerated over all 2^32 binary32 values in under a minute -- so it is ARITY, not width, that decides whether brute force is available. The binary16 instance is recorded separately and is still `open`: see F:fp16-add-monotone-rne.\n\nSCOPE. E5M2 only. Nothing here transfers to E4M3, which has no infinities and an all-ones NaN, is therefore not an IEEE format, and which axeyum's `arithmetic_format_supported` gate refuses for exactly that reason.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-monotone-rne.json",
+            "sha256": "2d6086c6bf2d252a7dc288231a4181652933cfff76a6ee85ac46feaa25c7c48f"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-fp8-add-monotone-rne",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#index",
+        "label": "Unconnected: see the index",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:fp8-add-monotone-rne",
+    "title": "fp8 E5M2 addition under roundNearestTiesToEven is monotone in its first argument"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-fp8-add-monotone-rne.json",
+        "sha256": "2d6086c6bf2d252a7dc288231a4181652933cfff76a6ee85ac46feaa25c7c48f"
+      }
+    ]
+  },
+  "schema_version": 1
+}

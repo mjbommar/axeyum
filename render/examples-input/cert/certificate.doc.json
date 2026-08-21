@@ -1,0 +1,696 @@
+{
+  "schema_version": 1,
+  "meta": {
+    "doc_id": "noh-p2-weight-certificate",
+    "title": "The p = 2 tame-point weight certificate",
+    "subtitle": "Closed form, admissibility, and exact sharpness for the Kramer-Miller--Upton weight at p = 2, e = 3",
+    "genre": "system",
+    "authors": [
+      "Axeyum render strand (prose only; every number is machine-produced)"
+    ],
+    "abstract": {
+      "text": "Kramer-Miller and Upton's local-to-global machinery needs an admissible weight, and at $p = 2$ their own remark records that they do not have one. This page is the output of a self-checking program that establishes one: a closed form for the transition coefficients, the valuation identity it implies, admissibility of $a(k) = \\lfloor (k-1)/3 \\rfloor + (k \\bmod 2)$ over a swept range, and a single coefficient that caps the achievable growth rate exactly rather than bracketing it."
+    },
+    "epoch": {
+      "unix": 1787307950,
+      "source": "commit",
+      "commit": "75663ef85c2dad4390a3b6d77361919a914642a9"
+    },
+    "repo": {
+      "url": "https://github.com/mjbommar/axeyum",
+      "commit": "75663ef85c2dad4390a3b6d77361919a914642a9",
+      "root": ""
+    },
+    "options": {
+      "latex": {
+        "detail": "appendix",
+        "package": "axeyum"
+      },
+      "markdown": {
+        "badge_style": "text"
+      }
+    }
+  },
+  "provenance": {
+    "generator": "render/producers/build-certificate-manifest.py (render strand P0-A, agent CERT)",
+    "command": "python3 render/producers/build-certificate-manifest.py",
+    "inputs": [
+      {
+        "path": "render/producers/build-certificate-manifest.py",
+        "sha256": "39039b7c5dac5bf96166d31858aa05122555d35d04c79fec2e5c1ab24f7035a5",
+        "role": "generator"
+      },
+      {
+        "path": "render/examples-input/cert/run-certificate.json",
+        "sha256": "40987dbfe49e77738b8b7072d0dddcca3975b71df8dde4c4ead62c38c965977f",
+        "role": "run-record"
+      },
+      {
+        "path": "render/examples-input/cert/run-mutant-M1.json",
+        "sha256": "6e31ab8b9d5bbdcba40fa6948c25527f8e27b5f0778d727b2d67747974192f2d",
+        "role": "run-record"
+      }
+    ],
+    "exit_status": 0,
+    "epoch": {
+      "unix": 1787307950,
+      "source": "commit",
+      "commit": "75663ef85c2dad4390a3b6d77361919a914642a9"
+    }
+  },
+  "blocks": [
+    {
+      "id": "intro-setting",
+      "tag": "essential",
+      "kind": {
+        "type": "prose",
+        "text": "Kramer-Miller and Upton, *Newton Polygons of Sums on Curves I* (arXiv:2110.08656v1), build a local-to-global comparison out of a WEIGHT: a function $a(k)$ on pole orders that makes a certain truncated space stable under the Frobenius operator $U_p$. At an auxiliary tame point with $\\eta(P) = 1$ their construction needs the weight to satisfy three admissibility conditions, the load-bearing one being $d(k) \\ge 1$ for every $k$ above the truncation, where $d(k)$ measures how far the operator moves a term away from the boundary of the truncated space. Their own Remark 6.5 records that at $p = 2$ the estimate they have is \"too low for applications to the global setting\": the weight they use is not admissible there."
+      },
+      "title": "The gap"
+    },
+    {
+      "id": "intro-result",
+      "tag": "essential",
+      "kind": {
+        "type": "prose",
+        "text": "That gap is closed, elementarily, at $p = 2$ with tame ramification index $e = 3$. The transition coefficients $c_{k,j}$ of $U_2$ turn out to be hypergeometric in closed form (Theorem 1); their $2$-adic valuation is then a digit-sum identity (Theorem 2), which yields a tail bound (Lemma A); the weight $a(k) = \\lfloor (k-1)/3 \\rfloor + (k \\bmod 2)$ -- KMU's own weight plus a parity indicator -- satisfies all three admissibility conditions for every $k$ (Theorem 3); and the achievable growth rate is pinned exactly, not bracketed, by a single coefficient (Theorem 4). The arguments are written out in `newton-over-hodge-char2/research-log/04-weight-proof.md` and were re-derived line by line by an adversarial audit in `newton-over-hodge-char2/research-log/20-verify.md`, Part Two."
+      }
+    },
+    {
+      "id": "intro-this-page",
+      "tag": "essential",
+      "kind": {
+        "type": "prose",
+        "text": "This page is not a summary of that work: it is the output of a checker. Every number below was read out of one run of a self-checking Rust program that recomputes the coefficients in exact rational arithmetic and asserts each claim over a stated finite range, exiting nonzero if any assertion fails. The run wrote a record; the record carries the SHA-256 of the source that produced it, the command that reproduces it, and its exit status; and the claim badges on this page are computed from that record rather than typed. A separate, deliberately broken copy of the same program is run the same way and its failing record is on this page too, folded away below, so that the machinery which turns evidence into badges can be seen failing as well as passing."
+      }
+    },
+    {
+      "id": "claim-theorem-3",
+      "tag": "essential",
+      "kind": {
+        "type": "claim",
+        "label": "Theorem 3 (the closed-form weight is admissible)",
+        "statement": {
+          "source": "text",
+          "text": "For $a(k) = 0$ when $k \\le 3$ and $a(k) = \\lfloor (k-1)/3 \\rfloor + (k \\bmod 2)$ when $k \\ge 4$, KMU's admissibility conditions hold at the tame point with $p = 2$, $e = 3$, $\\mu(P) = 3$: (A1) the weight vanishes below the truncation; (A2) it is $O(k)$; and (A3) $d(k) \\ge 1$ with the minimum attained at the leading term. Checked over $4 \\le k \\le 400$ with support $m \\le 250$: 397 columns, 0 violations, and 0 columns whose minimum sits anywhere but the leading term."
+        },
+        "status": "evidence",
+        "evidence": [
+          {
+            "run_record": "run-certificate.json",
+            "record_id": "R:noh-wt-certificate",
+            "claim_key": "c5-theorem-3-admissibility",
+            "role": "primary"
+          }
+        ],
+        "note": {
+          "text": "A finite sweep, not the proof. The proof -- a three-case parity argument for the tail and a six-case mod-6 identity for the leading term -- is `newton-over-hodge-char2/research-log/04-weight-proof.md` sec. 4, confirmed line by line at `newton-over-hodge-char2/research-log/20-verify.md` P2-3. What the sweep adds is that the argument's conclusion survives contact with the actual numbers over a range no one checked by hand."
+        }
+      }
+    },
+    {
+      "id": "claim-theorem-4",
+      "tag": "essential",
+      "kind": {
+        "type": "claim",
+        "label": "Theorem 4 (sharpness: the bound at $k = 6$ is universal)",
+        "statement": {
+          "source": "text",
+          "text": "$j'(6) + e = 6$, so $k = 6$ lies in its own support and the (A3) constraint there reads $a(6) - a(6) + v_2(c_{6,6}) \\ge d(6)$, in which the weight cancels identically. Since $c_{6,6} = 2$ and $v_2(c_{6,6}) = 1$, $d(6) \\le 1$ for EVERY admissible weight whatsoever -- not merely for the weight above."
+        },
+        "status": "evidence",
+        "evidence": [
+          {
+            "run_record": "run-certificate.json",
+            "record_id": "R:noh-wt-certificate",
+            "claim_key": "c6-theorem-4-sharpness",
+            "role": "primary"
+          }
+        ],
+        "note": {
+          "text": "Two computed facts are asserted here: that $k = 6$ is a self-loop of the support map, and the value of one coefficient's valuation. That a target $d(k) \\ge \\max(1, \\gamma k)$ is therefore achievable if and only if $\\gamma \\le 1/6$ follows in one line ($6\\gamma \\le 1$) and is argued at `newton-over-hodge-char2/research-log/04-weight-proof.md` sec. 5; the certificate prints that consequence but does not separately check it. It replaces an interval -- earlier work bracketed the threshold, first in $[1/6, 1/5)$ and then in $[1/6, 2/11)$ -- with a point, and the witness is one coefficient rather than a linear program."
+        }
+      }
+    },
+    {
+      "id": "steps-k6-self-loop",
+      "tag": "essential",
+      "kind": {
+        "type": "steps",
+        "caption": {
+          "text": "The whole of Theorem 4, in five steps. Every value is read from the run record's statistics; none is transcribed."
+        },
+        "steps": [
+          {
+            "index": 0,
+            "input": {
+              "text": "$k = 6$, $p = 2$, $e = 3$"
+            },
+            "op": "least pole order in the image: $j'(k) = k/2$ for even $k$",
+            "output": {
+              "text": "$j'(6) = 3$"
+            }
+          },
+          {
+            "index": 1,
+            "input": {
+              "text": "$j'(6) = 3$"
+            },
+            "op": "support of $U_2(t^{-6})$ is $j'(6) + e m$, $m \\ge 0$",
+            "output": {
+              "text": "$j \\in \\{3, 6, \\ldots\\}$ -- and $j'(6) + e = 6 = k$, a self-loop"
+            }
+          },
+          {
+            "index": 2,
+            "input": {
+              "text": "closed form of Theorem 1 at $k = 6$"
+            },
+            "op": "$3 \\mid 6$ terminates the product after one factor",
+            "output": {
+              "text": "$U_2(t^{-6}) = 1 \\cdot t^{-3} + 2 \\cdot t^{-6}$, and $c_{6,9} = 0$"
+            }
+          },
+          {
+            "index": 3,
+            "input": {
+              "text": "$c_{6,6} = 2$"
+            },
+            "op": "$2$-adic valuation",
+            "output": {
+              "text": "$v_2(c_{6,6}) = 1$"
+            }
+          },
+          {
+            "index": 4,
+            "input": {
+              "text": "the (A3) constraint at $(k, j) = (6, 6)$: $a(6) - a(6) + v_2(c_{6,6}) \\ge d(6)$"
+            },
+            "op": "the weight cancels; substitute the valuation",
+            "output": {
+              "text": "$d(6) \\le 1$ for every weight; for the weight of Theorem 3, $a(6) = 1$, $a(3) = 0$ and $d(6) = 1$, so the bound is attained"
+            },
+            "note": {
+              "text": "The two tightnesses are complementary: this is the one place Lemma A is tight, and it is exactly where the parity indicator lowers the increment rather than raising it."
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "table-d-k",
+      "tag": "detail",
+      "kind": {
+        "type": "table",
+        "caption": {
+          "text": "$d(k)$ for the weight of Theorem 3, taken from the `d-table` of run record `R:noh-wt-certificate` -- every row of it: the certificate swept $4 \\le k \\le 400$ (397 columns). No row is copied into this document, so a changed measurement changes this table. `argmin m` is the term of the support at which the minimum is attained -- it is the leading term $m = 0$ in every column."
+        },
+        "from_run": {
+          "run_record": "run-certificate.json",
+          "table": "d-table",
+          "record_id": "R:noh-wt-certificate"
+        }
+      }
+    },
+    {
+      "id": "figure-weight-and-slack",
+      "tag": "essential",
+      "kind": {
+        "type": "figure",
+        "caption": {
+          "text": "The weight $a(k)$ and the slack $d(k)$ it buys, over the first 48 pole orders. $a(k)$ is a staircase of slope $1/3$ with a parity indicator riding on it; $d(k)$ is the distance from the boundary of the truncated space, and the flat line at $d = 1$ that it keeps returning to is why the growth rate cannot exceed $k/6$."
+        },
+        "alt": "Two step plots against pole order k. The upper series, the weight a(k), rises in a sawtooth staircase. The lower series, the slack d(k), rises on average but repeatedly returns to 1, its universal floor.",
+        "spec": {
+          "figure_type": "plot",
+          "plot_type": "steps",
+          "x_label": "pole order k",
+          "y_label": "value",
+          "series": [
+            {
+              "label": "a(k), the weight",
+              "points": [
+                [
+                  1,
+                  0
+                ],
+                [
+                  2,
+                  0
+                ],
+                [
+                  3,
+                  0
+                ],
+                [
+                  4,
+                  1
+                ],
+                [
+                  5,
+                  2
+                ],
+                [
+                  6,
+                  1
+                ],
+                [
+                  7,
+                  3
+                ],
+                [
+                  8,
+                  2
+                ],
+                [
+                  9,
+                  3
+                ],
+                [
+                  10,
+                  3
+                ],
+                [
+                  11,
+                  4
+                ],
+                [
+                  12,
+                  3
+                ],
+                [
+                  13,
+                  5
+                ],
+                [
+                  14,
+                  4
+                ],
+                [
+                  15,
+                  5
+                ],
+                [
+                  16,
+                  5
+                ],
+                [
+                  17,
+                  6
+                ],
+                [
+                  18,
+                  5
+                ],
+                [
+                  19,
+                  7
+                ],
+                [
+                  20,
+                  6
+                ],
+                [
+                  21,
+                  7
+                ],
+                [
+                  22,
+                  7
+                ],
+                [
+                  23,
+                  8
+                ],
+                [
+                  24,
+                  7
+                ],
+                [
+                  25,
+                  9
+                ],
+                [
+                  26,
+                  8
+                ],
+                [
+                  27,
+                  9
+                ],
+                [
+                  28,
+                  9
+                ],
+                [
+                  29,
+                  10
+                ],
+                [
+                  30,
+                  9
+                ],
+                [
+                  31,
+                  11
+                ],
+                [
+                  32,
+                  10
+                ],
+                [
+                  33,
+                  11
+                ],
+                [
+                  34,
+                  11
+                ],
+                [
+                  35,
+                  12
+                ],
+                [
+                  36,
+                  11
+                ],
+                [
+                  37,
+                  13
+                ],
+                [
+                  38,
+                  12
+                ],
+                [
+                  39,
+                  13
+                ],
+                [
+                  40,
+                  13
+                ],
+                [
+                  41,
+                  14
+                ],
+                [
+                  42,
+                  13
+                ],
+                [
+                  43,
+                  15
+                ],
+                [
+                  44,
+                  14
+                ],
+                [
+                  45,
+                  15
+                ],
+                [
+                  46,
+                  15
+                ],
+                [
+                  47,
+                  16
+                ],
+                [
+                  48,
+                  15
+                ]
+              ],
+              "style": "weight"
+            },
+            {
+              "label": "d(k), the admissibility slack",
+              "points": [
+                [
+                  4,
+                  1
+                ],
+                [
+                  5,
+                  1
+                ],
+                [
+                  6,
+                  1
+                ],
+                [
+                  7,
+                  1
+                ],
+                [
+                  8,
+                  1
+                ],
+                [
+                  9,
+                  2
+                ],
+                [
+                  10,
+                  1
+                ],
+                [
+                  11,
+                  1
+                ],
+                [
+                  12,
+                  2
+                ],
+                [
+                  13,
+                  3
+                ],
+                [
+                  14,
+                  1
+                ],
+                [
+                  15,
+                  2
+                ],
+                [
+                  16,
+                  3
+                ],
+                [
+                  17,
+                  3
+                ],
+                [
+                  18,
+                  2
+                ],
+                [
+                  19,
+                  3
+                ],
+                [
+                  20,
+                  3
+                ],
+                [
+                  21,
+                  4
+                ],
+                [
+                  22,
+                  3
+                ],
+                [
+                  23,
+                  3
+                ],
+                [
+                  24,
+                  4
+                ],
+                [
+                  25,
+                  5
+                ],
+                [
+                  26,
+                  3
+                ],
+                [
+                  27,
+                  4
+                ],
+                [
+                  28,
+                  5
+                ],
+                [
+                  29,
+                  5
+                ],
+                [
+                  30,
+                  4
+                ],
+                [
+                  31,
+                  5
+                ],
+                [
+                  32,
+                  5
+                ],
+                [
+                  33,
+                  6
+                ],
+                [
+                  34,
+                  5
+                ],
+                [
+                  35,
+                  5
+                ],
+                [
+                  36,
+                  6
+                ],
+                [
+                  37,
+                  7
+                ],
+                [
+                  38,
+                  5
+                ],
+                [
+                  39,
+                  6
+                ],
+                [
+                  40,
+                  7
+                ],
+                [
+                  41,
+                  7
+                ],
+                [
+                  42,
+                  6
+                ],
+                [
+                  43,
+                  7
+                ],
+                [
+                  44,
+                  7
+                ],
+                [
+                  45,
+                  8
+                ],
+                [
+                  46,
+                  7
+                ],
+                [
+                  47,
+                  7
+                ],
+                [
+                  48,
+                  8
+                ]
+              ],
+              "style": "slack"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "certificate-run",
+      "tag": "essential",
+      "kind": {
+        "type": "certificate",
+        "cert_kind": "report-run",
+        "summary": {
+          "text": "7 of 7 checks of the p = 2 tame-point weight certificate passed; 0 assertion failures. The program is dependency-free and builds with a bare `rustc --edition 2024`, so the replay below needs no cargo, no workspace and no network. It is mutation-tested: all seven mutants in the paper repository's suite exit nonzero against this source, each with the catcher its `.expect` file records."
+        },
+        "artifact_refs": [
+          {
+            "path": "render/examples-input/cert/run-certificate.json",
+            "sha256": "40987dbfe49e77738b8b7072d0dddcca3975b71df8dde4c4ead62c38c965977f",
+            "label": "run record",
+            "bytes": 27922,
+            "media_type": "application/json"
+          },
+          {
+            "path": "render/producers/noh_wt_certificate_emitrun.rs",
+            "sha256": "3910f5f7519599f4a1beaff2f3d562757c0185bca72d308f943eb8ca6590a4bc",
+            "label": "producer source",
+            "bytes": 45990,
+            "media_type": "text/rust"
+          }
+        ],
+        "replay": {
+          "line": "rustc --edition 2024 -O -o /tmp/noh_wt_cert render/producers/noh_wt_certificate_emitrun.rs && /tmp/noh_wt_cert --emit-run render/examples-input/cert/run-certificate.json --source render/producers/noh_wt_certificate_emitrun.rs --record-id R:noh-wt-certificate --replay-seconds 1 --role production",
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "expected_seconds": 1
+        },
+        "evidence": [
+          {
+            "run_record": "run-certificate.json",
+            "record_id": "R:noh-wt-certificate"
+          }
+        ]
+      }
+    },
+    {
+      "id": "detail-what-is-checked",
+      "tag": "detail",
+      "kind": {
+        "type": "prose",
+        "text": "**What the certificate does and does not bind.** Its check [1] compares the closed-form product against a coefficient obtained by iterating the recurrence forced by the hypergeometric ODE, and the file originally called that an INDEPENDENT route. It is not one: the audit (`newton-over-hodge-char2/research-log/20-verify.md`, P2-8) established that the second route iterates the same product in a different association order, so check [1] verifies exact rational arithmetic and not the operator. The certificate's only binding to $U_2$ itself is the block of hard-coded coefficient rows recomputed independently by workstream 01 -- claim `c2` in the run record. Everything downstream (the valuation identity, Lemma A, the admissibility sweep, the sharpness witness) is arithmetic over the closed form that block pins. Widening that binding, by adding the series solve to the artifact, is the audit's open recommendation and is not done here."
+      },
+      "title": "What the certificate binds, and what it does not"
+    },
+    {
+      "id": "archive-run-record",
+      "tag": "archive",
+      "kind": {
+        "type": "include",
+        "path": "render/examples-input/cert/run-certificate.json",
+        "render_hint": "json",
+        "sha256": "40987dbfe49e77738b8b7072d0dddcca3975b71df8dde4c4ead62c38c965977f",
+        "max_bytes": 65536,
+        "caption": {
+          "text": "The full run record: seven claims with their statuses, sixty measured statistics, and four tables -- the 397-row $d(k)$ sweep, the weight series, the 150 tight Lemma-A pairs, and the ground-truth coefficient rows."
+        }
+      }
+    },
+    {
+      "id": "archive-producer-source",
+      "tag": "archive",
+      "kind": {
+        "type": "include",
+        "path": "render/producers/noh_wt_certificate_emitrun.rs",
+        "render_hint": "code",
+        "language": "rust",
+        "sha256": "3910f5f7519599f4a1beaff2f3d562757c0185bca72d308f943eb8ca6590a4bc",
+        "max_bytes": 65536,
+        "caption": {
+          "text": "The producer, pinned at axeyum `75663ef8` plus the run-record emission described in its header."
+        }
+      }
+    }
+  ]
+}

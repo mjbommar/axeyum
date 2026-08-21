@@ -1,0 +1,578 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:excluded-middle-not-intuitionistic",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-excluded-middle-not-intuitionistic.json",
+            "sha256": "6af7bb1cde68ad6a181143e5314b8eb3bfb68d07855ca98f8baf362e38e1ab4f"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Excluded middle is not derivable in intuitionistic propositional logic"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "open",
+            "open",
+            "0 of 0 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-excluded-middle-not-intuitionistic.json",
+              "sha256": "6af7bb1cde68ad6a181143e5314b8eb3bfb68d07855ca98f8baf362e38e1ab4f"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-excluded-middle-not-intuitionistic.json",
+            "sha256": "6af7bb1cde68ad6a181143e5314b8eb3bfb68d07855ca98f8baf362e38e1ab4f"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "disagreement-import-backlog",
+      "kind": {
+        "text": "Import backlog: open in this ledger (epistemic_status: open) and settled in the literature (external_status: proved). That is a target for import, not a result of this project.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-excluded-middle-not-intuitionistic.json",
+            "sha256": "6af7bb1cde68ad6a181143e5314b8eb3bfb68d07855ca98f8baf362e38e1ab4f"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Import backlog"
+    },
+    {
+      "id": "dependency-graph",
+      "kind": {
+        "alt": "Dependency graph around F:excluded-middle-not-intuitionistic: 1 dependencies, 0 dependents",
+        "caption": {
+          "text": "Immediate dependencies and dependents of this fact"
+        },
+        "spec": {
+          "edges": [
+            {
+              "from": "F:excluded-middle-not-intuitionistic",
+              "label": "depends_on",
+              "to": "F:excluded-middle"
+            }
+          ],
+          "figure_type": "dep-graph",
+          "nodes": [
+            {
+              "group": "smt-term-level",
+              "href": "F-excluded-middle.doc.json",
+              "id": "F:excluded-middle",
+              "label": "excluded-middle",
+              "status": "proved",
+              "tooltip": "Law of excluded middle"
+            },
+            {
+              "group": "focus",
+              "href": "F-excluded-middle-not-intuitionistic.doc.json",
+              "id": "F:excluded-middle-not-intuitionistic",
+              "label": "excluded-middle-not-intuitionistic",
+              "status": "open",
+              "tooltip": "Excluded middle is not derivable in intuitionistic propositional logic"
+            }
+          ],
+          "rankdir": "TB"
+        },
+        "type": "figure"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-excluded-middle-not-intuitionistic.json",
+            "sha256": "6af7bb1cde68ad6a181143e5314b8eb3bfb68d07855ca98f8baf362e38e1ab4f"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Dependency neighbourhood"
+    },
+    {
+      "id": "depends-on",
+      "kind": {
+        "caption": {
+          "text": "Depends on"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:excluded-middle",
+            "Law of excluded middle",
+            "proved",
+            "F-excluded-middle.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-excluded-middle-not-intuitionistic.json",
+              "sha256": "6af7bb1cde68ad6a181143e5314b8eb3bfb68d07855ca98f8baf362e38e1ab4f"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-excluded-middle-not-intuitionistic.json",
+            "sha256": "6af7bb1cde68ad6a181143e5314b8eb3bfb68d07855ca98f8baf362e38e1ab4f"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depends on"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-14"
+          ],
+          [
+            "established_by",
+            "not established in this ledger"
+          ],
+          [
+            "source",
+            "authored from the S:logic-and-proof strand of the math-education concept graph; statement written here, not copied"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-excluded-middle-not-intuitionistic.json",
+              "sha256": "6af7bb1cde68ad6a181143e5314b8eb3bfb68d07855ca98f8baf362e38e1ab4f"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-excluded-middle-not-intuitionistic.json",
+            "sha256": "6af7bb1cde68ad6a181143e5314b8eb3bfb68d07855ca98f8baf362e38e1ab4f"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "citation",
+            "key": "citation"
+          },
+          {
+            "header": "establishes",
+            "key": "establishes"
+          },
+          {
+            "header": "date",
+            "key": "date"
+          },
+          {
+            "header": "measurement",
+            "key": "measurement"
+          },
+          {
+            "header": "result",
+            "key": "result"
+          }
+        ],
+        "rows": [
+          [
+            "Godel 1932; Heyting; Kripke 1965",
+            "the theorem, long settled, by three-valued and Kripke countermodels",
+            null,
+            null,
+            null
+          ],
+          [
+            null,
+            "axeyum's Lean logic prelude assumes nothing classical -- it declares only True, False, And, Or, Iff, Eq, Exists and Not (as `a -> False`). This measures the ABSENCE of a classical axiom in our kernel; it does not by itself prove the non-derivability, which is the cited theorem.",
+            "2026-08-14",
+            "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory",
+            "logic: axiom=0 opaque=0 quotient=0 total_trusted=0"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-excluded-middle-not-intuitionistic.json",
+              "sha256": "6af7bb1cde68ad6a181143e5314b8eb3bfb68d07855ca98f8baf362e38e1ab4f"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-excluded-middle-not-intuitionistic.json",
+            "sha256": "6af7bb1cde68ad6a181143e5314b8eb3bfb68d07855ca98f8baf362e38e1ab4f"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "concept-refs",
+      "kind": {
+        "caption": {
+          "text": "Concept references (gloss and provenance only, never substance)"
+        },
+        "columns": [
+          {
+            "header": "graph",
+            "key": "graph"
+          },
+          {
+            "header": "ref",
+            "key": "ref"
+          },
+          {
+            "header": "relation",
+            "key": "relation"
+          },
+          {
+            "header": "resolved",
+            "key": "resolved"
+          }
+        ],
+        "rows": [
+          [
+            "math-education",
+            "C:intuitionism",
+            "states",
+            true
+          ],
+          [
+            "math-education",
+            "C:excluded-middle",
+            "about",
+            true
+          ],
+          [
+            "math-education",
+            "C:non-constructive-proof",
+            "related-to",
+            true
+          ],
+          [
+            "math-education",
+            "C:independence-of-axioms",
+            "instance-of",
+            true
+          ],
+          [
+            "math-education",
+            "C:constructive-proof",
+            "related-to",
+            true
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-excluded-middle-not-intuitionistic.json",
+              "sha256": "6af7bb1cde68ad6a181143e5314b8eb3bfb68d07855ca98f8baf362e38e1ab4f"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-excluded-middle-not-intuitionistic.json",
+            "sha256": "6af7bb1cde68ad6a181143e5314b8eb3bfb68d07855ca98f8baf362e38e1ab4f"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "The most important entry this lane produced, and the one that most sharply exposes the shape of the frontier. axeyum has TWO reasoning routes with DIFFERENT logics and no object that can compare them. The SMT route fixes a two-valued Bool sort and so proves F:excluded-middle, F:double-negation-elimination and F:peirce-law in microseconds. The Lean kernel route has an intuitionistic logic prelude with zero trusted declarations, in which none of those three has a proof term and none can get one without adding an axiom. Today nothing in the stack records that a fact proved on one route is unavailable on the other, and the fact schema has no field for it: `axiom_footprint` describes the route that DID establish the fact and is silent about routes that cannot. Concretely: if a future reconstruction lane pipes an `unsat` from the SMT route into the kernel, every classical tautology in this batch is a reconstruction failure waiting to happen, and the failure will surface as a kernel error rather than as a recognised logic mismatch. That is the roadmap item. The status is `open` in the same misused sense as F:godel-first-incompleteness -- the mathematics is settled; what is open is our ability to say it.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-excluded-middle-not-intuitionistic.json",
+            "sha256": "6af7bb1cde68ad6a181143e5314b8eb3bfb68d07855ca98f8baf362e38e1ab4f"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-excluded-middle-not-intuitionistic",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c15",
+        "label": "Component 15 of 38 (3 facts)",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:excluded-middle-not-intuitionistic",
+    "title": "Excluded middle is not derivable in intuitionistic propositional logic"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-excluded-middle-not-intuitionistic.json",
+        "sha256": "6af7bb1cde68ad6a181143e5314b8eb3bfb68d07855ca98f8baf362e38e1ab4f"
+      }
+    ]
+  },
+  "schema_version": 1
+}

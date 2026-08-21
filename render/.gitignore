@@ -1,0 +1,7 @@
+# Build output for this standalone package. The repository root's .gitignore
+# anchors its `/target` rule at the root, so it does not cover a nested package
+# -- the same trap the MIR fixture workspaces hit. Declared HERE rather than by
+# appending to the shared root .gitignore, which is one of this repository's
+# known clobbering points.
+/target
+out/cards/

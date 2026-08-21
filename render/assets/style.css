@@ -1,0 +1,722 @@
+/* Axeyum render strand -- HTML emitter stylesheet.
+ *
+ * Inlined verbatim into every emitted document by render/src/emit_html.rs.
+ * ZERO external references are permitted here: no stylesheet imports, no
+ * resource URIs other than data:, no webfonts. The function
+ * render::emit_html::lint_self_contained enforces that on the emitted
+ * document, and a unit test enforces it on this file -- which is why this
+ * comment spells the forbidden constructs out in words instead of writing
+ * them literally. The lint is textual, and a lint that its own documentation
+ * can trip is a lint that is actually looking.
+ *
+ * Design system (see docs/render-2026-08/11-design-diary.md):
+ *   type   serif for prose, sans for apparatus, mono for machine text
+ *   scale  1.125 minor-third-ish, base 17px, measure 68ch
+ *   space  4px grid, --sp-1 .. --sp-9
+ *   colour one hue family per epistemic status; badges carry a SHAPE too,
+ *          so status survives greyscale printing and colour blindness
+ */
+
+/* ---------- tokens ---------- */
+:root {
+  color-scheme: light dark;
+
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua",
+                Georgia, "Times New Roman", Times, serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+               "DejaVu Sans Mono", "Liberation Mono", monospace;
+  /* A MATH-table font is needed only for stretchy delimiters; the P0 corpus
+     avoids them, and the chain degrades to the prose serif. */
+  --font-math: "STIX Two Math", "Cambria Math", "Latin Modern Math",
+               var(--font-serif);
+
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.8125rem;
+  --fs-ui: 0.875rem;
+  --fs-base: 1rem;
+  --fs-md: 1.125rem;
+  --fs-lg: 1.375rem;
+  --fs-xl: 1.75rem;
+  --fs-2xl: 2.25rem;
+
+  --sp-1: 0.25rem; --sp-2: 0.5rem;  --sp-3: 0.75rem; --sp-4: 1rem;
+  --sp-5: 1.5rem;  --sp-6: 2rem;    --sp-7: 3rem;    --sp-8: 4rem;
+  --sp-9: 6rem;
+
+  /* In rem, not ch: `ch` resolves against the element's OWN font, so a
+     `ch`-based column silently narrows on every small-sans block and the page
+     stops lining up. 36rem is ~68 characters at the body serif. */
+  --measure: 36rem;
+  --radius: 3px;
+  --radius-lg: 6px;
+
+  /* light palette: warm paper, near-black ink */
+  --bg:        #fcfcfa;
+  --bg-sunk:   #f3f2ed;
+  --surface:   #ffffff;
+  --rule:      #e0ded5;
+  --rule-firm: #c9c6ba;
+  --ink:       #1a1a17;
+  --ink-2:     #46453f;
+  --ink-3:     #74726a;
+  --link:      #1c5480;
+  --link-visited: #5b3f7a;
+  --accent:    #1c5480;
+  --shadow:    0 1px 2px rgba(26, 26, 23, 0.06), 0 4px 12px rgba(26, 26, 23, 0.05);
+
+  /* status hues: --s-*-fg on --s-*-bg, both AA on their own ground */
+  --s-proved-fg:      #17603c; --s-proved-bg:      #e4f1e8;
+  --s-checked-fg:     #12566e; --s-checked-bg:     #e0eef3;
+  --s-evidence-fg:    #3f3d8e; --s-evidence-bg:    #e8e7f5;
+  --s-computed-fg:    #6a3583; --s-computed-bg:    #f0e7f5;
+  --s-empirical-fg:   #1f5a5f; --s-empirical-bg:   #e0efef;
+  --s-advisory-fg:    #7a5400; --s-advisory-bg:    #f7eed6;
+  --s-conjectured-fg: #6b4a1f; --s-conjectured-bg: #f3ebdd;
+  --s-refuted-fg:     #9a2222; --s-refuted-bg:     #f7e3e1;
+  --s-open-fg:        #4e5560; --s-open-bg:        #eceef1;
+  --s-axiom-fg:       #7c4a12; --s-axiom-bg:       #f6e9d9;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:        #14151a;
+    --bg-sunk:   #101116;
+    --surface:   #1b1d24;
+    --rule:      #2b2e37;
+    --rule-firm: #3d414c;
+    --ink:       #e8e6e0;
+    --ink-2:     #b9b6ad;
+    --ink-3:     #8d8a82;
+    --link:      #8fbde6;
+    --link-visited: #c0a8dd;
+    --accent:    #8fbde6;
+    --shadow:    0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 18px rgba(0, 0, 0, 0.3);
+
+    --s-proved-fg:      #7fd3a4; --s-proved-bg:      #14291e;
+    --s-checked-fg:     #7ec8e3; --s-checked-bg:     #10262f;
+    --s-evidence-fg:    #a9a7ef; --s-evidence-bg:    #1c1b33;
+    --s-computed-fg:    #d3a6e8; --s-computed-bg:    #291a30;
+    --s-empirical-fg:   #7fcbcf; --s-empirical-bg:   #12282a;
+    --s-advisory-fg:    #e0bb63; --s-advisory-bg:    #2c2410;
+    --s-conjectured-fg: #d5b183; --s-conjectured-bg: #2a2115;
+    --s-refuted-fg:     #f09a92; --s-refuted-bg:     #331716;
+    --s-open-fg:        #a5adba; --s-open-bg:        #1d2027;
+    --s-axiom-fg:       #dfab6e; --s-axiom-bg:       #2c2013;
+  }
+}
+
+/* ---------- reset-ish ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 17px;
+  line-height: 1.62;
+  text-rendering: optimizeLegibility;
+}
+img, svg { max-width: 100%; }
+/* Without `height: auto` an SVG with width/height attributes is shrunk in one
+   axis only and the drawing letterboxes inside a tall empty box. */
+svg.ax-graph, svg.ax-plot { height: auto; }
+a { color: var(--link); text-underline-offset: 2px; text-decoration-thickness: 1px; }
+a:visited { color: var(--link-visited); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+
+.ax-skip {
+  position: absolute; left: -9999px; top: 0;
+  background: var(--surface); color: var(--ink);
+  padding: var(--sp-2) var(--sp-3); z-index: 10;
+}
+.ax-skip:focus { left: var(--sp-3); top: var(--sp-3); }
+
+/* ---------- page frame ---------- */
+.ax-doc { max-width: var(--measure); margin: 0 auto; padding: 0 var(--sp-5); }
+
+/* Figures escape the text measure -- without a transform trick, which depends
+   on the containing block's width and breaks quietly when that changes. The
+   BODY column is wide; every direct child of <main> is re-narrowed to the
+   measure, and `.ax-wide` opts back out. Prose reads at ~68ch; a dependency
+   graph is a different kind of object and should not be squeezed to match. */
+main.ax-doc { max-width: 68rem; }
+main.ax-doc > * { max-width: var(--measure); margin-left: auto; margin-right: auto; }
+main.ax-doc > .ax-wide { max-width: 100%; }
+header.ax-head > .ax-doc, footer.ax-foot > .ax-doc { padding: 0; }
+
+header.ax-head {
+  border-bottom: 1px solid var(--rule);
+  padding: var(--sp-7) 0 var(--sp-5);
+  margin-bottom: var(--sp-6);
+}
+header.ax-head .ax-kicker {
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 0 0 var(--sp-2);
+}
+h1.ax-title {
+  font-size: var(--fs-2xl);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin: 0 0 var(--sp-3);
+  font-weight: 600;
+}
+p.ax-subtitle {
+  font-size: var(--fs-md);
+  color: var(--ink-2);
+  margin: 0 0 var(--sp-4);
+  max-width: 58ch;
+}
+
+/* Cross-document navigation. The corpus is a SITE -- an atlas, two pilots and
+   324 fact cards emitted together -- and these are the only relative links a
+   page carries. Each page is still self-contained: nothing is fetched on load.
+   render/tests/link_integrity.rs fails if one of them does not resolve. */
+.ax-crumbs {
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+  margin: 0 0 var(--sp-4);
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-2);
+}
+.ax-crumbs .ax-crumb-sep { color: var(--rule-firm); }
+a.ax-doclink { font-family: var(--font-sans); }
+a.ax-doclink code { font-family: var(--font-mono); }
+
+/* The single provenance line for a page whose blocks all come from one run.
+   Fifteen identical copies of it, one under each block, was the most repeated
+   element on a fact card; it is said once, here. */
+.ax-source-all { margin: var(--sp-2) 0 0; }
+
+/* metadata chips */
+.ax-meta { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); margin: 0; padding: 0; list-style: none; }
+.ax-meta li {
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+}
+.ax-meta li b { font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.ax-meta code { font-size: var(--fs-xs); }
+
+h2, h3, h4 { font-family: var(--font-sans); font-weight: 600; letter-spacing: -0.01em; line-height: 1.25; }
+h2 { font-size: var(--fs-xl); margin: var(--sp-7) 0 var(--sp-3); }
+h3 { font-size: var(--fs-lg); margin: var(--sp-6) 0 var(--sp-2); }
+h4 { font-size: var(--fs-md); margin: var(--sp-5) 0 var(--sp-2); }
+
+p { margin: 0 0 var(--sp-4); }
+code, kbd, samp, pre { font-family: var(--font-mono); font-size: 0.86em; }
+code { background: var(--bg-sunk); padding: 0.1em 0.32em; border-radius: var(--radius); }
+pre {
+  background: var(--bg-sunk);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: var(--sp-3);
+  overflow-x: auto;
+  line-height: 1.45;
+}
+pre code { background: none; padding: 0; }
+math { font-family: var(--font-math); }
+
+/* ---------- reading level ---------- */
+.ax-levels {
+  display: inline-flex;
+  border: 1px solid var(--rule-firm);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  background: var(--surface);
+}
+.ax-levels button {
+  appearance: none;
+  border: 0;
+  border-left: 1px solid var(--rule);
+  background: transparent;
+  color: var(--ink-2);
+  padding: var(--sp-2) var(--sp-3);
+  cursor: pointer;
+  font: inherit;
+  letter-spacing: 0.04em;
+}
+.ax-levels button:first-child { border-left: 0; }
+.ax-levels button[aria-pressed="true"] { background: var(--accent); color: var(--bg); }
+.ax-levels button:hover:not([aria-pressed="true"]) { background: var(--bg-sunk); }
+
+/* Level gating. The document is authored at "full"; with JS off nothing is
+   hidden, which is the required degradation. */
+body[data-level="summary"] .t-detail,
+body[data-level="summary"] .t-archive { display: none; }
+body[data-level="full"] .t-archive { display: none; }
+.ax-levelnote { font-family: var(--font-sans); font-size: var(--fs-xs); color: var(--ink-3); }
+
+/* ---------- blocks ---------- */
+.blk { margin: 0 0 var(--sp-5); }
+.blk.t-detail { border-left: 2px solid var(--rule); padding-left: var(--sp-4); }
+details.blk.t-detail { padding-left: 0; border-left: 0; }
+
+details.ax-fold {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 0;
+  /* `auto` on the inline axis, not `0`. `main.ax-doc > *` centres every direct
+     child inside the 68rem frame by setting margin-left/right to auto, and a
+     `margin: 0 0 X` shorthand here has the SAME specificity and comes later,
+     so it silently won and every fold on a fact card sat 190px left of the
+     text above it. Found by screenshot; no test could see it. */
+  margin: 0 auto var(--sp-5);
+}
+details.ax-fold > summary {
+  cursor: pointer;
+  padding: var(--sp-3) var(--sp-4);
+  font-family: var(--font-sans);
+  font-size: var(--fs-ui);
+  color: var(--ink-2);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+details.ax-fold > summary::-webkit-details-marker { display: none; }
+details.ax-fold > summary::before {
+  content: "";
+  width: 0; height: 0;
+  border-left: 5px solid currentColor;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform 120ms ease;
+  flex: none;
+}
+details.ax-fold[open] > summary::before { transform: rotate(90deg); }
+details.ax-fold > summary:hover { background: var(--bg-sunk); }
+details.ax-fold > .ax-foldbody { padding: 0 var(--sp-4) var(--sp-4); border-top: 1px solid var(--rule); padding-top: var(--sp-4); }
+
+/* archive tier: a link to what was left out, never silent omission */
+.blk.t-archive {
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+  border-left: 2px dotted var(--rule-firm);
+  padding-left: var(--sp-3);
+}
+
+/* ---------- badges: colour AND shape ---------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.18em 0.55em 0.18em 0.42em;
+  border-radius: var(--radius);
+  border: 1px solid currentColor;
+  white-space: nowrap;
+  vertical-align: 0.08em;
+}
+.badge svg { width: 0.85em; height: 0.85em; flex: none; fill: currentColor; }
+/* The badge with its word removed, for a place that has already said it (an
+   evidence row inside a claim card whose header carries the same status).
+   The SHAPE is what survives, because the shape is what makes a badge legible
+   in greyscale and to a colour-blind reader; the word survives as the
+   accessible name on the element. */
+.badge-compact { padding: 0.18em 0.32em; gap: 0; }
+.badge-compact svg { width: 0.95em; height: 0.95em; }
+.badge-proved      { color: var(--s-proved-fg);      background: var(--s-proved-bg); }
+.badge-checked     { color: var(--s-checked-fg);     background: var(--s-checked-bg); }
+.badge-evidence    { color: var(--s-evidence-fg);    background: var(--s-evidence-bg); }
+.badge-computed    { color: var(--s-computed-fg);    background: var(--s-computed-bg); }
+.badge-empirical   { color: var(--s-empirical-fg);   background: var(--s-empirical-bg); }
+.badge-advisory    { color: var(--s-advisory-fg);    background: var(--s-advisory-bg); }
+.badge-conjectured { color: var(--s-conjectured-fg); background: var(--s-conjectured-bg); }
+.badge-refuted     { color: var(--s-refuted-fg);     background: var(--s-refuted-bg); }
+.badge-open        { color: var(--s-open-fg);        background: var(--s-open-bg); }
+.badge-axiom       { color: var(--s-axiom-fg);       background: var(--s-axiom-bg); }
+.badge-unknown     { color: var(--ink-3);            background: var(--bg-sunk); }
+
+.ax-axes { display: inline-flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.ax-axes .ax-axis-label {
+  font-family: var(--font-sans); font-size: var(--fs-xs);
+  color: var(--ink-3); letter-spacing: 0.04em;
+}
+
+/* the interesting combination: ours ahead of the literature */
+.ax-newresult {
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--s-computed-fg);
+  border: 1px dashed currentColor;
+  border-radius: var(--radius);
+  padding: 0.18em 0.5em;
+}
+
+/* ---------- claim / fact card ---------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--rule-firm);
+  border-radius: var(--radius);
+  padding: var(--sp-4) var(--sp-5);
+  /* See `details.ax-fold`: `auto` keeps a card centred in the reading frame. */
+  margin: 0 auto var(--sp-5);
+  box-shadow: var(--shadow);
+}
+.card.s-proved      { border-left-color: var(--s-proved-fg); }
+.card.s-checked     { border-left-color: var(--s-checked-fg); }
+.card.s-evidence    { border-left-color: var(--s-evidence-fg); }
+.card.s-computed    { border-left-color: var(--s-computed-fg); }
+.card.s-empirical   { border-left-color: var(--s-empirical-fg); }
+.card.s-advisory    { border-left-color: var(--s-advisory-fg); }
+.card.s-conjectured { border-left-color: var(--s-conjectured-fg); }
+.card.s-refuted     { border-left-color: var(--s-refuted-fg); }
+.card.s-open        { border-left-color: var(--s-open-fg); }
+.card.s-axiom       { border-left-color: var(--s-axiom-fg); }
+
+.card > .card-head {
+  display: flex; flex-wrap: wrap; align-items: baseline;
+  gap: var(--sp-2) var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+.card h3, .card h4 { margin: 0; flex: 1 1 20ch; }
+.card .card-id {
+  font-family: var(--font-mono); font-size: var(--fs-xs);
+  color: var(--ink-3);
+}
+.card .card-statement { margin: 0 0 var(--sp-3); }
+.card .card-formal { margin: 0 0 var(--sp-3); }
+.card .card-formal pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
+.ax-tinylabel {
+  font-family: var(--font-sans); font-size: var(--fs-xs);
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink-3); margin: 0 0 var(--sp-1);
+}
+
+/* ---------- evidence rows ---------- */
+.ax-evidence { list-style: none; margin: 0; padding: 0; }
+.ax-evidence > li {
+  border-top: 1px solid var(--rule);
+  padding: var(--sp-3) 0 var(--sp-2);
+  font-size: var(--fs-ui);
+  font-family: var(--font-sans);
+}
+.ax-evidence > li:first-child { border-top: 0; }
+.ax-ev-head { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; }
+.ax-ev-kind {
+  font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--ink-3);
+}
+.ax-ev-supports { color: var(--ink-2); margin: var(--sp-1) 0 var(--sp-2); }
+.ax-noevidence {
+  font-family: var(--font-sans); font-size: var(--fs-ui);
+  color: var(--s-open-fg); background: var(--s-open-bg);
+  border: 1px dashed currentColor; border-radius: var(--radius);
+  padding: var(--sp-2) var(--sp-3);
+}
+
+/* ---------- command + copy ---------- */
+.ax-cmd {
+  display: flex; align-items: stretch; gap: 0;
+  border: 1px solid var(--rule); border-radius: var(--radius);
+  background: var(--bg-sunk);
+  overflow: hidden;
+  margin: 0 0 var(--sp-2);
+}
+.ax-cmd > code {
+  /* `min-width: 0` is load-bearing, not tidying: a flex item's default
+     min-width is `auto`, i.e. its content width, so `overflow-x: auto` never
+     engages and a long replay command is CLIPPED by the row's `overflow:
+     hidden` instead of scrolling. Found in a screenshot of certificate.html,
+     where the command a reader is invited to paste ended mid-path. */
+  flex: 1 1 auto; min-width: 0; background: none; border-radius: 0;
+  padding: var(--sp-2) var(--sp-3);
+  overflow-x: auto; white-space: pre; font-size: var(--fs-xs);
+}
+.ax-cmd > button {
+  flex: none; appearance: none; cursor: pointer;
+  border: 0; border-left: 1px solid var(--rule);
+  background: var(--surface); color: var(--ink-2);
+  font-family: var(--font-sans); font-size: var(--fs-xs); letter-spacing: 0.05em;
+  padding: 0 var(--sp-3);
+}
+.ax-cmd > button:hover { background: var(--bg); color: var(--ink); }
+.ax-cmd > button[data-copied="1"] { color: var(--s-proved-fg); }
+
+/* ---------- tables ---------- */
+/* A table with five or more columns opts out of the 36rem reading measure and
+   uses the full 68rem frame (`.ax-wide`). The atlas index has twelve columns:
+   at the reading measure its last four -- including the link to the fact's own
+   card -- were scrolled out of sight, so the page's navigation was hiding
+   behind a horizontal scrollbar. It still scrolls when it needs to; it just
+   does not need to as often. */
+.ax-tablewrap { overflow-x: auto; margin: 0 0 var(--sp-2); }
+/* A table of four or more columns breaks out of the 36rem reading measure,
+   CENTRED ON IT, so its heading and the prose above stay aligned. (Putting the
+   break-out on the section instead shifted the heading left and made the page
+   look ragged.) Only above a width where 52rem fits; below it the table stays
+   at the measure and the wrapper scrolls, which is the pre-existing
+   behaviour. */
+@media (min-width: 62rem) {
+  .blk.ax-widetable > .ax-tablewrap {
+    width: 52rem; max-width: none;
+    margin-left: calc((var(--measure) - 52rem) / 2);
+  }
+}
+table.ax-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-family: var(--font-sans);
+  font-size: var(--fs-ui);
+  font-variant-numeric: tabular-nums;
+}
+table.ax-table caption {
+  caption-side: top; text-align: left;
+  font-size: var(--fs-ui); color: var(--ink-2);
+  padding-bottom: var(--sp-2);
+}
+table.ax-table th, table.ax-table td {
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  vertical-align: baseline;
+  /* Machine values (`kernel-lean`, `QF_BV`) must not break at their hyphens;
+     the wrapper scrolls instead. The first column is prose and may wrap. */
+  white-space: nowrap;
+}
+table.ax-table td:first-child, table.ax-table th:first-child { white-space: normal; }
+/* ...and so may any cell the emitter marked as prose: a value containing a
+   space is a sentence, not a machine token, and on a fact card the `supports`
+   and `axiom_footprint` cells are sentences. See `table()` in emit_html.rs. */
+table.ax-table td.wrap { white-space: normal; }
+table.ax-table thead th {
+  border-bottom: 1px solid var(--rule-firm);
+  font-weight: 600; color: var(--ink-2);
+  font-size: var(--fs-xs); letter-spacing: 0.05em; text-transform: uppercase;
+}
+table.ax-table td.num, table.ax-table th.num { text-align: right; }
+table.ax-table tbody tr:hover { background: var(--bg-sunk); }
+.ax-source {
+  font-family: var(--font-sans); font-size: var(--fs-xs);
+  color: var(--ink-3); margin: 0 0 var(--sp-5);
+}
+
+/* ---------- steps player ---------- */
+ol.ax-steps { list-style: none; counter-reset: step; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+ol.ax-steps > li {
+  counter-increment: step;
+  display: grid;
+  grid-template-columns: 2.2rem 1fr;
+  gap: 0 var(--sp-3);
+  padding: var(--sp-3) var(--sp-3) var(--sp-3) var(--sp-2);
+  border-bottom: 1px solid var(--rule);
+  scroll-margin-top: var(--sp-6);
+}
+ol.ax-steps > li::before {
+  content: counter(step);
+  font-family: var(--font-mono); font-size: var(--fs-xs);
+  color: var(--ink-3); text-align: right; padding-top: 0.15em;
+}
+ol.ax-steps > li[aria-current="step"] { background: var(--bg-sunk); }
+ol.ax-steps > li[aria-current="step"]::before { color: var(--accent); font-weight: 700; }
+.ax-step-op { font-family: var(--font-sans); font-size: var(--fs-xs); letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-3); }
+.ax-step-io { font-family: var(--font-mono); font-size: var(--fs-sm); overflow-x: auto; }
+.ax-step-note { color: var(--ink-2); font-size: var(--fs-ui); font-family: var(--font-sans); }
+.ax-stepbar {
+  display: flex; gap: var(--sp-3); align-items: center;
+  font-family: var(--font-sans); font-size: var(--fs-xs); color: var(--ink-3);
+  padding: var(--sp-2) 0;
+}
+kbd {
+  border: 1px solid var(--rule-firm); border-bottom-width: 2px;
+  border-radius: var(--radius); padding: 0.05em 0.35em;
+  font-size: 0.9em; background: var(--surface);
+}
+
+/* ---------- certificate ---------- */
+.ax-cert { border-left-width: 3px; }
+.ax-cert .ax-cert-grid {
+  display: grid; grid-template-columns: max-content 1fr;
+  gap: var(--sp-1) var(--sp-3);
+  font-family: var(--font-sans); font-size: var(--fs-ui);
+  margin: 0 0 var(--sp-3);
+}
+.ax-cert .ax-cert-grid dt { color: var(--ink-3); font-size: var(--fs-xs); letter-spacing: 0.05em; text-transform: uppercase; padding-top: 0.25em; }
+.ax-cert .ax-cert-grid dd { margin: 0; word-break: break-word; }
+.ax-exit-ok { color: var(--s-proved-fg); font-weight: 600; }
+.ax-exit-bad { color: var(--s-refuted-fg); font-weight: 700; }
+/* Neither green nor red: a certificate that deliberately does not re-run. */
+.ax-exit-none { color: var(--s-advisory-fg); font-weight: 600; white-space: nowrap; }
+/* The full "why there is no recorded run" sentence, inside the fold. */
+.ax-noexit {
+  font-family: var(--font-sans); font-size: var(--fs-ui);
+  color: var(--s-advisory-fg); background: var(--s-advisory-bg);
+  border: 1px dashed currentColor; border-radius: var(--radius);
+  padding: var(--sp-2) var(--sp-3); margin: 0 0 var(--sp-3);
+}
+.ax-hash { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--ink-2); }
+
+/* ---------- figures ---------- */
+figure.ax-fig { margin: var(--sp-6) 0; }
+figure.ax-fig figcaption {
+  font-family: var(--font-sans); font-size: var(--fs-ui);
+  color: var(--ink-2); margin-top: var(--sp-3);
+  /* A caption is prose and reads at the prose measure even when the figure
+     it belongs to is three times as wide. */
+  max-width: var(--measure); margin-left: auto; margin-right: auto;
+}
+figure.ax-fig figcaption b { color: var(--ink); font-weight: 600; }
+.ax-figframe {
+  border: 1px solid var(--rule); border-radius: var(--radius);
+  background: var(--surface); padding: var(--sp-3);
+  overflow-x: auto;
+}
+
+/* dependency graph */
+svg.ax-graph { display: block; margin: 0 auto; }
+/* Wider than the column: render at natural size and let `.ax-figframe`'s
+   horizontal scroll do the work, rather than scaling the labels away. */
+svg.ax-graph.ax-graph-natural { max-width: none; margin: 0; }
+svg.ax-graph .gedge { fill: none; stroke: var(--rule-firm); stroke-width: 1.15; opacity: 0.85; }
+svg.ax-graph .gnode rect {
+  fill: var(--surface); stroke: var(--rule-firm); stroke-width: 1;
+  rx: 3;
+}
+svg.ax-graph .gnode text {
+  font-family: var(--font-sans); font-size: 11.5px; fill: var(--ink-2);
+  dominant-baseline: middle;
+}
+svg.ax-graph .gnode .gdot { stroke: none; }
+svg.ax-graph .gnode.s-proved      .gdot { fill: var(--s-proved-fg); }
+svg.ax-graph .gnode.s-checked     .gdot { fill: var(--s-checked-fg); }
+svg.ax-graph .gnode.s-evidence    .gdot { fill: var(--s-evidence-fg); }
+svg.ax-graph .gnode.s-computed    .gdot { fill: var(--s-computed-fg); }
+svg.ax-graph .gnode.s-empirical   .gdot { fill: var(--s-empirical-fg); }
+svg.ax-graph .gnode.s-advisory    .gdot { fill: var(--s-advisory-fg); }
+svg.ax-graph .gnode.s-conjectured .gdot { fill: var(--s-conjectured-fg); }
+svg.ax-graph .gnode.s-refuted     .gdot { fill: var(--s-refuted-fg); }
+svg.ax-graph .gnode.s-open        .gdot { fill: var(--s-open-fg); }
+svg.ax-graph .gnode.s-axiom       .gdot { fill: var(--s-axiom-fg); }
+svg.ax-graph .gnode { cursor: pointer; }
+/* A node that links to another document is wrapped in a real SVG anchor, so
+   the browser navigates with scripting off. Underlining every node label would
+   be noise at 300 nodes; the pointer and the focus ring carry the affordance,
+   and the anchor gives the reader the target in the status bar. */
+svg.ax-graph a.gnode-link { cursor: pointer; text-decoration: none; }
+svg.ax-graph a.gnode-link:focus-visible .gnode rect,
+svg.ax-graph a.gnode-link:hover .gnode rect { stroke: var(--accent); stroke-width: 1.8; }
+svg.ax-graph .gnode:hover rect, svg.ax-graph .gnode:focus rect { stroke: var(--accent); stroke-width: 1.8; }
+/* cone highlighting, driven by a class on the <svg> root */
+svg.ax-graph.coning .gnode { opacity: 0.22; }
+svg.ax-graph.coning .gedge { opacity: 0.1; }
+svg.ax-graph.coning .gnode.cone-self rect { stroke: var(--accent); stroke-width: 2; }
+svg.ax-graph.coning .gnode.cone-self,
+svg.ax-graph.coning .gnode.cone-anc,
+svg.ax-graph.coning .gnode.cone-desc { opacity: 1; }
+svg.ax-graph.coning .gedge.cone-edge { opacity: 1; stroke: var(--accent); stroke-width: 1.6; }
+.ax-legend {
+  display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4);
+  font-family: var(--font-sans); font-size: var(--fs-xs); color: var(--ink-3);
+  margin-top: var(--sp-3); padding: 0; list-style: none;
+}
+.ax-legend li { display: inline-flex; align-items: center; gap: 0.4em; }
+.ax-legend .swatch { width: 0.7em; height: 0.7em; border-radius: 50%; display: inline-block; }
+
+/* xy plot */
+svg.ax-plot { display: block; margin: 0 auto; }
+svg.ax-plot .axis { stroke: var(--rule-firm); stroke-width: 1; fill: none; }
+svg.ax-plot .grid { stroke: var(--rule); stroke-width: 1; stroke-dasharray: 2 3; }
+svg.ax-plot .tick { font-family: var(--font-sans); font-size: 10px; fill: var(--ink-3); }
+svg.ax-plot .axlabel { font-family: var(--font-sans); font-size: 11px; fill: var(--ink-2); }
+svg.ax-plot .series { fill: none; stroke: var(--accent); stroke-width: 1.8; stroke-linejoin: round; }
+svg.ax-plot .series-fill { fill: var(--accent); opacity: 0.08; stroke: none; }
+svg.ax-plot .series-bar { fill: var(--accent); opacity: 0.72; stroke: none; }
+svg.ax-plot .series-bar:hover, svg.ax-plot .series-bar:focus { opacity: 1; }
+svg.ax-plot .vertex { fill: var(--surface); stroke: var(--accent); stroke-width: 1.6; }
+svg.ax-plot .vertex:hover { fill: var(--accent); }
+svg.ax-plot .vlabel { font-family: var(--font-mono); font-size: 10px; fill: var(--ink-2); }
+
+/* ---------- footer ---------- */
+footer.ax-foot {
+  margin-top: var(--sp-8);
+  border-top: 1px solid var(--rule);
+  padding: var(--sp-5) 0 var(--sp-8);
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+}
+footer.ax-foot p { margin: 0 0 var(--sp-2); }
+footer.ax-foot code { font-size: var(--fs-xs); }
+
+.ax-unrenderable {
+  border: 2px dashed var(--s-refuted-fg);
+  color: var(--s-refuted-fg);
+  background: var(--s-refuted-bg);
+  padding: var(--sp-3);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+
+/* ---------- narrow screens ---------- */
+@media (max-width: 46rem) {
+  body { font-size: 16px; }
+  .ax-doc { padding: 0 var(--sp-4); }
+  h1.ax-title { font-size: var(--fs-xl); }
+  .card { padding: var(--sp-4); }
+  .ax-cert .ax-cert-grid { grid-template-columns: 1fr; }
+  .ax-cert .ax-cert-grid dt { padding-top: var(--sp-2); }
+
+  /* THE REPLAY COMMAND WRAPS ON A NARROW SCREEN INSTEAD OF SCROLLING.
+     Reader review gripe 4, checked at 420px: the `min-width: 0` fix made the
+     row scroll rather than clip, which is correct and still leaves a phone
+     reader looking at 30 characters of a 300-character command through a
+     letterbox. Wrapping shows the whole thing.
+
+     `pre-wrap` INSERTS NOTHING -- it only permits a break at an existing space
+     -- so the bytes the copy button puts on the clipboard are unchanged, and
+     `overflow-wrap: anywhere` lets a single long path break rather than push
+     the row wide again. The hanging indent is the visual cue that a run of
+     lines is one command: a continuation is inset, the way a wrapped shell
+     line is. */
+  .ax-cmd { align-items: flex-start; }
+  .ax-cmd > code {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    overflow-x: visible;
+    padding-left: calc(var(--sp-3) + 2ch);
+    text-indent: -2ch;
+  }
+  .ax-cmd > button { position: sticky; top: 0; align-self: stretch; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+/* ---------- print ---------- */
+@media print {
+  :root {
+    --bg: #fff; --bg-sunk: #f6f6f6; --surface: #fff;
+    --ink: #000; --ink-2: #222; --ink-3: #555;
+    --rule: #ccc; --rule-firm: #999; --shadow: none;
+  }
+  body { font-size: 10.5pt; background: #fff; color: #000; }
+  .ax-levels, .ax-cmd > button, .ax-stepbar, .ax-skip { display: none !important; }
+  /* Print is the forensic level: nothing is hidden on paper. */
+  .t-detail, .t-archive { display: block !important; }
+  details.ax-fold > .ax-foldbody { display: block !important; }
+  .card, figure.ax-fig, .ax-cert, ol.ax-steps > li { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  .ax-cmd > code { white-space: pre-wrap; word-break: break-all; }
+  a[data-external="1"]::after { content: " (" attr(href) ")"; font-size: 0.85em; color: #555; word-break: break-all; }
+  svg.ax-graph .gnode rect { stroke: #666; }
+}

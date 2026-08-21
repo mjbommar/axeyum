@@ -1,0 +1,194 @@
+{
+  "commands": [
+    "cargo run --release -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free logic --require-axiom-free nat --expect-axioms axreal=30 --expect-axioms integer=0 --expect-axioms rat=0 --expect-axioms string=0"
+  ],
+  "declarations": [
+    {
+      "kind": "axiom",
+      "name": "AxReal",
+      "prelude": "axreal",
+      "type": "Sort (1)"
+    },
+    {
+      "kind": "axiom",
+      "name": "AxReal.add",
+      "prelude": "axreal",
+      "type": "((x0 : AxReal) -> ((x1 : AxReal) -> AxReal))"
+    },
+    {
+      "kind": "axiom",
+      "name": "AxReal.add_assoc",
+      "prelude": "axreal",
+      "type": "((x0 : AxReal) -> ((x1 : AxReal) -> ((x2 : AxReal) -> Eq.{1} AxReal (AxReal.add (AxReal.add x0 x1) x2) (AxReal.add x0 (AxReal.add x1 x2)))))"
+    },
+    {
+      "kind": "axiom",
+      "name": "AxReal.add_comm",
+      "prelude": "axreal",
+      "type": "((x0 : AxReal) -> ((x1 : AxReal) -> Eq.{1} AxReal (AxReal.add x0 x1) (AxReal.add x1 x0)))"
+    },
+    {
+      "kind": "axiom",
+      "name": "AxReal.add_le_add",
+      "prelude": "axreal",
+      "type": "((x0 : AxReal) -> ((x1 : AxReal) -> ((x2 : AxReal) -> ((x3 : AxReal) -> ((x4 : AxReal.le x0 x1) -> ((x5 : AxReal.le x2 x3) -> AxReal.le (AxReal.add x0 x2) (AxReal.add x1 x3)))))))"
+    },
+    {
+      "kind": "axiom",
+      "name": "AxReal.add_lt_add_of_le_of_lt",
+      "prelude": "axreal",
+      "type": "((x0 : AxReal) -> ((x1 : AxReal) -> ((x2 : AxReal) -> ((x3 : AxReal) -> ((x4 : AxReal.le x0 x1) -> ((x5 : AxReal.lt x2 x3) -> AxReal.lt (AxReal.add x0 x2) (AxReal.add x1 x3)))))))"
+    },
+    {
+      "kind": "axiom",
+      "name": "AxReal.add_neg",
+      "prelude": "axreal",
+      "type": "((x0 : AxReal) -> Eq.{1} AxReal (AxReal.add x0 (AxReal.neg x0)) AxReal.zero)"
+    },
+    {
+      "kind": "axiom",
+      "name": "AxReal.add_zero",
+      "prelude": "axreal",
+      "type": "((x0 : AxReal) -> Eq.{1} AxReal (AxReal.add x0 AxReal.zero) x0)"
+    },
+    {
+      "kind": "axiom",
+      "name": "AxReal.le",
+      "prelude": "axreal",
+      "type": "((x0 : AxReal) -> ((x1 : AxReal) -> Prop))"
+    },
+    {
+      "kind": "axiom",
+      "name": "AxReal.le_of_lt",
+      "prelude": "axreal",
+      "type": "((x0 : AxReal) -> ((x1 : AxReal) -> ((x2 : AxReal.lt x0 x1) -> AxReal.le x0 x1)))"
+    },
+    {
+      "kind": "axiom",
+      "name": "AxReal.le_refl",
+      "prelude": "axreal",
+      "type": "((x0 : AxReal) -> AxReal.le x0 x0)"
+    },
+    {
+      "kind": "axiom",
+      "name": "AxReal.le_trans",
+      "prelude": "axreal",
+      "type": "((x0 : AxReal) -> ((x1 : AxReal) -> ((x2 : AxReal) -> ((x3 : AxReal.le x0 x1) -> ((x4 : AxReal.le x1 x2) -> AxReal.le x0 x2)))))"
+    },
+    {
+      "kind": "axiom",
+      "name": "AxReal.left_distrib",
+      "prelude": "axreal",
+      "type": "((x0 : AxReal) -> ((x1 : AxReal) -> ((x2 : AxReal) -> Eq.{1} AxReal (AxReal.mul x0 (AxReal.add x1 x2)) (AxReal.add (AxReal.mul x0 x1) (AxReal.mul x0 x2)))))"
+    },
+    {
+      "kind": "axiom",
+      "name": "AxReal.lt",
+      "prelude": "axreal",
+      "type": "((x0 : AxReal) -> ((x1 : AxReal) -> Prop))"
+    },
+    {
+      "kind": "axiom",
+      "name": "AxReal.lt_irrefl",
+      "prelude": "axreal",
+      "type": "((x0 : AxReal) -> Not (AxReal.lt x0 x0))"
+    },
+    {
+      "kind": "axiom",
+      "name": "AxReal.lt_of_le_of_lt",
+      "prelude": "axreal",
+      "type": "((x0 : AxReal) -> ((x1 : AxReal) -> ((x2 : AxReal) -> ((x3 : AxReal.le x0 x1) -> ((x4 : AxReal.lt x1 x2) -> AxReal.lt x0 x2)))))"
+    },
+    {
+      "kind": "axiom",
+      "name": "AxReal.lt_of_lt_of_le",
+      "prelude": "axreal",
+      "type": "((x0 : AxReal) -> ((x1 : AxReal) -> ((x2 : AxReal) -> ((x3 : AxReal.lt x0 x1) -> ((x4 : AxReal.le x1 x2) -> AxReal.lt x0 x2)))))"
+    },
+    {
+      "kind": "axiom",
+      "name": "AxReal.lt_trans",
+      "prelude": "axreal",
+      "type": "((x0 : AxReal) -> ((x1 : AxReal) -> ((x2 : AxReal) -> ((x3 : AxReal.lt x0 x1) -> ((x4 : AxReal.lt x1 x2) -> AxReal.lt x0 x2)))))"
+    },
+    {
+      "kind": "axiom",
+      "name": "AxReal.mul",
+      "prelude": "axreal",
+      "type": "((x0 : AxReal) -> ((x1 : AxReal) -> AxReal))"
+    },
+    {
+      "kind": "axiom",
+      "name": "AxReal.mul_assoc",
+      "prelude": "axreal",
+      "type": "((x0 : AxReal) -> ((x1 : AxReal) -> ((x2 : AxReal) -> Eq.{1} AxReal (AxReal.mul (AxReal.mul x0 x1) x2) (AxReal.mul x0 (AxReal.mul x1 x2)))))"
+    },
+    {
+      "kind": "axiom",
+      "name": "AxReal.mul_comm",
+      "prelude": "axreal",
+      "type": "((x0 : AxReal) -> ((x1 : AxReal) -> Eq.{1} AxReal (AxReal.mul x0 x1) (AxReal.mul x1 x0)))"
+    },
+    {
+      "kind": "axiom",
+      "name": "AxReal.mul_le_mul_of_nonneg_left",
+      "prelude": "axreal",
+      "type": "((x0 : AxReal) -> ((x1 : AxReal) -> ((x2 : AxReal) -> ((x3 : AxReal.le AxReal.zero x0) -> ((x4 : AxReal.le x1 x2) -> AxReal.le (AxReal.mul x0 x1) (AxReal.mul x0 x2))))))"
+    },
+    {
+      "kind": "axiom",
+      "name": "AxReal.mul_nonneg",
+      "prelude": "axreal",
+      "type": "((x0 : AxReal) -> ((x1 : AxReal) -> ((x2 : AxReal.le AxReal.zero x0) -> ((x3 : AxReal.le AxReal.zero x1) -> AxReal.le AxReal.zero (AxReal.mul x0 x1)))))"
+    },
+    {
+      "kind": "axiom",
+      "name": "AxReal.mul_one",
+      "prelude": "axreal",
+      "type": "((x0 : AxReal) -> Eq.{1} AxReal (AxReal.mul x0 AxReal.one) x0)"
+    },
+    {
+      "kind": "axiom",
+      "name": "AxReal.mul_zero",
+      "prelude": "axreal",
+      "type": "((x0 : AxReal) -> Eq.{1} AxReal (AxReal.mul x0 AxReal.zero) AxReal.zero)"
+    },
+    {
+      "kind": "axiom",
+      "name": "AxReal.neg",
+      "prelude": "axreal",
+      "type": "((x0 : AxReal) -> AxReal)"
+    },
+    {
+      "kind": "axiom",
+      "name": "AxReal.one",
+      "prelude": "axreal",
+      "type": "AxReal"
+    },
+    {
+      "kind": "axiom",
+      "name": "AxReal.sq_nonneg",
+      "prelude": "axreal",
+      "type": "((x0 : AxReal) -> AxReal.le AxReal.zero (AxReal.mul x0 x0))"
+    },
+    {
+      "kind": "axiom",
+      "name": "AxReal.zero",
+      "prelude": "axreal",
+      "type": "AxReal"
+    },
+    {
+      "kind": "axiom",
+      "name": "AxReal.zero_lt_one",
+      "prelude": "axreal",
+      "type": "AxReal.lt AxReal.zero AxReal.one"
+    }
+  ],
+  "epoch": {
+    "commit": "7805ef8b3187468be75109ed94d97fb9e9df2abd",
+    "source": "commit",
+    "unix": 1787288415
+  },
+  "generator": "render/producers-kernel/kernel_to_docir.py",
+  "note": "The TRUSTED SURFACE: declarations admitted without a checked proof body (axiom + opaque + quotient). Referenced by no statement block; rendered only as a table, which carries no status."
+}

@@ -1,0 +1,297 @@
+{
+  "schema_version": 1,
+  "meta": {
+    "doc_id": "fixture-fact-ledger",
+    "title": "Two ledger entries, rendered from their evidence",
+    "subtitle": "The P0 golden fixture for the render strand",
+    "genre": "result",
+    "authors": ["Axeyum render strand, lane CORE"],
+    "abstract": {
+      "text": "This document is the smallest thing the render pipeline can produce that is still honest. Every number, statement and badge below was resolved from a file on disk: the two propositions come from the fact ledger by checked reference, the claims about them come from a recorded run whose declared inputs are re-hashed on every build, and the table and the figure are copied out of that run rather than typed here. The prose is the only part a human wrote."
+    },
+    "epoch": {
+      "unix": 1787312215,
+      "source": "commit",
+      "commit": "10ef29f7f9764e29628e88d21184515c6cf6156a"
+    },
+    "repo": {
+      "url": "https://github.com/mjbommar/axeyum",
+      "commit": "10ef29f7f9764e29628e88d21184515c6cf6156a"
+    },
+    "options": {
+      "latex": { "detail": "appendix" }
+    }
+  },
+  "blocks": [
+    {
+      "id": "why",
+      "tag": "essential",
+      "kind": {
+        "type": "prose",
+        "text": "What the pipeline is for",
+        "heading_level": 2
+      }
+    },
+    {
+      "id": "why-body",
+      "tag": "essential",
+      "kind": {
+        "type": "prose",
+        "text": "A rendered document here is a checker output, not prose about one. The distinction is not stylistic: the claims below carry the status their evidence earned, and if the run behind them had exited nonzero the badges would say so, because the emitter that printed them cannot compute a status at all. Nothing in this file can be edited into looking better."
+      }
+    },
+    {
+      "id": "scope",
+      "tag": "essential",
+      "kind": {
+        "type": "prose",
+        "text": "Read the scope of the claims carefully, because it is the honest part. The run behind them validated two fact-ledger entries and read what they record. It did **not** check the mathematics -- that was checked elsewhere, by the routes the ledger names, and those statements appear below as statements of record with their own status axes rather than as claims this document makes."
+      }
+    },
+
+    {
+      "id": "claim-bool-and-comm",
+      "tag": "essential",
+      "kind": {
+        "type": "claim",
+        "label": "Ledger record of F:bool-and-comm",
+        "statement": {
+          "source": "text",
+          "text": "The fact-ledger entry for Boolean conjunction's commutativity is schema-valid and records a proof term this project's kernel admitted, together with the assumptions that admission rests on."
+        },
+        "status": "checked",
+        "evidence": [
+          {
+            "run_record": "run-fact-ledger-check.json",
+            "record_id": "R:fixture-fact-ledger-check",
+            "claim_key": "f-bool-and-comm",
+            "role": "primary"
+          }
+        ]
+      }
+    },
+    {
+      "id": "claim-excluded-middle",
+      "tag": "essential",
+      "kind": {
+        "type": "claim",
+        "label": "Ledger record of F:excluded-middle",
+        "statement": {
+          "source": "text",
+          "text": "The fact-ledger entry for the law of excluded middle is schema-valid and records a term-level decision, on a route whose trust base is different in kind from the imported one above."
+        },
+        "status": "checked",
+        "evidence": [
+          {
+            "run_record": "run-fact-ledger-check.json",
+            "record_id": "R:fixture-fact-ledger-check",
+            "claim_key": "f-excluded-middle",
+            "role": "primary"
+          }
+        ]
+      }
+    },
+    {
+      "id": "claim-no-unearned-axiom-freedom",
+      "tag": "essential",
+      "kind": {
+        "type": "claim",
+        "label": "No unearned axiom-freedom",
+        "statement": {
+          "source": "text",
+          "text": "Neither entry claims an empty axiom footprint on a route that cannot deliver one. This is the check worth having: an empty footprint is the strongest thing this project publishes, and only the constructed kernel route can earn it.",
+          "latex": "Neither entry claims an empty axiom footprint on a route that cannot deliver one. This is the check worth having: an empty footprint is the strongest thing this project publishes, and only the constructed kernel route can earn it."
+        },
+        "status": "checked",
+        "evidence": [
+          {
+            "run_record": "run-fact-ledger-check.json",
+            "record_id": "R:fixture-fact-ledger-check",
+            "claim_key": "no-unearned-axiom-freedom",
+            "role": "primary"
+          }
+        ]
+      }
+    },
+
+    {
+      "id": "measurements",
+      "tag": "essential",
+      "kind": {
+        "type": "prose",
+        "text": "What the run measured",
+        "heading_level": 2
+      }
+    },
+    {
+      "id": "table-fixture-facts",
+      "tag": "essential",
+      "title": "Recorded status, route and evidence per fact",
+      "kind": {
+        "type": "table",
+        "caption": {
+          "text": "Taken out of the run record by reference. No cell below was typed into this manifest."
+        },
+        "from_run": {
+          "run_record": "run-fact-ledger-check.json",
+          "table": "fixture-facts",
+          "record_id": "R:fixture-fact-ledger-check"
+        }
+      }
+    },
+    {
+      "id": "figure-footprints",
+      "tag": "essential",
+      "kind": {
+        "type": "figure",
+        "alt": "Bar chart of axiom-footprint size and evidence-row count for each fixture fact",
+        "caption": {
+          "text": "Drawn from the same rows: a changed footprint changes the picture."
+        },
+        "spec": {
+          "figure_type": "svg",
+          "src": "render/tests/fixtures/fixture-footprints.svg",
+          "width": 520,
+          "height": 170
+        }
+      }
+    },
+
+    {
+      "id": "statements",
+      "tag": "essential",
+      "kind": {
+        "type": "prose",
+        "text": "The statements of record",
+        "heading_level": 2
+      }
+    },
+    {
+      "id": "statement-bool-and-comm",
+      "tag": "essential",
+      "kind": {
+        "type": "statement",
+        "ref": { "kind": "fact", "id": "F:bool-and-comm" },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "note": {
+          "text": "Pulled from `artifacts/facts/F-bool-and-comm.json` by reference. If that id stopped resolving, this build would fail rather than print a plausible-looking theorem."
+        }
+      }
+    },
+    {
+      "id": "statement-excluded-middle",
+      "tag": "detail",
+      "title": "Statement of record: the law of excluded middle",
+      "kind": {
+        "type": "statement",
+        "ref": { "kind": "fact", "id": "F:excluded-middle" },
+        "show": ["title", "prose", "formal", "status", "proof_route", "axiom_footprint"]
+      }
+    },
+
+    {
+      "id": "steps-resolution",
+      "tag": "detail",
+      "title": "How the first claim above was resolved",
+      "kind": {
+        "type": "steps",
+        "caption": {
+          "text": "The resolution this build performed, in order. Every step either produced data or refused; none of them produced a status."
+        },
+        "steps": [
+          {
+            "op": "read the manifest block",
+            "input": { "text": "block `claim-bool-and-comm`" },
+            "output": {
+              "text": "a claim with one evidence reference. Zero references would have been a build error here, before anything was read."
+            }
+          },
+          {
+            "op": "load the run record",
+            "input": { "text": "run-fact-ledger-check.json, expecting id `R:fixture-fact-ledger-check`" },
+            "output": {
+              "text": "the record, its declared id matching the reference."
+            }
+          },
+          {
+            "op": "re-hash every declared input",
+            "input": { "text": "the record's three declared input paths" },
+            "output": {
+              "text": "three SHA-256 digests, each equal to what the run recorded. A single mismatch would have ended the build: the evidence would be describing bytes that are no longer there."
+            }
+          },
+          {
+            "op": "compute the rendered status",
+            "input": { "text": "declared `checked`, run exit status 0, run claim status `checked`" },
+            "output": {
+              "text": "`checked` -- the minimum of the declared ceiling and every cap the evidence imposed. This step can only lower."
+            }
+          },
+          {
+            "op": "resolve the statement of record",
+            "input": { "text": "the fact reference `F:bool-and-comm`" },
+            "output": {
+              "text": "the ledger entry's title, prose, formal statement and both status axes, fetched rather than transcribed."
+            },
+            "justification": { "kind": "fact", "id": "F:bool-and-comm" }
+          }
+        ]
+      }
+    },
+
+    {
+      "id": "cert-lean-import",
+      "tag": "essential",
+      "kind": {
+        "type": "certificate",
+        "cert_kind": "kernel-admission",
+        "summary": {
+          "text": "The proof term behind the first statement of record: an exported Lean declaration stream that this project's independent kernel type-checked. The artifact's digest is verified on every build of this document."
+        },
+        "artifact_refs": [
+          {
+            "path": "artifacts/lean-imports/bool-and-comm.ndjson",
+            "sha256": "19e3fd972bccd534660e447b445f8a80cb708752813c1d40ad9b8427045c898f",
+            "label": "lean4export NDJSON 3.1.0 stream",
+            "bytes": 60508,
+            "media_type": "application/x-ndjson"
+          }
+        ],
+        "replay": {
+          "line": "cargo test -p axeyum-lean-import --test imported_fact_evidence -- --nocapture 2>/dev/null | grep -q 'AXEYUM-IMPORT-FACT|F:bool-and-comm|'",
+          "cwd": ".",
+          "expected_exit_status": 0
+        }
+      }
+    },
+    {
+      "id": "include-run-record",
+      "tag": "archive",
+      "title": "the run record this document rests on",
+      "kind": {
+        "type": "include",
+        "path": "render/tests/fixtures/run-fact-ledger-check.json",
+        "render_hint": "link",
+        "caption": { "text": "The evidence artifact itself." }
+      }
+    },
+
+    {
+      "id": "closing",
+      "tag": "essential",
+      "kind": {
+        "type": "prose",
+        "text": "If you want to disbelieve this page, the cheapest attack is to change one byte of either fact file and rebuild. The build will refuse, and it will name the file, the digest the run recorded and the digest on disk. That is the whole design in one sentence."
+      }
+    }
+  ]
+}
