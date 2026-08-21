@@ -60,6 +60,25 @@ set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 ZERO=0000000000000000000000000000000000000000
+CALLER_HEAD="$(git rev-parse HEAD)"
+CALLER_INDEX="$(git write-tree)"
+CALLER_STATUS="$(git status --porcelain=v1)"
+GIT_LOCAL_ENV_VARS="$(git rev-parse --local-env-vars)"
+
+# A pre-push hook inherits GIT_DIR, GIT_WORK_TREE, and related variables from
+# its caller. Clear those variables before every foreign-worktree command:
+# otherwise git -C still operates on the caller and can detach or clean the
+# worktree being pushed. Keep this in a subshell so the push itself retains
+# its original context.
+foreign_git() (
+  unset $GIT_LOCAL_ENV_VARS
+  git -C "$tmp_wt" "$@"
+)
+
+repo_git() (
+  unset $GIT_LOCAL_ENV_VARS
+  git -C "$REPO_ROOT" "$@"
+)
 
 # Collect the distinct pushed SHAs whose diff-to-remote touches Rust/TOML.
 # (A branch delete — local_sha all-zero — is skipped; a new branch diffs from
@@ -137,13 +156,13 @@ echo "pre-push: Rust/TOML changed — compile + fmt gate on pushed SHA ${target_
 # stale-mtime trap in CLAUDE.md comes from tar restoring COMMIT times, which can
 # put content behind a warm cache and let a gate pass over code it never
 # compiled. Checkout cannot do that.
-if ! { git -C "$tmp_wt" rev-parse --git-dir >/dev/null 2>&1 \
-       && git -C "$tmp_wt" checkout --detach --force --quiet "$target_sha" 2>/dev/null; }; then
+if ! { foreign_git rev-parse --git-dir >/dev/null 2>&1 \
+       && foreign_git checkout --detach --force --quiet "$target_sha" 2>/dev/null; }; then
   rm -rf "$tmp_wt"
-  git -C "$REPO_ROOT" worktree prune
-  git -C "$REPO_ROOT" worktree add --detach --quiet "$tmp_wt" "$target_sha"
+  repo_git worktree prune
+  repo_git worktree add --detach --quiet "$tmp_wt" "$target_sha"
 fi
-git -C "$tmp_wt" clean -xdfq
+foreign_git clean -xdfq
 
 # A DEDICATED target dir for the gate — persistent, so it stays warm across
 # pushes, but NOT shared with the main checkout's.
@@ -355,5 +374,11 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
     done
   fi
 )
+if [ "$(git rev-parse HEAD)" != "$CALLER_HEAD" ] \
+   || [ "$(git write-tree)" != "$CALLER_INDEX" ] \
+   || [ "$(git status --porcelain=v1)" != "$CALLER_STATUS" ]; then
+  echo "pre-push: FAILED — gate worktree changed caller HEAD, index, or status" >&2
+  exit 1
+fi
 echo "pre-push: gate green (pushed SHA compiles, is formatted, corpus- and unit-sound)" >&2
 echo "pre-push: total ${SECONDS}s" >&2
