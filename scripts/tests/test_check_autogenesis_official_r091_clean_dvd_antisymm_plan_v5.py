@@ -53,6 +53,11 @@ assert COPRIME_AUDIT_SPEC and COPRIME_AUDIT_SPEC.loader
 COPRIME_AUDIT = importlib.util.module_from_spec(COPRIME_AUDIT_SPEC)
 COPRIME_AUDIT_SPEC.loader.exec_module(COPRIME_AUDIT)
 
+COPRIME_RESULT_SPEC = importlib.util.spec_from_file_location("coprime_carrier_result", ROOT / "scripts/check-autogenesis-nat-gcd-fib-add-self-coprime-carrier-audit-result.py")
+assert COPRIME_RESULT_SPEC and COPRIME_RESULT_SPEC.loader
+COPRIME_RESULT = importlib.util.module_from_spec(COPRIME_RESULT_SPEC)
+COPRIME_RESULT_SPEC.loader.exec_module(COPRIME_RESULT)
+
 
 class PlanControls(unittest.TestCase):
     def test_live_plan_passes(self) -> None:
@@ -165,6 +170,18 @@ class CoprimeCarrierAuditControls(unittest.TestCase):
         plan["audit"]["proof_terms_types_or_values_may_be_rendered"] = True
         with self.assertRaises(COPRIME_AUDIT.PlanError):
             COPRIME_AUDIT.validate(result, plan)
+
+
+class CoprimeCarrierResultControls(unittest.TestCase):
+    def test_live_result_passes(self) -> None:
+        self.assertEqual(COPRIME_RESULT.validate()[0]["nearest_exact_parent"]["target_compatibility"], "exact-declaration")
+
+    def test_leaf_hash_mutation_fails(self) -> None:
+        result, plan = COPRIME_RESULT.validate()
+        plan = copy.deepcopy(plan)
+        plan["authorized_change"]["required_target_leaf_declaration_sha256"] = "0" * 64
+        with self.assertRaises(COPRIME_RESULT.BoundaryError):
+            COPRIME_RESULT.validate(result, plan)
 
 
 if __name__ == "__main__":

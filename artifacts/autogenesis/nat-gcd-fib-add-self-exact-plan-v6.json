@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-exact-plan-v6",
+  "state": "preregistered-coprimality-target-leaf-pruning-before-code-or-rerun",
+  "predecessor": {"path": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-result-v5.json"},
+  "audit": {"path": "artifacts/autogenesis/nat-gcd-fib-add-self-coprime-carrier-audit-result-v1.json"},
+  "authorized_change": {"driver": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs", "root": "Nat.fib_coprime_fib_succ", "old_composition": "compose_checked_theorem_slice with no target leaves", "new_composition": "compose_checked_theorem_slice_with_target_leaves with exactly Axeyum.Autogenesis.nat_gcd_succ", "required_target_leaf_declaration_sha256": "1a9cf6e4ef4dc54a298214571515e7682a6265d9db7008b7cf1f8b3c38d11f16", "required_checked_compatibility": "exact declaration identity", "other_source_changes_authorized": false},
+  "inputs_inherited_byte_exactly_from": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-plan-v4.json",
+  "acceptance": {"one_driver_build": true, "fresh_complete_invocations": 2, "capsule_compositions": 8, "coprimality_target_leaf_reuses": 2, "local_gcd_comm_submissions": 2, "exact_target_submissions": 2, "outputs_byte_identical": true, "target_goal_sha256": "297c9f4af4d63eff354223f9548ab1d4dd3d7e52aa701e88802d58b7929a1451", "target_axiom_footprint": [], "all_four_capsule_roots_required_transitively": true, "proof_terms_types_or_values_may_be_rendered": false},
+  "budget": {"max_driver_builds": 1, "max_complete_invocations": 2, "max_capsule_compositions": 8, "max_coprimality_target_leaf_reuses": 2, "max_local_gcd_comm_submissions": 2, "max_exact_target_submissions": 2, "max_retries": 0},
+  "authority": {"target_credit_before_acceptance": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_on_accept": "Issue a dependency-bound theorem receipt, admit the exact fact through the crash-safe ledger transaction, and verify the newly unlocked frontier from a clean worktree.",
+  "output": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-result-v6.json",
+  "verification": "python3 scripts/check-autogenesis-nat-gcd-fib-add-self-coprime-carrier-audit-result.py",
+  "limitations": "This authorizes one exact target-leaf pruning change and two unchanged target attempts; it grants no credit before full deterministic acceptance."
+}
