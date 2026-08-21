@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-raw-cancellation-result",
+  "state": "typeclass-projections-reduced-concrete-int-methods-remain",
+  "plan_sha256": "c3f53b94de2f2f8d9059cd21cf9018dd44560ca50d1b92c8acd71adf2a9fb5bd",
+  "source": {"path": "artifacts/autogenesis/sources/int-fib-raw-cancellation-v2.lean", "sha256": "86ee9bc57df335bbfc1d8f6aa49b27ff1cca2135ab36d1a152fcdeb2dfcdf6fd"},
+  "execution": {"compiler_invocations": 1, "compiler_exit_status": 1, "exporter_invocations": 0, "importer_runs": 0, "theorem_submissions": 0, "retries": 0, "ledger_writes": 0},
+  "diagnostic": {
+    "successful_reduction": "Add.add, HAdd.hAdd, and Neg.neg expose Int.add and Int.neg methods",
+    "unknown_identifier": "HNeg.hNeg",
+    "remaining_surface": ["Int.add", "Int.neg"],
+    "repair": "remove HNeg.hNeg and add Int.add plus Int.neg to the same dsimp-only lists"
+  },
+  "cleanup": {"temporary_source_removed": true, "temporary_olean_removed": true, "checkout_baseline_restored": true},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}
