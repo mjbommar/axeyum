@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-raw-cancellation-result",
+  "state": "local-nat-recursions-stop-at-overloaded-operation-projections",
+  "plan_sha256": "475064dae1ee88727a975973d07377a235f5a00f0458ed4ecacca4bc84026162",
+  "source": {"path": "artifacts/autogenesis/sources/int-fib-raw-cancellation-v7.lean", "sha256": "24f346f6b72f899f389954577810b02b373cc560339f1b0f41a41cbe35059269"},
+  "execution": {"compiler_invocations": 1, "compiler_exit_status": 1, "exporter_invocations": 0, "importer_runs": 0, "theorem_submissions": 0, "retries": 0, "ledger_writes": 0},
+  "diagnostic": {
+    "failed_helpers": ["(x + z) - z = x", "z - (x + z) = 0"],
+    "cause": "overloaded Nat addition and subtraction remain opaque to definitional induction reduction",
+    "repair": "state the local helpers with raw Nat.add and Nat.sub functions while leaving every consumer and integer branch unchanged"
+  },
+  "cleanup": {"temporary_source_removed": true, "temporary_olean_removed": true, "checkout_baseline_restored": true},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}

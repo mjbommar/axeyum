@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-raw-cancellation-result",
+  "state": "five-constructor-branches-close-one-zero-normalization-remains",
+  "plan_sha256": "dabaf2443cb151cf7c338002c0f96de09df85946c2e486e9aa4acb5d7738eb47",
+  "source": {"path": "artifacts/autogenesis/sources/int-fib-raw-cancellation-v4.lean", "sha256": "7a0c1e1b7b0ef44300401106ac2f0344ad01d08443bf1fd09219466644d71a8f"},
+  "execution": {"compiler_invocations": 1, "compiler_exit_status": 1, "exporter_invocations": 0, "importer_runs": 0, "theorem_submissions": 0, "retries": 0, "ledger_writes": 0},
+  "diagnostic": {
+    "accepted_branches": 5,
+    "remaining_branch": "even x=0 z=succ",
+    "remaining_target_shape": "Int.subNatNat (z + 1) ((0 + z) + 1) = integer zero",
+    "repair": "normalize 0 + z with Nat.zero_add and reduce the OfNat.ofNat projection in that branch only"
+  },
+  "cleanup": {"temporary_source_removed": true, "temporary_olean_removed": true, "checkout_baseline_restored": true},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}

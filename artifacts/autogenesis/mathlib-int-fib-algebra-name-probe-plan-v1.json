@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-algebra-name-probe-plan",
+  "state": "preregistered-before-fixed-name-probe",
+  "predecessor": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-add-two-algebra-leaves-result-v1.json",
+    "required_state": "direct-cancellation-source-stops-at-unresolved-names"
+  },
+  "candidates": ["Int.neg_add_cancel_left", "Int.neg_add_cancel_right", "Int.add_neg_cancel_left", "Int.add_neg_cancel_right", "Int.neg_add_cancel", "Int.add_neg_cancel", "Int.neg_add_rev", "neg_add_rev"],
+  "execution": {
+    "source": "artifacts/autogenesis/sources/int-fib-algebra-name-probe-v1.lean",
+    "source_present_at_plan_commit": false,
+    "max_compiler_invocations": 1,
+    "max_retries": 0,
+    "max_theorem_submissions": 0,
+    "max_exporter_invocations": 0,
+    "max_importer_runs": 0,
+    "max_ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-algebra-name-probe-result-v1.json",
+  "limitations": "Name and type discovery grants no theorem or footprint credit."
+}

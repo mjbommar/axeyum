@@ -161,6 +161,33 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | V2 exposes both negative conditionals and stops only at the two mis-parenthesized algebra contracts; V3 freezes their exact post-rewrite shapes |
 | 2026-08-21 | (pending) | V3 compiles the complete seven-contract theorem, then its sole exporter call fails before writing because `lean` is absent from PATH; V4 freezes the unchanged source under pinned `lake env` |
 | 2026-08-21 | (pending) | V4 resolves the exporter runtime but finds no compiled module; V5 freezes an explicit `.lake/build/lib/lean` output path for the unchanged theorem |
+| 2026-08-21 | (pending) | V5 reconstructs the seven-contract integer recurrence in a 447,839-byte capsule with two identical imports, six clean dependencies, and an empty footprint |
+| 2026-08-21 | (pending) | Six elementary residual leaves are frozen for an Omega/rfl proposal whose root-selected kernel audit, not tactic success, decides reuse |
+| 2026-08-21 | (pending) | V1 stops before elaboration because the narrow Omega object is absent; V2 freezes only the already-built umbrella `Mathlib` import |
+| 2026-08-21 | (pending) | V2 proves the three parity leaves but stops where Omega cannot see cast addition; V3 freezes only a definitional `rfl` cast proof |
+| 2026-08-21 | (pending) | V3 admits only definitional cast addition as clean and rejects five Omega proposals carrying propext plus Quot/String assumptions |
+| 2026-08-21 | (pending) | Two rejected sign identities are frozen for direct additive-cancellation proofs with all broad automation forbidden |
+| 2026-08-21 | (pending) | Direct cancellation stops at two unavailable generic names; a fixed eight-candidate integer declaration probe is frozen before retrying proof code |
+| 2026-08-21 | (pending) | The probe resolves four integer cancellation types; V2 freezes direct odd cancellation and explicit negation transport for the even identity |
+| 2026-08-21 | (pending) | Both direct algebra leaves compile but retain propext; one sealed-stream read is frozen to classify their seven distinct dependencies |
+| 2026-08-21 | (pending) | Four transports are clean while integer commutativity and cancellation retain propext; their eight nearest parents are frozen for one final descent |
+| 2026-08-21 | (pending) | Parent descent finds clean Nat commutativity, integer zero, and negation transport; exact target-owned constructor proofs replace the contaminated integer algebra layer next |
+| 2026-08-21 | (pending) | Primitive V1 exposes `Int.subNat`'s two-index reduction boundary; V2 freezes clean zero rewrites plus generalized successor case splits |
+| 2026-08-21 | (pending) | Primitive V2 confirms public integer operations stay opaque after constructor splits; eight kernel-level arithmetic carriers are frozen for one composition audit |
+| 2026-08-21 | (pending) | Private integer associativity remains tied to proposition-equality simp; three lower `subNat` computation theorems are frozen as the prospective clean substrate |
+| 2026-08-21 | (pending) | All three `subNat` conveniences remain propext-bearing; nine raw branch and constructor lemmas are frozen to select the true kernel composition boundary |
+| 2026-08-21 | (pending) | Nine branch conveniences are rejected, exposing eight raw computation/constructor roots for the final diagnostic descent and wrapper-free composition stop rule |
+| 2026-08-21 | (pending) | Five raw integer computation/constructor roots are empty-footprint; descent stops and a three-name type probe begins the upward cancellation reconstruction |
+| 2026-08-21 | (pending) | Raw zero/successor `subNatNat` types align with odd/even cancellation; wrapper-free upward composition is frozen before source construction |
+| 2026-08-21 | (pending) | Raw composition V1 stops at opaque Add/Neg projections before arithmetic; V2 freezes definitional projection reduction only |
+| 2026-08-21 | (pending) | V2 exposes concrete `Int.add`/`Int.neg` methods; V3 freezes their direct definitional reduction with the arithmetic proof unchanged |
+| 2026-08-21 | (pending) | V3 reaches explicit `Int.negOfNat` constructor matches; V4 freezes the final natural zero/successor split into raw `subNatNat` branches |
+| 2026-08-21 | (pending) | V4 closes five of six raw constructor branches; V5 freezes only `Nat.zero_add` plus overloaded-zero reduction in the last branch |
+| 2026-08-21 | (pending) | V5 reaches one raw `Nat.add 0 z` node; V6 freezes exact equality transport through `Nat.succ` instead of a generic rewrite |
+| 2026-08-21 | (pending) | V6 compiles wrapper-free raw cancellation but both roots retain propext; six remaining Nat helpers are frozen for exact classification |
+| 2026-08-21 | (pending) | Four Nat helpers are clean; V7 replaces the two propext subtraction conveniences with direct structural recursion and removes commutativity detours |
+| 2026-08-21 | (pending) | V7's local recursions stop at overloaded Nat operations; V8 freezes explicit `Nat.add`/`Nat.sub` propositions with all integer branches unchanged |
+| 2026-08-21 | (pending) | V8 finds named Nat functions still opaque; V9 freezes explicit recursion unfolding only inside the two local helper inductions |
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
 | 2026-08-21 | `a9610560c` | The durable construction checker binds the separately stored target goal identity without weakening capsule checks |
@@ -2739,7 +2766,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | CAS parity | `BLOCKED` by deliberate pause | Wave-24 code `01d47334` and pause commit `245d8f25` are ancestors of current main. Do not start wave 25 until the user resumes it and retained specialized gate evidence is re-audited. |
 | Consumer apps / verified systems | `WIP`, non-critical path | Existing EVM, verifier, property, reflection, and symbolic-execution slices remain useful; do not preempt A2–A7 without measured demand. |
 | Foundational resources | `WIP`, separate content lane | Keep generated-resource gates green; record only project-level priority changes here. |
-| Public documentation and examples | `DONE`, current comprehensive pass | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; all 127 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, optional EVM/verifier certificate fields, and source-comment UNSAT-proof overclaims. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; reopen only for concrete drift. |
+| Public documentation and examples | `DONE`, current comprehensive pass | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; all 128 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, optional EVM/verifier certificate fields, and source-comment UNSAT-proof overclaims. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; reopen only for concrete drift. |
 | Worktree and build-cache hygiene | `WIP`, recovered | A11; only clean `main` is registered and published. A verified 2026-08-12 external Git bundle preserves the retired refs/stashes; all old branches, salvage stashes, inactive checkouts, and their large Cargo targets are removed. Next automate deterministic read-only inventory and exact-target cleanup classification. |
 
 ## Resume protocol

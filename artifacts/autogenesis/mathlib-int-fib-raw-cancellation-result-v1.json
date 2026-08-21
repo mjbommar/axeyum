@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-raw-cancellation-result",
+  "state": "raw-proof-stops-at-typeclass-operation-projections",
+  "plan_sha256": "452f030bf2de8bd647d02834369e86d71f7ed5814d45918abd19763e30a34991",
+  "source": {"path": "artifacts/autogenesis/sources/int-fib-raw-cancellation-v1.lean", "sha256": "97163c062ea7e8e38343786de8a82af00cbb889cf8d0ee72294998b356b3db92"},
+  "execution": {"compiler_invocations": 1, "compiler_exit_status": 1, "exporter_invocations": 0, "importer_runs": 0, "theorem_submissions": 0, "retries": 0, "ledger_writes": 0},
+  "diagnostic": {
+    "failures": ["even zero change to subNatNat", "even successor change to subNatNat", "odd change to subNatNat"],
+    "cause": "surface Add/Neg typeclass projections remain opaque to change before the raw computation equations can apply",
+    "raw_equation_mismatch": false,
+    "repair": "definitionally reduce only Add.add, HAdd.hAdd, Neg.neg, and HNeg.hNeg projections before each change"
+  },
+  "cleanup": {"temporary_source_removed": true, "temporary_olean_removed": true, "checkout_baseline_restored": true},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}

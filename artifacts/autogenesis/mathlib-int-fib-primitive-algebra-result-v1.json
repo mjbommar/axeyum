@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-primitive-algebra-result",
+  "state": "single-index-induction-does-not-reduce-int-subtraction",
+  "plan_sha256": "7e497367b3129145d6a9d2b410ca954e20960518ee8b689065e13f817a01ea0e",
+  "source": {"path": "artifacts/autogenesis/sources/int-fib-primitive-algebra-v1.lean", "sha256": "0c718a6d3daec75c9285894e386a25b3104e3298b9efcb06755da61f10566d10"},
+  "execution": {"compiler_invocations": 1, "compiler_exit_status": 1, "exporter_invocations": 0, "importer_runs": 0, "theorem_submissions": 0, "retries": 0, "ledger_writes": 0},
+  "diagnostic": {
+    "even_base": "requires the independently clean Int.add_zero rather than rfl",
+    "even_successor": "induction on z alone leaves x opaque to Int.subNat reduction",
+    "odd_successor": "induction on z alone leaves x opaque to Int.subNat reduction",
+    "repair": "generalize x across the z induction, split x in successor branches, and use only Int.add_zero in the base"
+  },
+  "cleanup": {"temporary_source_removed": true, "temporary_olean_removed": true, "checkout_baseline_restored": true},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}

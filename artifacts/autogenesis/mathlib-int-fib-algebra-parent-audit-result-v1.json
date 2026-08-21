@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-algebra-parent-audit-result",
+  "state": "three-clean-parents-five-propext-carriers-localized",
+  "plan": {"path": "artifacts/autogenesis/mathlib-int-fib-algebra-parent-audit-plan-v1.json", "sha256": "283111d72248ebb9c59f7935af3c797841104694c8eb4b5213c2a1c55dfaa3fb"},
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-algebra-leaves-v2/leaves.ndjson", "bytes": 1428492, "sha256": "205bb2dcf8ec703d912380bad0f8f2749379d23192d97af5a2422ad6f6ab4a53"},
+  "observation_sha256": "752f7c1e4b0ef81cdfca8472122551a485f19ef618a8d54dc6a696a4160c02b7",
+  "empty_footprint": ["Nat.add_comm", "of_eq_true", "Int.add_zero", "SubtractionMonoid.neg_add_rev"],
+  "propext_bearing": {
+    "eq_self": ["eq_true"],
+    "Int.add_assoc": ["Eq.symm", "Eq.trans", "Int.add_comm", "Nat.add_assoc", "Nat.add_comm", "Nat.add_left_comm", "_private.Init.Data.Int.Lemmas.0.Int.add_assoc.aux1", "_private.Init.Data.Int.Lemmas.0.Int.add_assoc.aux2", "congr", "congrArg", "congrFun'", "eq_self", "of_eq_true"],
+    "Int.add_left_neg": ["Eq.trans", "Int.subNat_eq_zero_iff._simp_1", "eq_self", "of_eq_true"],
+    "Int.add_right_neg": ["Int.add_comm", "Int.add_left_neg", "congrArg"]
+  },
+  "execution": {"importer_runs": 1, "proof_bearing_stream_reads": 1, "theorem_submissions": 0, "ledger_writes": 0},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}
