@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-subtractive-gcd-root-audit-result",
+  "state": "subtractive-gcd-shortcut-declined-all-seven-roots-assumption-bearing",
+  "plan": {
+    "path": "artifacts/autogenesis/subtractive-gcd-root-audit-plan-v1.json",
+    "sha256": "451eb0d6206ad22f98babec7ae543e3db565eb42439f83e4600b7cf012136a75"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/38e40236f-subtractive-gcd-root-audit-v1/manifest.json",
+    "sha256": "6b03e14eccbbbdf9dbb76750f0f60ba8c045237ba355eea04f436f66cfd39aa0",
+    "mode": "0444"
+  },
+  "summary": {
+    "population": 7,
+    "class_counts": {
+      "empty-footprint": 0,
+      "other-assumption-bearing": 2,
+      "propext-bearing": 5
+    },
+    "all_roots_empty": false,
+    "accepted_subtractive_foundation": false,
+    "direct_dependency_union_population": 17
+  },
+  "rows": [
+    {
+      "name": "Nat.gcd_one_left",
+      "declaration_sha256": "52fa4abe5297cfeeb71e4ca91ea4a70cf15db092d45b17e40d07c006f35e0499",
+      "axiom_footprint": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound"],
+      "direct_theorem_dependencies": ["Nat.gcd_succ", "Nat.mod_one", "congrArg"],
+      "class": "other-assumption-bearing",
+      "accepted": false
+    },
+    {
+      "name": "Nat.gcd_one_right",
+      "declaration_sha256": "73180203ea8579e7d3ee4c554a019e609a750a8d9d5dcef9f37f9cc19c376a38",
+      "axiom_footprint": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound", "propext"],
+      "direct_theorem_dependencies": ["Eq.trans", "Nat.gcd_comm", "Nat.gcd_one_left"],
+      "class": "propext-bearing",
+      "accepted": false
+    },
+    {
+      "name": "Nat.gcd_self",
+      "declaration_sha256": "b5bbff1446bcddc3355eca2c38ca9e20983bf782738770611215a7cd56a6bbe1",
+      "axiom_footprint": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound", "propext"],
+      "direct_theorem_dependencies": ["Eq.symm", "Eq.trans", "Nat.gcd_succ", "Nat.gcd_zero_left", "Nat.gcd_zero_right", "Nat.mod_self", "congrArg", "congrFun'", "eq_self", "of_eq_true"],
+      "class": "propext-bearing",
+      "accepted": false
+    },
+    {
+      "name": "Nat.gcd_sub_self_left",
+      "declaration_sha256": "58285353ea676fc88bdd182f65f27f57fdeb03b583d7434c8614aac36caaa7c7",
+      "axiom_footprint": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound", "propext"],
+      "direct_theorem_dependencies": ["Nat.gcd_sub_mul_right_left", "Nat.one_mul", "congrArg", "congrFun'"],
+      "class": "propext-bearing",
+      "accepted": false
+    },
+    {
+      "name": "Nat.gcd_sub_self_right",
+      "declaration_sha256": "61134e46481888560df946121a01579abfa4e09b50e41c9c959ce16575ae7da2",
+      "axiom_footprint": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound", "propext"],
+      "direct_theorem_dependencies": ["Nat.gcd_sub_mul_right_right", "Nat.one_mul", "congrArg", "congrFun'"],
+      "class": "propext-bearing",
+      "accepted": false
+    },
+    {
+      "name": "Nat.gcd_zero_left",
+      "declaration_sha256": "c38918c180c9f1d176c01195a807c22d56cc6a170ba3373e76067d32d45fcd69",
+      "axiom_footprint": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound"],
+      "direct_theorem_dependencies": ["_private.Init.Data.Nat.Gcd.0.Nat.gcd.eq_1", "congrArg"],
+      "class": "other-assumption-bearing",
+      "accepted": false
+    },
+    {
+      "name": "Nat.gcd_zero_right",
+      "declaration_sha256": "6dc78b5e2c7e91dd58f44a8607785668cb5e040a41bf2287fa7e9a23c42688df",
+      "axiom_footprint": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound", "propext"],
+      "direct_theorem_dependencies": ["Eq.symm", "Eq.trans", "Nat.gcd_succ", "Nat.gcd_zero_left", "congrArg", "congrFun'", "eq_self", "of_eq_true"],
+      "class": "propext-bearing",
+      "accepted": false
+    }
+  ],
+  "direct_dependency_union": [
+    "Eq.symm",
+    "Eq.trans",
+    "Nat.gcd_comm",
+    "Nat.gcd_one_left",
+    "Nat.gcd_sub_mul_right_left",
+    "Nat.gcd_sub_mul_right_right",
+    "Nat.gcd_succ",
+    "Nat.gcd_zero_left",
+    "Nat.gcd_zero_right",
+    "Nat.mod_one",
+    "Nat.mod_self",
+    "Nat.one_mul",
+    "_private.Init.Data.Nat.Gcd.0.Nat.gcd.eq_1",
+    "congrArg",
+    "congrFun'",
+    "eq_self",
+    "of_eq_true"
+  ],
+  "budget": {
+    "exporter_invocations": 1,
+    "batch_importer_runs": 1,
+    "retries": 0,
+    "bezout_source_compilations": 0,
+    "new_theorem_submissions": 0,
+    "exact_target_submissions": 0,
+    "executor_invocations": 0
+  },
+  "authority": {
+    "proof_terms_rendered": 0,
+    "theorem_types_rendered": 0,
+    "theorem_values_rendered": 0,
+    "support_theorem_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Keep all seven convenience roots declined. Audit their exact 17-name direct-dependency union before reconstructing only the measured assumption carriers needed for subtraction and zero bases.",
+  "limitations": "The result rejects importing the seven official convenience proofs. It neither refutes a fresh subtractive Bezout proof nor authorizes theorem construction, target submission, evaluation, fact, or ledger credit."
+}
