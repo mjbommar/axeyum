@@ -336,6 +336,31 @@ that is hidden. What was missing is that the **dominance metric does not make
 the distinction**, so "269/326 Lean-reconstructed" reads as a much stronger claim
 than it is — for 127 of them, Lean confirmed a tautology.
 
+**And "roughly half" is misleading in both directions, because the split is
+almost bimodal by logic.** Per-theory, over the same 269:
+
+| logic | reasoning | attestation | reasoning share |
+|---|---:|---:|---:|
+| QF_S | 11 | 0 | **100%** |
+| QF_SLIA | 2 | 0 | **100%** |
+| QF_ABV | 81 | 4 | **95%** |
+| QF_NRA | 15 | 10 | 60% |
+| QF_AUFBV | 11 | 9 | 55% |
+| BV | 8 | 11 | 42% |
+| QF_UF | 6 | 27 | 18% |
+| **QF_NIA, QF_FP, QF_UFLIA, QF_FF, QF_UFFF, QF_DT, QF_BVFP** | **0** | 52 | **0%** |
+| *total* | *142* | *127* | *53%* |
+
+**Seven logics have zero reasoning modules.** For QF_NIA (0 of 20), QF_FP (0 of
+6) and QF_UFLIA (0 of 6), "Lean-reconstructed" says nothing whatever about the
+query — every module is the 21-line shim. Meanwhile QF_ABV is 95% genuine and
+the two string logics are 100%.
+
+So the aggregate understates the strong theories and overstates the weak ones by
+the maximum possible amount, and a reader taking "about half" to any particular
+division will be wrong about it. This table is the number to quote; 53% is an
+average over a distribution with almost nothing in the middle.
+
 The largest attestation families are `BoundedIntBlast` (20), `TermLevelEnum`
 (12), `BvUfLocal` (10) and `NraEvenPower` (10). Note `BoundedIntBlast` appears
 here *and* in the DRAT column above: its Lean module attests, while its
