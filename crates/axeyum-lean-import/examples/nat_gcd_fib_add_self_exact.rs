@@ -55,6 +55,10 @@ fn run() -> Result<(), String> {
         return run_official_clean_order_capsule(args);
     }
     let mut args = std::env::args_os().skip(1);
+    if args.next().as_deref() == Some(std::ffi::OsStr::new("--coprime-carrier-audit")) {
+        return run_coprime_carrier_audit(args);
+    }
+    let mut args = std::env::args_os().skip(1);
     let r091_path = path(&mut args)?;
     let capsules = [
         (CLEAN_ANTISYMM, path(&mut args)?, CLEAN_ANTISYMM_CAPSULE),
@@ -150,6 +154,142 @@ fn run() -> Result<(), String> {
             },
             "execution": {"capsule_compositions": 4, "local_gcd_comm_submissions": 1, "exact_target_submissions": 1, "retries": 0},
             "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0},
+            "fact_status_changes": 0,
+            "evaluation_credit": 0,
+            "ledger_writes": 0,
+        }))
+        .map_err(|error| error.to_string())?
+    );
+    Ok(())
+}
+
+#[allow(clippy::too_many_lines)]
+fn run_coprime_carrier_audit(
+    mut args: impl Iterator<Item = std::ffi::OsString>,
+) -> Result<(), String> {
+    let r091_path = path(&mut args)?;
+    let clean_path = path(&mut args)?;
+    let cancellation_path = path(&mut args)?;
+    let addition_path = path(&mut args)?;
+    let coprime_path = path(&mut args)?;
+    if args.next().is_some() {
+        return Err("usage: nat_gcd_fib_add_self_exact --coprime-carrier-audit <r091> <official-clean-order> <cancellation> <addition> <coprimality>".to_owned());
+    }
+    let r091 = import_bound(&r091_path, R091_SHA256, "r091")?;
+    let clean = import_bound(&clean_path, CLEAN_ANTISYMM_CAPSULE, CLEAN_ANTISYMM)?;
+    let cancellation = import_bound(&cancellation_path, CANCELLATION_CAPSULE, CANCELLATION)?;
+    let addition = import_bound(&addition_path, ADDITION_CAPSULE, ADDITION)?;
+    let coprime = import_bound(&coprime_path, COPRIME_CAPSULE, COPRIME)?;
+    let sources = [
+        (CLEAN_ANTISYMM, clean.kernel()),
+        (CANCELLATION, cancellation.kernel()),
+        (ADDITION, addition.kernel()),
+    ];
+    let mut target = r091.kernel().clone();
+    let mut receipts = Vec::new();
+    for (root, source) in sources {
+        let completed = compose_checked_theorem_slice(source, &target, &[root])
+            .map_err(|error| format!("{root} audit setup composition declined: {error:?}"))?;
+        verify_checked_theorem_composition(
+            source,
+            &target,
+            completed.kernel(),
+            completed.receipt(),
+        )
+        .map_err(|error| format!("{root} audit setup composition did not replay: {error:?}"))?;
+        receipts.push(json!({
+            "root": root,
+            "receipt_sha256": completed.receipt().receipt_sha256,
+        }));
+        target = completed.kernel().clone();
+    }
+    let source = coprime.kernel();
+    let root = find_name(source, COPRIME)?;
+    let blocked_text = "Axeyum.Autogenesis.gcdModel_succ";
+    let blocked = find_name(source, blocked_text)?;
+    let root_closure = source.declaration_dependency_closure(root);
+    if !root_closure.contains(&blocked) {
+        return Err(format!("{blocked_text} disappeared from {COPRIME} closure"));
+    }
+    let mut carriers = root_closure
+        .iter()
+        .copied()
+        .filter_map(|candidate| {
+            let closure = source.declaration_dependency_closure(candidate);
+            (candidate == blocked || closure.contains(&blocked))
+                .then_some((candidate, closure.len()))
+        })
+        .collect::<Vec<_>>();
+    carriers.sort_by_key(|(name, closure_size)| {
+        (*closure_size, source.display_name(*name).to_string())
+    });
+    let rows = carriers
+        .into_iter()
+        .map(|(name, closure_size)| {
+            let rendered = source.display_name(name).to_string();
+            let declaration = source
+                .environment()
+                .get(name)
+                .ok_or_else(|| format!("source carrier disappeared: {rendered}"))?;
+            let source_hash = canonical_declaration_sha256(source, name)?;
+            let target_row = optional_name(&target, &rendered)?
+                .map(|target_name| {
+                    let target_hash = canonical_declaration_sha256(&target, target_name)?;
+                    let compatibility = if target_hash == source_hash {
+                        "exact-declaration".to_owned()
+                    } else {
+                        checked_reused_declaration_compatibility(source, &target, &rendered)
+                            .map_or_else(
+                                |error| format!("declined:{error:?}"),
+                                |receipt| receipt.compatibility.as_str().to_owned(),
+                            )
+                    };
+                    Ok::<_, String>(json!({"declaration_sha256": target_hash, "compatibility": compatibility}))
+                })
+                .transpose()?;
+            let origins = sources
+                .iter()
+                .filter_map(|(root, kernel)| {
+                    optional_name(kernel, &rendered)
+                        .transpose()
+                        .map(|result| result.map(|origin| (*root, kernel, origin)))
+                })
+                .collect::<Result<Vec<_>, _>>()?
+                .into_iter()
+                .map(|(root, kernel, origin)| {
+                    Ok::<_, String>(json!({"root": root, "declaration_sha256": canonical_declaration_sha256(kernel, origin)?}))
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            let footprint = if matches!(declaration, Declaration::Theorem { .. }) {
+                names(source, &source.axiom_footprint(name))
+            } else {
+                Vec::new()
+            };
+            Ok::<_, String>(json!({
+                "name": rendered,
+                "kind": declaration_kind(declaration),
+                "source_declaration_sha256": source_hash,
+                "source_closure_size": closure_size,
+                "source_axiom_footprint": footprint,
+                "target": target_row,
+                "introducing_capsules": origins,
+            }))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "schema_version": 1,
+            "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-coprime-carrier-audit",
+            "source_root": COPRIME,
+            "blocked_dependency": blocked_text,
+            "setup_compositions": receipts,
+            "root_closure_size": root_closure.len(),
+            "carrier_count": rows.len(),
+            "carriers_nearest_first": rows,
+            "execution": {"reads_per_input": 1, "complete_audits": 1, "kernel_submissions": 0, "exports": 0, "retries": 0},
+            "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0},
+            "exact_target_submissions": 0,
             "fact_status_changes": 0,
             "evaluation_credit": 0,
             "ledger_writes": 0,
@@ -1258,6 +1398,9 @@ fn transitive_dependencies(kernel: &Kernel, theorem: NameId) -> Vec<String> {
     seen.into_iter().collect()
 }
 fn find_name(kernel: &Kernel, expected: &str) -> Result<NameId, String> {
+    optional_name(kernel, expected)?.ok_or_else(|| format!("declaration is absent: {expected}"))
+}
+fn optional_name(kernel: &Kernel, expected: &str) -> Result<Option<NameId>, String> {
     let found = kernel
         .environment()
         .iter()
@@ -1266,9 +1409,21 @@ fn find_name(kernel: &Kernel, expected: &str) -> Result<NameId, String> {
         })
         .collect::<Vec<_>>();
     match found.as_slice() {
-        [name] => Ok(*name),
-        [] => Err(format!("declaration is absent: {expected}")),
+        [name] => Ok(Some(*name)),
+        [] => Ok(None),
         _ => Err(format!("declaration is ambiguous: {expected}")),
+    }
+}
+fn declaration_kind(declaration: &Declaration) -> &'static str {
+    match declaration {
+        Declaration::Axiom { .. } => "axiom",
+        Declaration::Definition { .. } => "definition",
+        Declaration::Theorem { .. } => "theorem",
+        Declaration::Opaque { .. } => "opaque",
+        Declaration::Quotient { .. } => "quotient",
+        Declaration::Inductive { .. } => "inductive",
+        Declaration::Constructor { .. } => "constructor",
+        Declaration::Recursor { .. } => "recursor",
     }
 }
 fn nested_name(kernel: &mut Kernel, parts: &[&str]) -> NameId {
