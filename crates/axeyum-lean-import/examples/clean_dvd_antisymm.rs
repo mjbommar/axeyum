@@ -16,16 +16,18 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
 const TARGET_SHA256: &str = "fc1117679c743009e8548a25d1f73f71f6cd42555ea77b3efce07844673670b2";
+const CLEAN_EQ_ZERO_OF_ZERO_DVD: &str = "Axeyum.Autogenesis.eqZeroOfZeroDvdCleanV1";
 const CLEAN_LE_OF_DVD: &str = "Axeyum.Autogenesis.leOfDvdCleanV1";
-const CLEAN_DVD_ANTISYMM: &str = "Axeyum.Autogenesis.dvdAntisymmCleanV2";
+const CLEAN_DVD_ANTISYMM: &str = "Axeyum.Autogenesis.dvdAntisymmCleanV3";
+const CLEAN_ZERO_DVD_DEPENDENCIES: [&str; 1] = ["Nat.zero_mul"];
 const CLEAN_LE_DEPENDENCIES: [&str; 3] = [
     "Nat.mul_le_mul_left",
     "Nat.mul_one",
     "Nat.one_le_right_of_mul",
 ];
 const CLEAN_ANTISYMM_DEPENDENCIES: [&str; 4] = [
+    CLEAN_EQ_ZERO_OF_ZERO_DVD,
     CLEAN_LE_OF_DVD,
-    "Nat.eq_zero_of_zero_dvd",
     "Nat.le_antisymm",
     "Nat.succ_pos",
 ];
@@ -52,6 +54,13 @@ fn run() -> Result<(), String> {
     let mut native = Kernel::new();
     let native_prelude = build_nat_prelude(&mut native)
         .map_err(|error| format!("native Nat prelude build failed: {error:?}"))?;
+    declare_clean_eq_zero_of_zero_dvd(&mut native, &native_prelude)?;
+    let clean_zero_dvd_evidence = theorem_evidence(&native, CLEAN_EQ_ZERO_OF_ZERO_DVD)?;
+    require_evidence(
+        &clean_zero_dvd_evidence,
+        CLEAN_EQ_ZERO_OF_ZERO_DVD,
+        &CLEAN_ZERO_DVD_DEPENDENCIES,
+    )?;
     duplicate_native_le_of_dvd(&mut native, &native_prelude)?;
     let clean_le_evidence = theorem_evidence(&native, CLEAN_LE_OF_DVD)?;
     require_evidence(&clean_le_evidence, CLEAN_LE_OF_DVD, &CLEAN_LE_DEPENDENCIES)?;
@@ -66,7 +75,11 @@ fn run() -> Result<(), String> {
     let transported = compose_checked_theorem_slice(
         &native,
         target.kernel(),
-        &[CLEAN_LE_OF_DVD, CLEAN_DVD_ANTISYMM],
+        &[
+            CLEAN_EQ_ZERO_OF_ZERO_DVD,
+            CLEAN_LE_OF_DVD,
+            CLEAN_DVD_ANTISYMM,
+        ],
     )
     .map_err(|error| format!("clean support transport declined: {error:?}"))?;
     verify_checked_theorem_composition(
@@ -76,10 +89,13 @@ fn run() -> Result<(), String> {
         transported.receipt(),
     )
     .map_err(|error| format!("clean support transport did not replay: {error:?}"))?;
+    let target_clean_zero_dvd_evidence =
+        theorem_evidence(transported.kernel(), CLEAN_EQ_ZERO_OF_ZERO_DVD)?;
     let target_clean_le_evidence = theorem_evidence(transported.kernel(), CLEAN_LE_OF_DVD)?;
     let target_clean_antisymm_evidence =
         theorem_evidence(transported.kernel(), CLEAN_DVD_ANTISYMM)?;
-    if target_clean_le_evidence != clean_le_evidence
+    if target_clean_zero_dvd_evidence != clean_zero_dvd_evidence
+        || target_clean_le_evidence != clean_le_evidence
         || target_clean_antisymm_evidence != clean_antisymm_evidence
     {
         return Err("source and r091 support theorem evidence differ".to_owned());
@@ -91,8 +107,8 @@ fn run() -> Result<(), String> {
         "state": "single-kernel-clean-supports-transported-to-r091-empty-footprint",
         "input_streams": {"target_sha256": TARGET_SHA256},
         "transport_receipt_sha256": transported.receipt().receipt_sha256,
-        "source_theorems": [clean_le_evidence, clean_antisymm_evidence],
-        "target_theorems": [target_clean_le_evidence, target_clean_antisymm_evidence],
+        "source_theorems": [clean_zero_dvd_evidence, clean_le_evidence, clean_antisymm_evidence],
+        "target_theorems": [target_clean_zero_dvd_evidence, target_clean_le_evidence, target_clean_antisymm_evidence],
         "clean_dvd_antisymm_type_sha256": hex_sha256_expression(&native, clean_antisymm)?,
         "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0},
         "exact_target_submissions": 0,
@@ -131,6 +147,61 @@ fn duplicate_native_le_of_dvd(kernel: &mut Kernel, prelude: &NatPrelude) -> Resu
         .map_err(|error| format!("clean le_of_dvd duplication rejected: {error:?}"))
 }
 
+fn declare_clean_eq_zero_of_zero_dvd(
+    kernel: &mut Kernel,
+    prelude: &NatPrelude,
+) -> Result<(), String> {
+    let target = nested_name(kernel, &["Axeyum", "Autogenesis", "eqZeroOfZeroDvdCleanV1"]);
+    let state = NatState::new(kernel, *prelude);
+    let mut d = Dev { kernel, state };
+    d.theorem(target, 1, &|d, values| {
+        let n = values[0];
+        let zero = d.zero();
+        let hypothesis_ty = d.dvd(zero, n);
+        let hypothesis_fv = d.fresh_fvar();
+        let hypothesis = d.kernel().fvar(hypothesis_fv);
+        let goal = d.eq(n, zero);
+        let predicate = d.dvd_predicate(zero, n);
+        let anon = d.anon_name();
+        let motive = d.kernel().lam(
+            anon,
+            hypothesis_ty,
+            goal,
+            axeyum_lean_kernel::BinderInfo::Default,
+        );
+        let minor = {
+            let nat = d.nat_ty();
+            let q_fv = d.fresh_fvar();
+            let q = d.kernel().fvar(q_fv);
+            let product = d.mul(zero, q);
+            let witness_ty = d.eq(n, product);
+            let witness_fv = d.fresh_fvar();
+            let witness = d.kernel().fvar(witness_fv);
+            let zero_mul = d.prelude().zero_mul;
+            let collapse = d.lemma(zero_mul, &[q]);
+            let proof = d.trans(n, product, zero, witness, collapse);
+            let with_witness = d.lam_fv(witness_fv, witness_ty, proof);
+            d.lam_fv(q_fv, nat, with_witness)
+        };
+        let one = d.level_one();
+        let exists_rec_name = d.prelude().logic.exists_rec;
+        let exists_rec = d.kernel().const_(exists_rec_name, vec![one]);
+        let nat = d.nat_ty();
+        let proof = d.apply(exists_rec, &[nat, predicate, motive, minor, hypothesis]);
+        (
+            d.arrow(hypothesis_ty, goal),
+            d.lam_fv(hypothesis_fv, hypothesis_ty, proof),
+        )
+    })
+    .map(|_| ())
+    .map_err(|error| {
+        format!(
+            "clean zero-divisibility equality rejected: {}",
+            d.explain(&error)
+        )
+    })
+}
+
 struct Dev<'k> {
     kernel: &'k mut Kernel,
     state: NatState,
@@ -166,7 +237,7 @@ impl Dev<'_> {
 
     fn prove_antisymm(&mut self, a: ExprId, b: ExprId) -> Result<ExprId, String> {
         let zero = self.zero();
-        let eq_zero = self.exact("Nat.eq_zero_of_zero_dvd")?;
+        let eq_zero = self.exact(CLEAN_EQ_ZERO_OF_ZERO_DVD)?;
         let le_antisymm = self.exact("Nat.le_antisymm")?;
         let succ_pos = self.exact("Nat.succ_pos")?;
         let clean_le = self.exact(CLEAN_LE_OF_DVD)?;
@@ -221,7 +292,7 @@ impl NatOps for Dev<'_> {
 }
 
 fn declare_clean_dvd_antisymm(kernel: &mut Kernel, prelude: &NatPrelude) -> Result<ExprId, String> {
-    let target = nested_name(kernel, &["Axeyum", "Autogenesis", "dvdAntisymmCleanV2"]);
+    let target = nested_name(kernel, &["Axeyum", "Autogenesis", "dvdAntisymmCleanV3"]);
     let state = NatState::new(kernel, *prelude);
     let mut d = Dev { kernel, state };
     d.theorem(target, 2, &|d, values| {

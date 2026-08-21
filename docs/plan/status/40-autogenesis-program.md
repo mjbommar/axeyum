@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction now includes unconditional official balanced Bézout and official coprime-factor divisibility cancellation. The V2 gcd-extensionality run correctly confined handles to one native kernel, then stopped before antisymmetry submission because that kernel does not install `Nat.eq_zero_of_zero_dvd`; the second replay was skipped and no support credit is due.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction now includes unconditional official balanced Bézout and official coprime-factor divisibility cancellation. V3 constructs the missing zero-divisibility equality, clean divisor bound, and clean divisibility antisymmetry wholly in one native kernel, then transports only their named closures; it passes the full importer suite without reading r091.
 
-**Next:** implement the preregistered target-owned same-kernel proof of zero divisibility equality, compose it into clean divisibility antisymmetry, and require two byte-identical empty-footprint r091 replays before support credit.
+**Next:** pass the full Rust push gate for V3, then execute at most two complete r091 invocations. Require byte-identical source/target evidence, empty footprints, and replayed three-root composition before support credit.
 
 <!-- plan-section: landed-changes -->
 
@@ -161,3 +161,4 @@
 | 2026-08-21 | (pending) | V2 clean order driver compiles Clippy-clean with all kernel-local handles confined to their native construction environment |
 | 2026-08-21 | (pending) | First V2 replay stops before antisymmetry submission because the native prelude lacks `Nat.eq_zero_of_zero_dvd`; the second is skipped and no support publishes |
 | 2026-08-21 | (pending) | V3 freezes an existential-witness proof of zero divisibility equality in the same native kernel before rebuilding or transporting antisymmetry |
+| 2026-08-21 | (pending) | V3 clean order driver closes the missing zero-divisibility leaf and passes Clippy plus the full importer suite without reading r091 |
