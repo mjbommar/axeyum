@@ -4,7 +4,7 @@
 
 **Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction now has an unconditional official-representation balanced-Bézout theorem: two byte-identical empty-footprint runs reuse canonically identical `Nat.mod_lt`, replay all six remaining composition receipts and six specializations, and close with exactly the three frozen direct dependencies.
 
-**Next:** preregister reconstruction of the retained coprime-factor cancellation theorem using the unconditional official-kernel balanced-Bézout result. Keep the Fibonacci target, fact transition, evaluation, and ledger authority at zero until that support theorem independently closes and replays.
+**Next:** author and execute the preregistered generic coprime-factor cancellation theorem with balanced Bézout as an explicit parameter. Allow one Lean 4.30 compilation, one root-selected export, and two byte-identical empty-footprint imports; preserve zero official-specialization and Fibonacci authority.
 
 <!-- plan-section: landed-changes -->
 
@@ -132,3 +132,4 @@
 | 2026-08-21 | `7e4af7cde` | Exact `Nat.mod_lt` identity reuse and the remaining three-root composition are frozen before code or stream access |
 | 2026-08-21 | `384826f41` | Exact-reuse driver compiles Clippy-clean, passes the full importer suite, and clears both full remote push gates without stream execution |
 | 2026-08-21 | (pending) | Exact `Nat.mod_lt` reuse closes official-representation balanced Bézout twice with byte-identical empty-footprint evidence |
+| 2026-08-21 | (pending) | Generic coprime-factor cancellation is frozen over an explicit balanced-Bézout parameter before source construction |
