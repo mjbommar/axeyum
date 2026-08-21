@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-coprime-target-cancellation-root-audit-result",
+  "state": "target-cancellation-shortcut-declined-two-assumption-bearing-roots",
+  "plan": {
+    "path": "artifacts/autogenesis/coprime-target-cancellation-root-audit-plan-v1.json",
+    "sha256": "2d90479e4a9fa45fbd2b753e167f48593ef434bf4080abeb885bc0e89b388ff5"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/b6bda2a04-coprime-target-root-audit-v1/manifest.json",
+    "sha256": "9a82ab1d116bb3250881c575cd41b8cfa85aa2105a9c25e34749a747dd842be6",
+    "mode": "0444"
+  },
+  "summary": {
+    "population": 3,
+    "class_counts": {
+      "empty-footprint": 1,
+      "propext-bearing": 2,
+      "other-assumption-bearing": 0
+    },
+    "all_roots_empty": false,
+    "accepted_target_route": false
+  },
+  "roots": {
+    "Nat.Coprime.coprime_dvd_left": {
+      "declaration_sha256": "f8bd0abeb2a001064da8f1959c24c6bdd3f0c3551425e2c177f6ffafb618675c",
+      "axiom_footprint": [
+        "Quot",
+        "Quot.lift",
+        "Quot.mk",
+        "Quot.sound",
+        "propext"
+      ],
+      "direct_theorem_dependencies": [
+        "Eq.symm",
+        "Nat.Coprime.eq_1",
+        "Nat.eq_one_of_dvd_one",
+        "Nat.gcd_dvd_gcd_of_dvd_left",
+        "congrArg"
+      ],
+      "accepted": false
+    },
+    "Nat.Coprime.dvd_of_dvd_mul_left": {
+      "declaration_sha256": "10276f358d886c5edfb6b768cf17bd0cb816051faf3ce82d2ade3a4584878c35",
+      "axiom_footprint": [
+        "Quot",
+        "Quot.lift",
+        "Quot.mk",
+        "Quot.sound",
+        "propext"
+      ],
+      "direct_theorem_dependencies": [
+        "Nat.Coprime.dvd_of_dvd_mul_right",
+        "Nat.mul_comm",
+        "congrArg"
+      ],
+      "accepted": false
+    },
+    "Nat.Coprime.eq_1": {
+      "declaration_sha256": "fdc67a13053aeacfd1a9371ec1561d4b921b5cc8256e38e30f187eeea858196b",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": [],
+      "accepted": true
+    }
+  },
+  "budget": {
+    "exporter_invocations": 1,
+    "importer_runs": 1,
+    "retries": 0,
+    "authored_support_compilations": 0,
+    "new_theorem_submissions": 0,
+    "exact_target_submissions": 0,
+    "executor_invocations": 0
+  },
+  "authority": {
+    "proof_terms_rendered": 0,
+    "theorem_values_rendered": 0,
+    "support_theorem_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Keep the target-side shortcut declined. Continue bottom-up with an independently authored subtractive cancellation or gcd route that uses the empty Coprime definition equation but none of the two assumption-bearing convenience theorems.",
+  "limitations": "The audit rejects only the convenience-root route. It does not refute an independently reconstructed target-side cancellation proof and does not authorize importing quotient or propext assumptions."
+}

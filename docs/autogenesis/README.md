@@ -201,6 +201,7 @@ compounding, not automation theatre.
 | [Public equation carrier audit plan](102-public-equation-carrier-audit-plan.md) | Which declarations immediately beneath `Nat.div_eq` and `Nat.mod_eq` carry their measured footprints? |
 | [Public equation carrier audit result](103-public-equation-carrier-audit-result.md) | Is quotient fuel congruence actually the blocker, or do proposition simplifiers and remainder wrappers carry the assumptions? |
 | [Target coprime-cancellation root audit plan](104-target-coprime-cancellation-root-audit-plan.md) | Can three official `Nat.Coprime` interfaces bypass the division wrapper and port cancellation into the exact target? |
+| [Target coprime-cancellation root audit result](105-target-coprime-cancellation-root-audit-result.md) | Which coprime interface is clean, and why do the two convenience cancellation roots still fail the trusted-base gate? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
