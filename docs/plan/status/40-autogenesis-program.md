@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction retains the accepted pointwise quotient witness, while the explicit four-Nat balanced-Bézout update V1 is declined. V1 compiled without diagnostics and exported, but its first fresh audit found `[propext]`; the second import was forbidden and exact cleanup restored the three-file `s5` baseline. The broad ring and function-equality routes are absent: the measured target has exactly nine direct theorem dependencies, limited to equality transport, Nat arithmetic leaves, and two private adjacent-permutation helpers. No Euclidean-update, generic-gcd, target, or ledger credit was granted.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction retains the accepted pointwise quotient witness, while the explicit four-Nat balanced-Bézout update V1 is declined at one `propext`. A dependency-local audit is now preregistered over exactly the nine direct theorem roots from that first result. It binds the sealed stream and audit binary identities, permits one stream read and no compile/export/retry, renders no proof/type/value material, and grants only dependency-classification credit.
 
-**Next:** preregister one dependency-local footprint audit over the exact nine direct theorem dependencies measured in V1, then read the sealed stream once with no proof/type/value rendering. Use that result to replace only the actual `propext` carrier; do not guess at a V2 source first. Preserve every prior source and sealed pack, the exact three-file baseline, and zero Fibonacci/ledger authority until each independent gate passes.
+**Next:** execute the exact nine-root dependency audit once against the sealed V1 stream. Report the exact `propext` carrier subset. If nonempty, preregister a V2 replacing only that subset; if empty, preregister a source-shape isolation for a direct or definition/elaboration-borne carrier before V2. Preserve every prior source and sealed pack, the exact three-file baseline, and zero Fibonacci/ledger authority until each independent gate passes.
 
 <!-- plan-section: landed-changes -->
 
@@ -103,3 +103,4 @@
 | 2026-08-21 | (pending) | Pointwise V4 quotient witness reconstructs twice with byte-identical empty footprints and seals exact evidence |
 | 2026-08-21 | (pending) | Explicit four-Nat balanced-Bézout Euclidean update is frozen before its one authorized compilation |
 | 2026-08-21 | (pending) | Explicit update compiles but its first audit retains one `propext`; exact nine-dependency descent replaces source guessing |
+| 2026-08-21 | (pending) | Exact nine-root dependency-local audit is frozen before one non-rendering sealed-stream read |
