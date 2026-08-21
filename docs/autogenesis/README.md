@@ -188,6 +188,7 @@ compounding, not automation theatre.
 | [Euclidean dependency-footprint audit plan](89-euclidean-dependency-footprint-audit-plan.md) | Which exact direct dependencies carry the first clean proof's `propext` footprint, and how can that be measured without reading proof terms? |
 | [Euclidean dependency-footprint audit result](90-euclidean-dependency-footprint-audit-result.md) | Which single theorem carries `propext`, and how narrow is the bottom-up replacement obligation? |
 | [Local subtraction-restoration replacement plan](91-local-subtraction-restoration-replacement-plan.md) | How can V2 replace exactly the sole assumption-bearing theorem without adding another global support declaration? |
+| [Subtraction-equation statement addendum](92-subtraction-equation-statement-addendum.md) | Which single proof-free equation is needed because Lean's primitive subtraction does not unfold in the local successor case? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
