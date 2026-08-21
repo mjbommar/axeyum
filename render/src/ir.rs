@@ -66,6 +66,28 @@ pub struct DocMeta {
     /// Per-format rendering options.
     #[serde(default, skip_serializing_if = "Options::is_empty")]
     pub options: Options,
+    /// Cross-document navigation, in reading order: where this document sits
+    /// in a set of them.
+    ///
+    /// Empty for a document that stands alone, which is why it defaults rather
+    /// than being required. Every entry is a link an emitter renders; a target
+    /// naming a Doc-IR source file (`*.doc.json`) resolves to that document's
+    /// rendered page -- see [`crate::doc_link_target`].
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub nav: Vec<NavLink>,
+}
+
+/// One cross-document navigation link.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct NavLink {
+    /// What the reader sees.
+    pub label: String,
+    /// Where it goes, relative to THIS document's own output file.
+    pub href: String,
+    /// Optional short relation (`up`, `prev`, `next`, `component`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rel: Option<String>,
 }
 
 /// Which of the two rendering products a document is.
@@ -274,6 +296,20 @@ pub enum BlockKind {
         /// Optional run records; may be empty, unlike a claim's.
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         evidence: Vec<EvidenceRef>,
+        /// Why this certificate carries no recorded run.
+        ///
+        /// A certificate box with neither an exit status nor a reason implies a
+        /// run that nothing records, and the HTML emitter reports exactly that
+        /// as a diagnostic. Some certificates legitimately have no run record:
+        /// a fact-ledger evidence row asserts `check_status: checked` and
+        /// offers a command a reader may run, but nothing recorded an
+        /// execution, and a four-hour re-check cannot be a per-commit gate.
+        /// The honest form of that is a STATED REASON, never a blank.
+        ///
+        /// Assembly refuses a block that sets this AND cites a run record: the
+        /// two are contradictory statements about the same box.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        no_exit_reason: Option<String>,
     },
     /// A figure specified as data wherever possible.
     Figure {

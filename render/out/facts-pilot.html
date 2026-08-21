@@ -182,6 +182,26 @@ p.ax-subtitle {
   max-width: 58ch;
 }
 
+/* Cross-document navigation. The corpus is a SITE -- an atlas, two pilots and
+   324 fact cards emitted together -- and these are the only relative links a
+   page carries. Each page is still self-contained: nothing is fetched on load.
+   render/tests/link_integrity.rs fails if one of them does not resolve. */
+.ax-crumbs {
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+  margin: 0 0 var(--sp-4);
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-2);
+}
+.ax-crumbs .ax-crumb-sep { color: var(--rule-firm); }
+a.ax-doclink { font-family: var(--font-sans); }
+a.ax-doclink code { font-family: var(--font-mono); }
+
+/* The single provenance line for a page whose blocks all come from one run.
+   Fifteen identical copies of it, one under each block, was the most repeated
+   element on a fact card; it is said once, here. */
+.ax-source-all { margin: var(--sp-2) 0 0; }
+
 /* metadata chips */
 .ax-meta { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); margin: 0; padding: 0; list-style: none; }
 .ax-meta li {
@@ -253,7 +273,12 @@ details.ax-fold {
   border-radius: var(--radius);
   background: var(--surface);
   padding: 0;
-  margin: 0 0 var(--sp-5);
+  /* `auto` on the inline axis, not `0`. `main.ax-doc > *` centres every direct
+     child inside the 68rem frame by setting margin-left/right to auto, and a
+     `margin: 0 0 X` shorthand here has the SAME specificity and comes later,
+     so it silently won and every fold on a fact card sat 190px left of the
+     text above it. Found by screenshot; no test could see it. */
+  margin: 0 auto var(--sp-5);
 }
 details.ax-fold > summary {
   cursor: pointer;
@@ -306,6 +331,13 @@ details.ax-fold > .ax-foldbody { padding: 0 var(--sp-4) var(--sp-4); border-top:
   vertical-align: 0.08em;
 }
 .badge svg { width: 0.85em; height: 0.85em; flex: none; fill: currentColor; }
+/* The badge with its word removed, for a place that has already said it (an
+   evidence row inside a claim card whose header carries the same status).
+   The SHAPE is what survives, because the shape is what makes a badge legible
+   in greyscale and to a colour-blind reader; the word survives as the
+   accessible name on the element. */
+.badge-compact { padding: 0.18em 0.32em; gap: 0; }
+.badge-compact svg { width: 0.95em; height: 0.95em; }
 .badge-proved      { color: var(--s-proved-fg);      background: var(--s-proved-bg); }
 .badge-checked     { color: var(--s-checked-fg);     background: var(--s-checked-bg); }
 .badge-evidence    { color: var(--s-evidence-fg);    background: var(--s-evidence-bg); }
@@ -344,7 +376,8 @@ details.ax-fold > .ax-foldbody { padding: 0 var(--sp-4) var(--sp-4); border-top:
   border-left: 3px solid var(--rule-firm);
   border-radius: var(--radius);
   padding: var(--sp-4) var(--sp-5);
-  margin: 0 0 var(--sp-5);
+  /* See `details.ax-fold`: `auto` keeps a card centred in the reading frame. */
+  margin: 0 auto var(--sp-5);
   box-shadow: var(--shadow);
 }
 .card.s-proved      { border-left-color: var(--s-proved-fg); }
@@ -427,7 +460,25 @@ details.ax-fold > .ax-foldbody { padding: 0 var(--sp-4) var(--sp-4); border-top:
 .ax-cmd > button[data-copied="1"] { color: var(--s-proved-fg); }
 
 /* ---------- tables ---------- */
+/* A table with five or more columns opts out of the 36rem reading measure and
+   uses the full 68rem frame (`.ax-wide`). The atlas index has twelve columns:
+   at the reading measure its last four -- including the link to the fact's own
+   card -- were scrolled out of sight, so the page's navigation was hiding
+   behind a horizontal scrollbar. It still scrolls when it needs to; it just
+   does not need to as often. */
 .ax-tablewrap { overflow-x: auto; margin: 0 0 var(--sp-2); }
+/* A table of four or more columns breaks out of the 36rem reading measure,
+   CENTRED ON IT, so its heading and the prose above stay aligned. (Putting the
+   break-out on the section instead shifted the heading left and made the page
+   look ragged.) Only above a width where 52rem fits; below it the table stays
+   at the measure and the wrapper scrolls, which is the pre-existing
+   behaviour. */
+@media (min-width: 62rem) {
+  .blk.ax-widetable > .ax-tablewrap {
+    width: 52rem; max-width: none;
+    margin-left: calc((var(--measure) - 52rem) / 2);
+  }
+}
 table.ax-table {
   border-collapse: collapse;
   width: 100%;
@@ -450,6 +501,10 @@ table.ax-table th, table.ax-table td {
   white-space: nowrap;
 }
 table.ax-table td:first-child, table.ax-table th:first-child { white-space: normal; }
+/* ...and so may any cell the emitter marked as prose: a value containing a
+   space is a sentence, not a machine token, and on a fact card the `supports`
+   and `axiom_footprint` cells are sentences. See `table()` in emit_html.rs. */
+table.ax-table td.wrap { white-space: normal; }
 table.ax-table thead th {
   border-bottom: 1px solid var(--rule-firm);
   font-weight: 600; color: var(--ink-2);
@@ -507,7 +562,14 @@ kbd {
 .ax-exit-ok { color: var(--s-proved-fg); font-weight: 600; }
 .ax-exit-bad { color: var(--s-refuted-fg); font-weight: 700; }
 /* Neither green nor red: a certificate that deliberately does not re-run. */
-.ax-exit-none { color: var(--s-advisory-fg); font-weight: 600; }
+.ax-exit-none { color: var(--s-advisory-fg); font-weight: 600; white-space: nowrap; }
+/* The full "why there is no recorded run" sentence, inside the fold. */
+.ax-noexit {
+  font-family: var(--font-sans); font-size: var(--fs-ui);
+  color: var(--s-advisory-fg); background: var(--s-advisory-bg);
+  border: 1px dashed currentColor; border-radius: var(--radius);
+  padding: var(--sp-2) var(--sp-3); margin: 0 0 var(--sp-3);
+}
 .ax-hash { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--ink-2); }
 
 /* ---------- figures ---------- */
@@ -552,6 +614,13 @@ svg.ax-graph .gnode.s-refuted     .gdot { fill: var(--s-refuted-fg); }
 svg.ax-graph .gnode.s-open        .gdot { fill: var(--s-open-fg); }
 svg.ax-graph .gnode.s-axiom       .gdot { fill: var(--s-axiom-fg); }
 svg.ax-graph .gnode { cursor: pointer; }
+/* A node that links to another document is wrapped in a real SVG anchor, so
+   the browser navigates with scripting off. Underlining every node label would
+   be noise at 300 nodes; the pointer and the focus ring carry the affordance,
+   and the anchor gives the reader the target in the status bar. */
+svg.ax-graph a.gnode-link { cursor: pointer; text-decoration: none; }
+svg.ax-graph a.gnode-link:focus-visible .gnode rect,
+svg.ax-graph a.gnode-link:hover .gnode rect { stroke: var(--accent); stroke-width: 1.8; }
 svg.ax-graph .gnode:hover rect, svg.ax-graph .gnode:focus rect { stroke: var(--accent); stroke-width: 1.8; }
 /* cone highlighting, driven by a class on the <svg> root */
 svg.ax-graph.coning .gnode { opacity: 0.22; }
@@ -613,6 +682,28 @@ footer.ax-foot code { font-size: var(--fs-xs); }
   .card { padding: var(--sp-4); }
   .ax-cert .ax-cert-grid { grid-template-columns: 1fr; }
   .ax-cert .ax-cert-grid dt { padding-top: var(--sp-2); }
+
+  /* THE REPLAY COMMAND WRAPS ON A NARROW SCREEN INSTEAD OF SCROLLING.
+     Reader review gripe 4, checked at 420px: the `min-width: 0` fix made the
+     row scroll rather than clip, which is correct and still leaves a phone
+     reader looking at 30 characters of a 300-character command through a
+     letterbox. Wrapping shows the whole thing.
+
+     `pre-wrap` INSERTS NOTHING -- it only permits a break at an existing space
+     -- so the bytes the copy button puts on the clipboard are unchanged, and
+     `overflow-wrap: anywhere` lets a single long path break rather than push
+     the row wide again. The hanging indent is the visual cue that a run of
+     lines is one command: a continuation is inset, the way a wrapped shell
+     line is. */
+  .ax-cmd { align-items: flex-start; }
+  .ax-cmd > code {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    overflow-x: visible;
+    padding-left: calc(var(--sp-3) + 2ch);
+    text-indent: -2ch;
+  }
+  .ax-cmd > button { position: sticky; top: 0; align-self: stretch; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -645,20 +736,22 @@ footer.ax-foot code { font-size: var(--fs-xs); }
 <header class="ax-head"><div class="ax-doc">
 <h1 class="ax-title">Pilot: the Fibonacci frontier</h1>
 <p class="ax-subtitle">9 facts, 8 depends_on edges</p>
+<nav class="ax-crumbs" aria-label="document navigation">
+<a class="ax-doclink" href="facts-atlas.html" rel="up">Fact atlas</a>
+</nav>
 <ul class="ax-meta">
 <li><b>document</b> fact-pilot</li>
 <li><b>genre</b> result</li>
 <li><b>source</b> <code>d637d83f77dbfa43c98eee4ab0ad78d235099006</code></li>
 <li><b>epoch</b> <code>1787144076 (commit)</code></li>
 </ul>
+<p class="ax-source ax-source-all">Every block on this page comes from one run &#x2014; generated by <code>render/producers-py/facts_to_docir.py</code> &middot; exit <span class="ax-exit-ok">0</span></p>
 <p style="margin-top:var(--sp-4)"><span class="ax-levelnote">reading level</span> <span class="ax-levels" role="group" aria-label="reading level"><button type="button" data-level="summary" aria-pressed="false">summary</button><button type="button" data-level="full" aria-pressed="true">full</button><button type="button" data-level="forensic" aria-pressed="false">forensic</button></span></p>
 </div></header>
 <main id="ax-main" class="ax-doc">
 <section class="blk prose t-essential" id="intro">
-<h2 id="pilot-the-fibonacci-frontier">Pilot: the Fibonacci frontier</h2>
 <p>A connected subgraph of the ledger (9 facts, 8 <code>depends_on</code> edges) chosen for status mixture: measured over the whole ledger it is the only connected component in the 8-20 band that does not carry a single epistemic status throughout. One fact is proved here on the <code>kernel-lean</code> route with an empty axiom footprint; the rest are open here and proved in the literature, so this page shows the self-extension frontier rather than finished work.</p>
 </section>
-<p class="ax-source">generated by <code>render/producers-py/facts_to_docir.py</code> &middot; <code>python3 render/producers-py/facts_to_docir.py</code> &middot; exit <span class="ax-exit-ok">0</span></p>
 <figure class="ax-fig blk t-essential ax-wide" id="dep-graph">
 <div class="ax-figframe">
 <svg class="ax-graph" viewBox="0 0 740 278" width="740" height="278" role="group" aria-label="`depends_on` over 9 facts, 8 edges. An edge runs from the dependent fact to the fact it rests on. Node status is the conservative mapping of the ledger&#39;s epistemic_status.">
@@ -681,60 +774,78 @@ footer.ax-foot code { font-size: var(--fs-xs); }
 <path class="gedge" data-from="8" data-to="5" style="fill:var(--rule-firm);stroke:none" d="M 605.4 124.0 L 605.2 116.8 L 610.7 119.2 Z"/>
 </g>
 <g class="nodes">
-<g class="gnode s-open" data-n="0" data-anc="" data-desc="1 3 4" data-href="cards-f-ml430-int-fib-add-one-33f1b748-doc-json" tabindex="0" role="listitem">
+<a class="gnode-link" href="cards/F-ml430-int-fib-add-one-33f1b748.html">
+<g class="gnode s-open" data-n="0" data-anc="" data-desc="1 3 4" tabindex="0" role="listitem">
 <title>Mathlib v4.30 source proposition Int.fib_add_one &#x2014; open &#x2014; 0 upstream, 3 downstream</title>
 <rect x="16.0" y="16.0" width="166.4" height="30.0"/>
 <circle class="gdot" cx="25.0" cy="31.0" r="3.2"/>
 <text x="33.0" y="31.0">ml430-int-fib-add-one</text>
 </g>
-<g class="gnode s-open" data-n="1" data-anc="0 2" data-desc="3 4" data-href="cards-f-ml430-int-fib-add-two-739358dd-doc-json" tabindex="0" role="listitem">
+</a>
+<a class="gnode-link" href="cards/F-ml430-int-fib-add-two-739358dd.html">
+<g class="gnode s-open" data-n="1" data-anc="0 2" data-desc="3 4" tabindex="0" role="listitem">
 <title>Mathlib v4.30 source proposition Int.fib_add_two &#x2014; open &#x2014; 2 upstream, 2 downstream</title>
 <rect x="148.0" y="124.0" width="166.4" height="30.0"/>
 <circle class="gdot" cx="157.0" cy="139.0" r="3.2"/>
 <text x="165.0" y="139.0">ml430-int-fib-add-two</text>
 </g>
-<g class="gnode s-open" data-n="2" data-anc="" data-desc="1 3 4" data-href="cards-f-ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d-doc-json" tabindex="0" role="listitem">
+</a>
+<a class="gnode-link" href="cards/F-ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d.html">
+<g class="gnode s-open" data-n="2" data-anc="" data-desc="1 3 4" tabindex="0" role="listitem">
 <title>Mathlib v4.30 source proposition Int.fib_eq_fib_add_two_sub_fib_add_one &#x2014; open &#x2014; 0 upstream, 3 downstream</title>
 <rect x="200.4" y="16.0" width="170.0" height="30.0"/>
 <circle class="gdot" cx="209.4" cy="31.0" r="3.2"/>
 <text x="217.4" y="31.0">ml430-int-fib-eq-fib-add-two-sub-fib-add-one</text>
 </g>
-<g class="gnode s-open" data-n="3" data-anc="0 1 2" data-desc="" data-href="cards-f-ml430-int-fib-natcast-d5886be4-doc-json" tabindex="0" role="listitem">
+</a>
+<a class="gnode-link" href="cards/F-ml430-int-fib-natcast-d5886be4.html">
+<g class="gnode s-open" data-n="3" data-anc="0 1 2" data-desc="" tabindex="0" role="listitem">
 <title>Mathlib v4.30 source proposition Int.fib_natCast &#x2014; open &#x2014; 3 upstream, 0 downstream</title>
 <rect x="114.8" y="232.0" width="166.4" height="30.0"/>
 <circle class="gdot" cx="123.8" cy="247.0" r="3.2"/>
 <text x="131.8" y="247.0">ml430-int-fib-natcast</text>
 </g>
-<g class="gnode s-proved" data-n="4" data-anc="0 1 2 5 6 7 8" data-desc="" data-href="cards-f-ml430-nat-fib-add-two-b86e0c82-doc-json" tabindex="0" role="listitem">
+</a>
+<a class="gnode-link" href="cards/F-ml430-nat-fib-add-two-b86e0c82.html">
+<g class="gnode s-proved" data-n="4" data-anc="0 1 2 5 6 7 8" data-desc="" tabindex="0" role="listitem">
 <title>Mathlib v4.30 source proposition Nat.fib_add_two &#x2014; proved &#x2014; 7 upstream, 0 downstream</title>
 <rect x="378.8" y="232.0" width="166.4" height="30.0"/>
 <circle class="gdot" cx="387.8" cy="247.0" r="3.2"/>
 <text x="395.8" y="247.0">ml430-nat-fib-add-two</text>
 </g>
-<g class="gnode s-open" data-n="5" data-anc="8" data-desc="4" data-href="cards-f-ml430-nat-fib-coprime-fib-succ-162fc738-doc-json" tabindex="0" role="listitem">
+</a>
+<a class="gnode-link" href="cards/F-ml430-nat-fib-coprime-fib-succ-162fc738.html">
+<g class="gnode s-open" data-n="5" data-anc="8" data-desc="4" tabindex="0" role="listitem">
 <title>Mathlib v4.30 source proposition Nat.fib_coprime_fib_succ &#x2014; open &#x2014; 1 upstream, 1 downstream</title>
 <rect x="520.4" y="124.0" width="170.0" height="30.0"/>
 <circle class="gdot" cx="529.4" cy="139.0" r="3.2"/>
 <text x="537.4" y="139.0">ml430-nat-fib-coprime-fib-succ</text>
 </g>
-<g class="gnode s-open" data-n="6" data-anc="7" data-desc="4" data-href="cards-f-ml430-nat-fib-le-fib-succ-d1ef4a3d-doc-json" tabindex="0" role="listitem">
+</a>
+<a class="gnode-link" href="cards/F-ml430-nat-fib-le-fib-succ-d1ef4a3d.html">
+<g class="gnode s-open" data-n="6" data-anc="7" data-desc="4" tabindex="0" role="listitem">
 <title>Mathlib v4.30 source proposition Nat.fib_le_fib_succ &#x2014; open &#x2014; 1 upstream, 1 downstream</title>
 <rect x="332.4" y="124.0" width="170.0" height="30.0"/>
 <circle class="gdot" cx="341.4" cy="139.0" r="3.2"/>
 <text x="349.4" y="139.0">ml430-nat-fib-le-fib-succ</text>
 </g>
-<g class="gnode s-open" data-n="7" data-anc="" data-desc="4 6" data-href="cards-f-ml430-nat-fib-mono-cc6afe09-doc-json" tabindex="0" role="listitem">
+</a>
+<a class="gnode-link" href="cards/F-ml430-nat-fib-mono-cc6afe09.html">
+<g class="gnode s-open" data-n="7" data-anc="" data-desc="4 6" tabindex="0" role="listitem">
 <title>Mathlib v4.30 source proposition Nat.fib_mono &#x2014; open &#x2014; 0 upstream, 2 downstream</title>
 <rect x="388.4" y="16.0" width="147.2" height="30.0"/>
 <circle class="gdot" cx="397.4" cy="31.0" r="3.2"/>
 <text x="405.4" y="31.0">ml430-nat-fib-mono</text>
 </g>
-<g class="gnode s-open" data-n="8" data-anc="" data-desc="4 5" data-href="cards-f-ml430-nat-gcd-fib-add-self-5a92d5e3-doc-json" tabindex="0" role="listitem">
+</a>
+<a class="gnode-link" href="cards/F-ml430-nat-gcd-fib-add-self-5a92d5e3.html">
+<g class="gnode s-open" data-n="8" data-anc="" data-desc="4 5" tabindex="0" role="listitem">
 <title>Mathlib v4.30 source proposition Nat.gcd_fib_add_self &#x2014; open &#x2014; 0 upstream, 2 downstream</title>
 <rect x="553.6" y="16.0" width="170.0" height="30.0"/>
 <circle class="gdot" cx="562.6" cy="31.0" r="3.2"/>
 <text x="570.6" y="31.0">ml430-nat-gcd-fib-add-self</text>
 </g>
+</a>
 </g>
 </svg>
 <ul class="ax-legend">
@@ -746,7 +857,6 @@ footer.ax-foot code { font-size: var(--fs-xs); }
 </div>
 <figcaption><code>depends_on</code> over 9 facts, 8 edges. An edge runs from the dependent fact to the fact it rests on. Node status is the conservative mapping of the ledger's epistemic_status.</figcaption>
 </figure>
-<p class="ax-source">generated by <code>render/producers-py/facts_to_docir.py</code> &middot; <code>python3 render/producers-py/facts_to_docir.py</code> &middot; exit <span class="ax-exit-ok">0</span></p>
 <section class="blk t-essential" id="spread">
 <h2 id="spread">Spread</h2>
 <div class="ax-tablewrap"><table class="ax-table">
@@ -761,26 +871,24 @@ footer.ax-foot code { font-size: var(--fs-xs); }
 <tr><td class="">formal.language</td><td class="">lean4-surface</td><td class="">9</td></tr>
 </tbody>
 </table></div>
-<p class="ax-source">generated by <code>render/producers-py/facts_to_docir.py</code> &middot; <code>python3 render/producers-py/facts_to_docir.py</code> &middot; exit <span class="ax-exit-ok">0</span></p>
 </section>
-<section class="blk t-essential" id="index">
+<section class="blk t-essential ax-widetable" id="index">
 <h2 id="index">Index</h2>
 <div class="ax-tablewrap"><table class="ax-table">
 <caption>Fact index</caption>
 <thead><tr><th class="">fact</th><th class="">title</th><th class="">language</th><th class="">fragment</th><th class="">proof_route</th><th class="">epistemic</th><th class="">external</th><th class="">badge</th><th class="">flag</th><th class="">evidence</th><th class="">checked</th><th class="">card</th></tr></thead>
 <tbody>
-<tr><td class="">F:ml430-int-fib-add-one-33f1b748</td><td class="">Mathlib v4.30 source proposition Int.fib_add_one</td><td class="">lean4-surface</td><td class="">Int</td><td class="">-</td><td class="">open</td><td class="">proved</td><td class="">open</td><td class="">import-backlog</td><td class="">0</td><td class="">0</td><td class="">cards/F-ml430-int-fib-add-one-33f1b748.doc.json</td></tr>
-<tr><td class="">F:ml430-int-fib-add-two-739358dd</td><td class="">Mathlib v4.30 source proposition Int.fib_add_two</td><td class="">lean4-surface</td><td class="">Int</td><td class="">-</td><td class="">open</td><td class="">proved</td><td class="">open</td><td class="">import-backlog</td><td class="">0</td><td class="">0</td><td class="">cards/F-ml430-int-fib-add-two-739358dd.doc.json</td></tr>
-<tr><td class="">F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d</td><td class="">Mathlib v4.30 source proposition Int.fib_eq_fib_add_two_sub_fib_add_one</td><td class="">lean4-surface</td><td class="">Int</td><td class="">-</td><td class="">open</td><td class="">proved</td><td class="">open</td><td class="">import-backlog</td><td class="">0</td><td class="">0</td><td class="">cards/F-ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d.doc.json</td></tr>
-<tr><td class="">F:ml430-int-fib-natcast-d5886be4</td><td class="">Mathlib v4.30 source proposition Int.fib_natCast</td><td class="">lean4-surface</td><td class="">Int</td><td class="">-</td><td class="">open</td><td class="">proved</td><td class="">open</td><td class="">import-backlog</td><td class="">0</td><td class="">0</td><td class="">cards/F-ml430-int-fib-natcast-d5886be4.doc.json</td></tr>
-<tr><td class="">F:ml430-nat-fib-add-two-b86e0c82</td><td class="">Mathlib v4.30 source proposition Nat.fib_add_two</td><td class="">lean4-surface</td><td class="">Nat</td><td class="">kernel-lean</td><td class="">proved</td><td class="">proved</td><td class="">proved</td><td class="">-</td><td class="">1</td><td class="">1</td><td class="">cards/F-ml430-nat-fib-add-two-b86e0c82.doc.json</td></tr>
-<tr><td class="">F:ml430-nat-fib-coprime-fib-succ-162fc738</td><td class="">Mathlib v4.30 source proposition Nat.fib_coprime_fib_succ</td><td class="">lean4-surface</td><td class="">Nat</td><td class="">-</td><td class="">open</td><td class="">proved</td><td class="">open</td><td class="">import-backlog</td><td class="">0</td><td class="">0</td><td class="">cards/F-ml430-nat-fib-coprime-fib-succ-162fc738.doc.json</td></tr>
-<tr><td class="">F:ml430-nat-fib-le-fib-succ-d1ef4a3d</td><td class="">Mathlib v4.30 source proposition Nat.fib_le_fib_succ</td><td class="">lean4-surface</td><td class="">Nat</td><td class="">-</td><td class="">open</td><td class="">proved</td><td class="">open</td><td class="">import-backlog</td><td class="">0</td><td class="">0</td><td class="">cards/F-ml430-nat-fib-le-fib-succ-d1ef4a3d.doc.json</td></tr>
-<tr><td class="">F:ml430-nat-fib-mono-cc6afe09</td><td class="">Mathlib v4.30 source proposition Nat.fib_mono</td><td class="">lean4-surface</td><td class="">Nat</td><td class="">-</td><td class="">open</td><td class="">proved</td><td class="">open</td><td class="">import-backlog</td><td class="">0</td><td class="">0</td><td class="">cards/F-ml430-nat-fib-mono-cc6afe09.doc.json</td></tr>
-<tr><td class="">F:ml430-nat-gcd-fib-add-self-5a92d5e3</td><td class="">Mathlib v4.30 source proposition Nat.gcd_fib_add_self</td><td class="">lean4-surface</td><td class="">Nat</td><td class="">-</td><td class="">open</td><td class="">proved</td><td class="">open</td><td class="">import-backlog</td><td class="">0</td><td class="">0</td><td class="">cards/F-ml430-nat-gcd-fib-add-self-5a92d5e3.doc.json</td></tr>
+<tr><td class="">F:ml430-int-fib-add-one-33f1b748</td><td class=" wrap">Mathlib v4.30 source proposition Int.fib_add_one</td><td class="">lean4-surface</td><td class="">Int</td><td class="">-</td><td class="">open</td><td class="">proved</td><td class="">open</td><td class="">import-backlog</td><td class="">0</td><td class="">0</td><td class=""><a class="ax-doclink" href="cards/F-ml430-int-fib-add-one-33f1b748.html"><code>F-ml430-int-fib-add-one-33f1b748</code></a></td></tr>
+<tr><td class="">F:ml430-int-fib-add-two-739358dd</td><td class=" wrap">Mathlib v4.30 source proposition Int.fib_add_two</td><td class="">lean4-surface</td><td class="">Int</td><td class="">-</td><td class="">open</td><td class="">proved</td><td class="">open</td><td class="">import-backlog</td><td class="">0</td><td class="">0</td><td class=""><a class="ax-doclink" href="cards/F-ml430-int-fib-add-two-739358dd.html"><code>F-ml430-int-fib-add-two-739358dd</code></a></td></tr>
+<tr><td class="">F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d</td><td class=" wrap">Mathlib v4.30 source proposition Int.fib_eq_fib_add_two_sub_fib_add_one</td><td class="">lean4-surface</td><td class="">Int</td><td class="">-</td><td class="">open</td><td class="">proved</td><td class="">open</td><td class="">import-backlog</td><td class="">0</td><td class="">0</td><td class=""><a class="ax-doclink" href="cards/F-ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d.html"><code>F-ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d</code></a></td></tr>
+<tr><td class="">F:ml430-int-fib-natcast-d5886be4</td><td class=" wrap">Mathlib v4.30 source proposition Int.fib_natCast</td><td class="">lean4-surface</td><td class="">Int</td><td class="">-</td><td class="">open</td><td class="">proved</td><td class="">open</td><td class="">import-backlog</td><td class="">0</td><td class="">0</td><td class=""><a class="ax-doclink" href="cards/F-ml430-int-fib-natcast-d5886be4.html"><code>F-ml430-int-fib-natcast-d5886be4</code></a></td></tr>
+<tr><td class="">F:ml430-nat-fib-add-two-b86e0c82</td><td class=" wrap">Mathlib v4.30 source proposition Nat.fib_add_two</td><td class="">lean4-surface</td><td class="">Nat</td><td class="">kernel-lean</td><td class="">proved</td><td class="">proved</td><td class="">proved</td><td class="">-</td><td class="">1</td><td class="">1</td><td class=""><a class="ax-doclink" href="cards/F-ml430-nat-fib-add-two-b86e0c82.html"><code>F-ml430-nat-fib-add-two-b86e0c82</code></a></td></tr>
+<tr><td class="">F:ml430-nat-fib-coprime-fib-succ-162fc738</td><td class=" wrap">Mathlib v4.30 source proposition Nat.fib_coprime_fib_succ</td><td class="">lean4-surface</td><td class="">Nat</td><td class="">-</td><td class="">open</td><td class="">proved</td><td class="">open</td><td class="">import-backlog</td><td class="">0</td><td class="">0</td><td class=""><a class="ax-doclink" href="cards/F-ml430-nat-fib-coprime-fib-succ-162fc738.html"><code>F-ml430-nat-fib-coprime-fib-succ-162fc738</code></a></td></tr>
+<tr><td class="">F:ml430-nat-fib-le-fib-succ-d1ef4a3d</td><td class=" wrap">Mathlib v4.30 source proposition Nat.fib_le_fib_succ</td><td class="">lean4-surface</td><td class="">Nat</td><td class="">-</td><td class="">open</td><td class="">proved</td><td class="">open</td><td class="">import-backlog</td><td class="">0</td><td class="">0</td><td class=""><a class="ax-doclink" href="cards/F-ml430-nat-fib-le-fib-succ-d1ef4a3d.html"><code>F-ml430-nat-fib-le-fib-succ-d1ef4a3d</code></a></td></tr>
+<tr><td class="">F:ml430-nat-fib-mono-cc6afe09</td><td class=" wrap">Mathlib v4.30 source proposition Nat.fib_mono</td><td class="">lean4-surface</td><td class="">Nat</td><td class="">-</td><td class="">open</td><td class="">proved</td><td class="">open</td><td class="">import-backlog</td><td class="">0</td><td class="">0</td><td class=""><a class="ax-doclink" href="cards/F-ml430-nat-fib-mono-cc6afe09.html"><code>F-ml430-nat-fib-mono-cc6afe09</code></a></td></tr>
+<tr><td class="">F:ml430-nat-gcd-fib-add-self-5a92d5e3</td><td class=" wrap">Mathlib v4.30 source proposition Nat.gcd_fib_add_self</td><td class="">lean4-surface</td><td class="">Nat</td><td class="">-</td><td class="">open</td><td class="">proved</td><td class="">open</td><td class="">import-backlog</td><td class="">0</td><td class="">0</td><td class=""><a class="ax-doclink" href="cards/F-ml430-nat-gcd-fib-add-self-5a92d5e3.html"><code>F-ml430-nat-gcd-fib-add-self-5a92d5e3</code></a></td></tr>
 </tbody>
 </table></div>
-<p class="ax-source">generated by <code>render/producers-py/facts_to_docir.py</code> &middot; <code>python3 render/producers-py/facts_to_docir.py</code> &middot; exit <span class="ax-exit-ok">0</span></p>
 </section>
 <section class="blk t-detail" id="import-backlog">
 <h2 id="import-backlog">Import backlog</h2>
@@ -788,17 +896,16 @@ footer.ax-foot code { font-size: var(--fs-xs); }
 <caption>Settled in the literature, open here (import backlog)</caption>
 <thead><tr><th class="">fact</th><th class="">title</th><th class="">card</th></tr></thead>
 <tbody>
-<tr><td class="">F:ml430-int-fib-add-one-33f1b748</td><td class="">Mathlib v4.30 source proposition Int.fib_add_one</td><td class="">cards/F-ml430-int-fib-add-one-33f1b748.doc.json</td></tr>
-<tr><td class="">F:ml430-int-fib-add-two-739358dd</td><td class="">Mathlib v4.30 source proposition Int.fib_add_two</td><td class="">cards/F-ml430-int-fib-add-two-739358dd.doc.json</td></tr>
-<tr><td class="">F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d</td><td class="">Mathlib v4.30 source proposition Int.fib_eq_fib_add_two_sub_fib_add_one</td><td class="">cards/F-ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d.doc.json</td></tr>
-<tr><td class="">F:ml430-int-fib-natcast-d5886be4</td><td class="">Mathlib v4.30 source proposition Int.fib_natCast</td><td class="">cards/F-ml430-int-fib-natcast-d5886be4.doc.json</td></tr>
-<tr><td class="">F:ml430-nat-fib-coprime-fib-succ-162fc738</td><td class="">Mathlib v4.30 source proposition Nat.fib_coprime_fib_succ</td><td class="">cards/F-ml430-nat-fib-coprime-fib-succ-162fc738.doc.json</td></tr>
-<tr><td class="">F:ml430-nat-fib-le-fib-succ-d1ef4a3d</td><td class="">Mathlib v4.30 source proposition Nat.fib_le_fib_succ</td><td class="">cards/F-ml430-nat-fib-le-fib-succ-d1ef4a3d.doc.json</td></tr>
-<tr><td class="">F:ml430-nat-fib-mono-cc6afe09</td><td class="">Mathlib v4.30 source proposition Nat.fib_mono</td><td class="">cards/F-ml430-nat-fib-mono-cc6afe09.doc.json</td></tr>
-<tr><td class="">F:ml430-nat-gcd-fib-add-self-5a92d5e3</td><td class="">Mathlib v4.30 source proposition Nat.gcd_fib_add_self</td><td class="">cards/F-ml430-nat-gcd-fib-add-self-5a92d5e3.doc.json</td></tr>
+<tr><td class="">F:ml430-int-fib-add-one-33f1b748</td><td class=" wrap">Mathlib v4.30 source proposition Int.fib_add_one</td><td class=""><a class="ax-doclink" href="cards/F-ml430-int-fib-add-one-33f1b748.html"><code>F-ml430-int-fib-add-one-33f1b748</code></a></td></tr>
+<tr><td class="">F:ml430-int-fib-add-two-739358dd</td><td class=" wrap">Mathlib v4.30 source proposition Int.fib_add_two</td><td class=""><a class="ax-doclink" href="cards/F-ml430-int-fib-add-two-739358dd.html"><code>F-ml430-int-fib-add-two-739358dd</code></a></td></tr>
+<tr><td class="">F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d</td><td class=" wrap">Mathlib v4.30 source proposition Int.fib_eq_fib_add_two_sub_fib_add_one</td><td class=""><a class="ax-doclink" href="cards/F-ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d.html"><code>F-ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d</code></a></td></tr>
+<tr><td class="">F:ml430-int-fib-natcast-d5886be4</td><td class=" wrap">Mathlib v4.30 source proposition Int.fib_natCast</td><td class=""><a class="ax-doclink" href="cards/F-ml430-int-fib-natcast-d5886be4.html"><code>F-ml430-int-fib-natcast-d5886be4</code></a></td></tr>
+<tr><td class="">F:ml430-nat-fib-coprime-fib-succ-162fc738</td><td class=" wrap">Mathlib v4.30 source proposition Nat.fib_coprime_fib_succ</td><td class=""><a class="ax-doclink" href="cards/F-ml430-nat-fib-coprime-fib-succ-162fc738.html"><code>F-ml430-nat-fib-coprime-fib-succ-162fc738</code></a></td></tr>
+<tr><td class="">F:ml430-nat-fib-le-fib-succ-d1ef4a3d</td><td class=" wrap">Mathlib v4.30 source proposition Nat.fib_le_fib_succ</td><td class=""><a class="ax-doclink" href="cards/F-ml430-nat-fib-le-fib-succ-d1ef4a3d.html"><code>F-ml430-nat-fib-le-fib-succ-d1ef4a3d</code></a></td></tr>
+<tr><td class="">F:ml430-nat-fib-mono-cc6afe09</td><td class=" wrap">Mathlib v4.30 source proposition Nat.fib_mono</td><td class=""><a class="ax-doclink" href="cards/F-ml430-nat-fib-mono-cc6afe09.html"><code>F-ml430-nat-fib-mono-cc6afe09</code></a></td></tr>
+<tr><td class="">F:ml430-nat-gcd-fib-add-self-5a92d5e3</td><td class=" wrap">Mathlib v4.30 source proposition Nat.gcd_fib_add_self</td><td class=""><a class="ax-doclink" href="cards/F-ml430-nat-gcd-fib-add-self-5a92d5e3.html"><code>F-ml430-nat-gcd-fib-add-self-5a92d5e3</code></a></td></tr>
 </tbody>
 </table></div>
-<p class="ax-source">generated by <code>render/producers-py/facts_to_docir.py</code> &middot; <code>python3 render/producers-py/facts_to_docir.py</code> &middot; exit <span class="ax-exit-ok">0</span></p>
 </section>
 </main>
 <footer class="ax-foot"><div class="ax-doc">

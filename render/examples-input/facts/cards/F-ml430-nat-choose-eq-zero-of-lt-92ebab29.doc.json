@@ -157,7 +157,7 @@
           "nodes": [
             {
               "group": "focus",
-              "href": "cards/F-ml430-nat-choose-eq-zero-of-lt-92ebab29.doc.json",
+              "href": "F-ml430-nat-choose-eq-zero-of-lt-92ebab29.doc.json",
               "id": "F:ml430-nat-choose-eq-zero-of-lt-92ebab29",
               "label": "ml430-nat-choose-eq-zero-of-lt",
               "status": "open",
@@ -165,7 +165,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-choose-succ-self-e396f6c2.doc.json",
+              "href": "F-ml430-nat-choose-succ-self-e396f6c2.doc.json",
               "id": "F:ml430-nat-choose-succ-self-e396f6c2",
               "label": "ml430-nat-choose-succ-self",
               "status": "open",
@@ -224,7 +224,7 @@
             "F:ml430-nat-choose-succ-self-e396f6c2",
             "Mathlib v4.30 source proposition Nat.choose_succ_self",
             "open",
-            "cards/F-ml430-nat-choose-succ-self-e396f6c2.doc.json"
+            "F-ml430-nat-choose-succ-self-e396f6c2.doc.json"
           ]
         ],
         "source": {
@@ -439,6 +439,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c25",
+        "label": "Component 25 of 37 (2 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

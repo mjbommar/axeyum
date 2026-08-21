@@ -181,6 +181,7 @@
       "kind": {
         "artifact_refs": [],
         "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -317,6 +318,7 @@
       "kind": {
         "artifact_refs": [],
         "cert_kind": "report-run",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -477,7 +479,7 @@
           "nodes": [
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-mul-assoc.doc.json",
+              "href": "F-nat-mul-assoc.doc.json",
               "id": "F:nat-mul-assoc",
               "label": "nat-mul-assoc",
               "status": "proved",
@@ -485,7 +487,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-mul-comm.doc.json",
+              "href": "F-nat-mul-comm.doc.json",
               "id": "F:nat-mul-comm",
               "label": "nat-mul-comm",
               "status": "proved",
@@ -493,7 +495,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-mul-one.doc.json",
+              "href": "F-nat-mul-one.doc.json",
               "id": "F:nat-mul-one",
               "label": "nat-mul-one",
               "status": "proved",
@@ -501,7 +503,7 @@
             },
             {
               "group": "focus",
-              "href": "cards/F-nat-pow-add.doc.json",
+              "href": "F-nat-pow-add.doc.json",
               "id": "F:nat-pow-add",
               "label": "nat-pow-add",
               "status": "proved",
@@ -560,19 +562,19 @@
             "F:nat-mul-assoc",
             "Multiplication on the naturals is associative",
             "proved",
-            "cards/F-nat-mul-assoc.doc.json"
+            "F-nat-mul-assoc.doc.json"
           ],
           [
             "F:nat-mul-comm",
             "Multiplication on the naturals is commutative",
             "proved",
-            "cards/F-nat-mul-comm.doc.json"
+            "F-nat-mul-comm.doc.json"
           ],
           [
             "F:nat-mul-one",
             "One is a right identity for multiplication on the naturals",
             "proved",
-            "cards/F-nat-mul-one.doc.json"
+            "F-nat-mul-one.doc.json"
           ]
         ],
         "source": {
@@ -857,6 +859,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c01",
+        "label": "Component 1 of 37 (31 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

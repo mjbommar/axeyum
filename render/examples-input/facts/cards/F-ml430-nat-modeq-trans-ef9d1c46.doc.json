@@ -157,7 +157,7 @@
           "nodes": [
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-modeq-dvd-iff-8f130450.doc.json",
+              "href": "F-ml430-nat-modeq-dvd-iff-8f130450.doc.json",
               "id": "F:ml430-nat-modeq-dvd-iff-8f130450",
               "label": "ml430-nat-modeq-dvd-iff",
               "status": "open",
@@ -165,7 +165,7 @@
             },
             {
               "group": "focus",
-              "href": "cards/F-ml430-nat-modeq-trans-ef9d1c46.doc.json",
+              "href": "F-ml430-nat-modeq-trans-ef9d1c46.doc.json",
               "id": "F:ml430-nat-modeq-trans-ef9d1c46",
               "label": "ml430-nat-modeq-trans",
               "status": "open",
@@ -224,7 +224,7 @@
             "F:ml430-nat-modeq-dvd-iff-8f130450",
             "Mathlib v4.30 source proposition Nat.ModEq.dvd_iff",
             "open",
-            "cards/F-ml430-nat-modeq-dvd-iff-8f130450.doc.json"
+            "F-ml430-nat-modeq-dvd-iff-8f130450.doc.json"
           ]
         ],
         "source": {
@@ -439,6 +439,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c04",
+        "label": "Component 4 of 37 (6 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

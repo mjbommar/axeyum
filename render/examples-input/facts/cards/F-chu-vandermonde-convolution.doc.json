@@ -187,6 +187,7 @@
           }
         ],
         "cert_kind": "witness-replay",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -371,6 +372,7 @@
           }
         ],
         "cert_kind": "witness-replay",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -563,7 +565,7 @@
           "nodes": [
             {
               "group": "focus",
-              "href": "cards/F-chu-vandermonde-convolution.doc.json",
+              "href": "F-chu-vandermonde-convolution.doc.json",
               "id": "F:chu-vandermonde-convolution",
               "label": "chu-vandermonde-convolution",
               "status": "proved",
@@ -571,7 +573,7 @@
             },
             {
               "group": "cas-certificate",
-              "href": "cards/F-chu-vandermonde-convolution-recurrence.doc.json",
+              "href": "F-chu-vandermonde-convolution-recurrence.doc.json",
               "id": "F:chu-vandermonde-convolution-recurrence",
               "label": "chu-vandermonde-convolution-recurrence",
               "status": "proved",
@@ -630,7 +632,7 @@
             "F:chu-vandermonde-convolution-recurrence",
             "The Chu-Vandermonde convolution satisfies a first-order recurrence in p",
             "proved",
-            "cards/F-chu-vandermonde-convolution-recurrence.doc.json"
+            "F-chu-vandermonde-convolution-recurrence.doc.json"
           ]
         ],
         "source": {
@@ -845,6 +847,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c23",
+        "label": "Component 23 of 37 (2 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

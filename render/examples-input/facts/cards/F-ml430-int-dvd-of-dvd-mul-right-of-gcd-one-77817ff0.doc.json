@@ -157,7 +157,7 @@
           "nodes": [
             {
               "group": "unproved",
-              "href": "cards/F-ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b.doc.json",
+              "href": "F-ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b.doc.json",
               "id": "F:ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b",
               "label": "ml430-int-dvd-of-dvd-mul-left-of-gcd-one",
               "status": "open",
@@ -165,7 +165,7 @@
             },
             {
               "group": "focus",
-              "href": "cards/F-ml430-int-dvd-of-dvd-mul-right-of-gcd-one-77817ff0.doc.json",
+              "href": "F-ml430-int-dvd-of-dvd-mul-right-of-gcd-one-77817ff0.doc.json",
               "id": "F:ml430-int-dvd-of-dvd-mul-right-of-gcd-one-77817ff0",
               "label": "ml430-int-dvd-of-dvd-mul-right-of-gcd-one",
               "status": "open",
@@ -224,7 +224,7 @@
             "F:ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b",
             "Mathlib v4.30 source proposition Int.dvd_of_dvd_mul_left_of_gcd_one",
             "open",
-            "cards/F-ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b.doc.json"
+            "F-ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b.doc.json"
           ]
         ],
         "source": {
@@ -439,6 +439,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c17",
+        "label": "Component 17 of 37 (3 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

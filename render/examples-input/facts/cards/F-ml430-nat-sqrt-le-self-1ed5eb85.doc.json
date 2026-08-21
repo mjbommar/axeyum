@@ -157,7 +157,7 @@
           "nodes": [
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-sqrt-le-7918582b.doc.json",
+              "href": "F-ml430-nat-sqrt-le-7918582b.doc.json",
               "id": "F:ml430-nat-sqrt-le-7918582b",
               "label": "ml430-nat-sqrt-le",
               "status": "open",
@@ -165,7 +165,7 @@
             },
             {
               "group": "focus",
-              "href": "cards/F-ml430-nat-sqrt-le-self-1ed5eb85.doc.json",
+              "href": "F-ml430-nat-sqrt-le-self-1ed5eb85.doc.json",
               "id": "F:ml430-nat-sqrt-le-self-1ed5eb85",
               "label": "ml430-nat-sqrt-le-self",
               "status": "open",
@@ -224,7 +224,7 @@
             "F:ml430-nat-sqrt-le-7918582b",
             "Mathlib v4.30 source proposition Nat.sqrt_le",
             "open",
-            "cards/F-ml430-nat-sqrt-le-7918582b.doc.json"
+            "F-ml430-nat-sqrt-le-7918582b.doc.json"
           ]
         ],
         "source": {
@@ -439,6 +439,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c03",
+        "label": "Component 3 of 37 (7 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

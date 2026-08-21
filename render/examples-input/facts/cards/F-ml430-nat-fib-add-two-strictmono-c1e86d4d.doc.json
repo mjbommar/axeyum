@@ -157,7 +157,7 @@
           "nodes": [
             {
               "group": "focus",
-              "href": "cards/F-ml430-nat-fib-add-two-strictmono-c1e86d4d.doc.json",
+              "href": "F-ml430-nat-fib-add-two-strictmono-c1e86d4d.doc.json",
               "id": "F:ml430-nat-fib-add-two-strictmono-c1e86d4d",
               "label": "ml430-nat-fib-add-two-strictmono",
               "status": "open",
@@ -165,7 +165,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-fib-strictmonoon-905810a9.doc.json",
+              "href": "F-ml430-nat-fib-strictmonoon-905810a9.doc.json",
               "id": "F:ml430-nat-fib-strictmonoon-905810a9",
               "label": "ml430-nat-fib-strictmonoon",
               "status": "open",
@@ -224,7 +224,7 @@
             "F:ml430-nat-fib-strictmonoon-905810a9",
             "Mathlib v4.30 source proposition Nat.fib_strictMonoOn",
             "open",
-            "cards/F-ml430-nat-fib-strictmonoon-905810a9.doc.json"
+            "F-ml430-nat-fib-strictmonoon-905810a9.doc.json"
           ]
         ],
         "source": {
@@ -439,6 +439,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c21",
+        "label": "Component 21 of 37 (3 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

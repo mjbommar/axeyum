@@ -162,7 +162,7 @@
           "nodes": [
             {
               "group": "unproved",
-              "href": "cards/F-ml430-int-gcd-fib-73bdafc2.doc.json",
+              "href": "F-ml430-int-gcd-fib-73bdafc2.doc.json",
               "id": "F:ml430-int-gcd-fib-73bdafc2",
               "label": "ml430-int-gcd-fib",
               "status": "open",
@@ -170,7 +170,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-fib-dvd-f80f3de1.doc.json",
+              "href": "F-ml430-nat-fib-dvd-f80f3de1.doc.json",
               "id": "F:ml430-nat-fib-dvd-f80f3de1",
               "label": "ml430-nat-fib-dvd",
               "status": "open",
@@ -178,7 +178,7 @@
             },
             {
               "group": "focus",
-              "href": "cards/F-ml430-nat-fib-gcd-d1d98407.doc.json",
+              "href": "F-ml430-nat-fib-gcd-d1d98407.doc.json",
               "id": "F:ml430-nat-fib-gcd-d1d98407",
               "label": "ml430-nat-fib-gcd",
               "status": "open",
@@ -237,13 +237,13 @@
             "F:ml430-int-gcd-fib-73bdafc2",
             "Mathlib v4.30 source proposition Int.gcd_fib",
             "open",
-            "cards/F-ml430-int-gcd-fib-73bdafc2.doc.json"
+            "F-ml430-int-gcd-fib-73bdafc2.doc.json"
           ],
           [
             "F:ml430-nat-fib-dvd-f80f3de1",
             "Mathlib v4.30 source proposition Nat.fib_dvd",
             "open",
-            "cards/F-ml430-nat-fib-dvd-f80f3de1.doc.json"
+            "F-ml430-nat-fib-dvd-f80f3de1.doc.json"
           ]
         ],
         "source": {
@@ -458,6 +458,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c05",
+        "label": "Component 5 of 37 (5 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

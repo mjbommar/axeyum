@@ -157,7 +157,7 @@
           "nodes": [
             {
               "group": "focus",
-              "href": "cards/F-ml430-nat-sqrt-eq-zero-53666a3b.doc.json",
+              "href": "F-ml430-nat-sqrt-eq-zero-53666a3b.doc.json",
               "id": "F:ml430-nat-sqrt-eq-zero-53666a3b",
               "label": "ml430-nat-sqrt-eq-zero",
               "status": "open",
@@ -165,7 +165,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-sqrt-lt-4909537f.doc.json",
+              "href": "F-ml430-nat-sqrt-lt-4909537f.doc.json",
               "id": "F:ml430-nat-sqrt-lt-4909537f",
               "label": "ml430-nat-sqrt-lt",
               "status": "open",
@@ -224,7 +224,7 @@
             "F:ml430-nat-sqrt-lt-4909537f",
             "Mathlib v4.30 source proposition Nat.sqrt_lt",
             "open",
-            "cards/F-ml430-nat-sqrt-lt-4909537f.doc.json"
+            "F-ml430-nat-sqrt-lt-4909537f.doc.json"
           ]
         ],
         "source": {
@@ -439,6 +439,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c09",
+        "label": "Component 9 of 37 (5 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

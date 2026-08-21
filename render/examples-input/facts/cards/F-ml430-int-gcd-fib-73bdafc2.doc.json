@@ -167,7 +167,7 @@
           "nodes": [
             {
               "group": "unproved",
-              "href": "cards/F-ml430-int-fib-gcd-3a8bfdec.doc.json",
+              "href": "F-ml430-int-fib-gcd-3a8bfdec.doc.json",
               "id": "F:ml430-int-fib-gcd-3a8bfdec",
               "label": "ml430-int-fib-gcd",
               "status": "open",
@@ -175,7 +175,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-int-fib-neg-b4021d37.doc.json",
+              "href": "F-ml430-int-fib-neg-b4021d37.doc.json",
               "id": "F:ml430-int-fib-neg-b4021d37",
               "label": "ml430-int-fib-neg",
               "status": "open",
@@ -183,7 +183,7 @@
             },
             {
               "group": "focus",
-              "href": "cards/F-ml430-int-gcd-fib-73bdafc2.doc.json",
+              "href": "F-ml430-int-gcd-fib-73bdafc2.doc.json",
               "id": "F:ml430-int-gcd-fib-73bdafc2",
               "label": "ml430-int-gcd-fib",
               "status": "open",
@@ -191,7 +191,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-fib-gcd-d1d98407.doc.json",
+              "href": "F-ml430-nat-fib-gcd-d1d98407.doc.json",
               "id": "F:ml430-nat-fib-gcd-d1d98407",
               "label": "ml430-nat-fib-gcd",
               "status": "open",
@@ -250,13 +250,13 @@
             "F:ml430-int-fib-neg-b4021d37",
             "Mathlib v4.30 source proposition Int.fib_neg",
             "open",
-            "cards/F-ml430-int-fib-neg-b4021d37.doc.json"
+            "F-ml430-int-fib-neg-b4021d37.doc.json"
           ],
           [
             "F:ml430-nat-fib-gcd-d1d98407",
             "Mathlib v4.30 source proposition Nat.fib_gcd",
             "open",
-            "cards/F-ml430-nat-fib-gcd-d1d98407.doc.json"
+            "F-ml430-nat-fib-gcd-d1d98407.doc.json"
           ]
         ],
         "source": {
@@ -325,7 +325,7 @@
             "F:ml430-int-fib-gcd-3a8bfdec",
             "Mathlib v4.30 source proposition Int.fib_gcd",
             "open",
-            "cards/F-ml430-int-fib-gcd-3a8bfdec.doc.json"
+            "F-ml430-int-fib-gcd-3a8bfdec.doc.json"
           ]
         ],
         "source": {
@@ -540,6 +540,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c05",
+        "label": "Component 5 of 37 (5 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

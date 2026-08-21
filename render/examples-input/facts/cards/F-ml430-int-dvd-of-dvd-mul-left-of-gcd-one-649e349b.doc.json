@@ -162,7 +162,7 @@
           "nodes": [
             {
               "group": "focus",
-              "href": "cards/F-ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b.doc.json",
+              "href": "F-ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b.doc.json",
               "id": "F:ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b",
               "label": "ml430-int-dvd-of-dvd-mul-left-of-gcd-one",
               "status": "open",
@@ -170,7 +170,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-int-dvd-of-dvd-mul-right-of-gcd-one-77817ff0.doc.json",
+              "href": "F-ml430-int-dvd-of-dvd-mul-right-of-gcd-one-77817ff0.doc.json",
               "id": "F:ml430-int-dvd-of-dvd-mul-right-of-gcd-one-77817ff0",
               "label": "ml430-int-dvd-of-dvd-mul-right-of-gcd-one",
               "status": "open",
@@ -178,7 +178,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-int-gcd-eq-gcd-ab-63005aef.doc.json",
+              "href": "F-ml430-int-gcd-eq-gcd-ab-63005aef.doc.json",
               "id": "F:ml430-int-gcd-eq-gcd-ab-63005aef",
               "label": "ml430-int-gcd-eq-gcd-ab",
               "status": "open",
@@ -237,7 +237,7 @@
             "F:ml430-int-gcd-eq-gcd-ab-63005aef",
             "Mathlib v4.30 source proposition Int.gcd_eq_gcd_ab",
             "open",
-            "cards/F-ml430-int-gcd-eq-gcd-ab-63005aef.doc.json"
+            "F-ml430-int-gcd-eq-gcd-ab-63005aef.doc.json"
           ]
         ],
         "source": {
@@ -306,7 +306,7 @@
             "F:ml430-int-dvd-of-dvd-mul-right-of-gcd-one-77817ff0",
             "Mathlib v4.30 source proposition Int.dvd_of_dvd_mul_right_of_gcd_one",
             "open",
-            "cards/F-ml430-int-dvd-of-dvd-mul-right-of-gcd-one-77817ff0.doc.json"
+            "F-ml430-int-dvd-of-dvd-mul-right-of-gcd-one-77817ff0.doc.json"
           ]
         ],
         "source": {
@@ -521,6 +521,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c17",
+        "label": "Component 17 of 37 (3 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

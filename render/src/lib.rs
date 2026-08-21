@@ -173,6 +173,72 @@ pub fn emitter_for(format: &str) -> Option<Box<dyn Emitter>> {
     }
 }
 
+/// A cross-document reference resolved to the page it names, or `None`.
+///
+/// Doc-IR carries a reference to another document as the RELATIVE PATH OF THAT
+/// DOCUMENT'S SOURCE (`cards/F-nat-add-comm.doc.json`, `../fact-atlas.doc.json`),
+/// relative to the referring document's own output file. That is deliberate:
+/// the source file is the thing that exists on disk and can be checked, and a
+/// producer that wrote `.html` into the IR would be encoding one emitter's
+/// output layout into the data.
+///
+/// Every emitter resolves such a reference to the same place -- the HTML page,
+/// because the corpus is published as an HTML site and that is the only format
+/// the whole 324-card set is rendered in. A Markdown atlas linking into the
+/// HTML cards is a live link; one linking to `.md` files nobody generated
+/// would be a dead one, and this strand does not ship dead links that look
+/// live.
+///
+/// `None` for anything that is not a SAFE RELATIVE reference: an absolute URL,
+/// an absolute path, a Windows path, anything carrying whitespace, a quote, or
+/// a fragment, and anything that does not name a Doc-IR source file. Callers
+/// treat `None` as "not a document link" and fall back to plain text, so a
+/// malformed reference can never become a live-looking anchor.
+///
+/// ```
+/// use axeyum_render::doc_link_target;
+/// assert_eq!(doc_link_target("cards/F-a.doc.json").as_deref(), Some("cards/F-a.html"));
+/// assert_eq!(doc_link_target("../atlas.doc.json").as_deref(), Some("../atlas.html"));
+/// assert_eq!(doc_link_target("../a.doc.json#index").as_deref(), Some("../a.html#index"));
+/// assert_eq!(doc_link_target("https://x/a.doc.json"), None);
+/// assert_eq!(doc_link_target("/abs/a.doc.json"), None);
+/// assert_eq!(doc_link_target("a.json"), None);
+/// ```
+#[must_use]
+pub fn doc_link_target(href: &str) -> Option<String> {
+    const SUFFIX: &str = ".doc.json";
+    // A fragment is allowed and travels through untouched: a card links UP to
+    // the component figure it belongs to on the atlas
+    // (`../facts-atlas.doc.json#dep-graph-c02`), which is a reference to a
+    // place in another document, not to a different document.
+    let (path, fragment) = match href.split_once('#') {
+        Some((p, f)) => (p, Some(f)),
+        None => (href, None),
+    };
+    let stem = path.strip_suffix(SUFFIX)?;
+    if stem.is_empty() {
+        return None;
+    }
+    if path.starts_with('/') || path.contains(':') {
+        return None;
+    }
+    if href
+        .chars()
+        .any(|c| c.is_whitespace() || c.is_control() || matches!(c, '"' | '\'' | '<' | '>' | '\\'))
+    {
+        return None;
+    }
+    // A second `#` would make the fragment ambiguous, and `?` is a query a
+    // static site has no way to answer.
+    if fragment.is_some_and(|f| f.contains('#') || f.is_empty()) || href.contains('?') {
+        return None;
+    }
+    Some(match fragment {
+        Some(f) => format!("{stem}.html#{f}"),
+        None => format!("{stem}.html"),
+    })
+}
+
 /// Canonical JSON: sorted keys, two-space indent, one trailing newline.
 ///
 /// This is the exact form `scripts/validate-docir.py --canonicalize` prints, and

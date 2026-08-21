@@ -157,7 +157,7 @@
           "nodes": [
             {
               "group": "unproved",
-              "href": "cards/F-ml430-int-modeq-of-mul-left-c4ccd51e.doc.json",
+              "href": "F-ml430-int-modeq-of-mul-left-c4ccd51e.doc.json",
               "id": "F:ml430-int-modeq-of-mul-left-c4ccd51e",
               "label": "ml430-int-modeq-of-mul-left",
               "status": "open",
@@ -165,7 +165,7 @@
             },
             {
               "group": "focus",
-              "href": "cards/F-ml430-int-modeq-of-mul-right-c92b7bf0.doc.json",
+              "href": "F-ml430-int-modeq-of-mul-right-c92b7bf0.doc.json",
               "id": "F:ml430-int-modeq-of-mul-right-c92b7bf0",
               "label": "ml430-int-modeq-of-mul-right",
               "status": "open",
@@ -224,7 +224,7 @@
             "F:ml430-int-modeq-of-mul-left-c4ccd51e",
             "Mathlib v4.30 source proposition Int.ModEq.of_mul_left",
             "open",
-            "cards/F-ml430-int-modeq-of-mul-left-c4ccd51e.doc.json"
+            "F-ml430-int-modeq-of-mul-left-c4ccd51e.doc.json"
           ]
         ],
         "source": {
@@ -439,6 +439,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c24",
+        "label": "Component 24 of 37 (2 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

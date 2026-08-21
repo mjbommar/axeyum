@@ -181,6 +181,7 @@
       "kind": {
         "artifact_refs": [],
         "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -317,6 +318,7 @@
       "kind": {
         "artifact_refs": [],
         "cert_kind": "report-run",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -467,7 +469,7 @@
           "nodes": [
             {
               "group": "focus",
-              "href": "cards/F-rat-add-neg-inverse.doc.json",
+              "href": "F-rat-add-neg-inverse.doc.json",
               "id": "F:rat-add-neg-inverse",
               "label": "rat-add-neg-inverse",
               "status": "proved",
@@ -475,7 +477,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-rat-mul-renormalises.doc.json",
+              "href": "F-rat-mul-renormalises.doc.json",
               "id": "F:rat-mul-renormalises",
               "label": "rat-mul-renormalises",
               "status": "proved",
@@ -534,7 +536,7 @@
             "F:rat-mul-renormalises",
             "Rational multiplication renormalises",
             "proved",
-            "cards/F-rat-mul-renormalises.doc.json"
+            "F-rat-mul-renormalises.doc.json"
           ]
         ],
         "source": {
@@ -718,6 +720,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c01",
+        "label": "Component 1 of 37 (31 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

@@ -41,6 +41,17 @@ impl Emitter for MarkdownEmitter {
         if let Some(sub) = &doc.subtitle {
             let _ = writeln!(s, "*{sub}*\n");
         }
+        if !doc.nav.is_empty() {
+            let crumbs: Vec<String> = doc
+                .nav
+                .iter()
+                .map(|n| match crate::doc_link_target(&n.href) {
+                    Some(page) => format!("[{}]({page})", cell(&n.label)),
+                    None => n.label.clone(),
+                })
+                .collect();
+            let _ = writeln!(s, "{}\n", crumbs.join(" / "));
+        }
         if !doc.authors.is_empty() {
             let _ = writeln!(s, "Authors: {}\n", doc.authors.join(", "));
         }
@@ -180,7 +191,7 @@ fn render_block(doc: &ResolvedDocument, block: &ResolvedBlock, out: &mut EmitOut
                 .collect();
             let _ = writeln!(s, "| {} |", rules.join(" | "));
             for row in rows {
-                let cells: Vec<String> = row.iter().map(|c| cell(c)).collect();
+                let cells: Vec<String> = row.iter().map(|c| body_cell(c)).collect();
                 let _ = writeln!(s, "| {} |", cells.join(" | "));
             }
             let _ = writeln!(
@@ -197,6 +208,7 @@ fn render_block(doc: &ResolvedDocument, block: &ResolvedBlock, out: &mut EmitOut
             artifact_refs,
             replay,
             evidence,
+            no_exit_reason,
         } => {
             let _ = writeln!(s, "**Certificate -- {}**\n", cert_kind.label());
             let _ = writeln!(s, "{}\n", summary.text);
@@ -210,6 +222,11 @@ fn render_block(doc: &ResolvedDocument, block: &ResolvedBlock, out: &mut EmitOut
             }
             let _ = writeln!(s, "Replay:\n");
             let _ = writeln!(s, "```sh\n{}\n```\n", replay.line);
+            // See the LaTeX emitter: silence about whether anything ran is the
+            // one thing a certificate box may never do.
+            if let Some(r) = no_exit_reason {
+                let _ = writeln!(s, "*No run was recorded: {r}*\n");
+            }
             for e in evidence {
                 s.push_str(&evidence_line(e));
             }
@@ -430,6 +447,30 @@ fn link(doc: &ResolvedDocument, path: &str) -> String {
 /// Escape the one character that breaks a GFM table row.
 fn cell(s: &str) -> String {
     s.replace('|', "\\|")
+}
+
+/// A body cell, with the card-link convention applied.
+///
+/// `ir::Cell` is a scalar, so a link between documents rides in a cell as the
+/// path of the document it names (`13-facts-diary.md`, item 5). A cell whose
+/// WHOLE content is such a path becomes a link to that document's rendered
+/// page, labelled with its stem. The target is the HTML page and not a `.md`
+/// one, because the card corpus is emitted as an HTML site and this atlas is
+/// written beside it -- see [`crate::doc_link_target`].
+fn body_cell(s: &str) -> String {
+    let trimmed = s.trim();
+    match crate::doc_link_target(trimmed) {
+        Some(page) => {
+            let stem = trimmed
+                .rsplit('/')
+                .next()
+                .unwrap_or(trimmed)
+                .strip_suffix(".doc.json")
+                .unwrap_or(trimmed);
+            format!("[`{}`]({page})", cell(stem))
+        }
+        None => cell(s),
+    }
 }
 
 /// A figure's data, as deterministic JSON.

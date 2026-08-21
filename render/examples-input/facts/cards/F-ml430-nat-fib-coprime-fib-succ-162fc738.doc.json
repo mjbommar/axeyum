@@ -162,7 +162,7 @@
           "nodes": [
             {
               "group": "kernel-lean",
-              "href": "cards/F-ml430-nat-fib-add-two-b86e0c82.doc.json",
+              "href": "F-ml430-nat-fib-add-two-b86e0c82.doc.json",
               "id": "F:ml430-nat-fib-add-two-b86e0c82",
               "label": "ml430-nat-fib-add-two",
               "status": "proved",
@@ -170,7 +170,7 @@
             },
             {
               "group": "focus",
-              "href": "cards/F-ml430-nat-fib-coprime-fib-succ-162fc738.doc.json",
+              "href": "F-ml430-nat-fib-coprime-fib-succ-162fc738.doc.json",
               "id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
               "label": "ml430-nat-fib-coprime-fib-succ",
               "status": "open",
@@ -178,7 +178,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-gcd-fib-add-self-5a92d5e3.doc.json",
+              "href": "F-ml430-nat-gcd-fib-add-self-5a92d5e3.doc.json",
               "id": "F:ml430-nat-gcd-fib-add-self-5a92d5e3",
               "label": "ml430-nat-gcd-fib-add-self",
               "status": "open",
@@ -237,7 +237,7 @@
             "F:ml430-nat-fib-add-two-b86e0c82",
             "Mathlib v4.30 source proposition Nat.fib_add_two",
             "proved",
-            "cards/F-ml430-nat-fib-add-two-b86e0c82.doc.json"
+            "F-ml430-nat-fib-add-two-b86e0c82.doc.json"
           ]
         ],
         "source": {
@@ -306,7 +306,7 @@
             "F:ml430-nat-gcd-fib-add-self-5a92d5e3",
             "Mathlib v4.30 source proposition Nat.gcd_fib_add_self",
             "open",
-            "cards/F-ml430-nat-gcd-fib-add-self-5a92d5e3.doc.json"
+            "F-ml430-nat-gcd-fib-add-self-5a92d5e3.doc.json"
           ]
         ],
         "source": {
@@ -521,6 +521,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c02",
+        "label": "Component 2 of 37 (9 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

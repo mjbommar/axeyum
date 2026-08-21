@@ -157,7 +157,7 @@
           "nodes": [
             {
               "group": "focus",
-              "href": "cards/F-ml430-nat-coprime-add-self-right-c3ed0f45.doc.json",
+              "href": "F-ml430-nat-coprime-add-self-right-c3ed0f45.doc.json",
               "id": "F:ml430-nat-coprime-add-self-right-c3ed0f45",
               "label": "ml430-nat-coprime-add-self-right",
               "status": "open",
@@ -165,7 +165,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-coprime-self-add-right-966e5434.doc.json",
+              "href": "F-ml430-nat-coprime-self-add-right-966e5434.doc.json",
               "id": "F:ml430-nat-coprime-self-add-right-966e5434",
               "label": "ml430-nat-coprime-self-add-right",
               "status": "open",
@@ -224,7 +224,7 @@
             "F:ml430-nat-coprime-self-add-right-966e5434",
             "Mathlib v4.30 source proposition Nat.coprime_self_add_right",
             "open",
-            "cards/F-ml430-nat-coprime-self-add-right-966e5434.doc.json"
+            "F-ml430-nat-coprime-self-add-right-966e5434.doc.json"
           ]
         ],
         "source": {
@@ -439,6 +439,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c29",
+        "label": "Component 29 of 37 (2 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

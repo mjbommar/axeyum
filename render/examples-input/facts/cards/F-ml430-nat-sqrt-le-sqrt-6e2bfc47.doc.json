@@ -167,7 +167,7 @@
           "nodes": [
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-le-sqrt-e6996680.doc.json",
+              "href": "F-ml430-nat-le-sqrt-e6996680.doc.json",
               "id": "F:ml430-nat-le-sqrt-e6996680",
               "label": "ml430-nat-le-sqrt",
               "status": "open",
@@ -175,7 +175,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-sqrt-le-7918582b.doc.json",
+              "href": "F-ml430-nat-sqrt-le-7918582b.doc.json",
               "id": "F:ml430-nat-sqrt-le-7918582b",
               "label": "ml430-nat-sqrt-le",
               "status": "open",
@@ -183,7 +183,7 @@
             },
             {
               "group": "focus",
-              "href": "cards/F-ml430-nat-sqrt-le-sqrt-6e2bfc47.doc.json",
+              "href": "F-ml430-nat-sqrt-le-sqrt-6e2bfc47.doc.json",
               "id": "F:ml430-nat-sqrt-le-sqrt-6e2bfc47",
               "label": "ml430-nat-sqrt-le-sqrt",
               "status": "open",
@@ -242,13 +242,13 @@
             "F:ml430-nat-le-sqrt-e6996680",
             "Mathlib v4.30 source proposition Nat.le_sqrt",
             "open",
-            "cards/F-ml430-nat-le-sqrt-e6996680.doc.json"
+            "F-ml430-nat-le-sqrt-e6996680.doc.json"
           ],
           [
             "F:ml430-nat-sqrt-le-7918582b",
             "Mathlib v4.30 source proposition Nat.sqrt_le",
             "open",
-            "cards/F-ml430-nat-sqrt-le-7918582b.doc.json"
+            "F-ml430-nat-sqrt-le-7918582b.doc.json"
           ]
         ],
         "source": {
@@ -463,6 +463,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c03",
+        "label": "Component 3 of 37 (7 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

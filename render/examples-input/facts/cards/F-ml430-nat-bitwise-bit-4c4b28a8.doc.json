@@ -157,7 +157,7 @@
           "nodes": [
             {
               "group": "focus",
-              "href": "cards/F-ml430-nat-bitwise-bit-4c4b28a8.doc.json",
+              "href": "F-ml430-nat-bitwise-bit-4c4b28a8.doc.json",
               "id": "F:ml430-nat-bitwise-bit-4c4b28a8",
               "label": "ml430-nat-bitwise-bit",
               "status": "open",
@@ -165,7 +165,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-bitwise-swap-7175e90e.doc.json",
+              "href": "F-ml430-nat-bitwise-swap-7175e90e.doc.json",
               "id": "F:ml430-nat-bitwise-swap-7175e90e",
               "label": "ml430-nat-bitwise-swap",
               "status": "open",
@@ -224,7 +224,7 @@
             "F:ml430-nat-bitwise-swap-7175e90e",
             "Mathlib v4.30 source proposition Nat.bitwise_swap",
             "open",
-            "cards/F-ml430-nat-bitwise-swap-7175e90e.doc.json"
+            "F-ml430-nat-bitwise-swap-7175e90e.doc.json"
           ]
         ],
         "source": {
@@ -439,6 +439,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c07",
+        "label": "Component 7 of 37 (5 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

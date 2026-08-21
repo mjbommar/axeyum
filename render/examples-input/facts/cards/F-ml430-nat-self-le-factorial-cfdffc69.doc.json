@@ -157,7 +157,7 @@
           "nodes": [
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-factorial-pos-f1dd2405.doc.json",
+              "href": "F-ml430-nat-factorial-pos-f1dd2405.doc.json",
               "id": "F:ml430-nat-factorial-pos-f1dd2405",
               "label": "ml430-nat-factorial-pos",
               "status": "open",
@@ -165,7 +165,7 @@
             },
             {
               "group": "focus",
-              "href": "cards/F-ml430-nat-self-le-factorial-cfdffc69.doc.json",
+              "href": "F-ml430-nat-self-le-factorial-cfdffc69.doc.json",
               "id": "F:ml430-nat-self-le-factorial-cfdffc69",
               "label": "ml430-nat-self-le-factorial",
               "status": "open",
@@ -224,7 +224,7 @@
             "F:ml430-nat-factorial-pos-f1dd2405",
             "Mathlib v4.30 source proposition Nat.factorial_pos",
             "open",
-            "cards/F-ml430-nat-factorial-pos-f1dd2405.doc.json"
+            "F-ml430-nat-factorial-pos-f1dd2405.doc.json"
           ]
         ],
         "source": {
@@ -439,6 +439,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c08",
+        "label": "Component 8 of 37 (5 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

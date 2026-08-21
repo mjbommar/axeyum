@@ -157,7 +157,7 @@
           "nodes": [
             {
               "group": "smt-term-level",
-              "href": "cards/F-excluded-middle.doc.json",
+              "href": "F-excluded-middle.doc.json",
               "id": "F:excluded-middle",
               "label": "excluded-middle",
               "status": "proved",
@@ -165,7 +165,7 @@
             },
             {
               "group": "focus",
-              "href": "cards/F-excluded-middle-not-intuitionistic.doc.json",
+              "href": "F-excluded-middle-not-intuitionistic.doc.json",
               "id": "F:excluded-middle-not-intuitionistic",
               "label": "excluded-middle-not-intuitionistic",
               "status": "open",
@@ -224,7 +224,7 @@
             "F:excluded-middle",
             "Law of excluded middle",
             "proved",
-            "cards/F-excluded-middle.doc.json"
+            "F-excluded-middle.doc.json"
           ]
         ],
         "source": {
@@ -538,6 +538,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c15",
+        "label": "Component 15 of 37 (3 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

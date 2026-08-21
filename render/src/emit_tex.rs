@@ -245,7 +245,7 @@ fn render_block(doc: &ResolvedDocument, block: &ResolvedBlock, out: &mut EmitOut
             let _ = writeln!(s, "{} \\\\", headers.join(" & "));
             s.push_str("\\hline\n");
             for row in rows {
-                let cells: Vec<String> = row.iter().map(|c| tex(c)).collect();
+                let cells: Vec<String> = row.iter().map(|c| body_cell(c)).collect();
                 let _ = writeln!(s, "{} \\\\", cells.join(" & "));
             }
             s.push_str("\\hline\n\\end{tabular}\n\\end{axtable}\n\n");
@@ -256,6 +256,7 @@ fn render_block(doc: &ResolvedDocument, block: &ResolvedBlock, out: &mut EmitOut
             artifact_refs,
             replay,
             evidence,
+            no_exit_reason,
         } => {
             let _ = writeln!(
                 s,
@@ -277,6 +278,17 @@ fn render_block(doc: &ResolvedDocument, block: &ResolvedBlock, out: &mut EmitOut
                 s.push_str("\\end{itemize}\n");
             }
             let _ = writeln!(s, "\\axreplay{{{}}}", tex(&replay.line));
+            // Why there is no exit status, when there is none. Printed in
+            // every format for the same reason the HTML emitter reports its
+            // absence as a diagnostic: a certificate box that is silent about
+            // whether anything ran implies a run nothing records.
+            if let Some(r) = no_exit_reason {
+                let _ = writeln!(
+                    s,
+                    "\\noindent\\textit{{No run was recorded: {}}}\\par",
+                    tex(r)
+                );
+            }
             if !evidence.is_empty() {
                 s.push_str("\\begin{itemize}\n");
                 for e in evidence {
@@ -532,6 +544,26 @@ fn rich(r: &RichText) -> String {
 /// `` `code` `` becomes `\texttt{...}`, `**bold**` becomes `\textbf{...}`, and
 /// everything else is escaped. Unterminated delimiters are treated as literal
 /// characters, so no input can make this function lose text.
+/// A body cell, with the card-link convention applied.
+///
+/// The Markdown emitter's `body_cell` states the reasoning; this is the same
+/// rule, so the three formats put the reader in the same place.
+fn body_cell(s: &str) -> String {
+    let trimmed = s.trim();
+    match crate::doc_link_target(trimmed) {
+        Some(page) => {
+            let stem = trimmed
+                .rsplit('/')
+                .next()
+                .unwrap_or(trimmed)
+                .strip_suffix(".doc.json")
+                .unwrap_or(trimmed);
+            format!("\\href{{{}}}{{\\texttt{{{}}}}}", page, tex(stem))
+        }
+        None => tex(s),
+    }
+}
+
 pub fn tex(input: &str) -> String {
     let b: Vec<char> = input.chars().collect();
     let mut out = String::with_capacity(input.len() + 16);

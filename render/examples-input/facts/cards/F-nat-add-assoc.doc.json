@@ -181,6 +181,7 @@
       "kind": {
         "artifact_refs": [],
         "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -317,6 +318,7 @@
       "kind": {
         "artifact_refs": [],
         "cert_kind": "report-run",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -492,7 +494,7 @@
           "nodes": [
             {
               "group": "kernel-lean",
-              "href": "cards/F-int-add-assoc.doc.json",
+              "href": "F-int-add-assoc.doc.json",
               "id": "F:int-add-assoc",
               "label": "int-add-assoc",
               "status": "proved",
@@ -500,7 +502,7 @@
             },
             {
               "group": "focus",
-              "href": "cards/F-nat-add-assoc.doc.json",
+              "href": "F-nat-add-assoc.doc.json",
               "id": "F:nat-add-assoc",
               "label": "nat-add-assoc",
               "status": "proved",
@@ -508,7 +510,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-euclid-lemma.doc.json",
+              "href": "F-nat-euclid-lemma.doc.json",
               "id": "F:nat-euclid-lemma",
               "label": "nat-euclid-lemma",
               "status": "proved",
@@ -516,7 +518,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-gcd-bezout.doc.json",
+              "href": "F-nat-gcd-bezout.doc.json",
               "id": "F:nat-gcd-bezout",
               "label": "nat-gcd-bezout",
               "status": "proved",
@@ -524,7 +526,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-left-distrib.doc.json",
+              "href": "F-nat-left-distrib.doc.json",
               "id": "F:nat-left-distrib",
               "label": "nat-left-distrib",
               "status": "proved",
@@ -583,25 +585,25 @@
             "F:int-add-assoc",
             "Addition on the integers is associative",
             "proved",
-            "cards/F-int-add-assoc.doc.json"
+            "F-int-add-assoc.doc.json"
           ],
           [
             "F:nat-euclid-lemma",
             "Euclid's lemma: a prime dividing a product divides a factor",
             "proved",
-            "cards/F-nat-euclid-lemma.doc.json"
+            "F-nat-euclid-lemma.doc.json"
           ],
           [
             "F:nat-gcd-bezout",
             "Bezout's identity holds for the natural gcd",
             "proved",
-            "cards/F-nat-gcd-bezout.doc.json"
+            "F-nat-gcd-bezout.doc.json"
           ],
           [
             "F:nat-left-distrib",
             "Multiplication distributes over addition on the left",
             "proved",
-            "cards/F-nat-left-distrib.doc.json"
+            "F-nat-left-distrib.doc.json"
           ]
         ],
         "source": {
@@ -816,6 +818,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c01",
+        "label": "Component 1 of 37 (31 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

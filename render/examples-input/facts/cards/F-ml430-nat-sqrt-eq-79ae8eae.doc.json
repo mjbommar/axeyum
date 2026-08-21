@@ -157,7 +157,7 @@
           "nodes": [
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-exists-mul-self-e73ca9fa.doc.json",
+              "href": "F-ml430-nat-exists-mul-self-e73ca9fa.doc.json",
               "id": "F:ml430-nat-exists-mul-self-e73ca9fa",
               "label": "ml430-nat-exists-mul-self",
               "status": "open",
@@ -165,7 +165,7 @@
             },
             {
               "group": "focus",
-              "href": "cards/F-ml430-nat-sqrt-eq-79ae8eae.doc.json",
+              "href": "F-ml430-nat-sqrt-eq-79ae8eae.doc.json",
               "id": "F:ml430-nat-sqrt-eq-79ae8eae",
               "label": "ml430-nat-sqrt-eq",
               "status": "open",
@@ -224,7 +224,7 @@
             "F:ml430-nat-exists-mul-self-e73ca9fa",
             "Mathlib v4.30 source proposition Nat.exists_mul_self",
             "open",
-            "cards/F-ml430-nat-exists-mul-self-e73ca9fa.doc.json"
+            "F-ml430-nat-exists-mul-self-e73ca9fa.doc.json"
           ]
         ],
         "source": {
@@ -439,6 +439,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c31",
+        "label": "Component 31 of 37 (2 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

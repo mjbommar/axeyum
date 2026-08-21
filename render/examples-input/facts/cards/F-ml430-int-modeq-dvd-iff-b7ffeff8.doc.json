@@ -162,7 +162,7 @@
           "nodes": [
             {
               "group": "focus",
-              "href": "cards/F-ml430-int-modeq-dvd-iff-b7ffeff8.doc.json",
+              "href": "F-ml430-int-modeq-dvd-iff-b7ffeff8.doc.json",
               "id": "F:ml430-int-modeq-dvd-iff-b7ffeff8",
               "label": "ml430-int-modeq-dvd-iff",
               "status": "open",
@@ -170,7 +170,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-int-modeq-symm-984a6e67.doc.json",
+              "href": "F-ml430-int-modeq-symm-984a6e67.doc.json",
               "id": "F:ml430-int-modeq-symm-984a6e67",
               "label": "ml430-int-modeq-symm",
               "status": "open",
@@ -178,7 +178,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-int-modeq-trans-6d7863e0.doc.json",
+              "href": "F-ml430-int-modeq-trans-6d7863e0.doc.json",
               "id": "F:ml430-int-modeq-trans-6d7863e0",
               "label": "ml430-int-modeq-trans",
               "status": "open",
@@ -237,13 +237,13 @@
             "F:ml430-int-modeq-symm-984a6e67",
             "Mathlib v4.30 source proposition Int.ModEq.symm",
             "open",
-            "cards/F-ml430-int-modeq-symm-984a6e67.doc.json"
+            "F-ml430-int-modeq-symm-984a6e67.doc.json"
           ],
           [
             "F:ml430-int-modeq-trans-6d7863e0",
             "Mathlib v4.30 source proposition Int.ModEq.trans",
             "open",
-            "cards/F-ml430-int-modeq-trans-6d7863e0.doc.json"
+            "F-ml430-int-modeq-trans-6d7863e0.doc.json"
           ]
         ],
         "source": {
@@ -458,6 +458,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c06",
+        "label": "Component 6 of 37 (5 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

@@ -167,7 +167,7 @@
           "nodes": [
             {
               "group": "focus",
-              "href": "cards/F-ml430-nat-bitwise-comm-1a273bae.doc.json",
+              "href": "F-ml430-nat-bitwise-comm-1a273bae.doc.json",
               "id": "F:ml430-nat-bitwise-comm-1a273bae",
               "label": "ml430-nat-bitwise-comm",
               "status": "open",
@@ -175,7 +175,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-bitwise-swap-7175e90e.doc.json",
+              "href": "F-ml430-nat-bitwise-swap-7175e90e.doc.json",
               "id": "F:ml430-nat-bitwise-swap-7175e90e",
               "label": "ml430-nat-bitwise-swap",
               "status": "open",
@@ -183,7 +183,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-land-comm-7e6ad72e.doc.json",
+              "href": "F-ml430-nat-land-comm-7e6ad72e.doc.json",
               "id": "F:ml430-nat-land-comm-7e6ad72e",
               "label": "ml430-nat-land-comm",
               "status": "open",
@@ -191,7 +191,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-lor-comm-2666d7ef.doc.json",
+              "href": "F-ml430-nat-lor-comm-2666d7ef.doc.json",
               "id": "F:ml430-nat-lor-comm-2666d7ef",
               "label": "ml430-nat-lor-comm",
               "status": "open",
@@ -250,7 +250,7 @@
             "F:ml430-nat-bitwise-swap-7175e90e",
             "Mathlib v4.30 source proposition Nat.bitwise_swap",
             "open",
-            "cards/F-ml430-nat-bitwise-swap-7175e90e.doc.json"
+            "F-ml430-nat-bitwise-swap-7175e90e.doc.json"
           ]
         ],
         "source": {
@@ -319,13 +319,13 @@
             "F:ml430-nat-land-comm-7e6ad72e",
             "Mathlib v4.30 source proposition Nat.land_comm",
             "open",
-            "cards/F-ml430-nat-land-comm-7e6ad72e.doc.json"
+            "F-ml430-nat-land-comm-7e6ad72e.doc.json"
           ],
           [
             "F:ml430-nat-lor-comm-2666d7ef",
             "Mathlib v4.30 source proposition Nat.lor_comm",
             "open",
-            "cards/F-ml430-nat-lor-comm-2666d7ef.doc.json"
+            "F-ml430-nat-lor-comm-2666d7ef.doc.json"
           ]
         ],
         "source": {
@@ -540,6 +540,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c07",
+        "label": "Component 7 of 37 (5 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

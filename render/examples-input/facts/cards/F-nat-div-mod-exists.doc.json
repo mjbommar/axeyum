@@ -181,6 +181,7 @@
       "kind": {
         "artifact_refs": [],
         "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -317,6 +318,7 @@
       "kind": {
         "artifact_refs": [],
         "cert_kind": "report-run",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -482,7 +484,7 @@
           "nodes": [
             {
               "group": "kernel-lean",
-              "href": "cards/F-int-euclidean-decomposition.doc.json",
+              "href": "F-int-euclidean-decomposition.doc.json",
               "id": "F:int-euclidean-decomposition",
               "label": "int-euclidean-decomposition",
               "status": "proved",
@@ -490,7 +492,7 @@
             },
             {
               "group": "focus",
-              "href": "cards/F-nat-div-mod-exists.doc.json",
+              "href": "F-nat-div-mod-exists.doc.json",
               "id": "F:nat-div-mod-exists",
               "label": "nat-div-mod-exists",
               "status": "proved",
@@ -498,7 +500,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-div-mod-unique.doc.json",
+              "href": "F-nat-div-mod-unique.doc.json",
               "id": "F:nat-div-mod-unique",
               "label": "nat-div-mod-unique",
               "status": "proved",
@@ -506,7 +508,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-exists-prime-dvd.doc.json",
+              "href": "F-nat-exists-prime-dvd.doc.json",
               "id": "F:nat-exists-prime-dvd",
               "label": "nat-exists-prime-dvd",
               "status": "proved",
@@ -565,19 +567,19 @@
             "F:int-euclidean-decomposition",
             "Euclidean decomposition over the integers is derived, not assumed",
             "proved",
-            "cards/F-int-euclidean-decomposition.doc.json"
+            "F-int-euclidean-decomposition.doc.json"
           ],
           [
             "F:nat-div-mod-unique",
             "The quotient and remainder of a division are unique",
             "proved",
-            "cards/F-nat-div-mod-unique.doc.json"
+            "F-nat-div-mod-unique.doc.json"
           ],
           [
             "F:nat-exists-prime-dvd",
             "Every natural number at least 2 has a prime divisor",
             "proved",
-            "cards/F-nat-exists-prime-dvd.doc.json"
+            "F-nat-exists-prime-dvd.doc.json"
           ]
         ],
         "source": {
@@ -798,6 +800,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c01",
+        "label": "Component 1 of 37 (31 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

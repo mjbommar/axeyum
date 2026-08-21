@@ -172,7 +172,7 @@
           "nodes": [
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-le-three-of-sqrt-eq-one-0c48a868.doc.json",
+              "href": "F-ml430-nat-le-three-of-sqrt-eq-one-0c48a868.doc.json",
               "id": "F:ml430-nat-le-three-of-sqrt-eq-one-0c48a868",
               "label": "ml430-nat-le-three-of-sqrt-eq-one",
               "status": "open",
@@ -180,7 +180,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-sqrt-eq-zero-53666a3b.doc.json",
+              "href": "F-ml430-nat-sqrt-eq-zero-53666a3b.doc.json",
               "id": "F:ml430-nat-sqrt-eq-zero-53666a3b",
               "label": "ml430-nat-sqrt-eq-zero",
               "status": "open",
@@ -188,7 +188,7 @@
             },
             {
               "group": "focus",
-              "href": "cards/F-ml430-nat-sqrt-lt-4909537f.doc.json",
+              "href": "F-ml430-nat-sqrt-lt-4909537f.doc.json",
               "id": "F:ml430-nat-sqrt-lt-4909537f",
               "label": "ml430-nat-sqrt-lt",
               "status": "open",
@@ -196,7 +196,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-sqrt-lt-self-ff7a155a.doc.json",
+              "href": "F-ml430-nat-sqrt-lt-self-ff7a155a.doc.json",
               "id": "F:ml430-nat-sqrt-lt-self-ff7a155a",
               "label": "ml430-nat-sqrt-lt-self",
               "status": "open",
@@ -204,7 +204,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-sqrt-succ-le-succ-sqrt-6b041183.doc.json",
+              "href": "F-ml430-nat-sqrt-succ-le-succ-sqrt-6b041183.doc.json",
               "id": "F:ml430-nat-sqrt-succ-le-succ-sqrt-6b041183",
               "label": "ml430-nat-sqrt-succ-le-succ-sqrt",
               "status": "open",
@@ -263,25 +263,25 @@
             "F:ml430-nat-le-three-of-sqrt-eq-one-0c48a868",
             "Mathlib v4.30 source proposition Nat.le_three_of_sqrt_eq_one",
             "open",
-            "cards/F-ml430-nat-le-three-of-sqrt-eq-one-0c48a868.doc.json"
+            "F-ml430-nat-le-three-of-sqrt-eq-one-0c48a868.doc.json"
           ],
           [
             "F:ml430-nat-sqrt-eq-zero-53666a3b",
             "Mathlib v4.30 source proposition Nat.sqrt_eq_zero",
             "open",
-            "cards/F-ml430-nat-sqrt-eq-zero-53666a3b.doc.json"
+            "F-ml430-nat-sqrt-eq-zero-53666a3b.doc.json"
           ],
           [
             "F:ml430-nat-sqrt-lt-self-ff7a155a",
             "Mathlib v4.30 source proposition Nat.sqrt_lt_self",
             "open",
-            "cards/F-ml430-nat-sqrt-lt-self-ff7a155a.doc.json"
+            "F-ml430-nat-sqrt-lt-self-ff7a155a.doc.json"
           ],
           [
             "F:ml430-nat-sqrt-succ-le-succ-sqrt-6b041183",
             "Mathlib v4.30 source proposition Nat.sqrt_succ_le_succ_sqrt",
             "open",
-            "cards/F-ml430-nat-sqrt-succ-le-succ-sqrt-6b041183.doc.json"
+            "F-ml430-nat-sqrt-succ-le-succ-sqrt-6b041183.doc.json"
           ]
         ],
         "source": {
@@ -496,6 +496,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c09",
+        "label": "Component 9 of 37 (5 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

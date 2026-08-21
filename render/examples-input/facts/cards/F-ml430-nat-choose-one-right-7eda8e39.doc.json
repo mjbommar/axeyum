@@ -157,7 +157,7 @@
           "nodes": [
             {
               "group": "focus",
-              "href": "cards/F-ml430-nat-choose-one-right-7eda8e39.doc.json",
+              "href": "F-ml430-nat-choose-one-right-7eda8e39.doc.json",
               "id": "F:ml430-nat-choose-one-right-7eda8e39",
               "label": "ml430-nat-choose-one-right",
               "status": "open",
@@ -165,7 +165,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-choose-zero-right-1ed2802a.doc.json",
+              "href": "F-ml430-nat-choose-zero-right-1ed2802a.doc.json",
               "id": "F:ml430-nat-choose-zero-right-1ed2802a",
               "label": "ml430-nat-choose-zero-right",
               "status": "open",
@@ -224,7 +224,7 @@
             "F:ml430-nat-choose-zero-right-1ed2802a",
             "Mathlib v4.30 source proposition Nat.choose_zero_right",
             "open",
-            "cards/F-ml430-nat-choose-zero-right-1ed2802a.doc.json"
+            "F-ml430-nat-choose-zero-right-1ed2802a.doc.json"
           ]
         ],
         "source": {
@@ -439,6 +439,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c26",
+        "label": "Component 26 of 37 (2 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

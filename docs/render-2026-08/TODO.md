@@ -67,6 +67,23 @@ the coordinator commits via the private-index procedure.
         docs/render-2026-08/18-runrec-diary.md. Owns:
         render/producers-runrec/, render/examples-input/runrec/, 18-*.md.
 
+- [x] P1-CARDS -- the corpus is a SITE: all 324 fact cards rendered to
+        render/out/cards/ (328 pages, 1.3s for the cards, whole build 3.8s,
+        byte-reproducible), atlas/pilot dep-graph nodes and index rows are real
+        links, every card links back to the atlas and to its component graph and
+        to its depends_on/dependents. 2085 relative links, 0 broken, checked
+        twice (render/tests/link_integrity.rs + check.sh step 10, both with
+        negative controls). All four reader-review gripes fixed. Additive:
+        Certificate.no_exit_reason and DocMeta.nav across schema + IR + assembly
+        + validate-docir.py; `--manifest-dir` batch mode and `--name-by source`
+        in the CLI; build-p0-outputs.sh renamed to build-outputs.sh. check.sh is
+        11 steps, 21 passed / 0 failed (was 15/0). Four screenshot-only defects
+        fixed (fold alignment, 15x repeated provenance line, sentence cells
+        clipped by nowrap, atlas index columns behind a scrollbar). Diary:
+        docs/render-2026-08/17-cards-diary.md. Owns: render/ (except
+        producers-runrec/, producers-kernel/ and their examples-input dirs),
+        17-*.md.
+
 ## Standing constraints (all agents)
 Rust+Python only; outputs md/LaTeX/self-contained HTML (+optional wasm);
 NO Node anywhere; real artifacts only — no synthetic evidence; fail-closed

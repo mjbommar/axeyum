@@ -157,7 +157,7 @@
           "nodes": [
             {
               "group": "focus",
-              "href": "cards/F-ml430-nat-coprime-odd-of-right-8dc1decc.doc.json",
+              "href": "F-ml430-nat-coprime-odd-of-right-8dc1decc.doc.json",
               "id": "F:ml430-nat-coprime-odd-of-right-8dc1decc",
               "label": "ml430-nat-coprime-odd-of-right",
               "status": "open",
@@ -165,7 +165,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-coprime-two-right-7c5a1850.doc.json",
+              "href": "F-ml430-nat-coprime-two-right-7c5a1850.doc.json",
               "id": "F:ml430-nat-coprime-two-right-7c5a1850",
               "label": "ml430-nat-coprime-two-right",
               "status": "open",
@@ -224,7 +224,7 @@
             "F:ml430-nat-coprime-two-right-7c5a1850",
             "Mathlib v4.30 source proposition Nat.coprime_two_right",
             "open",
-            "cards/F-ml430-nat-coprime-two-right-7c5a1850.doc.json"
+            "F-ml430-nat-coprime-two-right-7c5a1850.doc.json"
           ]
         ],
         "source": {
@@ -439,6 +439,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c12",
+        "label": "Component 12 of 37 (4 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

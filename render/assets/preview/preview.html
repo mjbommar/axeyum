@@ -182,6 +182,26 @@ p.ax-subtitle {
   max-width: 58ch;
 }
 
+/* Cross-document navigation. The corpus is a SITE -- an atlas, two pilots and
+   324 fact cards emitted together -- and these are the only relative links a
+   page carries. Each page is still self-contained: nothing is fetched on load.
+   render/tests/link_integrity.rs fails if one of them does not resolve. */
+.ax-crumbs {
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+  margin: 0 0 var(--sp-4);
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-2);
+}
+.ax-crumbs .ax-crumb-sep { color: var(--rule-firm); }
+a.ax-doclink { font-family: var(--font-sans); }
+a.ax-doclink code { font-family: var(--font-mono); }
+
+/* The single provenance line for a page whose blocks all come from one run.
+   Fifteen identical copies of it, one under each block, was the most repeated
+   element on a fact card; it is said once, here. */
+.ax-source-all { margin: var(--sp-2) 0 0; }
+
 /* metadata chips */
 .ax-meta { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); margin: 0; padding: 0; list-style: none; }
 .ax-meta li {
@@ -253,7 +273,12 @@ details.ax-fold {
   border-radius: var(--radius);
   background: var(--surface);
   padding: 0;
-  margin: 0 0 var(--sp-5);
+  /* `auto` on the inline axis, not `0`. `main.ax-doc > *` centres every direct
+     child inside the 68rem frame by setting margin-left/right to auto, and a
+     `margin: 0 0 X` shorthand here has the SAME specificity and comes later,
+     so it silently won and every fold on a fact card sat 190px left of the
+     text above it. Found by screenshot; no test could see it. */
+  margin: 0 auto var(--sp-5);
 }
 details.ax-fold > summary {
   cursor: pointer;
@@ -306,6 +331,13 @@ details.ax-fold > .ax-foldbody { padding: 0 var(--sp-4) var(--sp-4); border-top:
   vertical-align: 0.08em;
 }
 .badge svg { width: 0.85em; height: 0.85em; flex: none; fill: currentColor; }
+/* The badge with its word removed, for a place that has already said it (an
+   evidence row inside a claim card whose header carries the same status).
+   The SHAPE is what survives, because the shape is what makes a badge legible
+   in greyscale and to a colour-blind reader; the word survives as the
+   accessible name on the element. */
+.badge-compact { padding: 0.18em 0.32em; gap: 0; }
+.badge-compact svg { width: 0.95em; height: 0.95em; }
 .badge-proved      { color: var(--s-proved-fg);      background: var(--s-proved-bg); }
 .badge-checked     { color: var(--s-checked-fg);     background: var(--s-checked-bg); }
 .badge-evidence    { color: var(--s-evidence-fg);    background: var(--s-evidence-bg); }
@@ -344,7 +376,8 @@ details.ax-fold > .ax-foldbody { padding: 0 var(--sp-4) var(--sp-4); border-top:
   border-left: 3px solid var(--rule-firm);
   border-radius: var(--radius);
   padding: var(--sp-4) var(--sp-5);
-  margin: 0 0 var(--sp-5);
+  /* See `details.ax-fold`: `auto` keeps a card centred in the reading frame. */
+  margin: 0 auto var(--sp-5);
   box-shadow: var(--shadow);
 }
 .card.s-proved      { border-left-color: var(--s-proved-fg); }
@@ -427,7 +460,25 @@ details.ax-fold > .ax-foldbody { padding: 0 var(--sp-4) var(--sp-4); border-top:
 .ax-cmd > button[data-copied="1"] { color: var(--s-proved-fg); }
 
 /* ---------- tables ---------- */
+/* A table with five or more columns opts out of the 36rem reading measure and
+   uses the full 68rem frame (`.ax-wide`). The atlas index has twelve columns:
+   at the reading measure its last four -- including the link to the fact's own
+   card -- were scrolled out of sight, so the page's navigation was hiding
+   behind a horizontal scrollbar. It still scrolls when it needs to; it just
+   does not need to as often. */
 .ax-tablewrap { overflow-x: auto; margin: 0 0 var(--sp-2); }
+/* A table of four or more columns breaks out of the 36rem reading measure,
+   CENTRED ON IT, so its heading and the prose above stay aligned. (Putting the
+   break-out on the section instead shifted the heading left and made the page
+   look ragged.) Only above a width where 52rem fits; below it the table stays
+   at the measure and the wrapper scrolls, which is the pre-existing
+   behaviour. */
+@media (min-width: 62rem) {
+  .blk.ax-widetable > .ax-tablewrap {
+    width: 52rem; max-width: none;
+    margin-left: calc((var(--measure) - 52rem) / 2);
+  }
+}
 table.ax-table {
   border-collapse: collapse;
   width: 100%;
@@ -450,6 +501,10 @@ table.ax-table th, table.ax-table td {
   white-space: nowrap;
 }
 table.ax-table td:first-child, table.ax-table th:first-child { white-space: normal; }
+/* ...and so may any cell the emitter marked as prose: a value containing a
+   space is a sentence, not a machine token, and on a fact card the `supports`
+   and `axiom_footprint` cells are sentences. See `table()` in emit_html.rs. */
+table.ax-table td.wrap { white-space: normal; }
 table.ax-table thead th {
   border-bottom: 1px solid var(--rule-firm);
   font-weight: 600; color: var(--ink-2);
@@ -507,7 +562,14 @@ kbd {
 .ax-exit-ok { color: var(--s-proved-fg); font-weight: 600; }
 .ax-exit-bad { color: var(--s-refuted-fg); font-weight: 700; }
 /* Neither green nor red: a certificate that deliberately does not re-run. */
-.ax-exit-none { color: var(--s-advisory-fg); font-weight: 600; }
+.ax-exit-none { color: var(--s-advisory-fg); font-weight: 600; white-space: nowrap; }
+/* The full "why there is no recorded run" sentence, inside the fold. */
+.ax-noexit {
+  font-family: var(--font-sans); font-size: var(--fs-ui);
+  color: var(--s-advisory-fg); background: var(--s-advisory-bg);
+  border: 1px dashed currentColor; border-radius: var(--radius);
+  padding: var(--sp-2) var(--sp-3); margin: 0 0 var(--sp-3);
+}
 .ax-hash { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--ink-2); }
 
 /* ---------- figures ---------- */
@@ -552,6 +614,13 @@ svg.ax-graph .gnode.s-refuted     .gdot { fill: var(--s-refuted-fg); }
 svg.ax-graph .gnode.s-open        .gdot { fill: var(--s-open-fg); }
 svg.ax-graph .gnode.s-axiom       .gdot { fill: var(--s-axiom-fg); }
 svg.ax-graph .gnode { cursor: pointer; }
+/* A node that links to another document is wrapped in a real SVG anchor, so
+   the browser navigates with scripting off. Underlining every node label would
+   be noise at 300 nodes; the pointer and the focus ring carry the affordance,
+   and the anchor gives the reader the target in the status bar. */
+svg.ax-graph a.gnode-link { cursor: pointer; text-decoration: none; }
+svg.ax-graph a.gnode-link:focus-visible .gnode rect,
+svg.ax-graph a.gnode-link:hover .gnode rect { stroke: var(--accent); stroke-width: 1.8; }
 svg.ax-graph .gnode:hover rect, svg.ax-graph .gnode:focus rect { stroke: var(--accent); stroke-width: 1.8; }
 /* cone highlighting, driven by a class on the <svg> root */
 svg.ax-graph.coning .gnode { opacity: 0.22; }
@@ -613,6 +682,28 @@ footer.ax-foot code { font-size: var(--fs-xs); }
   .card { padding: var(--sp-4); }
   .ax-cert .ax-cert-grid { grid-template-columns: 1fr; }
   .ax-cert .ax-cert-grid dt { padding-top: var(--sp-2); }
+
+  /* THE REPLAY COMMAND WRAPS ON A NARROW SCREEN INSTEAD OF SCROLLING.
+     Reader review gripe 4, checked at 420px: the `min-width: 0` fix made the
+     row scroll rather than clip, which is correct and still leaves a phone
+     reader looking at 30 characters of a 300-character command through a
+     letterbox. Wrapping shows the whole thing.
+
+     `pre-wrap` INSERTS NOTHING -- it only permits a break at an existing space
+     -- so the bytes the copy button puts on the clipboard are unchanged, and
+     `overflow-wrap: anywhere` lets a single long path break rather than push
+     the row wide again. The hanging indent is the visual cue that a run of
+     lines is one command: a continuation is inset, the way a wrapped shell
+     line is. */
+  .ax-cmd { align-items: flex-start; }
+  .ax-cmd > code {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    overflow-x: visible;
+    padding-left: calc(var(--sp-3) + 2ch);
+    text-indent: -2ch;
+  }
+  .ax-cmd > button { position: sticky; top: 0; align-self: stretch; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -999,13 +1090,13 @@ footer.ax-foot code { font-size: var(--fs-xs); }
 <p class="ax-tinylabel">evidence</p>
 <ul class="ax-evidence">
 <li>
-<div class="ax-ev-head"><span class="badge badge-checked"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg>CHECKED</span><span class="ax-ev-kind">kernel-term</span><span class="ax-ev-kind">kernel-Nat.exists_prime_gt</span></div>
+<div class="ax-ev-head"><span class="badge badge-checked badge-compact" role="img" aria-label="CHECKED" title="CHECKED"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg></span><span class="ax-ev-kind">kernel-term</span><span class="ax-ev-kind">kernel-Nat.exists_prime_gt</span></div>
 <p class="ax-ev-supports">For every natural number n there is a prime p with n &lt; p.</p>
 <div class="ax-cmd"><code id="card-nat-exists-prime-gt-ev0-cmd">cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- exists_prime_gt 2&gt;/dev/null | grep -qxF 'Nat.exists_prime_gt	3	((x0 : AxNat) -&gt; Exists.{1} AxNat (fun (x1 : AxNat) =&gt; And (AxNat.lt x0 x1) (And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x1) (((x2 : AxNat) -&gt; ((x3 : AxNat.dvd x2 x1) -&gt; Or (Eq.{1} AxNat x2 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x2 x1)))))))'</code><button type="button" data-copy-target="card-nat-exists-prime-gt-ev0-cmd">copy</button></div>
 <details class="ax-fold t-detail"><summary>why this counts</summary><div class="ax-foldbody"><p><code>build_nat_prelude</code> admits this through the trusted <code>Kernel::add_declaration</code> gate, which re-checks the proof term against the stated type. Euclid's argument, done over N with no subtraction: take m = n! + 1, which is &gt;= 2 because 1 &lt;= n! (<code>one_le_factorial</code>), and let q be a prime dividing it (<code>exists_prime_dvd</code>). If q &lt;= n then <code>dvd_factorial_of_le</code> gives q | n!, and with q | n!+1 <code>dvd_add_right_cancel_of_pos</code> yields q | 1, refuted by <code>not_dvd_one_of_two_le</code>. So n &lt;= q, and the n = q case falls to the same contradiction after transporting n &lt;= n along the equality, leaving n &lt; q. The command matches the FULL RENDERED TYPE (grep -qxF), not the theorem name: lane <code>nat-prime-divisor</code> measured that a name-only checker survives a weakened statement &#x2014; spelling a primality bound <code>1 &lt;= p</code> instead of <code>2 &lt;= p</code> still type-checks, still admits, and is satisfied by p = 1. The kernel cannot see a weaker statement; only the type can.</p></div></details>
 </li>
 <li>
-<div class="ax-ev-head"><span class="badge badge-checked"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg>CHECKED</span><span class="ax-ev-kind">exhaustive-enumeration</span><span class="ax-ev-kind">footprint-Nat.exists_prime_gt</span></div>
+<div class="ax-ev-head"><span class="badge badge-checked badge-compact" role="img" aria-label="CHECKED" title="CHECKED"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg></span><span class="ax-ev-kind">exhaustive-enumeration</span><span class="ax-ev-kind">footprint-Nat.exists_prime_gt</span></div>
 <p class="ax-ev-supports">axiom_footprint: [] &#x2014; the Nat prelude's trusted surface is empty</p>
 <div class="ax-cmd"><code id="card-nat-exists-prime-gt-ev1-cmd">cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat</code><button type="button" data-copy-target="card-nat-exists-prime-gt-ev1-cmd">copy</button></div>
 <details class="ax-fold t-detail"><summary>why this counts</summary><div class="ax-foldbody"><p><code>theorem_axiom_footprint</code> reports <code>nat Nat.exists_prime_gt 0</code> and <code>integer Nat.exists_prime_gt 0</code>. <code>nat_axiom_inventory</code> bounds it by enumerating the whole trusted surface: a theorem cannot depend on a trusted declaration the environment does not contain. Counting <code>Declaration::Axiom</code> alone would not suffice &#x2014; <code>Opaque</code> has no proof body and <code>Quotient</code> admits <code>Quot.sound</code> &#x2014; so all three kinds are covered.</p></div></details>
@@ -1026,13 +1117,13 @@ footer.ax-foot code { font-size: var(--fs-xs); }
 <p class="ax-tinylabel">evidence</p>
 <ul class="ax-evidence">
 <li>
-<div class="ax-ev-head"><span class="badge badge-checked"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg>CHECKED</span><span class="ax-ev-kind">kernel-term</span><span class="ax-ev-kind">kernel-Nat.gcd_bezout</span></div>
+<div class="ax-ev-head"><span class="badge badge-checked badge-compact" role="img" aria-label="CHECKED" title="CHECKED"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg></span><span class="ax-ev-kind">kernel-term</span><span class="ax-ev-kind">kernel-Nat.gcd_bezout</span></div>
 <p class="ax-ev-supports">For all natural numbers m and n there exist natural numbers mp, mn, np, nn with gcd(m, n) + m*mn + n*nn = m*mp + n*np. This is Bezout's identity in balanced form: the usual <code>gcd(m,n) = m*x + n*y</code> with integer x, y, rearranged so both sides are natural numbers.</p>
 <div class="ax-cmd"><code id="card-nat-gcd-bezout-ev0-cmd">cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- gcd_bezout 2&gt;/dev/null | grep -qE '^Nat\.gcd_bezout[[:space:]]'</code><button type="button" data-copy-target="card-nat-gcd-bezout-ev0-cmd">copy</button></div>
 <details class="ax-fold t-detail"><summary>why this counts</summary><div class="ax-foldbody"><p><code>build_nat_prelude</code> admits this theorem through the trusted <code>Kernel::add_declaration</code> gate, which re-checks the proof term against the stated type, so producing the row at all is a machine-checked proof. TIGHTENED 2026-08-16: the command was <code>cargo test -p axeyum-lean-kernel --lib nat_prelude</code>, a whole-suite run that passes or fails identically for every fact citing it and would stay green if THIS theorem were deleted. It now names its own subject twice over &#x2014; <code>nat_theorem_inventory</code> exits non-zero for a name that does not exist, and the <code>grep -q</code> requires the admitted declaration to be printed.</p></div></details>
 </li>
 <li>
-<div class="ax-ev-head"><span class="badge badge-checked"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg>CHECKED</span><span class="ax-ev-kind">exhaustive-enumeration</span><span class="ax-ev-kind">footprint-Nat.gcd_bezout</span></div>
+<div class="ax-ev-head"><span class="badge badge-checked badge-compact" role="img" aria-label="CHECKED" title="CHECKED"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg></span><span class="ax-ev-kind">exhaustive-enumeration</span><span class="ax-ev-kind">footprint-Nat.gcd_bezout</span></div>
 <p class="ax-ev-supports">axiom_footprint: [] &#x2014; the Nat prelude's trusted surface is empty</p>
 <div class="ax-cmd"><code id="card-nat-gcd-bezout-ev1-cmd">cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat</code><button type="button" data-copy-target="card-nat-gcd-bezout-ev1-cmd">copy</button></div>
 <details class="ax-fold t-detail"><summary>why this counts</summary><div class="ax-foldbody"><p><code>nat_axiom_inventory</code> enumerates the built Nat environment and reports <code>nat: axiom=0 opaque=0 quotient=0 total_trusted=0</code> (re-run 2026-08-14 by this lane). That is the whole environment, not this theorem, and that is what makes it sound as a footprint: a theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual footprint by []. Counting <code>Declaration::Axiom</code> alone would NOT have sufficed &#x2014; <code>Opaque</code> has no proof body and <code>Quotient</code> admits <code>Quot.sound</code>, one of Lean's own axioms &#x2014; so the enumeration covers all three.</p></div></details>
@@ -1050,7 +1141,7 @@ footer.ax-foot code { font-size: var(--fs-xs); }
 <p class="ax-tinylabel">evidence</p>
 <ul class="ax-evidence">
 <li>
-<div class="ax-ev-head"><span class="badge badge-checked"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg>CHECKED</span><span class="ax-ev-kind">claim-ref</span><span class="ax-ev-kind">claim-rado-r4-a5-b3</span></div>
+<div class="ax-ev-head"><span class="badge badge-checked badge-compact" role="img" aria-label="CHECKED" title="CHECKED"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg></span><span class="ax-ev-kind">claim-ref</span><span class="ax-ev-kind">claim-rado-r4-a5-b3</span></div>
 <p class="ax-ev-supports">R_4(5(x-y)=3z) = 625, both bounds, with pinned deciding instance and regeneration recipe</p>
 <div class="ax-cmd"><code id="card-rado-r4-a5-b3-ev0-cmd">python3 scripts/validate-claims.py</code><button type="button" data-copy-target="card-rado-r4-a5-b3-ev0-cmd">copy</button></div>
 <p class="ax-source">checked by <code>validate-claims-schema-and-semantics</code></p>
@@ -1058,7 +1149,7 @@ footer.ax-foot code { font-size: var(--fs-xs); }
 <details class="ax-fold t-detail"><summary>why this counts</summary><div class="ax-foldbody"><p>The claim carries the pinned CNF, the replayable lower-bound colouring, and the DRAT regeneration recipe.</p></div></details>
 </li>
 <li>
-<div class="ax-ev-head"><span class="badge badge-checked"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg>CHECKED</span><span class="ax-ev-kind">witness-replay</span><span class="ax-ev-kind">lower-bound-replay</span></div>
+<div class="ax-ev-head"><span class="badge badge-checked badge-compact" role="img" aria-label="CHECKED" title="CHECKED"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg></span><span class="ax-ev-kind">witness-replay</span><span class="ax-ev-kind">lower-bound-replay</span></div>
 <p class="ax-ev-supports">R_4(5(x-y)=3z) &gt; 624</p>
 <div class="ax-cmd"><code id="card-rado-r4-a5-b3-ev1-cmd">cargo run --release -q -p axeyum-search --example akb2_frontier -- verify 5 3 4 artifacts/claims/rado/rado-r4-a5-b3/witness.txt</code><button type="button" data-copy-target="card-rado-r4-a5-b3-ev1-cmd">copy</button></div>
 <p class="ax-source">checked by <code>akb2_frontier-encoder-view</code>, <code>akb2_frontier-independent-enumerator</code></p>
@@ -1066,7 +1157,7 @@ footer.ax-foot code { font-size: var(--fs-xs); }
 <details class="ax-fold t-detail"><summary>why this counts</summary><div class="ax-foldbody"><p>Cheap and real: re-verifies the colouring three ways from the stored file in ~0.1s.</p></div></details>
 </li>
 <li>
-<div class="ax-ev-head"><span class="badge badge-checked"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg>CHECKED</span><span class="ax-ev-kind">instance-pin</span><span class="ax-ev-kind">deciding-instance-regeneration</span></div>
+<div class="ax-ev-head"><span class="badge badge-checked badge-compact" role="img" aria-label="CHECKED" title="CHECKED"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg></span><span class="ax-ev-kind">instance-pin</span><span class="ax-ev-kind">deciding-instance-regeneration</span></div>
 <p class="ax-ev-supports">the refutation's verdict names this exact formula</p>
 <div class="ax-cmd"><code id="card-rado-r4-a5-b3-ev2-cmd">test "$(cargo run --release -q -p axeyum-search --example rado_dump_cnf -- a=5 b=3 k=4 n=625 out=/tmp/rb3.cnf &gt;/dev/null 2&gt;&amp;1; sha256sum /tmp/rb3.cnf | cut -d' ' -f1)" = "$(sha256sum artifacts/claims/rado/rado-r4-a5-b3/F_625.cnf | cut -d' ' -f1)"</code><button type="button" data-copy-target="card-rado-r4-a5-b3-ev2-cmd">copy</button></div>
 <p class="ax-source">checked by <code>rado_dump_cnf-regeneration</code></p>
@@ -1086,7 +1177,7 @@ footer.ax-foot code { font-size: var(--fs-xs); }
 <p class="ax-tinylabel">evidence</p>
 <ul class="ax-evidence">
 <li>
-<div class="ax-ev-head"><span class="badge badge-checked"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg>CHECKED</span><span class="ax-ev-kind">witness-replay</span><span class="ax-ev-kind">fp8-assoc-counterexample-model</span></div>
+<div class="ax-ev-head"><span class="badge badge-checked badge-compact" role="img" aria-label="CHECKED" title="CHECKED"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg></span><span class="ax-ev-kind">witness-replay</span><span class="ax-ev-kind">fp8-assoc-counterexample-model</span></div>
 <p class="ax-ev-supports">The negation of formal.statement is satisfiable over fp8 E5M2, so the proposition does not hold for all triples.</p>
 <div class="ax-cmd"><code id="card-fp8-add-not-associative-ev0-cmd">test "$(cargo run --release -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/fp8-add-not-associative.smt2 | tail -1)" = sat</code><button type="button" data-copy-target="card-fp8-add-not-associative-ev0-cmd">copy</button></div>
 <p class="ax-source">checked by <code>axeyum-smtcomp-cli-producing-solve</code>, <code>axeyum-Evidence::check-fresh-parse-model-replay</code></p>
@@ -1094,7 +1185,7 @@ footer.ax-foot code { font-size: var(--fs-xs); }
 <details class="ax-fold t-detail"><summary>why this counts</summary><div class="ax-foldbody"><p>Ran 2026-08-14: <code>; evidence kind=sat-model certified=1 recheck=na arena=ok ms=27</code>, verdict <code>sat</code>. <code>arena=ok</code> is <code>Evidence::check</code> evaluating the produced model against a FRESH PARSE of the original assertions, so the witness is checked against the source formula, not the lowered form. NOT cross-checked by either external oracle, and that is the finding recorded in this fact's notes: neither z3 4.13.3 nor bitwuzla 0.9.1 can decide any fp8 E5M2 addition query at all.</p></div></details>
 </li>
 <li>
-<div class="ax-ev-head"><span class="badge badge-checked"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg>CHECKED</span><span class="ax-ev-kind">instance-pin</span><span class="ax-ev-kind">fp8-assoc-ground-witness</span></div>
+<div class="ax-ev-head"><span class="badge badge-checked badge-compact" role="img" aria-label="CHECKED" title="CHECKED"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg></span><span class="ax-ev-kind">instance-pin</span><span class="ax-ev-kind">fp8-assoc-ground-witness</span></div>
 <p class="ax-ev-supports">The specific triple a = b = 0x01 (the E5M2 subnormal 2^-16), c = 0x08 (the normal 2^-13), pinned as a GROUND formula: (a+b)+c = 0x09 while a+(b+c) = 0x08.</p>
 <div class="ax-cmd"><code id="card-fp8-add-not-associative-ev1-cmd">test "$(cargo run --release -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/fp8-add-not-associative-witness.smt2 | tail -1)" = sat</code><button type="button" data-copy-target="card-fp8-add-not-associative-ev1-cmd">copy</button></div>
 <p class="ax-source">checked by <code>axeyum-smtcomp-cli-ground-evaluation</code>, <code>axeyum-Evidence::check-fresh-parse</code>, <code>z3-4.13.3-ground-instance</code></p>
@@ -1102,7 +1193,7 @@ footer.ax-foot code { font-size: var(--fs-xs); }
 <details class="ax-fold t-detail"><summary>why this counts</summary><div class="ax-foldbody"><p>Ran 2026-08-14: <code>sat</code>, 2ms. The file has NO free symbols &#x2014; it asserts the disequality AND both concrete results &#x2014; so a <code>sat</code> verdict is direct evaluation of fp8 E5M2 arithmetic rather than a search, and it pins the witness so the fact cannot drift from the solver. Cross-checked: <code>z3 -smt2</code> also reports <code>sat</code> on this file. That z3 can settle the GROUND instance while returning <code>unknown</code> on the quantifier-free SEARCH is not a contradiction: z3's refusal is in its symbolic fpa2bv tactic, and a closed term is constant-folded before that tactic is reached. bitwuzla 0.9.1 refuses the file outright (unsupported format).</p><p>Arithmetic, for a reader: a+b = 2^-15 exactly; (a+b)+c = 2^-13 * 1.25 = 0x09 exactly; but b+c = 2^-13 * 1.125 is a tie between 0x08 and 0x09 that RNE breaks toward the even significand, giving 0x08, and a + 0x08 ties again to 0x08. Two ties in one direction is what separates the two bracketings.</p></div></details>
 </li>
 <li>
-<div class="ax-ev-head"><span class="badge badge-checked"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg>CHECKED</span><span class="ax-ev-kind">exhaustive-enumeration</span><span class="ax-ev-kind">fp8-assoc-exhaustive-apfloat</span></div>
+<div class="ax-ev-head"><span class="badge badge-checked badge-compact" role="img" aria-label="CHECKED" title="CHECKED"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg></span><span class="ax-ev-kind">exhaustive-enumeration</span><span class="ax-ev-kind">fp8-assoc-exhaustive-apfloat</span></div>
 <p class="ax-ev-supports">All 2^24 = 16777216 fp8 E5M2 triples enumerated by LLVM's APFloat: the two bracketings disagree at 427036 of them under RNE (2.55%).</p>
 <div class="ax-cmd"><code id="card-fp8-add-not-associative-ev2-cmd">cargo run --release -q -p axeyum-fp --example kernel_equivalence -- assoc</code><button type="button" data-copy-target="card-fp8-add-not-associative-ev2-cmd">copy</button></div>
 <p class="ax-source">checked by <code>rustc_apfloat-0.2.3-llvm-apfloat-exhaustive-enumeration</code></p>
@@ -1153,18 +1244,18 @@ So at exactly the width where a claim can be settled by brute force, the two sol
 </div></li>
 </ol>
 </section>
-<section class="blk t-detail" id="tbl-cone">
+<section class="blk t-detail ax-widetable" id="tbl-cone">
 <h2 id="the-trust-base-of-euclid-s-theorem-row-by-row">The trust base of Euclid's theorem, row by row</h2>
 <div class="ax-tablewrap"><table class="ax-table">
 <caption>Every fact in the upward cone of <code>F:nat-exists-prime-gt</code>. Generated from the ledger files; the <code>axioms</code> column counts <code>axiom_footprint</code> entries, so a zero is a measured claim.</caption>
 <thead><tr><th class="">fact</th><th class="">status</th><th class="">route</th><th class="num">depends on</th><th class="num">axioms</th><th class="num">evidence rows</th></tr></thead>
 <tbody>
-<tr><td class="">nat add assoc</td><td class="">proved</td><td class="">kernel-lean</td><td class="num">0</td><td class="num">0</td><td class="num">2</td></tr>
-<tr><td class="">nat div mod exists</td><td class="">proved</td><td class="">kernel-lean</td><td class="num">0</td><td class="num">0</td><td class="num">2</td></tr>
-<tr><td class="">nat dvd add</td><td class="">proved</td><td class="">kernel-lean</td><td class="num">1</td><td class="num">0</td><td class="num">2</td></tr>
-<tr><td class="">nat exists prime dvd</td><td class="">proved</td><td class="">kernel-lean</td><td class="num">2</td><td class="num">0</td><td class="num">2</td></tr>
-<tr><td class="">nat exists prime gt</td><td class="">proved</td><td class="">kernel-lean</td><td class="num">2</td><td class="num">0</td><td class="num">2</td></tr>
-<tr><td class="">nat left distrib</td><td class="">proved</td><td class="">kernel-lean</td><td class="num">1</td><td class="num">0</td><td class="num">2</td></tr>
+<tr><td class=" wrap">nat add assoc</td><td class="">proved</td><td class="">kernel-lean</td><td class="num">0</td><td class="num">0</td><td class="num">2</td></tr>
+<tr><td class=" wrap">nat div mod exists</td><td class="">proved</td><td class="">kernel-lean</td><td class="num">0</td><td class="num">0</td><td class="num">2</td></tr>
+<tr><td class=" wrap">nat dvd add</td><td class="">proved</td><td class="">kernel-lean</td><td class="num">1</td><td class="num">0</td><td class="num">2</td></tr>
+<tr><td class=" wrap">nat exists prime dvd</td><td class="">proved</td><td class="">kernel-lean</td><td class="num">2</td><td class="num">0</td><td class="num">2</td></tr>
+<tr><td class=" wrap">nat exists prime gt</td><td class="">proved</td><td class="">kernel-lean</td><td class="num">2</td><td class="num">0</td><td class="num">2</td></tr>
+<tr><td class=" wrap">nat left distrib</td><td class="">proved</td><td class="">kernel-lean</td><td class="num">1</td><td class="num">0</td><td class="num">2</td></tr>
 </tbody>
 </table></div>
 <p class="ax-source">generated by <code>artifacts/facts/*.json</code></p>
@@ -1201,8 +1292,9 @@ So at exactly the width where a claim can be settled by brute force, the two sol
 </div>
 </details>
 <details class="ax-fold card ax-cert blk t-detail s-checked" id="cert-rado">
-<summary><span class="badge badge-checked"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg>CHECKED</span><span>The pinned artifacts behind R_4(5(x-y)=3z) = 625</span><span class="ax-exit-none">not re-run: a four-hour re-check cannot be a gate; the three cheap checkers on the card above are the ones that run</span></summary>
+<summary><span class="badge badge-checked"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 8.5l3 3 5-6 1.6 1.4-6.6 7.6L0 10zM9 8.5l1.4-1.6L11.8 8 15 4l1.2 1.4L11.8 11z"/></svg>CHECKED</span><span>The pinned artifacts behind R_4(5(x-y)=3z) = 625</span><span class="ax-exit-none">no run recorded</span></summary>
 <div class="ax-foldbody">
+<p class="ax-noexit">a four-hour re-check cannot be a gate; the three cheap checkers on the card above are the ones that run</p>
 <dl class="ax-cert-grid">
 <dt>kind</dt><dd><code>SearchCertificate</code></dd>
 <dt>generator</dt><dd><code>axeyum native proof-producing CDCL (ADR-0002)</code></dd>

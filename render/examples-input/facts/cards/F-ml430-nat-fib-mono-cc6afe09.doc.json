@@ -157,7 +157,7 @@
           "nodes": [
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-fib-le-fib-succ-d1ef4a3d.doc.json",
+              "href": "F-ml430-nat-fib-le-fib-succ-d1ef4a3d.doc.json",
               "id": "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
               "label": "ml430-nat-fib-le-fib-succ",
               "status": "open",
@@ -165,7 +165,7 @@
             },
             {
               "group": "focus",
-              "href": "cards/F-ml430-nat-fib-mono-cc6afe09.doc.json",
+              "href": "F-ml430-nat-fib-mono-cc6afe09.doc.json",
               "id": "F:ml430-nat-fib-mono-cc6afe09",
               "label": "ml430-nat-fib-mono",
               "status": "open",
@@ -224,7 +224,7 @@
             "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
             "Mathlib v4.30 source proposition Nat.fib_le_fib_succ",
             "open",
-            "cards/F-ml430-nat-fib-le-fib-succ-d1ef4a3d.doc.json"
+            "F-ml430-nat-fib-le-fib-succ-d1ef4a3d.doc.json"
           ]
         ],
         "source": {
@@ -439,6 +439,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c02",
+        "label": "Component 2 of 37 (9 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

@@ -5,6 +5,7 @@
 //!
 //! ```text
 //! axeyum-render render   --manifest M --format md|tex|html [--out DIR] [--strict]
+//! axeyum-render render   --manifest-dir D --format html --out DIR   (batch)
 //! axeyum-render validate --manifest M [--strict]
 //! axeyum-render hash     FILE...
 //! ```
@@ -30,6 +31,9 @@ USAGE:
 
 OPTIONS:
   --manifest <file>    the Doc-IR document to assemble
+  --manifest-dir <dir> assemble every `*.doc.json` in <dir>, in sorted order
+  --name-by <rule>     output file naming: `doc-id` (default for --manifest)
+                       or `source` (default for --manifest-dir)
   --format <name>      md | tex | html
   --out <dir>          write outputs here (default: primary to stdout)
   --repo-root <dir>    root that input paths resolve against (default: .)
@@ -65,6 +69,8 @@ enum Fail {
 
 struct Args {
     manifest: Option<PathBuf>,
+    manifest_dir: Option<PathBuf>,
+    name_by: Option<String>,
     format: Option<String>,
     out: Option<PathBuf>,
     repo_root: PathBuf,
@@ -77,6 +83,8 @@ struct Args {
 fn parse(args: &[String]) -> Result<Args, Fail> {
     let mut a = Args {
         manifest: None,
+        manifest_dir: None,
+        name_by: None,
         format: None,
         out: None,
         repo_root: PathBuf::from("."),
@@ -90,6 +98,8 @@ fn parse(args: &[String]) -> Result<Args, Fail> {
         let arg = args[i].as_str();
         match arg {
             "--manifest" => a.manifest = Some(PathBuf::from(value(args, &mut i, arg)?)),
+            "--manifest-dir" => a.manifest_dir = Some(PathBuf::from(value(args, &mut i, arg)?)),
+            "--name-by" => a.name_by = Some(value(args, &mut i, arg)?),
             "--format" => a.format = Some(value(args, &mut i, arg)?),
             "--out" => a.out = Some(PathBuf::from(value(args, &mut i, arg)?)),
             "--repo-root" => a.repo_root = PathBuf::from(value(args, &mut i, arg)?),
@@ -138,11 +148,55 @@ fn options_for(a: &Args, manifest: &Path) -> AssembleOptions {
     opts
 }
 
+/// How an output file is named.
+///
+/// THIS IS LOAD-BEARING, not a convenience. Doc-IR carries a reference to
+/// another document as the relative path of that document's SOURCE
+/// (`cards/F-nat-add-comm.doc.json`), and every emitter resolves it to the same
+/// path with the extension swapped. So a corpus whose cross-references resolve
+/// is a corpus named after its sources -- `F-nat-add-comm.html`, not
+/// `fact-nat-add-comm.html`, which is what `doc_id` would give.
+///
+/// `doc-id` remains the default for a single `--manifest`, because that is what
+/// P0's deliverables and their golden tests are named after, and changing it
+/// silently would rename files under a build script that renames them again.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum NameBy {
+    DocId,
+    Source,
+}
+
+impl NameBy {
+    fn parse(v: &str) -> Result<Self, Fail> {
+        match v {
+            "doc-id" | "docid" => Ok(Self::DocId),
+            "source" | "file" => Ok(Self::Source),
+            other => Err(Fail::Usage(format!(
+                "--name-by `{other}` (expected `doc-id` or `source`)"
+            ))),
+        }
+    }
+}
+
+/// The stem an output file gets, given the rule and the manifest it came from.
+fn out_stem(rule: NameBy, manifest: &Path, doc_id: &str) -> String {
+    match rule {
+        NameBy::DocId => doc_id.to_string(),
+        NameBy::Source => manifest.file_name().and_then(|f| f.to_str()).map_or_else(
+            || doc_id.to_string(),
+            |f| f.strip_suffix(".doc.json").unwrap_or(f).to_string(),
+        ),
+    }
+}
+
 fn cmd_render(a: &Args) -> Result<(), Fail> {
+    if let Some(dir) = &a.manifest_dir {
+        return cmd_render_batch(a, dir);
+    }
     let manifest = a
         .manifest
         .as_ref()
-        .ok_or_else(|| Fail::Usage("render needs --manifest".to_string()))?;
+        .ok_or_else(|| Fail::Usage("render needs --manifest or --manifest-dir".to_string()))?;
     let format = a
         .format
         .as_deref()
@@ -196,7 +250,15 @@ fn cmd_render(a: &Args) -> Result<(), Fail> {
         Some(dir) => {
             std::fs::create_dir_all(dir)
                 .map_err(|e| Fail::Build(format!("cannot create {}: {e}", dir.display())))?;
-            let primary = dir.join(format!("{}.{}", doc.doc_id, emitter.primary_extension()));
+            let rule = match a.name_by.as_deref() {
+                Some(v) => NameBy::parse(v)?,
+                None => NameBy::DocId,
+            };
+            let primary = dir.join(format!(
+                "{}.{}",
+                out_stem(rule, manifest, &doc.doc_id),
+                emitter.primary_extension()
+            ));
             write(&primary, &out.primary)?;
             eprintln!("wrote {}", primary.display());
             for (name, contents) in &out.aux {
@@ -206,6 +268,118 @@ fn cmd_render(a: &Args) -> Result<(), Fail> {
             }
         }
     }
+    Ok(())
+}
+
+/// Render every `*.doc.json` in one directory, in sorted order, in one process.
+///
+/// Why a batch mode exists at all: the fact corpus is 324 cards, and rendering
+/// them one process at a time spends more time starting processes than
+/// assembling documents. Everything else is IDENTICAL to the single-manifest
+/// path -- the same assembler, the same fail-closed rules, the same diagnostics
+/// -- and each document gets its OWN `Assembler`, so nothing is cached across
+/// documents and no card can be rendered from bytes another card verified.
+/// Batch is a loop, not a shortcut; a card that would be refused alone is
+/// refused here.
+///
+/// The whole run is refused if ANY document is, and the refusals are reported
+/// together rather than one per invocation, because a caller fixing a corpus
+/// wants the list.
+fn cmd_render_batch(a: &Args, dir: &Path) -> Result<(), Fail> {
+    let format = a
+        .format
+        .as_deref()
+        .ok_or_else(|| Fail::Usage("render needs --format".to_string()))?;
+    let Some(emitter) = emitter_for(format) else {
+        return Err(Fail::Usage(format!(
+            "unknown or unwired format `{format}` (md | tex | html)"
+        )));
+    };
+    let out = a
+        .out
+        .as_ref()
+        .ok_or_else(|| Fail::Usage("--manifest-dir needs --out".to_string()))?;
+    let rule = match a.name_by.as_deref() {
+        Some(v) => NameBy::parse(v)?,
+        None => NameBy::Source,
+    };
+
+    // Sorted, so the run order -- and therefore every message and every
+    // failure list -- is the same on every machine.
+    let mut manifests: Vec<PathBuf> = std::fs::read_dir(dir)
+        .map_err(|e| Fail::Build(format!("cannot read {}: {e}", dir.display())))?
+        .filter_map(|e| e.ok().map(|e| e.path()))
+        .filter(|p| {
+            p.file_name()
+                .and_then(|f| f.to_str())
+                .is_some_and(|f| f.ends_with(".doc.json"))
+        })
+        .collect();
+    manifests.sort();
+    if manifests.is_empty() {
+        // An empty batch that exits 0 is indistinguishable from a batch that
+        // rendered everything, which is the shape of inert gate this
+        // repository keeps finding.
+        return Err(Fail::Build(format!(
+            "no `*.doc.json` in {} -- refusing to report a successful batch over zero \
+             documents",
+            dir.display()
+        )));
+    }
+
+    std::fs::create_dir_all(out)
+        .map_err(|e| Fail::Build(format!("cannot create {}: {e}", out.display())))?;
+    let mut failures: Vec<String> = Vec::new();
+    let mut diagnostics = 0usize;
+    let mut written = 0usize;
+    for manifest in &manifests {
+        let mut assembler = Assembler::new(options_for(a, manifest));
+        let doc = match assembler.assemble_path(manifest) {
+            Ok(d) => d,
+            Err(e) => {
+                failures.push(format!("{}: {e}", manifest.display()));
+                continue;
+            }
+        };
+        let rendered = emitter.emit(&doc);
+        let diags = emitter.diagnostics(&doc);
+        for d in &diags {
+            eprintln!("axeyum-render: DIAGNOSTIC: {}: {d}", manifest.display());
+        }
+        diagnostics += diags.len();
+        if a.fail_on_diagnostics && !diags.is_empty() {
+            failures.push(format!(
+                "{}: {} emitter diagnostic(s)",
+                manifest.display(),
+                diags.len()
+            ));
+            continue;
+        }
+        let stem = out_stem(rule, manifest, &doc.doc_id);
+        write(
+            &out.join(format!("{stem}.{}", emitter.primary_extension())),
+            &rendered.primary,
+        )?;
+        written += 1;
+        for (name, contents) in &rendered.aux {
+            write(&out.join(name), contents)?;
+        }
+    }
+    if !failures.is_empty() {
+        for f in &failures {
+            eprintln!("axeyum-render: REFUSED {f}");
+        }
+        return Err(Fail::Build(format!(
+            "{} of {} document(s) in {} were refused",
+            failures.len(),
+            manifests.len(),
+            dir.display()
+        )));
+    }
+    eprintln!(
+        "rendered {written} document(s) from {} as {format} ({diagnostics} diagnostic(s))",
+        dir.display()
+    );
     Ok(())
 }
 

@@ -157,7 +157,7 @@
           "nodes": [
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-log-mono-right-b8939fee.doc.json",
+              "href": "F-ml430-nat-log-mono-right-b8939fee.doc.json",
               "id": "F:ml430-nat-log-mono-right-b8939fee",
               "label": "ml430-nat-log-mono-right",
               "status": "open",
@@ -165,7 +165,7 @@
             },
             {
               "group": "focus",
-              "href": "cards/F-ml430-nat-log-monotone-52fad774.doc.json",
+              "href": "F-ml430-nat-log-monotone-52fad774.doc.json",
               "id": "F:ml430-nat-log-monotone-52fad774",
               "label": "ml430-nat-log-monotone",
               "status": "open",
@@ -224,7 +224,7 @@
             "F:ml430-nat-log-mono-right-b8939fee",
             "Mathlib v4.30 source proposition Nat.log_mono_right",
             "open",
-            "cards/F-ml430-nat-log-mono-right-b8939fee.doc.json"
+            "F-ml430-nat-log-mono-right-b8939fee.doc.json"
           ]
         ],
         "source": {
@@ -439,6 +439,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c34",
+        "label": "Component 34 of 37 (2 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

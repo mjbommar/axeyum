@@ -157,7 +157,7 @@
           "nodes": [
             {
               "group": "focus",
-              "href": "cards/F-ml430-nat-coprime-primes-5769049f.doc.json",
+              "href": "F-ml430-nat-coprime-primes-5769049f.doc.json",
               "id": "F:ml430-nat-coprime-primes-5769049f",
               "label": "ml430-nat-coprime-primes",
               "status": "open",
@@ -165,7 +165,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-prime-dvd-mul-of-dvd-ne-6c253439.doc.json",
+              "href": "F-ml430-nat-prime-dvd-mul-of-dvd-ne-6c253439.doc.json",
               "id": "F:ml430-nat-prime-dvd-mul-of-dvd-ne-6c253439",
               "label": "ml430-nat-prime-dvd-mul-of-dvd-ne",
               "status": "open",
@@ -224,7 +224,7 @@
             "F:ml430-nat-prime-dvd-mul-of-dvd-ne-6c253439",
             "Mathlib v4.30 source proposition Nat.Prime.dvd_mul_of_dvd_ne",
             "open",
-            "cards/F-ml430-nat-prime-dvd-mul-of-dvd-ne-6c253439.doc.json"
+            "F-ml430-nat-prime-dvd-mul-of-dvd-ne-6c253439.doc.json"
           ]
         ],
         "source": {
@@ -439,6 +439,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c30",
+        "label": "Component 30 of 37 (2 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

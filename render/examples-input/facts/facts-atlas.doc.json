@@ -69958,6 +69958,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "facts-pilot.doc.json",
+        "label": "Pilot: the Fibonacci frontier",
+        "rel": "next"
+      },
+      {
+        "href": "facts-pilot-arith.doc.json",
+        "label": "Pilot: Euclid's lemma",
+        "rel": "next"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

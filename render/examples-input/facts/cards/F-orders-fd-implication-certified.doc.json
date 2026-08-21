@@ -187,6 +187,7 @@
           }
         ],
         "cert_kind": "unsat-drat",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -371,6 +372,7 @@
           }
         ],
         "cert_kind": "witness-replay",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -547,13 +549,9 @@
     {
       "id": "evidence-002",
       "kind": {
-        "artifact_refs": [
-          {
-            "label": "directory, not a single artifact",
-            "path": "artifacts/instances/dbdesign/negative-controls/"
-          }
-        ],
+        "artifact_refs": [],
         "cert_kind": "report-run",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -721,7 +719,7 @@
           "nodes": [
             {
               "group": "search-certificate",
-              "href": "cards/F-bcnf-decomposition-lossless-not-dependency-preserving.doc.json",
+              "href": "F-bcnf-decomposition-lossless-not-dependency-preserving.doc.json",
               "id": "F:bcnf-decomposition-lossless-not-dependency-preserving",
               "label": "bcnf-decomposition-lossless-not-dependency-preserving",
               "status": "proved",
@@ -729,7 +727,7 @@
             },
             {
               "group": "search-certificate",
-              "href": "cards/F-orders-candidate-keys-and-normal-forms.doc.json",
+              "href": "F-orders-candidate-keys-and-normal-forms.doc.json",
               "id": "F:orders-candidate-keys-and-normal-forms",
               "label": "orders-candidate-keys-and-normal-forms",
               "status": "proved",
@@ -737,7 +735,7 @@
             },
             {
               "group": "focus",
-              "href": "cards/F-orders-fd-implication-certified.doc.json",
+              "href": "F-orders-fd-implication-certified.doc.json",
               "id": "F:orders-fd-implication-certified",
               "label": "orders-fd-implication-certified",
               "status": "proved",
@@ -796,13 +794,13 @@
             "F:bcnf-decomposition-lossless-not-dependency-preserving",
             "The BCNF repair of the street/city/zip schema rejoins exactly and cannot enforce its own dependency; two other splits lose information",
             "proved",
-            "cards/F-bcnf-decomposition-lossless-not-dependency-preserving.doc.json"
+            "F-bcnf-decomposition-lossless-not-dependency-preserving.doc.json"
           ],
           [
             "F:orders-candidate-keys-and-normal-forms",
             "An order-line schema has exactly two candidate keys, is not in BCNF, and is not in 3NF -- with every subset of the attributes examined",
             "proved",
-            "cards/F-orders-candidate-keys-and-normal-forms.doc.json"
+            "F-orders-candidate-keys-and-normal-forms.doc.json"
           ]
         ],
         "source": {
@@ -1024,6 +1022,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c13",
+        "label": "Component 13 of 37 (3 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

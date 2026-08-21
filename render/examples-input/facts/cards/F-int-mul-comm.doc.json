@@ -181,6 +181,7 @@
       "kind": {
         "artifact_refs": [],
         "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -317,6 +318,7 @@
       "kind": {
         "artifact_refs": [],
         "cert_kind": "report-run",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -472,7 +474,7 @@
           "nodes": [
             {
               "group": "focus",
-              "href": "cards/F-int-mul-comm.doc.json",
+              "href": "F-int-mul-comm.doc.json",
               "id": "F:int-mul-comm",
               "label": "int-mul-comm",
               "status": "proved",
@@ -480,7 +482,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-int-sq-nonneg.doc.json",
+              "href": "F-int-sq-nonneg.doc.json",
               "id": "F:int-sq-nonneg",
               "label": "int-sq-nonneg",
               "status": "proved",
@@ -488,7 +490,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-mul-comm.doc.json",
+              "href": "F-nat-mul-comm.doc.json",
               "id": "F:nat-mul-comm",
               "label": "nat-mul-comm",
               "status": "proved",
@@ -547,7 +549,7 @@
             "F:nat-mul-comm",
             "Multiplication on the naturals is commutative",
             "proved",
-            "cards/F-nat-mul-comm.doc.json"
+            "F-nat-mul-comm.doc.json"
           ]
         ],
         "source": {
@@ -616,7 +618,7 @@
             "F:int-sq-nonneg",
             "Every integer square is nonnegative",
             "proved",
-            "cards/F-int-sq-nonneg.doc.json"
+            "F-int-sq-nonneg.doc.json"
           ]
         ],
         "source": {
@@ -831,6 +833,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c01",
+        "label": "Component 1 of 37 (31 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

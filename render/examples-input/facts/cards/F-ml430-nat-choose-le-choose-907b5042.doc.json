@@ -162,7 +162,7 @@
           "nodes": [
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-choose-le-add-9c463139.doc.json",
+              "href": "F-ml430-nat-choose-le-add-9c463139.doc.json",
               "id": "F:ml430-nat-choose-le-add-9c463139",
               "label": "ml430-nat-choose-le-add",
               "status": "open",
@@ -170,7 +170,7 @@
             },
             {
               "group": "focus",
-              "href": "cards/F-ml430-nat-choose-le-choose-907b5042.doc.json",
+              "href": "F-ml430-nat-choose-le-choose-907b5042.doc.json",
               "id": "F:ml430-nat-choose-le-choose-907b5042",
               "label": "ml430-nat-choose-le-choose",
               "status": "open",
@@ -178,7 +178,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-choose-mono-a1af9c18.doc.json",
+              "href": "F-ml430-nat-choose-mono-a1af9c18.doc.json",
               "id": "F:ml430-nat-choose-mono-a1af9c18",
               "label": "ml430-nat-choose-mono",
               "status": "open",
@@ -237,7 +237,7 @@
             "F:ml430-nat-choose-le-add-9c463139",
             "Mathlib v4.30 source proposition Nat.choose_le_add",
             "open",
-            "cards/F-ml430-nat-choose-le-add-9c463139.doc.json"
+            "F-ml430-nat-choose-le-add-9c463139.doc.json"
           ]
         ],
         "source": {
@@ -306,7 +306,7 @@
             "F:ml430-nat-choose-mono-a1af9c18",
             "Mathlib v4.30 source proposition Nat.choose_mono",
             "open",
-            "cards/F-ml430-nat-choose-mono-a1af9c18.doc.json"
+            "F-ml430-nat-choose-mono-a1af9c18.doc.json"
           ]
         ],
         "source": {
@@ -521,6 +521,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c11",
+        "label": "Component 11 of 37 (4 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

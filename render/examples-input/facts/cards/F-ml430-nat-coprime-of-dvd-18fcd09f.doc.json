@@ -162,7 +162,7 @@
           "nodes": [
             {
               "group": "focus",
-              "href": "cards/F-ml430-nat-coprime-of-dvd-18fcd09f.doc.json",
+              "href": "F-ml430-nat-coprime-of-dvd-18fcd09f.doc.json",
               "id": "F:ml430-nat-coprime-of-dvd-18fcd09f",
               "label": "ml430-nat-coprime-of-dvd",
               "status": "open",
@@ -170,7 +170,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-coprime-of-dvd-left-b0e2aa94.doc.json",
+              "href": "F-ml430-nat-coprime-of-dvd-left-b0e2aa94.doc.json",
               "id": "F:ml430-nat-coprime-of-dvd-left-b0e2aa94",
               "label": "ml430-nat-coprime-of-dvd-left",
               "status": "open",
@@ -178,7 +178,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-coprime-of-dvd-right-a640bd56.doc.json",
+              "href": "F-ml430-nat-coprime-of-dvd-right-a640bd56.doc.json",
               "id": "F:ml430-nat-coprime-of-dvd-right-a640bd56",
               "label": "ml430-nat-coprime-of-dvd-right",
               "status": "open",
@@ -237,13 +237,13 @@
             "F:ml430-nat-coprime-of-dvd-left-b0e2aa94",
             "Mathlib v4.30 source proposition Nat.Coprime.of_dvd_left",
             "open",
-            "cards/F-ml430-nat-coprime-of-dvd-left-b0e2aa94.doc.json"
+            "F-ml430-nat-coprime-of-dvd-left-b0e2aa94.doc.json"
           ],
           [
             "F:ml430-nat-coprime-of-dvd-right-a640bd56",
             "Mathlib v4.30 source proposition Nat.Coprime.of_dvd_right",
             "open",
-            "cards/F-ml430-nat-coprime-of-dvd-right-a640bd56.doc.json"
+            "F-ml430-nat-coprime-of-dvd-right-a640bd56.doc.json"
           ]
         ],
         "source": {
@@ -458,6 +458,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c19",
+        "label": "Component 19 of 37 (3 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

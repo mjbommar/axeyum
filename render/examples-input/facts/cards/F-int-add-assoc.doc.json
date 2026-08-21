@@ -181,6 +181,7 @@
       "kind": {
         "artifact_refs": [],
         "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -317,6 +318,7 @@
       "kind": {
         "artifact_refs": [],
         "cert_kind": "report-run",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -507,7 +509,7 @@
           "nodes": [
             {
               "group": "focus",
-              "href": "cards/F-int-add-assoc.doc.json",
+              "href": "F-int-add-assoc.doc.json",
               "id": "F:int-add-assoc",
               "label": "int-add-assoc",
               "status": "proved",
@@ -515,7 +517,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-int-add-le-add.doc.json",
+              "href": "F-int-add-le-add.doc.json",
               "id": "F:int-add-le-add",
               "label": "int-add-le-add",
               "status": "proved",
@@ -523,7 +525,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-int-add-lt-add-of-le-of-lt.doc.json",
+              "href": "F-int-add-lt-add-of-le-of-lt.doc.json",
               "id": "F:int-add-lt-add-of-le-of-lt",
               "label": "int-add-lt-add-of-le-of-lt",
               "status": "proved",
@@ -531,7 +533,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-int-left-distrib.doc.json",
+              "href": "F-int-left-distrib.doc.json",
               "id": "F:int-left-distrib",
               "label": "int-left-distrib",
               "status": "proved",
@@ -539,7 +541,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-add-assoc.doc.json",
+              "href": "F-nat-add-assoc.doc.json",
               "id": "F:nat-add-assoc",
               "label": "nat-add-assoc",
               "status": "proved",
@@ -547,7 +549,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-add-comm.doc.json",
+              "href": "F-nat-add-comm.doc.json",
               "id": "F:nat-add-comm",
               "label": "nat-add-comm",
               "status": "proved",
@@ -555,7 +557,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-succ-add.doc.json",
+              "href": "F-nat-succ-add.doc.json",
               "id": "F:nat-succ-add",
               "label": "nat-succ-add",
               "status": "proved",
@@ -614,19 +616,19 @@
             "F:nat-add-assoc",
             "Addition on the naturals is associative",
             "proved",
-            "cards/F-nat-add-assoc.doc.json"
+            "F-nat-add-assoc.doc.json"
           ],
           [
             "F:nat-add-comm",
             "Addition on the naturals is commutative",
             "proved",
-            "cards/F-nat-add-comm.doc.json"
+            "F-nat-add-comm.doc.json"
           ],
           [
             "F:nat-succ-add",
             "Nat succ_add",
             "proved",
-            "cards/F-nat-succ-add.doc.json"
+            "F-nat-succ-add.doc.json"
           ]
         ],
         "source": {
@@ -695,19 +697,19 @@
             "F:int-add-le-add",
             "The order on the integers is compatible with addition",
             "proved",
-            "cards/F-int-add-le-add.doc.json"
+            "F-int-add-le-add.doc.json"
           ],
           [
             "F:int-add-lt-add-of-le-of-lt",
             "A strict integer inequality survives addition of a non-strict one",
             "proved",
-            "cards/F-int-add-lt-add-of-le-of-lt.doc.json"
+            "F-int-add-lt-add-of-le-of-lt.doc.json"
           ],
           [
             "F:int-left-distrib",
             "Multiplication distributes over addition on the integers",
             "proved",
-            "cards/F-int-left-distrib.doc.json"
+            "F-int-left-distrib.doc.json"
           ]
         ],
         "source": {
@@ -922,6 +924,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c01",
+        "label": "Component 1 of 37 (31 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

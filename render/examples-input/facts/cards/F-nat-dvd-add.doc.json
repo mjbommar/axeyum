@@ -181,6 +181,7 @@
       "kind": {
         "artifact_refs": [],
         "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -317,6 +318,7 @@
       "kind": {
         "artifact_refs": [],
         "cert_kind": "report-run",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -487,7 +489,7 @@
           "nodes": [
             {
               "group": "focus",
-              "href": "cards/F-nat-dvd-add.doc.json",
+              "href": "F-nat-dvd-add.doc.json",
               "id": "F:nat-dvd-add",
               "label": "nat-dvd-add",
               "status": "proved",
@@ -495,7 +497,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-euclid-lemma.doc.json",
+              "href": "F-nat-euclid-lemma.doc.json",
               "id": "F:nat-euclid-lemma",
               "label": "nat-euclid-lemma",
               "status": "proved",
@@ -503,7 +505,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-exists-prime-dvd.doc.json",
+              "href": "F-nat-exists-prime-dvd.doc.json",
               "id": "F:nat-exists-prime-dvd",
               "label": "nat-exists-prime-dvd",
               "status": "proved",
@@ -511,7 +513,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-exists-prime-gt.doc.json",
+              "href": "F-nat-exists-prime-gt.doc.json",
               "id": "F:nat-exists-prime-gt",
               "label": "nat-exists-prime-gt",
               "status": "proved",
@@ -519,7 +521,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-left-distrib.doc.json",
+              "href": "F-nat-left-distrib.doc.json",
               "id": "F:nat-left-distrib",
               "label": "nat-left-distrib",
               "status": "proved",
@@ -578,7 +580,7 @@
             "F:nat-left-distrib",
             "Multiplication distributes over addition on the left",
             "proved",
-            "cards/F-nat-left-distrib.doc.json"
+            "F-nat-left-distrib.doc.json"
           ]
         ],
         "source": {
@@ -647,19 +649,19 @@
             "F:nat-euclid-lemma",
             "Euclid's lemma: a prime dividing a product divides a factor",
             "proved",
-            "cards/F-nat-euclid-lemma.doc.json"
+            "F-nat-euclid-lemma.doc.json"
           ],
           [
             "F:nat-exists-prime-dvd",
             "Every natural number at least 2 has a prime divisor",
             "proved",
-            "cards/F-nat-exists-prime-dvd.doc.json"
+            "F-nat-exists-prime-dvd.doc.json"
           ],
           [
             "F:nat-exists-prime-gt",
             "There is no largest prime",
             "proved",
-            "cards/F-nat-exists-prime-gt.doc.json"
+            "F-nat-exists-prime-gt.doc.json"
           ]
         ],
         "source": {
@@ -880,6 +882,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c01",
+        "label": "Component 1 of 37 (31 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

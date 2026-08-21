@@ -127,6 +127,22 @@ pub enum AssembleError {
         /// The role the reference declared.
         declared_role: String,
     },
+    /// A certificate says there is no recorded run AND cites one.
+    ///
+    /// `no_exit_reason` is the honest form of "nothing recorded an execution
+    /// of this". A block that also names a run record makes two contradictory
+    /// statements about the same box, and a reader cannot tell which one the
+    /// page means. Refused rather than rendered, in the same spirit as the
+    /// negative-control pairing rules above: a discriminator that one side can
+    /// contradict is decoration.
+    CertificateExitReasonWithEvidence {
+        /// Block id.
+        block: String,
+        /// The stated reason.
+        reason: String,
+        /// How many records it cites.
+        records: usize,
+    },
     /// A reference declares the `negative-control` role over a record that is
     /// not one.
     ///
@@ -285,6 +301,14 @@ impl fmt::Display for AssembleError {
                  `\"role\": \"negative-control\"` if the document is reporting the control, or \
                  point the claim at a production record"
             ),
+            Self::CertificateExitReasonWithEvidence {
+                block,
+                reason,
+                records,
+            } => write!(
+                f,
+                "certificate block `{block}` states `no_exit_reason` (\"{reason}\") and yet cites                  {records} run record(s). Those are contradictory statements about the same box:                  either an execution was recorded or it was not. Drop the reason, or drop the                  evidence"
+            ),
             Self::NotANegativeControl { path, record } => write!(
                 f,
                 "the reference to run record `{path}` (`{record}`) declares \
@@ -414,6 +438,11 @@ pub struct ResolvedDocument {
     pub repo_url: Option<String>,
     /// Per-format options.
     pub options: crate::ir::Options,
+    /// Cross-document navigation, in reading order. Copied from the manifest;
+    /// assembly resolves nothing here, because a link to a sibling document is
+    /// not evidence and carries no status. `render/tests/link_integrity.rs` is
+    /// what checks these resolve, over the emitted site.
+    pub nav: Vec<crate::ir::NavLink>,
     /// The resolved body, in reading order.
     pub blocks: Vec<ResolvedBlock>,
     /// Every claim in the document as `(label, rendered status)`, in document
@@ -510,6 +539,9 @@ pub enum ResolvedKind {
         replay: Command,
         /// Resolved run records, possibly empty.
         evidence: Vec<ResolvedEvidence>,
+        /// Why there is no recorded run, when there is none. See
+        /// [`crate::ir::BlockKind::Certificate`].
+        no_exit_reason: Option<String>,
     },
     /// A figure.
     Figure {
@@ -786,6 +818,7 @@ impl Assembler {
                 .or_else(|| doc.meta.repo.as_ref().and_then(|r| r.commit.clone())),
             repo_url: doc.meta.repo.as_ref().and_then(|r| r.url.clone()),
             options: doc.meta.options.clone(),
+            nav: doc.meta.nav.clone(),
             blocks,
             claims,
         })
@@ -854,7 +887,19 @@ impl Assembler {
                 artifact_refs,
                 replay,
                 evidence,
+                no_exit_reason,
             } => {
+                // A box cannot both say "nothing recorded a run" and name the
+                // run it recorded.
+                if let Some(reason) = no_exit_reason
+                    && !evidence.is_empty()
+                {
+                    return Err(AssembleError::CertificateExitReasonWithEvidence {
+                        block: block.id.clone(),
+                        reason: reason.clone(),
+                        records: evidence.len(),
+                    });
+                }
                 for a in artifact_refs {
                     self.verify_artifact(a, &format!("block `{}` artifact", block.id))?;
                 }
@@ -868,6 +913,7 @@ impl Assembler {
                     artifact_refs: artifact_refs.clone(),
                     replay: replay.clone(),
                     evidence: resolved,
+                    no_exit_reason: no_exit_reason.clone(),
                 })
             }
             BlockKind::Figure { caption, alt, spec } => {

@@ -430,7 +430,8 @@ def resolve_artifact(art: str) -> tuple[dict, str]:
 # --- card document -----------------------------------------------------------
 
 def build_card(fact: dict, path: Path, digest: str, dependents: list[str],
-               facts: dict[str, dict], epoch: dict) -> tuple[dict, list[str]]:
+               facts: dict[str, dict], epoch: dict,
+               nav: list[dict] | None = None) -> tuple[dict, list[str]]:
     fid = fact["id"]
     src = rel(path)
     prov = provenance([(src, digest)], epoch)
@@ -516,8 +517,38 @@ def build_card(fact: dict, path: Path, digest: str, dependents: list[str],
                 "type": "certificate",
                 "cert_kind": CERT_KIND.get(e["kind"], "report-run"),
                 "summary": {"text": e["supports"]},
-                "artifact_refs": [art_ref] if art_ref else [],
+                # ONLY A PRESENT FILE. `ArtifactRef.path` is a path, and
+                # assembly re-hashes every one of them and REFUSES the build if
+                # it cannot read the bytes -- which is the rule working, not a
+                # rule to route around. The ledger's `artifact` field is used
+                # three ways (96 file paths, 6 bare `sha256:` content digests
+                # naming no file, 2 directories), and handing a digest to a
+                # field that means "path" made 4 of the 324 cards unrenderable
+                # the first time they were run through the pipeline. Nothing is
+                # lost by leaving them out: the evidence-record table below
+                # carries the ledger's string verbatim together with the state
+                # this producer resolved it to.
+                "artifact_refs": [art_ref] if art_state == "present" else [],
                 "replay": replay,
+                # WHY EVERY ONE OF THESE CARRIES A REASON RATHER THAN AN EXIT
+                # STATUS. A Doc-IR certificate with neither is a box that
+                # implies a run nothing records, and the HTML emitter reports
+                # exactly that -- 648 diagnostics over the 324 cards, which is
+                # what stopped them being renderable under the strand's own
+                # gate. The fix is not to silence the diagnostic: a fact-ledger
+                # evidence row genuinely IS an assertion plus an invitation.
+                # It says `check_status: checked` (someone checked this) and
+                # offers a command (you may check it too), and nothing in the
+                # ledger recorded an execution. So the card says so, in the
+                # box, every time. Emitting a claim over these rows instead
+                # would fabricate the exit status the whole fail-closed law
+                # flows through (13-facts-diary.md, item 2); run records for
+                # ledger checkers are the P1 item that would change this.
+                "no_exit_reason": (
+                    f"the ledger records check_status `{e['check_status']}` for this row "
+                    f"but no run record, so nothing here recorded an execution; the "
+                    f"command above is an invitation to the reader, not a replay of a "
+                    f"run this page witnessed"),
             }
             blocks.append(block(f"evidence-{i:03d}", "detail", cert, prov,
                                 title=f"Evidence: {e['id']}"))
@@ -570,7 +601,7 @@ def build_card(fact: dict, path: Path, digest: str, dependents: list[str],
              "caption": {"text": "Immediate dependencies and dependents of this fact"},
              "alt": f"Dependency graph around {fid}: {len(fact['depends_on'])} "
                     f"dependencies, {len(dependents)} dependents",
-             "spec": dep_graph_spec(neighbours, facts, focus=fid)},
+             "spec": dep_graph_spec(neighbours, facts, focus=fid, href_prefix="")},
             prov, title="Dependency neighbourhood",
         ))
 
@@ -583,7 +614,7 @@ def build_card(fact: dict, path: Path, digest: str, dependents: list[str],
                                         ("epistemic", "epistemic status"),
                                         ("card", "card")),
                            [[d, facts[d]["title"], facts[d]["epistemic_status"],
-                             f"cards/{slug(d)}.doc.json"] for d in ids],
+                             card_href(d, "")] for d in ids],
                            prov),
                 prov, title=cap,
             ))
@@ -630,7 +661,7 @@ def build_card(fact: dict, path: Path, digest: str, dependents: list[str],
         blocks.append(block(
             "supersedes", "detail",
             table_kind("Supersedes", columns(("fact", "fact"), ("card", "card")),
-                       [[s, f"cards/{slug(s)}.doc.json"] for s in sorted(fact["supersedes"])],
+                       [[s, card_href(s, "")] for s in sorted(fact["supersedes"])],
                        prov),
             prov,
         ))
@@ -648,6 +679,7 @@ def build_card(fact: dict, path: Path, digest: str, dependents: list[str],
             "subtitle": f"Fact card for {fid}",
             "epoch": epoch,
             "options": {"markdown": {"badge_style": "text"}},
+            "nav": nav or [],
         },
         "blocks": blocks,
         "provenance": prov,
@@ -671,8 +703,22 @@ def short_label(fact_id: str) -> str:
     return body
 
 
+def card_href(fact_id: str, prefix: str) -> str:
+    """The Doc-IR reference to another fact's card, RELATIVE TO THE REFERRING
+    DOCUMENT'S OWN OUTPUT FILE.
+
+    That is what `doc_link_target` in the Rust package resolves, and it is why
+    the prefix is a parameter rather than a constant: the atlas and the pilots
+    are emitted beside `cards/`, so they say `cards/F-x.doc.json`, and a card is
+    emitted INSIDE it, so it says `F-x.doc.json` to reach its sibling. Round 1
+    used the atlas form everywhere, which made every card-to-card link on a card
+    point one directory too deep.
+    """
+    return f"{prefix}{slug(fact_id)}.doc.json"
+
+
 def dep_graph_spec(ids: list[str], facts: dict[str, dict],
-                   focus: str | None = None) -> dict:
+                   focus: str | None = None, href_prefix: str = "cards/") -> dict:
     """FigureDepGraph over `depends_on`.
 
     Edge direction is dependent -> dependency (`from` needs `to`), matching the
@@ -694,7 +740,7 @@ def dep_graph_spec(ids: list[str], facts: dict[str, dict],
         # box, and the full title is one hover away.
         node = {"id": i, "label": short_label(i), "tooltip": f["title"],
                 "status": badge_for_epistemic(f["epistemic_status"], checked),
-                "href": f"cards/{slug(i)}.doc.json",
+                "href": card_href(i, href_prefix),
                 "group": f.get("proof_route") or "unproved"}
         if focus == i:
             node["group"] = "focus"
@@ -827,7 +873,7 @@ def graph_blocks(ids: list[str], facts: dict[str, dict], edges: int,
 
 def build_atlas(ids: list[str], facts: dict[str, dict], digests: dict[str, str],
                 epoch: dict, doc_id: str, title: str, subtitle: str,
-                intro: str) -> dict:
+                intro: str, nav: list[dict] | None = None) -> dict:
     inputs = [(f"artifacts/facts/{slug(i)}.json", digests[i]) for i in sorted(ids)]
     prov = provenance(inputs, epoch)
     edges = count_edges(ids, facts)
@@ -872,7 +918,8 @@ def build_atlas(ids: list[str], facts: dict[str, dict], digests: dict[str, str],
         "schema_version": DOC_SCHEMA_VERSION,
         "meta": {"doc_id": doc_id, "genre": "result", "title": title,
                  "subtitle": subtitle, "epoch": epoch,
-                 "options": {"markdown": {"badge_style": "text"}}},
+                 "options": {"markdown": {"badge_style": "text"}},
+                 "nav": nav or []},
         "blocks": blocks,
         "provenance": prov,
     }
@@ -1109,14 +1156,38 @@ def main() -> int:
         for d in facts[i]["depends_on"]:
             dependents[d].append(i)
 
+    all_ids = sorted(facts)
+
+    # WHERE EACH CARD SITS IN THE ATLAS. `graph_blocks` splits the atlas into
+    # one figure per connected component once the ledger is past
+    # GRAPH_ONE_PICTURE_MAX, numbering them largest-first as `dep-graph-cNN`.
+    # That numbering is recomputed here with the SAME key so a card's "up" link
+    # lands on the picture the card is actually in; if the two ever drift, the
+    # link-integrity test in render/tests/ sees a fragment with no element.
+    comp_of: dict[str, tuple[int, int, int]] = {}
+    if len(all_ids) > GRAPH_ONE_PICTURE_MAX:
+        comps = components(all_ids, facts)
+        nontrivial = sorted((c for c in comps if len(c) > 1), key=lambda c: (-len(c), c[0]))
+        for n, comp in enumerate(nontrivial, start=1):
+            for i in comp:
+                comp_of[i] = (n, len(nontrivial), len(comp))
+
+    ATLAS_UP = "../facts-atlas.doc.json"
     emitted: list[tuple[Path, dict]] = []
     for fid in sorted(facts):
+        nav = [{"label": "Fact atlas", "href": ATLAS_UP, "rel": "up"}]
+        if fid in comp_of:
+            n, total, size = comp_of[fid]
+            nav.append({"label": f"Component {n} of {total} ({size} facts)",
+                        "href": f"{ATLAS_UP}#dep-graph-c{n:02d}", "rel": "component"})
+        else:
+            nav.append({"label": "Unconnected: see the index",
+                        "href": f"{ATLAS_UP}#index", "rel": "component"})
         doc, warn = build_card(facts[fid], src_path[fid], digests[fid],
-                               dependents[fid], facts, epoch)
+                               dependents[fid], facts, epoch, nav=nav)
         warnings.extend(warn)
         emitted.append((out_dir / "cards" / f"{slug(fid)}.doc.json", doc))
 
-    all_ids = sorted(facts)
     emitted.append((out_dir / "facts-atlas.doc.json", build_atlas(
         all_ids, facts, digests, epoch, "fact-atlas",
         "Fact atlas: the whole ledger",
@@ -1126,7 +1197,11 @@ def main() -> int:
         f"status here is copied from the ledger; nothing infers or upgrades one, and the "
         f"badge column is a conservative mapping that can only weaken a ledger value. "
         f"Facts established here but not settled in the literature are listed first: that "
-        f"disagreement is the output this project exists to produce.")))
+        f"disagreement is the output this project exists to produce.",
+        nav=[{"label": "Pilot: the Fibonacci frontier",
+              "href": "facts-pilot.doc.json", "rel": "next"},
+             {"label": "Pilot: Euclid's lemma",
+              "href": "facts-pilot-arith.doc.json", "rel": "next"}])))
 
     if args.pilot:
         unknown = sorted(set(args.pilot) - set(facts))
@@ -1149,7 +1224,8 @@ def main() -> int:
             f"carry a single epistemic status throughout. One fact is proved here on the "
             f"`kernel-lean` route with an empty axiom footprint; the rest are open here "
             f"and proved in the literature, so this page shows the self-extension "
-            f"frontier rather than finished work.")))
+            f"frontier rather than finished work.",
+            nav=[{"label": "Fact atlas", "href": "facts-atlas.doc.json", "rel": "up"}])))
     pilot2_ids = ancestor_closure(PILOT2_ROOTS, facts) if not args.pilot else []
     if pilot2_ids:
         p2e = count_edges(pilot2_ids, facts)
@@ -1161,7 +1237,8 @@ def main() -> int:
             f"ledger's largest component ({len(pilot2_ids)} facts, {p2e} edges). Every "
             f"fact here is proved on the `kernel-lean` route with an empty axiom "
             f"footprint, so it exercises graph layout and branching rather than badge "
-            f"variety -- the complement of the primary pilot.")))
+            f"variety -- the complement of the primary pilot.",
+            nav=[{"label": "Fact atlas", "href": "facts-atlas.doc.json", "rel": "up"}])))
 
     for path, doc in emitted:
         write_json(path, doc)

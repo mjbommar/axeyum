@@ -157,7 +157,7 @@
           "nodes": [
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-coprime-or-dvd-of-prime-65f47114.doc.json",
+              "href": "F-ml430-nat-coprime-or-dvd-of-prime-65f47114.doc.json",
               "id": "F:ml430-nat-coprime-or-dvd-of-prime-65f47114",
               "label": "ml430-nat-coprime-or-dvd-of-prime",
               "status": "open",
@@ -165,7 +165,7 @@
             },
             {
               "group": "focus",
-              "href": "cards/F-ml430-nat-prime-dvd-iff-not-coprime-77854741.doc.json",
+              "href": "F-ml430-nat-prime-dvd-iff-not-coprime-77854741.doc.json",
               "id": "F:ml430-nat-prime-dvd-iff-not-coprime-77854741",
               "label": "ml430-nat-prime-dvd-iff-not-coprime",
               "status": "open",
@@ -224,7 +224,7 @@
             "F:ml430-nat-coprime-or-dvd-of-prime-65f47114",
             "Mathlib v4.30 source proposition Nat.coprime_or_dvd_of_prime",
             "open",
-            "cards/F-ml430-nat-coprime-or-dvd-of-prime-65f47114.doc.json"
+            "F-ml430-nat-coprime-or-dvd-of-prime-65f47114.doc.json"
           ]
         ],
         "source": {
@@ -439,6 +439,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c20",
+        "label": "Component 20 of 37 (3 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

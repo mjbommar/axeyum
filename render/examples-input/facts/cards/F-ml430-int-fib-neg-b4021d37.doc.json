@@ -157,7 +157,7 @@
           "nodes": [
             {
               "group": "focus",
-              "href": "cards/F-ml430-int-fib-neg-b4021d37.doc.json",
+              "href": "F-ml430-int-fib-neg-b4021d37.doc.json",
               "id": "F:ml430-int-fib-neg-b4021d37",
               "label": "ml430-int-fib-neg",
               "status": "open",
@@ -165,7 +165,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-int-gcd-fib-73bdafc2.doc.json",
+              "href": "F-ml430-int-gcd-fib-73bdafc2.doc.json",
               "id": "F:ml430-int-gcd-fib-73bdafc2",
               "label": "ml430-int-gcd-fib",
               "status": "open",
@@ -224,7 +224,7 @@
             "F:ml430-int-gcd-fib-73bdafc2",
             "Mathlib v4.30 source proposition Int.gcd_fib",
             "open",
-            "cards/F-ml430-int-gcd-fib-73bdafc2.doc.json"
+            "F-ml430-int-gcd-fib-73bdafc2.doc.json"
           ]
         ],
         "source": {
@@ -439,6 +439,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c05",
+        "label": "Component 5 of 37 (5 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

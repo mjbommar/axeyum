@@ -187,6 +187,7 @@
           }
         ],
         "cert_kind": "unsat-drat",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -371,6 +372,7 @@
           }
         ],
         "cert_kind": "witness-replay",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -563,7 +565,7 @@
           "nodes": [
             {
               "group": "kernel-lean",
-              "href": "cards/F-schedule-critical-chain-infeasible.doc.json",
+              "href": "F-schedule-critical-chain-infeasible.doc.json",
               "id": "F:schedule-critical-chain-infeasible",
               "label": "schedule-critical-chain-infeasible",
               "status": "proved",
@@ -571,7 +573,7 @@
             },
             {
               "group": "focus",
-              "href": "cards/F-schedule-deadline-iis.doc.json",
+              "href": "F-schedule-deadline-iis.doc.json",
               "id": "F:schedule-deadline-iis",
               "label": "schedule-deadline-iis",
               "status": "proved",
@@ -630,7 +632,7 @@
             "F:schedule-critical-chain-infeasible",
             "A five-constraint critical chain against a delivery deadline, refuted in the Lean kernel",
             "proved",
-            "cards/F-schedule-critical-chain-infeasible.doc.json"
+            "F-schedule-critical-chain-infeasible.doc.json"
           ]
         ],
         "source": {
@@ -771,6 +773,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c37",
+        "label": "Component 37 of 37 (2 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

@@ -181,6 +181,7 @@
       "kind": {
         "artifact_refs": [],
         "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -317,6 +318,7 @@
       "kind": {
         "artifact_refs": [],
         "cert_kind": "report-run",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -487,7 +489,7 @@
           "nodes": [
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-add-comm.doc.json",
+              "href": "F-nat-add-comm.doc.json",
               "id": "F:nat-add-comm",
               "label": "nat-add-comm",
               "status": "proved",
@@ -495,7 +497,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-gcd-bezout.doc.json",
+              "href": "F-nat-gcd-bezout.doc.json",
               "id": "F:nat-gcd-bezout",
               "label": "nat-gcd-bezout",
               "status": "proved",
@@ -503,7 +505,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-mul-one.doc.json",
+              "href": "F-nat-mul-one.doc.json",
               "id": "F:nat-mul-one",
               "label": "nat-mul-one",
               "status": "proved",
@@ -511,7 +513,7 @@
             },
             {
               "group": "focus",
-              "href": "cards/F-nat-zero-add.doc.json",
+              "href": "F-nat-zero-add.doc.json",
               "id": "F:nat-zero-add",
               "label": "nat-zero-add",
               "status": "proved",
@@ -570,19 +572,19 @@
             "F:nat-add-comm",
             "Addition on the naturals is commutative",
             "proved",
-            "cards/F-nat-add-comm.doc.json"
+            "F-nat-add-comm.doc.json"
           ],
           [
             "F:nat-gcd-bezout",
             "Bezout's identity holds for the natural gcd",
             "proved",
-            "cards/F-nat-gcd-bezout.doc.json"
+            "F-nat-gcd-bezout.doc.json"
           ],
           [
             "F:nat-mul-one",
             "One is a right identity for multiplication on the naturals",
             "proved",
-            "cards/F-nat-mul-one.doc.json"
+            "F-nat-mul-one.doc.json"
           ]
         ],
         "source": {
@@ -719,6 +721,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c01",
+        "label": "Component 1 of 37 (31 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

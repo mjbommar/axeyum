@@ -847,6 +847,13 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

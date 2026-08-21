@@ -181,6 +181,7 @@
       "kind": {
         "artifact_refs": [],
         "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -317,6 +318,7 @@
       "kind": {
         "artifact_refs": [],
         "cert_kind": "report-run",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -512,7 +514,7 @@
           "nodes": [
             {
               "group": "kernel-lean",
-              "href": "cards/F-int-add-assoc.doc.json",
+              "href": "F-int-add-assoc.doc.json",
               "id": "F:int-add-assoc",
               "label": "int-add-assoc",
               "status": "proved",
@@ -520,7 +522,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-int-add-comm.doc.json",
+              "href": "F-int-add-comm.doc.json",
               "id": "F:int-add-comm",
               "label": "int-add-comm",
               "status": "proved",
@@ -528,7 +530,7 @@
             },
             {
               "group": "focus",
-              "href": "cards/F-nat-add-comm.doc.json",
+              "href": "F-nat-add-comm.doc.json",
               "id": "F:nat-add-comm",
               "label": "nat-add-comm",
               "status": "proved",
@@ -536,7 +538,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-add-sub-cancel-left.doc.json",
+              "href": "F-nat-add-sub-cancel-left.doc.json",
               "id": "F:nat-add-sub-cancel-left",
               "label": "nat-add-sub-cancel-left",
               "status": "proved",
@@ -544,7 +546,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-euclid-lemma.doc.json",
+              "href": "F-nat-euclid-lemma.doc.json",
               "id": "F:nat-euclid-lemma",
               "label": "nat-euclid-lemma",
               "status": "proved",
@@ -552,7 +554,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-gcd-bezout.doc.json",
+              "href": "F-nat-gcd-bezout.doc.json",
               "id": "F:nat-gcd-bezout",
               "label": "nat-gcd-bezout",
               "status": "proved",
@@ -560,7 +562,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-succ-add.doc.json",
+              "href": "F-nat-succ-add.doc.json",
               "id": "F:nat-succ-add",
               "label": "nat-succ-add",
               "status": "proved",
@@ -568,7 +570,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-zero-add.doc.json",
+              "href": "F-nat-zero-add.doc.json",
               "id": "F:nat-zero-add",
               "label": "nat-zero-add",
               "status": "proved",
@@ -627,13 +629,13 @@
             "F:nat-succ-add",
             "Nat succ_add",
             "proved",
-            "cards/F-nat-succ-add.doc.json"
+            "F-nat-succ-add.doc.json"
           ],
           [
             "F:nat-zero-add",
             "Nat zero_add",
             "proved",
-            "cards/F-nat-zero-add.doc.json"
+            "F-nat-zero-add.doc.json"
           ]
         ],
         "source": {
@@ -702,31 +704,31 @@
             "F:int-add-assoc",
             "Addition on the integers is associative",
             "proved",
-            "cards/F-int-add-assoc.doc.json"
+            "F-int-add-assoc.doc.json"
           ],
           [
             "F:int-add-comm",
             "Addition on the integers is commutative",
             "proved",
-            "cards/F-int-add-comm.doc.json"
+            "F-int-add-comm.doc.json"
           ],
           [
             "F:nat-add-sub-cancel-left",
             "Subtraction undoes addition on the naturals",
             "proved",
-            "cards/F-nat-add-sub-cancel-left.doc.json"
+            "F-nat-add-sub-cancel-left.doc.json"
           ],
           [
             "F:nat-euclid-lemma",
             "Euclid's lemma: a prime dividing a product divides a factor",
             "proved",
-            "cards/F-nat-euclid-lemma.doc.json"
+            "F-nat-euclid-lemma.doc.json"
           ],
           [
             "F:nat-gcd-bezout",
             "Bezout's identity holds for the natural gcd",
             "proved",
-            "cards/F-nat-gcd-bezout.doc.json"
+            "F-nat-gcd-bezout.doc.json"
           ]
         ],
         "source": {
@@ -935,6 +937,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c01",
+        "label": "Component 1 of 37 (31 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

@@ -172,7 +172,7 @@
           "nodes": [
             {
               "group": "unproved",
-              "href": "cards/F-ml430-int-fib-add-one-33f1b748.doc.json",
+              "href": "F-ml430-int-fib-add-one-33f1b748.doc.json",
               "id": "F:ml430-int-fib-add-one-33f1b748",
               "label": "ml430-int-fib-add-one",
               "status": "open",
@@ -180,7 +180,7 @@
             },
             {
               "group": "focus",
-              "href": "cards/F-ml430-int-fib-add-two-739358dd.doc.json",
+              "href": "F-ml430-int-fib-add-two-739358dd.doc.json",
               "id": "F:ml430-int-fib-add-two-739358dd",
               "label": "ml430-int-fib-add-two",
               "status": "open",
@@ -188,7 +188,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d.doc.json",
+              "href": "F-ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d.doc.json",
               "id": "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
               "label": "ml430-int-fib-eq-fib-add-two-sub-fib-add-one",
               "status": "open",
@@ -196,7 +196,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-int-fib-natcast-d5886be4.doc.json",
+              "href": "F-ml430-int-fib-natcast-d5886be4.doc.json",
               "id": "F:ml430-int-fib-natcast-d5886be4",
               "label": "ml430-int-fib-natcast",
               "status": "open",
@@ -204,7 +204,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-ml430-nat-fib-add-two-b86e0c82.doc.json",
+              "href": "F-ml430-nat-fib-add-two-b86e0c82.doc.json",
               "id": "F:ml430-nat-fib-add-two-b86e0c82",
               "label": "ml430-nat-fib-add-two",
               "status": "proved",
@@ -263,13 +263,13 @@
             "F:ml430-int-fib-natcast-d5886be4",
             "Mathlib v4.30 source proposition Int.fib_natCast",
             "open",
-            "cards/F-ml430-int-fib-natcast-d5886be4.doc.json"
+            "F-ml430-int-fib-natcast-d5886be4.doc.json"
           ],
           [
             "F:ml430-nat-fib-add-two-b86e0c82",
             "Mathlib v4.30 source proposition Nat.fib_add_two",
             "proved",
-            "cards/F-ml430-nat-fib-add-two-b86e0c82.doc.json"
+            "F-ml430-nat-fib-add-two-b86e0c82.doc.json"
           ]
         ],
         "source": {
@@ -338,13 +338,13 @@
             "F:ml430-int-fib-add-one-33f1b748",
             "Mathlib v4.30 source proposition Int.fib_add_one",
             "open",
-            "cards/F-ml430-int-fib-add-one-33f1b748.doc.json"
+            "F-ml430-int-fib-add-one-33f1b748.doc.json"
           ],
           [
             "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
             "Mathlib v4.30 source proposition Int.fib_eq_fib_add_two_sub_fib_add_one",
             "open",
-            "cards/F-ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d.doc.json"
+            "F-ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d.doc.json"
           ]
         ],
         "source": {
@@ -559,6 +559,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c02",
+        "label": "Component 2 of 37 (9 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

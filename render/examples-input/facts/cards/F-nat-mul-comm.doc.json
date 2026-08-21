@@ -181,6 +181,7 @@
       "kind": {
         "artifact_refs": [],
         "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -317,6 +318,7 @@
       "kind": {
         "artifact_refs": [],
         "cert_kind": "report-run",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -477,7 +479,7 @@
           "nodes": [
             {
               "group": "kernel-lean",
-              "href": "cards/F-int-mul-comm.doc.json",
+              "href": "F-int-mul-comm.doc.json",
               "id": "F:int-mul-comm",
               "label": "int-mul-comm",
               "status": "proved",
@@ -485,7 +487,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-euclid-lemma.doc.json",
+              "href": "F-nat-euclid-lemma.doc.json",
               "id": "F:nat-euclid-lemma",
               "label": "nat-euclid-lemma",
               "status": "proved",
@@ -493,7 +495,7 @@
             },
             {
               "group": "focus",
-              "href": "cards/F-nat-mul-comm.doc.json",
+              "href": "F-nat-mul-comm.doc.json",
               "id": "F:nat-mul-comm",
               "label": "nat-mul-comm",
               "status": "proved",
@@ -501,7 +503,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-pow-add.doc.json",
+              "href": "F-nat-pow-add.doc.json",
               "id": "F:nat-pow-add",
               "label": "nat-pow-add",
               "status": "proved",
@@ -560,19 +562,19 @@
             "F:int-mul-comm",
             "Multiplication on the integers is commutative",
             "proved",
-            "cards/F-int-mul-comm.doc.json"
+            "F-int-mul-comm.doc.json"
           ],
           [
             "F:nat-euclid-lemma",
             "Euclid's lemma: a prime dividing a product divides a factor",
             "proved",
-            "cards/F-nat-euclid-lemma.doc.json"
+            "F-nat-euclid-lemma.doc.json"
           ],
           [
             "F:nat-pow-add",
             "The first index law: powers add over a product",
             "proved",
-            "cards/F-nat-pow-add.doc.json"
+            "F-nat-pow-add.doc.json"
           ]
         ],
         "source": {
@@ -787,6 +789,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c01",
+        "label": "Component 1 of 37 (31 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

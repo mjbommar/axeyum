@@ -182,6 +182,26 @@ p.ax-subtitle {
   max-width: 58ch;
 }
 
+/* Cross-document navigation. The corpus is a SITE -- an atlas, two pilots and
+   324 fact cards emitted together -- and these are the only relative links a
+   page carries. Each page is still self-contained: nothing is fetched on load.
+   render/tests/link_integrity.rs fails if one of them does not resolve. */
+.ax-crumbs {
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+  margin: 0 0 var(--sp-4);
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-2);
+}
+.ax-crumbs .ax-crumb-sep { color: var(--rule-firm); }
+a.ax-doclink { font-family: var(--font-sans); }
+a.ax-doclink code { font-family: var(--font-mono); }
+
+/* The single provenance line for a page whose blocks all come from one run.
+   Fifteen identical copies of it, one under each block, was the most repeated
+   element on a fact card; it is said once, here. */
+.ax-source-all { margin: var(--sp-2) 0 0; }
+
 /* metadata chips */
 .ax-meta { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); margin: 0; padding: 0; list-style: none; }
 .ax-meta li {
@@ -253,7 +273,12 @@ details.ax-fold {
   border-radius: var(--radius);
   background: var(--surface);
   padding: 0;
-  margin: 0 0 var(--sp-5);
+  /* `auto` on the inline axis, not `0`. `main.ax-doc > *` centres every direct
+     child inside the 68rem frame by setting margin-left/right to auto, and a
+     `margin: 0 0 X` shorthand here has the SAME specificity and comes later,
+     so it silently won and every fold on a fact card sat 190px left of the
+     text above it. Found by screenshot; no test could see it. */
+  margin: 0 auto var(--sp-5);
 }
 details.ax-fold > summary {
   cursor: pointer;
@@ -306,6 +331,13 @@ details.ax-fold > .ax-foldbody { padding: 0 var(--sp-4) var(--sp-4); border-top:
   vertical-align: 0.08em;
 }
 .badge svg { width: 0.85em; height: 0.85em; flex: none; fill: currentColor; }
+/* The badge with its word removed, for a place that has already said it (an
+   evidence row inside a claim card whose header carries the same status).
+   The SHAPE is what survives, because the shape is what makes a badge legible
+   in greyscale and to a colour-blind reader; the word survives as the
+   accessible name on the element. */
+.badge-compact { padding: 0.18em 0.32em; gap: 0; }
+.badge-compact svg { width: 0.95em; height: 0.95em; }
 .badge-proved      { color: var(--s-proved-fg);      background: var(--s-proved-bg); }
 .badge-checked     { color: var(--s-checked-fg);     background: var(--s-checked-bg); }
 .badge-evidence    { color: var(--s-evidence-fg);    background: var(--s-evidence-bg); }
@@ -344,7 +376,8 @@ details.ax-fold > .ax-foldbody { padding: 0 var(--sp-4) var(--sp-4); border-top:
   border-left: 3px solid var(--rule-firm);
   border-radius: var(--radius);
   padding: var(--sp-4) var(--sp-5);
-  margin: 0 0 var(--sp-5);
+  /* See `details.ax-fold`: `auto` keeps a card centred in the reading frame. */
+  margin: 0 auto var(--sp-5);
   box-shadow: var(--shadow);
 }
 .card.s-proved      { border-left-color: var(--s-proved-fg); }
@@ -427,7 +460,25 @@ details.ax-fold > .ax-foldbody { padding: 0 var(--sp-4) var(--sp-4); border-top:
 .ax-cmd > button[data-copied="1"] { color: var(--s-proved-fg); }
 
 /* ---------- tables ---------- */
+/* A table with five or more columns opts out of the 36rem reading measure and
+   uses the full 68rem frame (`.ax-wide`). The atlas index has twelve columns:
+   at the reading measure its last four -- including the link to the fact's own
+   card -- were scrolled out of sight, so the page's navigation was hiding
+   behind a horizontal scrollbar. It still scrolls when it needs to; it just
+   does not need to as often. */
 .ax-tablewrap { overflow-x: auto; margin: 0 0 var(--sp-2); }
+/* A table of four or more columns breaks out of the 36rem reading measure,
+   CENTRED ON IT, so its heading and the prose above stay aligned. (Putting the
+   break-out on the section instead shifted the heading left and made the page
+   look ragged.) Only above a width where 52rem fits; below it the table stays
+   at the measure and the wrapper scrolls, which is the pre-existing
+   behaviour. */
+@media (min-width: 62rem) {
+  .blk.ax-widetable > .ax-tablewrap {
+    width: 52rem; max-width: none;
+    margin-left: calc((var(--measure) - 52rem) / 2);
+  }
+}
 table.ax-table {
   border-collapse: collapse;
   width: 100%;
@@ -450,6 +501,10 @@ table.ax-table th, table.ax-table td {
   white-space: nowrap;
 }
 table.ax-table td:first-child, table.ax-table th:first-child { white-space: normal; }
+/* ...and so may any cell the emitter marked as prose: a value containing a
+   space is a sentence, not a machine token, and on a fact card the `supports`
+   and `axiom_footprint` cells are sentences. See `table()` in emit_html.rs. */
+table.ax-table td.wrap { white-space: normal; }
 table.ax-table thead th {
   border-bottom: 1px solid var(--rule-firm);
   font-weight: 600; color: var(--ink-2);
@@ -507,7 +562,14 @@ kbd {
 .ax-exit-ok { color: var(--s-proved-fg); font-weight: 600; }
 .ax-exit-bad { color: var(--s-refuted-fg); font-weight: 700; }
 /* Neither green nor red: a certificate that deliberately does not re-run. */
-.ax-exit-none { color: var(--s-advisory-fg); font-weight: 600; }
+.ax-exit-none { color: var(--s-advisory-fg); font-weight: 600; white-space: nowrap; }
+/* The full "why there is no recorded run" sentence, inside the fold. */
+.ax-noexit {
+  font-family: var(--font-sans); font-size: var(--fs-ui);
+  color: var(--s-advisory-fg); background: var(--s-advisory-bg);
+  border: 1px dashed currentColor; border-radius: var(--radius);
+  padding: var(--sp-2) var(--sp-3); margin: 0 0 var(--sp-3);
+}
 .ax-hash { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--ink-2); }
 
 /* ---------- figures ---------- */
@@ -552,6 +614,13 @@ svg.ax-graph .gnode.s-refuted     .gdot { fill: var(--s-refuted-fg); }
 svg.ax-graph .gnode.s-open        .gdot { fill: var(--s-open-fg); }
 svg.ax-graph .gnode.s-axiom       .gdot { fill: var(--s-axiom-fg); }
 svg.ax-graph .gnode { cursor: pointer; }
+/* A node that links to another document is wrapped in a real SVG anchor, so
+   the browser navigates with scripting off. Underlining every node label would
+   be noise at 300 nodes; the pointer and the focus ring carry the affordance,
+   and the anchor gives the reader the target in the status bar. */
+svg.ax-graph a.gnode-link { cursor: pointer; text-decoration: none; }
+svg.ax-graph a.gnode-link:focus-visible .gnode rect,
+svg.ax-graph a.gnode-link:hover .gnode rect { stroke: var(--accent); stroke-width: 1.8; }
 svg.ax-graph .gnode:hover rect, svg.ax-graph .gnode:focus rect { stroke: var(--accent); stroke-width: 1.8; }
 /* cone highlighting, driven by a class on the <svg> root */
 svg.ax-graph.coning .gnode { opacity: 0.22; }
@@ -613,6 +682,28 @@ footer.ax-foot code { font-size: var(--fs-xs); }
   .card { padding: var(--sp-4); }
   .ax-cert .ax-cert-grid { grid-template-columns: 1fr; }
   .ax-cert .ax-cert-grid dt { padding-top: var(--sp-2); }
+
+  /* THE REPLAY COMMAND WRAPS ON A NARROW SCREEN INSTEAD OF SCROLLING.
+     Reader review gripe 4, checked at 420px: the `min-width: 0` fix made the
+     row scroll rather than clip, which is correct and still leaves a phone
+     reader looking at 30 characters of a 300-character command through a
+     letterbox. Wrapping shows the whole thing.
+
+     `pre-wrap` INSERTS NOTHING -- it only permits a break at an existing space
+     -- so the bytes the copy button puts on the clipboard are unchanged, and
+     `overflow-wrap: anywhere` lets a single long path break rather than push
+     the row wide again. The hanging indent is the visual cue that a run of
+     lines is one command: a continuation is inset, the way a wrapped shell
+     line is. */
+  .ax-cmd { align-items: flex-start; }
+  .ax-cmd > code {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    overflow-x: visible;
+    padding-left: calc(var(--sp-3) + 2ch);
+    text-indent: -2ch;
+  }
+  .ax-cmd > button { position: sticky; top: 0; align-self: stretch; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -670,7 +761,7 @@ footer.ax-foot code { font-size: var(--fs-xs); }
 <p class="ax-tinylabel">evidence</p>
 <ul class="ax-evidence">
 <li>
-<div class="ax-ev-head"><span class="badge badge-evidence"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 1h6v6H1zM9 9h6v6H9zM9 1h6v6H9zM1 9h6v6H1z"/></svg>EVIDENCE</span><span class="ax-ev-kind">primary</span><span class="ax-ev-kind">R:noh-wt-certificate</span><span class="ax-exit-ok">exit 0</span></div>
+<div class="ax-ev-head"><span class="badge badge-evidence badge-compact" role="img" aria-label="EVIDENCE" title="EVIDENCE"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 1h6v6H1zM9 9h6v6H9zM9 1h6v6H9zM1 9h6v6H1z"/></svg></span><span class="ax-ev-kind">primary</span><span class="ax-ev-kind">R:noh-wt-certificate</span><span class="ax-exit-ok">exit 0</span></div>
 <p class="ax-ev-supports">Theorem 3 (admissibility) for a(k) = 0 (k &lt;= 3), a(k) = floor((k-1)/3) + (k mod 2) (k &gt;= 4): (A1) a(k) = 0 for k &lt;= mu(P) = 3; (A2) 2 a(k) &lt;= k + 6, so a(k) = O(k); (A3) d(k) = min over the computed support of [a(k) - a(j) + v_2(c_{k,j})] is &gt;= 1 for every 4 &lt;= k &lt;= 400, the minimum is attained at the leading term m = 0 for every such k, and d(k) &gt;= 40 once k &gt;= 300.</p>
 <div class="ax-cmd"><code id="claim-theorem-3-ev0-cmd">rustc --edition 2024 -O -o /tmp/noh_wt_cert render/producers/noh_wt_certificate_emitrun.rs &amp;&amp; /tmp/noh_wt_cert --emit-run render/examples-input/cert/run-certificate.json --source render/producers/noh_wt_certificate_emitrun.rs --record-id R:noh-wt-certificate --replay-seconds 1 --role production</code><button type="button" data-copy-target="claim-theorem-3-ev0-cmd">copy</button></div>
 <p class="ax-source">checked by <code>noh_wt_certificate.rs with --emit-run (render strand P0-A); base pin axeyum 75663ef8, built with rustc --edition 2024</code></p>
@@ -685,7 +776,7 @@ footer.ax-foot code { font-size: var(--fs-xs); }
 <p class="ax-tinylabel">evidence</p>
 <ul class="ax-evidence">
 <li>
-<div class="ax-ev-head"><span class="badge badge-evidence"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 1h6v6H1zM9 9h6v6H9zM9 1h6v6H9zM1 9h6v6H1z"/></svg>EVIDENCE</span><span class="ax-ev-kind">primary</span><span class="ax-ev-kind">R:noh-wt-certificate</span><span class="ax-exit-ok">exit 0</span></div>
+<div class="ax-ev-head"><span class="badge badge-evidence badge-compact" role="img" aria-label="EVIDENCE" title="EVIDENCE"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 1h6v6H1zM9 9h6v6H9zM9 1h6v6H9zM1 9h6v6H1z"/></svg></span><span class="ax-ev-kind">primary</span><span class="ax-ev-kind">R:noh-wt-certificate</span><span class="ax-exit-ok">exit 0</span></div>
 <p class="ax-ev-supports">Theorem 4 (sharpness): j'(6) + e = 6, so k = 6 lies in its own support, and the (A3) constraint there reads a(6) - a(6) + v_2(c_{6,6}) &gt;= d(6), in which the weight cancels identically. Since c_{6,6} = 2 and v_2(c_{6,6}) = 1, d(6) &lt;= 1 for EVERY admissible weight whatsoever.</p>
 <div class="ax-cmd"><code id="claim-theorem-4-ev0-cmd">rustc --edition 2024 -O -o /tmp/noh_wt_cert render/producers/noh_wt_certificate_emitrun.rs &amp;&amp; /tmp/noh_wt_cert --emit-run render/examples-input/cert/run-certificate.json --source render/producers/noh_wt_certificate_emitrun.rs --record-id R:noh-wt-certificate --replay-seconds 1 --role production</code><button type="button" data-copy-target="claim-theorem-4-ev0-cmd">copy</button></div>
 <p class="ax-source">checked by <code>noh_wt_certificate.rs with --emit-run (render strand P0-A); base pin axeyum 75663ef8, built with rustc --edition 2024</code></p>
@@ -726,7 +817,7 @@ footer.ax-foot code { font-size: var(--fs-xs); }
 </div></li>
 </ol>
 </section>
-<section class="blk t-detail" id="table-d-k">
+<section class="blk t-detail ax-widetable" id="table-d-k">
 <div class="ax-tablewrap"><table class="ax-table">
 <caption><math display="inline" alttext="d(k)"><semantics><mrow><mi>d</mi><mo>(</mo><mi>k</mi><mo>)</mo></mrow><annotation encoding="application/x-tex">d(k)</annotation></semantics></math> for the weight of Theorem 3, taken from the <code>d-table</code> of run record <code>R:noh-wt-certificate</code> &#x2014; every row of it: the certificate swept <math display="inline" alttext="4 \le k \le 400"><semantics><mrow><mn>4</mn><mo>&#x2264;</mo><mi>k</mi><mo>&#x2264;</mo><mn>400</mn></mrow><annotation encoding="application/x-tex">4 \le k \le 400</annotation></semantics></math> (397 columns). No row is copied into this document, so a changed measurement changes this table. <code>argmin m</code> is the term of the support at which the minimum is attained &#x2014; it is the leading term <math display="inline" alttext="m = 0"><semantics><mrow><mi>m</mi><mo stretchy="false">=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">m = 0</annotation></semantics></math> in every column.</caption>
 <thead><tr><th class="">k</th><th class="">jprime</th><th class="">a_k</th><th class="">a_jprime</th><th class="">d</th><th class="">argmin_m</th></tr></thead>

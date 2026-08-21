@@ -26,7 +26,9 @@
 #                                 EMITTER DIAGNOSTIC LIST FAILS (round 2)
 #   9  self-containment           an independent grep gate over the emitted HTML,
 #                                 with a negative control proving it can fail
-#  10  LaTeX compile             optional; SKIPPED loudly when no TeX is present
+#  10  link integrity            a SECOND implementation of the link sweep, over
+#                                 the built site, with a negative control (P1)
+#  11  LaTeX compile             optional; SKIPPED loudly when no TeX is present
 set -uo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -50,7 +52,7 @@ else
   printf 'note: dependencies are not fully vendored; running without --offline\n'
 fi
 
-step "1/10 formatting"
+step "1/11 formatting"
 # `cargo fmt --check` covers the WHOLE package, including files other lanes own
 # (render/src/emit_html.rs, render/src/layout.rs). Restricting rustfmt to a file
 # list does not work -- it follows `mod` declarations out of lib.rs -- and
@@ -70,7 +72,7 @@ core_files=(
   render/src/lib.rs render/src/main.rs
   render/tests/common/mod.rs render/tests/negative.rs render/tests/golden.rs
   render/tests/determinism.rs render/tests/cross_format.rs render/tests/schema.rs
-  render/tests/pipeline_negative_control.rs
+  render/tests/pipeline_negative_control.rs render/tests/link_integrity.rs
 )
 fmt_log="$(mktemp)"
 cargo fmt $cargo_flags --check >"$fmt_log" 2>&1
@@ -94,7 +96,7 @@ else
 fi
 [ -z "$theirs" ] || printf 'note: unformatted, owned by another lane:%s\n' "$theirs"
 
-step "2/10 cargo clippy --all-targets --all-features -D warnings"
+step "2/11 cargo clippy --all-targets --all-features -D warnings"
 # --all-features, so the HTML emitter and the layout engine are linted too.
 # Without it this step compiled neither, and they are the two largest modules
 # in the package.
@@ -104,7 +106,7 @@ else
   bad "clippy"
 fi
 
-step "3/10 cargo test --all-features (count asserted nonzero; named tests asserted to run)"
+step "3/11 cargo test --all-features (count asserted nonzero; named tests asserted to run)"
 test_log="$(mktemp)"
 if cargo test $cargo_flags $offline --all-features --no-fail-fast 2>&1 | tee "$test_log"; then
   test_status=0
@@ -129,7 +131,11 @@ fi
 for named in \
   all_three_formats_report_the_same_claims_and_statuses \
   the_committed_p0_manifests_agree_across_all_three_formats \
-  preview_page_matches_its_source; do
+  preview_page_matches_its_source \
+  every_link_in_the_emitted_site_resolves \
+  a_dangling_card_link_is_caught \
+  a_dangling_fragment_is_caught \
+  an_emitted_card_is_still_self_contained; do
   if grep -q "^test .*$named ... ok" "$test_log"; then
     ok "ran $named"
   else
@@ -138,7 +144,7 @@ for named in \
 done
 rm -f "$test_log"
 
-step "4/10 scripts/validate-docir.py on the fixtures AND the P0 corpus"
+step "4/11 scripts/validate-docir.py on the fixtures AND the P0 corpus"
 # Round 2 widened this from the two fixtures to every committed manifest and
 # run record: the schema is only a gate over what it is pointed at, and an
 # empty result from a tool nobody aimed at your subject is indistinguishable
@@ -168,7 +174,7 @@ else
 fi
 rm -f "$docir_log"
 
-step "5/10 the validator can fail (negative control)"
+step "5/11 the validator can fail (negative control)"
 neg_dir="$(mktemp -d)"
 python3 - "$neg_dir" <<'PY'
 import json, sys
@@ -192,7 +198,7 @@ else
 fi
 rm -rf "$neg_dir"
 
-step "6/10 the fixture run record still describes the ledger"
+step "6/11 the fixture run record still describes the ledger"
 # Re-run the producer into a temp file and compare everything except the epoch
 # (which pins whatever commit was HEAD when the record was written). A drift
 # here means the ledger moved and the goldens need regenerating -- deliberately,
@@ -219,9 +225,10 @@ else
 fi
 rm -rf "$fresh"
 
-step "7/10 ASCII over everything this package owns"
-non_ascii="$(LC_ALL=C grep -lP '[^\x00-\x7F]' \
-  "${core_files[@]}" render/check.sh render/Cargo.toml \
+step "7/11 ASCII over everything this package owns"
+non_ascii="$(LC_ALL=C grep -lrP '[^\x00-\x7F]' \
+  "${core_files[@]}" render/check.sh render/Cargo.toml render/build-outputs.sh \
+  render/examples-input/facts/cards \
   render/tests/fixtures/*.json render/tests/fixtures/*.py render/tests/fixtures/*.svg \
   render/tests/golden/* \
   render/assets/style.css render/assets/app.js render/assets/preview/*.py \
@@ -236,7 +243,7 @@ else
   bad "non-ASCII bytes in the files above"
 fi
 
-step "8/10 render the whole P0 corpus in every format; ANY emitter diagnostic fails"
+step "8/11 render the whole P0 corpus in every format; ANY emitter diagnostic fails"
 # THE EMITTER REPORTS WHAT IT COULD NOT DRAW, and until round 2 nobody read the
 # report. That is how every figure in every assembled document rendered as a
 # loud "unknown figure kind" box for a day without a gate noticing: the page
@@ -255,8 +262,15 @@ for manifest in \
   render/examples-input/facts/facts-atlas.doc.json; do
   for format in md tex html; do
     render_n=$((render_n + 1))
+    # `--name-by source`, the same rule build-outputs.sh uses, because it is
+    # what makes a cross-document href resolve: a reference names the
+    # referenced document's SOURCE file. Rendering this corpus under `doc_id`
+    # names would leave `facts-atlas.doc.json` as `fact-atlas.html` and every
+    # card's "up" link pointing at a file that is not there -- which is a real
+    # difference between this scratch build and the deliverable, and step 10
+    # would report it as 706 broken links.
     if ! cargo run $cargo_flags $offline --all-features -q -- render \
-         --manifest "$manifest" --repo-root . --format "$format" \
+         --manifest "$manifest" --repo-root . --format "$format" --name-by source \
          --out "$render_out" --fail-on-diagnostics >/dev/null 2>"$render_out/err.txt"; then
       sed 's/^/    /' "$render_out/err.txt" | head -5
       printf '    ^ %s as %s\n' "$manifest" "$format"
@@ -264,6 +278,30 @@ for manifest in \
     fi
   done
 done
+# THE 324 FACT CARDS, in one batch. `--fail-on-diagnostics` again, and the
+# COUNT is asserted: a batch that silently rendered nothing would otherwise
+# exit 0 over an empty directory, which is this repository's signature inert
+# gate one level up. (The CLI refuses an empty batch for the same reason; this
+# is the second statement of it.)
+mkdir -p "$render_out/cards"
+if cargo run $cargo_flags $offline --all-features -q -- render \
+     --manifest-dir render/examples-input/facts/cards --repo-root . --format html \
+     --out "$render_out/cards" --fail-on-diagnostics >/dev/null 2>"$render_out/cards-err.txt"; then
+  n_cards="$(find "$render_out/cards" -name '*.html' | wc -l)"
+  n_manifests="$(find render/examples-input/facts/cards -name '*.doc.json' | wc -l)"
+  if [ "$n_cards" -eq "$n_manifests" ] && [ "$n_cards" -gt 300 ]; then
+    render_n=$((render_n + n_cards))
+  else
+    printf '    rendered %s page(s) from %s manifest(s)\n' "$n_cards" "$n_manifests"
+    render_fail=$((render_fail + 1))
+  fi
+else
+  head -5 "$render_out/cards-err.txt" | sed 's/^/    /'
+  printf '    ^ the fact-card batch\n'
+  render_fail=$((render_fail + 1))
+fi
+rm -f "$render_out/cards-err.txt"
+
 # THE NEGATIVE CONTROL, and the first version of it was INERT. It handed the
 # renderer a figure with no SVG, which ASSEMBLY refuses ("declares neither
 # `svg` nor `src`") -- so the command exited 1 without the emitter ever
@@ -294,25 +332,31 @@ PY
 # difference: WITHOUT the flag the same document must render successfully
 # (contract point 2: the emitter reports, it does not refuse), and WITH it the
 # build must be refused.
+# Rendered OUTSIDE $render_out: step 10 sweeps that directory for links, and a
+# copy of the pilot page sitting where its `cards/` neighbours are not would be
+# reported as 27 broken links that are an artefact of this control.
+diag_out="$(mktemp -d)"
 control_ok=1
 cargo run $cargo_flags $offline --all-features -q -- render \
   --manifest "$render_out/undrawable.doc.json" --repo-root . --format html \
-  --out "$render_out/neg-control" >/dev/null 2>&1 || control_ok=0
+  --out "$diag_out" >/dev/null 2>&1 || control_ok=0
 if [ "$control_ok" -eq 0 ]; then
   bad "the diagnostics control does not assemble: it is testing assembly, not --fail-on-diagnostics"
 elif cargo run $cargo_flags $offline --all-features -q -- render \
      --manifest "$render_out/undrawable.doc.json" --repo-root . --format html \
-     --out "$render_out/neg-control" --fail-on-diagnostics >/dev/null 2>&1; then
+     --out "$diag_out" --fail-on-diagnostics >/dev/null 2>&1; then
   bad "a document the emitter cannot draw rendered without failing: --fail-on-diagnostics is inert"
 else
-  if [ "$render_fail" -eq 0 ] && [ "$render_n" -eq 12 ]; then
+  if [ "$render_fail" -eq 0 ] && [ "$render_n" -gt 300 ]; then
     ok "rendered $render_n (manifest, format) pairs with zero emitter diagnostics"
   else
-    bad "$render_fail of $render_n renders produced emitter diagnostics or failed"
+    bad "$render_fail failure(s) over $render_n renders (expected 12 + one card per manifest)"
   fi
 fi
 
-step "9/10 self-containment of the emitted HTML (independent grep gate)"
+rm -rf "$diag_out"
+
+step "9/11 self-containment of the emitted HTML (independent grep gate)"
 # A SECOND IMPLEMENTATION of the lint that `emit_html.rs` runs in Rust, written
 # the way 04-prototype-plan.md specifies it: grep every resource attribute in
 # the emitted bytes against an allowlist of `#`, `data:` and `mailto:`. Two
@@ -323,10 +367,23 @@ python3 - "$render_out" <<'PY' && ok "self-containment (grep gate over the emitt
 import re, sys, pathlib
 
 ALLOWED = ("#", "data:", "mailto:")
+
+
+def is_sibling_page(value: str) -> bool:
+    path = value.split("#", 1)[0]
+    if not path.endswith(".html"):
+        return False
+    if path.startswith("/") or ":" in path or "\\" in path:
+        return False
+    return not any(c.isspace() for c in path)
+
+
 ATTRS = frozenset(
     ("src", "srcset", "href", "action", "poster", "formaction", "data-src", "xlink:href")
 )
-pages = sorted(pathlib.Path(sys.argv[1]).glob("*.html"))
+# rglob, not glob: the fact cards land in `cards/`, and a gate pointed at the
+# wrong directory reports a correct empty answer to a question nobody asked.
+pages = sorted(pathlib.Path(sys.argv[1]).rglob("*.html"))
 if not pages:
     print("no HTML pages to check -- refusing to report success", file=sys.stderr)
     raise SystemExit(1)
@@ -353,6 +410,14 @@ for page in pages:
             if value == "" or value.startswith(ALLOWED):
                 continue
             if attr == "href" and external:
+                continue
+            # A LINK TO ANOTHER PAGE OF THIS SITE. The corpus is 328 pages that
+            # link to each other; a page that links to `cards/F-x.html` still
+            # opens with zero network requests, which is what self-containment
+            # means. Narrow on purpose: `href` only (never a fetched resource
+            # attribute), relative only, and `.html` only. That the other end
+            # EXISTS is a different property and is checked in step 10.
+            if attr == "href" and is_sibling_page(value):
                 continue
             print(f"{page.name}: {attr}=\"{value[:60]}\" is not self-contained", file=sys.stderr)
             bad += 1
@@ -381,10 +446,13 @@ print(f"self-containment: {len(pages)} page(s), {checked} resource reference(s),
 raise SystemExit(1 if bad else 0)
 PY
 # And the gate must be able to fail: inject one violation into a copy.
+# The control lives OUTSIDE $render_out: step 10 sweeps that directory for
+# links, and a copy of a page placed where its relative links no longer resolve
+# would be reported as 700 broken links that are an artefact of this control.
+neg_root="$(mktemp -d)"
 sed 's|<main|<main data-x="1"><img src="https://evil.example/x.png"|' \
-  "$render_out/fact-pilot.html" > "$render_out/violating.html.tmp" 2>/dev/null
-mkdir -p "$render_out/neg" && mv "$render_out/violating.html.tmp" "$render_out/neg/violating.html"
-if python3 - "$render_out/neg" <<'PY' >/dev/null 2>&1
+  "$render_out/facts-pilot.html" > "$neg_root/violating.html" 2>/dev/null
+if python3 - "$neg_root" <<'PY' >/dev/null 2>&1
 import re, sys, pathlib
 ALLOWED = ("#", "data:", "mailto:")
 bad = 0
@@ -400,9 +468,121 @@ then
 else
   ok "the self-containment gate rejects an external resource (negative control)"
 fi
+rm -rf "$neg_root"
+step "10/11 link integrity over the built site (independent of the Rust sweep)"
+# A SECOND IMPLEMENTATION of `render/tests/link_integrity.rs`, for the same
+# reason the self-containment lint has one and the Doc-IR schema has one: a bug
+# in a checker is invisible to that checker. This one walks the site step 8 just
+# rendered, so it is checking the bytes a reader would be handed.
+#
+# It exists because making dep-graph nodes into real links widened the
+# self-containment rule to accept a relative `.html` href. That is a hole unless
+# something checks the other end -- and "the other end" is two things: the FILE,
+# and the `#fragment` inside it.
+python3 - "$render_out" <<'LINKPY' && ok "link integrity (every relative href resolves)" || bad "link integrity"
+import pathlib, re, sys
+
+root = pathlib.Path(sys.argv[1])
+pages = sorted(root.rglob("*.html"))
+if len(pages) < 300:
+    print(f"only {len(pages)} page(s) -- refusing to report success", file=sys.stderr)
+    raise SystemExit(1)
+
+ids = {}
+
+
+def id_set(p):
+    if p not in ids:
+        ids[p] = set(re.findall(r'\bid="([^"]+)"', p.read_text()))
+    return ids[p]
+
+
+def resolve(page, path):
+    here = page.parent
+    for part in path.split("/"):
+        if part in ("", "."):
+            continue
+        here = here.parent if part == ".." else here / part
+    return here
+
+
+links = 0
+bad = 0
+for page in pages:
+    for value in re.findall(r'\shref="([^"]*)"', page.read_text()):
+        if not value or value.startswith(("#", "data:", "mailto:", "http://", "https://")):
+            continue
+        links += 1
+        path, _, frag = value.partition("#")
+        target = resolve(page, path)
+        if not target.is_file():
+            print(f'{page.name}: href="{value}" -> no such file', file=sys.stderr)
+            bad += 1
+        elif frag and frag not in id_set(target):
+            print(f'{page.name}: href="{value}" -> no element with that id', file=sys.stderr)
+            bad += 1
+
+if links < 1000:
+    print(f"only {links} link(s) over {len(pages)} pages -- the site stopped emitting them",
+          file=sys.stderr)
+    raise SystemExit(1)
+print(f"link integrity: {len(pages)} page(s), {links} relative link(s), {bad} finding(s)")
+raise SystemExit(1 if bad else 0)
+LINKPY
+
+# ...and it must be able to fail, in BOTH of the ways it can: a missing file and
+# a missing fragment. One control per rule, because a sweep that only checked
+# file existence would pass the first and be blind to the second.
+link_neg="$render_out/../linkneg-$$"
+mkdir -p "$link_neg/cards"
+cp "$render_out/facts-atlas.html" "$link_neg/facts-atlas.html"
+cp -r "$render_out/cards" "$link_neg/" 2>/dev/null
+sed 's|href="cards/|href="nowhere/|' "$render_out/facts-atlas.html" \
+  > "$link_neg/broken-file.html" 2>/dev/null
+sed 's|#dep-graph-c|#no-such-anchor-|' "$render_out/cards/F-nat-add-comm.html" \
+  > "$link_neg/cards/broken-frag.html" 2>/dev/null
+neg_ok=0
+for control in broken-file broken-frag; do
+  case "$control" in
+    broken-file) control_page="$link_neg/broken-file.html" ;;
+    *)           control_page="$link_neg/cards/broken-frag.html" ;;
+  esac
+  if python3 - "$control_page" <<'NEGPY' >/dev/null 2>&1
+import pathlib, re, sys
+
+page = pathlib.Path(sys.argv[1])
+ids = {}
+bad = 0
+for value in re.findall(r'\shref="([^"]*)"', page.read_text()):
+    if not value or value.startswith(("#", "data:", "mailto:", "http://", "https://")):
+        continue
+    path, _, frag = value.partition("#")
+    here = page.parent
+    for part in path.split("/"):
+        if part in ("", "."):
+            continue
+        here = here.parent if part == ".." else here / part
+    if not here.is_file():
+        bad += 1
+    elif frag:
+        if here not in ids:
+            ids[here] = set(re.findall(r'\bid="([^"]+)"', here.read_text()))
+        if frag not in ids[here]:
+            bad += 1
+raise SystemExit(1 if bad else 0)
+NEGPY
+  then
+    bad "the link sweep accepted $control: it is inert"
+  else
+    neg_ok=$((neg_ok + 1))
+  fi
+done
+[ "$neg_ok" -eq 2 ] && ok "the link sweep rejects a missing file AND a missing fragment"
+rm -rf "$link_neg"
+
 rm -rf "$render_out"
 
-step "10/10 LaTeX compiles standalone (only if a TeX toolchain is here)"
+step "11/11 LaTeX compiles standalone (only if a TeX toolchain is here)"
 # Reported as SKIPPED, never as a pass. A step that silently counts as green on
 # a host that cannot run it is how a gate stops meaning anything -- measured
 # 2026-08-16, `lean` and `just` existed on one fleet host of five.
@@ -439,8 +619,9 @@ fi
 
 printf '\n=== render/check.sh: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ] || exit 1
-# The floor rises with the step count: 10 steps, of which step 3 reports four
-# results (the count plus three named tests) and steps 5, 8 and 9 report two.
-# 14 is the number when every step runs and pdflatex is present; 13 without it.
-[ "$pass" -ge 13 ] || { printf 'refusing to report success after only %d checks\n' "$pass"; exit 2; }
+# The floor rises with the step count: 11 steps, of which step 3 reports eight
+# results (the count plus seven named tests) and steps 5, 8, 9 and 10 report
+# two. 20 is the number when every step runs and pdflatex is present; 19
+# without it.
+[ "$pass" -ge 19 ] || { printf 'refusing to report success after only %d checks\n' "$pass"; exit 2; }
 exit 0

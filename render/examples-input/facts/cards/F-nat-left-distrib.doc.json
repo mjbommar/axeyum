@@ -181,6 +181,7 @@
       "kind": {
         "artifact_refs": [],
         "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -317,6 +318,7 @@
       "kind": {
         "artifact_refs": [],
         "cert_kind": "report-run",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -497,7 +499,7 @@
           "nodes": [
             {
               "group": "kernel-lean",
-              "href": "cards/F-int-left-distrib.doc.json",
+              "href": "F-int-left-distrib.doc.json",
               "id": "F:int-left-distrib",
               "label": "int-left-distrib",
               "status": "proved",
@@ -505,7 +507,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-add-assoc.doc.json",
+              "href": "F-nat-add-assoc.doc.json",
               "id": "F:nat-add-assoc",
               "label": "nat-add-assoc",
               "status": "proved",
@@ -513,7 +515,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-dvd-add.doc.json",
+              "href": "F-nat-dvd-add.doc.json",
               "id": "F:nat-dvd-add",
               "label": "nat-dvd-add",
               "status": "proved",
@@ -521,7 +523,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-gcd-bezout.doc.json",
+              "href": "F-nat-gcd-bezout.doc.json",
               "id": "F:nat-gcd-bezout",
               "label": "nat-gcd-bezout",
               "status": "proved",
@@ -529,7 +531,7 @@
             },
             {
               "group": "focus",
-              "href": "cards/F-nat-left-distrib.doc.json",
+              "href": "F-nat-left-distrib.doc.json",
               "id": "F:nat-left-distrib",
               "label": "nat-left-distrib",
               "status": "proved",
@@ -537,7 +539,7 @@
             },
             {
               "group": "kernel-lean",
-              "href": "cards/F-nat-mul-assoc.doc.json",
+              "href": "F-nat-mul-assoc.doc.json",
               "id": "F:nat-mul-assoc",
               "label": "nat-mul-assoc",
               "status": "proved",
@@ -596,7 +598,7 @@
             "F:nat-add-assoc",
             "Addition on the naturals is associative",
             "proved",
-            "cards/F-nat-add-assoc.doc.json"
+            "F-nat-add-assoc.doc.json"
           ]
         ],
         "source": {
@@ -665,25 +667,25 @@
             "F:int-left-distrib",
             "Multiplication distributes over addition on the integers",
             "proved",
-            "cards/F-int-left-distrib.doc.json"
+            "F-int-left-distrib.doc.json"
           ],
           [
             "F:nat-dvd-add",
             "A common divisor of two numbers divides their sum",
             "proved",
-            "cards/F-nat-dvd-add.doc.json"
+            "F-nat-dvd-add.doc.json"
           ],
           [
             "F:nat-gcd-bezout",
             "Bezout's identity holds for the natural gcd",
             "proved",
-            "cards/F-nat-gcd-bezout.doc.json"
+            "F-nat-gcd-bezout.doc.json"
           ],
           [
             "F:nat-mul-assoc",
             "Multiplication on the naturals is associative",
             "proved",
-            "cards/F-nat-mul-assoc.doc.json"
+            "F-nat-mul-assoc.doc.json"
           ]
         ],
         "source": {
@@ -904,6 +906,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c01",
+        "label": "Component 1 of 37 (31 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

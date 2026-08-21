@@ -187,6 +187,7 @@
           }
         ],
         "cert_kind": "unsat-drat",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -371,6 +372,7 @@
           }
         ],
         "cert_kind": "witness-replay",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -547,13 +549,9 @@
     {
       "id": "evidence-002",
       "kind": {
-        "artifact_refs": [
-          {
-            "label": "directory, not a single artifact",
-            "path": "artifacts/instances/dbdesign/negative-controls/"
-          }
-        ],
+        "artifact_refs": [],
         "cert_kind": "report-run",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -716,7 +714,7 @@
           "nodes": [
             {
               "group": "focus",
-              "href": "cards/F-bcnf-decomposition-lossless-not-dependency-preserving.doc.json",
+              "href": "F-bcnf-decomposition-lossless-not-dependency-preserving.doc.json",
               "id": "F:bcnf-decomposition-lossless-not-dependency-preserving",
               "label": "bcnf-decomposition-lossless-not-dependency-preserving",
               "status": "proved",
@@ -724,7 +722,7 @@
             },
             {
               "group": "search-certificate",
-              "href": "cards/F-orders-fd-implication-certified.doc.json",
+              "href": "F-orders-fd-implication-certified.doc.json",
               "id": "F:orders-fd-implication-certified",
               "label": "orders-fd-implication-certified",
               "status": "proved",
@@ -783,7 +781,7 @@
             "F:orders-fd-implication-certified",
             "Two implied and two unimplied functional dependencies on a committed order-line schema, each with a replayable certificate",
             "proved",
-            "cards/F-orders-fd-implication-certified.doc.json"
+            "F-orders-fd-implication-certified.doc.json"
           ]
         ],
         "source": {
@@ -1012,6 +1010,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c13",
+        "label": "Component 13 of 37 (3 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"

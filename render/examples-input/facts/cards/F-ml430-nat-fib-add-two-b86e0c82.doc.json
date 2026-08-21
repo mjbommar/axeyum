@@ -179,14 +179,9 @@
     {
       "id": "evidence-000",
       "kind": {
-        "artifact_refs": [
-          {
-            "label": "content digest; no file of this name in the tree",
-            "path": "sha256:d55dac246e5d4ffc5a6eb716fb236ab183cc84ca8f147a81d53073dc8c61bb85",
-            "sha256": "d55dac246e5d4ffc5a6eb716fb236ab183cc84ca8f147a81d53073dc8c61bb85"
-          }
-        ],
+        "artifact_refs": [],
         "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
         "replay": {
           "cwd": ".",
           "expected_exit_status": 0,
@@ -363,7 +358,7 @@
           "nodes": [
             {
               "group": "unproved",
-              "href": "cards/F-ml430-int-fib-add-two-739358dd.doc.json",
+              "href": "F-ml430-int-fib-add-two-739358dd.doc.json",
               "id": "F:ml430-int-fib-add-two-739358dd",
               "label": "ml430-int-fib-add-two",
               "status": "open",
@@ -371,7 +366,7 @@
             },
             {
               "group": "focus",
-              "href": "cards/F-ml430-nat-fib-add-two-b86e0c82.doc.json",
+              "href": "F-ml430-nat-fib-add-two-b86e0c82.doc.json",
               "id": "F:ml430-nat-fib-add-two-b86e0c82",
               "label": "ml430-nat-fib-add-two",
               "status": "proved",
@@ -379,7 +374,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-fib-coprime-fib-succ-162fc738.doc.json",
+              "href": "F-ml430-nat-fib-coprime-fib-succ-162fc738.doc.json",
               "id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
               "label": "ml430-nat-fib-coprime-fib-succ",
               "status": "open",
@@ -387,7 +382,7 @@
             },
             {
               "group": "unproved",
-              "href": "cards/F-ml430-nat-fib-le-fib-succ-d1ef4a3d.doc.json",
+              "href": "F-ml430-nat-fib-le-fib-succ-d1ef4a3d.doc.json",
               "id": "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
               "label": "ml430-nat-fib-le-fib-succ",
               "status": "open",
@@ -446,19 +441,19 @@
             "F:ml430-int-fib-add-two-739358dd",
             "Mathlib v4.30 source proposition Int.fib_add_two",
             "open",
-            "cards/F-ml430-int-fib-add-two-739358dd.doc.json"
+            "F-ml430-int-fib-add-two-739358dd.doc.json"
           ],
           [
             "F:ml430-nat-fib-coprime-fib-succ-162fc738",
             "Mathlib v4.30 source proposition Nat.fib_coprime_fib_succ",
             "open",
-            "cards/F-ml430-nat-fib-coprime-fib-succ-162fc738.doc.json"
+            "F-ml430-nat-fib-coprime-fib-succ-162fc738.doc.json"
           ],
           [
             "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
             "Mathlib v4.30 source proposition Nat.fib_le_fib_succ",
             "open",
-            "cards/F-ml430-nat-fib-le-fib-succ-d1ef4a3d.doc.json"
+            "F-ml430-nat-fib-le-fib-succ-d1ef4a3d.doc.json"
           ]
         ],
         "source": {
@@ -673,6 +668,18 @@
       "unix": 1787144076
     },
     "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c02",
+        "label": "Component 2 of 37 (9 facts)",
+        "rel": "component"
+      }
+    ],
     "options": {
       "markdown": {
         "badge_style": "text"
