@@ -4,6 +4,8 @@
 
 #[path = "support/fib_coprime.rs"]
 mod fib_coprime;
+#[path = "support/fib_gcd_shift.rs"]
+mod fib_gcd_shift;
 
 use std::fs;
 use std::io::Cursor;
@@ -46,6 +48,8 @@ const TARGET_GOAL_SHA256: &str = "a053d8f483f2cc1e79c53924baf5f79e4897ce992ca777
 const TARGET_STREAM_SHA256: &str =
     "6afa79d79481403d3e3273ea3eea26b4d1194762f9bd623ec019f8e821323cfd";
 const TARGET_FACT: &str = "F:ml430-nat-fib-coprime-fib-succ-162fc738";
+const GCD_SHIFT_STREAM_SHA256: &str =
+    "fc1117679c743009e8548a25d1f73f71f6cd42555ea77b3efce07844673670b2";
 const CANDIDATE_OBSERVATION_SHA256: &str =
     "a1d92b2090392ac90e22419e6e4f6572beff1cbbd27f83d72c7dfcd566ca860a";
 const CANDIDATE_PROOF_SHA256: &str =
@@ -78,30 +82,45 @@ fn run() -> Result<(), String> {
     let mod_invariant_path = required_path(&mut arguments, "mod-invariant.ndjson")?;
     let target_path = required_path(&mut arguments, "target.ndjson")?;
     let gcd_bridge_path = required_path(&mut arguments, "gcd-bridge.ndjson")?;
-    let (all_support, exact_target_path, authority_audit, receipt_candidate_path) =
-        match arguments.next() {
-            None => (false, None, false, None),
-            Some(flag) if flag == "--all-support" => (true, None, false, None),
-            Some(flag) if flag == "--exact-target" => (
-                true,
-                Some(required_path(&mut arguments, "fib-recurrence.ndjson")?),
-                false,
-                None,
-            ),
-            Some(flag) if flag == "--exact-authority" => (
-                true,
-                Some(required_path(&mut arguments, "fib-recurrence.ndjson")?),
-                true,
-                None,
-            ),
-            Some(flag) if flag == "--issue-receipt" => (
-                true,
-                Some(required_path(&mut arguments, "fib-recurrence.ndjson")?),
-                false,
-                Some(required_path(&mut arguments, "candidate-observation.json")?),
-            ),
-            Some(_) => return Err("unexpected trailing argument".to_owned()),
-        };
+    let (
+        all_support,
+        exact_target_path,
+        authority_audit,
+        receipt_candidate_path,
+        gcd_shift_support,
+    ) = match arguments.next() {
+        None => (false, None, false, None, false),
+        Some(flag) if flag == "--all-support" => (true, None, false, None, false),
+        Some(flag) if flag == "--exact-target" => (
+            true,
+            Some(required_path(&mut arguments, "fib-recurrence.ndjson")?),
+            false,
+            None,
+            false,
+        ),
+        Some(flag) if flag == "--exact-authority" => (
+            true,
+            Some(required_path(&mut arguments, "fib-recurrence.ndjson")?),
+            true,
+            None,
+            false,
+        ),
+        Some(flag) if flag == "--issue-receipt" => (
+            true,
+            Some(required_path(&mut arguments, "fib-recurrence.ndjson")?),
+            false,
+            Some(required_path(&mut arguments, "candidate-observation.json")?),
+            false,
+        ),
+        Some(flag) if flag == "--gcd-fib-add-self-support" => (
+            true,
+            Some(required_path(&mut arguments, "fib-recurrence.ndjson")?),
+            false,
+            None,
+            true,
+        ),
+        Some(_) => return Err("unexpected trailing argument".to_owned()),
+    };
     if arguments.next().is_some() {
         return Err("unexpected trailing argument".to_owned());
     }
@@ -112,6 +131,14 @@ fn run() -> Result<(), String> {
         ) != TARGET_STREAM_SHA256
     {
         return Err("receipt target stream identity changed".to_owned());
+    }
+    if gcd_shift_support
+        && hex_sha256(
+            &fs::read(&target_path)
+                .map_err(|error| format!("gcd-shift target stream read failed: {error}"))?,
+        ) != GCD_SHIFT_STREAM_SHA256
+    {
+        return Err("gcd-shift target stream identity changed".to_owned());
     }
 
     let mod_invariant = import(&mod_invariant_path, "mod-invariant")?;
@@ -146,7 +173,7 @@ fn run() -> Result<(), String> {
     .map_err(|error| format!("mod-invariant composition did not replay: {error:?}"))?;
 
     let mut native = Kernel::new();
-    build_nat_prelude(&mut native)
+    let native_prelude = build_nat_prelude(&mut native)
         .map_err(|error| format!("native Nat reference build failed: {error:?}"))?;
     let helpers =
         compose_checked_theorem_slice(&native, generic_mod.kernel(), &MOD_INVARIANT_HELPERS)
@@ -261,6 +288,102 @@ fn run() -> Result<(), String> {
     } else {
         &["Nat.dvd_gcd"]
     };
+    if gcd_shift_support {
+        let completed = compose_checked_theorem_slice_with_target_leaves(
+            &native,
+            gcd_succ.kernel(),
+            support_roots,
+            &DVD_GCD_LEAVES,
+        )
+        .map_err(|error| format!("gcd-shift support composition declined: {error:?}"))?;
+        verify_checked_theorem_composition_with_target_leaves(
+            &native,
+            gcd_succ.kernel(),
+            completed.kernel(),
+            completed.receipt(),
+        )
+        .map_err(|error| format!("gcd-shift support composition did not replay: {error:?}"))?;
+        require_empty_added_footprints(
+            completed
+                .receipt()
+                .added_theorems
+                .iter()
+                .map(|row| (row.name.as_str(), row.axiom_footprint.as_slice())),
+        )?;
+        let recurrence = exact_target
+            .as_ref()
+            .ok_or("gcd-shift support requires the recurrence source")?;
+        let native_with_recurrence =
+            compose_checked_theorem_slice(recurrence.kernel(), &native, &[FIB_RECURRENCE])
+                .map_err(|error| {
+                    format!("native gcd-shift recurrence composition declined: {error:?}")
+                })?;
+        verify_checked_theorem_composition(
+            recurrence.kernel(),
+            &native,
+            native_with_recurrence.kernel(),
+            native_with_recurrence.receipt(),
+        )
+        .map_err(|error| {
+            format!("native gcd-shift recurrence composition did not replay: {error:?}")
+        })?;
+        let addition = fib_gcd_shift::reconstruct_addition_twice(
+            native_with_recurrence.kernel(),
+            &native_prelude,
+            FIB_RECURRENCE,
+        )?;
+        let target_with_recurrence = compose_checked_theorem_slice(
+            recurrence.kernel(),
+            completed.kernel(),
+            &[FIB_RECURRENCE],
+        )
+        .map_err(|error| format!("target gcd-shift recurrence composition declined: {error:?}"))?;
+        verify_checked_theorem_composition(
+            recurrence.kernel(),
+            completed.kernel(),
+            target_with_recurrence.kernel(),
+            target_with_recurrence.receipt(),
+        )
+        .map_err(|error| {
+            format!("target gcd-shift recurrence composition did not replay: {error:?}")
+        })?;
+        let target_with_addition = compose_checked_theorem_slice(
+            &addition.kernel,
+            target_with_recurrence.kernel(),
+            &[fib_gcd_shift::ADDITION_TARGET],
+        )
+        .map_err(|error| format!("gcd-shift addition composition declined: {error:?}"))?;
+        verify_checked_theorem_composition(
+            &addition.kernel,
+            target_with_recurrence.kernel(),
+            target_with_addition.kernel(),
+            target_with_addition.receipt(),
+        )
+        .map_err(|error| format!("gcd-shift addition composition did not replay: {error:?}"))?;
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&json!({
+                "schema_version": 1,
+                "kind": "axeyum-nat-gcd-fib-add-self-support-control",
+                "state": "first-support-reconstructed-no-target-or-ledger-credit",
+                "target_stream_sha256": GCD_SHIFT_STREAM_SHA256,
+                "support_composition_receipt_sha256": completed.receipt().receipt_sha256,
+                "native_recurrence_composition_receipt_sha256": native_with_recurrence.receipt().receipt_sha256,
+                "target_recurrence_composition_receipt_sha256": target_with_recurrence.receipt().receipt_sha256,
+                "addition_composition_receipt_sha256": target_with_addition.receipt().receipt_sha256,
+                "supports": [addition.evidence],
+                "support_theorems_reconstructed": 1,
+                "kernel_submissions": 2,
+                "exact_source_target_submissions": 0,
+                "proof_search_invocations": 0,
+                "executor_invocations": 0,
+                "evaluation_credit": 0,
+                "ledger_writes": 0,
+            }))
+            .map_err(|error| error.to_string())?
+        );
+        return Ok(());
+    }
     let frontier = retry_native_support(
         &native,
         gcd_succ.kernel(),
