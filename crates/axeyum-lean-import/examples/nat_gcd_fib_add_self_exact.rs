@@ -30,6 +30,8 @@ const TARGET_NATIVE_GOAL_SHA256: &str =
 const TARGET: &str = "Nat.gcd_fib_add_self";
 const GCD_GREATEST_TARGET: &str = "Nat.gcd_greatest";
 const FIB_GCD_TARGET: &str = "Nat.fib_gcd";
+const FIB_DVD_TARGET: &str = "Nat.fib_dvd";
+const FIB_GCD_CAPSULE: &str = "8ac3c35874540a10e5fa393c65f3ad313a6cf6a06303cec68fec3ec45d0f04cd";
 const FIB_GCD_ITERATION: &str = "Axeyum.Autogenesis.fibGcdQuotientIterationV1";
 const GCD_GREATEST_CAPSULE: &str =
     "c233478948b4d4aedc01c839ef9013c3feb2ddb0009d8b57699d7efb755375e6";
@@ -183,6 +185,10 @@ fn run() -> Result<(), String> {
     let mut args = std::env::args_os().skip(1);
     if args.next().as_deref() == Some(std::ffi::OsStr::new("--target-native-fib-gcd")) {
         return run_target_native_fib_gcd(args);
+    }
+    let mut args = std::env::args_os().skip(1);
+    if args.next().as_deref() == Some(std::ffi::OsStr::new("--target-native-fib-dvd")) {
+        return run_target_native_fib_dvd(args);
     }
     let mut args = std::env::args_os().skip(1);
     if args.next().as_deref()
@@ -1233,6 +1239,60 @@ fn run_target_native_fib_gcd(
     Ok(())
 }
 
+fn run_target_native_fib_dvd(
+    mut args: impl Iterator<Item = std::ffi::OsString>,
+) -> Result<(), String> {
+    let fib_gcd_path = path(&mut args)?;
+    let output_path = path(&mut args)?;
+    if args.next().is_some() || output_path.exists() {
+        return Err("usage: nat_gcd_fib_add_self_exact --target-native-fib-dvd \
+             <fib-gcd> <output>"
+            .to_owned());
+    }
+    let imported = import_bound(&fib_gcd_path, FIB_GCD_CAPSULE, "fib-gcd")?;
+    if !imported.report().axioms.is_empty() {
+        return Err("Nat.fib_gcd capsule is not proof-isolated".to_owned());
+    }
+    let mut kernel = imported.kernel().clone();
+    let theorem = declare_fib_dvd(&mut kernel)?;
+    require_empty(&kernel, theorem, FIB_DVD_TARGET)?;
+    let target_evidence = evidence(&kernel, theorem)?;
+    let target_goal = theorem_type(&kernel, theorem)?;
+    let target_goal_sha256 = canonical_expression_sha256(&kernel, target_goal)?;
+    let bytes = kernel
+        .render_lean4export_ndjson_roots(&Lean4ExportMetadata::axeyum("4.30.0"), &[theorem])
+        .map_err(|error| format!("Nat.fib_dvd capsule export failed: {error}"))?;
+    for pass in 1..=2 {
+        let replay = import_ndjson(Cursor::new(bytes.as_bytes()), ImportLimits::default())
+            .map_err(|error| format!("Nat.fib_dvd import {pass} failed: {error:?}"))?;
+        let replayed = find_name(replay.kernel(), FIB_DVD_TARGET)?;
+        if evidence(replay.kernel(), replayed)? != target_evidence {
+            return Err(format!("Nat.fib_dvd import {pass} changed theorem"));
+        }
+    }
+    fs::write(&output_path, &bytes)
+        .map_err(|error| format!("Nat.fib_dvd capsule write failed: {error}"))?;
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "schema_version":1,
+            "kind":"axeyum-autogenesis-target-native-nat-fib-dvd-capsule",
+            "state":"exact-target-reconstructed-empty-footprint-roundtrip-checked",
+            "target_goal_sha256":target_goal_sha256,
+            "target":target_evidence,
+            "capsule":{"bytes":bytes.len(),"sha256":hex_sha256(bytes.as_bytes()),"fresh_imports":2},
+            "execution":{"target_theorem_submissions":1,"exports":1,"fresh_imports":2,"retries":0},
+            "rendered_material":{"proof_terms":0,"theorem_types":0,"theorem_values":0},
+            "search_invocations":0,
+            "fact_status_changes":0,
+            "evaluation_credit":0,
+            "ledger_writes":0
+        }))
+        .map_err(|error| error.to_string())?
+    );
+    Ok(())
+}
+
 fn run_fib_gcd_helper_type_diagnostic(
     mut args: impl Iterator<Item = std::ffi::OsString>,
 ) -> Result<(), String> {
@@ -2044,6 +2104,77 @@ fn declare_fib_gcd(kernel: &mut Kernel) -> Result<NameId, String> {
             value: proof,
         })
         .map_err(|error| format!("exact Nat.fib_gcd rejected: {error:?}"))?;
+    Ok(target)
+}
+
+fn declare_fib_dvd(kernel: &mut Kernel) -> Result<NameId, String> {
+    if optional_name(kernel, FIB_DVD_TARGET)?.is_some() {
+        return Err("Nat.fib_dvd unexpectedly already exists".to_owned());
+    }
+    let target = nested_name(kernel, &["Nat", "fib_dvd"]);
+    let mut d = Dev::new(kernel)?;
+    let fib_gcd = d.exact(FIB_GCD_TARGET)?;
+    let dvd_refl = d.exact(TARGET_DVD_REFL)?;
+    let dvd_antisymm = d.exact(OFFICIAL_ANTISYMM)?;
+    let dvd_gcd = d.exact(TARGET_DVD_GCD)?;
+    let gcd_dvd_left = d.exact(TARGET_GCD_DVD_LEFT)?;
+    let gcd_dvd_right = d.exact(TARGET_GCD_DVD_RIGHT)?;
+    let nat = d.nat_ty();
+    let m_fv = d.fresh();
+    let m = d.kernel.fvar(m_fv);
+    let n_fv = d.fresh();
+    let n = d.kernel.fvar(n_fv);
+    let premise_ty = d.dvd(m, n);
+    let premise_fv = d.fresh();
+    let premise = d.kernel.fvar(premise_fv);
+
+    let gcd_mn = d.gcd(m, n);
+    let m_dvd_m = d.lemma(dvd_refl, &[m]);
+    let m_dvd_gcd = d.lemma(dvd_gcd, &[m, m, n, m_dvd_m, premise]);
+    let gcd_dvd_m = d.lemma(gcd_dvd_left, &[m, n]);
+    let gcd_eq_m = d.lemma(dvd_antisymm, &[gcd_mn, m, gcd_dvd_m, m_dvd_gcd]);
+
+    let fib_gcd_mn = d.fib(gcd_mn);
+    let fib_m = d.fib(m);
+    let fib_n = d.fib(n);
+    let gcd_fibs = d.gcd(fib_m, fib_n);
+    let fib_gcd_eq_fib_m = d.congr(gcd_mn, m, gcd_eq_m, &|d, value| d.fib(value));
+    let fib_m_eq_fib_gcd = d.symm(fib_gcd_mn, fib_m, fib_gcd_eq_fib_m);
+    let fib_gcd_theorem = d.lemma(fib_gcd, &[m, n]);
+    let fib_m_eq_gcd_fibs = d.trans(
+        fib_m,
+        fib_gcd_mn,
+        gcd_fibs,
+        fib_m_eq_fib_gcd,
+        fib_gcd_theorem,
+    );
+
+    let gcd_fibs_dvd_fib_n = d.lemma(gcd_dvd_right, &[fib_m, fib_n]);
+    let gcd_fibs_eq_fib_m = d.symm(fib_m, gcd_fibs, fib_m_eq_gcd_fibs);
+    let motive = d.eq_motive(gcd_fibs, &|d, divisor| d.dvd(divisor, fib_n));
+    let proof = d.transport(
+        gcd_fibs,
+        motive,
+        gcd_fibs_dvd_fib_n,
+        fib_m,
+        gcd_fibs_eq_fib_m,
+    );
+
+    let conclusion = d.dvd(fib_m, fib_n);
+    let proof = d.lam(premise_fv, premise_ty, proof);
+    let proof = d.lam(n_fv, nat, proof);
+    let proof = d.lam(m_fv, nat, proof);
+    let ty = d.arrow(premise_ty, conclusion);
+    let ty = d.pi(n_fv, nat, ty);
+    let ty = d.pi(m_fv, nat, ty);
+    d.kernel
+        .add_declaration(Declaration::Theorem {
+            name: target,
+            uparams: vec![],
+            ty,
+            value: proof,
+        })
+        .map_err(|error| format!("exact Nat.fib_dvd rejected: {error:?}"))?;
     Ok(target)
 }
 
