@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction now includes unconditional official balanced Bézout and official coprime-factor divisibility cancellation. V3 accepted the target-owned zero-divisibility leaf and clean divisor bound, then stopped before antisymmetry submission because the native prelude exposes successor positivity through `zero_le` and `le_succ_succ`, not Mathlib's `Nat.succ_pos`; no support credit is due.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction now includes unconditional official balanced Bézout and official coprime-factor divisibility cancellation. V4 constructs successor positivity inline from native `zero_le` and `le_succ_succ`; all three clean order supports now compile in one kernel and the focused importer gates are green without reading r091.
 
-**Next:** implement the preregistered inline successor positivity from native `zero_le` and `le_succ_succ`, rebuild clean divisibility antisymmetry, and require two byte-identical empty-footprint r091 replays before support credit.
+**Next:** pass the full Rust push gate for V4, then execute at most two complete r091 invocations. Require byte-identical source/target evidence, empty footprints, and replayed three-root composition before support credit.
 
 <!-- plan-section: landed-changes -->
 
@@ -164,3 +164,4 @@
 | 2026-08-21 | (pending) | V3 clean order driver closes the missing zero-divisibility leaf and passes Clippy plus the full importer suite without reading r091 |
 | 2026-08-21 | (pending) | First V3 replay accepts both prerequisite supports, then stops at absent convenience theorem `Nat.succ_pos`; the second is skipped and nothing publishes |
 | 2026-08-21 | (pending) | V4 freezes successor positivity as an inline native `zero_le` plus `le_succ_succ` proof before rebuilding antisymmetry |
+| 2026-08-21 | (pending) | V4 clean order driver replaces the absent convenience theorem with native order primitives and passes focused compile, Clippy, and importer tests |

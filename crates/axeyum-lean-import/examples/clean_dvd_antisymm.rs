@@ -18,18 +18,19 @@ use sha2::{Digest, Sha256};
 const TARGET_SHA256: &str = "fc1117679c743009e8548a25d1f73f71f6cd42555ea77b3efce07844673670b2";
 const CLEAN_EQ_ZERO_OF_ZERO_DVD: &str = "Axeyum.Autogenesis.eqZeroOfZeroDvdCleanV1";
 const CLEAN_LE_OF_DVD: &str = "Axeyum.Autogenesis.leOfDvdCleanV1";
-const CLEAN_DVD_ANTISYMM: &str = "Axeyum.Autogenesis.dvdAntisymmCleanV3";
+const CLEAN_DVD_ANTISYMM: &str = "Axeyum.Autogenesis.dvdAntisymmCleanV4";
 const CLEAN_ZERO_DVD_DEPENDENCIES: [&str; 1] = ["Nat.zero_mul"];
 const CLEAN_LE_DEPENDENCIES: [&str; 3] = [
     "Nat.mul_le_mul_left",
     "Nat.mul_one",
     "Nat.one_le_right_of_mul",
 ];
-const CLEAN_ANTISYMM_DEPENDENCIES: [&str; 4] = [
+const CLEAN_ANTISYMM_DEPENDENCIES: [&str; 5] = [
     CLEAN_EQ_ZERO_OF_ZERO_DVD,
     CLEAN_LE_OF_DVD,
     "Nat.le_antisymm",
-    "Nat.succ_pos",
+    "Nat.le_succ_succ",
+    "Nat.zero_le",
 ];
 const USAGE: &str = "usage: clean_dvd_antisymm <r091.ndjson>";
 
@@ -239,8 +240,9 @@ impl Dev<'_> {
         let zero = self.zero();
         let eq_zero = self.exact(CLEAN_EQ_ZERO_OF_ZERO_DVD)?;
         let le_antisymm = self.exact("Nat.le_antisymm")?;
-        let succ_pos = self.exact("Nat.succ_pos")?;
         let clean_le = self.exact(CLEAN_LE_OF_DVD)?;
+        let zero_le = self.prelude().zero_le;
+        let le_succ_succ = self.prelude().le_succ_succ;
         Ok(self.induct(
             &|d, candidate_b| d.antisymm_statement(a, candidate_b),
             &|d| {
@@ -264,8 +266,11 @@ impl Dev<'_> {
                         },
                         &|d, a_pred, _a_ih| {
                             let a_succ = d.succ(a_pred);
-                            let b_positive = d.lemma(succ_pos, &[b_pred]);
-                            let a_positive = d.lemma(succ_pos, &[a_pred]);
+                            let zero = d.zero();
+                            let zero_le_b = d.lemma(zero_le, &[b_pred]);
+                            let b_positive = d.lemma(le_succ_succ, &[zero, b_pred, zero_le_b]);
+                            let zero_le_a = d.lemma(zero_le, &[a_pred]);
+                            let a_positive = d.lemma(le_succ_succ, &[zero, a_pred, zero_le_a]);
                             let a_le_b = d.lemma(clean_le, &[a_succ, b_succ, b_positive, forward]);
                             let b_le_a = d.lemma(clean_le, &[b_succ, a_succ, a_positive, reverse]);
                             d.lemma(le_antisymm, &[a_succ, b_succ, a_le_b, b_le_a])
@@ -292,7 +297,7 @@ impl NatOps for Dev<'_> {
 }
 
 fn declare_clean_dvd_antisymm(kernel: &mut Kernel, prelude: &NatPrelude) -> Result<ExprId, String> {
-    let target = nested_name(kernel, &["Axeyum", "Autogenesis", "dvdAntisymmCleanV3"]);
+    let target = nested_name(kernel, &["Axeyum", "Autogenesis", "dvdAntisymmCleanV4"]);
     let state = NatState::new(kernel, *prelude);
     let mut d = Dev { kernel, state };
     d.theorem(target, 2, &|d, values| {
