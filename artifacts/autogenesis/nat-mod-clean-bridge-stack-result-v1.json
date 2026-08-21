@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-clean-reconstruction-result",
+  "state": "plan-self-containment-conflicts-with-blanket-simp-ban",
+  "plan_sha256": "5fb15104b8264bdb3a3457e8eccc06e3a744661958caebb37dc0efc62c1de1d5",
+  "execution": {"source_constructed": false, "compiler_invocations": 0, "exporter_invocations": 0, "importer_runs": 0, "retries": 0, "theorem_submissions": 0, "ledger_writes": 0},
+  "diagnostic": {"conflict": "the cleaned temporary V3 module requires self-contained duplication, but V1 forbids the exact simp-only reduction used by the already-qualified empty-footprint fuelCongr theorem", "repair": "authorize only simp only [Nat.modCore.go] inside the byte-equivalent support proof; retain the ban for all new bridge targets"},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}

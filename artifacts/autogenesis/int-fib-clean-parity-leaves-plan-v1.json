@@ -1,0 +1,12 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-clean-reconstruction-plan",
+  "state": "preregistered-before-source-construction",
+  "predecessor": {"path": "artifacts/autogenesis/nat-mod-clean-bridge-stack-result-v2.json", "required_state": "clean-public-modulo-bridges-reconstructed"},
+  "targets": ["Axeyum.IntFib.modStepTwo", "Axeyum.IntFib.modCases", "Axeyum.IntFib.succOne", "Axeyum.IntFib.succZero"],
+  "support": {"self_contained_copy": "artifacts/autogenesis/sources/nat-mod-clean-bridge-stack-v2.lean", "required_clean_roots": ["Axeyum.NatMod.modEqSubMod", "Nat.mod_lt"]},
+  "proof_route": {"modStepTwo": "specialize clean modEqSubMod at a = k + 2 and b = 2, prove 2 <= k + 2 with Nat.le_add_left, normalize only primitive Nat.add and Nat.sub", "modCases": "match n % 2 together with clean Nat.mod_lt n 2", "succOne_succZero": "structural recursion by two using modStepTwo"},
+  "forbidden": ["Nat.add_mod", "Nat.mod_eq_sub_mod", "Nat.mod_two_eq_zero_or_one", "omega", "simp", "simpa", "native_decide", "propext"],
+  "execution": {"source": "artifacts/autogenesis/sources/int-fib-clean-parity-leaves-v1.lean", "source_present_at_plan_commit": false, "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-clean-parity-leaves-v1", "max_compiler_invocations": 1, "max_exporter_invocations": 1, "max_importer_runs": 1, "max_retries": 0, "max_theorem_submissions": 9, "max_ledger_writes": 0},
+  "output": "artifacts/autogenesis/int-fib-clean-parity-leaves-result-v1.json"
+}

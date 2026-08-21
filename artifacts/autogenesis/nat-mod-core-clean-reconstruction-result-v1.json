@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-clean-reconstruction-result",
+  "state": "manual-branch-proof-needs-three-elaboration-corrections",
+  "plan_sha256": "18e68a7bc1d730c27786a903365b712cd88bb6762b7d7fc69a6f0a753fa57cba",
+  "source": {"path": "artifacts/autogenesis/sources/nat-mod-core-clean-reconstruction-v1.lean", "sha256": "0e4b3aad62d05a6eb5b2b45012ad6af0be1952d78879ceeb8f009ea20d23ccea"},
+  "execution": {"compiler_invocations": 1, "compiler_exit_status": 1, "exporter_invocations": 0, "importer_runs": 0, "retries": 0, "theorem_submissions": 0, "ledger_writes": 0},
+  "diagnostic": {"mathematical_route_rejected": false, "corrections": ["remove redundant second Nat.modCore unfold because the target is already reduced to modCore.go", "quote the full private fuel-congruence declaration name as one Lean identifier", "close false branches with explicit symmetric if_neg equalities"]},
+  "cleanup": {"temporary_source_removed": true, "temporary_olean_removed": true, "temporary_ilean_removed": true, "checkout_baseline_restored": true},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}

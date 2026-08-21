@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-clean-reconstruction-result",
+  "state": "all-parity-contracts-reconstructed-empty-footprint",
+  "plan_sha256": "9cd0fb56f40b7ecb8f85dbfdd2d67da557a94ad3690d5b7ef5e842b7a2c8a266",
+  "source": {"path": "artifacts/autogenesis/sources/int-fib-clean-parity-leaves-v4.lean", "sha256": "87348fc7a6a28f38ed1ace477936ad7ca90eb8967272bf75fcb71b49e9ed3d84"},
+  "evidence": {"pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-clean-parity-leaves-v4", "manifest_sha256": "1a251835c1e58ae1bba530de00711d48421f6bccce046e06ebc5ebfde0b1c8f1", "stream_sha256": "0e310823ba37adfbd9087c0da2f85ad57261228d601d9388800cf069b5b2ce82", "stream_bytes": 582656, "audit_sha256": "238bb63147cf2928897ac7849ea9f4355ad5ef0f35e691ebc4c6dcc1322c9ad8", "stream_axioms": [], "sealed": true},
+  "roots": [
+    {"name": "Axeyum.IntFib.modStepTwo", "declaration_sha256": "56a2192a5f4afe4a7b284f3083809c16bd6790cfe2b9b7679f423c7fe5604300", "axiom_footprint": []},
+    {"name": "Axeyum.IntFib.modCases", "declaration_sha256": "6a54512362abaf314e48d39a99377154c059fc83873b91c6767aab4c10f24b54", "axiom_footprint": []},
+    {"name": "Axeyum.IntFib.succOne", "declaration_sha256": "abb6665db155a3902d4b2c57d60a3a790a93332723c8f07e4c994ceaa51a5fbf", "axiom_footprint": []},
+    {"name": "Axeyum.IntFib.succZero", "declaration_sha256": "3058bab79250ecea348ca0cc58895a88b1f4c117b4bc2f16a95d637ea34db784", "axiom_footprint": []}
+  ],
+  "execution": {"compiler_invocations": 1, "compiler_exit_status": 0, "exporter_invocations": 1, "importer_runs": 1, "retries": 0, "theorem_submissions": 9, "ledger_writes": 0},
+  "authority": {"support_credit": 4, "closed_target_authorized": false, "ledger_writes": 0}
+}

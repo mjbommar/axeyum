@@ -1,33 +1,76 @@
 {
-  "schema_version": 1,
-  "id": "F:ml430-int-fib-add-two-739358dd",
-  "title": "Mathlib v4.30 source proposition Int.fib_add_two",
-  "statement": "The proposition declared as `Int.fib_add_two` in the pinned Mathlib v4.30 source.",
-  "formal": {
-    "language": "lean4-surface",
-    "statement": "∀ (n : ℤ), Int.fib (n + 2) = Int.fib n + Int.fib (n + 1)",
-    "fragment": "Int"
-  },
-  "epistemic_status": "open",
-  "external_status": "proved",
+  "axiom_footprint": [],
   "depends_on": [
     "F:ml430-int-fib-natcast-d5886be4",
     "F:ml430-nat-fib-add-two-b86e0c82"
   ],
-  "evidence": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "artifact": "sha256:71a8ca5e0bb2203660d15121d6daddc57636deb87eacaf38e4e295d7145e2c1a",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-autogenesis-fact-operation.py --fact artifacts/facts/F-ml430-int-fib-add-two-739358dd.json",
+      "checker_operation": {
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-exact-composition-v2/int-fib-add-two-1.ndjson",
+        "capsule_sha256": "0fbbb4d55ed862f7feb1b8efa3bf45eed24269067b3702c727d05e45c8947219",
+        "declaration_sha256": "cd1612aa68107d4b35b842f4ad2798f07d15256462d49236b8d34ab852de805f",
+        "direct_theorem_dependencies": [
+          "Axeyum.Autogenesis.fibAddTwo",
+          "Axeyum.IntFib.castAdd",
+          "Axeyum.IntFib.evenAdd",
+          "Axeyum.IntFib.modCases",
+          "Axeyum.IntFib.oddAdd",
+          "Axeyum.IntFib.succOne",
+          "Axeyum.IntFib.succZero",
+          "Int.fib_add_two_residual"
+        ],
+        "execution_sha256": "71a8ca5e0bb2203660d15121d6daddc57636deb87eacaf38e4e295d7145e2c1a",
+        "formal_statement_sha256": "8d73950b63516348e246f137ee9bd6cae88d59e3945e598cffa9864284a8409b",
+        "frontier_sha256": "bd463349683e75e30a4c9fc3300996794342383502eb9853a7af59dd468bd2cb",
+        "goal_sha256": "acd1e0af4faea9717102d1a977fa510295245969d95f86f64cbfcdacd33f3508",
+        "id": "authoritative-mathlib-int-fib-add-two-kernel-capsule-v1",
+        "operation_sha256": "630714cdabd1c6907332ad2e018b3c99442fdf8550e4831c0126ccc7efb12c07",
+        "receipt_sha256": "abccdebb1725d2853f204c342f9fd01625c70deefa41963618e41e1bfa2e6a1a",
+        "registry_sha256_at_execution": "28a9cb834cb80576e88d40ce069f993a7d944c5b4d853c8840c5d4316e65150c",
+        "result_manifest": "artifacts/autogenesis/int-fib-add-two-goal-identity-result-v1.json",
+        "result_manifest_sha256": "c0dd249d9fe44dc1b791783d1bd6e8fefce91ced2c6db3bc2c75daefbcb80ced",
+        "target_theorem": "Int.fib_add_two"
+      },
+      "checkers": [
+        "eight-root-integer-fibonacci-recurrence-composition-v1",
+        "axeyum-lean-import/sealed-int-fib-add-two-capsule-receipt-v1",
+        "axeyum-lean-import/sealed-kernel-capsule-v1"
+      ],
+      "id": "autogenesis-operation-71a8ca5e0bb22036",
+      "kind": "kernel-term",
+      "notes": "Derived from a clean-commit typed execution receipt. The registered fact-operation checker replays the immutable capsule and committed identity manifest and requires its exact theorem identity, four fresh imports, empty axiom footprint, and eight named direct theorem dependencies; no caller-authored route, footprint, checker, or shell command is accepted.",
+      "supports": "The proposition declared as `Int.fib_add_two` in the pinned Mathlib v4.30 source."
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Int",
+    "language": "lean4-surface",
+    "statement": "\u2200 (n : \u2124), Int.fib (n + 2) = Int.fib n + Int.fib (n + 1)"
+  },
+  "id": "F:ml430-int-fib-add-two-739358dd",
+  "notes": "CLOSED BY AXEYUM AUTOGENESIS. The machine frontier selected this exact fact for registered operation `authoritative-mathlib-int-fib-add-two-kernel-capsule-v1`; execution receipt `71a8ca5e0bb2203660d15121d6daddc57636deb87eacaf38e4e295d7145e2c1a` produced a eight-root-composed axiom-free sealed integer Fibonacci recurrence capsule, and the typed transaction derived this status, route, footprint, evidence row, checker, and provenance without caller-authored admission metadata.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
   "provenance": {
     "date": "2026-08-18",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Int.fib_add_two` from Mathlib v4.30.0; no proof value was exposed",
+    "established_by": "axeyum-autogenesis execution 6ffb182000fcabfff315db64bde1889b10008d0f52ddee03ef1d85866e975140",
     "prior_art": [
       {
-        "who": "the Mathlib contributors",
+        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted",
         "what": "the theorem declaration `Int.fib_add_two`",
         "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
-        "year": 2026,
-        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted"
+        "who": "the Mathlib contributors",
+        "year": 2026
       }
-    ]
+    ],
+    "source": "statement-only extraction of `Int.fib_add_two` from Mathlib v4.30.0; no proof value was exposed"
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "schema_version": 1,
+  "statement": "The proposition declared as `Int.fib_add_two` in the pinned Mathlib v4.30 source.",
+  "title": "Mathlib v4.30 source proposition Int.fib_add_two"
 }
