@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-parameterized-residual-result",
+  "state": "source-compiled-export-stream-empty",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-residual-plan-v2.json",
+    "sha256": "881558b3bb37d5fc8ea62438914eb4b510c015bcbdb68f703fd9add8a7809963",
+    "commit": "982bc4925b44288fae64ff44b0f1d0f99393ba6f"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-recurrence-corollary-residual-v2.lean",
+    "sha256": "8ccbbf2e436afd0c5f7315f0e281bf11989abd7394056ca45b9fdf20b48e11d6"
+  },
+  "environment": {
+    "host": "s5",
+    "lean_version": "4.30.0",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-recurrence-corollary-residual-v2",
+    "manifest_sha256": "a4ef970d5d21367c7e1b894c5a188cdbcd8dc239894d13520e3d21f7be570a38",
+    "stream_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stream_bytes": 0
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit": 0,
+    "exporter_invocations": 1,
+    "importer_runs": 1,
+    "importer_error": "line 1: empty stream; metadata is required",
+    "retries": 0
+  },
+  "diagnosis": "The exporter binary was invoked directly rather than through the pinned Mathlib lake environment and exited without output or diagnostics; the zero-retry contract forbids correcting the invocation inside V2.",
+  "authority": {
+    "residual_credit": 0,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Preregister the unchanged source with the exact lake env lean4export command before a fresh export.",
+  "limitations": "Only source compilation is established. An empty export cannot establish theorem identity, dependencies, footprint, or any ledger transition."
+}
