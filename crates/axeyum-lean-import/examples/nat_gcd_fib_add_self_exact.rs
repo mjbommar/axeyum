@@ -21,9 +21,9 @@ const R091_SHA256: &str = "fc1117679c743009e8548a25d1f73f71f6cd42555ea77b3efce07
 const GOAL_DEFINITION: &str = "Axeyum.Autogenesis.Coverage.r091";
 const GOAL_SHA256: &str = "297c9f4af4d63eff354223f9548ab1d4dd3d7e52aa701e88802d58b7929a1451";
 const TARGET: &str = "Nat.gcd_fib_add_self";
-const CLEAN_ANTISYMM: &str = "Axeyum.Autogenesis.dvdAntisymmCleanV5";
+const CLEAN_ANTISYMM: &str = "Axeyum.Autogenesis.dvdAntisymmOfficialV1";
 const CLEAN_ANTISYMM_CAPSULE: &str =
-    "d3b881ce30488b188bb4f557afc125418fdc21f5707b233a00934c9c97faa434";
+    "bc147e08e6425ce8c31f3a10ccd5e9a7f7774ef0265b45784700588cb4bbcb25";
 const CANCELLATION: &str = "Axeyum.Autogenesis.officialCoprimeFactorDivisibilityCancellationV1";
 const CANCELLATION_BOOTSTRAP: &str = "Nat.mod_lt";
 const CANCELLATION_CAPSULE: &str =
