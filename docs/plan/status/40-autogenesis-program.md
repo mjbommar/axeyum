@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction includes an accepted generic official-gcd balanced-Bézout theorem. Exact theorem-root export reduced the unchanged official-representation zero-left source from 340,033,933 to 509,474 bytes; two fresh imports are byte-identical, axiom-free, and depend only on the local `gcdModel_zero_left`. The zero-left leaf is accepted; the successor leaf and every downstream authority remain open.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction includes an accepted generic official-gcd balanced-Bézout theorem and accepted official-representation zero-left gcd leaf. The successor proof already accepted in a native-support kernel cannot satisfy the measured `WellFounded` representation boundary, so an unchanged-source theorem-root export into the official representation is preregistered with two imports and zero new authority.
 
-**Next:** preregister and execute the official-representation `Nat.gcd (Nat.succ m) n = Nat.gcd (n % Nat.succ m) (Nat.succ m)` reconstruction already authored in the same source, with exact theorem-root export and two fresh imports. Only after that leaf is independently empty-footprint may a separate increment compose both accepted leaves into the generic balanced-Bezout theorem.
+**Next:** compile the unchanged source once on pinned `s5`, export exactly `Axeyum.Autogenesis.nat_gcd_succ`, enforce the two-megabyte ceiling, and import twice. Accept only a byte-identical empty-footprint theorem with direct dependency `gcdModel_succ`; then preregister a separate official-kernel composition of both leaves with the generic balanced-Bezout theorem.
 
 <!-- plan-section: landed-changes -->
 
@@ -120,4 +120,5 @@
 | 2026-08-21 | `3e6373de5` | Pointwise official-representation gcd zero-left reconstruction is frozen before compilation |
 | 2026-08-21 | `0a73f8458` | Source compiles but unbounded 340 MB export hits the unchanged two-million-record importer ceiling |
 | 2026-08-21 | `b866b31ee` | Exact theorem-root exporter retry is frozen with unchanged proof and importer limit |
-| 2026-08-21 | (pending) | Root-selected zero-left gcd reconstructs twice with an empty footprint and only its local model dependency |
+| 2026-08-21 | `dfcff00d1` | Root-selected zero-left gcd reconstructs twice with an empty footprint and only its local model dependency |
+| 2026-08-21 | (pending) | Official-representation successor gcd root export is frozen without double-counting the native-support theorem |
