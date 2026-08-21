@@ -175,6 +175,7 @@ compounding, not automation theatre.
 | [Exact Fibonacci coprimality admission](76-exact-fibonacci-coprimality-admission.md) | Did the dependency-bound receipt survive crash-safe ledger admission and clean replay, and which descendant became ready? |
 | [`Nat.gcd_fib_add_self` qualification](77-nat-gcd-fib-add-self-qualification.md) | What exact relation and reusable support obligations lie between the newly ready child and its first honest bounded target submission? |
 | [`Nat.gcd_fib_add_self` support-first plan](78-nat-gcd-fib-add-self-support-plan.md) | Which fixed reusable support sequence and bounded authority may attempt the newly ready Fibonacci gcd-shift theorem? |
+| [Native Fibonacci successor addition](79-nat-fib-successor-addition.md) | Did the first preregistered support reconstruct twice, remain axiom-free, compose into r091, and preserve the zero-target-credit boundary? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

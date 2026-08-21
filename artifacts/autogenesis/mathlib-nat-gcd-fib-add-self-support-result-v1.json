@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-gcd-fib-add-self-support-result",
+  "state": "first-support-reconstructed-no-target-or-ledger-credit",
+  "tooling_commit": "f8c7febc631d6820ac8a8e827a6434bdcdc0cd8e",
+  "implementation": [
+    {
+      "path": "crates/axeyum-lean-import/examples/nat_gcd_succ_specialization.rs",
+      "sha256": "27841f21574d3d7bb5e751e5bfe2701831d28c62a2cbaad9752f1d4174088c40"
+    },
+    {
+      "path": "crates/axeyum-lean-import/examples/support/fib_gcd_shift.rs",
+      "sha256": "a151b87eade8ef5e94bea1adac8f200bd88bc439f4d13a57d132671185af30e2"
+    }
+  ],
+  "frozen_plan": {
+    "path": "artifacts/autogenesis/mathlib-nat-gcd-fib-add-self-support-plan-v1.json",
+    "sha256": "6b4c3243ef2053b7743f028268b21d436e181b9b2835d56880c860284dd08f46"
+  },
+  "reference_pack": {
+    "root": "/nas3/data/axeyum/autogenesis/reference-packs/f8c7febc6-nat-fib-successor-addition-v1",
+    "mode": "0555",
+    "manifest": "manifest.json",
+    "manifest_bytes": 3831,
+    "manifest_sha256": "9e14891d6822ec111bb40ce8dbed78fe7bbb65fd661ea0afb13679b7093d4544"
+  },
+  "result": {
+    "fact_id": "F:ml430-nat-gcd-fib-add-self-5a92d5e3",
+    "target_definition": "Axeyum.Autogenesis.Coverage.r091",
+    "support_id": "fibonacci-successor-addition-v1",
+    "support_theorem": "Axeyum.Autogenesis.NatFibSuccessorAddition",
+    "support_theorems_reconstructed": 1,
+    "support_theorems_planned": 2,
+    "goal_sha256": "297c9f4af4d63eff354223f9548ab1d4dd3d7e52aa701e88802d58b7929a1451",
+    "proof_sha256": "b8b1d301a7e4bd7595c809c83d62ce943d2d0152dbf124484f1de254fd3ab3d3",
+    "declaration_sha256": "049535cf7f432f14a0c93b4c7e9ecdcbd21feca4274b87be4a93e8838d6426ca",
+    "axiom_footprint": [],
+    "fresh_reconstructions": 2,
+    "kernel_submissions": 2,
+    "exact_source_target_submissions": 0,
+    "executor_invocations": 0,
+    "retries": 0,
+    "semantic_theorem_receipts_issued": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "verification": "python3 scripts/check-autogenesis-nat-gcd-fib-add-self-support-result.py",
+  "limitations": "This is the first of two preregistered reusable support theorems. It grants no exact r091 target result, theorem receipt, evaluation credit, or ledger transition; the second support must reconstruct and replay before any target submission."
+}
