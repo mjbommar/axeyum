@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-20 | `c59ae115d` | Refuted relative-trace positivity with exact negative odd/even rows after smooth localization, preventing unit local terms from being substituted for the still-required global REL comparison. |
 | 2026-08-20 | `838fd5e3e` | Proved that every proper odd-endpoint `Frob*c` orbit collapses to the cone vertex and every projective fixed point is smooth, transverse, and has unit local multiplicity, while retaining the unbounded global trace as REL. |
 | 2026-08-20 | `fbeb97a2b` | Proved the odd-endpoint projective cycle eigenlines smooth and transverse with exact Vandermonde Jacobians and tangent weights, while correcting the relative Lefschetz--Verdier source and retaining the distinct `Frob*c` trace as open. |
 | 2026-08-20 | `0d6b5a524` | Added bounded binary Hankel `(rho,pi)` characteristics with exhaustive independent rank controls, while proving from source scope that the published divisor variance does not supply the signed prime-weighted higher moment or REL. |
@@ -493,7 +494,11 @@ point has a full distinct-root orbit, Vandermonde Jacobian rank `ell`, and a
 transverse unit local term because Frobenius has zero differential.  Literal
 extension-field enumeration independently checks the collapse.  This removes
 all odd singular local corrections, but the sum of the unit terms remains the
-unknown global point count and supplies no REL saving.
+unknown global point count and supplies no REL saving.  Exact relative traces
+also refute a positivity shortcut: `C_(5,11)=-608` in the already smooth odd
+regime, and `C_(7,16)=-4608`.  A native regression pins both signs and the
+positive underlying populations.  The remaining virtual comparison can be
+negative even when every local term at each individual level is positive.
 
 **Next:** prove `(REL)`, encode it as replayable evidence, remove the
 manuscript's fail-visible warning, and perform the final source audit.  The
