@@ -1,30 +1,70 @@
 {
-  "schema_version": 1,
-  "id": "F:ml430-nat-fib-gcd-d1d98407",
-  "title": "Mathlib v4.30 source proposition Nat.fib_gcd",
-  "statement": "The proposition declared as `Nat.fib_gcd` in the pinned Mathlib v4.30 source.",
-  "formal": {
-    "language": "lean4-surface",
-    "statement": "∀ (m n : ℕ), Nat.fib (m.gcd n) = (Nat.fib m).gcd (Nat.fib n)",
-    "fragment": "Nat"
-  },
-  "epistemic_status": "open",
-  "external_status": "proved",
+  "axiom_footprint": [],
   "depends_on": [],
-  "evidence": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "artifact": "sha256:7b8858fe4b664345f2b600f8528b4bbf80f04dc1584911211a8f46eda00a1d49",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-autogenesis-fact-operation.py --fact artifacts/facts/F-ml430-nat-fib-gcd-d1d98407.json",
+      "checker_operation": {
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/749f30f65-nat-fib-gcd-v3/target-1.ndjson",
+        "capsule_sha256": "8ac3c35874540a10e5fa393c65f3ad313a6cf6a06303cec68fec3ec45d0f04cd",
+        "declaration_sha256": "2b5f52996fdc275c859364de7b99bf32ab4ba01e24fc14e10cf65bbd5724ea8d",
+        "direct_theorem_dependencies": [
+          "Axeyum.Autogenesis.fibGcdQuotientIterationV1",
+          "Axeyum.Autogenesis.gcdCommCleanV1",
+          "Axeyum.Autogenesis.modQuotientWitnessV4",
+          "Axeyum.Autogenesis.officialNatGcdSuccClosedV1",
+          "Nat.gcd.induction"
+        ],
+        "execution_sha256": "7b8858fe4b664345f2b600f8528b4bbf80f04dc1584911211a8f46eda00a1d49",
+        "formal_statement_sha256": "462bda6362ba8fbe244f081d82a2a56e52e9f6f200db1593197d6e8ba4fa6c79",
+        "frontier_sha256": "86c2413efccd6e5c0f43e2cf57299ce114fcd641b8eee8c7e55d28330e94a0aa",
+        "goal_sha256": "eb65db781afc310abd8a714f7f5b426c7a11daae78e737ea40a81612f23277d5",
+        "id": "authoritative-mathlib-nat-fib-gcd-kernel-capsule-v1",
+        "operation_sha256": "bd3de88c4a4456a8f6f7fdafa33a3be6ca6ae8fd088b30cd8854e58d2006a9ff",
+        "receipt_sha256": "1e65caac2183d493f517a9d78dc789b78a530cbaaf90a95fd07cf19dd7940bc8",
+        "registry_sha256_at_execution": "0f669feb7dd338a43229cac630c961de7f42f5f710e8d34a90c17bceea7cc1c5",
+        "result_manifest": "artifacts/autogenesis/mathlib-nat-fib-gcd-construction-result-v3.json",
+        "result_manifest_sha256": "9b552aa8cf51a69d2b18f312a6ecf9f8126c45963b4ab139ce18218332cfc42c",
+        "target_theorem": "Nat.fib_gcd"
+      },
+      "checkers": [
+        "target-native-fibonacci-gcd-v1",
+        "axeyum-lean-import/sealed-fib-gcd-capsule-receipt-v1",
+        "axeyum-lean-import/sealed-kernel-capsule-v1"
+      ],
+      "id": "autogenesis-operation-7b8858fe4b664345",
+      "kind": "kernel-term",
+      "notes": "Derived from a clean-commit typed execution receipt. The registered fact-operation checker replays the immutable capsule and committed result manifest and requires their exact twice-reconstructed theorem identity, empty axiom footprint, and named direct theorem dependencies; no caller-authored route, footprint, checker, or shell command is accepted.",
+      "supports": "The proposition declared as `Nat.fib_gcd` in the pinned Mathlib v4.30 source."
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "language": "lean4-surface",
+    "statement": "\u2200 (m n : \u2115), Nat.fib (m.gcd n) = (Nat.fib m).gcd (Nat.fib n)"
+  },
+  "id": "F:ml430-nat-fib-gcd-d1d98407",
+  "notes": "CLOSED BY AXEYUM AUTOGENESIS. The machine frontier selected this exact fact for registered operation `authoritative-mathlib-nat-fib-gcd-kernel-capsule-v1`; execution receipt `7b8858fe4b664345f2b600f8528b4bbf80f04dc1584911211a8f46eda00a1d49` produced a twice-reconstructed axiom-free sealed kernel theorem capsule, and the typed transaction derived this status, route, footprint, evidence row, checker, and provenance without caller-authored admission metadata.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
   "provenance": {
     "date": "2026-08-18",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Nat.fib_gcd` from Mathlib v4.30.0; no proof value was exposed",
+    "established_by": "axeyum-autogenesis execution 5d778789a79500d2c4caceef662ffdf69e8f8d9eb6406cd80ed14d3037f8bad1",
     "prior_art": [
       {
-        "who": "the Mathlib contributors",
+        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted",
         "what": "the theorem declaration `Nat.fib_gcd`",
         "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
-        "year": 2026,
-        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted"
+        "who": "the Mathlib contributors",
+        "year": 2026
       }
-    ]
+    ],
+    "source": "statement-only extraction of `Nat.fib_gcd` from Mathlib v4.30.0; no proof value was exposed"
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "schema_version": 1,
+  "statement": "The proposition declared as `Nat.fib_gcd` in the pinned Mathlib v4.30 source.",
+  "title": "Mathlib v4.30 source proposition Nat.fib_gcd"
 }

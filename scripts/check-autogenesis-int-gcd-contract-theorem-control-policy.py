@@ -113,12 +113,21 @@ def validate_policy(
         raise ControlPolicyError("evaluation dependency chain changed")
     for row in premise_rows:
         fact_id = row["fact_id"]
-        if (
-            row.get("epistemic_status") != "open"
-            or facts[fact_id].get("epistemic_status") != "open"
-            or row.get("file_sha256") != sha256(fact_path(fact_id))
+        fact = facts[fact_id]
+        if row.get("epistemic_status") != "open":
+            raise ControlPolicyError("frozen premise prestate changed")
+        if fact.get("epistemic_status") == "open":
+            if row.get("file_sha256") != sha256(fact_path(fact_id)):
+                raise ControlPolicyError("open premise identity changed")
+        elif (
+            fact.get("epistemic_status") != "proved"
+            or fact.get("proof_route") != "kernel-lean"
+            or fact.get("axiom_footprint") != []
+            or not fact.get("evidence")
         ):
-            raise ControlPolicyError("premise status or identity changed")
+            raise ControlPolicyError(
+                "settled premise lacks axiom-free kernel evidence"
+            )
     if producer != {
         "policy_version": "int-gcd-contract-theorem-control-v1",
         "operation": "trace-contract-reflexivity-v1",
