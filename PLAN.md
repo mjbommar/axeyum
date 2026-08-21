@@ -122,6 +122,8 @@ now. Nothing was deleted.
 | 2026-08-21 | `17079b33d` | `:pattern` was parsed and dropped; the author's trigger now decides. Arena side table, alternatives unioned, multi-patterns joined, declines explicit. ADR-0537. |
 | 2026-08-21 | `c4c6524ac` | Exact `Int.fib_neg` root audit is frozen against the pinned clean exporter environment with zero reconstruction or ledger authority |
 | 2026-08-21 | (pending) | One root export and non-rendering importer pass find 26 direct dependencies and an assumption-bearing official `Int.fib_neg` proof |
+| 2026-08-21 | `1c728c757` | Exact 26-root dependency descent is frozen against the immutable `Int.fib_neg` stream with zero theorem authority |
+| 2026-08-21 | (pending) | Dependency classification splits 14 clean outer supports from 12 contaminated roots and localizes the next frontier to `Int.fib_neg_natCast` |
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
 | 2026-08-21 | `a9610560c` | The durable construction checker binds the separately stored target goal identity without weakening capsule checks |
@@ -1144,9 +1146,9 @@ declines any trigger outside an application tree over declared uninterpreted
 functions, which rules out arithmetic subterms — the first real workload with
 `(f (+ x 1))` as a pattern will want that.
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd` and `Nat.fib_dvd` remain durably proved. The next premise `Int.fib_neg` has now been measured from one root-selected v4.30 export: its official proof is assumption-bearing, with 26 direct dependencies and a footprint containing `Classical.choice`, `propext`, quotient primitives, and opaque/string support. It received no theorem or ledger credit.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd` and `Nat.fib_dvd` remain durably proved. The `Int.fib_neg` descent now classifies all 26 direct dependencies: 14 are axiom-free, including `Int.eq_nat_or_neg`, while 12 are `propext`-bearing. The obstruction is localized to the negative-natural core `Int.fib_neg_natCast`, whose exact surface contains 36 direct theorem dependencies.
 
-**Next:** preregister one non-rendering classification pass over the exact 26 `Int.fib_neg` dependencies in the sealed stream, isolate the clean parity/sign and `Int.fib_neg_natCast` core, then preregister the smallest target-owned reconstruction before any target submission.
+**Next:** preregister one non-rendering classification pass over the exact 36 dependencies of `Int.fib_neg_natCast` in the same sealed stream, isolate the smallest clean parity/sign recurrence core, then preregister its target-owned reconstruction before any theorem submission.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement

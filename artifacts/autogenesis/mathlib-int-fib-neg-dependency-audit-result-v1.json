@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-dependency-audit-result",
+  "state": "integer-case-split-clean-negative-nat-core-assumption-bearing",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-neg-dependency-audit-plan-v1.json",
+    "sha256": "39294a126e921cb25cc89f97cf51cf6cd115993ec1d284b9337b53da3d2d8540"
+  },
+  "pack_manifest": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-dependency-audit-v1/manifest.json",
+    "sha256": "8233a87e297d488fb94b0611b0127303b70fb62510463afd75b234cae81711af"
+  },
+  "summary": {
+    "population": 26,
+    "empty_footprint": 14,
+    "propext_bearing": 12,
+    "other_assumption_bearing": 0
+  },
+  "empty_footprint_roots": [
+    "Eq.symm",
+    "Eq.trans",
+    "Int.eq_nat_or_neg",
+    "congr",
+    "congrArg",
+    "congrFun'",
+    "if_neg",
+    "if_pos",
+    "ite_congr",
+    "neg_mul",
+    "neg_neg",
+    "of_eq_true",
+    "one_mul",
+    "one_pow"
+  ],
+  "assumption_bearing_roots": [
+    "Even.add_one._simp_1",
+    "Even.neg_pow",
+    "Int.even_coe_nat._simp_1",
+    "Int.fib_neg_natCast",
+    "Nat.not_even_iff_odd._simp_1",
+    "Odd.add_one._simp_1",
+    "Odd.neg_one_pow",
+    "eq_self",
+    "even_neg._simp_1",
+    "implies_congr_ctx",
+    "implies_true",
+    "left_eq_ite_iff._simp_1"
+  ],
+  "key_frontier": {
+    "clean_integer_case_split": {
+      "name": "Int.eq_nat_or_neg",
+      "declaration_sha256": "357fe10e86f4a880773cbb62a8272d403b274c1b8bb130f882bea8fb8cb39d4d",
+      "direct_theorem_dependencies": ["Int.natAbs_eq"]
+    },
+    "assumption_bearing_negative_nat_core": {
+      "name": "Int.fib_neg_natCast",
+      "declaration_sha256": "13062bcdedb7c2bd3058504ec8a55942704018e2297c7b20bb6935bc7d3d71ec",
+      "direct_theorem_dependency_count": 36,
+      "axiom_footprint": [
+        "Classical.choice",
+        "Lean.opaqueId",
+        "Quot",
+        "Quot.ind",
+        "Quot.lift",
+        "Quot.mk",
+        "Quot.sound",
+        "String.Internal.append",
+        "propext"
+      ]
+    }
+  },
+  "decision": {
+    "direct_official_composition_authorized": false,
+    "smallest_next_root": "Int.fib_neg_natCast",
+    "next_action": "preregister one nonrendering audit of its exact 36 direct theorem dependencies"
+  },
+  "budget": {
+    "exporter_invocations": 0,
+    "batch_importer_runs": 1,
+    "proof_bearing_stream_reads": 1,
+    "retries": 0,
+    "reconstruction_source_compilations": 0,
+    "new_theorem_submissions": 0,
+    "exact_target_submissions": 0,
+    "executor_invocations": 0
+  },
+  "authority": {
+    "proof_terms_rendered": 0,
+    "theorem_types_rendered": 0,
+    "theorem_values_rendered": 0,
+    "support_theorem_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "limitations": "This classifies direct dependencies only. Empty footprints do not by themselves reconstruct Int.fib_neg, and no theorem or ledger credit is granted."
+}
