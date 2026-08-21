@@ -193,6 +193,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | V10 compiles but retains propext through oriented Nat subtraction; the two exact roots are frozen for nearest-boundary classification |
 | 2026-08-21 | (pending) | Both oriented Nat equations are propext-bearing; two add/sub translation roots plus zero subtraction are frozen for the next clean boundary |
 | 2026-08-21 | (pending) | Zero subtraction is clean while translation simp is not; successor subtraction and addition recurrence roots are frozen for target-specific induction |
+| 2026-08-21 | (pending) | Existing closure lacks `Nat.add_succ`, so the audit fails closed; a fresh pinned two-root recurrence export is frozen before classification |
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
 | 2026-08-21 | `a9610560c` | The durable construction checker binds the separately stored target goal identity without weakening capsule checks |
