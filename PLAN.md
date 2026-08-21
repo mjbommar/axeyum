@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-21 | pending | Proved that exact character orders at most the largest `Q` with `2Q^2<=ell` fit by individual Weil alone, removing the Artin--Schreier and first low-Witt layers from the factor-`4ell` endpoint hypothesis. |
 | 2026-08-21 | `1810a8ea4` | Reconstructed every exact-order conductor trace from four power-subgroup populations and proved that a factor-`4ell` saving per order layer closes both endpoints after the degree-400 handoff. |
 | 2026-08-21 | `d7f05ba53` | Classified all six binary projective transformations and proved translation is the only nonidentity element acting on the monic fixed-degree Hayes quotient. |
 | 2026-08-21 | `1e6d1aeef` | Spent every exact translation-forced zero in the one-sided endpoint ledger; the odd endpoint improves strictly but still requires saving 626, while the even endpoint is unchanged. |
@@ -658,9 +659,18 @@ needed.  The exact endpoint ledger proves that saving only a factor `4ell`
 over the summed individual Weil envelope inside every nonempty exact-order
 layer closes both endpoints for every `ell>=200`; at `(200,401)` it charges 67
 layers.  The quantified saving remains conjectural and receives no `(REL)`
-credit.  Fleet rows through level 22 satisfy the much stronger `j^2`
-coefficient diagnostic, with the level-21 even row already requiring 337 of
-the allowed 441; pending larger rows remain falsification evidence only.
+credit.  The much stronger `j^2` coefficient diagnostic survives through
+level 22 but is refuted at the level-23 even endpoint, which requires 710
+against its allowance 529.  This does not touch the weaker
+character-count-weighted factor-`4ell` premise.
+Low exact orders are now removed from that conjectural price.  If `Q` is the
+largest power of two with `2Q^2<=ell`, their complete summed individual-Weil
+envelope is exponentially small enough to fit beside the low-conductor
+envelope.  The factor-`4ell` premise is needed only for orders greater than
+`Q`; at `ell=200`, orders 2, 4, and 8 account for 20 of 67 layers and are
+therefore discharged unconditionally.  Closed geometric sums prove the split
+for every `ell>=200`, and the native integer ledger checks both parities
+through 1024 plus dyadic boundary controls through 16384 (ADR-0592).
 The companion characteristic-two Newton-over-Hodge result has also been
 priced conditionally: it forces only divisibility of the connected endpoint
 trace by eight.  At `ell=200` the existing envelope is already divisible by
@@ -672,9 +682,10 @@ manuscript's fail-visible warning, and perform the final source audit.  The
 active geometric form is the complete signed lower Witt trace `(WITT-LOW)`,
 with its exact contraction price supplied by the aggregate identity path.
 ADR-0591 supplies a second exact form: it is enough to prove a factor-`4ell`
-average saving in each exact-order family, equivalently a bound on the
-associated nested power-subgroup coefficient imbalances.  This is now the
-preferred order-resolved target because its endpoint implication is complete;
+average saving in each high exact-order family, equivalently a bound on the
+associated nested power-subgroup coefficient imbalances above order
+`sqrt(ell/2)`.  This is now the preferred order-resolved target because its
+endpoint implication is complete;
 the stronger finite `j^2` envelope must not be substituted for the weaker
 load-bearing statement.
 ADR-0586 rules out obtaining that price from affine-shell dimension alone;

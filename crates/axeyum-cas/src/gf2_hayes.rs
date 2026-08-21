@@ -5842,6 +5842,51 @@ pub struct ExactOrderLinearSavingEndpointImplication {
     pub proves_endpoint: bool,
 }
 
+/// Endpoint ledger that pays low exact character orders by the proved Weil
+/// bound and asks for a linear saving only at high exact orders.
+///
+/// Let `Q` be the largest power of two with `2Q^2<=ell`.  Exact-order layers
+/// with order at most `Q` contain exponentially fewer characters than a full
+/// conductor layer, so their ordinary summed Weil envelopes fit in the
+/// endpoint budget.  The only unproved input charged by this report is
+///
+/// ```text
+/// 4 ell |T_(j,s)(n)|
+///   <= #X_(j,s) (j-1) 2^ceil(n/2)
+/// ```
+///
+/// for the remaining layers with `2^s>Q`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExactOrderHighOrderSavingEndpointImplication {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// Endpoint degree `2ell+1` or `2ell+2`.
+    pub degree: usize,
+    /// First conductor level in the connected top window.
+    pub first_top_level: usize,
+    /// Largest exact character order paid without any family cancellation.
+    pub low_order_cutoff: usize,
+    /// Proved low-conductor individual-Weil envelope.
+    pub low_conductor_weil_numerator: BigUint,
+    /// Proved summed-Weil envelope for top-window orders at most the cutoff.
+    pub low_order_weil_numerator: BigUint,
+    /// Conditional envelope for high orders after division by `4ell`.
+    pub assumed_high_order_numerator: BigUint,
+    /// Number of low-order layers paid by the proved Weil bound.
+    pub proved_low_order_layer_count: usize,
+    /// Number of high-order layers charged to the unproved saving.
+    pub assumed_high_order_layer_count: usize,
+    /// Exact-conductor characters paid by the proved low-order envelope.
+    pub proved_low_order_character_count: BigUint,
+    /// Exact-conductor characters charged to the high-order hypothesis.
+    pub assumed_high_order_character_count: BigUint,
+    /// Required Haar discrepancy numerator `2^(2ell)`.
+    pub candidate_target_numerator: BigUint,
+    /// Whether the proved envelopes plus the high-order premise close the
+    /// endpoint strictly.
+    pub proves_endpoint: bool,
+}
+
 /// Exact conditional variance inside the identity coarse Witt cylinder.
 ///
 /// Let `c=first_top_level-1`, let `R=2^(ell-c)`, and let `x_e` be the fine
@@ -6992,6 +7037,130 @@ pub fn exact_order_linear_saving_endpoint_implication(
         assumed_top_order_layer_numerator,
         charged_order_layer_count,
         charged_character_count,
+        candidate_target_numerator: baseline.candidate_target_numerator,
+        proves_endpoint,
+    })
+}
+
+fn largest_power_of_two_with_twice_square_at_most(value: usize) -> usize {
+    let mut result = 1_usize;
+    while let Some(next) = result.checked_mul(2) {
+        let Some(twice_square) = next
+            .checked_mul(next)
+            .and_then(|square| square.checked_mul(2))
+        else {
+            break;
+        };
+        if twice_square > value {
+            break;
+        }
+        result = next;
+    }
+    result
+}
+
+/// Price a factor-`4ell` saving only on high exact character orders.
+///
+/// Let `Q` be the largest power of two satisfying `2Q^2<=ell`.  Orders at
+/// most `Q` are paid at their ordinary
+/// summed individual-Weil envelope.  Their cumulative character population
+/// is exponentially sparse inside `E_j^dual`; no cancellation theorem is
+/// assumed for them.  Orders above `Q` are divided by `4ell`, exactly as in
+/// [`exact_order_linear_saving_endpoint_implication`].
+///
+/// # Errors
+///
+/// Rejects the same invalid endpoints as
+/// [`population_refinement_one_sided_connected_implication`] or arithmetic
+/// overflow.
+pub fn exact_order_high_order_saving_endpoint_implication(
+    ell: usize,
+    degree: usize,
+) -> Result<ExactOrderHighOrderSavingEndpointImplication, HayesError> {
+    let baseline = population_refinement_one_sided_connected_implication(ell, degree)?;
+    let square_root_scale = BigUint::from(1_u8) << degree.div_ceil(2);
+    let saving_denominator = BigUint::from(4_usize.checked_mul(ell).ok_or_else(|| {
+        HayesError::InvalidParameter("high-order saving denominator overflow".to_owned())
+    })?);
+    let low_order_cutoff = largest_power_of_two_with_twice_square_at_most(ell);
+    let mut low_order_weil_numerator = BigUint::from(0_u8);
+    let mut assumed_high_order_numerator = BigUint::from(0_u8);
+    let mut proved_low_order_layer_count = 0_usize;
+    let mut assumed_high_order_layer_count = 0_usize;
+    let mut proved_low_order_character_count = BigUint::from(0_u8);
+    let mut assumed_high_order_character_count = BigUint::from(0_u8);
+    for level in baseline.first_top_level..=ell {
+        let maximum_order = principal_unit_factors(level)
+            .iter()
+            .map(|factor| factor.order)
+            .max()
+            .unwrap_or(1);
+        let mut previous_order = 1_usize;
+        let mut character_order = 2_usize;
+        while character_order <= maximum_order {
+            let full_current = bounded_order_character_count_closed(level, character_order)?;
+            let full_previous = bounded_order_character_count_closed(level, previous_order)?;
+            let lower_current = bounded_order_character_count_closed(level - 1, character_order)?;
+            let lower_previous = bounded_order_character_count_closed(level - 1, previous_order)?;
+            if full_current < lower_current || full_previous < lower_previous {
+                return Err(HayesError::Invariant(
+                    "high-order conductor count underflow".to_owned(),
+                ));
+            }
+            let cumulative_current = full_current - lower_current;
+            let cumulative_previous = full_previous - lower_previous;
+            if cumulative_current < cumulative_previous {
+                return Err(HayesError::Invariant(
+                    "high-order exact-order count underflow".to_owned(),
+                ));
+            }
+            let exact_character_count = cumulative_current - cumulative_previous;
+            if exact_character_count != BigUint::from(0_u8) {
+                let layer_weil =
+                    &exact_character_count * BigUint::from(level - 1) * &square_root_scale;
+                if character_order <= low_order_cutoff {
+                    proved_low_order_layer_count =
+                        proved_low_order_layer_count.checked_add(1).ok_or_else(|| {
+                            HayesError::InvalidParameter(
+                                "proved low-order layer count overflow".to_owned(),
+                            )
+                        })?;
+                    proved_low_order_character_count += &exact_character_count;
+                    low_order_weil_numerator += layer_weil;
+                } else {
+                    assumed_high_order_layer_count = assumed_high_order_layer_count
+                        .checked_add(1)
+                        .ok_or_else(|| {
+                            HayesError::InvalidParameter(
+                                "assumed high-order layer count overflow".to_owned(),
+                            )
+                        })?;
+                    assumed_high_order_character_count += &exact_character_count;
+                    assumed_high_order_numerator += layer_weil / &saving_denominator;
+                }
+            }
+            previous_order = character_order;
+            character_order = character_order.checked_mul(2).ok_or_else(|| {
+                HayesError::InvalidParameter("high-order iteration overflow".to_owned())
+            })?;
+        }
+    }
+    let total = &baseline.low_weil_triangle_numerator
+        + &low_order_weil_numerator
+        + &assumed_high_order_numerator;
+    let proves_endpoint = total < baseline.candidate_target_numerator;
+    Ok(ExactOrderHighOrderSavingEndpointImplication {
+        ell,
+        degree,
+        first_top_level: baseline.first_top_level,
+        low_order_cutoff,
+        low_conductor_weil_numerator: baseline.low_weil_triangle_numerator,
+        low_order_weil_numerator,
+        assumed_high_order_numerator,
+        proved_low_order_layer_count,
+        assumed_high_order_layer_count,
+        proved_low_order_character_count,
+        assumed_high_order_character_count,
         candidate_target_numerator: baseline.candidate_target_numerator,
         proves_endpoint,
     })
@@ -22922,6 +23091,25 @@ mod tests {
                     linear.low_weil_numerator + linear.assumed_top_order_layer_numerator
                         < linear.candidate_target_numerator
                 );
+                let high_only =
+                    exact_order_high_order_saving_endpoint_implication(ell, degree).unwrap();
+                assert!(high_only.proves_endpoint, "{high_only:?}");
+                assert_eq!(
+                    high_only.proved_low_order_layer_count
+                        + high_only.assumed_high_order_layer_count,
+                    report.charged_order_layer_count
+                );
+                assert_eq!(
+                    high_only.proved_low_order_character_count
+                        + high_only.assumed_high_order_character_count,
+                    linear.charged_character_count
+                );
+                assert!(
+                    high_only.low_conductor_weil_numerator
+                        + high_only.low_order_weil_numerator
+                        + high_only.assumed_high_order_numerator
+                        < high_only.candidate_target_numerator
+                );
             }
         }
         let first = exact_order_polynomial_endpoint_implication(200, 401).unwrap();
@@ -22934,6 +23122,17 @@ mod tests {
             linear.charged_character_count,
             (BigUint::from(1_u8) << 200) - (BigUint::from(1_u8) << 190)
         );
+        let high_only = exact_order_high_order_saving_endpoint_implication(200, 401).unwrap();
+        assert_eq!(high_only.low_order_cutoff, 8);
+        assert_eq!(high_only.proved_low_order_layer_count, 20);
+        assert_eq!(high_only.assumed_high_order_layer_count, 47);
+        for ell in [1_025_usize, 2_047, 2_048, 4_095, 4_096, 16_384] {
+            for degree in [2 * ell + 1, 2 * ell + 2] {
+                let report =
+                    exact_order_high_order_saving_endpoint_implication(ell, degree).unwrap();
+                assert!(report.proves_endpoint, "{report:?}");
+            }
+        }
     }
 
     #[test]

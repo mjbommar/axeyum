@@ -89,8 +89,9 @@ the triangle ledger, so the `j^2` experiment is intentionally far stronger
 than the endpoint needs.
 
 Fleet rows are falsification evidence only.  The strong `j^2` envelope
-survives both parities through level 22; its level-21 even row already needs
-coefficient 337 against allowance 441, so it is not promoted to a theorem.
+survives both parities through level 22 and is refuted at the level-23 even
+endpoint: its required coefficient is 710 against allowance 529.  This does
+not refute the much weaker character-count-weighted factor-`4ell` premise.
 All-feature CAS `lib`/`bins`/`tests` Clippy and formatting pass; untracked
 reviewer examples remain outside the owned Clippy scope.
 
