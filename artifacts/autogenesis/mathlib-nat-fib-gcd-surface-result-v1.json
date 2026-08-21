@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-surface-result-v1",
+  "state": "two-admitted-roots-composed-euclidean-surface-ready-two-convenience-names-absent",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-nat-fib-gcd-surface-plan-v1.json",
+    "sha256": "1acaa7f67284a10fd0615b563acfe39434a792284ed025d10e106c5419145500"
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/nat_fib_gcd_surface_audit.rs",
+    "sha256": "b6ca75c5f6d20410a158d3e13fa524ee887082358036a437987db4c75254931e"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/audits/3af329e21-nat-fib-gcd-surface-v1",
+    "index_sha256": "a15e76d6a38a6265de015dce7e1db43dbd7a438bb37366696c6c0b9234089ef1",
+    "observation_sha256": "c9093efa59c9260fbef4943d11bca692274edd480fd35dfd020769f0a9b9dbf7",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "composition": {
+    "root": "Nat.gcd_fib_add_self",
+    "receipt_sha256": "541513911a8298cb9464ce6275e1a65208c038bd3559de289ce13901ad2cb1cd",
+    "added_theorems": 22,
+    "fresh_imports": 2
+  },
+  "present": [
+    "Nat.gcd_greatest",
+    "Nat.gcd_fib_add_self",
+    "Nat.gcd.induction",
+    "Axeyum.Autogenesis.modQuotientWitnessV4",
+    "Nat.add_zero",
+    "Nat.zero_add",
+    "Nat.add_assoc",
+    "Nat.mul_succ",
+    "Nat.mul_comm",
+    "congrArg"
+  ],
+  "missing": [
+    "Nat.gcd_zero_left",
+    "Nat.gcd_succ"
+  ],
+  "selection": {
+    "route": "gcd-induction-plus-quotient-iteration",
+    "base": "prove the zero-side Fibonacci gcd identity directly from the accepted gcd universal property or a smaller target-owned leaf",
+    "step": "iterate Nat.gcd_fib_add_self across the quotient multiple, transport through modQuotientWitnessV4, and close with the gcd induction hypothesis",
+    "forbidden_shortcut": "do not import the missing convenience wrappers or inspect the Mathlib proof body"
+  },
+  "execution": {
+    "driver_builds": 1,
+    "complete_audits": 1,
+    "capsule_reads": 2,
+    "fresh_imports": 2,
+    "proof_search_invocations": 0,
+    "helper_theorem_submissions": 0,
+    "target_theorem_submissions": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "target_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "preregister the exact zero-side leaf and quotient-iteration helper, including their target-owned names, complete dependency set, and submission budget, before proof construction",
+  "limitations": "This is a non-rendering surface observation. It proves only that two admitted roots compose and that the named declarations have the reported identities and empty footprints; it does not prove or submit Nat.fib_gcd."
+}

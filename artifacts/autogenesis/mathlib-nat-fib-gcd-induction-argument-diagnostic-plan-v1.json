@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-induction-argument-diagnostic-plan-v1",
+  "state": "preregistered-base-then-step-inference-before-code",
+  "input": {
+    "result": "artifacts/autogenesis/mathlib-nat-fib-gcd-target-type-diagnostic-result-v1.json",
+    "sha256": "09b0850014a205925cfce308b9fe4545e48429bd7307b17d37f82fc8027b7234"
+  },
+  "implementation_prestate": {
+    "path": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+    "sha256": "67563e00d85076df502b5655c5b77805621acf4cc478703c6bf265e6049b77b3"
+  },
+  "diagnostic": {
+    "mode": "--target-native-fib-gcd-induction-argument-diagnostic",
+    "setup": "compose the same roots and submit the already-checked quotient-iteration helper once",
+    "order": [
+      "infer the exact base argument supplied to Nat.gcd.induction",
+      "if base inference succeeds, infer the exact step argument supplied to Nat.gcd.induction"
+    ],
+    "rendered_material": {
+      "theorem_types": "only if the corresponding inference succeeds",
+      "proof_values": 0
+    },
+    "theorem_statement_changes": 0,
+    "proof_route_changes": 0
+  },
+  "budget": {
+    "complete_diagnostics": 1,
+    "helper_theorem_submissions": 1,
+    "base_proof_inferences": 1,
+    "step_proof_inferences": 1,
+    "target_proof_inferences": 0,
+    "target_theorem_submissions": 0,
+    "capsule_writes": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "next_on_accept": "compare the two inferred argument types with the exact Nat.gcd.induction contract before another target construction",
+  "next_on_decline": "retain whether base or step was the first internal inference rejection and preregister a diagnostic within only that argument",
+  "limitations": "This diagnostic separates the induction arguments only. It does not submit, export, admit, or credit Nat.fib_gcd."
+}

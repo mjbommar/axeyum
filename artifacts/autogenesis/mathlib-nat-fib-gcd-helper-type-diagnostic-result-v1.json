@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-helper-type-diagnostic-result-v1",
+  "state": "proof-inference-stopped-at-internal-type-mismatch-no-submission",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-nat-fib-gcd-helper-type-diagnostic-plan-v1.json",
+    "sha256": "39317e648e88b6816fbbe37d3a4c1ab31aa1092f1dca2824089eb07b5c711252"
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+    "sha256": "c2d128fffac084f0a24f680d919c1f1db4d536f7bcb9a0712ba7ec65b52480d6"
+  },
+  "observation": {
+    "error": "helper proof inference failed: TypeMismatch { expected: ExprId(109646), got: ExprId(109657) }",
+    "expected_type_rendered": false,
+    "inferred_type_rendered": false,
+    "proof_value_rendered": false,
+    "helper_submitted": false,
+    "target_submitted": false
+  },
+  "localized_structural_seam": {
+    "stage": "quotient-iteration successor arithmetic equality chain",
+    "incorrect_middle": "m*q + (m + r)",
+    "required_middle": "m*q + (r + m)",
+    "reason": "the preceding congruence swaps m+r to r+m, while the final reversed Nat.add_assoc theorem starts from m*q+(r+m)",
+    "authorized_change": "pass the already-constructed m*q+(r+m) expression to the final Eq.symm helper"
+  },
+  "execution": {
+    "complete_diagnostics": 0,
+    "proof_inferences": 1,
+    "helper_theorem_submissions": 0,
+    "target_theorem_submissions": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "helper_credit": 0,
+    "target_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "preregister the one named intermediate correction; do not alter the theorem statements, route, or any other proof term",
+  "limitations": "The diagnostic failed closed before producing expected or inferred rendered types. The localization is a source-level structural diagnosis and grants no theorem credit."
+}

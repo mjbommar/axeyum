@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-helper-type-diagnostic-plan-v1",
+  "state": "preregistered-no-submission-expected-versus-inferred-type-diagnostic",
+  "input": {
+    "decline_result": "artifacts/autogenesis/mathlib-nat-fib-gcd-construction-result-v1.json",
+    "sha256": "a45ea7860b2297ba4a5c150ee82ccdc0eba8bd68a5303dac25bcece96b72a17e"
+  },
+  "target": {
+    "name": "Axeyum.Autogenesis.fibGcdQuotientIterationV1",
+    "expected_statement": "∀ (m r q : ℕ), (Nat.fib m).gcd (Nat.fib (m * q + r)) = (Nat.fib m).gcd (Nat.fib r)"
+  },
+  "observation": {
+    "allowed": [
+      "render expected helper type",
+      "infer and render closed proof type before declaration submission",
+      "canonical hashes and definitional-equality verdict"
+    ],
+    "forbidden": [
+      "render proof value",
+      "add helper or target declaration",
+      "write capsule or ledger"
+    ]
+  },
+  "budget": {
+    "driver_builds": 1,
+    "complete_diagnostics": 1,
+    "capsule_reads": 2,
+    "proof_inferences": 1,
+    "helper_theorem_submissions": 0,
+    "target_theorem_submissions": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "next_on_result": "preregister exactly the first structural difference between expected and inferred helper types before changing the proof",
+  "limitations": "This diagnostic cannot establish either helper or target theorem."
+}

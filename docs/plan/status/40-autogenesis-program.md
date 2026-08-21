@@ -2,11 +2,13 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** `Nat.gcd_greatest` is durably admitted as `proved` on `kernel-lean`, following `Nat.gcd_fib_add_self`. Its exact target-owned theorem reconstructs twice from four named GCD/divisibility premises, has an empty axiom footprint, survives four independent imports, passes the registered fact-operation replay, and reproduces the same execution, transaction, event, and readiness identities from an isolated clean worktree after an after-intent crash test. The admission performed exactly one authoritative ledger write and honestly unlocked no child because no ledger fact currently names this theorem in `depends_on`.
+**Status:** The exact `Nat.fib_gcd` route is now past its first proof-term defect. One preregistered source edit corrected the quotient-iteration helper's final associativity transport from `m*q + (m + r)` to the already-derived `m*q + (r + m)`. The existing no-submission diagnostic now infers the complete helper proof and confirms it definitionally equal to the frozen target type. No theorem was submitted, no capsule was written, and no ledger state changed; the spent first construction attempt remains spent.
 
-**Next:** return to the strategic exact proposition `Nat.fib_gcd`, preregister its proof route over the now-accepted Fibonacci shift, coprimality, and GCD universal-property stack, then execute only after both historical gate couplings are reconciled monotonically.
+**Next:** preregister a fresh bounded helper-plus-target construction attempt over the unchanged exact route, reconcile the two historical `Nat.fib_gcd` gate couplings monotonically, and only then execute its first zero-retry reconstruction.
 
 <!-- plan-section: landed-changes -->
+
+| 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 
 | 2026-08-21 | `9ff54f11c` | Six clean order/divisibility supports reconstruct twice over r091 with empty footprints and byte-identical capsules |
 | 2026-08-21 | `dfc8874ca` | Target-owned divisibility addition and divisor-of-one supports reconstruct reproducibly without importing `Iff` |

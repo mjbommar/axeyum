@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-construction-plan-v2",
+  "state": "preregistered-fresh-two-run-construction-after-defeq-repair-before-submission",
+  "target": {
+    "fact_id": "F:ml430-nat-fib-gcd-d1d98407",
+    "name": "Nat.fib_gcd",
+    "statement": "∀ (m n : ℕ), Nat.fib (m.gcd n) = (Nat.fib m).gcd (Nat.fib n)",
+    "fact_file_sha256": "e678d6b3a3b3bb9d6d7915b14e0ed3deed6377583fc0a15e22ea2d9c191db25d"
+  },
+  "authority": {
+    "contract_result": {
+      "path": "artifacts/autogenesis/mathlib-nat-fib-gcd-helper-contract-result-v1.json",
+      "sha256": "ee33b4bbc05cd0f421e695d46005647b8b83ef17b11819f20c8866079e4142f5"
+    },
+    "repair_result": {
+      "path": "artifacts/autogenesis/mathlib-nat-fib-gcd-helper-assoc-repair-result-v1.json",
+      "sha256": "c142f2ade03ff57aee7b31021ecb9dad0f993a84e70e0de7dcfe96110c21be6f"
+    },
+    "implementation": {
+      "path": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+      "sha256": "db962586e3c4285f6fdcfea3279e28a4b5af60ec9ffb1c049ce60074012392e3",
+      "permitted_source_edits": 0
+    },
+    "spent_attempt": "artifacts/autogenesis/mathlib-nat-fib-gcd-construction-result-v1.json"
+  },
+  "historical_gate_couplings": [
+    {
+      "checker": "scripts/check-autogenesis-int-gcd-contract-theorem-control-policy.py",
+      "checker_sha256": "6bfaff315913e05a57445ba7644c0aa4d0227db4390fa749d9c0e7a1f204e935",
+      "policy": "artifacts/autogenesis/mathlib-int-gcd-contract-theorem-control-policy-v1.json",
+      "policy_sha256": "7b5a63a5fe0738c807eaa8dab9e51e6549d553d2bb18a43dfb61494c30d931c9",
+      "preexecution_result": "pass",
+      "monotonic_contract": "Nat.fib_gcd remains open and the Int.gcd_fib horizon remains dependency-bound to it"
+    },
+    {
+      "checker": "scripts/check-autogenesis-nat-fib-gcd-premise-selection-policy.py",
+      "checker_sha256": "a2490504b4086870d5748bbf50c54de6c58080aad4222260351fb92dc9722c5c",
+      "policy": "artifacts/autogenesis/mathlib-nat-fib-gcd-premise-selection-policy-v1.json",
+      "policy_sha256": "74177fb996e3760fafb63b046c61929fa7b62e3cf7072f2304268865c4b5ec56",
+      "preexecution_result": "pass",
+      "monotonic_contract": "the first three chain facts form a proved axiom-free kernel prefix and Nat.fib_gcd remains the first open fact"
+    }
+  ],
+  "inputs": [
+    {
+      "root": "Nat.gcd_greatest",
+      "capsule": "/nas3/data/axeyum/autogenesis/reference-packs/85b9d4243-target-native-gcd-greatest-v4/target-1.ndjson",
+      "sha256": "c233478948b4d4aedc01c839ef9013c3feb2ddb0009d8b57699d7efb755375e6"
+    },
+    {
+      "root": "Nat.gcd_fib_add_self",
+      "capsule": "/nas3/data/axeyum/autogenesis/reference-packs/dfa79618c-target-native-exact-v3/target-1.ndjson",
+      "sha256": "279dc4db5daa6dc2f532f9876052500a7e278c54264b32ccbc9d4256907dfc24"
+    }
+  ],
+  "submissions": [
+    {
+      "order": 1,
+      "name": "Axeyum.Autogenesis.fibGcdQuotientIterationV1",
+      "statement": "∀ (m r q : ℕ), (Nat.fib m).gcd (Nat.fib (m * q + r)) = (Nat.fib m).gcd (Nat.fib r)"
+    },
+    {
+      "order": 2,
+      "name": "Nat.fib_gcd",
+      "statement": "∀ (m n : ℕ), Nat.fib (m.gcd n) = (Nat.fib m).gcd (Nat.fib n)"
+    }
+  ],
+  "route": {
+    "helper": "Nat induction on q, exact index normalization, Nat.gcd_fib_add_self, then the induction hypothesis",
+    "target": "Nat.gcd.induction, definitional zero base, positive-m split, modQuotientWitnessV4 elimination, quotient iteration, clean gcd commutativity, and the induction hypothesis",
+    "changes_from_v1": "only the preregistered and definitionally checked associativity middle correction"
+  },
+  "budget": {
+    "complete_invocations": 2,
+    "capsule_reads": 4,
+    "fresh_output_imports": 4,
+    "helper_theorem_submissions": 2,
+    "target_theorem_submissions": 2,
+    "proof_search_invocations": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "both_invocations_accept_both_exact_statements": true,
+    "all_theorem_axiom_footprints": [],
+    "outputs_byte_identical": true,
+    "receipts_byte_identical": true,
+    "target_fact_status_changes": 0
+  },
+  "next_on_accept": "seal the exact root-selected Nat.fib_gcd capsule, register its authoritative operation, then perform crash-safe admission and measure both promised unlocks",
+  "next_on_decline": "retain the first kernel rejection with zero retry and preregister only its exact missing transport or definitional seam",
+  "limitations": "The original construction attempt is not reset. This is one fresh two-run authorization over the unchanged route after a separately retained no-submission definitional-equality repair."
+}

@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-step-branch-diagnostic-result-v1",
+  "state": "zero-branch-infers-successor-branch-internal-type-mismatch",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-nat-fib-gcd-step-branch-diagnostic-plan-v1.json",
+    "sha256": "c83db20249753c15f45b854e608e956e63a4f52e6264e557945169fa8b273c27"
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+    "sha256": "d0200edd186038d85b72160664dcc4bda10b63228885e9b8ae628ed896f719f5"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/audits/42aae6a89-nat-fib-gcd-step-branch-diagnostic-v1",
+    "index_sha256": "ec235f696376112610454175db23eb69506d7e6803b773b194810f5e6bd31897",
+    "observation_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "00058bd751287439c4bcbfcf32f94d64fc98e68fa4656da02d1d71bff96e8bc7",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "observation": {
+    "zero_branch_inference_succeeded": true,
+    "successor_branch_inference_succeeded": false,
+    "error": "successor step branch inference failed: TypeMismatch { expected: ExprId(110382), got: ExprId(110600) }",
+    "process_local_expression_ids_are_not_semantic_evidence": true,
+    "proof_values_rendered": 0,
+    "target_submitted": false
+  },
+  "execution": {
+    "complete_diagnostics": 0,
+    "helper_theorem_submissions": 1,
+    "zero_branch_inferences": 1,
+    "successor_branch_inferences": 1,
+    "step_proof_inferences": 0,
+    "target_theorem_submissions": 0,
+    "proof_values_rendered": 0,
+    "capsule_writes": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "helper_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "preregister sequential inference of the successor branch's quotient witness, induction-hypothesis transport, quotient-iteration transport, equality transport, existential minor, and final Exists.rec term",
+  "limitations": "The zero branch is clean and the mismatch is within the successor branch. No successor substage has yet been credited, and no theorem or fact changed."
+}

@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-target-type-diagnostic-plan-v1",
+  "state": "preregistered-target-proof-inference-before-diagnostic-code",
+  "input": {
+    "result": "artifacts/autogenesis/mathlib-nat-fib-gcd-construction-result-v2.json",
+    "sha256": "84574ef7a553ad5dba00bde8fb2809ee6d460b273d0747959feaed21e45e2cce"
+  },
+  "implementation_prestate": {
+    "path": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+    "sha256": "db962586e3c4285f6fdcfea3279e28a4b5af60ec9ffb1c049ce60074012392e3"
+  },
+  "diagnostic": {
+    "mode": "--target-native-fib-gcd-target-type-diagnostic",
+    "setup": "compose the same two sealed roots and submit the already-definitionally-checked quotient-iteration helper once",
+    "operation": "build but do not submit Nat.fib_gcd; infer its proof type and compare it definitionally with the frozen expected type",
+    "rendered_material": {
+      "expected_theorem_types": 1,
+      "inferred_theorem_types": 1,
+      "proof_values": 0
+    },
+    "permitted_refactor": "split declare_fib_gcd into a shared pure builder plus the unchanged declaration wrapper",
+    "theorem_statement_changes": 0,
+    "proof_route_changes": 0
+  },
+  "budget": {
+    "complete_diagnostics": 1,
+    "helper_theorem_submissions": 1,
+    "target_proof_inferences": 1,
+    "target_theorem_submissions": 0,
+    "capsule_writes": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "next_on_accept": "preregister a fresh construction attempt with no proof changes because the target proof type is already definitionally equal",
+  "next_on_decline": "retain the internal inference rejection and localize exactly one target proof seam before any repair",
+  "limitations": "The process-local helper submission is setup only and grants no helper authority. This diagnostic cannot submit, export, admit, or credit Nat.fib_gcd."
+}
