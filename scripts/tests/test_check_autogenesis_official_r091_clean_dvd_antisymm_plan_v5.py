@@ -38,6 +38,11 @@ assert V10_SPEC and V10_SPEC.loader
 V10 = importlib.util.module_from_spec(V10_SPEC)
 V10_SPEC.loader.exec_module(V10)
 
+EXACT_V4_SPEC = importlib.util.spec_from_file_location("official_exact_v4", ROOT / "scripts/check-autogenesis-official-clean-order-and-exact-v4.py")
+assert EXACT_V4_SPEC and EXACT_V4_SPEC.loader
+EXACT_V4 = importlib.util.module_from_spec(EXACT_V4_SPEC)
+EXACT_V4_SPEC.loader.exec_module(EXACT_V4)
+
 
 class PlanControls(unittest.TestCase):
     def test_live_plan_passes(self) -> None:
@@ -114,6 +119,18 @@ class V9V10BoundaryControls(unittest.TestCase):
         plan["correction"]["induction_structure_changed"] = True
         with self.assertRaises(V10.BoundaryError):
             V10.validate(result, plan)
+
+
+class OfficialExactV4Controls(unittest.TestCase):
+    def test_live_boundary_passes(self) -> None:
+        self.assertEqual(EXACT_V4.validate()[0]["authority"]["support_credit"], 6)
+
+    def test_route_broadening_fails(self) -> None:
+        result, plan = EXACT_V4.validate()
+        plan = copy.deepcopy(plan)
+        plan["authorized_source_change"]["other_proof_route_changes_authorized"] = True
+        with self.assertRaises(EXACT_V4.BoundaryError):
+            EXACT_V4.validate(result, plan)
 
 
 if __name__ == "__main__":

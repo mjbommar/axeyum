@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-exact-plan-v4",
+  "state": "preregistered-exact-r091-construction-over-official-clean-order-before-code-or-submission",
+  "predecessor": {"path": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-result-v3.json", "sha256": "cabfd8dcf458bcf0c0dd23410698b996b2c113c9a474edfc45ad3cb7a4377e81"},
+  "unblocked_by": {"path": "artifacts/autogenesis/official-r091-clean-dvd-antisymm-result-v10.json"},
+  "target": {"fact_id": "F:ml430-nat-gcd-fib-add-self-5a92d5e3", "source_name": "Nat.gcd_fib_add_self", "statement": "forall m n : Nat, Nat.gcd (Nat.fib m) (Nat.fib (n + m)) = Nat.gcd (Nat.fib m) (Nat.fib n)", "target_goal_sha256": "297c9f4af4d63eff354223f9548ab1d4dd3d7e52aa701e88802d58b7929a1451"},
+  "inputs": {
+    "r091": {"path": "/nas3/data/axeyum/autogenesis/coverage/26fcc2c2f-mathlib-v4.30.0-reflexivity-train-development-v1/streams/r091.ndjson", "sha256": "fc1117679c743009e8548a25d1f73f71f6cd42555ea77b3efce07844673670b2"},
+    "official_clean_order": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/9ff54f11c-official-r091-clean-dvd-antisymm-v10/clean-order-1.ndjson", "root": "Axeyum.Autogenesis.dvdAntisymmOfficialV1", "sha256": "bc147e08e6425ce8c31f3a10ccd5e9a7f7774ef0265b45784700588cb4bbcb25"},
+    "official_cancellation": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/9b21389e9-nat-gcd-fib-add-self-portable-support-capsules-v1/official-cancellation-1.ndjson", "root": "Axeyum.Autogenesis.officialCoprimeFactorDivisibilityCancellationV1", "sha256": "6f9a3983ba4b0e7b2c872615d796ceb5414d3bd2cf51843ecb496b3ba83a52b0"},
+    "fibonacci_addition": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/9b21389e9-nat-gcd-fib-add-self-portable-support-capsules-v1/fibonacci-addition-1.ndjson", "root": "Axeyum.Autogenesis.NatFibSuccessorAddition", "sha256": "f46e3dd4053c930984b3232ff98320021daa2fcdb3451e84bfbf011945a18621"},
+    "fibonacci_coprimality": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/9b21389e9-nat-gcd-fib-add-self-portable-support-capsules-v1/fibonacci-coprimality-1.ndjson", "root": "Nat.fib_coprime_fib_succ", "sha256": "9106a3442d75a5fdaf51e35436e6fdbea78714d743e666bec27ffd9641160b11"}
+  },
+  "authorized_source_change": {"driver": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs", "old_root": "Axeyum.Autogenesis.dvdAntisymmCleanV5", "new_root": "Axeyum.Autogenesis.dvdAntisymmOfficialV1", "old_capsule_sha256": "d3b881ce30488b188bb4f557afc125418fdc21f5707b233a00934c9c97faa434", "new_capsule_sha256": "bc147e08e6425ce8c31f3a10ccd5e9a7f7774ef0265b45784700588cb4bbcb25", "other_proof_route_changes_authorized": false},
+  "acceptance": {"one_clippy_clean_driver_build": true, "fresh_complete_invocations": 2, "capsule_compositions": 8, "local_gcd_comm_submissions": 2, "exact_target_submissions": 2, "outputs_byte_identical": true, "target_goal_sha256": "297c9f4af4d63eff354223f9548ab1d4dd3d7e52aa701e88802d58b7929a1451", "target_axiom_footprint": [], "all_four_capsule_roots_required_transitively": true, "proof_terms_types_or_values_may_be_rendered": false},
+  "budget": {"max_driver_builds": 1, "max_complete_invocations": 2, "max_capsule_compositions": 8, "max_local_gcd_comm_submissions": 2, "max_exact_target_submissions": 2, "max_retries": 0},
+  "authority": {"target_credit_before_acceptance": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_on_accept": "Issue a dependency-bound theorem receipt, admit the exact fact through the crash-safe ledger transaction, and verify the newly unlocked frontier from a clean worktree.",
+  "output": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-result-v4.json",
+  "verification": "python3 scripts/check-autogenesis-official-clean-order-and-exact-v4.py",
+  "limitations": "No exact theorem, fact transition, evaluation, or ledger credit exists before both deterministic runs and every acceptance condition pass."
+}

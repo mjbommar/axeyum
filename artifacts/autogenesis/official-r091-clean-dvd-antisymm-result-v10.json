@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-r091-clean-dvd-antisymm-result-v10",
+  "state": "official-clean-order-reconstructed-twice-byte-identical-empty-footprint",
+  "plan": {"path": "artifacts/autogenesis/official-r091-clean-dvd-antisymm-plan-v10.json", "sha256": "04f7f2a473bdaf92b32ce843b380e48f287489c1a25840ae98235849db0a99a1"},
+  "implementation_commit": "9ff54f11c",
+  "evidence_pack": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/9ff54f11c-official-r091-clean-dvd-antisymm-v10", "manifest_sha256": "6b65cf54c943d6c93262483c2b21a3791a6dc2c8813241f1eb7e384e14ebd937", "directory_mode": "0555", "file_mode": "0444"},
+  "root": {"name": "Axeyum.Autogenesis.dvdAntisymmOfficialV1", "declaration_sha256": "d0bb666f4bbebafb01c3dc821317d86c10eaa538222d64b2cf4fac1caefa4f26", "capsule_sha256": "bc147e08e6425ce8c31f3a10ccd5e9a7f7774ef0265b45784700588cb4bbcb25", "bytes": 189710, "axiom_footprint": []},
+  "supports": [
+    {"name": "Axeyum.Autogenesis.eqZeroOfZeroDvdOfficialV1", "declaration_sha256": "346054dcaab38e63cfb9d83ea3984a78097475f65938275dabdd7e125847d9a8", "axiom_footprint": []},
+    {"name": "Axeyum.Autogenesis.oneLeRightOfMulOfficialV1", "declaration_sha256": "b365d704295714954ada3763d853c16889e0e8d9500c3b768a8072ba340205fd", "axiom_footprint": []},
+    {"name": "Axeyum.Autogenesis.mulLeMulLeftOfficialV1", "declaration_sha256": "fb8f506232811e05b0fb01241ec84aea3fecc5738c1dfba65cf7016950d6e65f", "axiom_footprint": []},
+    {"name": "Axeyum.Autogenesis.leOfDvdOfficialV1", "declaration_sha256": "f4cd2857b1727da396fd41e7c4eeee5ed0934e4cdd03046ed155993a20fb4f07", "axiom_footprint": []},
+    {"name": "Axeyum.Autogenesis.leAntisymmOfficialV1", "declaration_sha256": "57e2aa385a7cadc93fa5663a3fad409d3a64e310a2d176d2d413884cac6cb88a", "axiom_footprint": []},
+    {"name": "Axeyum.Autogenesis.dvdAntisymmOfficialV1", "declaration_sha256": "d0bb666f4bbebafb01c3dc821317d86c10eaa538222d64b2cf4fac1caefa4f26", "axiom_footprint": []}
+  ],
+  "execution": {"complete_invocations": 2, "successful_cancellation_compositions": 2, "support_submissions": 12, "exports": 2, "fresh_imports": 4, "outputs_byte_identical": true, "receipts_byte_identical": true, "exact_target_submissions": 0, "retries": 0},
+  "authority": {"support_credit": 6, "target_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_boundary": "Bind this exact official-r091 clean-order capsule into the preregistered Fibonacci gcd-shift driver and execute two fresh exact-target reconstructions.",
+  "limitations": "This establishes the six support theorems and official clean-order capsule only; it grants no Fibonacci target, fact transition, evaluation, or ledger credit."
+}
