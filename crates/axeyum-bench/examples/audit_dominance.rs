@@ -799,6 +799,17 @@ fn main() {
     let mut audited_unsat = 0usize;
     let mut timed_out = 0usize;
     let mut audit_errors = 0usize;
+    // How many baseline-UNDECIDED instances were re-probed, and how many of
+    // those the solver decides today. See the long comment at the skip site.
+    let mut newly_audited = 0usize;
+    let mut newly_decided = 0usize;
+    // Re-probing the undecided set is pure added cost on rows where nothing has
+    // changed, so it is capped independently of `limit`. A row with a zero
+    // baseline is exactly the case this must cover, and those rows are small.
+    let undecided_cap: usize = std::env::var("AXEYUM_AUDIT_UNDECIDED_CAP")
+        .ok()
+        .and_then(|raw| raw.parse().ok())
+        .unwrap_or(64);
 
     let instances_len: usize;
 
@@ -810,6 +821,40 @@ fn main() {
                 .and_then(JsonValue::as_str)
                 .map_or(Verdict::Unknown, Verdict::from_label);
             if !outcome.decided() {
+                // THE ZERO THAT COULD NOT MOVE. This branch used to `continue`,
+                // so an instance the baseline recorded as undecided was never
+                // re-run — and a row whose baseline decided NOTHING reported
+                // `audited_decided: 0` forever, no matter what the solver
+                // learned to do afterwards.
+                //
+                // That is not hypothetical. `quantified LIA` was recorded 0/12
+                // on 2026-06-24; measured through the shipped front door on
+                // 2026-08-21 it is **12/12**. The audit re-ran on 2026-08-21 and
+                // still emitted `instances: []`, because every instance was
+                // filtered out here. Three months of a capability the project
+                // had, published as a hole it did not, and the 2026-07-07 gap
+                // analysis named it "the biggest categorical hole" on the
+                // strength of this number.
+                //
+                // So the undecided ones are re-audited too, capped separately so
+                // this cannot blow up a large row's runtime, and counted as
+                // `newly_decided` — a gain the artifact can show rather than a
+                // zero it can only repeat.
+                if newly_audited < undecided_cap {
+                    newly_audited += 1;
+                    if let Some(file) = instance.get("file").and_then(JsonValue::as_str) {
+                        let probe = audit_instance_capped(PathBuf::from(file), outcome, cap);
+                        let probe_outcome = probe
+                            .record
+                            .get("audit_outcome")
+                            .and_then(JsonValue::as_str)
+                            .map_or(Verdict::Unknown, Verdict::from_label);
+                        if probe_outcome.decided() {
+                            newly_decided += 1;
+                            records.push(probe.record);
+                        }
+                    }
+                }
                 continue;
             }
             baseline_decided += 1;
@@ -963,6 +1008,8 @@ fn main() {
             "instances": instances_len,
             "baseline_decided": baseline_decided,
             "audited_decided": audited_decided,
+            "baseline_undecided_reprobed": newly_audited,
+            "newly_decided": newly_decided,
             "audited_unsat": audited_unsat,
             "evidence_certified": evidence_certified,
             "evidence_checked": evidence_checked,
@@ -985,8 +1032,20 @@ fn main() {
         println!("{rendered}");
     }
 
+    // A row whose baseline decided nothing prints `0/0 audited decided (0.0%)`,
+    // which reads as "there is nothing here" — and that is precisely how a
+    // frozen zero stayed invisible for three months while the solver could
+    // decide 12 of those 12. If the re-probe found capability the baseline never
+    // recorded, say so on the line a human actually reads.
+    let newly = if newly_decided > 0 {
+        format!(
+            ", NEWLY DECIDED {newly_decided}/{newly_audited} the baseline recorded as undecided (the baseline is stale)"
+        )
+    } else {
+        String::new()
+    };
     eprintln!(
-        "dominance audit {logic}: {dominant_candidates}/{audited_decided} audited decided ({dominant_pct_audited:.1}%), Lean unsat {lean_checked_unsat}/{audited_unsat} ({lean_unsat_pct:.1}%), mismatches {baseline_mismatches}, audit errors {audit_errors}, timeouts {timed_out}"
+        "dominance audit {logic}: {dominant_candidates}/{audited_decided} audited decided ({dominant_pct_audited:.1}%), Lean unsat {lean_checked_unsat}/{audited_unsat} ({lean_unsat_pct:.1}%), mismatches {baseline_mismatches}, audit errors {audit_errors}, timeouts {timed_out}{newly}"
     );
 }
 
