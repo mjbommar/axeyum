@@ -121,19 +121,23 @@ The division scoreboard contains 35 rows across 24 logic labels:
   directory branch, and they are exactly the two rows whose denominator is not
   independently pinned by a committed instance list.
 - The rows contain **326 baseline `unsat` decisions**. The evidence audit
-  reproduces **322 evidence-audit `unsat` outcomes**; **280 certified outcomes**
-  have **280 independently checked outcomes**, and Lean reconstruction checks
+  reproduces **323 evidence-audit `unsat` outcomes**; **281 certified outcomes**
+  have **281 independently checked outcomes**, and Lean reconstruction checks
   **269 Lean-checked outcomes**. The affected v1 rows historically contained 28
   structurally accepted but uncertified checks; the v2 refresh now records
   **0 vacuous `bare-unsat` check results** and gates checking on certification.
-  The four-case 326→322 difference is explicit, and it is **not** a proof
-  production *rejection* — all four are evidence-audit **timeouts**:
+  The three-case 326→323 difference is explicit, and it is **not** a proof
+  production *rejection* — all three are evidence-audit **timeouts**:
   `BV/.../cli__regress0__quantifiers__cond-var-elim-binary.smt2`,
-  `BV/.../cli__regress1__quantifiers__bug802.smt2`,
-  `BV/.../cli__regress1__quantifiers__small-pipeline-fixpoint-3.smt2`, and
-  `QF_FP/.../solver__fp__fp_misc.smt2`. The first three are the known
-  `BvAlternationCounterexample` rows, where the 64 MiB module cap bounds what is
-  *returned* and not what is *constructed*. Coverage
+  `BV/.../cli__regress1__quantifiers__bug802.smt2`, and
+  `BV/.../cli__regress1__quantifiers__small-pipeline-fixpoint-3.smt2`. All three
+  are the known `BvAlternationCounterexample` rows, where the 64 MiB module cap
+  bounds what is *returned* and not what is *constructed*.
+  `QF_FP/.../solver__fp__fp_misc.smt2` was a fourth until `4032bd660`: it was
+  not a budget at all but an unmemoized DAG walk in the *classifier*
+  (`array_bv_abs::abstract_term`), which did not finish in 125 s and now
+  completes the whole row in 314 ms. It is certified and checked here, and still
+  not dominant — see the `Fpa2Bv` note below. Coverage
   is substantial but uneven, not 269 fully audited outcomes out of 326:
   selected QF_ABV/AUFBV/LIA/LRA/UF rows are complete while general nonlinear,
   strings/sequences, AUFLIA, and some UFLIA rows retain large proof gaps.
@@ -141,8 +145,8 @@ The division scoreboard contains 35 rows across 24 logic labels:
   full conjunction rather than treating Lean acceptance as sufficient:
   **269 / 326 baseline UNSATs** are certified, independently checked,
   trust-hole-free, and Lean-reconstructed. The residual is 42 uncertified
-  audit-row occurrences, 10 trust-free Lean-reconstruction gaps, one
-  trust-hole-and-Lean-gap row, and four proof-production errors (all four
+  audit-row occurrences, 10 trust-free Lean-reconstruction gaps, two
+  trust-hole-and-Lean-gap rows, and three proof-production errors (all three
   timeouts). Categories are exclusive, so those five figures partition the
   326 exactly.
 - Its 33 file-backed baseline rows contain **927 file-backed occurrences** but
@@ -398,10 +402,10 @@ an adversarial differential gate; rejected mechanisms remain documented.
 ### G5 — Make proof coverage a first-class denominator
 
 The dominance audits provide five necessary denominators: 326 baseline UNSAT
-decisions, 322 evidence-audit UNSAT outcomes, 280 certified and independently
+decisions, 323 evidence-audit UNSAT outcomes, 281 certified and independently
 checked outcomes, and 269 Lean-checked outcomes. The v1 audit's historical 28
 vacuous bare-UNSAT check results are now corrected to zero in the refreshed
-artifacts; the four evidence-audit timeouts remain visible rather than
+artifacts; the three evidence-audit timeouts remain visible rather than
 being folded into nominal audit denominators. Remaining holes cluster by
 reduction and theory.
 

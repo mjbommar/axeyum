@@ -1283,6 +1283,49 @@ SUITES["nra-monomial-bound-cert"] = (
 
 
 # --------------------------------------------------------------------------
+# `array-bv-abstraction-walk` — the SIXTH time a term-DAG walk here recursed as
+# a tree.
+#
+# `contains_quantifier` (9.8e9 calls), `lower_derived_bv` (2.24e9),
+# `collect_enumerable_symbols_rec` (1.28e10), `collect_nested_registrations`,
+# `certify.rs`, and now `abstract_term`. A shared subterm is re-explored once
+# per path, so cost is exponential in sharing while the node count stays small.
+# On `QF_FP/solver__fp__fp_misc.smt2` — a query with no arrays in it at all —
+# the walk made 4,194,309 visits over 5,762 reachable nodes and did not finish
+# inside 125 s; memoized it makes 4,365.
+#
+# Registered because a memo is invisible when it works. Nothing about a correct
+# result says whether it was reached once or a million times, so a regression
+# here shows up only as "slow", which is exactly how this one survived: it was
+# recorded as a proof-production TIMEOUT and read as a budget problem.
+#
+# The two guards are a pair, and the pairing is the point: the memo makes the
+# walk linear, and the budget makes a DEFEATED memo fail fast instead of
+# hanging. Each is deleted separately below and each kills its own test.
+# --------------------------------------------------------------------------
+
+SUITES["array-bv-abstraction-walk"] = (
+    "crates/axeyum-solver/src/array_bv_abs.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--lib", "array_bv_abs"),
+        "array-bv-abstraction-walk",
+    ),
+    [
+        (
+            "the memo that makes the walk linear in the DAG",
+            "        if let Some(&cached) = self.memo.get(&term) {\n            return cached;\n        }",
+            "        if let Some(&cached) = self.memo.get(&term) {\n            let _ = cached;\n        }",
+        ),
+        (
+            "the visit budget that turns a defeated memo into a decline",
+            "        if self.visits > self.visit_budget {\n            return None;\n        }",
+            "        if false {\n            return None;\n        }",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
 # `mutation-controls` — the harness applied to itself.  The table lives in the
 # sibling module: an anchor stored in the file it mutates matches twice and the
 # harness rightly refuses it (`AMBIGUOUS ANCHOR`).

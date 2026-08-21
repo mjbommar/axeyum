@@ -46,7 +46,7 @@ Complete audit rows have one audit record for every baseline-decided instance in
 | QF_BVFP | `qf-bvfp-bitwuzla-regress-clean` | 7 | 71% (5/7) | 33% (1/3) | Lean unsat 1/3, evidence certified 6/7, evidence checked 6/7, trust holes bit-blast | `bench-results/dominance/qf-bvfp-bitwuzla-regress-clean-dominance-audit.json` |
 | QF_DT | `qf-dt-cvc5-regress-clean` | 3 | 100% (3/3) | 100% (3/3) | none | `bench-results/dominance/qf-dt-cvc5-regress-clean-dominance-audit.json` |
 | QF_FF | `qf-ff-cvc5-regress-clean` | 24 | 100% (24/24) | 100% (10/10) | none | `bench-results/dominance/qf-ff-cvc5-regress-clean-dominance-audit.json` |
-| QF_FP | `qf-fp-bitwuzla-regress-clean` | 16 | 94% (15/16) | 86% (6/7) | timeouts 1, Lean unsat 6/7, evidence certified 15/16, evidence checked 15/16, trust holes timeout, timeout phases lean-reconstruction 1 | `bench-results/dominance/qf-fp-bitwuzla-regress-clean-dominance-audit.json` |
+| QF_FP | `qf-fp-bitwuzla-regress-clean` | 16 | 94% (15/16) | 86% (6/7) | Lean unsat 6/7, trust holes bit-blast | `bench-results/dominance/qf-fp-bitwuzla-regress-clean-dominance-audit.json` |
 | QF_LIA | `qf-lia-cvc5-regress-clean` | 10 | 100% (10/10) | 100% (4/4) | none | `bench-results/dominance/qf-lia-cvc5-regress-clean-dominance-audit.json` |
 | QF_LRA | `qf-lra-cvc5-regress-clean` | 9 | 100% (9/9) | 100% (3/3) | none | `bench-results/dominance/qf-lra-cvc5-regress-clean-dominance-audit.json` |
 | QF_NIA | `qf-nia-curated-iand` | 3 | 100% (3/3) | 100% (2/2) | none | `bench-results/dominance/qf-nia-curated-iand-dominance-audit.json` |
@@ -95,7 +95,7 @@ These rows are the best immediate candidates: they are already decide-strong and
 | QF_BVFP | `qf-bvfp-bitwuzla-regress-clean` | 8 | 7 | 88% | strong | 0 | complete | 71% (5/7) | 33% (1/3) | close Lean unsat gaps | separate pure-BV certs from FP-to-BV trust-hole cases |
 | QF_DT | `qf-dt-cvc5-regress-clean` | 3 | 3 | 100% | strong | 0 | complete | 100% (3/3) | 100% (3/3) | dominant on audited row | witness the general DatatypeElim dispatch end to end |
 | QF_FF | `qf-ff-cvc5-regress-clean` | 30 | 24 | 80% | strong | 0 | complete | 100% (24/24) | 100% (10/10) | dominant on audited row | broaden finite-field audits beyond the cvc5 slice and grow algebraic certificates |
-| QF_FP | `qf-fp-bitwuzla-regress-clean` | 16 | 16 | 100% | strong | 0 | complete | 94% (15/16) | 86% (6/7) | fix audit timeouts | keep FP as measured-competitive, not Lean-dominant, until Fpa2Bv certs grow |
+| QF_FP | `qf-fp-bitwuzla-regress-clean` | 16 | 16 | 100% | strong | 0 | complete | 94% (15/16) | 86% (6/7) | close Lean unsat gaps | keep FP as measured-competitive, not Lean-dominant, until Fpa2Bv certs grow |
 | QF_LIA | `qf-lia-cvc5-regress-clean` | 11 | 10 | 91% | strong | 0 | complete | 100% (10/10) | 100% (4/4) | dominant on audited row | audit unsats by Diophantine/IntInequality/general LIA route |
 | QF_LRA | `qf-lra-cvc5-regress-clean` | 11 | 9 | 82% | strong | 0 | complete | 100% (9/9) | 100% (3/3) | dominant on audited row | run per-instance Lean reconstruction over the committed LRA slice |
 | QF_NIA | `qf-nia-curated-iand` | 3 | 3 | 100% | strong | 0 | complete | 100% (3/3) | 100% (2/2) | dominant on audited row | separate Diophantine/interval unsats from bit-blasted bounded boxes |

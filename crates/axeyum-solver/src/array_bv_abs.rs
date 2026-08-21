@@ -16,6 +16,17 @@ const MAX_ABSTRACTED_TERMS: usize = 64;
 const MAX_ABSTRACTED_NODES: usize = 512;
 const BV_ABSTRACTION_TIMEOUT: Duration = Duration::from_secs(1);
 
+/// Hard cap on [`AbstractionState::abstract_term`] invocations for one build.
+///
+/// Every other cap in this module (`MAX_ABSTRACTED_TERMS`, `MAX_ABSTRACTED_NODES`,
+/// `BV_ABSTRACTION_TIMEOUT`) is applied to the *result* of `build_bv_abstraction`,
+/// so none of them bound the walk that produces it. This one does. It is
+/// deliberately far above what a memoized walk needs (it visits each reached term
+/// at most once), so it can only fire if the memo is defeated -- which turns an
+/// unbounded hang into a bounded decline, and declining a refutation route is
+/// always sound.
+const MAX_ABSTRACTION_VISITS: u64 = 1 << 22;
+
 /// A self-checking refutation of an array query by scalar BV abstraction.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BvAbstractionRefutationCertificate {
@@ -77,13 +88,7 @@ struct BvAbstraction {
 }
 
 fn build_bv_abstraction(arena: &TermArena, assertions: &[TermId]) -> Option<BvAbstraction> {
-    let mut state = AbstractionState {
-        original: arena,
-        scratch: arena.clone(),
-        replacements: BTreeMap::new(),
-        abstracted_terms: Vec::new(),
-        next_fresh: 0,
-    };
+    let mut state = AbstractionState::new(arena);
     let mut abstracted_assertions = Vec::with_capacity(assertions.len());
     for &assertion in assertions {
         if arena.sort_of(assertion) != Sort::Bool {
@@ -104,10 +109,52 @@ struct AbstractionState<'a> {
     replacements: BTreeMap<TermId, TermId>,
     abstracted_terms: Vec<TermId>,
     next_fresh: usize,
+    /// Memo for [`Self::abstract_term`], keyed by the ORIGINAL term.
+    ///
+    /// Without it this walk is a tree walk over a DAG: a shared subterm is
+    /// re-explored once per path to it, which is exponential in the sharing.
+    /// Measured on `QF_FP/bitwuzla-regress-clean/solver__fp__fp_misc.smt2`
+    /// (5,762 reachable nodes, depth 424) it did not finish in 125 s.
+    ///
+    /// Memoizing is sound because `abstract_term` is a function of the term
+    /// alone: the `Sort` decline is fixed by the sort, `fresh_scalar` already
+    /// memoizes through `replacements`, and its cap-`None` is monotone (the
+    /// abstracted-term count never decreases), so no decision can flip back.
+    memo: BTreeMap<TermId, Option<TermId>>,
+    /// `abstract_term` invocations so far, against `visit_budget`.
+    visits: u64,
+    /// Budget for `visits`; exceeding it declines the whole abstraction.
+    visit_budget: u64,
 }
 
-impl AbstractionState<'_> {
+impl<'a> AbstractionState<'a> {
+    fn new(arena: &'a TermArena) -> Self {
+        Self {
+            original: arena,
+            scratch: arena.clone(),
+            replacements: BTreeMap::new(),
+            abstracted_terms: Vec::new(),
+            next_fresh: 0,
+            memo: BTreeMap::new(),
+            visits: 0,
+            visit_budget: MAX_ABSTRACTION_VISITS,
+        }
+    }
+
     fn abstract_term(&mut self, term: TermId) -> Option<TermId> {
+        if let Some(&cached) = self.memo.get(&term) {
+            return cached;
+        }
+        self.visits += 1;
+        if self.visits > self.visit_budget {
+            return None;
+        }
+        let result = self.abstract_term_uncached(term);
+        self.memo.insert(term, result);
+        result
+    }
+
+    fn abstract_term_uncached(&mut self, term: TermId) -> Option<TermId> {
         match self.original.sort_of(term) {
             Sort::Bool | Sort::BitVec(_) => {}
             Sort::Array { .. }
@@ -233,6 +280,59 @@ mod tests {
     use axeyum_smtlib::parse_script;
 
     use super::*;
+
+    const FP_MISC: &str = include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_misc.smt2"
+    );
+
+    /// The walk must be a DAG walk, not a tree walk.
+    ///
+    /// `fp_misc` is a 20-line `QF_FP` file that lowers to 5,762 reachable nodes
+    /// with heavy sharing. Unmemoized, `abstract_term` re-explores a shared
+    /// subterm once per path: measured 2026-08-21 it burned the whole
+    /// 4,194,304-visit budget and the audit's `lean-reconstruction` phase did not
+    /// finish inside 125 s. Memoized it visits 4,365 terms.
+    ///
+    /// The bound is `reachable_node_count`, which is what "each reached term is
+    /// walked at most once" means; `visits` counts memo MISSES only, so any
+    /// re-exploration shows up immediately.
+    #[test]
+    fn fp_misc_abstraction_walk_visits_each_term_at_most_once() {
+        let script = parse_script(FP_MISC).expect("parse fp_misc");
+        let nodes = reachable_node_count(&script.arena, &script.assertions) as u64;
+        let mut state = AbstractionState::new(&script.arena);
+        for &assertion in &script.assertions {
+            let _ = state.abstract_term(assertion);
+        }
+        assert!(
+            state.visits <= nodes,
+            "abstract_term re-explored shared subterms: {} visits over {nodes} reachable nodes",
+            state.visits
+        );
+    }
+
+    /// Exceeding the visit budget declines, it does not run forever.
+    ///
+    /// Nothing in `MAX_ABSTRACTED_TERMS` / `MAX_ABSTRACTED_NODES` /
+    /// `BV_ABSTRACTION_TIMEOUT` bounds the walk -- they all apply to its result --
+    /// so this is the only cap that can stop a walk that is going wrong, and
+    /// declining a refutation route is always sound.
+    #[test]
+    fn abstraction_declines_when_the_visit_budget_is_exhausted() {
+        let script = parse_script(FP_MISC).expect("parse fp_misc");
+        let mut state = AbstractionState::new(&script.arena);
+        state.visit_budget = 4;
+        let abstracted: Option<Vec<TermId>> = script
+            .assertions
+            .iter()
+            .map(|&assertion| state.abstract_term(assertion))
+            .collect();
+        assert!(
+            abstracted.is_none(),
+            "a walk past its visit budget must decline, got {abstracted:?}"
+        );
+        assert!(state.visits > state.visit_budget);
+    }
 
     #[test]
     fn refutes_rw213_by_bv_abstraction() {
