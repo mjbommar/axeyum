@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-clean-reconstruction-result",
+  "state": "lean-surface-constructor-split-exposes-four-subNatNat-goals-native-prelude-selected",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-add-neg-cancel-right-raw-plan-v1.json",
+    "commit": "3e1e281a8c40386c43247e3a8fd469eaf2652fb3"
+  },
+  "evidence": {
+    "directory": "/nas3/data/axeyum/autogenesis/diagnostics/3e1e281a8-int-add-neg-cancel-right-raw-v1",
+    "index_sha256": "d28b9bcbc80d4e826567bb0f99a619acc0dcc86b9b98b43e7755343b6a23d813",
+    "compile_stdout_sha256": "82587594dea6fc9db2c7e1fa82c0113f9c92046b1ab625a056b30ca3da9a8536",
+    "compile_stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "sealed": true
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit_status": 1,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "retries": 0,
+    "theorem_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "diagnostic": {
+    "constructor_goals": 4,
+    "common_obstruction": "opaque Int.subNatNat normalization after all public Int add and neg projections reduce",
+    "selected_existing_substrate": [
+      "native Int.add_assoc",
+      "native Int.add_neg",
+      "native Int.add_zero",
+      "native Int.subNatNat borrow development"
+    ]
+  },
+  "decision": "Derive Int.add_neg_cancel_right inside the native axiom-free Int prelude from add_assoc, add_neg, and add_zero. This is smaller, more reusable, and already below the opaque official Lean surface.",
+  "authority": {
+    "lean_source_support_credit": 0,
+    "native_theorem_credit": 0,
+    "Fibonacci_target_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "limitations": "The Lean source did not compile and proves nothing. The native-prelude decision must pass the kernel's declaration gate, exact footprint tests, and deterministic inventory before receiving credit."
+}

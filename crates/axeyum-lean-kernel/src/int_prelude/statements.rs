@@ -121,6 +121,14 @@ pub(super) fn add_neg(d: &mut IntDev<'_>, v: &[ExprId]) -> ExprId {
     d.ieq(left, zero)
 }
 
+/// `Eq Int (add (add a b) (neg b)) a`.
+pub(super) fn add_neg_cancel_right(d: &mut IntDev<'_>, v: &[ExprId]) -> ExprId {
+    let sum = d.iadd(v[0], v[1]);
+    let negated = d.ineg(v[1]);
+    let left = d.iadd(sum, negated);
+    d.ieq(left, v[0])
+}
+
 /// `le zero a → le b c → le (mul a b) (mul a c)`.
 pub(super) fn mul_le_mul_of_nonneg_left(d: &mut IntDev<'_>, v: &[ExprId]) -> ExprId {
     let left = d.imul(v[0], v[1]);

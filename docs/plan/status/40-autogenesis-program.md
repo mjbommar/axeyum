@@ -8,7 +8,8 @@
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-21 | (pending) | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
+| 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
+| 2026-08-21 | (pending) | The Lean surface exposes four borrow goals; native `Int.add_neg_cancel_right` is derived instead from Axeyum's axiom-free associativity, inverse, and zero laws |
 | 2026-08-21 | `93a314e15` | A fresh pinned Mathlib 4.30 two-root export is frozen to replace the failed full-closure corollary audit |
 | 2026-08-21 | (pending) | The two-root export remains 15.1 MB and its audit emits no report, so official closure import is declined in favor of target-owned rearrangement |
 | 2026-08-21 | `6f10d2c1a` | The two newly ready integer Fibonacci recurrence corollaries are frozen for one exact non-rendering root audit before route selection |

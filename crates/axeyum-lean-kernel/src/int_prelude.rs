@@ -225,6 +225,9 @@ pub struct IntPrelude {
     pub add_zero: NameId,
     /// `add_neg : ∀ (a : Int), Eq Int (add a (neg a)) zero`.
     pub add_neg: NameId,
+    /// `add_neg_cancel_right : ∀ (a b : Int),
+    /// Eq Int (add (add a b) (neg b)) a`.
+    pub add_neg_cancel_right: NameId,
     /// `add_lt_add_of_le_of_lt :
     /// ∀ (a b c d : Int), le a b → lt c d → lt (add a c) (add b d)`.
     pub add_lt_add_of_le_of_lt: NameId,
@@ -378,6 +381,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         add_assoc: child(kernel, "add_assoc"),
         add_zero: child(kernel, "add_zero"),
         add_neg: child(kernel, "add_neg"),
+        add_neg_cancel_right: child(kernel, "add_neg_cancel_right"),
         add_lt_add_of_le_of_lt: child(kernel, "add_lt_add_of_le_of_lt"),
         mul_le_mul_of_nonneg_left: child(kernel, "mul_le_mul_of_nonneg_left"),
         zero_lt_one: child(kernel, "zero_lt_one"),
