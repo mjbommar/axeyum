@@ -408,7 +408,7 @@ Ordered by *measured* cost, not by how large the hole feels.
 | 8 | **Memory bound is inert** | §7 | Operational, and this box has already been OOM-killed once |
 | 9 | Transcendentals; nested arrays; parametric datatypes | §4.1, §4.3, sized below | **Sized 2026-08-21 and DEPRIORITISED — "each blocking a whole slice" is not true of anything we measure.** Across 2,200 files in the 11 pinned competition lists: transcendentals **0**, nested arrays **0**, parametric datatypes **0**. Across the 1,101-file committed corpus: 10, 0, 0. These are real capability zeros and they block approximately nothing in the population this document scores. The honest caveat is that the population is a CHOICE — `QF_UFNRAT` has no pinned list, so its 0 is partly "we do not measure that division" |
 | 4b | **`Int` is `i128` in the IR, and 13% of QF_UFLIA never reaches the solver** | measured below | 26 of the 200 QF_UFLIA competition files carry integer literals above 2^127 (78 digits — EVM 2^256 words, Certora benchmarks). Axeyum decides **0 of 26**: they are rejected before any solver work runs. **But the opportunity is 11, not 26** — z3 4.13.3 at 20 s decides only 11 of them, so 15 are hard for the reference too. Not a parser fix: `Value::Int(i128)` is the IR representation and every arithmetic route is built on it, so this is ADR-sized. `WideUint` already exists as the precedent for wide bit-vectors |
-| 10 | **CAV-2024 bit-blasting abstraction** | — | Bitwuzla has it on by default since 0.8.0, cvc5 is adding it, in a division where the top three sit within 32 benchmarks of each other |
+| 10 | **CAV-2024 bit-blasting abstraction** | sized below | **Sized 2026-08-21 and DEPRIORITISED for our position.** Bitwuzla has it on by default since 0.8.0 and cvc5 is adding it, in a division whose top three sit within 32 benchmarks of each other — but that is a contest between leaders, and it is not our contest. We are **187/194 on QF_BV**, so the entire addressable set is **7 files**, and only 4 of those 7 contain `bvmul` at all (1 has `bvudiv`). Against gap #1's measured +17 in a division at 52.2%, this is the wrong thing to build next |
 
 Deliberately **not** on this list: new theory columns. Most of what cvc5 has and
 we lack, cvc5 labels experimental (§4.1). The breadth backlog stays counted, not
@@ -473,6 +473,22 @@ that read as "we are slower" is substantially "we stop early". And 26 files —
   instances of the trigger itself and reaches the excluded witness anyway. So a
   verdict is a blunt instrument for "was the annotation obeyed" — the direct
   observable is the proposed instance set, and that is what changed.
+
+**Sized and deprioritised (2).** Row 10 proposed the CAV-2024 bit-blasting
+abstraction on the grounds that both specialist references have it and the QF_BV
+podium is tight. Both facts are true and neither is about us. Our QF_BV slice:
+
+```
+200 files · axeyum solves 187 · bitwuzla solves 194 · neither solves 6
+                     addressable set = 7 files
+        of which contain bvmul: 4      bvudiv: 1
+```
+
+So the ceiling is 7, the abstraction-shaped subset is about 4, and we are at
+96.4% in that division. Ranked against gap #1's **measured +17** in QF_UFLIA at
+52.2%, this is straightforwardly the wrong next build. It stays on the list
+because a technique both references adopted is worth understanding — not because
+it closes anything here.
 
 **Sized and deprioritised.** Row 9 called transcendentals, nested arrays and
 parametric datatypes "clean capability zeros, each small and each blocking a
