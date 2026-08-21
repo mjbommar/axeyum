@@ -201,7 +201,7 @@ impl NamedPoly {
 /// How an atom compares its polynomial to zero, after normalization.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AtomSign {
-    /// `p = 0`. Produced only by [`atom_or_equality`]; [`atom`] never returns it,
+    /// `p = 0`. Produced only by `atom_or_equality`; `atom` never returns it,
     /// so the two-factor product route below is unaffected by its existence.
     Zero,
     /// `p > 0`
