@@ -1,0 +1,1171 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:farkas-refutation-over-constructed-reals",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+            "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "A Farkas refutation closes over the constructed reals resting on zero carrier axioms, where the same refutation over the axiomatized AxReal package rests on 30"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "4 of 4 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+              "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+            "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "kernel-lean"
+          ],
+          [
+            "axiom_footprint",
+            "[] -- axiom-free; only kernel-lean can deliver this"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+              "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+            "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo run -q -p axeyum-solver --features full --example ordered_ring_refutation -- --constructed-reals 2>&1) && printf '%s\\n' \"$out\" | grep -qE '^[[:space:]]+equality slot: .CReal[.]Equiv. adopted from CRealPrelude -- 0 declarations added [(]the .AxReal. route declares 18 AXIOMS'"
+        },
+        "summary": {
+          "text": "The equality slot is ADOPTED from CRealPrelude at 0 declarations added, against 18 axioms declared for the same slot over AxReal."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+            "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: creal-equality-slot-costs-nothing"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row creal-equality-slot-costs-nothing as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "creal-equality-slot-costs-nothing"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "The equality slot is ADOPTED from CRealPrelude at 0 declarations added, against 18 axioms declared for the same slot over AxReal."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+              "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+            "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Anchored on BOTH numbers in one line, so the row fails if adoption starts declaring anything and equally if the AxReal comparison it is measured against stops being 18. Both are read from Environment::len before and after, not from a constant. Verified to fail when the line is mutated to '18 declarations added'.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+            "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo run -q -p axeyum-solver --features full --example ordered_ring_refutation -- --constructed-reals 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -cE '^[[:space:]]+over CReal : closed False -- footprint [0-9]+ of which 0 are CARRIER axioms')\" = 5"
+        },
+        "summary": {
+          "text": "All five fixtures close a False over CReal with zero carrier axioms in the footprint."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+            "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: no-carrier-axiom-in-any-fixture"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row no-carrier-axiom-in-any-fixture as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "no-carrier-axiom-in-any-fixture"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "All five fixtures close a False over CReal with zero carrier axioms in the footprint."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+              "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+            "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "Counts rather than greps: `grep -q` would pass on ONE surviving fixture if the other four regressed or were dropped. The footprint size is left free because it is the query's own variables and hypotheses and legitimately differs per fixture (2 to 7); what is pinned is that none of it is carrier. Verified to fail when a single row is mutated to '1 are CARRIER axioms'.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+            "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-002",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo run -q -p axeyum-solver --features full --example ordered_ring_refutation -- --constructed-reals 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -cE '^[[:space:]]+over AxReal: closed False -- footprint [0-9]+ of which 30 are CARRIER axioms')\" = 5"
+        },
+        "summary": {
+          "text": "The same five fixtures over the axiomatized AxReal package carry 30 carrier axioms each, so the CReal result is a reduction rather than a measurement of nothing."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+            "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: the-real-comparison-is-not-vacuous"
+    },
+    {
+      "id": "evidence-002-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row the-real-comparison-is-not-vacuous as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "the-real-comparison-is-not-vacuous"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "The same five fixtures over the axiomatized AxReal package carry 30 carrier axioms each, so the CReal result is a reduction rather than a measurement of nothing."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+              "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+            "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-002-notes",
+      "kind": {
+        "text": "Without this row the fact would still pass if the AxReal route quietly stopped depending on its own axioms, which would mean the comparison had become trivial rather than that CReal had achieved anything. 30 is the ledger's whole `real` trusted surface, so this row also fails if that number moves for any reason.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+            "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-003",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo run -q -p axeyum-solver --features full --example ordered_ring_refutation -- --constructed-reals 2>&1) && printf '%s\\n' \"$out\" | grep -qxE 'closed refutations over the CONSTRUCTED reals rest on zero carrier axioms: true'"
+        },
+        "summary": {
+          "text": "The example's own aggregate verdict, which it computes from the per-fixture measurements rather than printing unconditionally."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+            "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: population-verdict"
+    },
+    {
+      "id": "evidence-003-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row population-verdict as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "population-verdict"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "The example's own aggregate verdict, which it computes from the per-fixture measurements rather than printing unconditionally."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+              "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+            "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-003-notes",
+      "kind": {
+        "text": "`grep -x` on the whole line including the trailing `true`: an unanchored match would also accept the `false` rendering of the same sentence. The example's exit status is 0 either way, so a row checking only the command's exit code would pass on a negative result -- the failure mode this ledger keeps finding. Both streams are captured (`2>&1`) because a summary on stderr with `2>/dev/null` matches nothing and passes for the wrong reason.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+            "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "dependency-graph",
+      "kind": {
+        "alt": "Dependency graph around F:farkas-refutation-over-constructed-reals: 2 dependencies, 1 dependents",
+        "caption": {
+          "text": "Immediate dependencies and dependents of this fact"
+        },
+        "spec": {
+          "edges": [
+            {
+              "from": "F:farkas-refutation-over-constructed-reals",
+              "label": "depends_on",
+              "to": "F:ordered-ring-farkas-refutation"
+            },
+            {
+              "from": "F:farkas-refutation-over-constructed-reals",
+              "label": "depends_on",
+              "to": "F:real-axioms-modelled-by-constructed-setoid"
+            },
+            {
+              "from": "F:shipped-front-door-refutes-over-constructed-reals",
+              "label": "depends_on",
+              "to": "F:farkas-refutation-over-constructed-reals"
+            },
+            {
+              "from": "F:shipped-front-door-refutes-over-constructed-reals",
+              "label": "depends_on",
+              "to": "F:real-axioms-modelled-by-constructed-setoid"
+            }
+          ],
+          "figure_type": "dep-graph",
+          "nodes": [
+            {
+              "group": "focus",
+              "href": "F-farkas-refutation-over-constructed-reals.doc.json",
+              "id": "F:farkas-refutation-over-constructed-reals",
+              "label": "farkas-refutation-over-constructed-reals",
+              "status": "proved",
+              "tooltip": "A Farkas refutation closes over the constructed reals resting on zero carrier axioms, where the same refutation over the axiomatized AxReal package rests on 30"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "F-ordered-ring-farkas-refutation.doc.json",
+              "id": "F:ordered-ring-farkas-refutation",
+              "label": "ordered-ring-farkas-refutation",
+              "status": "proved",
+              "tooltip": "A reconstructed Farkas refutation holds in every ordered commutative ring, and rests on no axiom"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "F-real-axioms-modelled-by-constructed-setoid.doc.json",
+              "id": "F:real-axioms-modelled-by-constructed-setoid",
+              "label": "real-axioms-modelled-by-constructed-setoid",
+              "status": "proved",
+              "tooltip": "The 30 AxReal axioms are satisfiable: a Bishop setoid over the constructed rationals models all 22 laws at zero trusted declarations"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "F-shipped-front-door-refutes-over-constructed-reals.doc.json",
+              "id": "F:shipped-front-door-refutes-over-constructed-reals",
+              "label": "shipped-front-door-refutes-over-constructed-reals",
+              "status": "proved",
+              "tooltip": "The shipped LRA/SOS front door reconstructs over the constructed reals, and the refutation it returns rests on zero carrier axioms"
+            }
+          ],
+          "rankdir": "TB"
+        },
+        "type": "figure"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+            "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Dependency neighbourhood"
+    },
+    {
+      "id": "depends-on",
+      "kind": {
+        "caption": {
+          "text": "Depends on"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:ordered-ring-farkas-refutation",
+            "A reconstructed Farkas refutation holds in every ordered commutative ring, and rests on no axiom",
+            "proved",
+            "F-ordered-ring-farkas-refutation.doc.json"
+          ],
+          [
+            "F:real-axioms-modelled-by-constructed-setoid",
+            "The 30 AxReal axioms are satisfiable: a Bishop setoid over the constructed rationals models all 22 laws at zero trusted declarations",
+            "proved",
+            "F-real-axioms-modelled-by-constructed-setoid.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+              "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+            "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depends on"
+    },
+    {
+      "id": "depended-on-by",
+      "kind": {
+        "caption": {
+          "text": "Depended on by"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:shipped-front-door-refutes-over-constructed-reals",
+            "The shipped LRA/SOS front door reconstructs over the constructed reals, and the refutation it returns rests on zero carrier axioms",
+            "proved",
+            "F-shipped-front-door-refutes-over-constructed-reals.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+              "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+            "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depended on by"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-18"
+          ],
+          [
+            "established_by",
+            "adopt_setoid_equality + RingSignature seam (agent-real-migration, agent-creal-reconstruct lanes); ADR-0512 phase R4"
+          ],
+          [
+            "source",
+            "hand-built; Farkas' lemma over an ordered commutative ring, instantiated at a constructed carrier"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+              "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+            "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "concept-refs",
+      "kind": {
+        "caption": {
+          "text": "Concept references (gloss and provenance only, never substance)"
+        },
+        "columns": [
+          {
+            "header": "graph",
+            "key": "graph"
+          },
+          {
+            "header": "ref",
+            "key": "ref"
+          },
+          {
+            "header": "relation",
+            "key": "relation"
+          },
+          {
+            "header": "resolved",
+            "key": "resolved"
+          }
+        ],
+        "rows": [
+          [
+            "math-education",
+            "C:real-numbers",
+            "uses",
+            false
+          ],
+          [
+            "math-education",
+            "C:linear-programming-duality",
+            "uses",
+            false
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+              "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+            "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "WHAT THIS DOES NOT SAY. It does not retire the 30 AxReal axioms and `nat_axiom_inventory` still reports `real: axiom=30`. `LraReconstructCtx::new` still builds the AxReal package and every shipped front-door LRA/SOS route still goes through it; this fact says the reconstruction NEED not, not that it does not. Making CReal the default carrier is a separate migration whose cost is the ~40 s `build_creal_prelude` (there is no `PreludeKey::CReal` in the prelude cache). Nor is a Lean MODULE on offer for the instantiated theorem: `render_lean_module` emits non-listed inductives as axioms, so a module for the closed False over CReal would emit the entire nat/int/rat/CReal development as axioms and defeat the claim. The load-bearing evidence here is the kernel's own `axiom_footprint`, not a rendered module.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+            "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-farkas-refutation-over-constructed-reals",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c01",
+        "label": "Component 1 of 38 (43 facts)",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:farkas-refutation-over-constructed-reals",
+    "title": "A Farkas refutation closes over the constructed reals resting on zero carrier axioms, where the same refutation over the axiomatized AxReal package rests on 30"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+        "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
+      }
+    ]
+  },
+  "schema_version": 1
+}

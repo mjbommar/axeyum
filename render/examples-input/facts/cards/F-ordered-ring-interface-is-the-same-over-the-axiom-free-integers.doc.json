@@ -1,0 +1,873 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.json",
+            "sha256": "5e69eb037cec1546f8772a8fa9f69a9fc80fd9f9a3c183fbc29d06ec2fde04ad"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "The ordered-ring interface telescope is byte-identical over Real and over the axiom-free Int development"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "3 of 3 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "unknown",
+            "unknown",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.json",
+              "sha256": "5e69eb037cec1546f8772a8fa9f69a9fc80fd9f9a3c183fbc29d06ec2fde04ad"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.json",
+            "sha256": "5e69eb037cec1546f8772a8fa9f69a9fc80fd9f9a3c183fbc29d06ec2fde04ad"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "kernel-lean"
+          ],
+          [
+            "axiom_footprint",
+            "[] -- axiom-free; only kernel-lean can deliver this"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.json",
+              "sha256": "5e69eb037cec1546f8772a8fa9f69a9fc80fd9f9a3c183fbc29d06ec2fde04ad"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.json",
+            "sha256": "5e69eb037cec1546f8772a8fa9f69a9fc80fd9f9a3c183fbc29d06ec2fde04ad"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo run --release -q -p axeyum-solver --features full --example ring_interface_pin -- --require-identical 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'ring interface telescope: 30 binders, 30 identical, 0 differing'"
+        },
+        "summary": {
+          "text": "The finding itself: all 30 binder types agree, and none differ. The example's exit status depends on it (`--require-identical` exits 1 on any difference), so this row cannot pass on a run that found a difference."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.json",
+            "sha256": "5e69eb037cec1546f8772a8fa9f69a9fc80fd9f9a3c183fbc29d06ec2fde04ad"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: ordered-ring-interface-is-the-same-over-the-axiom-free-integers-1"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row ordered-ring-interface-is-the-same-over-the-axiom-free-integers-1 as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "ordered-ring-interface-is-the-same-over-the-axiom-free-integers-1"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "The finding itself: all 30 binder types agree, and none differ. The example's exit status depends on it (`--require-identical` exits 1 on any difference), so this row cannot pass on a run that found a difference."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.json",
+              "sha256": "5e69eb037cec1546f8772a8fa9f69a9fc80fd9f9a3c183fbc29d06ec2fde04ad"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.json",
+            "sha256": "5e69eb037cec1546f8772a8fa9f69a9fc80fd9f9a3c183fbc29d06ec2fde04ad"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Anchored on the count line the example computes from the comparison, not on prose. Mutated output (any binder differing) changes '30 identical, 0 differing' and the pattern stops matching; the command also exits nonzero. Verified discriminating by scripts/new-fact.py.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.json",
+            "sha256": "5e69eb037cec1546f8772a8fa9f69a9fc80fd9f9a3c183fbc29d06ec2fde04ad"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo run --release -q -p axeyum-solver --features full --example ring_interface_pin -- --require-identical 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^real\\s')\" = 30"
+        },
+        "summary": {
+          "text": "Coverage of the `Real` side: 30 rows were actually emitted from the axiomatized package, so 'identical' is not the identity of an empty comparison."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.json",
+            "sha256": "5e69eb037cec1546f8772a8fa9f69a9fc80fd9f9a3c183fbc29d06ec2fde04ad"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: ordered-ring-interface-is-the-same-over-the-axiom-free-integers-2"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row ordered-ring-interface-is-the-same-over-the-axiom-free-integers-2 as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "ordered-ring-interface-is-the-same-over-the-axiom-free-integers-2"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "Coverage of the `Real` side: 30 rows were actually emitted from the axiomatized package, so 'identical' is not the identity of an empty comparison."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.json",
+              "sha256": "5e69eb037cec1546f8772a8fa9f69a9fc80fd9f9a3c183fbc29d06ec2fde04ad"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.json",
+            "sha256": "5e69eb037cec1546f8772a8fa9f69a9fc80fd9f9a3c183fbc29d06ec2fde04ad"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "Anchored on the row population of the `real` source column. This is a POPULATION check, declared as such (--allow-population-only): it catches the `Real` telescope disappearing from the comparison, not a value changing inside a row that is still there. Row 1 is what catches the values.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.json",
+            "sha256": "5e69eb037cec1546f8772a8fa9f69a9fc80fd9f9a3c183fbc29d06ec2fde04ad"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-002",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo run --release -q -p axeyum-solver --features full --example ring_interface_pin -- --require-identical 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^int\\s')\" = 30"
+        },
+        "summary": {
+          "text": "Coverage of the `Int` side, symmetrically \u2014 and the two together are what make the zero above a comparison of two populated telescopes rather than of one against itself."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.json",
+            "sha256": "5e69eb037cec1546f8772a8fa9f69a9fc80fd9f9a3c183fbc29d06ec2fde04ad"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: ordered-ring-interface-is-the-same-over-the-axiom-free-integers-3"
+    },
+    {
+      "id": "evidence-002-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row ordered-ring-interface-is-the-same-over-the-axiom-free-integers-3 as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "ordered-ring-interface-is-the-same-over-the-axiom-free-integers-3"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "Coverage of the `Int` side, symmetrically \u2014 and the two together are what make the zero above a comparison of two populated telescopes rather than of one against itself."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.json",
+              "sha256": "5e69eb037cec1546f8772a8fa9f69a9fc80fd9f9a3c183fbc29d06ec2fde04ad"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.json",
+            "sha256": "5e69eb037cec1546f8772a8fa9f69a9fc80fd9f9a3c183fbc29d06ec2fde04ad"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-002-notes",
+      "kind": {
+        "text": "As row 2, for the `int` source column.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.json",
+            "sha256": "5e69eb037cec1546f8772a8fa9f69a9fc80fd9f9a3c183fbc29d06ec2fde04ad"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "dependency-graph",
+      "kind": {
+        "alt": "Dependency graph around F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers: 2 dependencies, 0 dependents",
+        "caption": {
+          "text": "Immediate dependencies and dependents of this fact"
+        },
+        "spec": {
+          "edges": [
+            {
+              "from": "F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
+              "label": "depends_on",
+              "to": "F:int-add-comm"
+            },
+            {
+              "from": "F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
+              "label": "depends_on",
+              "to": "F:int-sq-nonneg"
+            }
+          ],
+          "figure_type": "dep-graph",
+          "nodes": [
+            {
+              "group": "kernel-lean",
+              "href": "F-int-add-comm.doc.json",
+              "id": "F:int-add-comm",
+              "label": "int-add-comm",
+              "status": "proved",
+              "tooltip": "Addition on the integers is commutative"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "F-int-sq-nonneg.doc.json",
+              "id": "F:int-sq-nonneg",
+              "label": "int-sq-nonneg",
+              "status": "proved",
+              "tooltip": "Every integer square is nonnegative"
+            },
+            {
+              "group": "focus",
+              "href": "F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.doc.json",
+              "id": "F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
+              "label": "ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
+              "status": "proved",
+              "tooltip": "The ordered-ring interface telescope is byte-identical over Real and over the axiom-free Int development"
+            }
+          ],
+          "rankdir": "TB"
+        },
+        "type": "figure"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.json",
+            "sha256": "5e69eb037cec1546f8772a8fa9f69a9fc80fd9f9a3c183fbc29d06ec2fde04ad"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Dependency neighbourhood"
+    },
+    {
+      "id": "depends-on",
+      "kind": {
+        "caption": {
+          "text": "Depends on"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:int-add-comm",
+            "Addition on the integers is commutative",
+            "proved",
+            "F-int-add-comm.doc.json"
+          ],
+          [
+            "F:int-sq-nonneg",
+            "Every integer square is nonnegative",
+            "proved",
+            "F-int-sq-nonneg.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.json",
+              "sha256": "5e69eb037cec1546f8772a8fa9f69a9fc80fd9f9a3c183fbc29d06ec2fde04ad"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.json",
+            "sha256": "5e69eb037cec1546f8772a8fa9f69a9fc80fd9f9a3c183fbc29d06ec2fde04ad"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depends on"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-18"
+          ],
+          [
+            "established_by",
+            "agent-shrink-control"
+          ],
+          [
+            "source",
+            "ADR-0515; crates/axeyum-solver/examples/ring_interface_pin.rs, crates/axeyum-solver/src/reconstruct/arithmetic/ordered_ring.rs (ring_interface_telescope)"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.json",
+              "sha256": "5e69eb037cec1546f8772a8fa9f69a9fc80fd9f9a3c183fbc29d06ec2fde04ad"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.json",
+            "sha256": "5e69eb037cec1546f8772a8fa9f69a9fc80fd9f9a3c183fbc29d06ec2fde04ad"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "WHAT THIS DOES NOT SAY. (1) It does not say `real: axiom=30` moved; it did not. The ledger still pins the axiom declarations, and moving the pin onto the telescope is a separate change (ADR-0515, 'What this ADR does not do'). (2) It does not say \u2124 is \u211d. The interface has no inverse, no completeness and no Archimedean axiom, so both developments satisfy it; ADR-0456's caveat stands. (3) It compares RENDERED types, which is what the ledger digests \u2014 not definitional equality, and not the proofs. That the `Int` side's 30 are proved rather than assumed is the separate measurement `integer: axiom=0` in nat_axiom_inventory. (4) The comparison is positional: it pairs binder i with binder i, so it would not notice two interface slots being swapped in BOTH signatures at once. It does notice a swap in one of them \u2014 measured, transposing `le_refl`/`le_trans` in `From<IntPrelude>` gives '28 identical, 2 differing' and exit 1, which is the transposition an earlier lane found no test could see.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.json",
+            "sha256": "5e69eb037cec1546f8772a8fa9f69a9fc80fd9f9a3c183fbc29d06ec2fde04ad"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c01",
+        "label": "Component 1 of 38 (43 facts)",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
+    "title": "The ordered-ring interface telescope is byte-identical over Real and over the axiom-free Int development"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.json",
+        "sha256": "5e69eb037cec1546f8772a8fa9f69a9fc80fd9f9a3c183fbc29d06ec2fde04ad"
+      }
+    ]
+  },
+  "schema_version": 1
+}

@@ -1,0 +1,928 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:complex-admits-no-compatible-order",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
+            "sha256": "31fe18d95fa09bf7e2cbfd85cfdca71683cbb161a28ec08d8a1fda92a87ef678"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "No relation on the constructed complex numbers satisfies seven of the Real package's ordered-ring laws"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "3 of 3 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
+              "sha256": "31fe18d95fa09bf7e2cbfd85cfdca71683cbb161a28ec08d8a1fda92a87ef678"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
+            "sha256": "31fe18d95fa09bf7e2cbfd85cfdca71683cbb161a28ec08d8a1fda92a87ef678"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "kernel-lean"
+          ],
+          [
+            "axiom_footprint",
+            "[] -- axiom-free; only kernel-lean can deliver this"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
+              "sha256": "31fe18d95fa09bf7e2cbfd85cfdca71683cbb161a28ec08d8a1fda92a87ef678"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
+            "sha256": "31fe18d95fa09bf7e2cbfd85cfdca71683cbb161a28ec08d8a1fda92a87ef678"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo run -q -p axeyum-lean-kernel --example complex_ring_witness 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^Complex[.]no_compatible_order[[:space:]]+theorem[[:space:]]+-$'"
+        },
+        "summary": {
+          "text": "Complex.no_compatible_order is a checked theorem -- not an axiom, not an opaque -- with an empty axiom footprint."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
+            "sha256": "31fe18d95fa09bf7e2cbfd85cfdca71683cbb161a28ec08d8a1fda92a87ef678"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: complex-no-order-theorem"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row complex-no-order-theorem as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "complex-no-order-theorem"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "Complex.no_compatible_order is a checked theorem -- not an axiom, not an opaque -- with an empty axiom footprint."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
+              "sha256": "31fe18d95fa09bf7e2cbfd85cfdca71683cbb161a28ec08d8a1fda92a87ef678"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
+            "sha256": "31fe18d95fa09bf7e2cbfd85cfdca71683cbb161a28ec08d8a1fda92a87ef678"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "The kind column distinguishes theorem from AXIOM/OPAQUE and the third column is the footprint, so an assumed version of this statement fails the row rather than passing it.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
+            "sha256": "31fe18d95fa09bf7e2cbfd85cfdca71683cbb161a28ec08d8a1fda92a87ef678"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo run -q -p axeyum-lean-kernel --example complex_ring_witness 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^Complex[.]I_sq[[:space:]]+theorem[[:space:]]+-$'"
+        },
+        "summary": {
+          "text": "Complex.I_sq is a checked theorem, so the refutation's witness is a real one: without it Complex.I is unconstrained and I = 0 would satisfy every other law in the module."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
+            "sha256": "31fe18d95fa09bf7e2cbfd85cfdca71683cbb161a28ec08d8a1fda92a87ef678"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: complex-i-sq-pins-the-witness"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row complex-i-sq-pins-the-witness as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "complex-i-sq-pins-the-witness"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "Complex.I_sq is a checked theorem, so the refutation's witness is a real one: without it Complex.I is unconstrained and I = 0 would satisfy every other law in the module."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
+              "sha256": "31fe18d95fa09bf7e2cbfd85cfdca71683cbb161a28ec08d8a1fda92a87ef678"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
+            "sha256": "31fe18d95fa09bf7e2cbfd85cfdca71683cbb161a28ec08d8a1fda92a87ef678"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "Complex.ofReal_mul cannot pin I, because I is not in the image of ofReal. This is the only declaration that constrains it.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
+            "sha256": "31fe18d95fa09bf7e2cbfd85cfdca71683cbb161a28ec08d8a1fda92a87ef678"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-002",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo run -q -p axeyum-lean-kernel --example complex_ring_witness 2>&1) && printf '%s\\n' \"$out\" | grep -qE 'order refuted = true, order declared = none'"
+        },
+        "summary": {
+          "text": "Neither Complex.le nor Complex.lt is declared, checked against the environment rather than inferred from the absence of the words in a source file -- the theorem and a declared order cannot both stand."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
+            "sha256": "31fe18d95fa09bf7e2cbfd85cfdca71683cbb161a28ec08d8a1fda92a87ef678"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: complex-no-order-declared"
+    },
+    {
+      "id": "evidence-002-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row complex-no-order-declared as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "complex-no-order-declared"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "Neither Complex.le nor Complex.lt is declared, checked against the environment rather than inferred from the absence of the words in a source file -- the theorem and a declared order cannot both stand."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
+              "sha256": "31fe18d95fa09bf7e2cbfd85cfdca71683cbb161a28ec08d8a1fda92a87ef678"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
+            "sha256": "31fe18d95fa09bf7e2cbfd85cfdca71683cbb161a28ec08d8a1fda92a87ef678"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-002-notes",
+      "kind": {
+        "text": "An omission and a refutation look identical from outside, which is the whole reason this row exists in addition to the theorem row. The example probes the environment for Complex.le and Complex.lt by name and exits non-zero if either is present; verified to fail when a Complex.le definition is added.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
+            "sha256": "31fe18d95fa09bf7e2cbfd85cfdca71683cbb161a28ec08d8a1fda92a87ef678"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "dependency-graph",
+      "kind": {
+        "alt": "Dependency graph around F:complex-admits-no-compatible-order: 1 dependencies, 0 dependents",
+        "caption": {
+          "text": "Immediate dependencies and dependents of this fact"
+        },
+        "spec": {
+          "edges": [
+            {
+              "from": "F:complex-admits-no-compatible-order",
+              "label": "depends_on",
+              "to": "F:complex-ring-constructed-axiom-free"
+            }
+          ],
+          "figure_type": "dep-graph",
+          "nodes": [
+            {
+              "group": "focus",
+              "href": "F-complex-admits-no-compatible-order.doc.json",
+              "id": "F:complex-admits-no-compatible-order",
+              "label": "complex-admits-no-compatible-order",
+              "status": "proved",
+              "tooltip": "No relation on the constructed complex numbers satisfies seven of the Real package's ordered-ring laws"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "F-complex-ring-constructed-axiom-free.doc.json",
+              "id": "F:complex-ring-constructed-axiom-free",
+              "label": "complex-ring-constructed-axiom-free",
+              "status": "proved",
+              "tooltip": "The complex numbers are constructible in this kernel at zero trusted declarations, as a pair setoid over the constructed reals"
+            }
+          ],
+          "rankdir": "TB"
+        },
+        "type": "figure"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
+            "sha256": "31fe18d95fa09bf7e2cbfd85cfdca71683cbb161a28ec08d8a1fda92a87ef678"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Dependency neighbourhood"
+    },
+    {
+      "id": "depends-on",
+      "kind": {
+        "caption": {
+          "text": "Depends on"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:complex-ring-constructed-axiom-free",
+            "The complex numbers are constructible in this kernel at zero trusted declarations, as a pair setoid over the constructed reals",
+            "proved",
+            "F-complex-ring-constructed-axiom-free.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
+              "sha256": "31fe18d95fa09bf7e2cbfd85cfdca71683cbb161a28ec08d8a1fda92a87ef678"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
+            "sha256": "31fe18d95fa09bf7e2cbfd85cfdca71683cbb161a28ec08d8a1fda92a87ef678"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depends on"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-18"
+          ],
+          [
+            "established_by",
+            "axeyum-lean-kernel complex module (ADR-0521; agent-complex-foundation lane)"
+          ],
+          [
+            "source",
+            "the standard argument that a formally real field cannot contain a square root of -1, stated over this kernel's setoid equality"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
+              "sha256": "31fe18d95fa09bf7e2cbfd85cfdca71683cbb161a28ec08d8a1fda92a87ef678"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
+            "sha256": "31fe18d95fa09bf7e2cbfd85cfdca71683cbb161a28ec08d8a1fda92a87ef678"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "concept-refs",
+      "kind": {
+        "caption": {
+          "text": "Concept references (gloss and provenance only, never substance)"
+        },
+        "columns": [
+          {
+            "header": "graph",
+            "key": "graph"
+          },
+          {
+            "header": "ref",
+            "key": "ref"
+          },
+          {
+            "header": "relation",
+            "key": "relation"
+          },
+          {
+            "header": "resolved",
+            "key": "resolved"
+          }
+        ],
+        "rows": [
+          [
+            "math-education",
+            "C:complex-numbers",
+            "about",
+            false
+          ],
+          [
+            "math-education",
+            "C:ordered-field",
+            "uses",
+            false
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
+              "sha256": "31fe18d95fa09bf7e2cbfd85cfdca71683cbb161a28ec08d8a1fda92a87ef678"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
+            "sha256": "31fe18d95fa09bf7e2cbfd85cfdca71683cbb161a28ec08d8a1fda92a87ef678"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "WHAT THIS DOES NOT SAY. It does not say \u2102 carries no order at all -- the lexicographic order on pairs is a perfectly good total order on Complex, and it satisfies le_refl, le_trans and add_le_add. It says no order is compatible with the RING structure, because sq_nonneg and zero_lt_one cannot both hold. Nor does it rule out CReal-valued statements about \u2102: Complex.normSq lands in CReal's existing nonneg cone (Complex.normSq_nonneg), which is available precisely because it is a statement about the components.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
+            "sha256": "31fe18d95fa09bf7e2cbfd85cfdca71683cbb161a28ec08d8a1fda92a87ef678"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-complex-admits-no-compatible-order",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c01",
+        "label": "Component 1 of 38 (43 facts)",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:complex-admits-no-compatible-order",
+    "title": "No relation on the constructed complex numbers satisfies seven of the Real package's ordered-ring laws"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
+        "sha256": "31fe18d95fa09bf7e2cbfd85cfdca71683cbb161a28ec08d8a1fda92a87ef678"
+      }
+    ]
+  },
+  "schema_version": 1
+}

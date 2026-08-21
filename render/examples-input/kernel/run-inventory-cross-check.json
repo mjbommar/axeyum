@@ -25,9 +25,9 @@
   "provenance": {
     "command": "python3 render/producers-kernel/kernel_to_docir.py",
     "epoch": {
-      "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+      "commit": "7805ef8b3187468be75109ed94d97fb9e9df2abd",
       "source": "commit",
-      "unix": 1787129238
+      "unix": 1787288415
     },
     "exit_status": 0,
     "generator": "render/producers-kernel/kernel_to_docir.py",
@@ -42,11 +42,11 @@
       },
       {
         "path": "crates/axeyum-lean-kernel/examples/theorem_axiom_footprint.rs",
-        "sha256": "0f50b4a7d7453fb6fa42c1979ade7c6582f6ef7b71f585e6c109d5e8d9b6465b"
+        "sha256": "fe79689583d45964a55d296f56a22fd006543e7fd953ab11eb1713611a0bf22a"
       },
       {
         "path": "crates/axeyum-lean-kernel/examples/nat_axiom_inventory.rs",
-        "sha256": "3cccf280b1fae8517ea340fdc32d1c66bbfda29489cc4d77539735e10c9d3c75"
+        "sha256": "e03de885f92ffde076a2a09a7e7d7a894679e73d93161b59e938a9135b9ba6b6"
       }
     ]
   },
@@ -62,7 +62,7 @@
     "inventory_declarations": 196,
     "nat_footprint_rows": 139,
     "nat_theorems": 139,
-    "trusted_declarations": 31
+    "trusted_declarations": 30
   },
   "summary": "Two independently built kernels agree: the Nat theorem names and every Int.* footprint match across two tools, and no Nat declaration carries a non-empty footprint."
 }

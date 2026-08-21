@@ -1,0 +1,728 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:qf-nia-univariate-unsat-is-certified",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-qf-nia-univariate-unsat-is-certified.json",
+            "sha256": "02bc6c1e5c71bf2aba16be0a26949a5530b1637b8d6eb3a2afa62a76a932c984"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "QF_NIA single-variable polynomial UNSAT carries an independently re-derivable refutation"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "3 of 3 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "unknown",
+            "unknown",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-qf-nia-univariate-unsat-is-certified.json",
+              "sha256": "02bc6c1e5c71bf2aba16be0a26949a5530b1637b8d6eb3a2afa62a76a932c984"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-qf-nia-univariate-unsat-is-certified.json",
+            "sha256": "02bc6c1e5c71bf2aba16be0a26949a5530b1637b8d6eb3a2afa62a76a932c984"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "smt-term-level"
+          ],
+          [
+            "axiom_footprint",
+            "smtlib2.int-semantics; axeyum-ir.int-term-collector; axeyum-solver.i128-guarded-arithmetic; rational-root-theorem-over-Z"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-qf-nia-univariate-unsat-is-certified.json",
+              "sha256": "02bc6c1e5c71bf2aba16be0a26949a5530b1637b8d6eb3a2afa62a76a932c984"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-qf-nia-univariate-unsat-is-certified.json",
+            "sha256": "02bc6c1e5c71bf2aba16be0a26949a5530b1637b8d6eb3a2afa62a76a932c984"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "unsat-drat",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo test -q -p axeyum-solver --features full --test certified_implies_revalidatable -- --nocapture 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'nia_non_square_discriminant .*kind=unsat-int-univariate-poly .*certified=1 outcome=verified'"
+        },
+        "summary": {
+          "text": "One named refutation reaches `outcome=verified` end-to-end. Anchored on the row rather than on a test-count line: `test result: ok` is true of a suite that produced no certificate at all, and this pattern is false unless a certificate was produced AND re-derived."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-qf-nia-univariate-unsat-is-certified.json",
+            "sha256": "02bc6c1e5c71bf2aba16be0a26949a5530b1637b8d6eb3a2afa62a76a932c984"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: qf-nia-univariate-unsat-is-certified-1"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row qf-nia-univariate-unsat-is-certified-1 as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "qf-nia-univariate-unsat-is-certified-1"
+          ],
+          [
+            "ledger kind",
+            "unsat-certificate"
+          ],
+          [
+            "cert_kind",
+            "unsat-drat"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "One named refutation reaches `outcome=verified` end-to-end. Anchored on the row rather than on a test-count line: `test result: ok` is true of a suite that produced no certificate at all, and this pattern is false unless a certificate was produced AND re-derived."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-qf-nia-univariate-unsat-is-certified.json",
+              "sha256": "02bc6c1e5c71bf2aba16be0a26949a5530b1637b8d6eb3a2afa62a76a932c984"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-qf-nia-univariate-unsat-is-certified.json",
+            "sha256": "02bc6c1e5c71bf2aba16be0a26949a5530b1637b8d6eb3a2afa62a76a932c984"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Anchored on `certified=1 outcome=verified` in one row of `certified_implies_revalidatable`, which re-validates against a FRESH PARSE of the SMT-LIB text rather than the producing run's arena. That distinction is the whole point of the anchor: checking against the producer's own arena passes for any certificate, including one that merely copies the producer's conclusions. `UnsatQuantInstanceSet` shipped `certified=1` over a FAILED re-check on 2026-08-17 because its TermIds meant nothing in a second arena, and this suite exists because of it.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-qf-nia-univariate-unsat-is-certified.json",
+            "sha256": "02bc6c1e5c71bf2aba16be0a26949a5530b1637b8d6eb3a2afa62a76a932c984"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "unsat-drat",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo test -q -p axeyum-solver --features full --test certified_implies_revalidatable -- --nocapture 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'kind=unsat-int-univariate-poly .*certified=1 outcome=verified')\" = 3"
+        },
+        "summary": {
+          "text": "The POPULATION, not one survivor. All three arguments -- non-square discriminant, non-integral rational roots, rational-root exhaustion -- must verify. A `grep -q` would still pass if two of the three regressed to `outcome=failed`, which is how a three-argument claim silently becomes a one-argument claim."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-qf-nia-univariate-unsat-is-certified.json",
+            "sha256": "02bc6c1e5c71bf2aba16be0a26949a5530b1637b8d6eb3a2afa62a76a932c984"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: qf-nia-univariate-unsat-is-certified-2"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row qf-nia-univariate-unsat-is-certified-2 as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "qf-nia-univariate-unsat-is-certified-2"
+          ],
+          [
+            "ledger kind",
+            "unsat-certificate"
+          ],
+          [
+            "cert_kind",
+            "unsat-drat"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "The POPULATION, not one survivor. All three arguments -- non-square discriminant, non-integral rational roots, rational-root exhaustion -- must verify. A `grep -q` would still pass if two of the three regressed to `outcome=failed`, which is how a three-argument claim silently becomes a one-argument claim."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-qf-nia-univariate-unsat-is-certified.json",
+              "sha256": "02bc6c1e5c71bf2aba16be0a26949a5530b1637b8d6eb3a2afa62a76a932c984"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-qf-nia-univariate-unsat-is-certified.json",
+            "sha256": "02bc6c1e5c71bf2aba16be0a26949a5530b1637b8d6eb3a2afa62a76a932c984"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "Count pinned at 3. Raising it is a new argument and must be deliberate; a fall is a regression. Verified discriminating by scripts/new-fact.py: the pattern matches the real output and fails on mutated output.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-qf-nia-univariate-unsat-is-certified.json",
+            "sha256": "02bc6c1e5c71bf2aba16be0a26949a5530b1637b8d6eb3a2afa62a76a932c984"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-002",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "unsat-drat",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(python3 scripts/check-capability-assurance.py --rank --quiet 2>&1) && printf \"%s\\n\" \"$out\" | grep -A1 'band 1' | grep -qE 'QF_NIA'"
+        },
+        "summary": {
+          "text": "The strand's PRIMARY METRIC moved, not just a test passing. `docs/mathematics-2026-08/01-decide-vs-certify.md` asks, per area, whether a verdict comes with an artifact a third party can check; `QF_NIA` answered no. It now ranks band 1, `artifact already built`."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-qf-nia-univariate-unsat-is-certified.json",
+            "sha256": "02bc6c1e5c71bf2aba16be0a26949a5530b1637b8d6eb3a2afa62a76a932c984"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: qf-nia-univariate-unsat-is-certified-3"
+    },
+    {
+      "id": "evidence-002-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row qf-nia-univariate-unsat-is-certified-3 as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "qf-nia-univariate-unsat-is-certified-3"
+          ],
+          [
+            "ledger kind",
+            "unsat-certificate"
+          ],
+          [
+            "cert_kind",
+            "unsat-drat"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "The strand's PRIMARY METRIC moved, not just a test passing. `docs/mathematics-2026-08/01-decide-vs-certify.md` asks, per area, whether a verdict comes with an artifact a third party can check; `QF_NIA` answered no. It now ranks band 1, `artifact already built`."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-qf-nia-univariate-unsat-is-certified.json",
+              "sha256": "02bc6c1e5c71bf2aba16be0a26949a5530b1637b8d6eb3a2afa62a76a932c984"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-qf-nia-univariate-unsat-is-certified.json",
+            "sha256": "02bc6c1e5c71bf2aba16be0a26949a5530b1637b8d6eb3a2afa62a76a932c984"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-002-notes",
+      "kind": {
+        "text": "The exit status depends on the FINDING: `grep -A1 'band 1'` fails when QF_NIA sits under any other band, and the same command asserted against `band 3` exits 1 today -- so this discriminates rather than merely running. Deliberately NOT a claim that an external checker reads the artifact: band 1 means one could be pointed at it, and `checked_by` stays `SelfChecker` until one is.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-qf-nia-univariate-unsat-is-certified.json",
+            "sha256": "02bc6c1e5c71bf2aba16be0a26949a5530b1637b8d6eb3a2afa62a76a932c984"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-20"
+          ],
+          [
+            "established_by",
+            "agent-capability-assurance"
+          ],
+          [
+            "source",
+            "crates/axeyum-solver/src/nia_univariate_cert.rs (producer + independent checker + 13 white-box tests); crates/axeyum-solver/tests/nia_univariate_cert.rs (6 black-box tests); crates/axeyum-solver/tests/certified_implies_revalidatable.rs (the general obligation); commit 119a91c53"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-qf-nia-univariate-unsat-is-certified.json",
+              "sha256": "02bc6c1e5c71bf2aba16be0a26949a5530b1637b8d6eb3a2afa62a76a932c984"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-qf-nia-univariate-unsat-is-certified.json",
+            "sha256": "02bc6c1e5c71bf2aba16be0a26949a5530b1637b8d6eb3a2afa62a76a932c984"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "WHAT THIS DOES NOT SAY. (1) It does not say QF_NIA is certified. It covers single-variable polynomial EQUALITIES only. Multivariate NIA, inequalities of degree >= 3, and |a0| past the checker's scan bound (2^20) stay DECIDED BUT NOT CERTIFIED -- and that bound is deliberate: the checker proves divisor-set completeness by scanning 1..=|a0| precisely so it does not reuse the producer's sqrt-with-cofactors enumeration, which is where a completeness bug would hide. Reusing it would raise coverage and lower what coverage means. (2) It does not say an external checker has read the artifact. The re-derivation is in-tree, so this is the self-checker tier, not the external-artifact tier; Lean reconstruction of these certificates is not done. (3) It does not say the certificate is minimal or canonical. (4) The negative-discriminant case is NOT covered here -- it keeps its own certificate, because an autogenesis operation is registered against that shape and redefining a pinned shape is not an upgrade. HOW HARD THE CHECKER WAS TESTED. Nine guards, each deleted in turn; all nine now kill exactly one test. The first run killed only five: four guards were removable with everything green, because another guard rejected the same forgery first. Isolating them needed certificates the producer would never emit -- notably a degree-2 argument over `x^3+x^2+x-3 = 0`, which is SATISFIABLE at x=1 and whose leading three coefficients give a genuine non-square 13 with a valid bracket, so every other guard passes and only the degree check prevents certifying a satisfiable query as unsat.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-qf-nia-univariate-unsat-is-certified.json",
+            "sha256": "02bc6c1e5c71bf2aba16be0a26949a5530b1637b8d6eb3a2afa62a76a932c984"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-qf-nia-univariate-unsat-is-certified",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#index",
+        "label": "Unconnected: see the index",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:qf-nia-univariate-unsat-is-certified",
+    "title": "QF_NIA single-variable polynomial UNSAT carries an independently re-derivable refutation"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-qf-nia-univariate-unsat-is-certified.json",
+        "sha256": "02bc6c1e5c71bf2aba16be0a26949a5530b1637b8d6eb3a2afa62a76a932c984"
+      }
+    ]
+  },
+  "schema_version": 1
+}

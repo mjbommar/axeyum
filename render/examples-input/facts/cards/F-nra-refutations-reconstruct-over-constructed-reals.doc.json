@@ -1,0 +1,591 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:nra-refutations-reconstruct-over-constructed-reals",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nra-refutations-reconstruct-over-constructed-reals.json",
+            "sha256": "0da79bbb567cd54ace237098b47629351c20c7285d9348c1cdce864b096fffc5"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Two QF_NRA refutation certificates reconstruct to a kernel-checked Lean False over the CONSTRUCTED reals"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "2 of 2 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "unknown",
+            "unknown",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nra-refutations-reconstruct-over-constructed-reals.json",
+              "sha256": "0da79bbb567cd54ace237098b47629351c20c7285d9348c1cdce864b096fffc5"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nra-refutations-reconstruct-over-constructed-reals.json",
+            "sha256": "0da79bbb567cd54ace237098b47629351c20c7285d9348c1cdce864b096fffc5"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "kernel-lean"
+          ],
+          [
+            "axiom_footprint",
+            "creal-prelude.constructed-carrier; axeyum-lean-kernel.type-checker"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nra-refutations-reconstruct-over-constructed-reals.json",
+              "sha256": "0da79bbb567cd54ace237098b47629351c20c7285d9348c1cdce864b096fffc5"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nra-refutations-reconstruct-over-constructed-reals.json",
+            "sha256": "0da79bbb567cd54ace237098b47629351c20c7285d9348c1cdce864b096fffc5"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo test -p axeyum-solver --features full --lib reconstruct::arithmetic 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'test result: ok\\. [0-9]+ passed; 0 failed'"
+        },
+        "summary": {
+          "text": "Nothing in the suite failed. Anchored on `0 failed` rather than on a test name plus `ok`, because the latter contains no digit or boolean and so survives every mutation the scaffolder applies \u2014 it would have gone into the ledger as a checker that cannot discriminate."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nra-refutations-reconstruct-over-constructed-reals.json",
+            "sha256": "0da79bbb567cd54ace237098b47629351c20c7285d9348c1cdce864b096fffc5"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: nra-refutations-reconstruct-over-constructed-reals-1"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row nra-refutations-reconstruct-over-constructed-reals-1 as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "nra-refutations-reconstruct-over-constructed-reals-1"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "Nothing in the suite failed. Anchored on `0 failed` rather than on a test name plus `ok`, because the latter contains no digit or boolean and so survives every mutation the scaffolder applies \u2014 it would have gone into the ledger as a checker that cannot discriminate."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nra-refutations-reconstruct-over-constructed-reals.json",
+              "sha256": "0da79bbb567cd54ace237098b47629351c20c7285d9348c1cdce864b096fffc5"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nra-refutations-reconstruct-over-constructed-reals.json",
+            "sha256": "0da79bbb567cd54ace237098b47629351c20c7285d9348c1cdce864b096fffc5"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Verified discriminating by scripts/new-fact.py: the pattern matches the real output and fails on mutated output (`0 failed` -> `1 failed`).",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nra-refutations-reconstruct-over-constructed-reals.json",
+            "sha256": "0da79bbb567cd54ace237098b47629351c20c7285d9348c1cdce864b096fffc5"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo test -p axeyum-solver --features full --lib reconstruct::arithmetic 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^test reconstruct::arithmetic::(zero_product|product_positivstellensatz)::.*constructed_reals \\.\\.\\. ok$')\" = 2"
+        },
+        "summary": {
+          "text": "BOTH reconstructions check over the CONSTRUCTED reals, not one. The two named tests build `CReal` explicitly via `try_new_over_constructed_reals_reporting`; `LraReconstructCtx::new()` would build `AxReal` and its 30 assumptions, and the terms would still infer to `False` there. Without pinning the count at 2, one route regressing onto the axiomatized carrier would leave this green."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nra-refutations-reconstruct-over-constructed-reals.json",
+            "sha256": "0da79bbb567cd54ace237098b47629351c20c7285d9348c1cdce864b096fffc5"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: nra-refutations-reconstruct-over-constructed-reals-2"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row nra-refutations-reconstruct-over-constructed-reals-2 as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "nra-refutations-reconstruct-over-constructed-reals-2"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "BOTH reconstructions check over the CONSTRUCTED reals, not one. The two named tests build `CReal` explicitly via `try_new_over_constructed_reals_reporting`; `LraReconstructCtx::new()` would build `AxReal` and its 30 assumptions, and the terms would still infer to `False` there. Without pinning the count at 2, one route regressing onto the axiomatized carrier would leave this green."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nra-refutations-reconstruct-over-constructed-reals.json",
+              "sha256": "0da79bbb567cd54ace237098b47629351c20c7285d9348c1cdce864b096fffc5"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nra-refutations-reconstruct-over-constructed-reals.json",
+            "sha256": "0da79bbb567cd54ace237098b47629351c20c7285d9348c1cdce864b096fffc5"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "POPULATION-ONLY, deliberately, and `--allow-population-only` was passed to say so: no mutation of the output moves the count. It catches a test disappearing or being renamed, which is the failure mode that matters here -- a carrier assertion silently dropped. It does not catch a value changing inside a surviving row; the `0 failed` row above covers that.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nra-refutations-reconstruct-over-constructed-reals.json",
+            "sha256": "0da79bbb567cd54ace237098b47629351c20c7285d9348c1cdce864b096fffc5"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-20"
+          ],
+          [
+            "established_by",
+            "agent-capability-assurance"
+          ],
+          [
+            "source",
+            "crates/axeyum-solver/src/reconstruct/arithmetic/zero_product.rs (commit bc4b6f589); crates/axeyum-solver/src/reconstruct/arithmetic/product_positivstellensatz.rs (commit 71f1c29a0)"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nra-refutations-reconstruct-over-constructed-reals.json",
+              "sha256": "0da79bbb567cd54ace237098b47629351c20c7285d9348c1cdce864b096fffc5"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nra-refutations-reconstruct-over-constructed-reals.json",
+            "sha256": "0da79bbb567cd54ace237098b47629351c20c7285d9348c1cdce864b096fffc5"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "WHAT THIS DOES NOT SAY. (1) It does not say the OTHER four certificate kinds reconstruct: monomial-bound, Handelman, string-length and int-univariate-poly have no Lean proof yet. (2) It does not say the hypotheses are bound to the query's `(assert ...)` lines. They are minted from the certificate, and that binding is the certificate's own two-stage checker, which re-scans the original assertions. It is the same split the hypothesis-binding audit measures across the LRA routes. (3) It does not say an EXTERNAL checker read the module -- the kernel here is this repository's, so this is the self-checker tier, not the external-artifact tier. (4) Scope is deliberately narrow: the zero-product route handles the DIRECT form only (the disjunctive form needs kernel case analysis) and the product route handles a `Negative` refuted atom only (`Nonpositive` needs `mul_pos`). Both declines have tests. WHY THE CARRIER IS THE POINT. `AxReal` is the legacy axiomatized ordered field and carries this repository's only nonzero trusted-surface row, `axreal: axiom=30`. A refutation checked there rests on all 30. `CReal` is constructed and measures 0 (ADR-0512). Both terms would type-check over either, so the distinction lives entirely in which context the test builds -- which is why the test names the carrier and why the count is pinned.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nra-refutations-reconstruct-over-constructed-reals.json",
+            "sha256": "0da79bbb567cd54ace237098b47629351c20c7285d9348c1cdce864b096fffc5"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-nra-refutations-reconstruct-over-constructed-reals",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#index",
+        "label": "Unconnected: see the index",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:nra-refutations-reconstruct-over-constructed-reals",
+    "title": "Two QF_NRA refutation certificates reconstruct to a kernel-checked Lean False over the CONSTRUCTED reals"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-nra-refutations-reconstruct-over-constructed-reals.json",
+        "sha256": "0da79bbb567cd54ace237098b47629351c20c7285d9348c1cdce864b096fffc5"
+      }
+    ]
+  },
+  "schema_version": 1
+}

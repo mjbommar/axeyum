@@ -22,16 +22,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-int-euclidean-decomposition.json",
-            "sha256": "1fe0ac8ba3bf9a450119573a1246b70dac5d0eeae194a40362ffe31629452013"
+            "sha256": "d46c6e906a8c6441ebd99662738dc163eb026b9b3e8fa2b2bebcc26f37ba8ca3"
           }
         ]
       },
@@ -79,16 +79,16 @@
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
           "inputs": [
             {
               "path": "artifacts/facts/F-int-euclidean-decomposition.json",
-              "sha256": "1fe0ac8ba3bf9a450119573a1246b70dac5d0eeae194a40362ffe31629452013"
+              "sha256": "d46c6e906a8c6441ebd99662738dc163eb026b9b3e8fa2b2bebcc26f37ba8ca3"
             }
           ]
         },
@@ -97,16 +97,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-int-euclidean-decomposition.json",
-            "sha256": "1fe0ac8ba3bf9a450119573a1246b70dac5d0eeae194a40362ffe31629452013"
+            "sha256": "d46c6e906a8c6441ebd99662738dc163eb026b9b3e8fa2b2bebcc26f37ba8ca3"
           }
         ]
       },
@@ -142,16 +142,16 @@
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
           "inputs": [
             {
               "path": "artifacts/facts/F-int-euclidean-decomposition.json",
-              "sha256": "1fe0ac8ba3bf9a450119573a1246b70dac5d0eeae194a40362ffe31629452013"
+              "sha256": "d46c6e906a8c6441ebd99662738dc163eb026b9b3e8fa2b2bebcc26f37ba8ca3"
             }
           ]
         },
@@ -160,16 +160,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-int-euclidean-decomposition.json",
-            "sha256": "1fe0ac8ba3bf9a450119573a1246b70dac5d0eeae194a40362ffe31629452013"
+            "sha256": "d46c6e906a8c6441ebd99662738dc163eb026b9b3e8fa2b2bebcc26f37ba8ca3"
           }
         ]
       },
@@ -195,16 +195,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-int-euclidean-decomposition.json",
-            "sha256": "1fe0ac8ba3bf9a450119573a1246b70dac5d0eeae194a40362ffe31629452013"
+            "sha256": "d46c6e906a8c6441ebd99662738dc163eb026b9b3e8fa2b2bebcc26f37ba8ca3"
           }
         ]
       },
@@ -256,16 +256,16 @@
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
           "inputs": [
             {
               "path": "artifacts/facts/F-int-euclidean-decomposition.json",
-              "sha256": "1fe0ac8ba3bf9a450119573a1246b70dac5d0eeae194a40362ffe31629452013"
+              "sha256": "d46c6e906a8c6441ebd99662738dc163eb026b9b3e8fa2b2bebcc26f37ba8ca3"
             }
           ]
         },
@@ -274,16 +274,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-int-euclidean-decomposition.json",
-            "sha256": "1fe0ac8ba3bf9a450119573a1246b70dac5d0eeae194a40362ffe31629452013"
+            "sha256": "d46c6e906a8c6441ebd99662738dc163eb026b9b3e8fa2b2bebcc26f37ba8ca3"
           }
         ]
       },
@@ -298,16 +298,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-int-euclidean-decomposition.json",
-            "sha256": "1fe0ac8ba3bf9a450119573a1246b70dac5d0eeae194a40362ffe31629452013"
+            "sha256": "d46c6e906a8c6441ebd99662738dc163eb026b9b3e8fa2b2bebcc26f37ba8ca3"
           }
         ]
       },
@@ -332,16 +332,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-int-euclidean-decomposition.json",
-            "sha256": "1fe0ac8ba3bf9a450119573a1246b70dac5d0eeae194a40362ffe31629452013"
+            "sha256": "d46c6e906a8c6441ebd99662738dc163eb026b9b3e8fa2b2bebcc26f37ba8ca3"
           }
         ]
       },
@@ -393,16 +393,16 @@
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
           "inputs": [
             {
               "path": "artifacts/facts/F-int-euclidean-decomposition.json",
-              "sha256": "1fe0ac8ba3bf9a450119573a1246b70dac5d0eeae194a40362ffe31629452013"
+              "sha256": "d46c6e906a8c6441ebd99662738dc163eb026b9b3e8fa2b2bebcc26f37ba8ca3"
             }
           ]
         },
@@ -411,16 +411,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-int-euclidean-decomposition.json",
-            "sha256": "1fe0ac8ba3bf9a450119573a1246b70dac5d0eeae194a40362ffe31629452013"
+            "sha256": "d46c6e906a8c6441ebd99662738dc163eb026b9b3e8fa2b2bebcc26f37ba8ca3"
           }
         ]
       },
@@ -435,16 +435,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-int-euclidean-decomposition.json",
-            "sha256": "1fe0ac8ba3bf9a450119573a1246b70dac5d0eeae194a40362ffe31629452013"
+            "sha256": "d46c6e906a8c6441ebd99662738dc163eb026b9b3e8fa2b2bebcc26f37ba8ca3"
           }
         ]
       },
@@ -453,7 +453,7 @@
     {
       "id": "dependency-graph",
       "kind": {
-        "alt": "Dependency graph around F:int-euclidean-decomposition: 2 dependencies, 1 dependents",
+        "alt": "Dependency graph around F:int-euclidean-decomposition: 3 dependencies, 1 dependents",
         "caption": {
           "text": "Immediate dependencies and dependents of this fact"
         },
@@ -468,6 +468,11 @@
               "from": "F:int-euclidean-decomposition",
               "label": "depends_on",
               "to": "F:nat-div-mod-unique"
+            },
+            {
+              "from": "F:int-euclidean-decomposition",
+              "label": "depends_on",
+              "to": "F:nat-zero-add"
             },
             {
               "from": "F:nat-div-mod-unique",
@@ -508,6 +513,14 @@
             },
             {
               "group": "kernel-lean",
+              "href": "F-nat-zero-add.doc.json",
+              "id": "F:nat-zero-add",
+              "label": "nat-zero-add",
+              "status": "proved",
+              "tooltip": "Nat zero_add"
+            },
+            {
+              "group": "kernel-lean",
               "href": "F-rat-normalize-reduces.doc.json",
               "id": "F:rat-normalize-reduces",
               "label": "rat-normalize-reduces",
@@ -522,16 +535,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-int-euclidean-decomposition.json",
-            "sha256": "1fe0ac8ba3bf9a450119573a1246b70dac5d0eeae194a40362ffe31629452013"
+            "sha256": "d46c6e906a8c6441ebd99662738dc163eb026b9b3e8fa2b2bebcc26f37ba8ca3"
           }
         ]
       },
@@ -574,21 +587,27 @@
             "The quotient and remainder of a division are unique",
             "proved",
             "F-nat-div-mod-unique.doc.json"
+          ],
+          [
+            "F:nat-zero-add",
+            "Nat zero_add",
+            "proved",
+            "F-nat-zero-add.doc.json"
           ]
         ],
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
           "inputs": [
             {
               "path": "artifacts/facts/F-int-euclidean-decomposition.json",
-              "sha256": "1fe0ac8ba3bf9a450119573a1246b70dac5d0eeae194a40362ffe31629452013"
+              "sha256": "d46c6e906a8c6441ebd99662738dc163eb026b9b3e8fa2b2bebcc26f37ba8ca3"
             }
           ]
         },
@@ -597,16 +616,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-int-euclidean-decomposition.json",
-            "sha256": "1fe0ac8ba3bf9a450119573a1246b70dac5d0eeae194a40362ffe31629452013"
+            "sha256": "d46c6e906a8c6441ebd99662738dc163eb026b9b3e8fa2b2bebcc26f37ba8ca3"
           }
         ]
       },
@@ -648,16 +667,16 @@
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
           "inputs": [
             {
               "path": "artifacts/facts/F-int-euclidean-decomposition.json",
-              "sha256": "1fe0ac8ba3bf9a450119573a1246b70dac5d0eeae194a40362ffe31629452013"
+              "sha256": "d46c6e906a8c6441ebd99662738dc163eb026b9b3e8fa2b2bebcc26f37ba8ca3"
             }
           ]
         },
@@ -666,16 +685,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-int-euclidean-decomposition.json",
-            "sha256": "1fe0ac8ba3bf9a450119573a1246b70dac5d0eeae194a40362ffe31629452013"
+            "sha256": "d46c6e906a8c6441ebd99662738dc163eb026b9b3e8fa2b2bebcc26f37ba8ca3"
           }
         ]
       },
@@ -715,16 +734,16 @@
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
           "inputs": [
             {
               "path": "artifacts/facts/F-int-euclidean-decomposition.json",
-              "sha256": "1fe0ac8ba3bf9a450119573a1246b70dac5d0eeae194a40362ffe31629452013"
+              "sha256": "d46c6e906a8c6441ebd99662738dc163eb026b9b3e8fa2b2bebcc26f37ba8ca3"
             }
           ]
         },
@@ -733,16 +752,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-int-euclidean-decomposition.json",
-            "sha256": "1fe0ac8ba3bf9a450119573a1246b70dac5d0eeae194a40362ffe31629452013"
+            "sha256": "d46c6e906a8c6441ebd99662738dc163eb026b9b3e8fa2b2bebcc26f37ba8ca3"
           }
         ]
       },
@@ -784,16 +803,16 @@
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
           "inputs": [
             {
               "path": "artifacts/facts/F-int-euclidean-decomposition.json",
-              "sha256": "1fe0ac8ba3bf9a450119573a1246b70dac5d0eeae194a40362ffe31629452013"
+              "sha256": "d46c6e906a8c6441ebd99662738dc163eb026b9b3e8fa2b2bebcc26f37ba8ca3"
             }
           ]
         },
@@ -802,16 +821,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-int-euclidean-decomposition.json",
-            "sha256": "1fe0ac8ba3bf9a450119573a1246b70dac5d0eeae194a40362ffe31629452013"
+            "sha256": "d46c6e906a8c6441ebd99662738dc163eb026b9b3e8fa2b2bebcc26f37ba8ca3"
           }
         ]
       },
@@ -821,9 +840,9 @@
   "meta": {
     "doc_id": "fact-int-euclidean-decomposition",
     "epoch": {
-      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
       "source": "commit",
-      "unix": 1787144076
+      "unix": 1787338967
     },
     "genre": "result",
     "nav": [
@@ -834,7 +853,7 @@
       },
       {
         "href": "../facts-atlas.doc.json#dep-graph-c01",
-        "label": "Component 1 of 37 (31 facts)",
+        "label": "Component 1 of 38 (43 facts)",
         "rel": "component"
       }
     ],
@@ -849,16 +868,16 @@
   "provenance": {
     "command": "python3 render/producers-py/facts_to_docir.py",
     "epoch": {
-      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
       "source": "commit",
-      "unix": 1787144076
+      "unix": 1787338967
     },
     "exit_status": 0,
     "generator": "render/producers-py/facts_to_docir.py",
     "inputs": [
       {
         "path": "artifacts/facts/F-int-euclidean-decomposition.json",
-        "sha256": "1fe0ac8ba3bf9a450119573a1246b70dac5d0eeae194a40362ffe31629452013"
+        "sha256": "d46c6e906a8c6441ebd99662738dc163eb026b9b3e8fa2b2bebcc26f37ba8ca3"
       }
     ]
   },

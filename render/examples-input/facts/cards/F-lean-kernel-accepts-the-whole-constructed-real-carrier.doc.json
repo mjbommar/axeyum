@@ -1,0 +1,728 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:lean-kernel-accepts-the-whole-constructed-real-carrier",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-lean-kernel-accepts-the-whole-constructed-real-carrier.json",
+            "sha256": "974aed9cb701e9a5804b222847d938e7224004084e792f0ca71a700e128a740b"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Official Lean's own kernel accepts every declaration of the constructed-real carrier"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "3 of 3 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "unknown",
+            "unknown",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-lean-kernel-accepts-the-whole-constructed-real-carrier.json",
+              "sha256": "974aed9cb701e9a5804b222847d938e7224004084e792f0ca71a700e128a740b"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-lean-kernel-accepts-the-whole-constructed-real-carrier.json",
+            "sha256": "974aed9cb701e9a5804b222847d938e7224004084e792f0ca71a700e128a740b"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "kernel-lean"
+          ],
+          [
+            "axiom_footprint",
+            "[] -- axiom-free; only kernel-lean can deliver this"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-lean-kernel-accepts-the-whole-constructed-real-carrier.json",
+              "sha256": "974aed9cb701e9a5804b222847d938e7224004084e792f0ca71a700e128a740b"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-lean-kernel-accepts-the-whole-constructed-real-carrier.json",
+            "sha256": "974aed9cb701e9a5804b222847d938e7224004084e792f0ca71a700e128a740b"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(AXEYUM_REQUIRE_LEAN=1 cargo test -q -p axeyum-lean-kernel --test real_lean_creal_carrier_kernel_replay -- --nocapture 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'AXEYUM-CREAL-CARRIER declared=470 lean_kernel_constants=470'"
+        },
+        "summary": {
+          "text": "The whole carrier, and the WHOLE of it. Lean's kernel ends with exactly as many constants as this kernel holds -- 470 = 470, both numbers read out of the run rather than transcribed. This is the row that distinguishes `accepted` from `accepted a subset`, which is the failure mode every other real-Lean check in this repository is exposed to: they render the closure of one refutation, so Lean only ever sees the declarations some query happens to cite."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-lean-kernel-accepts-the-whole-constructed-real-carrier.json",
+            "sha256": "974aed9cb701e9a5804b222847d938e7224004084e792f0ca71a700e128a740b"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: lean-kernel-accepts-the-whole-constructed-real-carrier-1"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row lean-kernel-accepts-the-whole-constructed-real-carrier-1 as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "lean-kernel-accepts-the-whole-constructed-real-carrier-1"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "The whole carrier, and the WHOLE of it. Lean's kernel ends with exactly as many constants as this kernel holds -- 470 = 470, both numbers read out of the run rather than transcribed. This is the row that distinguishes `accepted` from `accepted a subset`, which is the failure mode every other real-Lean check in this repository is exposed to: they render the closure of one refutation, so Lean only ever sees the declarations some query happens to cite."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-lean-kernel-accepts-the-whole-constructed-real-carrier.json",
+              "sha256": "974aed9cb701e9a5804b222847d938e7224004084e792f0ca71a700e128a740b"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-lean-kernel-accepts-the-whole-constructed-real-carrier.json",
+            "sha256": "974aed9cb701e9a5804b222847d938e7224004084e792f0ca71a700e128a740b"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Verified discriminating by scripts/new-fact.py: the pattern matches the real output and fails on mutated output. Anchored on the two counts printed on ONE line, so neither can drift without the other being noticed, and both are read from the kernel and from Lean at run time. A bare `470` in a document would be a transcription; this is a comparison.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-lean-kernel-accepts-the-whole-constructed-real-carrier.json",
+            "sha256": "974aed9cb701e9a5804b222847d938e7224004084e792f0ca71a700e128a740b"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(AXEYUM_REQUIRE_LEAN=1 cargo test -q -p axeyum-lean-kernel --test real_lean_creal_carrier_kernel_replay -- --nocapture 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE 'AXEYUM-LEAN-CHECKED creal-carrier-kernel-replay checked=2'"
+        },
+        "summary": {
+          "text": "Lean actually RAN, twice. An exit status cannot distinguish `checked 2 modules` from `checked none`, and this repository has shipped suites that were inert for weeks. The suite prints its own invocation count and the pinned toolchain it used; `scripts/check-lean-gate.sh` sums those counts and cross-checks the binary."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-lean-kernel-accepts-the-whole-constructed-real-carrier.json",
+            "sha256": "974aed9cb701e9a5804b222847d938e7224004084e792f0ca71a700e128a740b"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: lean-kernel-accepts-the-whole-constructed-real-carrier-2"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row lean-kernel-accepts-the-whole-constructed-real-carrier-2 as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "lean-kernel-accepts-the-whole-constructed-real-carrier-2"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "Lean actually RAN, twice. An exit status cannot distinguish `checked 2 modules` from `checked none`, and this repository has shipped suites that were inert for weeks. The suite prints its own invocation count and the pinned toolchain it used; `scripts/check-lean-gate.sh` sums those counts and cross-checks the binary."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-lean-kernel-accepts-the-whole-constructed-real-carrier.json",
+              "sha256": "974aed9cb701e9a5804b222847d938e7224004084e792f0ca71a700e128a740b"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-lean-kernel-accepts-the-whole-constructed-real-carrier.json",
+            "sha256": "974aed9cb701e9a5804b222847d938e7224004084e792f0ca71a700e128a740b"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "Verified discriminating by scripts/new-fact.py: the pattern matches the real output and fails on mutated output. Anchored on the suite's own `AXEYUM-LEAN-CHECKED` count, not on the exit status. The count is the thing an inert suite cannot produce.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-lean-kernel-accepts-the-whole-constructed-real-carrier.json",
+            "sha256": "974aed9cb701e9a5804b222847d938e7224004084e792f0ca71a700e128a740b"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-002",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(AXEYUM_REQUIRE_LEAN=1 cargo test -q -p axeyum-lean-kernel --test real_lean_creal_carrier_kernel_replay -- --nocapture 2>&1) && printf \"%s\\n\" \"$out\" | grep -qE '1 passed; 0 failed'"
+        },
+        "summary": {
+          "text": "The NEGATIVE control passed, which is what makes the two rows above mean anything. The second of the two Lean invocations replays the same stream with `CReal.Equiv.not_zero_one`'s proof replaced by another closed proof, and the run only passes if Lean's kernel REJECTS it naming `CReal.Equiv` -- i.e. only if it really type-checked that declaration against that type."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-lean-kernel-accepts-the-whole-constructed-real-carrier.json",
+            "sha256": "974aed9cb701e9a5804b222847d938e7224004084e792f0ca71a700e128a740b"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: lean-kernel-accepts-the-whole-constructed-real-carrier-3"
+    },
+    {
+      "id": "evidence-002-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row lean-kernel-accepts-the-whole-constructed-real-carrier-3 as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "lean-kernel-accepts-the-whole-constructed-real-carrier-3"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "The NEGATIVE control passed, which is what makes the two rows above mean anything. The second of the two Lean invocations replays the same stream with `CReal.Equiv.not_zero_one`'s proof replaced by another closed proof, and the run only passes if Lean's kernel REJECTS it naming `CReal.Equiv` -- i.e. only if it really type-checked that declaration against that type."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-lean-kernel-accepts-the-whole-constructed-real-carrier.json",
+              "sha256": "974aed9cb701e9a5804b222847d938e7224004084e792f0ca71a700e128a740b"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-lean-kernel-accepts-the-whole-constructed-real-carrier.json",
+            "sha256": "974aed9cb701e9a5804b222847d938e7224004084e792f0ca71a700e128a740b"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-002-notes",
+      "kind": {
+        "text": "Verified discriminating by scripts/new-fact.py: the pattern matches the real output and fails on mutated output. Anchored on the harness verdict for a suite whose every assertion is about the finding: the count equality, the presence of the two residue declarations by name BEFORE any Lean runs, and the tampered-stream rejection. `0 failed` is only informative because of what the assertions are.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-lean-kernel-accepts-the-whole-constructed-real-carrier.json",
+            "sha256": "974aed9cb701e9a5804b222847d938e7224004084e792f0ca71a700e128a740b"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-18"
+          ],
+          [
+            "established_by",
+            "lane `agent-creal-lean-divergence`, crates/axeyum-lean-kernel/tests/real_lean_creal_carrier_kernel_replay.rs"
+          ],
+          [
+            "source",
+            "Measured while investigating a handover claim that this kernel admits four `CReal` declarations Lean's kernel rejects. It does not: Lean's ELABORATOR refuses them and Lean's kernel accepts them, which is ADR-0517. The whole-carrier replay exists because the refusal had gone unnoticed -- emission is reachability driven, so 122 of the carrier's declarations had never been handed to any Lean."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-lean-kernel-accepts-the-whole-constructed-real-carrier.json",
+              "sha256": "974aed9cb701e9a5804b222847d938e7224004084e792f0ca71a700e128a740b"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-lean-kernel-accepts-the-whole-constructed-real-carrier.json",
+            "sha256": "974aed9cb701e9a5804b222847d938e7224004084e792f0ca71a700e128a740b"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "WHAT THIS DOES NOT SAY.\n\n1. It does not say the carrier is AXIOM-FREE. That is `Kernel::axiom_footprint`'s claim and is checked elsewhere; this fact is only that Lean's kernel accepts the declarations, whatever they rest on. A development full of axioms would replay just as happily.\n\n2. It does not say the `.lean` SOURCE artefact carries the whole carrier. It does not: Lean's elaborator refuses four declarations of it (two, plus two `unknown constant` cascades), because its reducer treats a `theorem` as opaque and `Nat.gcd`'s recursive step is justified by the theorem `Nat.mod_lt`. Re-spelling every `theorem` as `def` in the same file makes the elaborator accept the whole carrier in 27.9 s; that change is measured and deliberately not taken (ADR-0517).\n\n3. It does not say the 470 declarations are the RIGHT ones, only that Lean admits the ones there are. `creal_setoid_witness` is what stops the development being vacuous -- `Equiv.not_zero_one` and `not_le_one_zero` are exactly the declarations that make `CReal.Equiv` and `CReal.le` non-total, and they are two of the four the elaborator refuses.\n\n4. The number 470 is a snapshot of a carrier under active development; the fact's content is the EQUALITY of the two counts, and the checker compares them rather than either alone. It will need re-pinning when the carrier grows, which is the intended failure.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-lean-kernel-accepts-the-whole-constructed-real-carrier.json",
+            "sha256": "974aed9cb701e9a5804b222847d938e7224004084e792f0ca71a700e128a740b"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-lean-kernel-accepts-the-whole-constructed-real-carrier",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#index",
+        "label": "Unconnected: see the index",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:lean-kernel-accepts-the-whole-constructed-real-carrier",
+    "title": "Official Lean's own kernel accepts every declaration of the constructed-real carrier"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-lean-kernel-accepts-the-whole-constructed-real-carrier.json",
+        "sha256": "974aed9cb701e9a5804b222847d938e7224004084e792f0ca71a700e128a740b"
+      }
+    ]
+  },
+  "schema_version": 1
+}

@@ -22,9 +22,9 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
@@ -79,9 +79,9 @@
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
@@ -97,9 +97,9 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
@@ -142,9 +142,9 @@
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
@@ -160,9 +160,9 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
@@ -195,9 +195,9 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
@@ -256,9 +256,9 @@
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
@@ -274,9 +274,9 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
@@ -298,9 +298,9 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
@@ -332,9 +332,9 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
@@ -393,9 +393,9 @@
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
@@ -411,9 +411,9 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
@@ -435,9 +435,9 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
@@ -453,7 +453,7 @@
     {
       "id": "dependency-graph",
       "kind": {
-        "alt": "Dependency graph around F:rat-add-neg-inverse: 1 dependencies, 0 dependents",
+        "alt": "Dependency graph around F:rat-add-neg-inverse: 1 dependencies, 1 dependents",
         "caption": {
           "text": "Immediate dependencies and dependents of this fact"
         },
@@ -461,6 +461,16 @@
           "edges": [
             {
               "from": "F:rat-add-neg-inverse",
+              "label": "depends_on",
+              "to": "F:rat-mul-renormalises"
+            },
+            {
+              "from": "F:real-axioms-modelled-by-constructed-setoid",
+              "label": "depends_on",
+              "to": "F:rat-add-neg-inverse"
+            },
+            {
+              "from": "F:real-axioms-modelled-by-constructed-setoid",
               "label": "depends_on",
               "to": "F:rat-mul-renormalises"
             }
@@ -482,6 +492,14 @@
               "label": "rat-mul-renormalises",
               "status": "proved",
               "tooltip": "Rational multiplication renormalises"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "F-real-axioms-modelled-by-constructed-setoid.doc.json",
+              "id": "F:real-axioms-modelled-by-constructed-setoid",
+              "label": "real-axioms-modelled-by-constructed-setoid",
+              "status": "proved",
+              "tooltip": "The 30 AxReal axioms are satisfiable: a Bishop setoid over the constructed rationals models all 22 laws at zero trusted declarations"
             }
           ],
           "rankdir": "TB"
@@ -491,9 +509,9 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
@@ -542,9 +560,9 @@
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
@@ -560,9 +578,9 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
@@ -575,6 +593,75 @@
       },
       "tag": "detail",
       "title": "Depends on"
+    },
+    {
+      "id": "depended-on-by",
+      "kind": {
+        "caption": {
+          "text": "Depended on by"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:real-axioms-modelled-by-constructed-setoid",
+            "The 30 AxReal axioms are satisfiable: a Bishop setoid over the constructed rationals models all 22 laws at zero trusted declarations",
+            "proved",
+            "F-real-axioms-modelled-by-constructed-setoid.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-rat-add-neg-inverse.json",
+              "sha256": "e7ee314bc69063f96fc6902dc1658743ed3fde572dc4e6172b634bffebd6460f"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-rat-add-neg-inverse.json",
+            "sha256": "e7ee314bc69063f96fc6902dc1658743ed3fde572dc4e6172b634bffebd6460f"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depended on by"
     },
     {
       "id": "fact-provenance",
@@ -609,9 +696,9 @@
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
@@ -627,9 +714,9 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
@@ -678,9 +765,9 @@
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
@@ -696,9 +783,9 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
@@ -715,9 +802,9 @@
   "meta": {
     "doc_id": "fact-rat-add-neg-inverse",
     "epoch": {
-      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
       "source": "commit",
-      "unix": 1787144076
+      "unix": 1787338967
     },
     "genre": "result",
     "nav": [
@@ -728,7 +815,7 @@
       },
       {
         "href": "../facts-atlas.doc.json#dep-graph-c01",
-        "label": "Component 1 of 37 (31 facts)",
+        "label": "Component 1 of 38 (43 facts)",
         "rel": "component"
       }
     ],
@@ -743,9 +830,9 @@
   "provenance": {
     "command": "python3 render/producers-py/facts_to_docir.py",
     "epoch": {
-      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
       "source": "commit",
-      "unix": 1787144076
+      "unix": 1787338967
     },
     "exit_status": 0,
     "generator": "render/producers-py/facts_to_docir.py",

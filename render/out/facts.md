@@ -1,10 +1,12 @@
 # Fact atlas: the whole ledger
 
-*324 facts, 135 depends_on edges*
+*341 facts, 155 depends_on edges*
 
 [Pilot: the Fibonacci frontier](facts-pilot.html) / [Pilot: Euclid's lemma](facts-pilot-arith.html)
 
-Every fact in `artifacts/facts/` (324 facts, 135 `depends_on` edges), both of its status axes, and the dependency graph they form. Every status here is copied from the ledger; nothing infers or upgrades one, and the badge column is a conservative mapping that can only weaken a ledger value. Facts established here but not settled in the literature are listed first: that disagreement is the output this project exists to produce.
+Every fact in `artifacts/facts/` (341 facts, 155 `depends_on` edges), both of its status axes, and the dependency graph they form. Every status here is copied from the ledger; nothing infers or upgrades one, and the badge column is a conservative mapping that can only weaken a ledger value. Facts established here but not settled in the literature are listed first: that disagreement is the output this project exists to produce.
+
+EXCLUDED FROM THIS ATLAS: 2 fact file(s) in the ledger currently FAIL fact.schema.json and are not rendered here, because a card cannot be built from bytes the schema rejects. The exclusion is a finding about the ledger, not about the mathematics: F-lean-query-module-shrinks-by-a-shared-import.json; F-lean-query-module-shrinks-by-a-shared-import.json. Note that scripts/validate-facts.py currently ACCEPTS these files, so the schema and the gate disagree; reported to the ledger owners.
 
 Established here, not settled in the literature
 
@@ -13,17 +15,37 @@ Established here, not settled in the literature
 | F:rado-r4-a5-b3 | The four-colour Rado number of 5(x-y) = 3z is 625 | computed | open | [`F-rado-r4-a5-b3`](cards/F-rado-r4-a5-b3.html) |
 | F:rado-r4-a5-b4 | The four-colour Rado number of 5(x-y) = 4z is 741 | computed | open | [`F-rado-r4-a5-b4`](cards/F-rado-r4-a5-b4.html) |
 
-Source: `python3 render/producers-py/facts_to_docir.py` (exit 0), 324 input(s) hashed.
+Source: `python3 render/producers-py/facts_to_docir.py` (exit 0), 341 input(s) hashed.
 
-The `depends_on` relation over these 324 facts has 135 edges and falls into 210 connected components: 37 with more than one fact (151 facts between them, the largest holding 31), and 173 single facts that nothing in the ledger depends on and that depend on nothing in it.
+The `depends_on` relation over these 341 facts has 155 edges and falls into 213 connected components: 38 with more than one fact (166 facts between them, the largest holding 43), and 175 single facts that nothing in the ledger depends on and that depend on nothing in it.
 
-One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip some thirty thousand pixels across, which at page width is a smear. So each component is drawn on its own below, largest first, and the 173 unconnected facts appear in the index table rather than as a row of dots. The index is the complete list either way: every fact is in it.
+One drawing of all 341 would be 341 nodes wide and four layers deep -- a strip some thirty thousand pixels across, which at page width is a smear. So each component is drawn on its own below, largest first, and the 175 unconnected facts appear in the index table rather than as a row of dots. The index is the complete list either way: every fact is in it.
 
-*Figure (Dependency graph of 31 facts with 49 edges) -- data:*
+*Figure (Dependency graph of 43 facts with 67 edges) -- data:*
 
 ```json
 {
   "edges": [
+    {
+      "from": "F:complex-admits-no-compatible-order",
+      "label": "depends_on",
+      "to": "F:complex-ring-constructed-axiom-free"
+    },
+    {
+      "from": "F:complex-ring-constructed-axiom-free",
+      "label": "depends_on",
+      "to": "F:real-axioms-modelled-by-constructed-setoid"
+    },
+    {
+      "from": "F:farkas-refutation-over-constructed-reals",
+      "label": "depends_on",
+      "to": "F:ordered-ring-farkas-refutation"
+    },
+    {
+      "from": "F:farkas-refutation-over-constructed-reals",
+      "label": "depends_on",
+      "to": "F:real-axioms-modelled-by-constructed-setoid"
+    },
     {
       "from": "F:int-add-assoc",
       "label": "depends_on",
@@ -70,6 +92,26 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
       "to": "F:int-add-le-add"
     },
     {
+      "from": "F:int-categoricity",
+      "label": "depends_on",
+      "to": "F:int-characterization"
+    },
+    {
+      "from": "F:int-categoricity",
+      "label": "depends_on",
+      "to": "F:nat-peano-categoricity"
+    },
+    {
+      "from": "F:int-characterization",
+      "label": "depends_on",
+      "to": "F:int-add-assoc"
+    },
+    {
+      "from": "F:int-characterization",
+      "label": "depends_on",
+      "to": "F:int-mul-assoc"
+    },
+    {
       "from": "F:int-euclidean-decomposition",
       "label": "depends_on",
       "to": "F:nat-div-mod-exists"
@@ -78,6 +120,11 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
       "from": "F:int-euclidean-decomposition",
       "label": "depends_on",
       "to": "F:nat-div-mod-unique"
+    },
+    {
+      "from": "F:int-euclidean-decomposition",
+      "label": "depends_on",
+      "to": "F:nat-zero-add"
     },
     {
       "from": "F:int-left-distrib",
@@ -255,6 +302,16 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
       "to": "F:nat-mul-one"
     },
     {
+      "from": "F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
+      "label": "depends_on",
+      "to": "F:int-add-comm"
+    },
+    {
+      "from": "F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
+      "label": "depends_on",
+      "to": "F:int-sq-nonneg"
+    },
+    {
       "from": "F:rat-add-neg-inverse",
       "label": "depends_on",
       "to": "F:rat-mul-renormalises"
@@ -268,10 +325,69 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
       "from": "F:rat-normalize-reduces",
       "label": "depends_on",
       "to": "F:int-euclidean-decomposition"
+    },
+    {
+      "from": "F:real-axioms-modelled-by-constructed-setoid",
+      "label": "depends_on",
+      "to": "F:rat-add-neg-inverse"
+    },
+    {
+      "from": "F:real-axioms-modelled-by-constructed-setoid",
+      "label": "depends_on",
+      "to": "F:rat-mul-renormalises"
+    },
+    {
+      "from": "F:real-axioms-modelled-by-constructed-setoid",
+      "label": "depends_on",
+      "to": "F:rat-normalize-reduces"
+    },
+    {
+      "from": "F:real-lattice-is-constructed-axiom-free",
+      "label": "depends_on",
+      "to": "F:real-axioms-modelled-by-constructed-setoid"
+    },
+    {
+      "from": "F:shipped-front-door-reaches-no-real-axiom",
+      "label": "depends_on",
+      "to": "F:shipped-front-door-refutes-over-constructed-reals"
+    },
+    {
+      "from": "F:shipped-front-door-refutes-over-constructed-reals",
+      "label": "depends_on",
+      "to": "F:farkas-refutation-over-constructed-reals"
+    },
+    {
+      "from": "F:shipped-front-door-refutes-over-constructed-reals",
+      "label": "depends_on",
+      "to": "F:real-axioms-modelled-by-constructed-setoid"
     }
   ],
   "figure_type": "dep-graph",
   "nodes": [
+    {
+      "group": "kernel-lean",
+      "href": "cards/F-complex-admits-no-compatible-order.doc.json",
+      "id": "F:complex-admits-no-compatible-order",
+      "label": "complex-admits-no-compatible-order",
+      "status": "proved",
+      "tooltip": "No relation on the constructed complex numbers satisfies seven of the Real package's ordered-ring laws"
+    },
+    {
+      "group": "kernel-lean",
+      "href": "cards/F-complex-ring-constructed-axiom-free.doc.json",
+      "id": "F:complex-ring-constructed-axiom-free",
+      "label": "complex-ring-constructed-axiom-free",
+      "status": "proved",
+      "tooltip": "The complex numbers are constructible in this kernel at zero trusted declarations, as a pair setoid over the constructed reals"
+    },
+    {
+      "group": "kernel-lean",
+      "href": "cards/F-farkas-refutation-over-constructed-reals.doc.json",
+      "id": "F:farkas-refutation-over-constructed-reals",
+      "label": "farkas-refutation-over-constructed-reals",
+      "status": "proved",
+      "tooltip": "A Farkas refutation closes over the constructed reals resting on zero carrier axioms, where the same refutation over the axiomatized AxReal package rests on 30"
+    },
     {
       "group": "kernel-lean",
       "href": "cards/F-int-add-assoc.doc.json",
@@ -303,6 +419,22 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
       "label": "int-add-lt-add-of-le-of-lt",
       "status": "proved",
       "tooltip": "A strict integer inequality survives addition of a non-strict one"
+    },
+    {
+      "group": "kernel-lean",
+      "href": "cards/F-int-categoricity.doc.json",
+      "id": "F:int-categoricity",
+      "label": "int-categoricity",
+      "status": "proved",
+      "tooltip": "The constructed Int is THE integers: every generated aperiodic Z-structure is in structure-preserving bijection with it"
+    },
+    {
+      "group": "kernel-lean",
+      "href": "cards/F-int-characterization.doc.json",
+      "id": "F:int-characterization",
+      "label": "int-characterization",
+      "status": "proved",
+      "tooltip": "The constructed Int is a discretely ordered ring generated by 1, with unique maps out"
     },
     {
       "group": "kernel-lean",
@@ -474,6 +606,14 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
     },
     {
       "group": "kernel-lean",
+      "href": "cards/F-nat-peano-categoricity.doc.json",
+      "id": "F:nat-peano-categoricity",
+      "label": "nat-peano-categoricity",
+      "status": "proved",
+      "tooltip": "The constructed Nat is THE natural numbers, up to unique isomorphism"
+    },
+    {
+      "group": "kernel-lean",
       "href": "cards/F-nat-pow-add.doc.json",
       "id": "F:nat-pow-add",
       "label": "nat-pow-add",
@@ -498,6 +638,22 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
     },
     {
       "group": "kernel-lean",
+      "href": "cards/F-ordered-ring-farkas-refutation.doc.json",
+      "id": "F:ordered-ring-farkas-refutation",
+      "label": "ordered-ring-farkas-refutation",
+      "status": "proved",
+      "tooltip": "A reconstructed Farkas refutation holds in every ordered commutative ring, and rests on no axiom"
+    },
+    {
+      "group": "kernel-lean",
+      "href": "cards/F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.doc.json",
+      "id": "F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
+      "label": "ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
+      "status": "proved",
+      "tooltip": "The ordered-ring interface telescope is byte-identical over Real and over the axiom-free Int development"
+    },
+    {
+      "group": "kernel-lean",
       "href": "cards/F-rat-add-neg-inverse.doc.json",
       "id": "F:rat-add-neg-inverse",
       "label": "rat-add-neg-inverse",
@@ -519,13 +675,45 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
       "label": "rat-normalize-reduces",
       "status": "proved",
       "tooltip": "The rational smart constructor normalises"
+    },
+    {
+      "group": "kernel-lean",
+      "href": "cards/F-real-axioms-modelled-by-constructed-setoid.doc.json",
+      "id": "F:real-axioms-modelled-by-constructed-setoid",
+      "label": "real-axioms-modelled-by-constructed-setoid",
+      "status": "proved",
+      "tooltip": "The 30 AxReal axioms are satisfiable: a Bishop setoid over the constructed rationals models all 22 laws at zero trusted declarations"
+    },
+    {
+      "group": "kernel-lean",
+      "href": "cards/F-real-lattice-is-constructed-axiom-free.doc.json",
+      "id": "F:real-lattice-is-constructed-axiom-free",
+      "label": "real-lattice-is-constructed-axiom-free",
+      "status": "proved",
+      "tooltip": "The constructed reals carry max, min and a total absolute value, built with no index shift and no decision procedure"
+    },
+    {
+      "group": "kernel-lean",
+      "href": "cards/F-shipped-front-door-reaches-no-real-axiom.doc.json",
+      "id": "F:shipped-front-door-reaches-no-real-axiom",
+      "label": "shipped-front-door-reaches-no-real-axiom",
+      "status": "proved",
+      "tooltip": "No shipped reconstruction route BUILDS the AxReal axiom package: the trusted surface is declared but never reached"
+    },
+    {
+      "group": "kernel-lean",
+      "href": "cards/F-shipped-front-door-refutes-over-constructed-reals.doc.json",
+      "id": "F:shipped-front-door-refutes-over-constructed-reals",
+      "label": "shipped-front-door-refutes-over-constructed-reals",
+      "status": "proved",
+      "tooltip": "The shipped LRA/SOS front door reconstructs over the constructed reals, and the refutation it returns rests on zero carrier axioms"
     }
   ],
   "rankdir": "TB"
 }
 ```
 
-*Component 1 of 37: 31 facts, 49 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 1 of 38: 43 facts, 67 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 *Figure (Dependency graph of 9 facts with 8 edges) -- data:*
 
@@ -616,11 +804,11 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
       "tooltip": "Mathlib v4.30 source proposition Nat.fib_add_two"
     },
     {
-      "group": "unproved",
+      "group": "kernel-lean",
       "href": "cards/F-ml430-nat-fib-coprime-fib-succ-162fc738.doc.json",
       "id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
       "label": "ml430-nat-fib-coprime-fib-succ",
-      "status": "open",
+      "status": "proved",
       "tooltip": "Mathlib v4.30 source proposition Nat.fib_coprime_fib_succ"
     },
     {
@@ -640,11 +828,11 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
       "tooltip": "Mathlib v4.30 source proposition Nat.fib_mono"
     },
     {
-      "group": "unproved",
+      "group": "kernel-lean",
       "href": "cards/F-ml430-nat-gcd-fib-add-self-5a92d5e3.doc.json",
       "id": "F:ml430-nat-gcd-fib-add-self-5a92d5e3",
       "label": "ml430-nat-gcd-fib-add-self",
-      "status": "open",
+      "status": "proved",
       "tooltip": "Mathlib v4.30 source proposition Nat.gcd_fib_add_self"
     }
   ],
@@ -652,7 +840,7 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 2 of 37: 9 facts, 8 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 2 of 38: 9 facts, 8 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 *Figure (Dependency graph of 7 facts with 7 edges) -- data:*
 
@@ -758,7 +946,7 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 3 of 37: 7 facts, 7 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 3 of 38: 7 facts, 7 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 *Figure (Dependency graph of 6 facts with 5 edges) -- data:*
 
@@ -846,7 +1034,7 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 4 of 37: 6 facts, 5 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 4 of 38: 6 facts, 5 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 *Figure (Dependency graph of 5 facts with 4 edges) -- data:*
 
@@ -901,19 +1089,19 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
       "tooltip": "Mathlib v4.30 source proposition Int.gcd_fib"
     },
     {
-      "group": "unproved",
+      "group": "kernel-lean",
       "href": "cards/F-ml430-nat-fib-dvd-f80f3de1.doc.json",
       "id": "F:ml430-nat-fib-dvd-f80f3de1",
       "label": "ml430-nat-fib-dvd",
-      "status": "open",
+      "status": "proved",
       "tooltip": "Mathlib v4.30 source proposition Nat.fib_dvd"
     },
     {
-      "group": "unproved",
+      "group": "kernel-lean",
       "href": "cards/F-ml430-nat-fib-gcd-d1d98407.doc.json",
       "id": "F:ml430-nat-fib-gcd-d1d98407",
       "label": "ml430-nat-fib-gcd",
-      "status": "open",
+      "status": "proved",
       "tooltip": "Mathlib v4.30 source proposition Nat.fib_gcd"
     }
   ],
@@ -921,7 +1109,7 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 5 of 37: 5 facts, 4 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 5 of 38: 5 facts, 4 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 *Figure (Dependency graph of 5 facts with 4 edges) -- data:*
 
@@ -996,7 +1184,7 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 6 of 37: 5 facts, 4 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 6 of 38: 5 facts, 4 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 *Figure (Dependency graph of 5 facts with 4 edges) -- data:*
 
@@ -1071,7 +1259,7 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 7 of 37: 5 facts, 4 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 7 of 38: 5 facts, 4 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 *Figure (Dependency graph of 5 facts with 4 edges) -- data:*
 
@@ -1146,7 +1334,7 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 8 of 37: 5 facts, 4 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 8 of 38: 5 facts, 4 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 *Figure (Dependency graph of 5 facts with 4 edges) -- data:*
 
@@ -1221,7 +1409,7 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 9 of 37: 5 facts, 4 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 9 of 38: 5 facts, 4 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 *Figure (Dependency graph of 5 facts with 4 edges) -- data:*
 
@@ -1296,7 +1484,7 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 10 of 37: 5 facts, 4 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 10 of 38: 5 facts, 4 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 <details>
 <summary>Component 11 (4 facts)</summary>
@@ -1361,7 +1549,7 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 11 of 37: 4 facts, 3 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 11 of 38: 4 facts, 3 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 </details>
 
@@ -1428,7 +1616,7 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 12 of 37: 4 facts, 3 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 12 of 38: 4 facts, 3 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 </details>
 
@@ -1482,7 +1670,7 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 13 of 37: 3 facts, 2 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 13 of 38: 3 facts, 2 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 </details>
 
@@ -1536,7 +1724,7 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 14 of 37: 3 facts, 2 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 14 of 38: 3 facts, 2 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 </details>
 
@@ -1590,7 +1778,7 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 15 of 37: 3 facts, 2 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 15 of 38: 3 facts, 2 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 </details>
 
@@ -1649,7 +1837,7 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 16 of 37: 3 facts, 3 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 16 of 38: 3 facts, 3 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 </details>
 
@@ -1703,7 +1891,7 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 17 of 37: 3 facts, 2 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 17 of 38: 3 facts, 2 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 </details>
 
@@ -1757,7 +1945,7 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 18 of 37: 3 facts, 2 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 18 of 38: 3 facts, 2 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 </details>
 
@@ -1811,7 +1999,7 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 19 of 37: 3 facts, 2 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 19 of 38: 3 facts, 2 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 </details>
 
@@ -1865,7 +2053,7 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 20 of 37: 3 facts, 2 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 20 of 38: 3 facts, 2 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 </details>
 
@@ -1919,7 +2107,7 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 21 of 37: 3 facts, 2 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 21 of 38: 3 facts, 2 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 </details>
 
@@ -1973,12 +2161,66 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 22 of 37: 3 facts, 2 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 22 of 38: 3 facts, 2 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 </details>
 
 <details>
-<summary>Component 23 (2 facts)</summary>
+<summary>Component 23 (3 facts)</summary>
+
+*Figure (Dependency graph of 3 facts with 2 edges) -- data:*
+
+```json
+{
+  "edges": [
+    {
+      "from": "F:real-inverse-is-built-and-well-defined",
+      "label": "depends_on",
+      "to": "F:real-inverse-is-partial-and-its-modulus-is-data"
+    },
+    {
+      "from": "F:real-inverse-is-partial-and-its-modulus-is-data",
+      "label": "depends_on",
+      "to": "F:rationals-are-a-field-axiom-free"
+    }
+  ],
+  "figure_type": "dep-graph",
+  "nodes": [
+    {
+      "group": "kernel-lean",
+      "href": "cards/F-rationals-are-a-field-axiom-free.doc.json",
+      "id": "F:rationals-are-a-field-axiom-free",
+      "label": "rationals-are-a-field-axiom-free",
+      "status": "proved",
+      "tooltip": "ℚ is a field: Rat.inv is proved to invert, at zero trusted declarations"
+    },
+    {
+      "group": "kernel-lean",
+      "href": "cards/F-real-inverse-is-built-and-well-defined.doc.json",
+      "id": "F:real-inverse-is-built-and-well-defined",
+      "label": "real-inverse-is-built-and-well-defined",
+      "status": "proved",
+      "tooltip": "The constructed reals have a multiplicative inverse whose modulus is an explicit natural, and it is a function on the reals rather than on representatives"
+    },
+    {
+      "group": "kernel-lean",
+      "href": "cards/F-real-inverse-is-partial-and-its-modulus-is-data.doc.json",
+      "id": "F:real-inverse-is-partial-and-its-modulus-is-data",
+      "label": "real-inverse-is-partial-and-its-modulus-is-data",
+      "status": "proved",
+      "tooltip": "No function on all of the constructed reals is a multiplicative inverse, and the modulus that would make one possible cannot be extracted from positivity"
+    }
+  ],
+  "rankdir": "TB"
+}
+```
+
+*Component 23 of 38: 3 facts, 2 edges. An edge runs from the dependent fact to the fact it rests on.*
+
+</details>
+
+<details>
+<summary>Component 24 (2 facts)</summary>
 
 *Figure (Dependency graph of 2 facts with 1 edges) -- data:*
 
@@ -2014,12 +2256,12 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 23 of 37: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 24 of 38: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 </details>
 
 <details>
-<summary>Component 24 (2 facts)</summary>
+<summary>Component 25 (2 facts)</summary>
 
 *Figure (Dependency graph of 2 facts with 1 edges) -- data:*
 
@@ -2055,12 +2297,12 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 24 of 37: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 25 of 38: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 </details>
 
 <details>
-<summary>Component 25 (2 facts)</summary>
+<summary>Component 26 (2 facts)</summary>
 
 *Figure (Dependency graph of 2 facts with 1 edges) -- data:*
 
@@ -2096,12 +2338,12 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 25 of 37: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 26 of 38: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 </details>
 
 <details>
-<summary>Component 26 (2 facts)</summary>
+<summary>Component 27 (2 facts)</summary>
 
 *Figure (Dependency graph of 2 facts with 1 edges) -- data:*
 
@@ -2137,12 +2379,12 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 26 of 37: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 27 of 38: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 </details>
 
 <details>
-<summary>Component 27 (2 facts)</summary>
+<summary>Component 28 (2 facts)</summary>
 
 *Figure (Dependency graph of 2 facts with 1 edges) -- data:*
 
@@ -2178,12 +2420,12 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 27 of 37: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 28 of 38: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 </details>
 
 <details>
-<summary>Component 28 (2 facts)</summary>
+<summary>Component 29 (2 facts)</summary>
 
 *Figure (Dependency graph of 2 facts with 1 edges) -- data:*
 
@@ -2219,12 +2461,12 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 28 of 37: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 29 of 38: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 </details>
 
 <details>
-<summary>Component 29 (2 facts)</summary>
+<summary>Component 30 (2 facts)</summary>
 
 *Figure (Dependency graph of 2 facts with 1 edges) -- data:*
 
@@ -2260,12 +2502,12 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 29 of 37: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 30 of 38: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 </details>
 
 <details>
-<summary>Component 30 (2 facts)</summary>
+<summary>Component 31 (2 facts)</summary>
 
 *Figure (Dependency graph of 2 facts with 1 edges) -- data:*
 
@@ -2301,12 +2543,12 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 30 of 37: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 31 of 38: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 </details>
 
 <details>
-<summary>Component 31 (2 facts)</summary>
+<summary>Component 32 (2 facts)</summary>
 
 *Figure (Dependency graph of 2 facts with 1 edges) -- data:*
 
@@ -2342,12 +2584,12 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 31 of 37: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 32 of 38: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 </details>
 
 <details>
-<summary>Component 32 (2 facts)</summary>
+<summary>Component 33 (2 facts)</summary>
 
 *Figure (Dependency graph of 2 facts with 1 edges) -- data:*
 
@@ -2383,12 +2625,12 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 32 of 37: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 33 of 38: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 </details>
 
 <details>
-<summary>Component 33 (2 facts)</summary>
+<summary>Component 34 (2 facts)</summary>
 
 *Figure (Dependency graph of 2 facts with 1 edges) -- data:*
 
@@ -2424,12 +2666,12 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 33 of 37: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 34 of 38: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 </details>
 
 <details>
-<summary>Component 34 (2 facts)</summary>
+<summary>Component 35 (2 facts)</summary>
 
 *Figure (Dependency graph of 2 facts with 1 edges) -- data:*
 
@@ -2465,12 +2707,12 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 34 of 37: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 35 of 38: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 </details>
 
 <details>
-<summary>Component 35 (2 facts)</summary>
+<summary>Component 36 (2 facts)</summary>
 
 *Figure (Dependency graph of 2 facts with 1 edges) -- data:*
 
@@ -2506,12 +2748,12 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 35 of 37: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 36 of 38: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 </details>
 
 <details>
-<summary>Component 36 (2 facts)</summary>
+<summary>Component 37 (2 facts)</summary>
 
 *Figure (Dependency graph of 2 facts with 1 edges) -- data:*
 
@@ -2547,12 +2789,12 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 36 of 37: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 37 of 38: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 </details>
 
 <details>
-<summary>Component 37 (2 facts)</summary>
+<summary>Component 38 (2 facts)</summary>
 
 *Figure (Dependency graph of 2 facts with 1 edges) -- data:*
 
@@ -2588,7 +2830,7 @@ One drawing of all 324 would be 324 nodes wide and four layers deep -- a strip s
 }
 ```
 
-*Component 37 of 37: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
+*Component 38 of 38: 2 facts, 1 edges. An edge runs from the dependent fact to the fact it rests on.*
 
 </details>
 
@@ -2598,27 +2840,27 @@ Ledger spread over the documented facts
 | --- | --- | --- |
 | epistemic_status | computed | 2 |
 | epistemic_status | conjectured | 3 |
-| epistemic_status | open | 217 |
-| epistemic_status | proved | 99 |
+| epistemic_status | open | 212 |
+| epistemic_status | proved | 121 |
 | epistemic_status | refuted | 3 |
 | external_status | (absent) | 8 |
 | external_status | open | 5 |
-| external_status | proved | 296 |
+| external_status | proved | 308 |
 | external_status | refuted | 3 |
-| external_status | unknown | 12 |
-| proof_route | (none) | 220 |
+| external_status | unknown | 17 |
+| proof_route | (none) | 215 |
 | proof_route | cas-certificate | 19 |
 | proof_route | imported-kernel-lean | 5 |
-| proof_route | kernel-lean | 43 |
+| proof_route | kernel-lean | 64 |
 | proof_route | search-certificate | 12 |
 | proof_route | smt-clausal | 9 |
-| proof_route | smt-term-level | 16 |
+| proof_route | smt-term-level | 17 |
 | formal.language | cas-term | 9 |
-| formal.language | lean4 | 47 |
+| formal.language | lean4 | 62 |
 | formal.language | lean4-surface | 214 |
-| formal.language | smtlib2 | 54 |
+| formal.language | smtlib2 | 56 |
 
-Source: `python3 render/producers-py/facts_to_docir.py` (exit 0), 324 input(s) hashed.
+Source: `python3 render/producers-py/facts_to_docir.py` (exit 0), 341 input(s) hashed.
 
 Fact index
 
@@ -2634,6 +2876,8 @@ Fact index
 | F:chu-vandermonde-convolution | Chu-Vandermonde convolution, closed form at symbolic parameters | cas-term | hypergeometric-summation | cas-certificate | proved | proved | proved | - | 2 | 2 | [`F-chu-vandermonde-convolution`](cards/F-chu-vandermonde-convolution.html) |
 | F:chu-vandermonde-convolution-recurrence | The Chu-Vandermonde convolution satisfies a first-order recurrence in p | cas-term | hypergeometric-summation | cas-certificate | proved | proved | proved | - | 2 | 2 | [`F-chu-vandermonde-convolution-recurrence`](cards/F-chu-vandermonde-convolution-recurrence.html) |
 | F:collatz-reaches-one | Collatz conjecture | lean4 | none | - | conjectured | open | open | - | 0 | 0 | [`F-collatz-reaches-one`](cards/F-collatz-reaches-one.html) |
+| F:complex-admits-no-compatible-order | No relation on the constructed complex numbers satisfies seven of the Real package's ordered-ring laws | lean4 | Complex | kernel-lean | proved | proved | proved | - | 3 | 3 | [`F-complex-admits-no-compatible-order`](cards/F-complex-admits-no-compatible-order.html) |
+| F:complex-ring-constructed-axiom-free | The complex numbers are constructible in this kernel at zero trusted declarations, as a pair setoid over the constructed reals | lean4 | Complex | kernel-lean | proved | proved | proved | - | 4 | 4 | [`F-complex-ring-constructed-axiom-free`](cards/F-complex-ring-constructed-axiom-free.html) |
 | F:conjunctive-query-containment-homomorphism-certified | Six conjunctive-query containment questions decided by homomorphism and by counterexample database, agreeing across three independent routes | smtlib2 | none | search-certificate | proved | unclassified | proved | - | 3 | 3 | [`F-conjunctive-query-containment-homomorphism-certified`](cards/F-conjunctive-query-containment-homomorphism-certified.html) |
 | F:continuum-hypothesis-independent | The continuum hypothesis is independent of ZFC | smtlib2 | none | - | open | proved | open | import-backlog | 0 | 0 | [`F-continuum-hypothesis-independent`](cards/F-continuum-hypothesis-independent.html) |
 | F:contraposition | A conditional is equivalent to its contrapositive | smtlib2 | QF_UF | smt-term-level | proved | proved | proved | - | 1 | 1 | [`F-contraposition`](cards/F-contraposition.html) |
@@ -2644,6 +2888,7 @@ Fact index
 | F:excluded-middle | Law of excluded middle | smtlib2 | QF_UF | smt-term-level | proved | proved | proved | - | 1 | 1 | [`F-excluded-middle`](cards/F-excluded-middle.html) |
 | F:excluded-middle-not-intuitionistic | Excluded middle is not derivable in intuitionistic propositional logic | smtlib2 | none | - | open | proved | open | import-backlog | 0 | 0 | [`F-excluded-middle-not-intuitionistic`](cards/F-excluded-middle-not-intuitionistic.html) |
 | F:exportation | Exportation: the propositional form of the deduction theorem | smtlib2 | QF_UF | smt-term-level | proved | proved | proved | - | 1 | 1 | [`F-exportation`](cards/F-exportation.html) |
+| F:farkas-refutation-over-constructed-reals | A Farkas refutation closes over the constructed reals resting on zero carrier axioms, where the same refutation over the axiomatized AxReal package rests on 30 | lean4 | QF_LRA | kernel-lean | proved | proved | proved | - | 4 | 4 | [`F-farkas-refutation-over-constructed-reals`](cards/F-farkas-refutation-over-constructed-reals.html) |
 | F:fermat-last-theorem | Fermat's Last Theorem | smtlib2 | none | - | open | proved | open | import-backlog | 0 | 0 | [`F-fermat-last-theorem`](cards/F-fermat-last-theorem.html) |
 | F:fol-validity-undecidable | Validity in first-order logic is undecidable | smtlib2 | none | - | open | proved | open | import-backlog | 0 | 0 | [`F-fol-validity-undecidable`](cards/F-fol-validity-undecidable.html) |
 | F:fp16-add-monotone-rne | binary16 addition under roundNearestTiesToEven is monotone in its first argument | smtlib2 | QF_FP | - | open | proved | open | import-backlog | 0 | 0 | [`F-fp16-add-monotone-rne`](cards/F-fp16-add-monotone-rne.html) |
@@ -2671,6 +2916,8 @@ Fact index
 | F:int-add-le-add | The order on the integers is compatible with addition | lean4 | Int | kernel-lean | proved | proved | proved | - | 2 | 2 | [`F-int-add-le-add`](cards/F-int-add-le-add.html) |
 | F:int-add-lt-add-of-le-of-lt | A strict integer inequality survives addition of a non-strict one | lean4 | Int | kernel-lean | proved | proved | proved | - | 2 | 2 | [`F-int-add-lt-add-of-le-of-lt`](cards/F-int-add-lt-add-of-le-of-lt.html) |
 | F:int-add-neg | Every integer has an additive inverse | lean4 | Int | kernel-lean | proved | proved | proved | - | 3 | 3 | [`F-int-add-neg`](cards/F-int-add-neg.html) |
+| F:int-categoricity | The constructed Int is THE integers: every generated aperiodic Z-structure is in structure-preserving bijection with it | lean4 | Int | kernel-lean | proved | proved | proved | - | 5 | 5 | [`F-int-categoricity`](cards/F-int-categoricity.html) |
+| F:int-characterization | The constructed Int is a discretely ordered ring generated by 1, with unique maps out | lean4 | Int | kernel-lean | proved | proved | proved | - | 5 | 5 | [`F-int-characterization`](cards/F-int-characterization.html) |
 | F:int-equality-is-decidable | Equality of integers is decidable | lean4 | Int | kernel-lean | proved | proved | proved | - | 2 | 2 | [`F-int-equality-is-decidable`](cards/F-int-equality-is-decidable.html) |
 | F:int-euclidean-decomposition | Euclidean decomposition over the integers is derived, not assumed | lean4 | Int | kernel-lean | proved | proved | proved | - | 2 | 2 | [`F-int-euclidean-decomposition`](cards/F-int-euclidean-decomposition.html) |
 | F:int-left-distrib | Multiplication distributes over addition on the integers | lean4 | Int | kernel-lean | proved | proved | proved | - | 2 | 2 | [`F-int-left-distrib`](cards/F-int-left-distrib.html) |
@@ -2680,6 +2927,7 @@ Fact index
 | F:int-sq-nonneg | Every integer square is nonnegative | lean4 | Int | kernel-lean | proved | proved | proved | - | 2 | 2 | [`F-int-sq-nonneg`](cards/F-int-sq-nonneg.html) |
 | F:int-sub-nat-nat-elim | The integer borrow has exactly two outcomes, and each is witnessed by a natural | lean4 | Int | kernel-lean | proved | proved | proved | - | 2 | 2 | [`F-int-sub-nat-nat-elim`](cards/F-int-sub-nat-nat-elim.html) |
 | F:int-sub-nat-nat-shift | The normalized integer difference is invariant under a common shift | lean4 | Int | kernel-lean | proved | proved | proved | - | 2 | 2 | [`F-int-sub-nat-nat-shift`](cards/F-int-sub-nat-nat-shift.html) |
+| F:lean-kernel-accepts-the-whole-constructed-real-carrier | Official Lean's own kernel accepts every declaration of the constructed-real carrier | lean4 | lean4-kernel-declaration-stream | kernel-lean | proved | unknown | proved | - | 3 | 3 | [`F-lean-kernel-accepts-the-whole-constructed-real-carrier`](cards/F-lean-kernel-accepts-the-whole-constructed-real-carrier.html) |
 | F:list-nil-append | The empty list is a left identity for append | lean4 | List | imported-kernel-lean | proved | proved | proved | - | 2 | 2 | [`F-list-nil-append`](cards/F-list-nil-append.html) |
 | F:loadplan-hazmat-iis | Fourteen rows of a 90-row outbound load plan are an irreducible infeasible subsystem | smtlib2 | LIA | search-certificate | proved | unclassified | proved | - | 2 | 2 | [`F-loadplan-hazmat-iis`](cards/F-loadplan-hazmat-iis.html) |
 | F:ml430-int-add-modeq-left-ee732b5b | Mathlib v4.30 source proposition Int.add_modEq_left | lean4-surface | Int | - | open | proved | open | import-backlog | 0 | 0 | [`F-ml430-int-add-modeq-left-ee732b5b`](cards/F-ml430-int-add-modeq-left-ee732b5b.html) |
@@ -2809,17 +3057,17 @@ Fact index
 | F:ml430-nat-fastfib-eq-cde11774 | Mathlib v4.30 source proposition Nat.fastFib_eq | lean4-surface | Nat | - | open | proved | open | import-backlog | 0 | 0 | [`F-ml430-nat-fastfib-eq-cde11774`](cards/F-ml430-nat-fastfib-eq-cde11774.html) |
 | F:ml430-nat-fib-add-two-b86e0c82 | Mathlib v4.30 source proposition Nat.fib_add_two | lean4-surface | Nat | kernel-lean | proved | proved | proved | - | 1 | 1 | [`F-ml430-nat-fib-add-two-b86e0c82`](cards/F-ml430-nat-fib-add-two-b86e0c82.html) |
 | F:ml430-nat-fib-add-two-strictmono-c1e86d4d | Mathlib v4.30 source proposition Nat.fib_add_two_strictMono | lean4-surface | Nat | - | open | proved | open | import-backlog | 0 | 0 | [`F-ml430-nat-fib-add-two-strictmono-c1e86d4d`](cards/F-ml430-nat-fib-add-two-strictmono-c1e86d4d.html) |
-| F:ml430-nat-fib-coprime-fib-succ-162fc738 | Mathlib v4.30 source proposition Nat.fib_coprime_fib_succ | lean4-surface | Nat | - | open | proved | open | import-backlog | 0 | 0 | [`F-ml430-nat-fib-coprime-fib-succ-162fc738`](cards/F-ml430-nat-fib-coprime-fib-succ-162fc738.html) |
-| F:ml430-nat-fib-dvd-f80f3de1 | Mathlib v4.30 source proposition Nat.fib_dvd | lean4-surface | Nat | - | open | proved | open | import-backlog | 0 | 0 | [`F-ml430-nat-fib-dvd-f80f3de1`](cards/F-ml430-nat-fib-dvd-f80f3de1.html) |
+| F:ml430-nat-fib-coprime-fib-succ-162fc738 | Mathlib v4.30 source proposition Nat.fib_coprime_fib_succ | lean4-surface | Nat | kernel-lean | proved | proved | proved | - | 1 | 1 | [`F-ml430-nat-fib-coprime-fib-succ-162fc738`](cards/F-ml430-nat-fib-coprime-fib-succ-162fc738.html) |
+| F:ml430-nat-fib-dvd-f80f3de1 | Mathlib v4.30 source proposition Nat.fib_dvd | lean4-surface | Nat | kernel-lean | proved | proved | proved | - | 1 | 1 | [`F-ml430-nat-fib-dvd-f80f3de1`](cards/F-ml430-nat-fib-dvd-f80f3de1.html) |
 | F:ml430-nat-fib-eq-zero-61879073 | Mathlib v4.30 source proposition Nat.fib_eq_zero | lean4-surface | Nat | - | open | proved | open | import-backlog | 0 | 0 | [`F-ml430-nat-fib-eq-zero-61879073`](cards/F-ml430-nat-fib-eq-zero-61879073.html) |
-| F:ml430-nat-fib-gcd-d1d98407 | Mathlib v4.30 source proposition Nat.fib_gcd | lean4-surface | Nat | - | open | proved | open | import-backlog | 0 | 0 | [`F-ml430-nat-fib-gcd-d1d98407`](cards/F-ml430-nat-fib-gcd-d1d98407.html) |
+| F:ml430-nat-fib-gcd-d1d98407 | Mathlib v4.30 source proposition Nat.fib_gcd | lean4-surface | Nat | kernel-lean | proved | proved | proved | - | 1 | 1 | [`F-ml430-nat-fib-gcd-d1d98407`](cards/F-ml430-nat-fib-gcd-d1d98407.html) |
 | F:ml430-nat-fib-le-fib-succ-d1ef4a3d | Mathlib v4.30 source proposition Nat.fib_le_fib_succ | lean4-surface | Nat | - | open | proved | open | import-backlog | 0 | 0 | [`F-ml430-nat-fib-le-fib-succ-d1ef4a3d`](cards/F-ml430-nat-fib-le-fib-succ-d1ef4a3d.html) |
 | F:ml430-nat-fib-lt-fib-3582b881 | Mathlib v4.30 source proposition Nat.fib_lt_fib | lean4-surface | Nat | - | open | proved | open | import-backlog | 0 | 0 | [`F-ml430-nat-fib-lt-fib-3582b881`](cards/F-ml430-nat-fib-lt-fib-3582b881.html) |
 | F:ml430-nat-fib-mono-cc6afe09 | Mathlib v4.30 source proposition Nat.fib_mono | lean4-surface | Nat | - | open | proved | open | import-backlog | 0 | 0 | [`F-ml430-nat-fib-mono-cc6afe09`](cards/F-ml430-nat-fib-mono-cc6afe09.html) |
 | F:ml430-nat-fib-pos-9e67bd8e | Mathlib v4.30 source proposition Nat.fib_pos | lean4-surface | Nat | - | open | proved | open | import-backlog | 0 | 0 | [`F-ml430-nat-fib-pos-9e67bd8e`](cards/F-ml430-nat-fib-pos-9e67bd8e.html) |
 | F:ml430-nat-fib-strictmonoon-905810a9 | Mathlib v4.30 source proposition Nat.fib_strictMonoOn | lean4-surface | Nat | - | open | proved | open | import-backlog | 0 | 0 | [`F-ml430-nat-fib-strictmonoon-905810a9`](cards/F-ml430-nat-fib-strictmonoon-905810a9.html) |
-| F:ml430-nat-gcd-fib-add-self-5a92d5e3 | Mathlib v4.30 source proposition Nat.gcd_fib_add_self | lean4-surface | Nat | - | open | proved | open | import-backlog | 0 | 0 | [`F-ml430-nat-gcd-fib-add-self-5a92d5e3`](cards/F-ml430-nat-gcd-fib-add-self-5a92d5e3.html) |
-| F:ml430-nat-gcd-greatest-0a04214a | Mathlib v4.30 source proposition Nat.gcd_greatest | lean4-surface | Nat | - | open | proved | open | import-backlog | 0 | 0 | [`F-ml430-nat-gcd-greatest-0a04214a`](cards/F-ml430-nat-gcd-greatest-0a04214a.html) |
+| F:ml430-nat-gcd-fib-add-self-5a92d5e3 | Mathlib v4.30 source proposition Nat.gcd_fib_add_self | lean4-surface | Nat | kernel-lean | proved | proved | proved | - | 1 | 1 | [`F-ml430-nat-gcd-fib-add-self-5a92d5e3`](cards/F-ml430-nat-gcd-fib-add-self-5a92d5e3.html) |
+| F:ml430-nat-gcd-greatest-0a04214a | Mathlib v4.30 source proposition Nat.gcd_greatest | lean4-surface | Nat | kernel-lean | proved | proved | proved | - | 1 | 1 | [`F-ml430-nat-gcd-greatest-0a04214a`](cards/F-ml430-nat-gcd-greatest-0a04214a.html) |
 | F:ml430-nat-land-assoc-ad4775b8 | Mathlib v4.30 source proposition Nat.land_assoc | lean4-surface | Nat | - | open | proved | open | import-backlog | 0 | 0 | [`F-ml430-nat-land-assoc-ad4775b8`](cards/F-ml430-nat-land-assoc-ad4775b8.html) |
 | F:ml430-nat-land-bit-b9ab7475 | Mathlib v4.30 source proposition Nat.land_bit | lean4-surface | Nat | - | open | proved | open | import-backlog | 0 | 0 | [`F-ml430-nat-land-bit-b9ab7475`](cards/F-ml430-nat-land-bit-b9ab7475.html) |
 | F:ml430-nat-land-comm-7e6ad72e | Mathlib v4.30 source proposition Nat.land_comm | lean4-surface | Nat | - | open | proved | open | import-backlog | 0 | 0 | [`F-ml430-nat-land-comm-7e6ad72e`](cards/F-ml430-nat-land-comm-7e6ad72e.html) |
@@ -2919,26 +3167,37 @@ Fact index
 | F:nat-mul-assoc | Multiplication on the naturals is associative | lean4 | Nat | kernel-lean | proved | proved | proved | - | 2 | 2 | [`F-nat-mul-assoc`](cards/F-nat-mul-assoc.html) |
 | F:nat-mul-comm | Multiplication on the naturals is commutative | lean4 | Nat | kernel-lean | proved | proved | proved | - | 2 | 2 | [`F-nat-mul-comm`](cards/F-nat-mul-comm.html) |
 | F:nat-mul-one | One is a right identity for multiplication on the naturals | lean4 | Nat | kernel-lean | proved | proved | proved | - | 2 | 2 | [`F-nat-mul-one`](cards/F-nat-mul-one.html) |
+| F:nat-peano-categoricity | The constructed Nat is THE natural numbers, up to unique isomorphism | lean4 | Nat | kernel-lean | proved | proved | proved | - | 4 | 4 | [`F-nat-peano-categoricity`](cards/F-nat-peano-categoricity.html) |
 | F:nat-pow-add | The first index law: powers add over a product | lean4 | Nat | kernel-lean | proved | proved | proved | - | 2 | 2 | [`F-nat-pow-add`](cards/F-nat-pow-add.html) |
 | F:nat-succ-add | Nat succ_add | lean4 | Nat | kernel-lean | proved | proved | proved | - | 2 | 2 | [`F-nat-succ-add`](cards/F-nat-succ-add.html) |
 | F:nat-zero-add | Nat zero_add | lean4 | Nat | kernel-lean | proved | proved | proved | - | 2 | 2 | [`F-nat-zero-add`](cards/F-nat-zero-add.html) |
 | F:no-integer-square-is-minus-one | No integer squares to minus one | smtlib2 | QF_NIA | smt-term-level | proved | proved | proved | - | 1 | 1 | [`F-no-integer-square-is-minus-one`](cards/F-no-integer-square-is-minus-one.html) |
 | F:no-self-negating-proposition | No proposition is equivalent to its own negation | smtlib2 | QF_UF | smt-term-level | proved | proved | proved | - | 1 | 1 | [`F-no-self-negating-proposition`](cards/F-no-self-negating-proposition.html) |
+| F:nra-refutations-reconstruct-over-constructed-reals | Two QF_NRA refutation certificates reconstruct to a kernel-checked Lean False over the CONSTRUCTED reals | smtlib2 | QF_NRA | kernel-lean | proved | unknown | proved | - | 2 | 2 | [`F-nra-refutations-reconstruct-over-constructed-reals`](cards/F-nra-refutations-reconstruct-over-constructed-reals.html) |
 | F:ordered-ring-farkas-refutation | A reconstructed Farkas refutation holds in every ordered commutative ring, and rests on no axiom | lean4 | QF_LRA | kernel-lean | proved | proved | proved | - | 4 | 4 | [`F-ordered-ring-farkas-refutation`](cards/F-ordered-ring-farkas-refutation.html) |
+| F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers | The ordered-ring interface telescope is byte-identical over Real and over the axiom-free Int development | lean4 | kernel-metatheory | kernel-lean | proved | unknown | proved | - | 3 | 3 | [`F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers`](cards/F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.html) |
 | F:orders-candidate-keys-and-normal-forms | An order-line schema has exactly two candidate keys, is not in BCNF, and is not in 3NF -- with every subset of the attributes examined | smtlib2 | QF_UF | search-certificate | proved | unclassified | proved | - | 3 | 3 | [`F-orders-candidate-keys-and-normal-forms`](cards/F-orders-candidate-keys-and-normal-forms.html) |
 | F:orders-fd-implication-certified | Two implied and two unimplied functional dependencies on a committed order-line schema, each with a replayable certificate | smtlib2 | QF_UF | search-certificate | proved | unclassified | proved | - | 3 | 3 | [`F-orders-fd-implication-certified`](cards/F-orders-fd-implication-certified.html) |
 | F:peirce-law | Peirce's law | smtlib2 | QF_UF | smt-term-level | proved | proved | proved | - | 1 | 1 | [`F-peirce-law`](cards/F-peirce-law.html) |
 | F:prop-excluded-middle-classical | Excluded middle for propositions, as Lean proves it | lean4 | Prop | imported-kernel-lean | proved | proved | proved | - | 2 | 2 | [`F-prop-excluded-middle-classical`](cards/F-prop-excluded-middle-classical.html) |
+| F:qf-nia-univariate-unsat-is-certified | QF_NIA single-variable polynomial UNSAT carries an independently re-derivable refutation | smtlib2 | QF_NIA | smt-term-level | proved | unknown | proved | - | 3 | 3 | [`F-qf-nia-univariate-unsat-is-certified`](cards/F-qf-nia-univariate-unsat-is-certified.html) |
 | F:quantifier-negation-duality | Negation exchanges the two quantifiers | smtlib2 | UF | smt-term-level | proved | proved | proved | - | 1 | 1 | [`F-quantifier-negation-duality`](cards/F-quantifier-negation-duality.html) |
 | F:rado-r4-a5-b3 | The four-colour Rado number of 5(x-y) = 3z is 625 | smtlib2 | QF_BV | search-certificate | computed | open | evidence | novel | 3 | 3 | [`F-rado-r4-a5-b3`](cards/F-rado-r4-a5-b3.html) |
 | F:rado-r4-a5-b4 | The four-colour Rado number of 5(x-y) = 4z is 741 | smtlib2 | QF_BV | search-certificate | computed | open | evidence | novel | 1 | 1 | [`F-rado-r4-a5-b4`](cards/F-rado-r4-a5-b4.html) |
 | F:rat-add-neg-inverse | Rational addition renormalises and negation is an additive inverse | lean4 | Rat | kernel-lean | proved | proved | proved | - | 2 | 2 | [`F-rat-add-neg-inverse`](cards/F-rat-add-neg-inverse.html) |
 | F:rat-mul-renormalises | Rational multiplication renormalises | lean4 | Rat | kernel-lean | proved | proved | proved | - | 2 | 2 | [`F-rat-mul-renormalises`](cards/F-rat-mul-renormalises.html) |
 | F:rat-normalize-reduces | The rational smart constructor normalises | lean4 | Rat | kernel-lean | proved | proved | proved | - | 2 | 2 | [`F-rat-normalize-reduces`](cards/F-rat-normalize-reduces.html) |
+| F:rationals-are-a-field-axiom-free | ℚ is a field: Rat.inv is proved to invert, at zero trusted declarations | lean4 | Rat | kernel-lean | proved | proved | proved | - | 3 | 3 | [`F-rationals-are-a-field-axiom-free`](cards/F-rationals-are-a-field-axiom-free.html) |
+| F:real-axioms-modelled-by-constructed-setoid | The 30 AxReal axioms are satisfiable: a Bishop setoid over the constructed rationals models all 22 laws at zero trusted declarations | lean4 | Real | kernel-lean | proved | proved | proved | - | 3 | 3 | [`F-real-axioms-modelled-by-constructed-setoid`](cards/F-real-axioms-modelled-by-constructed-setoid.html) |
+| F:real-inverse-is-built-and-well-defined | The constructed reals have a multiplicative inverse whose modulus is an explicit natural, and it is a function on the reals rather than on representatives | lean4 | CReal | kernel-lean | proved | proved | proved | - | 4 | 4 | [`F-real-inverse-is-built-and-well-defined`](cards/F-real-inverse-is-built-and-well-defined.html) |
+| F:real-inverse-is-partial-and-its-modulus-is-data | No function on all of the constructed reals is a multiplicative inverse, and the modulus that would make one possible cannot be extracted from positivity | lean4 | CReal | kernel-lean | proved | proved | proved | - | 4 | 4 | [`F-real-inverse-is-partial-and-its-modulus-is-data`](cards/F-real-inverse-is-partial-and-its-modulus-is-data.html) |
+| F:real-lattice-is-constructed-axiom-free | The constructed reals carry max, min and a total absolute value, built with no index shift and no decision procedure | lean4 | CReal | kernel-lean | proved | proved | proved | - | 5 | 5 | [`F-real-lattice-is-constructed-axiom-free`](cards/F-real-lattice-is-constructed-axiom-free.html) |
 | F:resolution-rule-sound | The binary propositional resolution rule is sound | smtlib2 | QF_UF | smt-term-level | proved | proved | proved | - | 1 | 1 | [`F-resolution-rule-sound`](cards/F-resolution-rule-sound.html) |
 | F:roster-icu-night-iis | Five rows of a 102-row ICU night roster are an irreducible infeasible subsystem | smtlib2 | LIA | search-certificate | proved | unclassified | proved | - | 2 | 2 | [`F-roster-icu-night-iis`](cards/F-roster-icu-night-iis.html) |
 | F:schedule-critical-chain-infeasible | A five-constraint critical chain against a delivery deadline, refuted in the Lean kernel | smtlib2 | QF_LRA | kernel-lean | proved | unclassified | proved | - | 2 | 2 | [`F-schedule-critical-chain-infeasible`](cards/F-schedule-critical-chain-infeasible.html) |
 | F:schedule-deadline-iis | Five rows of a 60-row project schedule are an irreducible infeasible subsystem | smtlib2 | LRA | search-certificate | proved | unclassified | proved | - | 2 | 2 | [`F-schedule-deadline-iis`](cards/F-schedule-deadline-iis.html) |
+| F:shipped-front-door-reaches-no-real-axiom | No shipped reconstruction route BUILDS the AxReal axiom package: the trusted surface is declared but never reached | lean4 | QF_LRA | kernel-lean | proved | unknown | proved | - | 7 | 7 | [`F-shipped-front-door-reaches-no-real-axiom`](cards/F-shipped-front-door-reaches-no-real-axiom.html) |
+| F:shipped-front-door-refutes-over-constructed-reals | The shipped LRA/SOS front door reconstructs over the constructed reals, and the refutation it returns rests on zero carrier axioms | lean4 | QF_LRA | kernel-lean | proved | proved | proved | - | 6 | 6 | [`F-shipped-front-door-refutes-over-constructed-reals`](cards/F-shipped-front-door-refutes-over-constructed-reals.html) |
 | F:sorting-network-optimal-size-n3 | The optimal sorting network on 3 channels has exactly 3 comparators | smtlib2 | QF_BV | smt-clausal | proved | proved | proved | - | 2 | 2 | [`F-sorting-network-optimal-size-n3`](cards/F-sorting-network-optimal-size-n3.html) |
 | F:sorting-network-optimal-size-n4 | The optimal sorting network on 4 channels has exactly 5 comparators | smtlib2 | QF_BV | smt-clausal | proved | proved | proved | - | 2 | 2 | [`F-sorting-network-optimal-size-n4`](cards/F-sorting-network-optimal-size-n4.html) |
 | F:sorting-network-optimal-size-n5 | The optimal sorting network on 5 channels has exactly 9 comparators | smtlib2 | QF_BV | smt-clausal | proved | proved | proved | - | 2 | 2 | [`F-sorting-network-optimal-size-n5`](cards/F-sorting-network-optimal-size-n5.html) |
@@ -2949,7 +3208,7 @@ Fact index
 | F:weighted-binomial-row-sum | The k-weighted binomial row sum | cas-term | hypergeometric-summation | cas-certificate | proved | proved | proved | - | 2 | 2 | [`F-weighted-binomial-row-sum`](cards/F-weighted-binomial-row-sum.html) |
 | F:xor-associative | Exclusive-or is associative | smtlib2 | QF_UF | smt-term-level | proved | proved | proved | - | 1 | 1 | [`F-xor-associative`](cards/F-xor-associative.html) |
 
-Source: `python3 render/producers-py/facts_to_docir.py` (exit 0), 324 input(s) hashed.
+Source: `python3 render/producers-py/facts_to_docir.py` (exit 0), 341 input(s) hashed.
 
 <details>
 <summary>Import backlog</summary>
@@ -3076,17 +3335,12 @@ Settled in the literature, open here (import backlog)
 | F:ml430-nat-factorial-pos-f1dd2405 | Mathlib v4.30 source proposition Nat.factorial_pos | [`F-ml430-nat-factorial-pos-f1dd2405`](cards/F-ml430-nat-factorial-pos-f1dd2405.html) |
 | F:ml430-nat-fastfib-eq-cde11774 | Mathlib v4.30 source proposition Nat.fastFib_eq | [`F-ml430-nat-fastfib-eq-cde11774`](cards/F-ml430-nat-fastfib-eq-cde11774.html) |
 | F:ml430-nat-fib-add-two-strictmono-c1e86d4d | Mathlib v4.30 source proposition Nat.fib_add_two_strictMono | [`F-ml430-nat-fib-add-two-strictmono-c1e86d4d`](cards/F-ml430-nat-fib-add-two-strictmono-c1e86d4d.html) |
-| F:ml430-nat-fib-coprime-fib-succ-162fc738 | Mathlib v4.30 source proposition Nat.fib_coprime_fib_succ | [`F-ml430-nat-fib-coprime-fib-succ-162fc738`](cards/F-ml430-nat-fib-coprime-fib-succ-162fc738.html) |
-| F:ml430-nat-fib-dvd-f80f3de1 | Mathlib v4.30 source proposition Nat.fib_dvd | [`F-ml430-nat-fib-dvd-f80f3de1`](cards/F-ml430-nat-fib-dvd-f80f3de1.html) |
 | F:ml430-nat-fib-eq-zero-61879073 | Mathlib v4.30 source proposition Nat.fib_eq_zero | [`F-ml430-nat-fib-eq-zero-61879073`](cards/F-ml430-nat-fib-eq-zero-61879073.html) |
-| F:ml430-nat-fib-gcd-d1d98407 | Mathlib v4.30 source proposition Nat.fib_gcd | [`F-ml430-nat-fib-gcd-d1d98407`](cards/F-ml430-nat-fib-gcd-d1d98407.html) |
 | F:ml430-nat-fib-le-fib-succ-d1ef4a3d | Mathlib v4.30 source proposition Nat.fib_le_fib_succ | [`F-ml430-nat-fib-le-fib-succ-d1ef4a3d`](cards/F-ml430-nat-fib-le-fib-succ-d1ef4a3d.html) |
 | F:ml430-nat-fib-lt-fib-3582b881 | Mathlib v4.30 source proposition Nat.fib_lt_fib | [`F-ml430-nat-fib-lt-fib-3582b881`](cards/F-ml430-nat-fib-lt-fib-3582b881.html) |
 | F:ml430-nat-fib-mono-cc6afe09 | Mathlib v4.30 source proposition Nat.fib_mono | [`F-ml430-nat-fib-mono-cc6afe09`](cards/F-ml430-nat-fib-mono-cc6afe09.html) |
 | F:ml430-nat-fib-pos-9e67bd8e | Mathlib v4.30 source proposition Nat.fib_pos | [`F-ml430-nat-fib-pos-9e67bd8e`](cards/F-ml430-nat-fib-pos-9e67bd8e.html) |
 | F:ml430-nat-fib-strictmonoon-905810a9 | Mathlib v4.30 source proposition Nat.fib_strictMonoOn | [`F-ml430-nat-fib-strictmonoon-905810a9`](cards/F-ml430-nat-fib-strictmonoon-905810a9.html) |
-| F:ml430-nat-gcd-fib-add-self-5a92d5e3 | Mathlib v4.30 source proposition Nat.gcd_fib_add_self | [`F-ml430-nat-gcd-fib-add-self-5a92d5e3`](cards/F-ml430-nat-gcd-fib-add-self-5a92d5e3.html) |
-| F:ml430-nat-gcd-greatest-0a04214a | Mathlib v4.30 source proposition Nat.gcd_greatest | [`F-ml430-nat-gcd-greatest-0a04214a`](cards/F-ml430-nat-gcd-greatest-0a04214a.html) |
 | F:ml430-nat-land-assoc-ad4775b8 | Mathlib v4.30 source proposition Nat.land_assoc | [`F-ml430-nat-land-assoc-ad4775b8`](cards/F-ml430-nat-land-assoc-ad4775b8.html) |
 | F:ml430-nat-land-bit-b9ab7475 | Mathlib v4.30 source proposition Nat.land_bit | [`F-ml430-nat-land-bit-b9ab7475`](cards/F-ml430-nat-land-bit-b9ab7475.html) |
 | F:ml430-nat-land-comm-7e6ad72e | Mathlib v4.30 source proposition Nat.land_comm | [`F-ml430-nat-land-comm-7e6ad72e`](cards/F-ml430-nat-land-comm-7e6ad72e.html) |
@@ -3164,10 +3418,10 @@ Settled in the literature, open here (import backlog)
 | F:ml430-nat-zero-ascfactorial-af4fcdca | Mathlib v4.30 source proposition Nat.zero_ascFactorial | [`F-ml430-nat-zero-ascfactorial-af4fcdca`](cards/F-ml430-nat-zero-ascfactorial-af4fcdca.html) |
 | F:ml430-nat-zero-of-testbit-eq-false-e244c9a1 | Mathlib v4.30 source proposition Nat.zero_of_testBit_eq_false | [`F-ml430-nat-zero-of-testbit-eq-false-e244c9a1`](cards/F-ml430-nat-zero-of-testbit-eq-false-e244c9a1.html) |
 
-Source: `python3 render/producers-py/facts_to_docir.py` (exit 0), 324 input(s) hashed.
+Source: `python3 render/producers-py/facts_to_docir.py` (exit 0), 341 input(s) hashed.
 
 </details>
 
 ---
 
-Rendered from Doc-IR by `axeyum-render`. Epoch 1787144076 (2026-08-19T12:54:36Z, source `commit`), commit `d637d83f77dbfa43c98eee4ab0ad78d235099006`.
+Rendered from Doc-IR by `axeyum-render`. Epoch 1787338967 (2026-08-21T19:02:47Z, source `commit`), commit `733126c0f351f0931f7eaf0b4f5f9f569f3aef44`.

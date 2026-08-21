@@ -18,9 +18,9 @@
   "provenance": {
     "command": "cargo run --release -q -p axeyum-lean-kernel --example int_theorem_inventory -- --expect-derived 57 --expect-asserted 0",
     "epoch": {
-      "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+      "commit": "7805ef8b3187468be75109ed94d97fb9e9df2abd",
       "source": "commit",
-      "unix": 1787129238
+      "unix": 1787288415
     },
     "exit_status": 0,
     "generator": "crates/axeyum-lean-kernel/examples/int_theorem_inventory.rs",

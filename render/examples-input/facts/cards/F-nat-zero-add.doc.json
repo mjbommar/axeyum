@@ -22,9 +22,9 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
@@ -79,9 +79,9 @@
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
@@ -97,9 +97,9 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
@@ -142,9 +142,9 @@
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
@@ -160,9 +160,9 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
@@ -195,9 +195,9 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
@@ -256,9 +256,9 @@
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
@@ -274,9 +274,9 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
@@ -298,9 +298,9 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
@@ -332,9 +332,9 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
@@ -393,9 +393,9 @@
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
@@ -411,9 +411,9 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
@@ -435,9 +435,9 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
@@ -453,12 +453,17 @@
     {
       "id": "dependency-graph",
       "kind": {
-        "alt": "Dependency graph around F:nat-zero-add: 0 dependencies, 3 dependents",
+        "alt": "Dependency graph around F:nat-zero-add: 0 dependencies, 4 dependents",
         "caption": {
           "text": "Immediate dependencies and dependents of this fact"
         },
         "spec": {
           "edges": [
+            {
+              "from": "F:int-euclidean-decomposition",
+              "label": "depends_on",
+              "to": "F:nat-zero-add"
+            },
             {
               "from": "F:nat-add-comm",
               "label": "depends_on",
@@ -487,6 +492,14 @@
           ],
           "figure_type": "dep-graph",
           "nodes": [
+            {
+              "group": "kernel-lean",
+              "href": "F-int-euclidean-decomposition.doc.json",
+              "id": "F:int-euclidean-decomposition",
+              "label": "int-euclidean-decomposition",
+              "status": "proved",
+              "tooltip": "Euclidean decomposition over the integers is derived, not assumed"
+            },
             {
               "group": "kernel-lean",
               "href": "F-nat-add-comm.doc.json",
@@ -527,9 +540,9 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
@@ -569,6 +582,12 @@
         ],
         "rows": [
           [
+            "F:int-euclidean-decomposition",
+            "Euclidean decomposition over the integers is derived, not assumed",
+            "proved",
+            "F-int-euclidean-decomposition.doc.json"
+          ],
+          [
             "F:nat-add-comm",
             "Addition on the naturals is commutative",
             "proved",
@@ -590,9 +609,9 @@
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
@@ -608,9 +627,9 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
@@ -653,9 +672,9 @@
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
@@ -671,9 +690,9 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
@@ -696,9 +715,9 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
@@ -716,9 +735,9 @@
   "meta": {
     "doc_id": "fact-nat-zero-add",
     "epoch": {
-      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
       "source": "commit",
-      "unix": 1787144076
+      "unix": 1787338967
     },
     "genre": "result",
     "nav": [
@@ -729,7 +748,7 @@
       },
       {
         "href": "../facts-atlas.doc.json#dep-graph-c01",
-        "label": "Component 1 of 37 (31 facts)",
+        "label": "Component 1 of 38 (43 facts)",
         "rel": "component"
       }
     ],
@@ -744,9 +763,9 @@
   "provenance": {
     "command": "python3 render/producers-py/facts_to_docir.py",
     "epoch": {
-      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
       "source": "commit",
-      "unix": 1787144076
+      "unix": 1787338967
     },
     "exit_status": 0,
     "generator": "render/producers-py/facts_to_docir.py",

@@ -22,16 +22,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-ml430-nat-fib-dvd-f80f3de1.json",
-            "sha256": "523804a5730bc72f1865e1415126e4d1825df8285fef01ae99ca9f57ae6230ff"
+            "sha256": "3bac3095580546e680e5b24923f6f7e54b01d0dfd116d7e28d381a89180d4002"
           }
         ]
       },
@@ -65,9 +65,9 @@
         "rows": [
           [
             "epistemic (what this ledger established)",
-            "open",
-            "open",
-            "0 of 0 evidence row(s) checked"
+            "proved",
+            "proved",
+            "1 of 1 evidence row(s) checked"
           ],
           [
             "external (what mathematics knows)",
@@ -79,16 +79,16 @@
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
           "inputs": [
             {
               "path": "artifacts/facts/F-ml430-nat-fib-dvd-f80f3de1.json",
-              "sha256": "523804a5730bc72f1865e1415126e4d1825df8285fef01ae99ca9f57ae6230ff"
+              "sha256": "3bac3095580546e680e5b24923f6f7e54b01d0dfd116d7e28d381a89180d4002"
             }
           ]
         },
@@ -97,16 +97,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-ml430-nat-fib-dvd-f80f3de1.json",
-            "sha256": "523804a5730bc72f1865e1415126e4d1825df8285fef01ae99ca9f57ae6230ff"
+            "sha256": "3bac3095580546e680e5b24923f6f7e54b01d0dfd116d7e28d381a89180d4002"
           }
         ]
       },
@@ -114,29 +114,220 @@
       "title": "Status"
     },
     {
-      "id": "disagreement-import-backlog",
+      "id": "trust-base",
       "kind": {
-        "text": "Import backlog: open in this ledger (epistemic_status: open) and settled in the literature (external_status: proved). That is a target for import, not a result of this project.",
-        "type": "prose"
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "kernel-lean"
+          ],
+          [
+            "axiom_footprint",
+            "[] -- axiom-free; only kernel-lean can deliver this"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ml430-nat-fib-dvd-f80f3de1.json",
+              "sha256": "3bac3095580546e680e5b24923f6f7e54b01d0dfd116d7e28d381a89180d4002"
+            }
+          ]
+        },
+        "type": "table"
       },
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-ml430-nat-fib-dvd-f80f3de1.json",
-            "sha256": "523804a5730bc72f1865e1415126e4d1825df8285fef01ae99ca9f57ae6230ff"
+            "sha256": "3bac3095580546e680e5b24923f6f7e54b01d0dfd116d7e28d381a89180d4002"
           }
         ]
       },
       "tag": "essential",
-      "title": "Import backlog"
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "python3 scripts/check-autogenesis-fact-operation.py --fact artifacts/facts/F-ml430-nat-fib-dvd-f80f3de1.json"
+        },
+        "summary": {
+          "text": "The proposition declared as `Nat.fib_dvd` in the pinned Mathlib v4.30 source."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-dvd-f80f3de1.json",
+            "sha256": "3bac3095580546e680e5b24923f6f7e54b01d0dfd116d7e28d381a89180d4002"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: autogenesis-operation-44e0b4912e5905da"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row autogenesis-operation-44e0b4912e5905da as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "autogenesis-operation-44e0b4912e5905da"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "target-native-fibonacci-divisibility-v1, axeyum-lean-import/sealed-fib-dvd-capsule-receipt-v1, axeyum-lean-import/sealed-kernel-capsule-v1"
+          ],
+          [
+            "supports",
+            "The proposition declared as `Nat.fib_dvd` in the pinned Mathlib v4.30 source."
+          ],
+          [
+            "artifact",
+            "sha256:44e0b4912e5905da546a32291d0e1b1dea704a39389b77cae969a5e0c965695a"
+          ],
+          [
+            "artifact state",
+            "content-hash-only"
+          ],
+          [
+            "artifact sha256",
+            "44e0b4912e5905da546a32291d0e1b1dea704a39389b77cae969a5e0c965695a"
+          ],
+          [
+            "checker_operation",
+            "{'capsule_path': '/nas3/data/axeyum/autogenesis/reference-packs/c2266de88-nat-fib-dvd-v1/target-1.ndjson', 'capsule_sha256': '52acbd5a51f2163ab5b712483c582adb916ab198567c2b0b6c3678f7316d86d7', 'declaration_sha256': 'eef50a6cf5d2d19c80ed894f11d14bbe3521b86982a960e381fff8076be55237', 'direct_theorem_dependencies': ['Axeyum.Autogenesis.dvdAntisymmOfficialV1', 'Axeyum.Autogenesis.dvdGcdOfficialV1', 'Axeyum.Autogenesis.dvdReflOfficialV1', 'Axeyum.Autogenesis.gcdDvdLeftOfficialV1', 'Axeyum.Autogenesis.gcdDvdRightOfficialV1', 'Nat.fib_gcd'], 'execution_sha256': '44e0b4912e5905da546a32291d0e1b1dea7..."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ml430-nat-fib-dvd-f80f3de1.json",
+              "sha256": "3bac3095580546e680e5b24923f6f7e54b01d0dfd116d7e28d381a89180d4002"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-dvd-f80f3de1.json",
+            "sha256": "3bac3095580546e680e5b24923f6f7e54b01d0dfd116d7e28d381a89180d4002"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Derived from a clean-commit typed execution receipt. The registered fact-operation checker replays the immutable capsule and committed result manifest and requires their exact twice-reconstructed theorem identity, empty axiom footprint, and named direct theorem dependencies; no caller-authored route, footprint, checker, or shell command is accepted.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-dvd-f80f3de1.json",
+            "sha256": "3bac3095580546e680e5b24923f6f7e54b01d0dfd116d7e28d381a89180d4002"
+          }
+        ]
+      },
+      "tag": "archive"
     },
     {
       "id": "dependency-graph",
@@ -160,15 +351,15 @@
               "href": "F-ml430-nat-fib-dvd-f80f3de1.doc.json",
               "id": "F:ml430-nat-fib-dvd-f80f3de1",
               "label": "ml430-nat-fib-dvd",
-              "status": "open",
+              "status": "proved",
               "tooltip": "Mathlib v4.30 source proposition Nat.fib_dvd"
             },
             {
-              "group": "unproved",
+              "group": "kernel-lean",
               "href": "F-ml430-nat-fib-gcd-d1d98407.doc.json",
               "id": "F:ml430-nat-fib-gcd-d1d98407",
               "label": "ml430-nat-fib-gcd",
-              "status": "open",
+              "status": "proved",
               "tooltip": "Mathlib v4.30 source proposition Nat.fib_gcd"
             }
           ],
@@ -179,16 +370,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-ml430-nat-fib-dvd-f80f3de1.json",
-            "sha256": "523804a5730bc72f1865e1415126e4d1825df8285fef01ae99ca9f57ae6230ff"
+            "sha256": "3bac3095580546e680e5b24923f6f7e54b01d0dfd116d7e28d381a89180d4002"
           }
         ]
       },
@@ -223,23 +414,23 @@
           [
             "F:ml430-nat-fib-gcd-d1d98407",
             "Mathlib v4.30 source proposition Nat.fib_gcd",
-            "open",
+            "proved",
             "F-ml430-nat-fib-gcd-d1d98407.doc.json"
           ]
         ],
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
           "inputs": [
             {
               "path": "artifacts/facts/F-ml430-nat-fib-dvd-f80f3de1.json",
-              "sha256": "523804a5730bc72f1865e1415126e4d1825df8285fef01ae99ca9f57ae6230ff"
+              "sha256": "3bac3095580546e680e5b24923f6f7e54b01d0dfd116d7e28d381a89180d4002"
             }
           ]
         },
@@ -248,16 +439,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-ml430-nat-fib-dvd-f80f3de1.json",
-            "sha256": "523804a5730bc72f1865e1415126e4d1825df8285fef01ae99ca9f57ae6230ff"
+            "sha256": "3bac3095580546e680e5b24923f6f7e54b01d0dfd116d7e28d381a89180d4002"
           }
         ]
       },
@@ -287,7 +478,7 @@
           ],
           [
             "established_by",
-            "not established in this ledger"
+            "axeyum-autogenesis execution 2cf642d486187e6ec1f84bc68dba0334074b596ca415fc4aff37a7a1a2f4bede"
           ],
           [
             "source",
@@ -297,16 +488,16 @@
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
           "inputs": [
             {
               "path": "artifacts/facts/F-ml430-nat-fib-dvd-f80f3de1.json",
-              "sha256": "523804a5730bc72f1865e1415126e4d1825df8285fef01ae99ca9f57ae6230ff"
+              "sha256": "3bac3095580546e680e5b24923f6f7e54b01d0dfd116d7e28d381a89180d4002"
             }
           ]
         },
@@ -315,16 +506,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-ml430-nat-fib-dvd-f80f3de1.json",
-            "sha256": "523804a5730bc72f1865e1415126e4d1825df8285fef01ae99ca9f57ae6230ff"
+            "sha256": "3bac3095580546e680e5b24923f6f7e54b01d0dfd116d7e28d381a89180d4002"
           }
         ]
       },
@@ -371,16 +562,16 @@
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
           "inputs": [
             {
               "path": "artifacts/facts/F-ml430-nat-fib-dvd-f80f3de1.json",
-              "sha256": "523804a5730bc72f1865e1415126e4d1825df8285fef01ae99ca9f57ae6230ff"
+              "sha256": "3bac3095580546e680e5b24923f6f7e54b01d0dfd116d7e28d381a89180d4002"
             }
           ]
         },
@@ -389,16 +580,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-ml430-nat-fib-dvd-f80f3de1.json",
-            "sha256": "523804a5730bc72f1865e1415126e4d1825df8285fef01ae99ca9f57ae6230ff"
+            "sha256": "3bac3095580546e680e5b24923f6f7e54b01d0dfd116d7e28d381a89180d4002"
           }
         ]
       },
@@ -408,22 +599,22 @@
     {
       "id": "ledger-notes",
       "kind": {
-        "text": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+        "text": "CLOSED BY AXEYUM AUTOGENESIS. The machine frontier selected this exact fact for registered operation `authoritative-mathlib-nat-fib-dvd-kernel-capsule-v1`; execution receipt `44e0b4912e5905da546a32291d0e1b1dea704a39389b77cae969a5e0c965695a` produced a twice-reconstructed axiom-free sealed kernel theorem capsule, and the typed transaction derived this status, route, footprint, evidence row, checker, and provenance without caller-authored admission metadata.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
         "type": "prose"
       },
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-ml430-nat-fib-dvd-f80f3de1.json",
-            "sha256": "523804a5730bc72f1865e1415126e4d1825df8285fef01ae99ca9f57ae6230ff"
+            "sha256": "3bac3095580546e680e5b24923f6f7e54b01d0dfd116d7e28d381a89180d4002"
           }
         ]
       },
@@ -434,9 +625,9 @@
   "meta": {
     "doc_id": "fact-ml430-nat-fib-dvd-f80f3de1",
     "epoch": {
-      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
       "source": "commit",
-      "unix": 1787144076
+      "unix": 1787338967
     },
     "genre": "result",
     "nav": [
@@ -447,7 +638,7 @@
       },
       {
         "href": "../facts-atlas.doc.json#dep-graph-c05",
-        "label": "Component 5 of 37 (5 facts)",
+        "label": "Component 5 of 38 (5 facts)",
         "rel": "component"
       }
     ],
@@ -462,16 +653,16 @@
   "provenance": {
     "command": "python3 render/producers-py/facts_to_docir.py",
     "epoch": {
-      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
       "source": "commit",
-      "unix": 1787144076
+      "unix": 1787338967
     },
     "exit_status": 0,
     "generator": "render/producers-py/facts_to_docir.py",
     "inputs": [
       {
         "path": "artifacts/facts/F-ml430-nat-fib-dvd-f80f3de1.json",
-        "sha256": "523804a5730bc72f1865e1415126e4d1825df8285fef01ae99ca9f57ae6230ff"
+        "sha256": "3bac3095580546e680e5b24923f6f7e54b01d0dfd116d7e28d381a89180d4002"
       }
     ]
   },

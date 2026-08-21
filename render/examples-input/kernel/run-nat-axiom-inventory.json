@@ -34,11 +34,11 @@
   "id": "R:kernel-nat-axiom-inventory",
   "outcome": "established",
   "provenance": {
-    "command": "cargo run --release -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free logic --require-axiom-free nat --expect-axioms real=30 --expect-axioms integer=0 --expect-axioms string=1",
+    "command": "cargo run --release -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free logic --require-axiom-free nat --expect-axioms axreal=30 --expect-axioms integer=0 --expect-axioms rat=0 --expect-axioms string=0",
     "epoch": {
-      "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+      "commit": "7805ef8b3187468be75109ed94d97fb9e9df2abd",
       "source": "commit",
-      "unix": 1787129238
+      "unix": 1787288415
     },
     "exit_status": 0,
     "generator": "crates/axeyum-lean-kernel/examples/nat_axiom_inventory.rs",
@@ -46,7 +46,7 @@
       {
         "path": "crates/axeyum-lean-kernel/examples/nat_axiom_inventory.rs",
         "role": "source",
-        "sha256": "3cccf280b1fae8517ea340fdc32d1c66bbfda29489cc4d77539735e10c9d3c75"
+        "sha256": "e03de885f92ffde076a2a09a7e7d7a894679e73d93161b59e938a9135b9ba6b6"
       }
     ]
   },
@@ -54,15 +54,16 @@
     "cwd": ".",
     "expected_exit_status": 0,
     "expected_seconds": 1,
-    "line": "cargo run --release -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free logic --require-axiom-free nat --expect-axioms real=30 --expect-axioms integer=0 --expect-axioms string=1"
+    "line": "cargo run --release -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free logic --require-axiom-free nat --expect-axioms axreal=30 --expect-axioms integer=0 --expect-axioms rat=0 --expect-axioms string=0"
   },
   "schema_version": 1,
   "stats": {
+    "axreal_trusted": 30,
     "integer_trusted": 0,
     "logic_trusted": 0,
     "nat_trusted": 0,
-    "real_trusted": 30,
-    "string_trusted": 1
+    "rat_trusted": 0,
+    "string_trusted": 0
   },
   "summary": "The trusted surface (axiom + opaque + quotient) of all five prelude builders: logic 0, nat 0, integer 0, string 1, real 30 -- each number pinned by a flag that fails on drift.",
   "tables": {
@@ -74,159 +75,154 @@
       ],
       "rows": [
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real"
+          "AxReal"
         ],
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real.add"
+          "AxReal.add"
         ],
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real.add_assoc"
+          "AxReal.add_assoc"
         ],
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real.add_comm"
+          "AxReal.add_comm"
         ],
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real.add_le_add"
+          "AxReal.add_le_add"
         ],
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real.add_lt_add_of_le_of_lt"
+          "AxReal.add_lt_add_of_le_of_lt"
         ],
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real.add_neg"
+          "AxReal.add_neg"
         ],
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real.add_zero"
+          "AxReal.add_zero"
         ],
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real.le"
+          "AxReal.le"
         ],
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real.le_of_lt"
+          "AxReal.le_of_lt"
         ],
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real.le_refl"
+          "AxReal.le_refl"
         ],
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real.le_trans"
+          "AxReal.le_trans"
         ],
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real.left_distrib"
+          "AxReal.left_distrib"
         ],
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real.lt"
+          "AxReal.lt"
         ],
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real.lt_irrefl"
+          "AxReal.lt_irrefl"
         ],
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real.lt_of_le_of_lt"
+          "AxReal.lt_of_le_of_lt"
         ],
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real.lt_of_lt_of_le"
+          "AxReal.lt_of_lt_of_le"
         ],
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real.lt_trans"
+          "AxReal.lt_trans"
         ],
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real.mul"
+          "AxReal.mul"
         ],
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real.mul_assoc"
+          "AxReal.mul_assoc"
         ],
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real.mul_comm"
+          "AxReal.mul_comm"
         ],
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real.mul_le_mul_of_nonneg_left"
+          "AxReal.mul_le_mul_of_nonneg_left"
         ],
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real.mul_nonneg"
+          "AxReal.mul_nonneg"
         ],
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real.mul_one"
+          "AxReal.mul_one"
         ],
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real.mul_zero"
+          "AxReal.mul_zero"
         ],
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real.neg"
+          "AxReal.neg"
         ],
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real.one"
+          "AxReal.one"
         ],
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real.sq_nonneg"
+          "AxReal.sq_nonneg"
         ],
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real.zero"
+          "AxReal.zero"
         ],
         [
-          "real",
+          "axreal",
           "axiom",
-          "Real.zero_lt_one"
-        ],
-        [
-          "string",
-          "axiom",
-          "axeyum.string.2.append"
+          "AxReal.zero_lt_one"
         ]
       ]
     },
@@ -254,7 +250,7 @@
           "0"
         ],
         [
-          "real",
+          "axreal",
           "30",
           "0",
           "0",
@@ -268,11 +264,18 @@
           "0"
         ],
         [
+          "rat",
+          "0",
+          "0",
+          "0",
+          "0"
+        ],
+        [
           "string",
-          "1",
           "0",
           "0",
-          "1"
+          "0",
+          "0"
         ]
       ]
     }

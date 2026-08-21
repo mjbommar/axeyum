@@ -642,7 +642,7 @@
       "kind": "theorem",
       "name": "Nat.div_succ",
       "prelude": "nat",
-      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.div (AxNat.succ x0) (AxNat.succ x1)) (Bool.rec.{1} (fun (x2 : Bool) => AxNat) (AxNat.succ (AxNat.div x0 (AxNat.succ x1))) (AxNat.div x0 (AxNat.succ x1)) (AxNat.beq (AxNat.mod x0 (AxNat.succ x1)) x1))))"
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.div (AxNat.succ x0) (AxNat.succ x1)) (Bool.rec.{1} (fun (x2 : Bool) => AxNat) (AxNat.div x0 (AxNat.succ x1)) (AxNat.succ (AxNat.div x0 (AxNat.succ x1))) (AxNat.beq (AxNat.mod x0 (AxNat.succ x1)) x1))))"
     },
     {
       "axiom_footprint": [],
@@ -1118,11 +1118,11 @@
     },
     {
       "axiom_footprint": [],
-      "binders": 2,
+      "binders": 3,
       "kind": "theorem",
       "name": "Nat.mod_lt",
       "prelude": "nat",
-      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> AxNat.lt (AxNat.mod x1 (AxNat.succ x0)) (AxNat.succ x0)))"
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.lt AxNat.zero x1) -> AxNat.lt (AxNat.mod x0 x1) x1)))"
     },
     {
       "axiom_footprint": [],
@@ -1130,7 +1130,7 @@
       "kind": "theorem",
       "name": "Nat.mod_succ",
       "prelude": "nat",
-      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.mod (AxNat.succ x0) (AxNat.succ x1)) (Bool.rec.{1} (fun (x2 : Bool) => AxNat) AxNat.zero (AxNat.succ (AxNat.mod x0 (AxNat.succ x1))) (AxNat.beq (AxNat.mod x0 (AxNat.succ x1)) x1))))"
+      "type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.mod (AxNat.succ x0) (AxNat.succ x1)) (Bool.rec.{1} (fun (x2 : Bool) => AxNat) (AxNat.succ (AxNat.mod x0 (AxNat.succ x1))) AxNat.zero (AxNat.beq (AxNat.mod x0 (AxNat.succ x1)) x1))))"
     },
     {
       "axiom_footprint": [],
@@ -1518,9 +1518,9 @@
     }
   ],
   "epoch": {
-    "commit": "2f2fe9b0cc408777fef63d1f84c19472464606cb",
+    "commit": "7805ef8b3187468be75109ed94d97fb9e9df2abd",
     "source": "commit",
-    "unix": 1787129238
+    "unix": 1787288415
   },
   "generator": "render/producers-kernel/kernel_to_docir.py",
   "note": "Kernel inventory snapshot: THEOREM ROWS ONLY. Produced by running the inventory examples, never by reading source. Assembly resolves a kernel reference to `proved`/`kernel-lean` without consulting `kind`, so assumptions live in render/examples-input/kernel/kernel-assumptions.json and are referenced by no statement block."

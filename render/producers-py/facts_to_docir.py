@@ -873,7 +873,8 @@ def graph_blocks(ids: list[str], facts: dict[str, dict], edges: int,
 
 def build_atlas(ids: list[str], facts: dict[str, dict], digests: dict[str, str],
                 epoch: dict, doc_id: str, title: str, subtitle: str,
-                intro: str, nav: list[dict] | None = None) -> dict:
+                intro: str, nav: list[dict] | None = None,
+                excluded_invalid: tuple[str, ...] = ()) -> dict:
     inputs = [(f"artifacts/facts/{slug(i)}.json", digests[i]) for i in sorted(ids)]
     prov = provenance(inputs, epoch)
     edges = count_edges(ids, facts)
@@ -886,6 +887,20 @@ def build_atlas(ids: list[str], facts: dict[str, dict], digests: dict[str, str],
             backlog.append(i)
 
     blocks = [block("intro", "essential", prose_kind(intro), prov, title=title)]
+    if excluded_invalid:
+        names = "; ".join(e.split(":", 1)[0].strip() for e in excluded_invalid)
+        blocks.append(block(
+            "atlas-exclusions", "essential",
+            prose_kind(
+                f"EXCLUDED FROM THIS ATLAS: {len(excluded_invalid)} fact "
+                f"file(s) in the ledger currently FAIL fact.schema.json and "
+                f"are not rendered here, because a card cannot be built from "
+                f"bytes the schema rejects. The exclusion is a finding about "
+                f"the ledger, not about the mathematics: {names}. Note that "
+                f"scripts/validate-facts.py currently ACCEPTS these files, so "
+                f"the schema and the gate disagree; reported to the ledger "
+                f"owners."),
+            prov, title="Excluded: schema-invalid ledger entries"))
     if novel:
         blocks.append(block(
             "novel", "essential",
@@ -1067,6 +1082,11 @@ def main() -> int:
     ap.add_argument("--pilot", nargs="*", default=None,
                     help="explicit pilot fact ids (default: the measured mixed component)")
     ap.add_argument("--quiet", action="store_true")
+    ap.add_argument("--exclude-invalid", action="store_true",
+                    help="do not abort on input facts that fail "
+                         "fact.schema.json: drop them from the corpus and "
+                         "render the exclusion LOUDLY in the atlas; every "
+                         "other error class still refuses the whole run")
     args = ap.parse_args()
 
     facts_dir = Path(args.facts_dir)
@@ -1137,6 +1157,24 @@ def main() -> int:
             errors.append(f"{fid}: status `open` carrying {len(f['evidence'])} evidence "
                           f"row(s) -- an open fact with evidence is a contradiction")
 
+    excluded_invalid: list[str] = []
+    if errors and args.exclude_invalid:
+        keep = []
+        for e in errors:
+            if "is not of type" in e or "fails fact.schema.json" in e:
+                excluded_invalid.append(e)
+            else:
+                keep.append(e)
+        errors = keep
+        for e in excluded_invalid:
+            stem = e.split(":", 1)[0].replace(".json", "").strip()
+            fid = "F:" + stem[2:] if stem.startswith("F-") else stem
+            facts.pop(fid, None)
+        # also purge from skipped-list echo so the count lines stay honest
+        if excluded_invalid:
+            print(f"facts_to_docir: EXCLUDED {len(excluded_invalid)} "
+                  f"schema-invalid input fact(s); rendered loudly in the "
+                  f"atlas exclusions block", file=sys.stderr)
     if errors:
         print(f"facts_to_docir: {len(facts)} facts read, {len(errors)} error(s); "
               f"NOTHING WAS WRITTEN", file=sys.stderr)
@@ -1201,7 +1239,8 @@ def main() -> int:
         nav=[{"label": "Pilot: the Fibonacci frontier",
               "href": "facts-pilot.doc.json", "rel": "next"},
              {"label": "Pilot: Euclid's lemma",
-              "href": "facts-pilot-arith.doc.json", "rel": "next"}])))
+              "href": "facts-pilot-arith.doc.json", "rel": "next"}],
+        excluded_invalid=tuple(excluded_invalid))))
 
     if args.pilot:
         unknown = sorted(set(args.pilot) - set(facts))

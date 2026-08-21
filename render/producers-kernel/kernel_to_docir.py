@@ -86,7 +86,7 @@ ASSUMPTIONS_REL = "render/examples-input/kernel/kernel-assumptions.json"
 EXPECT_NAT_THEOREMS = 139
 EXPECT_INT_DERIVED = 57
 EXPECT_INT_ASSERTED = 0
-EXPECT_TRUSTED = {"logic": 0, "nat": 0, "real": 30, "integer": 0, "string": 1}
+EXPECT_TRUSTED = {"logic": 0, "nat": 0, "axreal": 30, "integer": 0, "rat": 0, "string": 0}
 
 
 # --- small helpers -----------------------------------------------------------
@@ -469,8 +469,9 @@ def build(args) -> int:
         "trusted": Run("nat_axiom_inventory",
                        ["--require-axiom-free", "logic",
                         "--require-axiom-free", "nat",
-                        "--expect-axioms", f"real={EXPECT_TRUSTED['real']}",
+                        "--expect-axioms", f"axreal={EXPECT_TRUSTED['axreal']}",
                         "--expect-axioms", f"integer={EXPECT_TRUSTED['integer']}",
+                        "--expect-axioms", f"rat={EXPECT_TRUSTED['rat']}",
                         "--expect-axioms", f"string={EXPECT_TRUSTED['string']}"],
                        quiet),
     }

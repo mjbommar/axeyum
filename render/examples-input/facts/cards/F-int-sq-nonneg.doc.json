@@ -22,16 +22,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-int-sq-nonneg.json",
-            "sha256": "ea2411c692e8fb1a2f40ebaad868b6b6ff9181887421c717269a94111296b727"
+            "sha256": "62bd0dfdb9a87f28c2987ee927b3f756475a59e36d206203ded204bcb1c0d5e1"
           }
         ]
       },
@@ -79,16 +79,16 @@
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
           "inputs": [
             {
               "path": "artifacts/facts/F-int-sq-nonneg.json",
-              "sha256": "ea2411c692e8fb1a2f40ebaad868b6b6ff9181887421c717269a94111296b727"
+              "sha256": "62bd0dfdb9a87f28c2987ee927b3f756475a59e36d206203ded204bcb1c0d5e1"
             }
           ]
         },
@@ -97,16 +97,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-int-sq-nonneg.json",
-            "sha256": "ea2411c692e8fb1a2f40ebaad868b6b6ff9181887421c717269a94111296b727"
+            "sha256": "62bd0dfdb9a87f28c2987ee927b3f756475a59e36d206203ded204bcb1c0d5e1"
           }
         ]
       },
@@ -142,16 +142,16 @@
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
           "inputs": [
             {
               "path": "artifacts/facts/F-int-sq-nonneg.json",
-              "sha256": "ea2411c692e8fb1a2f40ebaad868b6b6ff9181887421c717269a94111296b727"
+              "sha256": "62bd0dfdb9a87f28c2987ee927b3f756475a59e36d206203ded204bcb1c0d5e1"
             }
           ]
         },
@@ -160,16 +160,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-int-sq-nonneg.json",
-            "sha256": "ea2411c692e8fb1a2f40ebaad868b6b6ff9181887421c717269a94111296b727"
+            "sha256": "62bd0dfdb9a87f28c2987ee927b3f756475a59e36d206203ded204bcb1c0d5e1"
           }
         ]
       },
@@ -195,16 +195,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-int-sq-nonneg.json",
-            "sha256": "ea2411c692e8fb1a2f40ebaad868b6b6ff9181887421c717269a94111296b727"
+            "sha256": "62bd0dfdb9a87f28c2987ee927b3f756475a59e36d206203ded204bcb1c0d5e1"
           }
         ]
       },
@@ -256,16 +256,16 @@
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
           "inputs": [
             {
               "path": "artifacts/facts/F-int-sq-nonneg.json",
-              "sha256": "ea2411c692e8fb1a2f40ebaad868b6b6ff9181887421c717269a94111296b727"
+              "sha256": "62bd0dfdb9a87f28c2987ee927b3f756475a59e36d206203ded204bcb1c0d5e1"
             }
           ]
         },
@@ -274,16 +274,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-int-sq-nonneg.json",
-            "sha256": "ea2411c692e8fb1a2f40ebaad868b6b6ff9181887421c717269a94111296b727"
+            "sha256": "62bd0dfdb9a87f28c2987ee927b3f756475a59e36d206203ded204bcb1c0d5e1"
           }
         ]
       },
@@ -298,16 +298,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-int-sq-nonneg.json",
-            "sha256": "ea2411c692e8fb1a2f40ebaad868b6b6ff9181887421c717269a94111296b727"
+            "sha256": "62bd0dfdb9a87f28c2987ee927b3f756475a59e36d206203ded204bcb1c0d5e1"
           }
         ]
       },
@@ -332,16 +332,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-int-sq-nonneg.json",
-            "sha256": "ea2411c692e8fb1a2f40ebaad868b6b6ff9181887421c717269a94111296b727"
+            "sha256": "62bd0dfdb9a87f28c2987ee927b3f756475a59e36d206203ded204bcb1c0d5e1"
           }
         ]
       },
@@ -393,16 +393,16 @@
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
           "inputs": [
             {
               "path": "artifacts/facts/F-int-sq-nonneg.json",
-              "sha256": "ea2411c692e8fb1a2f40ebaad868b6b6ff9181887421c717269a94111296b727"
+              "sha256": "62bd0dfdb9a87f28c2987ee927b3f756475a59e36d206203ded204bcb1c0d5e1"
             }
           ]
         },
@@ -411,16 +411,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-int-sq-nonneg.json",
-            "sha256": "ea2411c692e8fb1a2f40ebaad868b6b6ff9181887421c717269a94111296b727"
+            "sha256": "62bd0dfdb9a87f28c2987ee927b3f756475a59e36d206203ded204bcb1c0d5e1"
           }
         ]
       },
@@ -435,16 +435,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-int-sq-nonneg.json",
-            "sha256": "ea2411c692e8fb1a2f40ebaad868b6b6ff9181887421c717269a94111296b727"
+            "sha256": "62bd0dfdb9a87f28c2987ee927b3f756475a59e36d206203ded204bcb1c0d5e1"
           }
         ]
       },
@@ -453,7 +453,7 @@
     {
       "id": "dependency-graph",
       "kind": {
-        "alt": "Dependency graph around F:int-sq-nonneg: 1 dependencies, 0 dependents",
+        "alt": "Dependency graph around F:int-sq-nonneg: 1 dependencies, 1 dependents",
         "caption": {
           "text": "Immediate dependencies and dependents of this fact"
         },
@@ -463,6 +463,11 @@
               "from": "F:int-sq-nonneg",
               "label": "depends_on",
               "to": "F:int-mul-comm"
+            },
+            {
+              "from": "F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
+              "label": "depends_on",
+              "to": "F:int-sq-nonneg"
             }
           ],
           "figure_type": "dep-graph",
@@ -482,6 +487,14 @@
               "label": "int-sq-nonneg",
               "status": "proved",
               "tooltip": "Every integer square is nonnegative"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.doc.json",
+              "id": "F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
+              "label": "ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
+              "status": "proved",
+              "tooltip": "The ordered-ring interface telescope is byte-identical over Real and over the axiom-free Int development"
             }
           ],
           "rankdir": "TB"
@@ -491,16 +504,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-int-sq-nonneg.json",
-            "sha256": "ea2411c692e8fb1a2f40ebaad868b6b6ff9181887421c717269a94111296b727"
+            "sha256": "62bd0dfdb9a87f28c2987ee927b3f756475a59e36d206203ded204bcb1c0d5e1"
           }
         ]
       },
@@ -542,16 +555,16 @@
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
           "inputs": [
             {
               "path": "artifacts/facts/F-int-sq-nonneg.json",
-              "sha256": "ea2411c692e8fb1a2f40ebaad868b6b6ff9181887421c717269a94111296b727"
+              "sha256": "62bd0dfdb9a87f28c2987ee927b3f756475a59e36d206203ded204bcb1c0d5e1"
             }
           ]
         },
@@ -560,21 +573,90 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-int-sq-nonneg.json",
-            "sha256": "ea2411c692e8fb1a2f40ebaad868b6b6ff9181887421c717269a94111296b727"
+            "sha256": "62bd0dfdb9a87f28c2987ee927b3f756475a59e36d206203ded204bcb1c0d5e1"
           }
         ]
       },
       "tag": "detail",
       "title": "Depends on"
+    },
+    {
+      "id": "depended-on-by",
+      "kind": {
+        "caption": {
+          "text": "Depended on by"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
+            "The ordered-ring interface telescope is byte-identical over Real and over the axiom-free Int development",
+            "proved",
+            "F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-sq-nonneg.json",
+              "sha256": "62bd0dfdb9a87f28c2987ee927b3f756475a59e36d206203ded204bcb1c0d5e1"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-sq-nonneg.json",
+            "sha256": "62bd0dfdb9a87f28c2987ee927b3f756475a59e36d206203ded204bcb1c0d5e1"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depended on by"
     },
     {
       "id": "fact-provenance",
@@ -603,22 +685,22 @@
           ],
           [
             "source",
-            "the one law of the axiomatized `Real` package (`Real.sq_nonneg`, the nonnegativity primitive each SOS square rests on) that had no `Int` counterpart; proving it completed ZZ as a model of all 30 Real axioms (ADR-0456)"
+            "the one law of the axiomatized `AxReal` package (`AxReal.sq_nonneg`, the nonnegativity primitive each SOS square rests on) that had no `Int` counterpart; proving it completed ZZ as a model of all 30 AxReal axioms (ADR-0456)"
           ]
         ],
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
           "inputs": [
             {
               "path": "artifacts/facts/F-int-sq-nonneg.json",
-              "sha256": "ea2411c692e8fb1a2f40ebaad868b6b6ff9181887421c717269a94111296b727"
+              "sha256": "62bd0dfdb9a87f28c2987ee927b3f756475a59e36d206203ded204bcb1c0d5e1"
             }
           ]
         },
@@ -627,16 +709,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-int-sq-nonneg.json",
-            "sha256": "ea2411c692e8fb1a2f40ebaad868b6b6ff9181887421c717269a94111296b727"
+            "sha256": "62bd0dfdb9a87f28c2987ee927b3f756475a59e36d206203ded204bcb1c0d5e1"
           }
         ]
       },
@@ -678,16 +760,16 @@
         "source": {
           "command": "python3 render/producers-py/facts_to_docir.py",
           "epoch": {
-            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
             "source": "commit",
-            "unix": 1787144076
+            "unix": 1787338967
           },
           "exit_status": 0,
           "generator": "render/producers-py/facts_to_docir.py",
           "inputs": [
             {
               "path": "artifacts/facts/F-int-sq-nonneg.json",
-              "sha256": "ea2411c692e8fb1a2f40ebaad868b6b6ff9181887421c717269a94111296b727"
+              "sha256": "62bd0dfdb9a87f28c2987ee927b3f756475a59e36d206203ded204bcb1c0d5e1"
             }
           ]
         },
@@ -696,16 +778,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-int-sq-nonneg.json",
-            "sha256": "ea2411c692e8fb1a2f40ebaad868b6b6ff9181887421c717269a94111296b727"
+            "sha256": "62bd0dfdb9a87f28c2987ee927b3f756475a59e36d206203ded204bcb1c0d5e1"
           }
         ]
       },
@@ -720,16 +802,16 @@
       "provenance": {
         "command": "python3 render/producers-py/facts_to_docir.py",
         "epoch": {
-          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
           "source": "commit",
-          "unix": 1787144076
+          "unix": 1787338967
         },
         "exit_status": 0,
         "generator": "render/producers-py/facts_to_docir.py",
         "inputs": [
           {
             "path": "artifacts/facts/F-int-sq-nonneg.json",
-            "sha256": "ea2411c692e8fb1a2f40ebaad868b6b6ff9181887421c717269a94111296b727"
+            "sha256": "62bd0dfdb9a87f28c2987ee927b3f756475a59e36d206203ded204bcb1c0d5e1"
           }
         ]
       },
@@ -740,9 +822,9 @@
   "meta": {
     "doc_id": "fact-int-sq-nonneg",
     "epoch": {
-      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
       "source": "commit",
-      "unix": 1787144076
+      "unix": 1787338967
     },
     "genre": "result",
     "nav": [
@@ -753,7 +835,7 @@
       },
       {
         "href": "../facts-atlas.doc.json#dep-graph-c01",
-        "label": "Component 1 of 37 (31 facts)",
+        "label": "Component 1 of 38 (43 facts)",
         "rel": "component"
       }
     ],
@@ -768,16 +850,16 @@
   "provenance": {
     "command": "python3 render/producers-py/facts_to_docir.py",
     "epoch": {
-      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
       "source": "commit",
-      "unix": 1787144076
+      "unix": 1787338967
     },
     "exit_status": 0,
     "generator": "render/producers-py/facts_to_docir.py",
     "inputs": [
       {
         "path": "artifacts/facts/F-int-sq-nonneg.json",
-        "sha256": "ea2411c692e8fb1a2f40ebaad868b6b6ff9181887421c717269a94111296b727"
+        "sha256": "62bd0dfdb9a87f28c2987ee927b3f756475a59e36d206203ded204bcb1c0d5e1"
       }
     ]
   },
