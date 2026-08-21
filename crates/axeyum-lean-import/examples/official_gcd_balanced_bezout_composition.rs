@@ -1,5 +1,5 @@
-//! Close the generic official-gcd balanced-Bezout theorem without crossing
-//! the measured native/official `WellFounded` representation boundary.
+// Close the generic official-gcd balanced-Bezout theorem without crossing
+// the measured native/official `WellFounded` representation boundary.
 
 use std::fmt::Write as _;
 use std::fs;
@@ -12,7 +12,7 @@ use axeyum_lean_import::{
     specialize_checked_theorem, verify_checked_theorem_composition,
     verify_checked_theorem_specialization,
 };
-use axeyum_lean_kernel::{Declaration, Kernel, NameId};
+use axeyum_lean_kernel::{Declaration, Kernel, NameId, build_nat_prelude};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
@@ -26,6 +26,12 @@ const SUCCESSOR_STREAM_SHA256: &str =
     "2af40b2c7d89a0959bbe3018da60841ea1dc933ae2f40112ae84d95feab6044c";
 const GENERIC_STREAM_SHA256: &str =
     "c106a1e03a329535042f17f6a9d3cf408361e4b4691b5ea6bac4d1a71186bb56";
+const CLEAN_MUL_STREAM_SHA256: &str =
+    "d157386bf359aa25d9f48ca361010a211598fb4d563384a608886d21044d63bc";
+const RESIDUAL_STREAM_SHA256: &str =
+    "477f006772dd6e5a968f09ebec2c05778044b3727b20129e117730dd3927716f";
+const ALL_NAT_ADAPTER_STREAM_SHA256: &str =
+    "9f710f7b64afffe7c021cadfd7ec1dae34bbab1d059d8335628bb4d7c2547558";
 
 const MOD_LT_ADAPTER: &str = "Axeyum.Autogenesis.modLtSucc";
 const MOD_LT_ADAPTER_SHA256: &str =
@@ -41,8 +47,17 @@ const MOD_LT_CLOSED: &str = "Axeyum.Autogenesis.officialModLtSuccV1";
 const SUCCESSOR_CLOSED: &str = "Axeyum.Autogenesis.officialNatGcdSuccClosedV1";
 const BALANCED_BEZOUT_CLOSED: &str =
     "Axeyum.Autogenesis.officialGcdBalancedBezoutClosedOfficialKernelV1";
+const MUL_ASSOC_LEAF: &str = "Axeyum.Autogenesis.balancedBezoutMulAssocLeafV1";
+const RIGHT_DISTRIB_LEAF: &str = "Axeyum.Autogenesis.balancedBezoutRightDistribLeafV1";
+const RESIDUAL_CANCELLATION: &str =
+    "Axeyum.Autogenesis.coprimeFactorDivisibilityCancellationResidualV2";
+const ALL_NAT_ADAPTER: &str = "Axeyum.Autogenesis.dvdAddCancelAllNatAdapterV1";
+const POSITIVE_CANCELLATION: &str = "Nat.dvd_add_right_cancel_of_pos";
+const ALL_NAT_CLOSED: &str = "Axeyum.Autogenesis.dvdAddCancelAllNatClosedV1";
+const OFFICIAL_CANCELLATION: &str =
+    "Axeyum.Autogenesis.officialCoprimeFactorDivisibilityCancellationV1";
 
-const USAGE: &str = "usage: official_gcd_balanced_bezout_composition <target-base> <mod-lt-adapter> <zero-left> <successor> <generic-balanced-bezout>";
+const USAGE: &str = "usage: official_coprime_factor_cancellation_composition <target-base> <mod-lt-adapter> <zero-left> <successor> <generic-balanced-bezout> <clean-mul-leaves> <residual-cancellation> <all-nat-adapter>";
 
 fn main() {
     if let Err(error) = run() {
@@ -59,6 +74,9 @@ fn run() -> Result<(), String> {
     let zero_left_path = required_path(&mut arguments)?;
     let successor_path = required_path(&mut arguments)?;
     let generic_path = required_path(&mut arguments)?;
+    let clean_mul_path = required_path(&mut arguments)?;
+    let residual_path = required_path(&mut arguments)?;
+    let all_nat_adapter_path = required_path(&mut arguments)?;
     if arguments.next().is_some() {
         return Err(USAGE.to_owned());
     }
@@ -72,12 +90,26 @@ fn run() -> Result<(), String> {
         "generic-balanced-bezout",
         GENERIC_STREAM_SHA256,
     )?;
+    let clean_mul = import_bound(&clean_mul_path, "clean-mul-leaves", CLEAN_MUL_STREAM_SHA256)?;
+    let residual = import_bound(
+        &residual_path,
+        "residual-cancellation",
+        RESIDUAL_STREAM_SHA256,
+    )?;
+    let all_nat_adapter = import_bound(
+        &all_nat_adapter_path,
+        "all-nat-adapter",
+        ALL_NAT_ADAPTER_STREAM_SHA256,
+    )?;
     for (label, imported) in [
         ("target-base", &target),
         ("mod-lt-adapter", &adapter),
         ("zero-left", &zero_left),
         ("successor", &successor),
         ("generic-balanced-bezout", &generic),
+        ("clean-mul-leaves", &clean_mul),
+        ("residual-cancellation", &residual),
+        ("all-nat-adapter", &all_nat_adapter),
     ] {
         if !imported.report().axioms.is_empty() {
             return Err(format!("{label} stream is not proof-isolated"));
@@ -88,6 +120,26 @@ fn run() -> Result<(), String> {
     require_identity(successor.kernel(), SUCCESSOR, SUCCESSOR_SHA256)?;
     require_identity(adapter.kernel(), MOD_LT_ADAPTER, MOD_LT_ADAPTER_SHA256)?;
     require_identity(generic.kernel(), GENERIC, GENERIC_SHA256)?;
+    require_identity(
+        clean_mul.kernel(),
+        MUL_ASSOC_LEAF,
+        "3e1ef3dc51f2702b9b457e5621457542c07757b30a57cede7db9e5b7273f7c00",
+    )?;
+    require_identity(
+        clean_mul.kernel(),
+        RIGHT_DISTRIB_LEAF,
+        "7d41f955bf36b0825b925ec0d1d31b0df7551c0b413b0ed6cca4fcef1d833f05",
+    )?;
+    require_identity(
+        residual.kernel(),
+        RESIDUAL_CANCELLATION,
+        "ce4e5a785f115f8c6f858d63df218db2470dca1ba436b2faa0dee6d1fc2c18ef",
+    )?;
+    require_identity(
+        all_nat_adapter.kernel(),
+        ALL_NAT_ADAPTER,
+        "2ab68f18df024f92a1f344e2f323737b7d69293175d6511b99af797be22280e4",
+    )?;
 
     let mod_lt_reuse =
         checked_reused_declaration_compatibility(target.kernel(), generic.kernel(), "Nat.mod_lt")
@@ -225,6 +277,125 @@ fn run() -> Result<(), String> {
         BALANCED_BEZOUT_CLOSED,
     )?;
 
+    let with_mul_leaves = compose_roots(
+        clean_mul.kernel(),
+        closed.kernel(),
+        &[MUL_ASSOC_LEAF, RIGHT_DISTRIB_LEAF],
+        "clean-multiplication-leaves",
+    )?;
+    let with_residual = compose_root(
+        residual.kernel(),
+        with_mul_leaves.kernel(),
+        RESIDUAL_CANCELLATION,
+        "residual-cancellation",
+    )?;
+    let with_all_nat_adapter = compose_root(
+        all_nat_adapter.kernel(),
+        with_residual.kernel(),
+        ALL_NAT_ADAPTER,
+        "all-nat-adapter",
+    )?;
+    let mut native = Kernel::new();
+    let native_prelude = build_nat_prelude(&mut native)
+        .map_err(|error| format!("native Nat prelude build failed: {error:?}"))?;
+    if native
+        .display_name(native_prelude.dvd_add_right_cancel_of_pos)
+        .to_string()
+        != POSITIVE_CANCELLATION
+    {
+        return Err("native positive-cancellation identity changed".to_owned());
+    }
+    if !native
+        .axiom_footprint(native_prelude.dvd_add_right_cancel_of_pos)
+        .is_empty()
+    {
+        return Err("native positive cancellation reaches assumptions".to_owned());
+    }
+    let with_positive = compose_root(
+        &native,
+        with_all_nat_adapter.kernel(),
+        POSITIVE_CANCELLATION,
+        "native-positive-cancellation",
+    )?;
+
+    let mut all_nat_prepared = with_positive.kernel().clone();
+    let adapter_name = find_name(&all_nat_prepared, ALL_NAT_ADAPTER)?;
+    let positive_name = find_name(&all_nat_prepared, POSITIVE_CANCELLATION)?;
+    let all_nat_closed_name = nested_name(
+        &mut all_nat_prepared,
+        &["Axeyum", "Autogenesis", "dvdAddCancelAllNatClosedV1"],
+    );
+    let all_nat_closed = specialize_checked_theorem(
+        &all_nat_prepared,
+        adapter_name,
+        &[positive_name],
+        all_nat_closed_name,
+    )
+    .map_err(|error| format!("all-Nat cancellation specialization declined: {error:?}"))?;
+    verify_checked_theorem_specialization(
+        &all_nat_prepared,
+        all_nat_closed.kernel(),
+        adapter_name,
+        &[positive_name],
+        all_nat_closed_name,
+        all_nat_closed.receipt(),
+    )
+    .map_err(|error| format!("all-Nat cancellation specialization did not replay: {error:?}"))?;
+    let all_nat_evidence = theorem_evidence(all_nat_closed.kernel(), all_nat_closed_name)?;
+    require_empty_footprint(&all_nat_evidence, ALL_NAT_CLOSED)?;
+    require_dependencies(
+        &all_nat_evidence,
+        &[ALL_NAT_ADAPTER.to_owned(), POSITIVE_CANCELLATION.to_owned()],
+        ALL_NAT_CLOSED,
+    )?;
+
+    let mut cancellation_prepared = all_nat_closed.kernel().clone();
+    let residual_name = find_name(&cancellation_prepared, RESIDUAL_CANCELLATION)?;
+    let cancellation_arguments = [
+        find_name(&cancellation_prepared, BALANCED_BEZOUT_CLOSED)?,
+        find_name(&cancellation_prepared, MUL_ASSOC_LEAF)?,
+        find_name(&cancellation_prepared, RIGHT_DISTRIB_LEAF)?,
+        find_name(&cancellation_prepared, ALL_NAT_CLOSED)?,
+    ];
+    let official_cancellation_name = nested_name(
+        &mut cancellation_prepared,
+        &[
+            "Axeyum",
+            "Autogenesis",
+            "officialCoprimeFactorDivisibilityCancellationV1",
+        ],
+    );
+    let official_cancellation = specialize_checked_theorem(
+        &cancellation_prepared,
+        residual_name,
+        &cancellation_arguments,
+        official_cancellation_name,
+    )
+    .map_err(|error| format!("official cancellation specialization declined: {error:?}"))?;
+    verify_checked_theorem_specialization(
+        &cancellation_prepared,
+        official_cancellation.kernel(),
+        residual_name,
+        &cancellation_arguments,
+        official_cancellation_name,
+        official_cancellation.receipt(),
+    )
+    .map_err(|error| format!("official cancellation specialization did not replay: {error:?}"))?;
+    let official_cancellation_evidence =
+        theorem_evidence(official_cancellation.kernel(), official_cancellation_name)?;
+    require_empty_footprint(&official_cancellation_evidence, OFFICIAL_CANCELLATION)?;
+    require_dependencies(
+        &official_cancellation_evidence,
+        &[
+            MUL_ASSOC_LEAF.to_owned(),
+            RIGHT_DISTRIB_LEAF.to_owned(),
+            RESIDUAL_CANCELLATION.to_owned(),
+            ALL_NAT_CLOSED.to_owned(),
+            BALANCED_BEZOUT_CLOSED.to_owned(),
+        ],
+        OFFICIAL_CANCELLATION,
+    )?;
+
     let output = json!({
         "schema_version": 1,
         "kind": "axeyum-official-gcd-balanced-bezout-official-kernel-composition",
@@ -235,6 +406,9 @@ fn run() -> Result<(), String> {
             "zero_left_sha256": ZERO_LEFT_STREAM_SHA256,
             "successor_sha256": SUCCESSOR_STREAM_SHA256,
             "generic_balanced_bezout_sha256": GENERIC_STREAM_SHA256,
+            "clean_mul_leaves_sha256": CLEAN_MUL_STREAM_SHA256,
+            "residual_cancellation_sha256": RESIDUAL_STREAM_SHA256,
+            "all_nat_adapter_sha256": ALL_NAT_ADAPTER_STREAM_SHA256,
         },
         "reused_declarations": {
             "Nat.mod_lt": {
@@ -249,6 +423,10 @@ fn run() -> Result<(), String> {
             "mod_lt_adapter_receipt_sha256": with_adapter.receipt().receipt_sha256,
             "zero_left_receipt_sha256": with_zero.receipt().receipt_sha256,
             "successor_receipt_sha256": with_successor.receipt().receipt_sha256,
+            "clean_mul_leaves_receipt_sha256": with_mul_leaves.receipt().receipt_sha256,
+            "residual_cancellation_receipt_sha256": with_residual.receipt().receipt_sha256,
+            "all_nat_adapter_receipt_sha256": with_all_nat_adapter.receipt().receipt_sha256,
+            "native_positive_cancellation_receipt_sha256": with_positive.receipt().receipt_sha256,
         },
         "composition_base": "generic-balanced-bezout-kernel",
         "generic_composition_operations": 0,
@@ -264,6 +442,14 @@ fn run() -> Result<(), String> {
             "balanced_bezout": {
                 "receipt_sha256": closed.receipt().receipt_sha256,
                 "evidence": closed_evidence,
+            },
+            "all_nat_cancellation": {
+                "receipt_sha256": all_nat_closed.receipt().receipt_sha256,
+                "evidence": all_nat_evidence,
+            },
+            "official_coprime_factor_cancellation": {
+                "receipt_sha256": official_cancellation.receipt().receipt_sha256,
+                "evidence": official_cancellation_evidence,
             },
         },
         "accepted_argument_identities": {
@@ -318,6 +504,27 @@ fn compose_root(
     label: &str,
 ) -> Result<axeyum_lean_import::CompletedTheoremComposition, String> {
     let composed = compose_checked_theorem_slice(source, target, &[root])
+        .map_err(|error| format!("{label} composition declined: {error:?}"))?;
+    verify_checked_theorem_composition(source, target, composed.kernel(), composed.receipt())
+        .map_err(|error| format!("{label} composition did not replay: {error:?}"))?;
+    for theorem in &composed.receipt().added_theorems {
+        if !theorem.axiom_footprint.is_empty() {
+            return Err(format!(
+                "{label} composition added assumption-bearing theorem {}: {:?}",
+                theorem.name, theorem.axiom_footprint
+            ));
+        }
+    }
+    Ok(composed)
+}
+
+fn compose_roots(
+    source: &Kernel,
+    target: &Kernel,
+    roots: &[&str],
+    label: &str,
+) -> Result<axeyum_lean_import::CompletedTheoremComposition, String> {
+    let composed = compose_checked_theorem_slice(source, target, roots)
         .map_err(|error| format!("{label} composition declined: {error:?}"))?;
     verify_checked_theorem_composition(source, target, composed.kernel(), composed.receipt())
         .map_err(|error| format!("{label} composition did not replay: {error:?}"))?;

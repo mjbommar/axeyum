@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction has unconditional official balanced Bézout. Residual cancellation V2 and both witness leaves are accepted empty-footprint. The all-Nat additive cancellation adapter now also reconstructs twice empty-footprint; only its positive-divisor parameter remains, and that theorem already exists in the clean native Nat prelude.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction has unconditional official balanced Bézout. Residual cancellation V2, both witness leaves, and the all-Nat adapter are accepted empty-footprint. The eight-stream composition driver now compiles Clippy-clean and passes the full importer suite; it has performed zero new stream reads or final theorem submissions.
 
-**Next:** implement the preregistered eight-stream composition driver: replay official balanced Bézout, compose native positive-divisor cancellation and the four accepted authored roots, then perform two checked specializations. Require two byte-identical empty-footprint runs before official cancellation credit.
+**Next:** pass the full Rust push gate for the eight-stream driver, retain its source and binary identities, then execute exactly two complete invocations. Require byte-identical empty-footprint output and replayed receipts before official cancellation credit.
 
 <!-- plan-section: landed-changes -->
 
@@ -146,4 +146,5 @@
 | 2026-08-21 | (pending) | Residual V2 reconstructs both witness leaves and four-parameter cancellation twice empty-footprint |
 | 2026-08-21 | `c9379241e` | All-Nat additive cancellation adapter is frozen as zero-divisor witness elimination plus positive successor delegation |
 | 2026-08-21 | (pending) | The all-Nat adapter reconstructs twice empty-footprint with only positive-divisor cancellation explicit |
-| 2026-08-21 | (pending) | Official cancellation composition is frozen across eight streams and one native positive-divisor leaf before code |
+| 2026-08-21 | `dd15493b6` | Official cancellation composition is frozen across eight streams and one native positive-divisor leaf before code |
+| 2026-08-21 | (pending) | Eight-stream cancellation driver compiles Clippy-clean and passes the full importer suite without stream execution |
