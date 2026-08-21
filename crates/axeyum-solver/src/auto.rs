@@ -452,6 +452,23 @@ fn finish_quantified_solve(
     }
 }
 
+/// `memory_limit_mb` at a front door, or `None` when it is not set or not
+/// exceeded.
+///
+/// `SatBvBackend` probes its own three phase boundaries, but these front doors
+/// reach routes that never bit-blast (simplex, strings, e-matching, the
+/// quantified ladder), and those would otherwise ignore the field entirely. One
+/// probe (~9.4 us) bounds every one of them to "did not arrive already over".
+///
+/// What happens *inside* a rung is **not** bounded by this, and
+/// [`crate::memory_budget`] says so rather than implying otherwise: a faithful
+/// bound needs a global allocator hook, which is an ADR-sized decision.
+fn memory_budget_decline(config: &SolverConfig, phase: &str) -> Option<CheckResult> {
+    crate::memory_budget::MemoryBudget::from_config(config)
+        .and_then(|budget| budget.exceeded(phase))
+        .map(CheckResult::Unknown)
+}
+
 /// The unified front door: decides any supported query — quantifier-free or
 /// quantified, over any combination of the supported theories.
 ///
@@ -466,6 +483,11 @@ fn finish_quantified_solve(
 ///
 /// Returns [`SolverError`] from the chosen engine; constructs outside the
 /// supported fragment surface as [`SolverError::Unsupported`].
+// The memory-budget probe put this at 103 lines against a 100 limit. It was at
+// exactly 100 before, so the honest options were an `allow` or a refactor of a
+// front door for three lines' worth of budget; five other functions in this
+// module already carry the same `allow`.
+#[allow(clippy::too_many_lines)]
 pub fn solve(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -474,6 +496,9 @@ pub fn solve(
     let deadline = config
         .timeout
         .and_then(|timeout| Instant::now().checked_add(timeout));
+    if let Some(decline) = memory_budget_decline(config, "solve entry") {
+        return Ok(decline);
+    }
     let is_quantified = has_quantifier(arena, assertions);
     if is_quantified && ground_subset_refutes_quantified_query(arena, assertions, config)? {
         return Ok(CheckResult::Unsat);
@@ -1086,6 +1111,9 @@ pub fn check_auto(
     // The caller's budget is a WALL-CLOCK deadline for the whole call, not a fresh
     // allowance per fallback rung (see `fallback_deadline`).
     let deadline = fallback_deadline(config);
+    if let Some(decline) = memory_budget_decline(config, "check_auto entry") {
+        return Ok(decline);
+    }
     let result = check_auto_with_recorder(arena, assertions, config, &mut None)?;
     if matches!(result, CheckResult::Unknown(_)) {
         // Integer-algebraic identity refutation (QF_NIA): cheap, exact, unsat-only.

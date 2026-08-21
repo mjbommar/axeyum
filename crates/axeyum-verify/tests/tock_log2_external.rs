@@ -25,9 +25,29 @@ const CANONICAL_64_SHA256: &str =
 
 const TIMEOUT_SECS: u64 = 30;
 const RESOURCE_LIMIT: u64 = 5_000_000;
+/// This cap was **inert** until 2026-08-21: `memory_limit_mb`'s only read was
+/// under `#[cfg(feature = "z3")]`, and this is a default (pure-Rust) build, so
+/// the 2 GB written here bounded nothing. It is honoured now
+/// (`axeyum_solver`'s `memory_budget`), and the value is deliberately unchanged:
+/// at the module's 384 B/clause charge it buys ~5.6 M clauses, so
+/// `CNF_CLAUSE_BUDGET` below still binds first and this row's verdicts and
+/// timings are the same as before. The cap is now the backstop it was always
+/// written to be, rather than a comment with a type.
+///
+/// One consequence to know about before it surprises someone: the resident-set
+/// half of the budget is process-wide, and ADR-0338 records the authenticated
+/// scoreboard peaking at **1,256,496 KiB — 1.20 GiB against this 2.00 GiB cap**,
+/// i.e. 40 % headroom. That run is `#[ignore]`d without local canonical Tock
+/// LLVM, so CI does not exercise it. If it ever declines with
+/// `UnknownKind::MemoryLimit`, the cap did its job and the number to change is
+/// this one — not the guard.
 const MEMORY_LIMIT_MB: u64 = 2_048;
 const NODE_BUDGET: u64 = 250_000;
 const CNF_VARIABLE_BUDGET: u64 = 1_000_000;
+/// 5 M clauses is ~1.8 GiB of encoding, inside `MEMORY_LIMIT_MB` above. Keep
+/// the two consistent: a clause budget past the memory cap makes the memory cap
+/// the one that fires, and the failure then reads as a memory problem when it
+/// is a query-size problem.
 const CNF_CLAUSE_BUDGET: u64 = 5_000_000;
 
 #[derive(Clone, Copy)]

@@ -327,17 +327,29 @@ every generator omitted them — which is exactly how the *first* instance of th
 class hid for weeks. A generator that cannot emit the shape is blind on the one
 axis where the grammar has a rule.
 
+**Two of the three fixed 2026-08-21, after this audit was written:**
+
+- ~~`TermArena::bv_nego` computes `1u128 << (w - 1)`~~ — fixed, and it was
+  **worse than recorded here**. Measured with overflow checks off (release
+  semantics), the shipped `SatBvBackend` returned **`sat`** for
+  `(bvnego x) ∧ (x = 1)` at 129 bits, which is unsatisfiable: a wrong `sat`
+  through the front door, not merely a wrong term. The reachability question
+  this section marked UNVERIFIED now has an answer: **no committed corpus file
+  reaches it** — `bvnego` occurs in **0 of 1430** tracked `.smt2` files
+  (positive control, same command: `bvadd` in 106). It is reachable only from
+  the parser on user input, which is why no sweep could have found it.
+- ~~`SolverConfig::memory_limit_mb` is set but never read~~ — the field now
+  binds on the pure-Rust path (`crates/axeyum-solver/src/memory_budget.rs`): a
+  portable pre-allocation clause ceiling at a measured 384 B/clause, plus a
+  `/proc` probe at three BV phase boundaries and the two front doors. A
+  *faithful* bound still needs a `#[global_allocator]` hook, which is
+  ADR-sized and is now an open research question rather than an unspoken gap.
+  The default path costs nothing measurable; a configured limit costs ~32 µs
+  per check. **The gap that remains** is allocation between two probes, which
+  is the 125 GB shape exactly.
+
 **Open, not fixed here:**
 
-- `TermArena::bv_nego` computes `1u128 << (w - 1)` with legal widths to 65536.
-  Release masks the shift mod 128 and builds a **silently wrong term**; debug
-  panics. The sibling `bv_umulo` handles the wide case. Tests cover widths 1–4.
-  UNVERIFIED whether a corpus file reaches it end to end.
-- `SolverConfig::memory_limit_mb` is **set but never read** on the pure-Rust
-  path — its only read is under `#[cfg(feature = "z3")]`. A live caller sets a
-  2 GB cap on a non-z3 build where it is inert. The solver has no memory bound
-  at all, which is the exact shape of the 125 GB OOM that killed an agent
-  session on 2026-08-17.
 - `explain_corpus` diverges from the front door in both directions, and prints
   `unsat-UNCONFIRMED`. Do not use its verdicts for anything quantified or
   string-shaped.
