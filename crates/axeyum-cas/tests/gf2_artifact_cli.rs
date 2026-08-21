@@ -218,3 +218,40 @@ fn composition_tower_cli_retains_a_certified_chain() {
     assert!(stdout.contains("|base_degree=4|substitution_degree=3|depth=1|degrees=4,12|"));
     assert!(stdout.contains("|substitutions=0,3|"));
 }
+
+#[test]
+fn conditional_variance_cli_replays_the_local_haar_decomposition() {
+    let output = Command::new(env!("CARGO_BIN_EXE_axeyum-gf2-hayes-conditional-variance"))
+        .arg("14")
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    assert!(stdout.contains(
+        "GF2_HAYES_CONDITIONAL_VARIANCE|status=PASS|ell=14|degree=29|coarse_level=8|descendant_count=64"
+    ));
+    assert!(stdout.contains(
+        "|conditional_variance_numerator=1288331008|quarter_scale_variance_target_numerator=4294967296|"
+    ));
+    assert!(stdout.contains(
+        "GF2_HAYES_CONDITIONAL_VARIANCE_LEVEL|status=PASS|ell=14|degree=29|level=14|parent_count=32|sibling_difference_square_sum=18117780|conditional_variance_numerator_contribution=579768960"
+    ));
+    assert!(stdout.contains(
+        "GF2_HAYES_CONDITIONAL_VARIANCE|status=PASS|ell=14|degree=30|coarse_level=8|descendant_count=64"
+    ));
+
+    let rejected = Command::new(env!("CARGO_BIN_EXE_axeyum-gf2-hayes-conditional-variance"))
+        .arg("24")
+        .output()
+        .unwrap();
+    assert!(!rejected.status.success());
+    assert!(
+        String::from_utf8(rejected.stderr)
+            .unwrap()
+            .contains("ell: 4..=23")
+    );
+}

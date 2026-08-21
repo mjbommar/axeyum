@@ -5307,6 +5307,209 @@ pub struct PopulationRefinementOneSidedConnectedImplication {
     pub candidate_target_numerator: BigUint,
 }
 
+/// Exact conditional variance inside the identity coarse Witt cylinder.
+///
+/// Let `c=first_top_level-1`, let `R=2^(ell-c)`, and let `x_e` be the fine
+/// populations in the fibre above the identity of `E_c`.  With
+/// `S=sum_e x_e`, put `y_e=R*x_e-S`.  Then
+///
+/// ```text
+/// C_(ell,n)=2^c y_1,
+/// R y_1^2 <= (R-1) sum_e y_e^2.
+/// ```
+///
+/// The second line is the sharp deterministic point-versus-variance bound
+/// for a zero-sum vector.  Consequently the strict comparison
+///
+/// ```text
+/// 2^(2c) (R-1) sum_e y_e^2 < R B_(ell,n)^2
+/// ```
+///
+/// implies the one-sided relative trace premise `(REL)`.  The report computes
+/// every integer in that implication.  Its finite success is a diagnostic,
+/// not a uniform conditional-variance theorem.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IdentityCylinderVarianceLevel {
+    /// Refinement level `j`, with `coarse_level < j <= ell`.
+    pub level: usize,
+    /// Number `2^(j-coarse_level-1)` of sibling pairs above the coarse identity.
+    pub parent_count: usize,
+    /// Sum of squared sibling differences at this level inside the cylinder.
+    pub sibling_difference_square_sum: BigUint,
+    /// Contribution `2^(j-coarse_level-1) sum H_j(parent)^2` to
+    /// `descendant_count * V_id`.
+    pub conditional_variance_numerator_contribution: BigUint,
+}
+
+/// Exact conditional variance and localized Haar reconstruction for the
+/// identity coarse Witt cylinder.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IdentityCylinderConditionalVarianceReport {
+    /// Fine coefficient-prefix length.
+    pub ell: usize,
+    /// Lemire endpoint degree.
+    pub degree: usize,
+    /// First conductor level retained in the connected trace.
+    pub first_top_level: usize,
+    /// Coarse quotient level `first_top_level-1`.
+    pub coarse_level: usize,
+    /// Number `R=2^(ell-coarse_level)` of fine classes in the identity fibre.
+    pub descendant_count: u128,
+    /// Fine identity-class Mangoldt population.
+    pub identity_population: u128,
+    /// Sum of all fine populations in the identity coarse cylinder.
+    pub coarse_identity_population: u128,
+    /// Scaled identity deviation `R*x_1-S`.
+    pub identity_scaled_deviation: BigInt,
+    /// Exact connected trace `2^coarse_level*(R*x_1-S)`.
+    pub connected_trace: BigInt,
+    /// Exact scaled conditional square sum `sum_e (R*x_e-S)^2`.
+    pub conditional_scaled_square_sum: BigUint,
+    /// Numerator `R*sum_e x_e^2-S^2` of the ordinary conditional variance.
+    /// Its denominator is [`Self::descendant_count`].
+    pub conditional_variance_numerator: BigUint,
+    /// Exact localized Haar decomposition of the conditional variance.
+    pub variance_levels: Vec<IdentityCylinderVarianceLevel>,
+    /// Clean sufficient target `2^(2ell-2)` for the ordinary conditional
+    /// variance, represented with the same denominator.
+    pub quarter_scale_variance_target_numerator: BigUint,
+    /// Left side of the sharp conditional-Cauchy comparison.
+    pub sharp_cauchy_scaled_bound_square: BigUint,
+    /// Right side `R*B_(ell,n)^2` of that strict comparison.
+    pub rel_allowance_scaled_square: BigUint,
+    /// Largest integral conditional square sum that proves `(REL)` by the
+    /// sharp deterministic comparison.
+    pub maximum_conditional_scaled_square_sum_for_rel: BigUint,
+    /// Exact full-family variance `sum_e (N_e-2^(n-ell))^2`.
+    pub total_squared_deviation: BigUint,
+    /// Generic envelope `R^2` times the exact full-family variance.
+    pub exact_global_scaled_square_sum_envelope: BigUint,
+    /// Proved envelope `R^2*2^(n-ell)*Sigma(ell)` obtained from individual
+    /// Hayes Riemann-hypothesis bounds.
+    pub proved_weil_scaled_square_sum_envelope: BigUint,
+    /// Integral saving needed over the exact global envelope to reach the
+    /// sufficient identity-cylinder threshold.
+    pub exact_global_required_saving_ceiling: BigUint,
+    /// Integral saving needed over the proved Weil envelope.
+    pub proved_weil_required_saving_ceiling: BigUint,
+    /// The exact negative allowance `B_(ell,n)` in `(REL)`.
+    pub negative_allowance_numerator: BigUint,
+}
+
+impl IdentityCylinderConditionalVarianceReport {
+    /// Whether the sharp conditional-variance inequality proves `(REL)` on
+    /// this exact finite row.
+    #[must_use]
+    pub fn conditional_cauchy_proves_rel(&self) -> bool {
+        self.sharp_cauchy_scaled_bound_square < self.rel_allowance_scaled_square
+    }
+
+    /// Whether the exact connected trace itself satisfies `(REL)`.
+    #[must_use]
+    pub fn rel_holds_exactly(&self) -> bool {
+        self.connected_trace > -BigInt::from(self.negative_allowance_numerator.clone())
+    }
+
+    /// Whether this finite row satisfies the clean sufficient estimate
+    /// `sum_e (x_e-S/R)^2 <= 2^(2ell-2)`.
+    #[must_use]
+    pub fn satisfies_quarter_scale_variance(&self) -> bool {
+        self.conditional_variance_numerator <= self.quarter_scale_variance_target_numerator
+    }
+}
+
+/// Symbolic implication from a clean identity-cylinder variance estimate.
+///
+/// The premise is
+///
+/// ```text
+/// sum_(e above 1 in E_c) (N_ell(e)-N_c(1)/R)^2 <= 2^(2ell-2),
+/// R=2^(ell-c).
+/// ```
+///
+/// The report checks that the sharp zero-sum point bound makes this premise
+/// strictly stronger than `(REL)`.  It does not prove the premise.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IdentityCylinderQuarterVarianceImplication {
+    /// Fine coefficient-prefix length.
+    pub ell: usize,
+    /// Lemire endpoint degree.
+    pub degree: usize,
+    /// Coarse quotient level.
+    pub coarse_level: usize,
+    /// Number of descendants in the identity coarse cylinder.
+    pub descendant_count: BigUint,
+    /// Assumed conditional-variance ceiling `2^(2ell-2)`.
+    pub assumed_conditional_variance: BigUint,
+    /// Scaled sharp upper bound on the connected-trace square.
+    pub sharp_connected_square_bound_scaled: BigUint,
+    /// Scaled square of the `(REL)` negative allowance.
+    pub rel_allowance_square_scaled: BigUint,
+    /// Individual-Weil upper bound for the full-family variance.
+    pub global_weil_variance_envelope: BigUint,
+    /// Integral saving over that full-family envelope required to reach the
+    /// clean localized premise.
+    pub global_weil_required_saving_ceiling: BigUint,
+}
+
+impl IdentityCylinderQuarterVarianceImplication {
+    /// Whether the assumed variance ceiling strictly implies `(REL)`.
+    #[must_use]
+    pub fn proves_rel(&self) -> bool {
+        self.sharp_connected_square_bound_scaled < self.rel_allowance_square_scaled
+    }
+}
+
+/// Conditional endpoint ledger for a Newton-over-Hodge input on every
+/// Carlitz character in the connected window.
+///
+/// An exact-conductor level-`j` character on the affine line has Hodge slopes
+/// `1/j,...,(j-1)/j`.  If its Newton polygon lies above that Hodge polygon,
+/// every degree-`n` trace has `2`-adic valuation at least `n/j`.  Summing the
+/// Galois-stable character families for `first_top_level<=j<=ell` therefore
+/// makes the integral connected trace divisible by
+/// `2^ceil(n/ell)`.  This report prices that divisibility against `(REL)`; it
+/// does not prove the Newton-over-Hodge premise.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CarlitzConnectedTopNewtonHodgeLedger {
+    /// Fine coefficient-prefix level.
+    pub ell: usize,
+    /// Lemire endpoint degree.
+    pub degree: usize,
+    /// First exact-conductor level in the connected trace.
+    pub first_top_level: usize,
+    /// Numerator of the smallest Hodge slope in the connected family.
+    pub minimum_hodge_slope_numerator: usize,
+    /// Denominator of the smallest Hodge slope in the connected family.
+    pub minimum_hodge_slope_denominator: usize,
+    /// Integral valuation exponent forced on the connected trace.
+    pub connected_trace_divisibility_exponent: usize,
+    /// Corresponding power-of-two divisor.
+    pub connected_trace_divisor: BigUint,
+    /// Separate-character Weil envelope before divisibility rounding.
+    pub individual_weil_trace_envelope: BigUint,
+    /// Largest multiple of the Hodge-forced divisor below that envelope.
+    pub rounded_trace_envelope: BigUint,
+    /// Exact additive improvement supplied by divisibility alone.
+    pub maximum_rounding_improvement: BigUint,
+    /// Harmful negative allowance in `(REL)`.
+    pub negative_allowance_numerator: BigUint,
+    /// Smallest power-of-two valuation exponent that would make rounding the
+    /// separate Weil envelope sufficient for `(REL)`.
+    pub minimum_rounding_exponent_for_rel: usize,
+    /// Number of additional valuation bits missing from the Hodge input.
+    pub missing_rounding_exponent_bits: usize,
+}
+
+impl CarlitzConnectedTopNewtonHodgeLedger {
+    /// Whether Hodge-forced divisibility and separate Weil already prove
+    /// `(REL)`.
+    #[must_use]
+    pub fn rounding_proves_rel(&self) -> bool {
+        self.rounded_trace_envelope < self.negative_allowance_numerator
+    }
+}
+
 /// Exact Carlitz-cyclotomic geometry underlying the connected top trace.
 ///
 /// Hayes level `j` is the Galois group of the Carlitz field of conductor
@@ -5770,6 +5973,228 @@ pub fn population_refinement_one_sided_connected_implication(
         negative_allowance_numerator,
         required_saving_ceiling,
         candidate_target_numerator: symmetric.candidate_target_numerator,
+    })
+}
+
+/// Compute the exact conditional variance inside the identity coarse cylinder.
+///
+/// This is the weakest positive-square bridge currently attached directly to
+/// `(REL)`: it controls only the one coarse cylinder containing the requested
+/// identity class, and it uses the sharp zero-sum point-versus-variance
+/// constant.  The returned exact row can falsify a proposed uniform theorem;
+/// success on finitely many rows grants no theorem credit.
+///
+/// # Errors
+///
+/// Returns the class-population transform's typed declines, rejects malformed
+/// quotient fibres, and fails closed if the conditional and connected-trace
+/// reconstructions disagree.
+pub fn identity_cylinder_conditional_variance(
+    ell: usize,
+    degree: usize,
+    limits: HayesLimits,
+) -> Result<IdentityCylinderConditionalVarianceReport, HayesError> {
+    let implication = population_refinement_one_sided_connected_implication(ell, degree)?;
+    let first_top_level = implication.first_top_level;
+    let coarse_level = first_top_level.checked_sub(1).ok_or_else(|| {
+        HayesError::InvalidParameter("identity-cylinder coarse level underflow".to_owned())
+    })?;
+    let descendant_exponent = ell.checked_sub(coarse_level).ok_or_else(|| {
+        HayesError::Invariant("identity-cylinder quotient exceeds the fine level".to_owned())
+    })?;
+    let descendant_count = 1_u128
+        .checked_shl(u32::try_from(descendant_exponent).map_err(|_| {
+            HayesError::InvalidParameter("identity-cylinder exponent exceeds u32".to_owned())
+        })?)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("identity-cylinder descendant count overflow".to_owned())
+        })?;
+    if descendant_count <= 1 {
+        return Err(HayesError::Invariant(
+            "identity cylinder must contain at least two fine classes".to_owned(),
+        ));
+    }
+
+    let distribution = class_population_distribution(ell, degree, limits)?;
+    let full_factors = principal_unit_factors(ell);
+    let coarse_factors = principal_unit_factors(coarse_level);
+    let descendants = identity_cylinder_descendants(
+        &distribution.counts,
+        &full_factors,
+        &coarse_factors,
+        descendant_count,
+    )?;
+    let moments = identity_cylinder_moments(&descendants, descendant_count)?;
+    let variance_levels = identity_cylinder_variance_levels(
+        &distribution.counts,
+        &full_factors,
+        &coarse_factors,
+        coarse_level,
+        ell,
+        &moments.conditional_variance_numerator,
+    )?;
+    let quarter_scale_variance_target_numerator = BigUint::from(descendant_count) << (2 * ell - 2);
+    let identity_scaled_deviation = moments.scaled_deviations[0].clone();
+    let connected_trace = &identity_scaled_deviation << coarse_level;
+    let direct_trace =
+        connected_top_direct_trace(&distribution.counts, &full_factors, ell, first_top_level)?;
+    if connected_trace != direct_trace {
+        return Err(HayesError::Invariant(
+            "identity-cylinder and connected-trace reconstructions disagree".to_owned(),
+        ));
+    }
+
+    let descendant_count_uint = BigUint::from(descendant_count);
+    let descendant_count_minus_one = BigUint::from(descendant_count - 1);
+    let coarse_scale_square = BigUint::from(1_u8) << (2 * coarse_level);
+    let sharp_cauchy_scaled_bound_square =
+        &coarse_scale_square * &descendant_count_minus_one * &moments.conditional_scaled_square_sum;
+    let negative_allowance_numerator = implication.negative_allowance_numerator;
+    let rel_allowance_scaled_square = &descendant_count_uint * negative_allowance_numerator.pow(2);
+    let strict_numerator = &rel_allowance_scaled_square - BigUint::from(1_u8);
+    let threshold_denominator = &coarse_scale_square * &descendant_count_minus_one;
+    let maximum_conditional_scaled_square_sum_for_rel = &strict_numerator / &threshold_denominator;
+
+    let global = identity_cylinder_global_envelopes(
+        &distribution,
+        ell,
+        &descendant_count_uint,
+        &maximum_conditional_scaled_square_sum_for_rel,
+    )?;
+
+    Ok(IdentityCylinderConditionalVarianceReport {
+        ell,
+        degree,
+        first_top_level,
+        coarse_level,
+        descendant_count,
+        identity_population: distribution.counts[0],
+        coarse_identity_population: moments.coarse_identity_population,
+        identity_scaled_deviation,
+        connected_trace,
+        conditional_scaled_square_sum: moments.conditional_scaled_square_sum,
+        conditional_variance_numerator: moments.conditional_variance_numerator,
+        variance_levels,
+        quarter_scale_variance_target_numerator,
+        sharp_cauchy_scaled_bound_square,
+        rel_allowance_scaled_square,
+        maximum_conditional_scaled_square_sum_for_rel,
+        total_squared_deviation: global.total_squared_deviation,
+        exact_global_scaled_square_sum_envelope: global.exact_scaled_square_sum,
+        proved_weil_scaled_square_sum_envelope: global.proved_weil_scaled_square_sum,
+        exact_global_required_saving_ceiling: global.exact_required_saving,
+        proved_weil_required_saving_ceiling: global.proved_weil_required_saving,
+        negative_allowance_numerator,
+    })
+}
+
+/// Check that a quarter-scale conditional variance estimate implies `(REL)`.
+///
+/// This operation proves only the deterministic implication.  The localized
+/// variance premise remains an analytic theorem obligation.
+///
+/// # Errors
+///
+/// Rejects the same invalid endpoints as
+/// [`population_refinement_one_sided_connected_implication`].
+pub fn identity_cylinder_quarter_variance_implication(
+    ell: usize,
+    degree: usize,
+) -> Result<IdentityCylinderQuarterVarianceImplication, HayesError> {
+    let implication = population_refinement_one_sided_connected_implication(ell, degree)?;
+    let coarse_level = implication.first_top_level.checked_sub(1).ok_or_else(|| {
+        HayesError::InvalidParameter("identity-cylinder coarse level underflow".to_owned())
+    })?;
+    let descendant_exponent = ell.checked_sub(coarse_level).ok_or_else(|| {
+        HayesError::Invariant("identity-cylinder quotient exceeds the fine level".to_owned())
+    })?;
+    let descendant_count = BigUint::from(1_u8) << descendant_exponent;
+    let assumed_conditional_variance = BigUint::from(1_u8) << (2 * ell - 2);
+    let sharp_connected_square_bound_scaled = (BigUint::from(1_u8) << (2 * ell))
+        * (&descendant_count - BigUint::from(1_u8))
+        * &assumed_conditional_variance;
+    let rel_allowance_square_scaled =
+        &descendant_count * implication.negative_allowance_numerator.pow(2);
+    let mean = BigUint::from(1_u8) << (degree - ell);
+    let mut sigma = BigUint::from(0_u8);
+    for level in 2..=ell {
+        sigma += BigUint::from(level - 1).pow(2) << (level - 1);
+    }
+    let global_weil_variance_envelope = mean * sigma;
+    let global_weil_required_saving_ceiling =
+        (&global_weil_variance_envelope + &assumed_conditional_variance - BigUint::from(1_u8))
+            / &assumed_conditional_variance;
+    let report = IdentityCylinderQuarterVarianceImplication {
+        ell,
+        degree,
+        coarse_level,
+        descendant_count,
+        assumed_conditional_variance,
+        sharp_connected_square_bound_scaled,
+        rel_allowance_square_scaled,
+        global_weil_variance_envelope,
+        global_weil_required_saving_ceiling,
+    };
+    if !report.proves_rel() {
+        return Err(HayesError::Invariant(
+            "quarter-scale identity-cylinder variance does not imply REL".to_owned(),
+        ));
+    }
+    Ok(report)
+}
+
+/// Price a Newton-over-Hodge theorem on the connected Carlitz trace.
+///
+/// The arithmetic in this operation is unconditional once the stated
+/// characterwise Newton-over-Hodge premise is supplied.  The operation keeps
+/// that premise explicit and grants no trace-bound credit beyond its forced
+/// power-of-two divisibility.
+///
+/// # Errors
+///
+/// Rejects the same invalid endpoints as
+/// [`population_refinement_one_sided_connected_implication`].
+pub fn carlitz_connected_top_newton_hodge_ledger(
+    ell: usize,
+    degree: usize,
+) -> Result<CarlitzConnectedTopNewtonHodgeLedger, HayesError> {
+    let implication = population_refinement_one_sided_connected_implication(ell, degree)?;
+    let connected_trace_divisibility_exponent = degree.div_ceil(ell);
+    let connected_trace_divisor = BigUint::from(1_u8) << connected_trace_divisibility_exponent;
+    let individual_weil_trace_envelope = implication.connected_top_individual_weil_numerator;
+    let rounded_trace_envelope =
+        (&individual_weil_trace_envelope / &connected_trace_divisor) * &connected_trace_divisor;
+    let maximum_rounding_improvement = &individual_weil_trace_envelope - &rounded_trace_envelope;
+    let negative_allowance_numerator = implication.negative_allowance_numerator;
+    let mut minimum_rounding_exponent_for_rel = 0_usize;
+    loop {
+        let divisor = BigUint::from(1_u8) << minimum_rounding_exponent_for_rel;
+        let rounded = (&individual_weil_trace_envelope / &divisor) * &divisor;
+        if rounded < negative_allowance_numerator {
+            break;
+        }
+        minimum_rounding_exponent_for_rel = minimum_rounding_exponent_for_rel
+            .checked_add(1)
+            .ok_or_else(|| {
+                HayesError::InvalidParameter("Newton-Hodge exponent search overflow".to_owned())
+            })?;
+    }
+    let missing_rounding_exponent_bits =
+        minimum_rounding_exponent_for_rel.saturating_sub(connected_trace_divisibility_exponent);
+    Ok(CarlitzConnectedTopNewtonHodgeLedger {
+        ell,
+        degree,
+        first_top_level: implication.first_top_level,
+        minimum_hodge_slope_numerator: 1,
+        minimum_hodge_slope_denominator: ell,
+        connected_trace_divisibility_exponent,
+        connected_trace_divisor,
+        individual_weil_trace_envelope,
+        rounded_trace_envelope,
+        maximum_rounding_improvement,
+        negative_allowance_numerator,
+        minimum_rounding_exponent_for_rel,
+        missing_rounding_exponent_bits,
     })
 }
 
@@ -16523,6 +16948,123 @@ struct RawPopulationRefinementStep {
     signed_child_differences: Vec<BigInt>,
 }
 
+struct IdentityCylinderMoments {
+    coarse_identity_population: u128,
+    scaled_deviations: Vec<BigInt>,
+    conditional_scaled_square_sum: BigUint,
+    conditional_variance_numerator: BigUint,
+}
+
+struct IdentityCylinderGlobalEnvelopes {
+    total_squared_deviation: BigUint,
+    exact_scaled_square_sum: BigUint,
+    proved_weil_scaled_square_sum: BigUint,
+    exact_required_saving: BigUint,
+    proved_weil_required_saving: BigUint,
+}
+
+fn identity_cylinder_descendants(
+    counts: &[u128],
+    full_factors: &[PrincipalUnitFactor],
+    coarse_factors: &[PrincipalUnitFactor],
+    expected_count: u128,
+) -> Result<Vec<u128>, HayesError> {
+    let capacity = usize::try_from(expected_count).map_err(|_| {
+        HayesError::InvalidParameter("identity-cylinder size exceeds usize".to_owned())
+    })?;
+    let mut descendants = Vec::with_capacity(capacity);
+    for (index, count) in counts.iter().copied().enumerate() {
+        if project_mixed_radix_index(index, full_factors, coarse_factors)? == 0 {
+            descendants.push(count);
+        }
+    }
+    if descendants.len() != capacity {
+        return Err(HayesError::Invariant(format!(
+            "identity cylinder has {} descendants, expected {expected_count}",
+            descendants.len()
+        )));
+    }
+    Ok(descendants)
+}
+
+fn identity_cylinder_moments(
+    descendants: &[u128],
+    descendant_count: u128,
+) -> Result<IdentityCylinderMoments, HayesError> {
+    let coarse_identity_population = descendants.iter().try_fold(0_u128, |sum, count| {
+        sum.checked_add(*count).ok_or_else(|| {
+            HayesError::InvalidParameter("identity-cylinder population overflow".to_owned())
+        })
+    })?;
+    let count = BigInt::from(descendant_count);
+    let coarse_population = BigInt::from(coarse_identity_population);
+    let scaled_deviations = descendants
+        .iter()
+        .map(|value| BigInt::from(*value) * &count - &coarse_population)
+        .collect::<Vec<_>>();
+    if scaled_deviations.iter().sum::<BigInt>() != BigInt::from(0_u8) {
+        return Err(HayesError::Invariant(
+            "identity-cylinder scaled deviations do not sum to zero".to_owned(),
+        ));
+    }
+    let conditional_scaled_square_sum = scaled_deviations
+        .iter()
+        .fold(BigUint::from(0_u8), |sum, value| {
+            sum + value.magnitude().pow(2)
+        });
+    let fine_square_sum = descendants.iter().fold(BigUint::from(0_u8), |sum, value| {
+        sum + BigUint::from(*value).pow(2)
+    });
+    let conditional_variance_numerator = BigUint::from(descendant_count) * fine_square_sum
+        - BigUint::from(coarse_identity_population).pow(2);
+    if conditional_scaled_square_sum
+        != BigUint::from(descendant_count) * &conditional_variance_numerator
+    {
+        return Err(HayesError::Invariant(
+            "identity-cylinder variance normalizations disagree".to_owned(),
+        ));
+    }
+    Ok(IdentityCylinderMoments {
+        coarse_identity_population,
+        scaled_deviations,
+        conditional_scaled_square_sum,
+        conditional_variance_numerator,
+    })
+}
+
+fn identity_cylinder_global_envelopes(
+    distribution: &ClassPopulationDistribution,
+    ell: usize,
+    descendant_count: &BigUint,
+    target: &BigUint,
+) -> Result<IdentityCylinderGlobalEnvelopes, HayesError> {
+    let mean = distribution.uniform_mean().ok_or_else(|| {
+        HayesError::InvalidParameter("identity-cylinder distribution has no mean".to_owned())
+    })?;
+    let total_squared_deviation = distribution
+        .counts
+        .iter()
+        .fold(BigUint::from(0_u8), |sum, count| {
+            sum + BigUint::from(count.abs_diff(mean)).pow(2)
+        });
+    let descendant_square = descendant_count * descendant_count;
+    let exact_scaled_square_sum = &descendant_square * &total_squared_deviation;
+    let sigma = (2..=ell).fold(BigUint::from(0_u8), |sum, level| {
+        sum + (BigUint::from(level - 1).pow(2) << (level - 1))
+    });
+    let proved_weil_scaled_square_sum = descendant_square * BigUint::from(mean) * sigma;
+    let ceiling = |value: &BigUint| (value + target - BigUint::from(1_u8)) / target;
+    let exact_required_saving = ceiling(&exact_scaled_square_sum);
+    let proved_weil_required_saving = ceiling(&proved_weil_scaled_square_sum);
+    Ok(IdentityCylinderGlobalEnvelopes {
+        total_squared_deviation,
+        exact_scaled_square_sum,
+        proved_weil_scaled_square_sum,
+        exact_required_saving,
+        proved_weil_required_saving,
+    })
+}
+
 fn validate_population_refinement_reconstruction(
     reconstruction: &[BigInt],
     counts: &[u128],
@@ -16634,6 +17176,60 @@ fn raw_population_refinement_step(
         },
         signed_child_differences,
     })
+}
+
+fn identity_cylinder_variance_levels(
+    counts: &[u128],
+    full_factors: &[PrincipalUnitFactor],
+    coarse_factors: &[PrincipalUnitFactor],
+    coarse_level: usize,
+    ell: usize,
+    expected_numerator: &BigUint,
+) -> Result<Vec<IdentityCylinderVarianceLevel>, HayesError> {
+    let mut levels = Vec::with_capacity(ell - coarse_level);
+    let mut reconstructed = BigUint::from(0_u8);
+    for level in (coarse_level + 1)..=ell {
+        let level_factors = principal_unit_factors(level);
+        let step = raw_population_refinement_step(counts, full_factors, &level_factors, level)?;
+        let mut duplicated_square_sum = BigUint::from(0_u8);
+        for (child, difference) in step.signed_child_differences.iter().enumerate() {
+            if project_mixed_radix_index(child, &level_factors, coarse_factors)? == 0 {
+                duplicated_square_sum += difference.magnitude().pow(2);
+            }
+        }
+        if duplicated_square_sum.bit(0) {
+            return Err(HayesError::Invariant(format!(
+                "identity-cylinder level {level} has an odd duplicated square sum"
+            )));
+        }
+        let sibling_difference_square_sum = duplicated_square_sum >> 1;
+        let parent_exponent = level - coarse_level - 1;
+        let parent_count = 1_usize
+            .checked_shl(u32::try_from(parent_exponent).map_err(|_| {
+                HayesError::InvalidParameter(
+                    "identity-cylinder Haar parent exponent exceeds u32".to_owned(),
+                )
+            })?)
+            .ok_or_else(|| {
+                HayesError::InvalidParameter(
+                    "identity-cylinder Haar parent count overflow".to_owned(),
+                )
+            })?;
+        let contribution = &sibling_difference_square_sum << parent_exponent;
+        reconstructed += &contribution;
+        levels.push(IdentityCylinderVarianceLevel {
+            level,
+            parent_count,
+            sibling_difference_square_sum,
+            conditional_variance_numerator_contribution: contribution,
+        });
+    }
+    if reconstructed != *expected_numerator {
+        return Err(HayesError::Invariant(
+            "localized Haar levels do not reconstruct identity-cylinder variance".to_owned(),
+        ));
+    }
+    Ok(levels)
 }
 
 fn witt_haar_difference_square_sum(
@@ -20841,6 +21437,122 @@ mod tests {
             }
         }
         assert!(connected_top_inverse_mobius_fourier_regroup(4, 9, limits).is_err());
+    }
+
+    #[test]
+    fn identity_cylinder_conditional_variance_prices_rel() {
+        let limits = HayesLimits::default();
+        for ell in 4_usize..=14 {
+            for degree in [2 * ell + 1, 2 * ell + 2] {
+                let report = identity_cylinder_conditional_variance(ell, degree, limits).unwrap();
+                eprintln!(
+                    "IDENTITY_CYLINDER|ell={ell}|degree={degree}|coarse={}|R={}|C={}|Q={}|Qmax={}|global_save={}|weil_save={}|cauchy={}|quarter={}|rel={}",
+                    report.coarse_level,
+                    report.descendant_count,
+                    report.connected_trace,
+                    report.conditional_scaled_square_sum,
+                    report.maximum_conditional_scaled_square_sum_for_rel,
+                    report.exact_global_required_saving_ceiling,
+                    report.proved_weil_required_saving_ceiling,
+                    report.conditional_cauchy_proves_rel(),
+                    report.satisfies_quarter_scale_variance(),
+                    report.rel_holds_exactly(),
+                );
+                assert!(report.rel_holds_exactly());
+                assert_eq!(
+                    report
+                        .variance_levels
+                        .iter()
+                        .map(|level| &level.conditional_variance_numerator_contribution)
+                        .sum::<BigUint>(),
+                    report.conditional_variance_numerator
+                );
+                assert_eq!(
+                    report
+                        .variance_levels
+                        .iter()
+                        .map(|level| level.parent_count)
+                        .collect::<Vec<_>>(),
+                    (0..(ell - report.coarse_level))
+                        .map(|exponent| 1_usize << exponent)
+                        .collect::<Vec<_>>()
+                );
+                assert_eq!(
+                    report.satisfies_quarter_scale_variance(),
+                    ell >= 14 || (ell == 13 && degree == 27)
+                );
+            }
+        }
+        let odd = identity_cylinder_conditional_variance(14, 29, limits).unwrap();
+        assert_eq!(
+            odd.conditional_variance_numerator,
+            BigUint::from(1_288_331_008_u64)
+        );
+        assert_eq!(
+            odd.quarter_scale_variance_target_numerator,
+            BigUint::from(4_294_967_296_u64)
+        );
+        eprintln!(
+            "IDENTITY_CYLINDER_HAAR|ell=14|degree=29|levels={:?}",
+            odd.variance_levels
+                .iter()
+                .map(|level| (
+                    level.level,
+                    level.sibling_difference_square_sum.clone(),
+                    level.conditional_variance_numerator_contribution.clone()
+                ))
+                .collect::<Vec<_>>()
+        );
+        let even = identity_cylinder_conditional_variance(14, 30, limits).unwrap();
+        assert_eq!(
+            even.conditional_variance_numerator,
+            BigUint::from(2_905_795_008_u64)
+        );
+        assert!(identity_cylinder_conditional_variance(4, 8, limits).is_err());
+
+        for ell in 200_usize..=1024 {
+            for degree in [2 * ell + 1, 2 * ell + 2] {
+                let implication =
+                    identity_cylinder_quarter_variance_implication(ell, degree).unwrap();
+                assert!(implication.proves_rel());
+            }
+        }
+        let first = identity_cylinder_quarter_variance_implication(200, 401).unwrap();
+        let first_even = identity_cylinder_quarter_variance_implication(200, 402).unwrap();
+        assert_eq!(
+            first_even.global_weil_required_saving_ceiling,
+            BigUint::from(627_296_u32)
+        );
+        eprintln!(
+            "IDENTITY_CYLINDER_IMPLICATION|ell=200|degree=401|R={}|global_weil_save={}",
+            first.descendant_count, first.global_weil_required_saving_ceiling
+        );
+    }
+
+    #[test]
+    fn newton_hodge_divisibility_does_not_close_rel() {
+        let limits = HayesLimits::default();
+        for ell in 4_usize..=14 {
+            for degree in [2 * ell + 1, 2 * ell + 2] {
+                let trace = identity_cylinder_conditional_variance(ell, degree, limits)
+                    .unwrap()
+                    .connected_trace;
+                let hodge = carlitz_connected_top_newton_hodge_ledger(ell, degree).unwrap();
+                assert_eq!(
+                    trace % BigInt::from(hodge.connected_trace_divisor),
+                    BigInt::from(0_u8)
+                );
+            }
+        }
+        for degree in [401_usize, 402] {
+            let hodge = carlitz_connected_top_newton_hodge_ledger(200, degree).unwrap();
+            assert_eq!(hodge.connected_trace_divisibility_exponent, 3);
+            assert_eq!(hodge.connected_trace_divisor, BigUint::from(8_u8));
+            assert_eq!(hodge.minimum_rounding_exponent_for_rel, 409);
+            assert_eq!(hodge.missing_rounding_exponent_bits, 406);
+            assert_eq!(hodge.maximum_rounding_improvement, BigUint::from(0_u8));
+            assert!(!hodge.rounding_proves_rel());
+        }
     }
 
     #[test]

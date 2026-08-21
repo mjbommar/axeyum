@@ -3587,6 +3587,104 @@ over both (CRT) and the stronger TOP-POLY statement.
 A relative characteristic-two theorem should now target this one harmful
 sign of the single trace (CT), preserving cross-conductor cancellation.
 
+There is a strictly localized second-moment route to the same one-sided
+target.  Put `c_0=a-1`, let `K=ker(E_ell -> E_(c_0))`, and write
+
+```text
+R = #K = 2^(ell-c_0),
+x_e = N_ell(e)                  (e in K),
+S = sum_(e in K) x_e = N_(c_0)(1).
+```
+
+The connected trace is exactly the displacement of the identity child from
+the average of this one coarse cylinder:
+
+```text
+(CT) = 2^ell (x_1-S/R).
+```
+
+For the conditional variance
+
+```text
+V_id = sum_(e in K) (x_e-S/R)^2
+     = sum_(e in K) x_e^2-S^2/R,                         (ICV0)
+```
+
+The binary quotient filtration gives an exact local Haar decomposition. If
+`H_j(p)` denotes the difference of the two level-`j` child populations of a
+parent `p` above the coarse identity, then
+
+```text
+R V_id = sum_(j=c_0+1)^ell 2^(j-c_0-1)
+           sum_(p above 1 in E_(c_0)) H_j(p)^2.          (ICV-H)
+```
+
+The native report reconstructs every summand and fails closed unless their
+sum equals the direct conditional variance. Thus the missing positive-square
+statement is precisely a local Carleson-energy estimate on one ramified
+identity subtree.
+
+The sharp zero-sum point inequality gives
+
+```text
+(x_1-S/R)^2 <= (R-1)V_id/R.                              (ICV1)
+```
+
+Thus the exact sufficient threshold is
+
+```text
+2^(2ell)(R-1)V_id/R < B_(ell,n)^2.                       (ICV-exact)
+```
+
+A cleaner, slightly stronger premise is
+
+```text
+(ICV)  V_id <= 2^(2ell-2).                               (ICV)
+```
+
+For every `ell>=200`, the already checked low-Weil calculation gives
+`B_(ell,n)>2^(2ell-1)`.  Since `(R-1)/R<1`, (ICV1) then gives
+`abs(CT)<2^(2ell-1)<B_(ell,n)`, proving (REL).  The native operations
+`identity_cylinder_conditional_variance` and
+`identity_cylinder_quarter_variance_implication` retain both the sharp and
+clean integer comparisons.  The symbolic implication is checked for both
+endpoint parities through `ell=1024`.
+
+This is not the old global variance in disguise.  If `eta` runs over the
+characters of `K`, restriction Fourier inversion gives
+
+```text
+V_id = R^(-1) sum_(eta != 1)
+          abs(2^(-c_0) sum_(chi restricted to K = eta) S_n(chi))^2. (ICV-F)
+```
+
+The inner sum combines every coarse-character twist **before** it is squared.
+Applying Cauchy inside those twist blocks returns the global `M_2` envelope
+and loses the localization.  At `ell=200`, (ICV) asks for integral savings
+`313648` and `627296` over the proved individual-Weil global envelope at the
+odd and even endpoints respectively.  These are polynomial, about
+`7.84ell^2` and `15.68ell^2`, while a genuinely uniform distribution over the
+`2^c_0` coarse cylinders would give an exponential gain.
+
+The clean target is false in the finite prefix: for example the even
+`ell=13` row has conditional-variance numerator `2181638144` against the
+same-denominator target `1073741824`.  It holds at both endpoints for every
+exact row `14<=ell<=23`.  At the first two-sided success `ell=14`, the odd and
+even numerators are `1288331008` and `2905795008` against target
+`4294967296`; by the even `ell=23` row the scaled square sum is
+`1649531354734592` against the sharp REL ceiling
+`709227422017958242`.  These are finite diagnostics, not a theorem.
+
+The closest published fixed-field variance bounds do not supply (ICV-F).
+Hast--Matei's `m=2` theorem averages over all short intervals and leaves its
+constant dependent on the growing `(n,h)`.  Baier--Bhandari's fixed-`q`
+hybrid variance also averages over centers and residue classes and explicitly
+assumes `Q(0)!=0`; after reversal the present nested quotient has modulus a
+power of `x`.  The missing statement is therefore a localized
+coarse-twist/Carleson estimate at the ramified modulus, not another global
+second moment.  ADR-0578 records this boundary and keeps (REL), rather than
+(ICV), as the paper's sole minimal lemma.
+
 The most direct zero-`2`-rank shortcut is now priced exactly and gives no
 endpoint information.  Deuring--Shafarevich gives `2`-rank zero at both
 Carlitz levels, hence also on the relative Jacobian quotient.  But the general
@@ -3608,6 +3706,19 @@ Hasse--Weil envelope.  Yoo--Lee's elementary-abelian applications likewise do
 not apply to the cyclic `2`-power blocks of this quotient.  ADR-0573 records
 the source-level audit and selects a collective Witt complete-weight or
 zero-fibre estimate as the necessary form of any coding bridge.
+
+The stronger characteristic-two Newton-over-Hodge result developed in the
+separate `noh-p2-2026-08` review artifact can also be priced without importing
+that artifact into this lane. An exact level-`j` Carlitz character has Hodge
+slopes `1/j,...,(j-1)/j`, so the claimed polygon domination would make the
+degree-`n` trace divisible by `2^ceil(n/j)`. Galois stability then makes the
+connected trace divisible by `2^ceil(n/ell)=8` at both endpoints. At
+`ell=200`, however, the existing Weil envelope is already a multiple of eight:
+rounding saves zero, while divisibility-based rounding alone would need
+exponent `409`, leaving `406` bits missing. The conditional native ledger
+`carlitz_connected_top_newton_hodge_ledger` records this boundary. ADR-0579
+therefore treats Newton-over-Hodge as a valuable independent theorem but not
+as proof credit for `(REL)`.
 
 The fixed-`q` Hankel route is now source-audited and natively representable,
 but it does not yet improve this target.  Yiasemides's theorem computes the

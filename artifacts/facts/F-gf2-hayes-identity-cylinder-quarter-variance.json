@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-hayes-identity-cylinder-quarter-variance",
+  "title": "Quarter-scale conditional variance in the binary Hayes identity cylinder",
+  "statement": "Let ell >= 200, let n be 2 ell + 1 or 2 ell + 2, put c_0=ell-ceil(log2 ell)-2, K=ker(E_ell -> E_c_0), R=#K, x_e=N_ell(e), and S=sum_{e in K}x_e. Then sum_{e in K}(x_e-S/R)^2 <= 2^(2ell-2).",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"bound\":\"sum_(e in K)(N_ell(e)-N_c0(1)/R)^2 <= 2^(2*ell-2)\",\"degrees\":[\"2*ell+1\",\"2*ell+2\"],\"field_order\":2,\"format\":\"axeyum-gf2-hayes-identity-cylinder-quarter-variance\",\"level_min\":200,\"parameters\":{\"K\":\"ker(E_ell -> E_c0)\",\"R\":\"2^(ell-c0)\",\"c0\":\"ell-ceil(log2(ell))-2\"},\"version\":1}",
+    "fragment": "none",
+    "free_symbols": [
+      "ell",
+      "n"
+    ]
+  },
+  "epistemic_status": "conjectured",
+  "external_status": "unknown",
+  "depends_on": [],
+  "proof_route": "none",
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-20",
+    "established_by": "not established in this ledger",
+    "source": "Axeyum gf2-lemire lane; localized positive-square bridge to REL"
+  },
+  "notes": "The native identity_cylinder_quarter_variance_implication operation proves that this statement implies F:gf2-hayes-one-sided-relative-trace, hence the Lemire endpoint, for every ell>=200. identity_cylinder_conditional_variance reconstructs the exact local Haar identity R*V_id=sum_j 2^(j-c0-1) sum_p H_j(p)^2. The clean bound is false on some small rows but holds at both endpoint parities for every exact row 14<=ell<=23. Finite evidence is deliberately not attached as universal proof evidence, and no Autogenesis operation is registered because no uniform checker establishes the statement."
+}

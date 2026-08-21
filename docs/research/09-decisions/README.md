@@ -650,3 +650,5 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0575](adr-0575-certify-tame-eigenline-local-geometry-without-mislocalizing-frobenius.md) | Prove smooth transverse odd-endpoint cycle eigenlines while retaining the distinct Frobenius-cycle correspondence as REL | accepted |
 | [0576](adr-0576-remove-odd-frobenius-cycle-singular-local-terms.md) | Collapse every proper odd Frobenius-cycle orbit to the cone vertex and certify smooth transverse projective local terms without claiming a trace bound | accepted |
 | [0577](adr-0577-reject-relative-trace-positivity-after-smooth-localization.md) | Pin exact negative connected traces and prevent smooth unit local terms from being mistaken for relative positivity | accepted |
+| [0578](adr-0578-localize-rel-to-identity-cylinder-variance.md) | Reduce REL to a localized identity-cylinder Haar energy without claiming the open variance theorem | accepted |
+| [0579](adr-0579-price-newton-over-hodge-for-rel.md) | Record that characteristic-two Newton-over-Hodge gives only divisibility by eight for the endpoint connected trace | accepted |
