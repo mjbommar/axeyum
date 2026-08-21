@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-parity-leaves-result",
+  "state": "three-parity-leaves-compile-but-add-mod-propext-rejected",
+  "plan_sha256": "6445686b632c62cfc2859df154d5fe365f5bdf5ab84e4e6fe6362e7493e18668",
+  "source": {"path": "artifacts/autogenesis/sources/int-fib-parity-leaves-v1.lean", "sha256": "0cf44da70088aaed976ae76191aaf1761067f0dd5d55e38181e286fa92a0101c"},
+  "evidence": {"pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-parity-leaves-v1", "manifest_sha256": "61f6e792fcee5fd551286caf0488383ffc8d3341b5d32b020f0ee1c32e7226e1", "stream_sha256": "cda662ec943e7c8b5bd8131efdcb2a8e5b3e2c8c995e303e762bc04c750a9da5", "stream_bytes": 685665, "audit_sha256": "604e07353248f0bb20c47283bed4b50ab2eda4bd053e6ea41b08a17e36c45db3"},
+  "roots": [
+    {"name": "Axeyum.IntFib.modCases", "declaration_sha256": "c92e566d1038037e1f88a7c01f109a54481aa559532a2b7bbeb4679db40b5996", "axiom_footprint": ["propext"], "direct_theorem_dependencies": []},
+    {"name": "Axeyum.IntFib.succOne", "declaration_sha256": "203030cb6c4f6b66f2f36084759cf1533acfc5bfcac26652cdf8b8c06823ea78", "axiom_footprint": ["propext"], "direct_theorem_dependencies": ["Nat.add_mod", "congrArg"]},
+    {"name": "Axeyum.IntFib.succZero", "declaration_sha256": "8fa33348bbf59763dc1eadf89ab721a4ddeefecc5823b58338544a1d85555083", "axiom_footprint": ["propext"], "direct_theorem_dependencies": ["Nat.add_mod", "congrArg"]}
+  ],
+  "execution": {"compiler_invocations": 1, "exporter_invocations": 1, "importer_runs": 1, "theorem_submissions": 3, "retries": 0, "ledger_writes": 0},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}

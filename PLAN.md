@@ -196,6 +196,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Existing closure lacks `Nat.add_succ`, so the audit fails closed; a fresh pinned two-root recurrence export is frozen before classification |
 | 2026-08-21 | (pending) | Fresh export proves both Nat recurrence roots empty-footprint; V11 freezes explicit target-specific subtraction induction over them |
 | 2026-08-21 | (pending) | V11 reconstructs both integer cancellation leaves empty-footprint; only three parity contracts remain before closed recurrence composition |
+| 2026-08-21 | (pending) | Parity V1 compiles but all roots inherit propext from `Nat.add_mod`; its single dependency closure is frozen for descent |
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
 | 2026-08-21 | `a9610560c` | The durable construction checker binds the separately stored target goal identity without weakening capsule checks |
