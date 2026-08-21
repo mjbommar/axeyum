@@ -124,7 +124,8 @@ now. Nothing was deleted.
 | 2026-08-21 | `e7d8629c5` | `docs/PROJECT-STATE.md` said the parity ledger holds "eleven divisions" and named QF_ABV among its parity cells. It holds nine and has never held a QF_ABV entry — that list is committed and was never run. Two guards added to `check-parity-docs.py`, both derived from the ledger and both shown to fire on the real tree before the prose was fixed. |
 | 2026-08-21 | `35f46112b` | `scripts/parity-run.sh` was invoked by NO gate, so the repository's declared headline froze on 2026-08-06 for fifteen days and nothing went red. `scripts/check-parity-freshness.py` fails past 14 days per logic (warn 10), wired into BOTH `scripts/check.sh` and the justfile's `check`. Parser classifies every `## ` header and exits 2 on one it does not recognise — a silently skipped entry is indistinguishable from an absent one, which is how a stale logic reads as fresh. 12 controls, every guard mutation-verified. |
 | 2026-08-21 | `45587c513` | QF_NIA gap #4 diagnosed. "Multi-year catch-up" confirmed for the search — three cheapest levers yield 0 / +1 / +3 files, 4× clock buys 0 of 20 timeouts — and three premises corrected: **cvc5 is on this host** (`/nas3/data/axeyum/harness/bin/cvc5`, not on `$PATH`; two docs say otherwise), **z3 is 60 files from cvc5 here** (136 vs 76, cvc5's set a strict subset), and **the deficit is one family** (`VeryMax/ITS` = 74 of 104 misses; excluding it, 74.4 % of cvc5). `int-blast-ladder` decisive on 158/161; its constant-fit rule leaves **1 live rung on 32 files, 0 decided**. Four per-file passes committed. |
-| 2026-08-21 | (pending) | Crash-safe recovery admits exact `Int.fib_add_two` with one authoritative write and makes two integer Fibonacci descendants newly ready |
+| 2026-08-21 | `c254e3c9a` | Crash-safe recovery admits exact `Int.fib_add_two` with one authoritative write and makes two integer Fibonacci descendants newly ready |
+| 2026-08-21 | (pending) | Immutable primary evidence and an isolated clean replay seal the exact recurrence admission and reproduce its two-fact readiness delta |
 | 2026-08-21 | `c4c6524ac` | Exact `Int.fib_neg` root audit is frozen against the pinned clean exporter environment with zero reconstruction or ledger authority |
 | 2026-08-21 | (pending) | One root export and non-rendering importer pass find 26 direct dependencies and an assumption-bearing official `Int.fib_neg` proof |
 | 2026-08-21 | `1c728c757` | Exact 26-root dependency descent is frozen against the immutable `Int.fib_neg` stream with zero theorem authority |
@@ -1353,7 +1354,7 @@ unpriced, and it is a route, not a constant.
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, and now `Int.fib_add_two` are durably proved. The recurrence composes eight exact target-owned roots into an empty-footprint kernel theorem; crash-safe recovery performed one authoritative write and made two integer Fibonacci descendants newly ready.
 
-**Next:** archive and clean-replay the exact `Int.fib_add_two` admission, then qualify the two newly ready descendants and continue the sign/parity route toward `Int.fib_neg_natCast`.
+**Next:** qualify the two newly ready descendants, select the one that advances the sign/parity route most directly, and continue toward `Int.fib_neg_natCast` without importing official proof terms.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement

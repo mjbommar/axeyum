@@ -4,11 +4,12 @@
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, and now `Int.fib_add_two` are durably proved. The recurrence composes eight exact target-owned roots into an empty-footprint kernel theorem; crash-safe recovery performed one authoritative write and made two integer Fibonacci descendants newly ready.
 
-**Next:** archive and clean-replay the exact `Int.fib_add_two` admission, then qualify the two newly ready descendants and continue the sign/parity route toward `Int.fib_neg_natCast`.
+**Next:** qualify the two newly ready descendants, select the one that advances the sign/parity route most directly, and continue toward `Int.fib_neg_natCast` without importing official proof terms.
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-21 | (pending) | Crash-safe recovery admits exact `Int.fib_add_two` with one authoritative write and makes two integer Fibonacci descendants newly ready |
+| 2026-08-21 | `c254e3c9a` | Crash-safe recovery admits exact `Int.fib_add_two` with one authoritative write and makes two integer Fibonacci descendants newly ready |
+| 2026-08-21 | (pending) | Immutable primary evidence and an isolated clean replay seal the exact recurrence admission and reproduce its two-fact readiness delta |
 
 | 2026-08-21 | `c4c6524ac` | Exact `Int.fib_neg` root audit is frozen against the pinned clean exporter environment with zero reconstruction or ledger authority |
 | 2026-08-21 | (pending) | One root export and non-rendering importer pass find 26 direct dependencies and an assumption-bearing official `Int.fib_neg` proof |
