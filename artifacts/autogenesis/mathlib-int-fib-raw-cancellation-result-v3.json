@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-raw-cancellation-result",
+  "state": "concrete-int-methods-reduced-negofnat-match-remains",
+  "plan_sha256": "db514480c0d5c5a6179da51c9f93d3e55f3d75fc99d1ea3d44d3ad4075c2ab2b",
+  "source": {"path": "artifacts/autogenesis/sources/int-fib-raw-cancellation-v3.lean", "sha256": "79aad6b29eda2df0076c44c7ac70ad15661a0c267daa9e1060b01870e7325047"},
+  "execution": {"compiler_invocations": 1, "compiler_exit_status": 1, "exporter_invocations": 0, "importer_runs": 0, "theorem_submissions": 0, "retries": 0, "ledger_writes": 0},
+  "diagnostic": {
+    "successful_reduction": "all typeclass projections and concrete Int.add/Int.neg methods reduce",
+    "remaining_surface": "three explicit constructor matches headed by Int.negOfNat",
+    "repair": "split z in both local cancellation proofs and include Int.negOfNat in definitional reduction so every match selects a raw zero/successor subNatNat branch"
+  },
+  "cleanup": {"temporary_source_removed": true, "temporary_olean_removed": true, "checkout_baseline_restored": true},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}
