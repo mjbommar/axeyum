@@ -3913,6 +3913,26 @@ No canonical lift of the principal-unit action to ordered roots, and no such
 degree-uniform local-system theorem, has yet been proved; this is a precise
 geometric bridge rather than proof credit.
 
+The character-parameter presentation nevertheless proves one uniform piece
+of that bridge.  Sawin's universal Witt family applied to the fixed pair of
+rank-one sheaves `1,L_(eta^(-1))` has product geometric monodromy containing
+the two special-linear factors, in characteristic two as well as in odd
+characteristic.  The degree-`n` Mangoldt sum is the power-sum character
+`p_n(U)=trace(U^n)`.  Its hook expansion contains no representation trivial on
+`SL_(j-1)` because `n>j-1` and the only rectangular hook is `(1^(j-1))` at
+`n=j-1`.  Hence the external shifted character has no invariant vector and
+the top compactly supported cohomology of every nontrivial shift vanishes.
+
+This is a real weight cancellation, but not yet the endpoint estimate.
+Sawin fixes the conductor and sheaves while `q` tends to infinity and
+explicitly does not provide uniformity in those inputs.  At fixed `q=2`, the
+remaining degrees carry only a formal `2^(-1/2)` weight drop multiplied by
+their conductor- and Adams-power-dependent Betti complexity.  The missing
+statement `(WITT-LOW)` must bound their complete signed trace, summed over the
+exact low-twist layer and all high conductors, by ADR-0584's native contraction
+price.  ADR-0585 records the proved top vanishing and leaves that lower trace
+open rather than importing a large-field asymptotic.
+
 The most direct zero-`2`-rank shortcut is now priced exactly and gives no
 endpoint information.  Deuring--Shafarevich gives `2`-rank zero at both
 Carlitz levels, hence also on the relative Jacobian quotient.  But the general
