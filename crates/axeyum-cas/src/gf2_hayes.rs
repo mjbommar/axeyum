@@ -5526,6 +5526,42 @@ pub struct IdentityCylinderTranslationSplitImplication {
     pub residual_three_quarter_balanced_steps: usize,
 }
 
+/// Exact translation involution on the complete binary Hayes character group.
+///
+/// If `u(t)` is the truncated reciprocal class of a monic degree-`n`
+/// polynomial, translation `F(x) -> F(x+1)` acts by
+///
+/// ```text
+/// sigma(u) = c * tau(u),
+/// c = (1+t)^n,
+/// tau(u)(t) = u(t/(1+t))                 mod t^(ell+1).
+/// ```
+///
+/// The report checks the group identities and the induced permutation of the
+/// exact Mangoldt populations.  If `K={tau(g)g^(-1)}`, the `tau`-fixed dual
+/// characters are the dual of `G/K`.  Exactly half of them have
+/// `chi(c)=-1` when `n` is odd, and none do when `n` is even; every such
+/// character has zero Mangoldt and squared-discrepancy Fourier coefficient.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HayesTranslationSpectralInvolutionReport {
+    /// Leading-coefficient prefix length.
+    pub ell: usize,
+    /// Polynomial degree.
+    pub degree: usize,
+    /// Order `2^ell` of the principal-unit group.
+    pub group_order: usize,
+    /// Packed translation class `c=(1+t)^degree mod t^(ell+1)`.
+    pub translation_class: u64,
+    /// Order of `K={tau(g)g^(-1):g in G}`.
+    pub commutator_image_order: usize,
+    /// Number `|G/K|` of `tau`-fixed dual characters.
+    pub tau_fixed_character_count: usize,
+    /// Number of fixed characters with `chi(c)=-1`, hence forced to vanish.
+    pub forced_vanishing_character_count: usize,
+    /// Whether `c` lies in `K`.
+    pub translation_class_in_commutator_image: bool,
+}
+
 /// Balanced-step summary for the Haar-weighted aggregate identity path.
 ///
 /// Unlike [`IdentityCylinderPathBalanceReport`], this report combines every
@@ -6660,6 +6696,183 @@ pub fn identity_cylinder_translation_split_implication(
         residual_half_balanced_steps: split.required_half_balanced_steps - forced_count,
         residual_three_quarter_balanced_steps: split.required_three_quarter_balanced_steps
             - forced_count,
+    })
+}
+
+struct TranslationInvolutionConstruction {
+    translation_class: u64,
+    sigma_images: Vec<u64>,
+    commutator_image: BTreeSet<u64>,
+}
+
+fn construct_translation_involution(
+    ell: usize,
+    degree: usize,
+    group_order: usize,
+    factors: &[PrincipalUnitFactor],
+    unit_to_index: &BTreeMap<u64, usize>,
+) -> Result<TranslationInvolutionConstruction, HayesError> {
+    let units = (0..group_order)
+        .map(|index| principal_unit_from_mixed_radix_index(index, factors, ell))
+        .collect::<Result<Vec<_>, _>>()?;
+    let translation_class = truncated_series_power(0b11, degree, ell);
+    let translation_inverse = principal_unit_inverse(translation_class, ell);
+    if unit_multiply(translation_class, translation_inverse, ell) != 1
+        || principal_unit_tau(translation_class, ell) != translation_inverse
+    {
+        return Err(HayesError::Invariant(
+            "translation class does not satisfy tau(c)=c^(-1)".to_owned(),
+        ));
+    }
+
+    let mut tau_images = Vec::with_capacity(group_order);
+    let mut sigma_images = Vec::with_capacity(group_order);
+    let mut commutator_image = BTreeSet::new();
+    for &unit in &units {
+        let tau = principal_unit_tau(unit, ell);
+        let sigma = unit_multiply(translation_class, tau, ell);
+        if !unit_to_index.contains_key(&tau) || !unit_to_index.contains_key(&sigma) {
+            return Err(HayesError::Invariant(
+                "translation map left the principal-unit group".to_owned(),
+            ));
+        }
+        tau_images.push(tau);
+        sigma_images.push(sigma);
+        commutator_image.insert(unit_multiply(tau, principal_unit_inverse(unit, ell), ell));
+    }
+
+    for (index, &unit) in units.iter().enumerate() {
+        let tau = tau_images[index];
+        let sigma_index = *unit_to_index.get(&sigma_images[index]).ok_or_else(|| {
+            HayesError::Invariant("translation sigma index is missing".to_owned())
+        })?;
+        if principal_unit_tau(tau, ell) != unit || sigma_images[sigma_index] != unit {
+            return Err(HayesError::Invariant(
+                "translation map is not involutive".to_owned(),
+            ));
+        }
+        for factor in factors {
+            let generator = 1_u64 | (1_u64 << factor.odd_degree);
+            let product = unit_multiply(unit, generator, ell);
+            let product_index = *unit_to_index.get(&product).ok_or_else(|| {
+                HayesError::Invariant("principal-unit product index is missing".to_owned())
+            })?;
+            if tau_images[product_index]
+                != unit_multiply(tau, principal_unit_tau(generator, ell), ell)
+            {
+                return Err(HayesError::Invariant(
+                    "translation tau is not a group automorphism".to_owned(),
+                ));
+            }
+        }
+    }
+    Ok(TranslationInvolutionConstruction {
+        translation_class,
+        sigma_images,
+        commutator_image,
+    })
+}
+
+/// Construct and check the complete translation involution on Hayes classes.
+///
+/// Translation preserves degree and the polynomial von Mangoldt weight.  The
+/// checked class identity therefore proves the two spectral functional
+/// equations
+///
+/// ```text
+/// S(chi)    = chi(c) S(chi o tau),
+/// D2hat(chi)= chi(c) D2hat(chi o tau).
+/// ```
+///
+/// A `tau`-fixed character with `chi(c)=-1` consequently makes both Fourier
+/// coefficients zero.  The returned count is exact for the admitted finite
+/// group; it is not an asymptotic cancellation estimate.
+///
+/// # Errors
+///
+/// Rejects invalid or over-limit domains and fails closed if the class map,
+/// group automorphism, involutions, commutator quotient, parity dichotomy, or
+/// Mangoldt-population permutation fails.
+pub fn hayes_translation_spectral_involution(
+    ell: usize,
+    degree: usize,
+    limits: HayesLimits,
+) -> Result<HayesTranslationSpectralInvolutionReport, HayesError> {
+    if degree == 0 {
+        return Err(HayesError::InvalidParameter(
+            "translation spectral involution requires positive degree".to_owned(),
+        ));
+    }
+    check_limit("degree", degree, limits.max_degree)?;
+    let structure = principal_unit_structure(ell, limits)?;
+    let (factors, unit_to_index) = principal_unit_index_table(ell, limits)?;
+    let construction = construct_translation_involution(
+        ell,
+        degree,
+        structure.group_order,
+        &factors,
+        &unit_to_index,
+    )?;
+    let translation_class = construction.translation_class;
+    let sigma_images = construction.sigma_images;
+    let commutator_image = construction.commutator_image;
+
+    // Since G is abelian and tau is an automorphism, g -> tau(g)g^(-1) is a
+    // homomorphism.  Its enumerated image is therefore already the subgroup K.
+    let commutator_image_order = commutator_image.len();
+    if commutator_image_order == 0 || !structure.group_order.is_multiple_of(commutator_image_order)
+    {
+        return Err(HayesError::Invariant(
+            "translation commutator image has invalid order".to_owned(),
+        ));
+    }
+    let tau_fixed_character_count = structure.group_order / commutator_image_order;
+    let translation_class_in_commutator_image = commutator_image.contains(&translation_class);
+    // If n is even, c=(1+t)^n is the inverse of
+    // tau((1+t)^(n/2))*(1+t)^(-n/2), hence c lies in K.  If n is odd, the
+    // tau-fixed first-coordinate sign character takes c to -1, hence c notin K.
+    if translation_class_in_commutator_image != degree.is_multiple_of(2) {
+        return Err(HayesError::Invariant(
+            "translation commutator parity dichotomy failed".to_owned(),
+        ));
+    }
+    let forced_vanishing_character_count = if translation_class_in_commutator_image {
+        0
+    } else {
+        if !tau_fixed_character_count.is_multiple_of(2) {
+            return Err(HayesError::Invariant(
+                "nontrivial translation evaluation did not split the fixed dual".to_owned(),
+            ));
+        }
+        tau_fixed_character_count / 2
+    };
+
+    let distribution = class_population_distribution(ell, degree, limits)?;
+    if distribution.counts.len() != structure.group_order {
+        return Err(HayesError::Invariant(
+            "translation population and group orders disagree".to_owned(),
+        ));
+    }
+    for (index, &sigma) in sigma_images.iter().enumerate() {
+        let sigma_index = *unit_to_index.get(&sigma).ok_or_else(|| {
+            HayesError::Invariant("translation population index is missing".to_owned())
+        })?;
+        if distribution.counts[index] != distribution.counts[sigma_index] {
+            return Err(HayesError::Invariant(
+                "translation does not preserve Mangoldt class populations".to_owned(),
+            ));
+        }
+    }
+
+    Ok(HayesTranslationSpectralInvolutionReport {
+        ell,
+        degree,
+        group_order: structure.group_order,
+        translation_class,
+        commutator_image_order,
+        tau_fixed_character_count,
+        forced_vanishing_character_count,
+        translation_class_in_commutator_image,
     })
 }
 
@@ -18809,6 +19022,38 @@ fn unit_multiply(mut left: u64, right: u64, ell: usize) -> u64 {
     product & mask
 }
 
+fn truncated_series_power(mut base: u64, mut exponent: usize, ell: usize) -> u64 {
+    let mut value = 1_u64;
+    while exponent != 0 {
+        if exponent & 1 != 0 {
+            value = unit_multiply(value, base, ell);
+        }
+        exponent >>= 1;
+        if exponent != 0 {
+            base = unit_multiply(base, base, ell);
+        }
+    }
+    value
+}
+
+fn principal_unit_tau(unit: u64, ell: usize) -> u64 {
+    // s=t/(1+t)=t+t^2+...+t^ell in characteristic two.
+    let substitution = if ell == 63 {
+        u64::MAX ^ 1
+    } else {
+        ((1_u64 << (ell + 1)) - 1) ^ 1
+    };
+    let mut image = 0_u64;
+    let mut power = 1_u64;
+    for degree in 0..=ell {
+        if unit & (1_u64 << degree) != 0 {
+            image ^= power;
+        }
+        power = unit_multiply(power, substitution, ell);
+    }
+    image
+}
+
 fn polynomial_multiply_packed(mut left: u64, right: u64) -> u64 {
     let mut product = 0_u64;
     while left != 0 {
@@ -20144,6 +20389,52 @@ mod tests {
                 assert_eq!(layers[paired_level - 1].value, 0, "degree={degree}");
             }
         }
+    }
+
+    #[test]
+    fn translation_spectral_involution_checks_the_complete_character_group() {
+        let limits = HayesLimits::default();
+        for ell in 2..=8 {
+            for degree in [2 * ell + 1, 2 * ell + 2] {
+                let report = hayes_translation_spectral_involution(ell, degree, limits).unwrap();
+                assert_eq!(report.group_order, 1_usize << ell);
+                assert_eq!(
+                    report.group_order,
+                    report.commutator_image_order * report.tau_fixed_character_count
+                );
+                assert_eq!(
+                    report.translation_class_in_commutator_image,
+                    degree.is_multiple_of(2)
+                );
+                assert_eq!(
+                    report.forced_vanishing_character_count,
+                    if degree.is_multiple_of(2) {
+                        0
+                    } else {
+                        report.tau_fixed_character_count / 2
+                    }
+                );
+            }
+        }
+        let odd = hayes_translation_spectral_involution(8, 17, limits).unwrap();
+        assert_eq!(odd.commutator_image_order, 16);
+        assert_eq!(odd.tau_fixed_character_count, 16);
+        assert_eq!(odd.forced_vanishing_character_count, 8);
+        let even = hayes_translation_spectral_involution(8, 18, limits).unwrap();
+        assert_eq!(even.commutator_image_order, 16);
+        assert_eq!(even.tau_fixed_character_count, 16);
+        assert_eq!(even.forced_vanishing_character_count, 0);
+    }
+
+    #[test]
+    fn translation_spectral_involution_declines_invalid_or_limited_domains() {
+        let limits = HayesLimits::default();
+        assert!(hayes_translation_spectral_involution(2, 0, limits).is_err());
+        let limited = HayesLimits {
+            max_group_order: 8,
+            ..limits
+        };
+        assert!(hayes_translation_spectral_involution(4, 9, limited).is_err());
     }
 
     #[test]

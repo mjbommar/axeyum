@@ -4737,6 +4737,38 @@ the two-Mobius virtual representation, or cancellation across conductor
 orders; dimension, lissity, and top-invariant vanishing alone cannot supply
 the required repeated contractions (ADR-0586).
 
+Translation has now been promoted from one path split to its complete dual
+functional equation.  If `u(t)` is a truncated reciprocal class, direct
+substitution gives
+
+```text
+sigma(u)=(1+t)^n tau(u),
+tau(u)(t)=u(t/(1+t)) mod t^(ell+1).
+```
+
+Here `tau` is an involutive group automorphism and `sigma` is the class
+involution induced by `F(x)->F(x+1)`.  Since translation preserves the
+polynomial Mangoldt weight, both the Mangoldt spectrum and the Fourier
+transform of the squared class discrepancy satisfy
+
+```text
+A(chi)=chi((1+t)^n) A(chi o tau).                         (TRANS-FE)
+```
+
+Put `K={tau(g)g^(-1)}`.  The `tau`-fixed dual is the dual of `G_ell/K`.
+For odd `n`, the first-coordinate sign character proves `(1+t)^n notin K`,
+so exactly half of the fixed dual has negative evaluation and vanishes in
+`(TRANS-FE)`.  For even `n`, taking `g=(1+t)^(n/2)` proves
+`tau(g)g^(-1)=(1+t)^(-n)`, so `(1+t)^n in K` and this mechanism forces no
+fixed character to vanish.  The bounded
+`hayes_translation_spectral_involution` operation checks every group element,
+canonical generator, commutator-image class, and exact population permutation.
+At `ell=8` the fixed dual has order `16`: degree `17` forces eight zeros and
+degree `18` forces none.  This strictly generalizes the earlier odd
+one-character zero, but the odd vanishing fraction shrinks with conductor and
+the even endpoint receives no cancellation.  Thus it is reusable exact
+structure, not a proof of `(WITT-LOW)` or `(REL)` (ADR-0587).
+
 The exact algebra is no longer trapped in that executable. ADR-0486 extracts a
 bounded `axeyum_cas::gf2_hayes` API for the principal-unit cyclic structure,
 identity-class populations, endpoint discrepancies, conductor layers, and the

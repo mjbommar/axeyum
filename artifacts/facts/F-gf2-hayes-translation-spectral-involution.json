@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-hayes-translation-spectral-involution",
+  "title": "Complete Hayes translation spectral involution",
+  "statement": "For every ell>=1 and n>=1, translation F(x)->F(x+1) acts on the binary principal-unit class u by sigma(u)=(1+t)^n u(t/(1+t)) modulo t^(ell+1). Writing tau(u)=u(t/(1+t)), both tau and sigma are involutions, tau is a group automorphism, and the degree-n Mangoldt and squared-discrepancy spectra satisfy A(chi)=chi((1+t)^n)A(chi composed with tau). Among tau-fixed characters, exactly half are forced to vanish when n is odd and none are forced by this mechanism when n is even.",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"format\":\"axeyum-gf2-hayes-translation-spectral-involution\",\"parameters\":{\"degree\":\"n>=1\",\"ell\":\"ell>=1\"},\"sigma\":\"(1+t)^n*tau(u) mod t^(ell+1)\",\"tau\":\"u(t/(1+t)) mod t^(ell+1)\",\"version\":1}",
+    "fragment": "gf2-principal-unit-character-duality",
+    "free_symbols": ["ell", "n"]
+  },
+  "epistemic_status": "proved",
+  "external_status": "unknown",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "binary-polynomial-von-mangoldt-translation-invariance",
+    "finite-abelian-character-duality",
+    "truncated-principal-unit-semantics-v1"
+  ],
+  "evidence": [
+    {
+      "id": "gf2-hayes-translation-spectral-native-check",
+      "kind": "exhaustive-enumeration",
+      "supports": "The class formula, group automorphism, two involutions, commutator quotient, odd-even vanishing dichotomy, and exact Mangoldt-population permutation.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-cas --all-features translation_spectral_involution",
+      "artifact": "crates/axeyum-cas/src/gf2_hayes.rs",
+      "notes": "The universal step is the reciprocal substitution and finite-abelian duality proof. Exhaustive endpoint rows through level eight are mutation controls, not quantifier evidence."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-21",
+    "established_by": "Axeyum gf2-lemire lane",
+    "source": "exact reciprocal translation on the truncated binary principal-unit group"
+  },
+  "notes": "This generalizes the translation-forced identity-path split. The forced odd vanishing fraction shrinks with conductor and the even endpoint gets none, so the theorem supplies no standalone REL or Lemire proof credit."
+}
