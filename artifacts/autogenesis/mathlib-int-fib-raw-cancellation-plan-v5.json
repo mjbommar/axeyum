@@ -1,0 +1,27 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-int-fib-raw-cancellation-plan",
+  "state": "preregistered-after-single-zero-normalization-before-v5-source",
+  "predecessor": {"path": "artifacts/autogenesis/mathlib-int-fib-raw-cancellation-result-v4.json", "required_state": "five-constructor-branches-close-one-zero-normalization-remains"},
+  "repair": {
+    "only_changes": ["add OfNat.ofNat to the even-zero-successor dsimp-only list", "rewrite Nat.zero_add z before that branch's subNatNat change"],
+    "other_five_branches_unchanged": true,
+    "raw_equations_unchanged": true,
+    "forbidden": ["higher Int.subNatNat convenience theorems", "official Int algebra theorems", "omega", "abel", "simp", "ring", "linarith", "native_decide"]
+  },
+  "execution": {
+    "source": "artifacts/autogenesis/sources/int-fib-raw-cancellation-v5.lean",
+    "source_present_at_plan_commit": false,
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-raw-cancellation-v5",
+    "pack_present_at_plan_commit": false,
+    "roots": ["Axeyum.IntFib.evenAdd", "Axeyum.IntFib.oddAdd"],
+    "max_compiler_invocations": 1,
+    "max_exporter_invocations": 1,
+    "max_importer_runs": 1,
+    "max_retries": 0,
+    "max_theorem_submissions": 2,
+    "max_closed_target_submissions": 0,
+    "max_ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-raw-cancellation-result-v5.json"
+}

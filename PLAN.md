@@ -179,6 +179,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Raw composition V1 stops at opaque Add/Neg projections before arithmetic; V2 freezes definitional projection reduction only |
 | 2026-08-21 | (pending) | V2 exposes concrete `Int.add`/`Int.neg` methods; V3 freezes their direct definitional reduction with the arithmetic proof unchanged |
 | 2026-08-21 | (pending) | V3 reaches explicit `Int.negOfNat` constructor matches; V4 freezes the final natural zero/successor split into raw `subNatNat` branches |
+| 2026-08-21 | (pending) | V4 closes five of six raw constructor branches; V5 freezes only `Nat.zero_add` plus overloaded-zero reduction in the last branch |
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
 | 2026-08-21 | `a9610560c` | The durable construction checker binds the separately stored target goal identity without weakening capsule checks |
