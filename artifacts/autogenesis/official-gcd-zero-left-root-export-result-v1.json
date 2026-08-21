@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-gcd-zero-left-root-export-result",
+  "state": "official-gcd-zero-left-reconstructed-twice-empty-footprint",
+  "plan": {
+    "path": "artifacts/autogenesis/official-gcd-zero-left-root-export-plan-v1.json",
+    "sha256": "88430300df6e8ed6b3beb9ca834d808e3cc9379205ecac6e1d73742620bd8d9c",
+    "commit": "b866b31eec94a3ed72a40d4df304a80ae2c169f5"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/0a73f8458-official-gcd-zero-left-root-v1/manifest.json",
+    "sha256": "f7d01b5c782b098fce84d8ce342d53c7da70bc2fe8d59864e0d44d04c095ff0e",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "execution": {
+    "source_copies": 1,
+    "compiler_invocations": 1,
+    "successful_compilations": 1,
+    "exporter_invocations": 1,
+    "importer_runs": 2,
+    "successful_importer_runs": 2,
+    "proof_bearing_stream_reads": 2,
+    "retries": 0
+  },
+  "stream": {
+    "bytes": 509474,
+    "maximum_bytes": 2000000,
+    "sha256": "824399899916c72329f201c0ea8c1b0fe25315ea013c4f392586668f67f606a0",
+    "root_selected": true
+  },
+  "theorem": {
+    "name": "Axeyum.Autogenesis.nat_gcd_zero_left",
+    "contract": "forall n : Nat, Nat.gcd 0 n = n",
+    "declaration_sha256": "e4f6c7e3971f5751bd1e889e9bfc28b7035d9f47204f7aafa5efc06b97cf3555",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": ["Axeyum.Autogenesis.gcdModel_zero_left"],
+    "audit_sha256": "27fc809c6e634453589aeedd5ae37527bc8f4c3412d6ba6ae141be12ed33d4de",
+    "fresh_reconstructions": 2,
+    "audits_byte_identical": true,
+    "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0}
+  },
+  "cleanup": {
+    "exact_temporary_paths_removed": 3,
+    "preexisting_status_entries_before": 3,
+    "preexisting_status_entries_after": 3,
+    "preexisting_baseline_unchanged": true
+  },
+  "next_boundary": {
+    "official_gcd_zero_left_completed": true,
+    "required_next_increment": "reconstruct the official-representation Nat.gcd successor computation leaf, then preregister composition with the accepted generic balanced-Bezout theorem",
+    "official_gcd_succ_completed": false
+  },
+  "authority": {
+    "official_gcd_zero_left_credit": 1,
+    "official_gcd_succ_credit": 0,
+    "closed_gcd_balanced_bezout_credit": 0,
+    "cancellation_credit": 0,
+    "target_specialization_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "verification": "python3 scripts/check-autogenesis-official-gcd-zero-left-root-export-result.py",
+  "limitations": "This accepts only the official-representation zero-left gcd computation theorem. It grants no successor equation, closed balanced-Bezout theorem, cancellation, target, evaluation, fact, or ledger credit."
+}
