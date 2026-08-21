@@ -68,6 +68,8 @@ const GCD_ZERO_LEFT_GENERIC: &str = "Axeyum.Autogenesis.nat_gcd_zero_left";
 const GCD_ZERO_LEFT_GENERIC_SHA256: &str =
     "e4f6c7e3971f5751bd1e889e9bfc28b7035d9f47204f7aafa5efc06b97cf3555";
 const GCD_ZERO_LEFT_PUBLIC: &str = "Nat.gcd_zero_left";
+const TARGET_DVD_ADD: &str = "Axeyum.Autogenesis.dvdAddOfficialV1";
+const TARGET_EQ_ONE_OF_DVD_ONE: &str = "Axeyum.Autogenesis.eqOneOfDvdOneOfficialV1";
 const COPRIME_CAPSULE: &str = "9106a3442d75a5fdaf51e35436e6fdbea78714d743e666bec27ffd9641160b11";
 const CLEAN_GCD_COMM: &str = "Axeyum.Autogenesis.gcdCommCleanV1";
 const OFFICIAL_EQ_ZERO: &str = "Axeyum.Autogenesis.eqZeroOfZeroDvdOfficialV1";
@@ -98,6 +100,14 @@ fn run() -> Result<(), String> {
     let mut args = std::env::args_os().skip(1);
     if args.next().as_deref() == Some(std::ffi::OsStr::new("--target-native-coprime-audit")) {
         return run_target_native_coprime_audit(args);
+    }
+    let mut args = std::env::args_os().skip(1);
+    if args.next().as_deref()
+        == Some(std::ffi::OsStr::new(
+            "--target-native-simple-support-capsule",
+        ))
+    {
+        return run_target_native_simple_support_capsule(args);
     }
     let mut args = std::env::args_os().skip(1);
     let r091_path = path(&mut args)?;
@@ -249,6 +259,88 @@ fn run() -> Result<(), String> {
             },
             "execution": {"capsule_compositions": 4, "local_gcd_comm_submissions": 1, "exact_target_submissions": 1, "retries": 0},
             "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0},
+            "fact_status_changes": 0,
+            "evaluation_credit": 0,
+            "ledger_writes": 0,
+        }))
+        .map_err(|error| error.to_string())?
+    );
+    Ok(())
+}
+
+fn run_target_native_simple_support_capsule(
+    mut args: impl Iterator<Item = std::ffi::OsString>,
+) -> Result<(), String> {
+    let r091_path = path(&mut args)?;
+    let clean_path = path(&mut args)?;
+    let cancellation_path = path(&mut args)?;
+    let addition_path = path(&mut args)?;
+    let output_path = path(&mut args)?;
+    if args.next().is_some() || output_path.exists() {
+        return Err("usage: nat_gcd_fib_add_self_exact --target-native-simple-support-capsule <r091> <official-clean-order> <cancellation> <addition> <output>".to_owned());
+    }
+    let r091 = import_bound(&r091_path, R091_SHA256, "r091")?;
+    let clean = import_bound(&clean_path, CLEAN_ANTISYMM_CAPSULE, CLEAN_ANTISYMM)?;
+    let cancellation = import_bound(&cancellation_path, CANCELLATION_CAPSULE, CANCELLATION)?;
+    let addition = import_bound(&addition_path, ADDITION_CAPSULE, ADDITION)?;
+    let mut kernel = r091.kernel().clone();
+    let mut setup_receipts = Vec::new();
+    for (root, source) in [
+        (CLEAN_ANTISYMM, clean.kernel()),
+        (CANCELLATION, cancellation.kernel()),
+        (ADDITION, addition.kernel()),
+    ] {
+        let completed = compose_checked_theorem_slice(source, &kernel, &[root])
+            .map_err(|error| format!("{root} support setup composition declined: {error:?}"))?;
+        verify_checked_theorem_composition(
+            source,
+            &kernel,
+            completed.kernel(),
+            completed.receipt(),
+        )
+        .map_err(|error| format!("{root} support setup composition did not replay: {error:?}"))?;
+        setup_receipts
+            .push(json!({"root": root, "receipt_sha256": completed.receipt().receipt_sha256}));
+        kernel = completed.kernel().clone();
+    }
+    let dvd_add = declare_target_native_dvd_add(&mut kernel)?;
+    require_empty(&kernel, dvd_add, TARGET_DVD_ADD)?;
+    let eq_one = declare_target_native_eq_one_of_dvd_one(&mut kernel)?;
+    require_empty(&kernel, eq_one, TARGET_EQ_ONE_OF_DVD_ONE)?;
+    let expected = [evidence(&kernel, dvd_add)?, evidence(&kernel, eq_one)?];
+    let bytes = kernel
+        .render_lean4export_ndjson_roots(&Lean4ExportMetadata::axeyum("4.30.0"), &[dvd_add, eq_one])
+        .map_err(|error| format!("simple support capsule export failed: {error}"))?;
+    for pass in 1..=2 {
+        let replay = import_ndjson(Cursor::new(bytes.as_bytes()), ImportLimits::default())
+            .map_err(|error| format!("simple support capsule import {pass} failed: {error:?}"))?;
+        for (name, evidence_expected) in [
+            (TARGET_DVD_ADD, &expected[0]),
+            (TARGET_EQ_ONE_OF_DVD_ONE, &expected[1]),
+        ] {
+            let theorem = find_name(replay.kernel(), name)?;
+            if evidence(replay.kernel(), theorem)? != *evidence_expected {
+                return Err(format!(
+                    "simple support capsule import {pass} changed {name}"
+                ));
+            }
+        }
+    }
+    fs::write(&output_path, &bytes)
+        .map_err(|error| format!("simple support capsule write failed: {error}"))?;
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "schema_version": 1,
+            "kind": "axeyum-autogenesis-target-native-simple-coprime-support-capsule",
+            "state": "two-simple-supports-reconstructed-empty-footprint-roundtrip-checked",
+            "setup_compositions": setup_receipts,
+            "supports": expected,
+            "capsule": {"bytes": bytes.len(), "sha256": hex_sha256(bytes.as_bytes()), "fresh_imports": 2},
+            "execution": {"support_submissions": 2, "exports": 1, "fresh_imports": 2, "retries": 0},
+            "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0},
+            "exact_coprime_submissions": 0,
+            "exact_target_submissions": 0,
             "fact_status_changes": 0,
             "evaluation_credit": 0,
             "ledger_writes": 0,
@@ -775,6 +867,21 @@ impl<'a> Dev<'a> {
             d.eq(successor_left, successor)
         });
         let base = self.refl(successor_left);
+        self.transport(left, motive, base, right, equality)
+    }
+    fn congr(
+        &mut self,
+        left: ExprId,
+        right: ExprId,
+        equality: ExprId,
+        context: &dyn Fn(&mut Self, ExprId) -> ExprId,
+    ) -> ExprId {
+        let context_left = context(self, left);
+        let motive = self.eq_motive(left, &|d, value| {
+            let context_value = context(d, value);
+            d.eq(context_left, context_value)
+        });
+        let base = self.refl(context_left);
         self.transport(left, motive, base, right, equality)
     }
     fn false_elim(&mut self, goal: ExprId, contradiction: ExprId) -> ExprId {
@@ -1404,6 +1511,146 @@ fn declare_official_antisymm(kernel: &mut Kernel) -> Result<NameId, String> {
 }
 
 #[allow(clippy::similar_names)]
+fn declare_target_native_dvd_add(kernel: &mut Kernel) -> Result<NameId, String> {
+    let target = nested_name(kernel, &["Axeyum", "Autogenesis", "dvdAddOfficialV1"]);
+    let mut d = Dev::new(kernel)?;
+    let mul_add = d.exact("Nat.mul_add")?;
+    let exists_intro = d.exact("Exists.intro")?;
+    let nat = d.nat_ty();
+    let divisor_fv = d.fresh();
+    let divisor = d.kernel.fvar(divisor_fv);
+    let left_fv = d.fresh();
+    let left = d.kernel.fvar(left_fv);
+    let right_fv = d.fresh();
+    let right = d.kernel.fvar(right_fv);
+    let divides_left_ty = d.dvd(divisor, left);
+    let divides_left_fv = d.fresh();
+    let divides_left = d.kernel.fvar(divides_left_fv);
+    let divides_right_ty = d.dvd(divisor, right);
+    let divides_right_fv = d.fresh();
+    let divides_right = d.kernel.fvar(divides_right_fv);
+    let sum = d.add(left, right);
+    let conclusion = d.dvd(divisor, sum);
+    let left_predicate = d.dvd_predicate(divisor, left);
+    let remaining = d.arrow(divides_right_ty, conclusion);
+    let left_motive = d
+        .kernel
+        .lam(d.anon, divides_left_ty, remaining, BinderInfo::Default);
+    let left_witness_fv = d.fresh();
+    let left_witness = d.kernel.fvar(left_witness_fv);
+    let divisor_left = d.mul(divisor, left_witness);
+    let left_equation_ty = d.eq(left, divisor_left);
+    let left_equation_fv = d.fresh();
+    let left_equation = d.kernel.fvar(left_equation_fv);
+    let right_predicate = d.dvd_predicate(divisor, right);
+    let right_motive = d
+        .kernel
+        .lam(d.anon, divides_right_ty, conclusion, BinderInfo::Default);
+    let right_witness_fv = d.fresh();
+    let right_witness = d.kernel.fvar(right_witness_fv);
+    let divisor_right = d.mul(divisor, right_witness);
+    let right_equation_ty = d.eq(right, divisor_right);
+    let right_equation_fv = d.fresh();
+    let right_equation = d.kernel.fvar(right_equation_fv);
+    let first = d.congr(left, divisor_left, left_equation, &|d, value| {
+        d.add(value, right)
+    });
+    let second = d.congr(right, divisor_right, right_equation, &|d, value| {
+        d.add(divisor_left, value)
+    });
+    let distributed = d.lemma(mul_add, &[divisor, left_witness, right_witness]);
+    let witness = d.add(left_witness, right_witness);
+    let product = d.mul(divisor, witness);
+    let divisor_sum = d.add(divisor_left, divisor_right);
+    let undistribute = d.symm(product, divisor_sum, distributed);
+    let left_replaced = d.add(divisor_left, right);
+    let left_to_both = d.trans(sum, left_replaced, divisor_sum, first, second);
+    let equation = d.trans(sum, divisor_sum, product, left_to_both, undistribute);
+    let sum_predicate = d.dvd_predicate(divisor, sum);
+    let one = d.one_level();
+    let intro = d.kernel.const_(exists_intro, vec![one]);
+    let inner_body = d.apply(intro, &[nat, sum_predicate, witness, equation]);
+    let inner_minor = d.lam(right_equation_fv, right_equation_ty, inner_body);
+    let inner_minor = d.lam(right_witness_fv, nat, inner_minor);
+    let rec = d.kernel.const_(d.exists_rec, vec![one]);
+    let inner = d.apply(
+        rec,
+        &[
+            nat,
+            right_predicate,
+            right_motive,
+            inner_minor,
+            divides_right,
+        ],
+    );
+    let inner = d.lam(divides_right_fv, divides_right_ty, inner);
+    let outer_minor = d.lam(left_equation_fv, left_equation_ty, inner);
+    let outer_minor = d.lam(left_witness_fv, nat, outer_minor);
+    let rec = d.kernel.const_(d.exists_rec, vec![one]);
+    let proof = d.apply(
+        rec,
+        &[nat, left_predicate, left_motive, outer_minor, divides_left],
+    );
+    let proof = d.lam(divides_left_fv, divides_left_ty, proof);
+    let proof = d.lam(right_fv, nat, proof);
+    let proof = d.lam(left_fv, nat, proof);
+    let proof = d.lam(divisor_fv, nat, proof);
+    let ty = d.arrow(divides_right_ty, conclusion);
+    let ty = d.arrow(divides_left_ty, ty);
+    let ty = d.pi(right_fv, nat, ty);
+    let ty = d.pi(left_fv, nat, ty);
+    let ty = d.pi(divisor_fv, nat, ty);
+    d.kernel
+        .add_declaration(Declaration::Theorem {
+            name: target,
+            uparams: vec![],
+            ty,
+            value: proof,
+        })
+        .map_err(|error| format!("target-native dvd_add rejected: {error:?}"))?;
+    Ok(target)
+}
+
+fn declare_target_native_eq_one_of_dvd_one(kernel: &mut Kernel) -> Result<NameId, String> {
+    let target = nested_name(
+        kernel,
+        &["Axeyum", "Autogenesis", "eqOneOfDvdOneOfficialV1"],
+    );
+    let mut d = Dev::new(kernel)?;
+    let antisymm = d.exact(OFFICIAL_ANTISYMM)?;
+    let one_mul = d.exact("Nat.one_mul")?;
+    let exists_intro = d.exact("Exists.intro")?;
+    let nat = d.nat_ty();
+    let divisor_fv = d.fresh();
+    let divisor = d.kernel.fvar(divisor_fv);
+    let one_value = d.num(1);
+    let divides_ty = d.dvd(divisor, one_value);
+    let divides_fv = d.fresh();
+    let divides = d.kernel.fvar(divides_fv);
+    let one_times = d.mul(one_value, divisor);
+    let collapse = d.lemma(one_mul, &[divisor]);
+    let witness_equation = d.symm(one_times, divisor, collapse);
+    let predicate = d.dvd_predicate(one_value, divisor);
+    let level = d.one_level();
+    let intro = d.kernel.const_(exists_intro, vec![level]);
+    let one_divides = d.apply(intro, &[nat, predicate, divisor, witness_equation]);
+    let proof = d.lemma(antisymm, &[divisor, one_value, divides, one_divides]);
+    let conclusion = d.eq(divisor, one_value);
+    let proof = d.lam(divides_fv, divides_ty, proof);
+    let proof = d.lam(divisor_fv, nat, proof);
+    let ty = d.arrow(divides_ty, conclusion);
+    let ty = d.pi(divisor_fv, nat, ty);
+    d.kernel
+        .add_declaration(Declaration::Theorem {
+            name: target,
+            uparams: vec![],
+            ty,
+            value: proof,
+        })
+        .map_err(|error| format!("target-native eq_one_of_dvd_one rejected: {error:?}"))?;
+    Ok(target)
+}
+
 fn declare_public_gcd_zero_left(kernel: &mut Kernel) -> Result<NameId, String> {
     if optional_name(kernel, GCD_ZERO_LEFT_PUBLIC)?.is_some() {
         return Err(format!(
