@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-raw-cancellation-result",
+  "state": "two-integer-cancellation-leaves-empty-footprint",
+  "plan_sha256": "9e19d51c6f5d29c0f7cbb36a61b29d1b0c79cce7f44ca29f03074ff39637bb72",
+  "source": {"path": "artifacts/autogenesis/sources/int-fib-raw-cancellation-v11.lean", "sha256": "8034de8094de7dd25c02aa99c83a38f1436cf55bea2d519e4b8461749cc6e309"},
+  "evidence": {"pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-raw-cancellation-v11", "manifest_sha256": "c6a0f063a285c78a396d56970ff618c03a46fff92779b8bd335c9fb435777a7c", "stream_sha256": "40e8ea3b85312f3067808a0772ecedb6689b656999ce86acd2602d9a114d9076", "stream_bytes": 216134, "audit_sha256": "5cb60701564c5f08c681b6ec970fee31ea0cd346cc6689846c679897105ab15c"},
+  "roots": [
+    {"name": "Axeyum.IntFib.evenAdd", "declaration_sha256": "ee866e07bd0af1103e0df13927538a4d5307093731833d007fde44599b92e44f", "axiom_footprint": [], "direct_theorem_dependencies": ["Eq.symm", "Eq.trans", "Int.subNatNat_of_sub_eq_succ", "Int.subNatNat_of_sub_eq_zero", "Nat.add_succ", "Nat.sub_self", "Nat.sub_zero", "Nat.succ_sub_succ_eq_sub", "Nat.zero_add", "congrArg"]},
+    {"name": "Axeyum.IntFib.oddAdd", "declaration_sha256": "1386a216f759f509f07a78f98972f7b9f6d0ffa8aa7865f242576fdfe2a843d2", "axiom_footprint": [], "direct_theorem_dependencies": ["Eq.symm", "Eq.trans", "Int.subNatNat_of_sub_eq_zero", "Nat.add_succ", "Nat.add_zero", "Nat.sub_zero", "Nat.succ_sub_succ_eq_sub", "Nat.zero_sub", "congrArg"]}
+  ],
+  "replaced_assumption_carriers": ["Int.add_comm", "Int.add_assoc", "Int.add_left_neg", "Int.add_right_neg", "Nat.add_sub_cancel", "Nat.sub_self_add", "generated simp proposition-equality wrappers"],
+  "execution": {"compiler_invocations": 1, "exporter_invocations": 1, "importer_runs": 1, "theorem_submissions": 2, "retries": 0, "ledger_writes": 0},
+  "authority": {"clean_support_credit": 2, "closed_target_authorized": false, "fact_status_changes": 0, "ledger_writes": 0}
+}

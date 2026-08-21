@@ -1,0 +1,14 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-int-fib-parity-leaves-plan",
+  "state": "preregistered-after-general-mod-rejection-before-two-step-source",
+  "predecessors": [
+    {"path": "artifacts/autogenesis/mathlib-int-fib-parity-leaves-result-v1.json", "required_state": "three-parity-leaves-compile-but-add-mod-propext-rejected"},
+    {"path": "artifacts/autogenesis/mathlib-nat-mod-arithmetic-core-audit-result-v1.json", "required_state": "general-mod-arithmetic-core-propext-specialization-required"}
+  ],
+  "strategy": "establish (n + 2) % 2 = n % 2 by definitional reduction inside each proof, then construct modCases, succOne, and succZero by zero/one/two-step recursion",
+  "forbidden": ["Nat.add_mod", "Nat.add_mod_mod", "Nat.mod_add_mod", "Nat.add_mul_mod_self_left", "Nat.mod_add_div", "official modulo-two convenience theorems", "omega", "simp", "native_decide"],
+  "execution": {"source": "artifacts/autogenesis/sources/int-fib-parity-leaves-v2.lean", "source_present_at_plan_commit": false, "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-parity-leaves-v2", "pack_present_at_plan_commit": false, "max_compiler_invocations": 1, "max_exporter_invocations": 1, "max_importer_runs": 1, "max_retries": 0, "max_theorem_submissions": 3, "max_closed_target_submissions": 0, "max_ledger_writes": 0},
+  "output": "artifacts/autogenesis/mathlib-int-fib-parity-leaves-result-v2.json",
+  "limitations": "The experiment grants support only after root-selected empty-footprint import."
+}

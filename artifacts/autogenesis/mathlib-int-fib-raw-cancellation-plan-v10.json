@@ -1,0 +1,30 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-int-fib-raw-cancellation-plan",
+  "state": "preregistered-after-oriented-nat-equations-before-v10-source",
+  "predecessors": [
+    {"path": "artifacts/autogenesis/mathlib-int-fib-raw-cancellation-result-v9.json", "required_state": "explicit-nat-unfold-reveals-pred-oriented-subtraction"},
+    {"path": "artifacts/autogenesis/mathlib-nat-subtraction-type-probe-result-v1.json", "required_state": "two-exact-oriented-nat-subtraction-equations-bound"}
+  ],
+  "repair": {
+    "only_changes": ["replace both local addSub definitions with Nat.add_sub_cancel", "replace subAdd with Nat.sub_self_add transported across clean Nat.add_comm by congrArg"],
+    "integer_branches_unchanged": true,
+    "raw_integer_equations_unchanged": true,
+    "forbidden": ["Nat.add_sub_cancel_left", "Nat.sub_eq_zero_of_le", "higher Int.subNatNat convenience theorems", "official Int algebra theorems", "omega", "abel", "simp", "ring", "linarith", "native_decide"]
+  },
+  "execution": {
+    "source": "artifacts/autogenesis/sources/int-fib-raw-cancellation-v10.lean",
+    "source_present_at_plan_commit": false,
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-raw-cancellation-v10",
+    "pack_present_at_plan_commit": false,
+    "roots": ["Axeyum.IntFib.evenAdd", "Axeyum.IntFib.oddAdd"],
+    "max_compiler_invocations": 1,
+    "max_exporter_invocations": 1,
+    "max_importer_runs": 1,
+    "max_retries": 0,
+    "max_theorem_submissions": 2,
+    "max_closed_target_submissions": 0,
+    "max_ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-raw-cancellation-result-v10.json"
+}

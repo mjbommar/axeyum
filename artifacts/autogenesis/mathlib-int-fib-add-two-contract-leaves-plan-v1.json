@@ -1,0 +1,35 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-int-fib-add-two-contract-leaves-plan",
+  "state": "preregistered-before-six-leaf-source-or-execution",
+  "predecessor": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-add-two-residualization-result-v5.json",
+    "required_state": "seven-contract-integer-fib-recurrence-reconstructs-empty-footprint"
+  },
+  "already_admitted_contract": {
+    "parameter": "natRec",
+    "fact": "F:ml430-nat-fib-add-two-b86e0c82",
+    "required_status": "proved",
+    "required_route": "kernel-lean",
+    "required_axiom_footprint": []
+  },
+  "experiment": {
+    "source": "artifacts/autogenesis/sources/int-fib-add-two-contract-leaves-v1.lean",
+    "source_present_at_plan_commit": false,
+    "roots": ["Axeyum.IntFib.modCases", "Axeyum.IntFib.succOne", "Axeyum.IntFib.succZero", "Axeyum.IntFib.castAdd", "Axeyum.IntFib.evenAdd", "Axeyum.IntFib.oddAdd"],
+    "method": "allow rfl and Mathlib Omega only as untrusted proof search; independently classify each root by the Axeyum kernel footprint and direct dependencies",
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-contract-leaves-v1",
+    "acceptance": "a leaf is reusable only when its independently imported axiom footprint is empty"
+  },
+  "budget": {
+    "max_compiler_invocations": 1,
+    "max_exporter_invocations": 1,
+    "max_importer_runs": 1,
+    "max_retries": 0,
+    "max_theorem_submissions": 6,
+    "max_closed_target_submissions": 0,
+    "max_ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-add-two-contract-leaves-result-v1.json",
+  "limitations": "This experiment cannot admit Int.fib_add_two or substitute an assumption-bearing automation result for a clean support."
+}

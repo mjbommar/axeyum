@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-raw-cancellation-result",
+  "state": "named-nat-functions-require-explicit-recursion-unfold",
+  "plan_sha256": "b6c9f0a251e2d2fb385be69217d144d911704b64a12d26a819165c901bd3c6b4",
+  "source": {"path": "artifacts/autogenesis/sources/int-fib-raw-cancellation-v8.lean", "sha256": "83ea537b7a73709f64c8ae96f73e3115eef98b2771aa1711209a81dbf812a6f9"},
+  "execution": {"compiler_invocations": 1, "compiler_exit_status": 1, "exporter_invocations": 0, "importer_runs": 0, "theorem_submissions": 0, "retries": 0, "ledger_writes": 0},
+  "diagnostic": {
+    "failed_helpers": ["Nat.sub (Nat.add x z) z = x", "Nat.sub z (Nat.add x z) = 0"],
+    "cause": "named Nat.add and Nat.sub remain opaque at ordinary elaboration transparency",
+    "repair": "explicitly unfold Nat.add and Nat.sub in each local induction base and at both induction hypothesis and successor goal"
+  },
+  "cleanup": {"temporary_source_removed": true, "temporary_olean_removed": true, "checkout_baseline_restored": true},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}

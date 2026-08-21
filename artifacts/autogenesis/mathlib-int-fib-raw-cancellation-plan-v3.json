@@ -1,0 +1,27 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-int-fib-raw-cancellation-plan",
+  "state": "preregistered-after-concrete-method-boundary-before-v3-source",
+  "predecessor": {"path": "artifacts/autogenesis/mathlib-int-fib-raw-cancellation-result-v2.json", "required_state": "typeclass-projections-reduced-concrete-int-methods-remain"},
+  "repair": {
+    "only_change": "replace HNeg.hNeg with Int.add and Int.neg in all three dsimp-only lists",
+    "raw_equations_unchanged": true,
+    "nat_arithmetic_unchanged": true,
+    "forbidden": ["higher Int.subNatNat convenience theorems", "official Int algebra theorems", "omega", "abel", "simp", "ring", "linarith", "native_decide"]
+  },
+  "execution": {
+    "source": "artifacts/autogenesis/sources/int-fib-raw-cancellation-v3.lean",
+    "source_present_at_plan_commit": false,
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-raw-cancellation-v3",
+    "pack_present_at_plan_commit": false,
+    "roots": ["Axeyum.IntFib.evenAdd", "Axeyum.IntFib.oddAdd"],
+    "max_compiler_invocations": 1,
+    "max_exporter_invocations": 1,
+    "max_importer_runs": 1,
+    "max_retries": 0,
+    "max_theorem_submissions": 2,
+    "max_closed_target_submissions": 0,
+    "max_ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-raw-cancellation-result-v3.json"
+}

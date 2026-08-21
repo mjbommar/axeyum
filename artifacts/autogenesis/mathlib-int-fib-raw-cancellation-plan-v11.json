@@ -1,0 +1,30 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-int-fib-raw-cancellation-plan",
+  "state": "preregistered-after-clean-nat-recurrence-before-v11-source",
+  "predecessors": [
+    {"path": "artifacts/autogenesis/mathlib-int-fib-raw-cancellation-result-v10.json", "required_state": "oriented-nat-subtraction-compiles-but-propext-remains"},
+    {"path": "artifacts/autogenesis/mathlib-nat-subtraction-recurrence-root-result-v1.json", "required_state": "two-recurrence-roots-empty-footprint"}
+  ],
+  "repair": {
+    "only_changes": ["replace Nat.add_sub_cancel with induction using Nat.add_succ and Nat.succ_sub_succ_eq_sub", "replace Nat.sub_self_add with the same recurrence induction plus clean zero laws"],
+    "integer_branches_unchanged": true,
+    "raw_integer_equations_unchanged": true,
+    "forbidden": ["Nat.add_sub_cancel", "Nat.sub_self_add", "Nat.add_sub_cancel_left", "Nat.sub_eq_zero_of_le", "higher Int.subNatNat convenience theorems", "official Int algebra theorems", "omega", "abel", "simp", "ring", "linarith", "native_decide"]
+  },
+  "execution": {
+    "source": "artifacts/autogenesis/sources/int-fib-raw-cancellation-v11.lean",
+    "source_present_at_plan_commit": false,
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-raw-cancellation-v11",
+    "pack_present_at_plan_commit": false,
+    "roots": ["Axeyum.IntFib.evenAdd", "Axeyum.IntFib.oddAdd"],
+    "max_compiler_invocations": 1,
+    "max_exporter_invocations": 1,
+    "max_importer_runs": 1,
+    "max_retries": 0,
+    "max_theorem_submissions": 2,
+    "max_closed_target_submissions": 0,
+    "max_ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-raw-cancellation-result-v11.json"
+}

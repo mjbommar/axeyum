@@ -1,0 +1,32 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-int-fib-add-two-contract-leaves-plan",
+  "state": "preregistered-after-missing-omega-object-before-v2-source",
+  "prior_result": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-add-two-contract-leaves-result-v1.json",
+    "required_state": "proposal-stops-at-missing-omega-object-before-elaboration"
+  },
+  "repair": {
+    "only_change": "replace import Mathlib.Tactic.Omega with import Mathlib",
+    "six_propositions_unchanged": true,
+    "six_proof_scripts_unchanged": true,
+    "audit_route_unchanged": true
+  },
+  "execution": {
+    "source": "artifacts/autogenesis/sources/int-fib-add-two-contract-leaves-v2.lean",
+    "source_present_at_plan_commit": false,
+    "roots": ["Axeyum.IntFib.modCases", "Axeyum.IntFib.succOne", "Axeyum.IntFib.succZero", "Axeyum.IntFib.castAdd", "Axeyum.IntFib.evenAdd", "Axeyum.IntFib.oddAdd"],
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-contract-leaves-v2",
+    "pack_present_at_plan_commit": false
+  },
+  "budget": {
+    "max_compiler_invocations": 1,
+    "max_exporter_invocations": 1,
+    "max_importer_runs": 1,
+    "max_retries": 0,
+    "max_theorem_submissions": 6,
+    "max_closed_target_submissions": 0,
+    "max_ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-add-two-contract-leaves-result-v2.json"
+}

@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-theorem-root-audit-result",
+  "state": "existing-stream-lacks-required-root",
+  "plan_sha256": "1262146b8e354ad441b338bd535ef2c60827d168fe0916605cf65277a3a9be2b",
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-parity-leaves-v1/leaves.ndjson", "bytes": 685665, "sha256": "cda662ec943e7c8b5bd8131efdcb2a8e5b3e2c8c995e303e762bc04c750a9da5"},
+  "execution": {"importer_runs": 1, "stream_reads": 1, "exit_status": 1, "retries": 0, "theorem_submissions": 0, "ledger_writes": 0},
+  "diagnostic": {"missing_root": "Nat.mod_lt", "coverage_complete": false, "root_rows_published": 0, "next_boundary": "fresh exact-root export of Nat.mod_eq_sub_mod and Nat.mod_lt from the pinned Mathlib environment"},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}

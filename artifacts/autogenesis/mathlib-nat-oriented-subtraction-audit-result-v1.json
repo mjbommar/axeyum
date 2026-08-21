@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-oriented-subtraction-audit-result",
+  "state": "both-oriented-subtraction-equations-propext-bearing",
+  "plan": {"path": "artifacts/autogenesis/mathlib-nat-oriented-subtraction-audit-plan-v1.json", "sha256": "c3908e82dd2ad94e31a889b5e844641de85e8a34b708072caa5af6cfadca1f2d"},
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-raw-cancellation-v10/leaves.ndjson", "bytes": 258097, "sha256": "0b01976d35be7f7c161ca7635e2569f753be3b0d4e4541dd00a147ad5eb5965b"},
+  "observation_sha256": "c2027c3370810834455bfd1620094b40140d5aa492d275feda234c39ecd20f49",
+  "propext_bearing": {
+    "Nat.add_sub_cancel": ["Nat.add_sub_add_right", "Nat.sub_zero", "Nat.zero_add", "congrArg"],
+    "Nat.sub_self_add": ["Nat.add_sub_add_left", "Nat.zero_sub", "congrArg"]
+  },
+  "execution": {"importer_runs": 1, "proof_bearing_stream_reads": 1, "theorem_submissions": 0, "ledger_writes": 0},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}

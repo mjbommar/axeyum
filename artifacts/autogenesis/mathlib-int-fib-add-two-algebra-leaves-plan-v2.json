@@ -1,0 +1,32 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-int-fib-add-two-algebra-leaves-plan",
+  "state": "preregistered-after-name-probe-before-v2-source",
+  "predecessors": [
+    {"path": "artifacts/autogenesis/mathlib-int-fib-add-two-algebra-leaves-result-v1.json", "required_state": "direct-cancellation-source-stops-at-unresolved-names"},
+    {"path": "artifacts/autogenesis/mathlib-int-fib-algebra-name-probe-result-v1.json", "required_state": "four-integer-cancellation-declarations-resolved"}
+  ],
+  "repair": {
+    "oddAdd": "apply Int.add_neg_cancel_right at the exact second summand and reverse the equality",
+    "evenAdd": "rewrite the negated sum explicitly with add_comm and neg_add_rev, then apply Int.neg_add_cancel_right and reverse the equality",
+    "allowed_theorems": ["Int.add_comm", "neg_add_rev", "Int.neg_add_cancel_right", "Int.add_neg_cancel_right", "Eq.symm", "Eq.trans", "congrArg"],
+    "forbidden": ["omega", "abel", "simp", "ring", "linarith", "native_decide"]
+  },
+  "execution": {
+    "source": "artifacts/autogenesis/sources/int-fib-add-two-algebra-leaves-v2.lean",
+    "source_present_at_plan_commit": false,
+    "roots": ["Axeyum.IntFib.evenAdd", "Axeyum.IntFib.oddAdd"],
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-algebra-leaves-v2",
+    "pack_present_at_plan_commit": false
+  },
+  "budget": {
+    "max_compiler_invocations": 1,
+    "max_exporter_invocations": 1,
+    "max_importer_runs": 1,
+    "max_retries": 0,
+    "max_theorem_submissions": 2,
+    "max_closed_target_submissions": 0,
+    "max_ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-add-two-algebra-leaves-result-v2.json"
+}

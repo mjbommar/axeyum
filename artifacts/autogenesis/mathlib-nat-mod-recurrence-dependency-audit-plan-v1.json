@@ -1,0 +1,11 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-theorem-root-audit-plan",
+  "state": "preregistered-before-single-sealed-stream-read",
+  "predecessor": {"path": "artifacts/autogenesis/mathlib-int-fib-mod-primitive-export-result-v1.json", "required_state": "exact-roots-exported-and-audited"},
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/nat-mod-primitive-roots-v1/roots.ndjson", "bytes": 530110, "sha256": "e853f65e058893db16bf29c382fe7a9ed3bb737fb4577013f129602e9577d76f", "proof_bearing_render_forbidden": true},
+  "roots": ["Eq.symm", "Nat.eq_zero_or_pos", "Nat.mod_eq", "Nat.sub_zero", "if_pos"],
+  "execution": {"tool": "theorem_root_audit", "max_importer_runs": 1, "max_stream_reads": 1, "max_retries": 0, "max_theorem_submissions": 0, "max_ledger_writes": 0},
+  "decision_rule": "retain every empty-footprint dependency and parameterize or reconstruct only the direct assumption carrier",
+  "output": "artifacts/autogenesis/mathlib-nat-mod-recurrence-dependency-audit-result-v1.json"
+}

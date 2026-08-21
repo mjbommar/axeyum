@@ -1,0 +1,11 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-clean-reconstruction-plan",
+  "state": "preregistered-before-source-construction",
+  "predecessor": {"path": "artifacts/autogenesis/mathlib-nat-mod-core-closure-audit-result-v1.json", "required_state": "simp-proposition-equalities-are-assumption-carriers"},
+  "target": {"name": "Axeyum.NatMod.modCoreEq", "statement": "forall x y, Nat.modCore x y = if 0 < y and y <= x then Nat.modCore (x - y) y else x"},
+  "proof_route": ["unfold Nat.modCore", "split on the same fuel condition", "rewrite Nat.modCore.go", "split on the same recursive guard", "select the target if branch with if_pos or if_neg from bound hypotheses", "use the private fuel congruence only in the recursive branch"],
+  "forbidden": ["simp", "simpa", "propext", "and_false", "and_self", "eq_false", "eq_self", "eq_true", "false_and", "ite_cond_eq_false", "ite_cond_eq_true", "omega", "native_decide"],
+  "execution": {"source": "artifacts/autogenesis/sources/nat-mod-core-clean-reconstruction-v1.lean", "source_present_at_plan_commit": false, "pack": "/nas3/data/axeyum/autogenesis/reference-packs/nat-mod-core-clean-reconstruction-v1", "max_compiler_invocations": 1, "max_exporter_invocations": 1, "max_importer_runs": 1, "max_retries": 0, "max_theorem_submissions": 1, "max_ledger_writes": 0},
+  "output": "artifacts/autogenesis/nat-mod-core-clean-reconstruction-result-v1.json"
+}

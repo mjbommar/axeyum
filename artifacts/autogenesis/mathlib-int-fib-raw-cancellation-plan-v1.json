@@ -1,0 +1,30 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-int-fib-raw-cancellation-plan",
+  "state": "preregistered-before-upward-composition-source",
+  "predecessors": [
+    {"path": "artifacts/autogenesis/mathlib-int-subnat-raw-core-audit-result-v1.json", "required_state": "five-raw-integer-computation-roots-empty-footprint"},
+    {"path": "artifacts/autogenesis/mathlib-int-subnat-type-probe-result-v1.json", "required_state": "raw-zero-successor-equations-bound-for-upward-composition"}
+  ],
+  "construction": {
+    "oddAdd": "expose Int.subNatNat (x + z) z, use the raw zero equation, and discharge both Nat differences",
+    "evenAdd": "split x; expose Int.subNatNat z (x + z); use the raw zero equation at x=0 and raw successor equation at x+1",
+    "allowed": ["Int.subNatNat_of_sub_eq_zero", "Int.subNatNat_of_sub_eq_succ", "Nat.add_comm", "Nat.add_sub_cancel_left", "Nat.sub_eq_zero_of_le", "Nat.le_add_left", "Nat.sub_self", "Eq transports"],
+    "forbidden": ["higher Int.subNatNat convenience theorems", "official Int algebra theorems", "omega", "abel", "simp", "ring", "linarith", "native_decide"]
+  },
+  "execution": {
+    "source": "artifacts/autogenesis/sources/int-fib-raw-cancellation-v1.lean",
+    "source_present_at_plan_commit": false,
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-raw-cancellation-v1",
+    "pack_present_at_plan_commit": false,
+    "roots": ["Axeyum.IntFib.evenAdd", "Axeyum.IntFib.oddAdd"],
+    "max_compiler_invocations": 1,
+    "max_exporter_invocations": 1,
+    "max_importer_runs": 1,
+    "max_retries": 0,
+    "max_theorem_submissions": 2,
+    "max_closed_target_submissions": 0,
+    "max_ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-raw-cancellation-result-v1.json"
+}

@@ -1,0 +1,25 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-int-fib-primitive-algebra-plan",
+  "state": "preregistered-after-v1-reduction-boundary-before-v2-source",
+  "predecessor": {"path": "artifacts/autogenesis/mathlib-int-fib-primitive-algebra-result-v1.json", "required_state": "single-index-induction-does-not-reduce-int-subtraction"},
+  "repair": {
+    "only_changes": ["rewrite zero bases with clean Int.add_zero", "generalize x in both z inductions", "case-split x in both successor branches before applying the induction hypothesis"],
+    "allowed_theorems": ["Int.add_zero", "induction hypotheses"],
+    "forbidden": ["official Int.add_comm", "official Int.add_assoc", "official Int.add_left_neg", "official Int.add_right_neg", "official cancellation lemmas", "omega", "abel", "simp", "ring", "linarith", "native_decide"]
+  },
+  "execution": {
+    "source": "artifacts/autogenesis/sources/int-fib-primitive-algebra-v2.lean",
+    "source_present_at_plan_commit": false,
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-primitive-algebra-v2",
+    "pack_present_at_plan_commit": false,
+    "max_compiler_invocations": 1,
+    "max_exporter_invocations": 1,
+    "max_importer_runs": 1,
+    "max_retries": 0,
+    "max_theorem_submissions": 2,
+    "max_closed_target_submissions": 0,
+    "max_ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-primitive-algebra-result-v2.json"
+}

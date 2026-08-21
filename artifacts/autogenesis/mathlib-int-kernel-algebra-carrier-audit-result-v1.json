@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-kernel-algebra-carrier-audit-result",
+  "state": "private-int-assoc-carriers-contaminated-by-proposition-equality-layer",
+  "plan": {"path": "artifacts/autogenesis/mathlib-int-kernel-algebra-carrier-audit-plan-v1.json", "sha256": "3a2f335dcae12ac7bf5b410ba227fc31cc15475f48c3d63bc1182fc2988137b4"},
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-algebra-leaves-v2/leaves.ndjson", "bytes": 1428492, "sha256": "205bb2dcf8ec703d912380bad0f8f2749379d23192d97af5a2422ad6f6ab4a53"},
+  "observation_sha256": "419d6c3ad6fe04414a9fdac7ecb3305722ecb8bdaf005ba0a014276e7ada522e",
+  "empty_footprint": ["Nat.add_assoc", "Nat.add_left_comm", "congr", "congrFun'"],
+  "propext_bearing": {
+    "eq_true": ["trivial"],
+    "_private.Init.Data.Int.Lemmas.0.Int.add_assoc.aux1": ["Eq.trans", "Int.subNatNat_add", "Nat.add_assoc", "congrArg", "congrFun'", "eq_self", "of_eq_true"],
+    "_private.Init.Data.Int.Lemmas.0.Int.add_assoc.aux2": ["Eq.trans", "Int.add_comm", "Int.subNatNat_add_negSucc", "Nat.add_assoc", "Nat.add_comm", "Nat.add_left_comm", "congr", "congrArg", "congrFun'", "eq_self", "of_eq_true"],
+    "Int.subNat_eq_zero_iff._simp_1": ["Int.subNat_eq_zero_iff"]
+  },
+  "localization": "The private integer associativity layer uses proposition-equality simp carriers; the lower subNat computation theorems are the next possible clean boundary.",
+  "execution": {"importer_runs": 1, "proof_bearing_stream_reads": 1, "theorem_submissions": 0, "ledger_writes": 0},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}

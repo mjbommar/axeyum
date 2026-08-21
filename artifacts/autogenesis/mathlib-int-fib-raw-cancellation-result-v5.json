@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-raw-cancellation-result",
+  "state": "last-branch-stops-at-generic-zero-add-rewrite",
+  "plan_sha256": "328de0a3a83b91314167ac0c3d270f073483c134c71c9c879feba91fdc221c62",
+  "source": {"path": "artifacts/autogenesis/sources/int-fib-raw-cancellation-v5.lean", "sha256": "7841384c534168046864c5fd3879db003e765235ab0d4628bf43589089860952"},
+  "execution": {"compiler_invocations": 1, "compiler_exit_status": 1, "exporter_invocations": 0, "importer_runs": 0, "theorem_submissions": 0, "retries": 0, "ledger_writes": 0},
+  "diagnostic": {
+    "remaining_goal": "Int.subNatNat (z + 1) (Nat.succ (Nat.add 0 z)) = Int.ofNat 0",
+    "failure": "generic rw Nat.zero_add does not match the already-unfolded raw Nat.add node",
+    "repair": "name Nat.add 0 z = z explicitly, transport it through Nat.succ with congrArg, and rewrite that exact equality"
+  },
+  "cleanup": {"temporary_source_removed": true, "temporary_olean_removed": true, "checkout_baseline_restored": true},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}

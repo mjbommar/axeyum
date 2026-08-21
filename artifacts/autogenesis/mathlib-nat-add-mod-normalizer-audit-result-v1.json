@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-add-mod-normalizer-audit-result",
+  "state": "both-directional-normalizers-propext-arithmetic-core-exposed",
+  "plan": {"path": "artifacts/autogenesis/mathlib-nat-add-mod-normalizer-audit-plan-v1.json", "sha256": "9c015d40b4c7144684eab6e2f099f23b79d45fbd2d422f220c88f961ab958717"},
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-parity-leaves-v1/leaves.ndjson", "bytes": 685665, "sha256": "cda662ec943e7c8b5bd8131efdcb2a8e5b3e2c8c995e303e762bc04c750a9da5"},
+  "observation_sha256": "9476a97f0258c1c17a1469cf8a090045f18c1dff23901049763ff7132042264c",
+  "propext_bearing": {
+    "Nat.add_mod_mod": ["Nat.add_comm", "Nat.mod_add_mod", "congrArg"],
+    "Nat.mod_add_mod": ["Eq.symm", "Nat.add_mul_mod_self_left", "Nat.add_right_comm", "Nat.mod_add_div", "congrArg"]
+  },
+  "execution": {"importer_runs": 1, "proof_bearing_stream_reads": 1, "theorem_submissions": 0, "ledger_writes": 0},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}

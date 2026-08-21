@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-subtraction-translation-audit-result",
+  "state": "zero-sub-clean-translation-layer-simp-contaminated",
+  "plan": {"path": "artifacts/autogenesis/mathlib-nat-subtraction-translation-audit-plan-v1.json", "sha256": "d49583ee92954320c83e5233f75e6152f6283ea939c7ebd9ae4bc44ba4f3fced"},
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-raw-cancellation-v10/leaves.ndjson", "bytes": 258097, "sha256": "0b01976d35be7f7c161ca7635e2569f753be3b0d4e4541dd00a147ad5eb5965b"},
+  "observation_sha256": "20a5105e725fe52bc1f102109d3912d8c217660525f21f2b7828ba18be86250f",
+  "empty_footprint": ["Nat.zero_sub"],
+  "propext_bearing": {
+    "Nat.add_sub_add_right": ["Eq.trans", "Nat.succ_sub_succ_eq_sub", "_private.Init.Data.Nat.Basic.0.Nat.add_sub_add_right._simp_1_1", "congr", "congrArg", "congrFun'", "eq_self", "of_eq_true"],
+    "Nat.add_sub_add_left": ["Nat.add_comm", "Nat.add_sub_add_right", "congrArg"]
+  },
+  "selected_route": "rebuild both exact subtraction equations by induction using clean zero subtraction, addition successor, and successor-subtraction recurrence",
+  "execution": {"importer_runs": 1, "proof_bearing_stream_reads": 1, "theorem_submissions": 0, "ledger_writes": 0},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}

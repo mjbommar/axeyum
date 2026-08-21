@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-subnat-raw-core-audit-plan",
+  "state": "preregistered-before-raw-core-single-read",
+  "predecessor": {"path": "artifacts/autogenesis/mathlib-int-subnat-branch-audit-result-v1.json", "required_state": "branch-conveniences-propext-raw-computation-roots-exposed"},
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-algebra-leaves-v2/leaves.ndjson", "bytes": 1428492, "sha256": "205bb2dcf8ec703d912380bad0f8f2749379d23192d97af5a2422ad6f6ab4a53"},
+  "roots": ["Int.subNatNat_of_sub_eq_zero", "Int.subNatNat_of_sub_eq_succ", "Int.subNatNat_add_left", "Int.subNatNat_add_right", "Int.subNatNat_elim", "Int.negSucc.inj", "Int.negSucc_ne_zero", "Int.ofNat_inj"],
+  "budget": {"max_importer_runs": 1, "max_proof_bearing_stream_reads": 1, "max_compiler_invocations": 0, "max_exporter_invocations": 0, "max_theorem_submissions": 0, "max_ledger_writes": 0},
+  "output": "artifacts/autogenesis/mathlib-int-subnat-raw-core-audit-result-v1.json",
+  "decision_rule": "If raw arithmetic equalities and constructor proofs are empty-footprint, stop descending and preregister a kernel composition that excludes all proposition-equality wrappers.",
+  "limitations": "This is the final diagnostic descent; it grants no theorem credit."
+}

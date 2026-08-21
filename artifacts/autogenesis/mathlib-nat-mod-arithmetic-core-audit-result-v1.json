@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-mod-arithmetic-core-audit-result",
+  "state": "general-mod-arithmetic-core-propext-specialization-required",
+  "plan": {"path": "artifacts/autogenesis/mathlib-nat-mod-arithmetic-core-audit-plan-v1.json", "sha256": "5f8dd8984b19d76edb5e29113c70dce5f3da3c685285c13eb793f2a88de792df"},
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-parity-leaves-v1/leaves.ndjson", "bytes": 685665, "sha256": "cda662ec943e7c8b5bd8131efdcb2a8e5b3e2c8c995e303e762bc04c750a9da5"},
+  "observation_sha256": "3987b2520725d045f5e5ee65dcaf48e2441ceda5dfb9f3a614f1788951a9996c",
+  "propext_bearing": {
+    "Nat.add_mul_mod_self_left": [],
+    "Nat.mod_add_div": ["And.right", "Eq.symm", "Eq.trans", "Nat.add_assoc", "Nat.div_eq", "Nat.mod_eq", "Nat.mul_succ", "Nat.sub_add_cancel", "and_self", "congr", "congrArg", "congrFun'", "eq_false", "eq_self", "eq_true", "ite_cond_eq_false", "ite_cond_eq_true", "of_eq_true"]
+  },
+  "decision": "stop descending general modulo theorems and construct only the modulus-two two-step recurrence",
+  "execution": {"importer_runs": 1, "proof_bearing_stream_reads": 1, "theorem_submissions": 0, "ledger_writes": 0},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}

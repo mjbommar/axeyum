@@ -1,0 +1,10 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-root-export-plan",
+  "state": "preregistered-before-exact-root-export",
+  "predecessor": {"path": "artifacts/autogenesis/mathlib-int-fib-mod-primitive-audit-result-v1.json", "required_state": "existing-stream-lacks-required-root"},
+  "fixed_environment": {"ssh_alias": "s5", "hostname": "server5", "mathlib_checkout": "/home/mjbommar/lean-import-scale/mathlib4", "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f", "lean_version": "4.30.0", "lean4export_binary": "/home/mjbommar/lean-import-scale/lean4export/.lake/build/bin/lean4export", "lean4export_binary_sha256": "8e763913b03762488571a93ced6ec1a4e04f7d8eebbe40bd1215ba41a6bd4449"},
+  "roots": ["Nat.mod_eq_sub_mod", "Nat.mod_lt"],
+  "execution": {"module": "Mathlib.Data.Int.Basic", "pack": "/nas3/data/axeyum/autogenesis/reference-packs/nat-mod-primitive-roots-v1", "max_exporter_invocations": 1, "max_importer_runs": 1, "max_retries": 0, "max_theorem_submissions": 0, "max_ledger_writes": 0, "proof_bearing_render_forbidden": true},
+  "output": "artifacts/autogenesis/mathlib-int-fib-mod-primitive-export-result-v1.json"
+}

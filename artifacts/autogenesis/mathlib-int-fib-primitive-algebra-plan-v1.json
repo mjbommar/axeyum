@@ -1,0 +1,24 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-int-fib-primitive-algebra-plan",
+  "state": "preregistered-before-target-owned-primitive-source",
+  "predecessor": {"path": "artifacts/autogenesis/mathlib-int-fib-algebra-parent-audit-result-v1.json", "required_state": "three-clean-parents-five-propext-carriers-localized"},
+  "target": {
+    "scope": "only the two exact Int.ofNat algebra propositions required by Int.fib_add_two_residual",
+    "strategy": "constructor induction and definitional integer reduction over Nat indices; reuse only empty-footprint Nat.add_comm, Int.add_zero, neg_add_rev, equality transports, and induction hypotheses",
+    "forbidden": ["official Int.add_comm", "official Int.add_assoc", "official Int.add_left_neg", "official Int.add_right_neg", "official cancellation lemmas", "omega", "abel", "simp", "ring", "linarith", "native_decide"]
+  },
+  "execution": {
+    "source": "artifacts/autogenesis/sources/int-fib-primitive-algebra-v1.lean",
+    "source_present_at_plan_commit": false,
+    "max_compiler_invocations": 1,
+    "max_exporter_invocations": 1,
+    "max_importer_runs": 1,
+    "max_retries": 0,
+    "max_theorem_submissions": 2,
+    "max_closed_target_submissions": 0,
+    "max_ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-primitive-algebra-result-v1.json",
+  "limitations": "This exact specialization intentionally avoids claiming a clean replacement for the full integer additive group."
+}

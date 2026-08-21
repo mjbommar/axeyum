@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-subnat-raw-core-audit-result",
+  "state": "five-raw-integer-computation-roots-empty-footprint",
+  "plan": {"path": "artifacts/autogenesis/mathlib-int-subnat-raw-core-audit-plan-v1.json", "sha256": "f53269586b5e23e8b78182bcd0028529b998ebc763feef529f1ffe25990e792f"},
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-algebra-leaves-v2/leaves.ndjson", "bytes": 1428492, "sha256": "205bb2dcf8ec703d912380bad0f8f2749379d23192d97af5a2422ad6f6ab4a53"},
+  "observation_sha256": "3fb1d593e858f1ee818d6ae22a21e76e023b89dc7d707d84268add1e019d5d38",
+  "empty_footprint": {
+    "Int.subNatNat_of_sub_eq_zero": "ff22280e28313cb37df3acf0cf78cd8a7fb01bc55e465fea2f208f126c3408f5",
+    "Int.subNatNat_of_sub_eq_succ": "5e85dbf4b780c9e889025341cadb4eda6e9786ca3cdf3cd37c36d08eaf5a57a6",
+    "Int.negSucc.inj": "1cf2ad78c6badfb7040c21ddcb9e43d09f5cc66736a650b0d3478eeb45266a41",
+    "Int.negSucc_ne_zero": "8d069dd1b7a7ac6355077c753c3d5c3b9663ef4c88a35d88eb60c3e83893c8d6",
+    "Int.ofNat_inj": "b87507fc035f76ca95fa60b620da89796f3fceecfe3e9f5eb24d2210e4e4b548"
+  },
+  "rejected_propext": ["Int.subNatNat_add_left", "Int.subNatNat_add_right", "Int.subNatNat_elim"],
+  "decision": "stop dependency descent and build the exact cancellation propositions from raw zero/successor computation roots plus independently checked Nat arithmetic",
+  "execution": {"importer_runs": 1, "proof_bearing_stream_reads": 1, "theorem_submissions": 0, "ledger_writes": 0},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}

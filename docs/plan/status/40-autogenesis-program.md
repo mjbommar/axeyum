@@ -46,6 +46,47 @@
 | 2026-08-21 | (pending) | V2 exposes both negative conditionals and stops only at the two mis-parenthesized algebra contracts; V3 freezes their exact post-rewrite shapes |
 | 2026-08-21 | (pending) | V3 compiles the complete seven-contract theorem, then its sole exporter call fails before writing because `lean` is absent from PATH; V4 freezes the unchanged source under pinned `lake env` |
 | 2026-08-21 | (pending) | V4 resolves the exporter runtime but finds no compiled module; V5 freezes an explicit `.lake/build/lib/lean` output path for the unchanged theorem |
+| 2026-08-21 | (pending) | V5 reconstructs the seven-contract integer recurrence in a 447,839-byte capsule with two identical imports, six clean dependencies, and an empty footprint |
+| 2026-08-21 | (pending) | Six elementary residual leaves are frozen for an Omega/rfl proposal whose root-selected kernel audit, not tactic success, decides reuse |
+| 2026-08-21 | (pending) | V1 stops before elaboration because the narrow Omega object is absent; V2 freezes only the already-built umbrella `Mathlib` import |
+| 2026-08-21 | (pending) | V2 proves the three parity leaves but stops where Omega cannot see cast addition; V3 freezes only a definitional `rfl` cast proof |
+| 2026-08-21 | (pending) | V3 admits only definitional cast addition as clean and rejects five Omega proposals carrying propext plus Quot/String assumptions |
+| 2026-08-21 | (pending) | Two rejected sign identities are frozen for direct additive-cancellation proofs with all broad automation forbidden |
+| 2026-08-21 | (pending) | Direct cancellation stops at two unavailable generic names; a fixed eight-candidate integer declaration probe is frozen before retrying proof code |
+| 2026-08-21 | (pending) | The probe resolves four integer cancellation types; V2 freezes direct odd cancellation and explicit negation transport for the even identity |
+| 2026-08-21 | (pending) | Both direct algebra leaves compile but retain propext; one sealed-stream read is frozen to classify their seven distinct dependencies |
+| 2026-08-21 | (pending) | Four transports are clean while integer commutativity and cancellation retain propext; their eight nearest parents are frozen for one final descent |
+| 2026-08-21 | (pending) | Parent descent finds clean Nat commutativity, integer zero, and negation transport; exact target-owned constructor proofs replace the contaminated integer algebra layer next |
+| 2026-08-21 | (pending) | Primitive V1 exposes `Int.subNat`'s two-index reduction boundary; V2 freezes clean zero rewrites plus generalized successor case splits |
+| 2026-08-21 | (pending) | Primitive V2 confirms public integer operations stay opaque after constructor splits; eight kernel-level arithmetic carriers are frozen for one composition audit |
+| 2026-08-21 | (pending) | Private integer associativity remains tied to proposition-equality simp; three lower `subNat` computation theorems are frozen as the prospective clean substrate |
+| 2026-08-21 | (pending) | All three `subNat` conveniences remain propext-bearing; nine raw branch and constructor lemmas are frozen to select the true kernel composition boundary |
+| 2026-08-21 | (pending) | Nine branch conveniences are rejected, exposing eight raw computation/constructor roots for the final diagnostic descent and wrapper-free composition stop rule |
+| 2026-08-21 | (pending) | Five raw integer computation/constructor roots are empty-footprint; descent stops and a three-name type probe begins the upward cancellation reconstruction |
+| 2026-08-21 | (pending) | Raw zero/successor `subNatNat` types align with odd/even cancellation; wrapper-free upward composition is frozen before source construction |
+| 2026-08-21 | (pending) | Raw composition V1 stops at opaque Add/Neg projections before arithmetic; V2 freezes definitional projection reduction only |
+| 2026-08-21 | (pending) | V2 exposes concrete `Int.add`/`Int.neg` methods; V3 freezes their direct definitional reduction with the arithmetic proof unchanged |
+| 2026-08-21 | (pending) | V3 reaches explicit `Int.negOfNat` constructor matches; V4 freezes the final natural zero/successor split into raw `subNatNat` branches |
+| 2026-08-21 | (pending) | V4 closes five of six raw constructor branches; V5 freezes only `Nat.zero_add` plus overloaded-zero reduction in the last branch |
+| 2026-08-21 | (pending) | V5 reaches one raw `Nat.add 0 z` node; V6 freezes exact equality transport through `Nat.succ` instead of a generic rewrite |
+| 2026-08-21 | (pending) | V6 compiles wrapper-free raw cancellation but both roots retain propext; six remaining Nat helpers are frozen for exact classification |
+| 2026-08-21 | (pending) | Four Nat helpers are clean; V7 replaces the two propext subtraction conveniences with direct structural recursion and removes commutativity detours |
+| 2026-08-21 | (pending) | V7's local recursions stop at overloaded Nat operations; V8 freezes explicit `Nat.add`/`Nat.sub` propositions with all integer branches unchanged |
+| 2026-08-21 | (pending) | V8 finds named Nat functions still opaque; V9 freezes explicit recursion unfolding only inside the two local helper inductions |
+| 2026-08-21 | (pending) | V9 exposes predecessor-oriented `Nat.sub`; exact `add_sub_cancel` and `sub_self_add` candidates are frozen for a two-name type probe |
+| 2026-08-21 | (pending) | Two exact-oriented Nat subtraction equations are bound; V10 freezes direct use plus clean commutativity transport in the unchanged integer proof |
+| 2026-08-21 | (pending) | V10 compiles but retains propext through oriented Nat subtraction; the two exact roots are frozen for nearest-boundary classification |
+| 2026-08-21 | (pending) | Both oriented Nat equations are propext-bearing; two add/sub translation roots plus zero subtraction are frozen for the next clean boundary |
+| 2026-08-21 | (pending) | Zero subtraction is clean while translation simp is not; successor subtraction and addition recurrence roots are frozen for target-specific induction |
+| 2026-08-21 | (pending) | Existing closure lacks `Nat.add_succ`, so the audit fails closed; a fresh pinned two-root recurrence export is frozen before classification |
+| 2026-08-21 | (pending) | Fresh export proves both Nat recurrence roots empty-footprint; V11 freezes explicit target-specific subtraction induction over them |
+| 2026-08-21 | (pending) | V11 reconstructs both integer cancellation leaves empty-footprint; only three parity contracts remain before closed recurrence composition |
+| 2026-08-21 | (pending) | Parity V1 compiles but all roots inherit propext from `Nat.add_mod`; its single dependency closure is frozen for descent |
+| 2026-08-21 | (pending) | `Nat.add_mod` localizes to two directional modulo normalizers; both are frozen for clean specialization selection |
+| 2026-08-21 | (pending) | Both modulo normalizers retain propext; `add_mul_mod_self_left` and `mod_add_div` are frozen as the underlying arithmetic core |
+| 2026-08-21 | (pending) | General modulo arithmetic remains propext-bearing; V2 freezes a target-only two-step modulo-two recursion with all conveniences forbidden |
+| 2026-08-21 | (pending) | V2's parity recursion reaches only opaque `(k+2)%2`; V3 freezes explicit Nat add/mod unfolding inside the two local step proofs |
+| 2026-08-21 | (pending) | V3 cannot see `Nat.add` through overloaded projections; V4 freezes projection reduction before the same modulo unfold |
 
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
@@ -272,3 +313,10 @@
 | 2026-08-21 | (pending) | V6 advances to missing positive-product factor support; V7 freezes a primitive-induction replacement |
 | 2026-08-21 | `29c126c0e` | Target-owned positive-product right-factor proof is added without importing broader order theory |
 | 2026-08-21 | (pending) | V7 advances to multiplicative monotonicity; V8 freezes two target-owned order leaves |
+| 2026-08-21 | (pending) | Parity V4 exposes overloaded addition but stops at opaque `Nat.mod`; V5 freezes a direct definitional-equality test without the failing unfold |
+| 2026-08-21 | (pending) | Parity V5 proves the two-step recurrence is not definitional; one non-rendering audit freezes the explicit recurrence and range primitives |
+| 2026-08-21 | (pending) | The old parity stream lacks `Nat.mod_lt`; a fresh exact-root export is frozen instead of treating incomplete coverage as evidence |
+| 2026-08-21 | (pending) | Exact modulo roots expose clean `Nat.mod_lt` and reject assumption-bearing `Nat.mod_eq_sub_mod`; its five-edge closure is frozen for localization |
+| 2026-08-21 | (pending) | Recurrence audit isolates `Nat.mod_eq` as the sole direct assumption carrier; its four-edge `modCore` boundary is frozen next |
+| 2026-08-21 | (pending) | `Nat.modCore_eq` is the deepest assumption-bearing bridge; its finite direct closure is frozen to separate recursion from simp infrastructure |
+| 2026-08-21 | (pending) | All modulo recursion machinery is clean; only generic simp proposition equalities carry assumptions, so a manual branch proof is frozen |

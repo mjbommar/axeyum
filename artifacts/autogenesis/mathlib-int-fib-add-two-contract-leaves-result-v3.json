@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-add-two-contract-leaves-result",
+  "state": "one-definitional-leaf-clean-five-omega-leaves-rejected",
+  "plan_sha256": "d5b1992e0cadc6ccf2b98b5b32184cc2ec2fbc543625c0bc325d26b30a24c2c8",
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-add-two-contract-leaves-v3.lean",
+    "sha256": "ea7cb421f44718fb91eb8c319142ea23dca69dee94e26da2d449c03997980aa2"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-contract-leaves-v3",
+    "manifest_sha256": "5de8dfb8e5f2b035a28e207505612eee0513df2851c8fa712ce2106d848febbc",
+    "stream_sha256": "0fa66a39f3caec4c4bd00cfefa402b328b37a3fcbd4dd840e17e3f7f292439a5",
+    "stream_bytes": 4475481,
+    "audit_sha256": "b2c92d0e69df1eed2f4572e4f0776f84a8ff23e747e198d70faaeccf9bc59edc"
+  },
+  "accepted": [{
+    "name": "Axeyum.IntFib.castAdd",
+    "declaration_sha256": "a7119d893be27d22a4eab4dde02f2242203de904c8cdc8c4e7db29ea9e4431d2",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": []
+  }],
+  "rejected": {
+    "names": ["Axeyum.IntFib.modCases", "Axeyum.IntFib.succOne", "Axeyum.IntFib.succZero", "Axeyum.IntFib.evenAdd", "Axeyum.IntFib.oddAdd"],
+    "shared_assumptions": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound", "String.Internal.append", "propext"],
+    "shared_route": ["generated _proof_1_1 theorem", "Decidable.byContradiction"]
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "exporter_invocations": 1,
+    "importer_runs": 1,
+    "theorem_submissions": 6,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "clean_support_credit": 1,
+    "rejected_support_credit": 0,
+    "closed_target_authorized": false,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  }
+}

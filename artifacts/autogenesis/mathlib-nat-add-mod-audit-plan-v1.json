@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-add-mod-audit-plan",
+  "state": "preregistered-before-single-root-read",
+  "predecessor": {"path": "artifacts/autogenesis/mathlib-int-fib-parity-leaves-result-v1.json", "required_state": "three-parity-leaves-compile-but-add-mod-propext-rejected"},
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-parity-leaves-v1/leaves.ndjson", "bytes": 685665, "sha256": "cda662ec943e7c8b5bd8131efdcb2a8e5b3e2c8c995e303e762bc04c750a9da5"},
+  "roots": ["Nat.add_mod"],
+  "budget": {"max_importer_runs": 1, "max_proof_bearing_stream_reads": 1, "max_compiler_invocations": 0, "max_exporter_invocations": 0, "max_theorem_submissions": 0, "max_ledger_writes": 0},
+  "output": "artifacts/autogenesis/mathlib-nat-add-mod-audit-result-v1.json",
+  "decision_rule": "Replace Nat.add_mod at its nearest clean recurrence boundary; do not reuse an assumption-bearing modulo convenience theorem.",
+  "limitations": "This audit grants no parity or Fibonacci theorem credit."
+}

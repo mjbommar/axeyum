@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-algebra-name-probe-result",
+  "state": "four-integer-cancellation-declarations-resolved",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-algebra-name-probe-plan-v1.json",
+    "sha256": "7a981f13a5e8f81e2958d200cb1981fee28b7cfd171eb8a9a2c2891de1748829"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-algebra-name-probe-v1.lean",
+    "sha256": "191679ba4f7daa73a00dbdee38e4618223f2e742a84f6f60f972703847e114cb"
+  },
+  "present": {
+    "Int.neg_add_cancel_left": "forall a b : Int, -a + (a + b) = b",
+    "Int.neg_add_cancel_right": "forall a b : Int, a + -b + b = a",
+    "Int.add_neg_cancel_left": "forall a b : Int, a + (-a + b) = b",
+    "Int.add_neg_cancel_right": "forall a b : Int, a + b + -b = a"
+  },
+  "absent": ["Int.neg_add_cancel", "Int.add_neg_cancel", "Int.neg_add_rev", "neg_add_rev"],
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit_status": 1,
+    "expected_unknown_identifier_diagnostics": 4,
+    "theorem_submissions": 0,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "theorem_credit": 0,
+    "footprint_credit": 0,
+    "ledger_writes": 0
+  }
+}

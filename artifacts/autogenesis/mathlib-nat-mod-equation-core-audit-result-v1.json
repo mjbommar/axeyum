@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-theorem-root-audit-result",
+  "state": "mod-core-equation-is-assumption-carrier",
+  "plan_sha256": "9d30bf9d20aba00c28507d2f662ef79af024713bfe063de6b4da157e79e4c8f9",
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/nat-mod-primitive-roots-v1/roots.ndjson", "bytes": 530110, "sha256": "e853f65e058893db16bf29c382fe7a9ed3bb737fb4577013f129602e9577d76f"},
+  "roots": [
+    {"name": "Eq.symm", "declaration_sha256": "fb271ec2ea3431e3c34737664fb7b6e308edb40ce00c7f038724eb0e4a08245f", "axiom_footprint": [], "direct_theorem_dependencies": []},
+    {"name": "Nat.modCore_eq", "declaration_sha256": "79efee272c460d1d8c18c827922e67eb684990d70f30b5ec94e006a1b04c5232", "axiom_footprint": ["propext"], "direct_theorem_dependencies": ["Eq.trans", "Nat.div_rec_fuel_lemma", "Nat.lt_succ_self", "Nat.modCore.go.eq_1", "_private.Init.Data.Nat.Div.Basic.0.Nat.modCore.go.fuel_congr", "and_false", "and_self", "congr", "congrArg", "congrFun'", "dif_neg", "dif_pos", "eq_false", "eq_self", "eq_true", "false_and", "ite_cond_eq_false", "ite_cond_eq_true", "ite_congr", "of_eq_true"]},
+    {"name": "Nat.modCore_eq_mod", "declaration_sha256": "314634a41aab51702b72584eb53609ec394eb84b35325660c36e6a6cae00b955", "axiom_footprint": ["propext"], "direct_theorem_dependencies": ["Nat.lt_irrefl", "Nat.lt_of_lt_of_le", "Nat.mod.eq_2", "Nat.modCore_eq", "congrArg", "if_neg"]},
+    {"name": "congrArg", "declaration_sha256": "d39a34eb11556f4a80414b3cbda6ae21118baba14aa37ba6bff92265bf3a853b", "axiom_footprint": [], "direct_theorem_dependencies": []}
+  ],
+  "execution": {"importer_runs": 1, "stream_reads": 1, "retries": 0, "theorem_submissions": 0, "ledger_writes": 0},
+  "conclusion": {"deepest_known_assumption_carrier": "Nat.modCore_eq", "next_boundary": "audit all 21 direct dependencies of Nat.modCore_eq once"},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}
