@@ -9,7 +9,7 @@
       "baseline_outcome": "unsat",
       "decision_backend": "auto-solve",
       "dominant_candidate": false,
-      "elapsed_ms": 5861.323095000001,
+      "elapsed_ms": 6740.497012,
       "evidence_certified": false,
       "evidence_check_mode": "not-applicable-uncertified",
       "evidence_checked": false,
@@ -20,12 +20,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.000095,
-        "lean_reconstruction": 562.4191870000001,
-        "parse_evidence": 21.482920999999997,
-        "parse_lean": 15.863024,
-        "produce_evidence": 5261.184495,
-        "read": 0.19685699999999998
+        "check_evidence": 0.000103,
+        "lean_reconstruction": 587.245583,
+        "parse_evidence": 20.427612,
+        "parse_lean": 18.745586000000003,
+        "produce_evidence": 5521.684499,
+        "read": 0.190126
       },
       "trust_holes": [],
       "trust_steps": []
@@ -37,7 +37,7 @@
       "baseline_outcome": "unsat",
       "decision_backend": "auto-solve",
       "dominant_candidate": false,
-      "elapsed_ms": 5815.861459,
+      "elapsed_ms": 6834.458935,
       "evidence_certified": false,
       "evidence_check_mode": "not-applicable-uncertified",
       "evidence_checked": false,
@@ -48,23 +48,25 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.000114,
-        "lean_reconstruction": 558.325811,
-        "parse_evidence": 15.926150999999999,
-        "parse_lean": 15.299724000000001,
-        "produce_evidence": 5226.049252,
-        "read": 0.084023
+        "check_evidence": 0.000116,
+        "lean_reconstruction": 589.0907,
+        "parse_evidence": 18.215512999999998,
+        "parse_lean": 16.492663,
+        "produce_evidence": 5610.097647,
+        "read": 0.08028400000000001
       },
       "trust_holes": [],
       "trust_steps": []
     }
   ],
-  "limit": null,
+  "limit": 1000,
   "logic": "QF_UFLIA",
+  "prelude_warm_ms": 14534.903736,
+  "prelude_warmed": true,
   "slice": "qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts-solver-vs-z3-10s.json",
   "source_revision": {
     "dirty": false,
-    "sha": "2e207eba5",
+    "sha": "496288979",
     "source": "lane-snapshot"
   },
   "summary": {

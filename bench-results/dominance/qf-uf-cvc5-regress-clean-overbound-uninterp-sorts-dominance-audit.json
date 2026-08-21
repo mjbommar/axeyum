@@ -9,7 +9,7 @@
       "baseline_outcome": "unsat",
       "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 6.551554,
+      "elapsed_ms": 4.848853999999999,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -20,12 +20,12 @@
       "lean_fragment": "BoolEufOnline",
       "lean_module_bytes": 3161,
       "phase_timings_ms": {
-        "check_evidence": 0.440328,
-        "lean_reconstruction": 4.076089,
-        "parse_evidence": 0.321569,
-        "parse_lean": 0.192305,
-        "produce_evidence": 1.489014,
-        "read": 0.019818
+        "check_evidence": 0.473261,
+        "lean_reconstruction": 1.415407,
+        "parse_evidence": 0.358034,
+        "parse_lean": 0.23702299999999998,
+        "produce_evidence": 1.621127,
+        "read": 0.029992
       },
       "trust_holes": [],
       "trust_steps": []
@@ -37,7 +37,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 278.36224999999996,
+      "elapsed_ms": 519.965912,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -48,12 +48,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.44792699999999996,
+        "check_evidence": 0.851524,
         "lean_reconstruction": null,
-        "parse_evidence": 3.0547959999999996,
+        "parse_evidence": 3.0204120000000003,
         "parse_lean": null,
-        "produce_evidence": 274.833521,
-        "read": 0.022099999999999998
+        "produce_evidence": 516.044494,
+        "read": 0.038959
       },
       "trust_holes": [],
       "trust_steps": []
@@ -65,7 +65,7 @@
       "baseline_outcome": "unsat",
       "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 10.962863,
+      "elapsed_ms": 15.723194999999999,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -76,12 +76,12 @@
       "lean_fragment": "BoolEufOnline",
       "lean_module_bytes": 3161,
       "phase_timings_ms": {
-        "check_evidence": 1.9934739999999997,
-        "lean_reconstruction": 2.463171,
-        "parse_evidence": 0.229979,
-        "parse_lean": 0.12507600000000002,
-        "produce_evidence": 6.1140609999999995,
-        "read": 0.025062
+        "check_evidence": 2.651955,
+        "lean_reconstruction": 4.2259530000000005,
+        "parse_evidence": 0.215656,
+        "parse_lean": 0.24617999999999998,
+        "produce_evidence": 6.253113,
+        "read": 0.033236
       },
       "trust_holes": [],
       "trust_steps": []
@@ -93,7 +93,7 @@
       "baseline_outcome": "unsat",
       "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 4158.025269999999,
+      "elapsed_ms": 6226.134572,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -104,23 +104,25 @@
       "lean_fragment": "BoolEufOnline",
       "lean_module_bytes": 3161,
       "phase_timings_ms": {
-        "check_evidence": 1046.673942,
-        "lean_reconstruction": 2085.474149,
-        "parse_evidence": 2.245856,
-        "parse_lean": 1.3054729999999999,
-        "produce_evidence": 1022.192902,
-        "read": 0.035998999999999996
+        "check_evidence": 1340.899199,
+        "lean_reconstruction": 2313.6219960000003,
+        "parse_evidence": 2.1955120000000004,
+        "parse_lean": 1.372649,
+        "produce_evidence": 1312.506969,
+        "read": 0.051733
       },
       "trust_holes": [],
       "trust_steps": []
     }
   ],
-  "limit": null,
+  "limit": 1000,
   "logic": "QF_UF",
+  "prelude_warm_ms": 15275.454153,
+  "prelude_warmed": true,
   "slice": "qf-uf-cvc5-regress-clean-overbound-uninterp-sorts-solver-vs-z3-10s.json",
   "source_revision": {
     "dirty": false,
-    "sha": "2e207eba5",
+    "sha": "496288979",
     "source": "lane-snapshot"
   },
   "summary": {

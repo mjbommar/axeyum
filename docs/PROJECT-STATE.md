@@ -104,13 +104,15 @@ The newest QF_BV evidence run has 130 UNSAT decisions:
 These are deliberately different assurance claims. Fresh-arena checking must
 not be described as serialized proof replay.
 
-The broader audit still records 58 uncertified occurrences, eight independently
-checked results without Lean reconstruction, and two QF_NIA `IntPow2`
-proof-production errors. The current official-source proof-family population has
-a retained local Lean 4.30 result of 77/77 accepted. That number is modules Lean
-READ, not propositions Lean PROVED: measured 2026-08-17, 40 of the 77 families
-emit a structural attestation — an axiom pair Lean cannot fail on the merits —
-and 37 carry a theory reconstruction. The 75th is `qf_rdl_difference`, added
+The broader audit records 42 uncertified occurrences, ten independently
+checked results without Lean reconstruction, and four evidence-audit **timeouts**
+(not proof-production refusals — the earlier reading of that line as a QF_NIA
+`IntPow2` rejection was wrong). The current official-source proof-family
+population has a retained local Lean 4.30 result of **78/78 accepted**. That
+number is modules Lean READ, not propositions Lean PROVED: measured 2026-08-21,
+40 of the 78 families emit a structural attestation — an axiom pair Lean cannot
+fail on the merits — and 38 carry a theory reconstruction, the newest being
+`qf_s_string_length`. The 75th is `qf_rdl_difference`, added
 2026-08-17: real difference logic scans into the same `Lra` fragment as QF_LRA,
 so it reconstructs rather than attests, and the family slice had never contained
 a module from that logic. `scripts/check-lean-gate.sh` now reports
@@ -128,11 +130,18 @@ treat a rise in `theory_families` unaccompanied by a rise in `bound`/`structural
 as unexplained rather than as progress. Corrected remote attestation
 and exhaustive execution remain open.
 
-Across the retained broad UNSAT denominator, **262 / 324** outcomes satisfy the
+Across the retained broad UNSAT denominator, **269 / 326** outcomes satisfy the
 full certified, independently checked, trust-hole-free, Lean-reconstructed
 conjunction; **42 uncertified** outcomes carry no certificate at all;
-**15 certified** and independently checked outcomes lack Lean reconstruction;
-and **4 proof-production errors** remain. All four of those errors are evidence-audit
+**10 certified** and independently checked outcomes lack Lean reconstruction;
+and **4 proof-production errors** remain. All 35 audits were re-run at
+`496288979` on 2026-08-21 and four rows moved: **+5 of the +7 dominant outcomes
+are capability** (two `RealProduct` and one `MonomialBound` reconstruction in
+QF_NRA, two `StringLength` in QF_S) and **+2 are the instrument** — two QF_NRA
+synthetic instances that had been billed for a process-wide 32 s `CReal` prelude
+build inside a 10 s per-instance cap, and which a directory-backed row drops
+without recording a timeout. The A/B that separates the two is in the
+[gap analysis](plan/gap-analysis-z3-lean-2026-07-21.md). All four of those errors are evidence-audit
 **timeouts**, not rejections — three quantified-BV instances and
 `QF_FP/solver__fp__fp_misc.smt2` — so they are a budget the audit did not fit
 inside, and the earlier reading of this line as a proof-production *refusal* was

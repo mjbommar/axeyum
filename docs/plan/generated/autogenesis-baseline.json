@@ -59,25 +59,29 @@
   "contract": "internal-autogenesis-phase0",
   "ledger": {
     "assurance": {
-      "axiom_free_kernel_facts": 39,
+      "axiom_free_kernel_facts": 58,
       "check_statuses": {
-        "checked": 197
+        "checked": 273
       },
-      "evidence_rows": 197,
-      "with_checker_command": 195,
-      "with_multiple_named_checkers": 124
+      "evidence_rows": 273,
+      "with_checker_command": 271,
+      "with_multiple_named_checkers": 127
     },
     "dependency_graph": {
       "dangling": [],
       "depth_histogram": {
-        "1": 226,
-        "2": 59,
-        "3": 24,
-        "4": 10,
-        "5": 4,
-        "6": 1
+        "1": 232,
+        "10": 1,
+        "2": 60,
+        "3": 25,
+        "4": 11,
+        "5": 5,
+        "6": 2,
+        "7": 1,
+        "8": 3,
+        "9": 2
       },
-      "edges": 135,
+      "edges": 155,
       "edges_detail": [
         {
           "consequent": "F:bcnf-decomposition-lossless-not-dependency-preserving",
@@ -88,12 +92,28 @@
           "premise": "F:chu-vandermonde-convolution-recurrence"
         },
         {
+          "consequent": "F:complex-admits-no-compatible-order",
+          "premise": "F:complex-ring-constructed-axiom-free"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:real-axioms-modelled-by-constructed-setoid"
+        },
+        {
           "consequent": "F:double-negation-elimination",
           "premise": "F:excluded-middle"
         },
         {
           "consequent": "F:excluded-middle-not-intuitionistic",
           "premise": "F:excluded-middle"
+        },
+        {
+          "consequent": "F:farkas-refutation-over-constructed-reals",
+          "premise": "F:ordered-ring-farkas-refutation"
+        },
+        {
+          "consequent": "F:farkas-refutation-over-constructed-reals",
+          "premise": "F:real-axioms-modelled-by-constructed-setoid"
         },
         {
           "consequent": "F:int-add-assoc",
@@ -132,12 +152,32 @@
           "premise": "F:int-add-le-add"
         },
         {
+          "consequent": "F:int-categoricity",
+          "premise": "F:int-characterization"
+        },
+        {
+          "consequent": "F:int-categoricity",
+          "premise": "F:nat-peano-categoricity"
+        },
+        {
+          "consequent": "F:int-characterization",
+          "premise": "F:int-add-assoc"
+        },
+        {
+          "consequent": "F:int-characterization",
+          "premise": "F:int-mul-assoc"
+        },
+        {
           "consequent": "F:int-euclidean-decomposition",
           "premise": "F:nat-div-mod-exists"
         },
         {
           "consequent": "F:int-euclidean-decomposition",
           "premise": "F:nat-div-mod-unique"
+        },
+        {
+          "consequent": "F:int-euclidean-decomposition",
+          "premise": "F:nat-zero-add"
         },
         {
           "consequent": "F:int-left-distrib",
@@ -600,6 +640,14 @@
           "premise": "F:nat-mul-one"
         },
         {
+          "consequent": "F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
+          "premise": "F:int-add-comm"
+        },
+        {
+          "consequent": "F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
+          "premise": "F:int-sq-nonneg"
+        },
+        {
           "consequent": "F:orders-candidate-keys-and-normal-forms",
           "premise": "F:orders-fd-implication-certified"
         },
@@ -616,41 +664,117 @@
           "premise": "F:int-euclidean-decomposition"
         },
         {
+          "consequent": "F:real-axioms-modelled-by-constructed-setoid",
+          "premise": "F:rat-add-neg-inverse"
+        },
+        {
+          "consequent": "F:real-axioms-modelled-by-constructed-setoid",
+          "premise": "F:rat-mul-renormalises"
+        },
+        {
+          "consequent": "F:real-axioms-modelled-by-constructed-setoid",
+          "premise": "F:rat-normalize-reduces"
+        },
+        {
+          "consequent": "F:real-inverse-is-built-and-well-defined",
+          "premise": "F:real-inverse-is-partial-and-its-modulus-is-data"
+        },
+        {
+          "consequent": "F:real-inverse-is-partial-and-its-modulus-is-data",
+          "premise": "F:rationals-are-a-field-axiom-free"
+        },
+        {
+          "consequent": "F:real-lattice-is-constructed-axiom-free",
+          "premise": "F:real-axioms-modelled-by-constructed-setoid"
+        },
+        {
           "consequent": "F:schedule-deadline-iis",
           "premise": "F:schedule-critical-chain-infeasible"
+        },
+        {
+          "consequent": "F:shipped-front-door-reaches-no-real-axiom",
+          "premise": "F:shipped-front-door-refutes-over-constructed-reals"
+        },
+        {
+          "consequent": "F:shipped-front-door-refutes-over-constructed-reals",
+          "premise": "F:farkas-refutation-over-constructed-reals"
+        },
+        {
+          "consequent": "F:shipped-front-door-refutes-over-constructed-reals",
+          "premise": "F:real-axioms-modelled-by-constructed-setoid"
         }
       ],
-      "isolated": 173,
-      "max_depth": 6,
-      "nodes": 324,
-      "with_dependencies": 98,
-      "with_dependents": 84
+      "isolated": 176,
+      "max_depth": 10,
+      "nodes": 342,
+      "with_dependencies": 110,
+      "with_dependents": 96
     },
-    "facts": 324,
+    "facts": 342,
     "kernel_dependency_coverage": {
       "authority_gate": "scripts/check-fact-depends-derived.py",
-      "facts": 40,
+      "facts": 60,
       "named": 35,
       "unnamed_fact_ids": [
+        "F:complex-admits-no-compatible-order",
+        "F:complex-ring-constructed-axiom-free",
+        "F:farkas-refutation-over-constructed-reals",
+        "F:int-categoricity",
+        "F:int-characterization",
+        "F:lean-kernel-accepts-the-whole-constructed-real-carrier",
+        "F:lean-query-module-shrinks-by-a-shared-import",
+        "F:ml430-nat-ascfactorial-zero-fd183202",
+        "F:ml430-nat-descfactorial-zero-966b01df",
+        "F:ml430-nat-fib-add-two-b86e0c82",
+        "F:nat-peano-categoricity",
+        "F:nra-refutations-reconstruct-over-constructed-reals",
         "F:ordered-ring-farkas-refutation",
+        "F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
         "F:rat-add-neg-inverse",
         "F:rat-mul-renormalises",
         "F:rat-normalize-reduces",
-        "F:schedule-critical-chain-infeasible"
+        "F:rationals-are-a-field-axiom-free",
+        "F:real-axioms-modelled-by-constructed-setoid",
+        "F:real-inverse-is-built-and-well-defined",
+        "F:real-inverse-is-partial-and-its-modulus-is-data",
+        "F:real-lattice-is-constructed-axiom-free",
+        "F:schedule-critical-chain-infeasible",
+        "F:shipped-front-door-reaches-no-real-axiom",
+        "F:shipped-front-door-refutes-over-constructed-reals"
       ]
     },
     "kernel_lean_graph": {
       "dangling": [],
       "depth_histogram": {
-        "1": 14,
-        "2": 6,
-        "3": 8,
-        "4": 7,
-        "5": 4,
-        "6": 1
+        "1": 22,
+        "10": 1,
+        "2": 7,
+        "3": 9,
+        "4": 8,
+        "5": 5,
+        "6": 2,
+        "7": 1,
+        "8": 3,
+        "9": 2
       },
-      "edges": 52,
+      "edges": 72,
       "edges_detail": [
+        {
+          "consequent": "F:complex-admits-no-compatible-order",
+          "premise": "F:complex-ring-constructed-axiom-free"
+        },
+        {
+          "consequent": "F:complex-ring-constructed-axiom-free",
+          "premise": "F:real-axioms-modelled-by-constructed-setoid"
+        },
+        {
+          "consequent": "F:farkas-refutation-over-constructed-reals",
+          "premise": "F:ordered-ring-farkas-refutation"
+        },
+        {
+          "consequent": "F:farkas-refutation-over-constructed-reals",
+          "premise": "F:real-axioms-modelled-by-constructed-setoid"
+        },
         {
           "consequent": "F:int-add-assoc",
           "premise": "F:nat-add-assoc"
@@ -688,12 +812,32 @@
           "premise": "F:int-add-le-add"
         },
         {
+          "consequent": "F:int-categoricity",
+          "premise": "F:int-characterization"
+        },
+        {
+          "consequent": "F:int-categoricity",
+          "premise": "F:nat-peano-categoricity"
+        },
+        {
+          "consequent": "F:int-characterization",
+          "premise": "F:int-add-assoc"
+        },
+        {
+          "consequent": "F:int-characterization",
+          "premise": "F:int-mul-assoc"
+        },
+        {
           "consequent": "F:int-euclidean-decomposition",
           "premise": "F:nat-div-mod-exists"
         },
         {
           "consequent": "F:int-euclidean-decomposition",
           "premise": "F:nat-div-mod-unique"
+        },
+        {
+          "consequent": "F:int-euclidean-decomposition",
+          "premise": "F:nat-zero-add"
         },
         {
           "consequent": "F:int-left-distrib",
@@ -848,6 +992,14 @@
           "premise": "F:nat-mul-one"
         },
         {
+          "consequent": "F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
+          "premise": "F:int-add-comm"
+        },
+        {
+          "consequent": "F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
+          "premise": "F:int-sq-nonneg"
+        },
+        {
           "consequent": "F:rat-add-neg-inverse",
           "premise": "F:rat-mul-renormalises"
         },
@@ -858,32 +1010,68 @@
         {
           "consequent": "F:rat-normalize-reduces",
           "premise": "F:int-euclidean-decomposition"
+        },
+        {
+          "consequent": "F:real-axioms-modelled-by-constructed-setoid",
+          "premise": "F:rat-add-neg-inverse"
+        },
+        {
+          "consequent": "F:real-axioms-modelled-by-constructed-setoid",
+          "premise": "F:rat-mul-renormalises"
+        },
+        {
+          "consequent": "F:real-axioms-modelled-by-constructed-setoid",
+          "premise": "F:rat-normalize-reduces"
+        },
+        {
+          "consequent": "F:real-inverse-is-built-and-well-defined",
+          "premise": "F:real-inverse-is-partial-and-its-modulus-is-data"
+        },
+        {
+          "consequent": "F:real-inverse-is-partial-and-its-modulus-is-data",
+          "premise": "F:rationals-are-a-field-axiom-free"
+        },
+        {
+          "consequent": "F:real-lattice-is-constructed-axiom-free",
+          "premise": "F:real-axioms-modelled-by-constructed-setoid"
+        },
+        {
+          "consequent": "F:shipped-front-door-reaches-no-real-axiom",
+          "premise": "F:shipped-front-door-refutes-over-constructed-reals"
+        },
+        {
+          "consequent": "F:shipped-front-door-refutes-over-constructed-reals",
+          "premise": "F:farkas-refutation-over-constructed-reals"
+        },
+        {
+          "consequent": "F:shipped-front-door-refutes-over-constructed-reals",
+          "premise": "F:real-axioms-modelled-by-constructed-setoid"
         }
       ],
-      "isolated": 6,
-      "max_depth": 6,
-      "nodes": 40,
+      "isolated": 11,
+      "max_depth": 10,
+      "nodes": 60,
       "statuses": {
-        "proved": 40
+        "proved": 60
       },
       "unsettled": 0,
-      "with_dependencies": 26,
-      "with_dependents": 24
+      "with_dependencies": 38,
+      "with_dependents": 36
     },
     "routes": {
-      "(missing)": 223,
+      "(missing)": 220,
       "cas-certificate": 19,
       "imported-kernel-lean": 5,
-      "kernel-lean": 40,
+      "kernel-lean": 60,
       "search-certificate": 12,
       "smt-clausal": 9,
-      "smt-term-level": 16
+      "smt-term-level": 17
     },
     "statuses": {
       "computed": 2,
       "conjectured": 3,
-      "open": 220,
-      "proved": 96,
+      "open": 217,
+      "proved": 117,
       "refuted": 3
     }
   },
@@ -974,21 +1162,21 @@
     }
   ],
   "proof_gap": {
-    "audit_reported_checked": 267,
-    "audit_unsat": 325,
-    "baseline_unsat": 327,
+    "audit_reported_checked": 280,
+    "audit_unsat": 322,
+    "baseline_unsat": 326,
     "complete_audits": 35,
-    "dominant_unsat": 259,
-    "evidence_certified": 267,
-    "evidence_checked": 267,
-    "lean_checked": 260,
-    "proof_errors": 2,
-    "trust_hole_free": 325,
-    "trust_hole_instances": 0
+    "dominant_unsat": 269,
+    "evidence_certified": 280,
+    "evidence_checked": 280,
+    "lean_checked": 269,
+    "proof_errors": 4,
+    "trust_hole_free": 321,
+    "trust_hole_instances": 5
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "8dafbf1a197d61a814364468123fbe9463a0dce5fe10e3eb352ab88de81ecd07",
+    "digest": "aa1536a4ad36a1240f7f9fcfdbfa560ae4d9007c2a953125664210b4e5678f80",
     "inputs": [
       {
         "bytes": 1939,
@@ -1036,14 +1224,14 @@
         "sha256": "8d7df257783ab2cdcfad18719de68d6f40681e1bacb06e938c7f0827d07eebdc"
       },
       {
-        "bytes": 1942,
+        "bytes": 109126,
         "path": "artifacts/autogenesis/nursery-v1.json",
-        "sha256": "ed158ff63645f73ac2cdcd96fe84b95ec8346a0a3f45f3b4f0d2b6705b56eb7e"
+        "sha256": "221b5278448e933590c665647b3fcad72fae96cd03b9701eecf50bac65b5d161"
       },
       {
-        "bytes": 6739,
+        "bytes": 12791,
         "path": "artifacts/autogenesis/operations.json",
-        "sha256": "c64f93d5c4443ccd1162bb6b898a8f1c78cd4ccce523a05b27c1dae6bf7ef602"
+        "sha256": "41a4301e4463e1fb3fc7fe55bf67680c3786bd39765ba1a61dba16ed78d6232c"
       },
       {
         "bytes": 3519,
@@ -1096,6 +1284,16 @@
         "sha256": "b189142039a4e84d081b03b3a8c4f78ff5486344123d461508464eae8e41f006"
       },
       {
+        "bytes": 5185,
+        "path": "artifacts/facts/F-complex-admits-no-compatible-order.json",
+        "sha256": "31fe18d95fa09bf7e2cbfd85cfdca71683cbb161a28ec08d8a1fda92a87ef678"
+      },
+      {
+        "bytes": 6482,
+        "path": "artifacts/facts/F-complex-ring-constructed-axiom-free.json",
+        "sha256": "d62a1e5f4505dfffce63f7205acaeb4bcc12a24ecc84eb97dfc4179ebcf701f6"
+      },
+      {
         "bytes": 9692,
         "path": "artifacts/facts/F-conjunctive-query-containment-homomorphism-certified.json",
         "sha256": "bf94647a0c86bbdf5f6576f715582cbd43e43f501e72bda5fa37dfbdb25297e1"
@@ -1144,6 +1342,11 @@
         "bytes": 4740,
         "path": "artifacts/facts/F-exportation.json",
         "sha256": "a633e580813411f7c2668e82a30950eda4f40bb3a3653d409093f0d56e1bcbdd"
+      },
+      {
+        "bytes": 7184,
+        "path": "artifacts/facts/F-farkas-refutation-over-constructed-reals.json",
+        "sha256": "b79e7aca08d7926e6c74aa3432d141569b1322a8cd80890bf26dba7c1ec35b34"
       },
       {
         "bytes": 2365,
@@ -1281,14 +1484,24 @@
         "sha256": "413649b045b1616f295d3f9b49b38028a24ff0d8d9e6be49d36786e6ed51a632"
       },
       {
+        "bytes": 9992,
+        "path": "artifacts/facts/F-int-categoricity.json",
+        "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+      },
+      {
+        "bytes": 6959,
+        "path": "artifacts/facts/F-int-characterization.json",
+        "sha256": "98dd97cfb9f22b52daabc49f7d9c74bf2368091c3cd97f454542771761792e2a"
+      },
+      {
         "bytes": 3700,
         "path": "artifacts/facts/F-int-equality-is-decidable.json",
         "sha256": "cc1a5725b6579bcdbf90917b298552b7c962083662d3920ec5827c37bc69d1f3"
       },
       {
-        "bytes": 3023,
+        "bytes": 3045,
         "path": "artifacts/facts/F-int-euclidean-decomposition.json",
-        "sha256": "1fe0ac8ba3bf9a450119573a1246b70dac5d0eeae194a40362ffe31629452013"
+        "sha256": "d46c6e906a8c6441ebd99662738dc163eb026b9b3e8fa2b2bebcc26f37ba8ca3"
       },
       {
         "bytes": 4341,
@@ -1311,9 +1524,9 @@
         "sha256": "27d34cf3d9afef0c47884af022e5e9d44c516fdae6bd7a7d3317298b5c505c47"
       },
       {
-        "bytes": 3649,
+        "bytes": 3655,
         "path": "artifacts/facts/F-int-sq-nonneg.json",
-        "sha256": "ea2411c692e8fb1a2f40ebaad868b6b6ff9181887421c717269a94111296b727"
+        "sha256": "62bd0dfdb9a87f28c2987ee927b3f756475a59e36d206203ded204bcb1c0d5e1"
       },
       {
         "bytes": 5041,
@@ -1324,6 +1537,16 @@
         "bytes": 4965,
         "path": "artifacts/facts/F-int-sub-nat-nat-shift.json",
         "sha256": "9e4d8e2b0ea945bf73ca9d53c18383b2898d8d28faca2a60b111f603038cead9"
+      },
+      {
+        "bytes": 7418,
+        "path": "artifacts/facts/F-lean-kernel-accepts-the-whole-constructed-real-carrier.json",
+        "sha256": "974aed9cb701e9a5804b222847d938e7224004084e792f0ca71a700e128a740b"
+      },
+      {
+        "bytes": 8441,
+        "path": "artifacts/facts/F-lean-query-module-shrinks-by-a-shared-import.json",
+        "sha256": "3ddb78d859d8b780c0b7a93bdebb71b6e4ee58b4de3f6019e8fbc54e7737874d"
       },
       {
         "bytes": 5114,
@@ -1621,9 +1844,9 @@
         "sha256": "e5a19eda16540b82085a700176ca6ba05a175bd1bb948b4fc65150e5362ef380"
       },
       {
-        "bytes": 1561,
+        "bytes": 4724,
         "path": "artifacts/facts/F-ml430-nat-ascfactorial-zero-fd183202.json",
-        "sha256": "568e49a6955bf7621741f0ca7c182e5f9552b33e0e754e38c37da770de800f34"
+        "sha256": "15e5db2900595decd3330d63696b3a8f713a7284f158e54ae2d8953d9a9cdf33"
       },
       {
         "bytes": 1713,
@@ -1871,9 +2094,9 @@
         "sha256": "2baa2816bb05e1de20b8e07e0fcf73959d7d1386f84c57df17d9e08768e5761f"
       },
       {
-        "bytes": 1567,
+        "bytes": 4801,
         "path": "artifacts/facts/F-ml430-nat-descfactorial-zero-966b01df.json",
-        "sha256": "504087788f8ac3f20dd2d25c1ec931871f84f4175c3115b0143b805d4c52a580"
+        "sha256": "eb0e801feec7e64693caaa227e2a2b5f2647c10f04f6da4443faeeaa8d958fd5"
       },
       {
         "bytes": 1579,
@@ -1961,9 +2184,9 @@
         "sha256": "854dc2f2b5dd09da6a53a65fdb212d2a65b11c915fbd0267c271aa5efed61422"
       },
       {
-        "bytes": 1556,
+        "bytes": 4643,
         "path": "artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
-        "sha256": "d51fc715b0c2f90fafb6b412de89cd05c9584c060d228242ad8942072aac3cf0"
+        "sha256": "87f1fca2822e62e7940e189ff997746f0b4ac245bd98ee2265226d9c49479577"
       },
       {
         "bytes": 1594,
@@ -2521,6 +2744,11 @@
         "sha256": "3f5cba9ea3a950081dc762e74ab433385503dbb37ead805723d4d18b01944480"
       },
       {
+        "bytes": 7259,
+        "path": "artifacts/facts/F-nat-peano-categoricity.json",
+        "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+      },
+      {
         "bytes": 5082,
         "path": "artifacts/facts/F-nat-pow-add.json",
         "sha256": "4da8efbb7943f23c0ab6fc3de1ef54badfdc75525ded899480a4134d5ed12b63"
@@ -2546,9 +2774,19 @@
         "sha256": "b2a8c563c13582450078e9cddda7137da437d83b59554f4cc64c335366c99898"
       },
       {
+        "bytes": 4850,
+        "path": "artifacts/facts/F-nra-refutations-reconstruct-over-constructed-reals.json",
+        "sha256": "0da79bbb567cd54ace237098b47629351c20c7285d9348c1cdce864b096fffc5"
+      },
+      {
         "bytes": 11217,
         "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
         "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+      },
+      {
+        "bytes": 5383,
+        "path": "artifacts/facts/F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.json",
+        "sha256": "5e69eb037cec1546f8772a8fa9f69a9fc80fd9f9a3c183fbc29d06ec2fde04ad"
       },
       {
         "bytes": 10680,
@@ -2569,6 +2807,11 @@
         "bytes": 6282,
         "path": "artifacts/facts/F-prop-excluded-middle-classical.json",
         "sha256": "0321754b17ad7dde5f5da67e0fef4c947b2e91dc7ca72867db02f48a491991db"
+      },
+      {
+        "bytes": 6283,
+        "path": "artifacts/facts/F-qf-nia-univariate-unsat-is-certified.json",
+        "sha256": "02bc6c1e5c71bf2aba16be0a26949a5530b1637b8d6eb3a2afa62a76a932c984"
       },
       {
         "bytes": 6890,
@@ -2601,6 +2844,31 @@
         "sha256": "595714e8e93cbd24998c0d3d7cc83f0e25e8f00e426cab6d1ae1ef5bb1fc8926"
       },
       {
+        "bytes": 5166,
+        "path": "artifacts/facts/F-rationals-are-a-field-axiom-free.json",
+        "sha256": "44a939d9db7d725db27facfa5f8385739bacd1f57ce2e6a3a803e4bfeec834e7"
+      },
+      {
+        "bytes": 5272,
+        "path": "artifacts/facts/F-real-axioms-modelled-by-constructed-setoid.json",
+        "sha256": "1cf5af5fe6904c766baaf0fd63a30d9724ffabf0c723586d1dd97a69e26afad7"
+      },
+      {
+        "bytes": 10352,
+        "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+        "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+      },
+      {
+        "bytes": 8728,
+        "path": "artifacts/facts/F-real-inverse-is-partial-and-its-modulus-is-data.json",
+        "sha256": "8ae52321418f7ab35b610b10b34133ccde8c626334dc11f3480cee7d468c851f"
+      },
+      {
+        "bytes": 9625,
+        "path": "artifacts/facts/F-real-lattice-is-constructed-axiom-free.json",
+        "sha256": "e19faff1885000123170d91deb88d4128deeb834f2ad7199a751dc2a8b4fa025"
+      },
+      {
         "bytes": 4893,
         "path": "artifacts/facts/F-resolution-rule-sound.json",
         "sha256": "edca31fb14db96ee34684b42083160be05180ba1f2ed85796fb0de9817e4bb51"
@@ -2611,14 +2879,24 @@
         "sha256": "6ddd3cf2db0344ad48b6f3db831fc0baaaec3cd04be1a14d024870da5e3248b7"
       },
       {
-        "bytes": 7088,
+        "bytes": 9733,
         "path": "artifacts/facts/F-schedule-critical-chain-infeasible.json",
-        "sha256": "e98f29ab71bd4dea39c05ff3c3cee78bc6437ae5e48194f11c65cc5dee8363fd"
+        "sha256": "1558e60de57b4a0d41b67eff74a59deb023f52cb530cfb267f079d6e29c5ada4"
       },
       {
         "bytes": 5669,
         "path": "artifacts/facts/F-schedule-deadline-iis.json",
         "sha256": "c87cfb7e0d238d886bb57c7a729dd734da7ab8bdcd50a151d073de165388214e"
+      },
+      {
+        "bytes": 9254,
+        "path": "artifacts/facts/F-shipped-front-door-reaches-no-real-axiom.json",
+        "sha256": "5b2020ea86ce9a6ca8b92e3737d0761dc734799850e67419ca804372a2d6405c"
+      },
+      {
+        "bytes": 11739,
+        "path": "artifacts/facts/F-shipped-front-door-refutes-over-constructed-reals.json",
+        "sha256": "f699d59b14cedeb62fb02a32060c128916d9d635d521240e405370575242fe01"
       },
       {
         "bytes": 3216,
@@ -2691,14 +2969,14 @@
         "sha256": "05dddd7a636f3baf93aa43e5cd874e9994e7252303507bc11b2b8ea017454e0f"
       },
       {
-        "bytes": 46105,
+        "bytes": 48985,
         "path": "docs/plan/generated/proof-gap-matrix.json",
-        "sha256": "3fe917d568d6d3bdac4cf8a91790a46ba1309a24ae49a5f0a34f60837422cde4"
+        "sha256": "2fa71d5589eba0a176fd1a5c269333134111cb009a3de5c6fd3340ffd159ceb7"
       },
       {
-        "bytes": 75948,
+        "bytes": 94656,
         "path": "justfile",
-        "sha256": "3ca0b4cc91a96a1987cf29f1d6cdf6a4e8197566693cf459a921bf3d3dfbc828"
+        "sha256": "837d9abfd539d932add3328e762d0a530e3b8cfd262ea7b4765172b95e43b9b6"
       },
       {
         "bytes": 11929,
@@ -2731,9 +3009,9 @@
         "sha256": "98361cbd4b978273d5e49270f2614af91755379c5229fbba00812281797493fa"
       },
       {
-        "bytes": 10292,
+        "bytes": 15943,
         "path": "scripts/check-autogenesis-fact-operation.py",
-        "sha256": "c6567c2318511ba1f96ad3246fb73ec9ab2b3ab222bbbedc784235e12b1951f1"
+        "sha256": "7b210a7e820125811c5675648af78d0d982c465c61c7d37d7c5cc9c8a7bcac30"
       },
       {
         "bytes": 3677,
@@ -2751,9 +3029,9 @@
         "sha256": "6bfda36b437386c77a8e2ebe6f5466c91396b21fb169406f806f980388bfd8a0"
       },
       {
-        "bytes": 16108,
+        "bytes": 16804,
         "path": "scripts/check-autogenesis-nursery.py",
-        "sha256": "2d2e888f040b0c6f4d2aad4ccc7486d8f7a547c78eb4805533b5e56ec76997e1"
+        "sha256": "6948bd566129e9d561f4e483cfaea099f0049e49df81bd1ea5527a7d42d10f8c"
       },
       {
         "bytes": 3090,
@@ -2766,14 +3044,14 @@
         "sha256": "224a2672fd9a41730ca47e860a3a6a0b0c605113a924f6066f4a3287422fde81"
       },
       {
-        "bytes": 7054,
+        "bytes": 8699,
         "path": "scripts/check-fact-depends-derived.py",
-        "sha256": "c1caf69c8df3b221907889a63ed126bfc37a0c3be520cb29b733f36ca37d2f98"
+        "sha256": "745d919e6c9db709d77beb05ce7bff3f12e99daf16507edb4d883cb7860f9dbc"
       },
       {
-        "bytes": 23809,
+        "bytes": 37737,
         "path": "scripts/check.sh",
-        "sha256": "0fa5b08f99838cbcc2683616d4cc638ed7fa0c473862790d7fcac165ac4c1d62"
+        "sha256": "18b5a7c3b7012988c821b2528c40b0fc279ff5053d61c103e3b3a4efbf47c92c"
       },
       {
         "bytes": 6846,
@@ -2841,9 +3119,9 @@
         "sha256": "cb7b1b6ed2cb8f268b6adac42cc1bfb4ff3b99ce9e85b438c23790b4ce92c9e1"
       },
       {
-        "bytes": 41220,
+        "bytes": 53253,
         "path": "scripts/execute-autogenesis-operation.py",
-        "sha256": "dfc6b131d999ad5a2d35ffcea9647f54e203717674fa27fa28ebd83ed86c5fc6"
+        "sha256": "edf923e80f5935b3288703163322df6cde0b197ed7820490c53d6f7e08629406"
       },
       {
         "bytes": 27844,
@@ -2856,9 +3134,9 @@
         "sha256": "608da396eec9425da489f23e23e40bee9b1f84f06776dc604c1601b4db2a1a78"
       },
       {
-        "bytes": 17112,
+        "bytes": 23432,
         "path": "scripts/gen-proof-gap-matrix.py",
-        "sha256": "577024d768dd62c778418b78248d0dbf68d33d0a01241738d83a20ce9f279c9e"
+        "sha256": "c46945d4f53d48bbb8cb0210dd1f9ab5e394f6b2150a4dc587b522ceb66febed"
       },
       {
         "bytes": 1789,
@@ -2871,14 +3149,14 @@
         "sha256": "78cc93de6ab3c1fed5378c757f0ebfcbee47e66ecd72c25022755a4707e2b376"
       },
       {
-        "bytes": 23897,
+        "bytes": 28019,
         "path": "scripts/prepare-autogenesis-fact-transaction.py",
-        "sha256": "7d08be51e5cc81cfcb748e85cb9411875423ee5d902e06d9805213c437db4a26"
+        "sha256": "20de0cacf5bc86374c274fe3a7f460f6941a955b2159afbe734ff4bb8187dc1c"
       },
       {
-        "bytes": 10990,
+        "bytes": 14169,
         "path": "scripts/provision-fleet-host.sh",
-        "sha256": "f9ceaa822e1d7c090f79608b238276c8921581f151a6b814648e95f6e5b87f00"
+        "sha256": "841d39270cec4315192be40ed361d6654a54d06733921412516b34b874b69002"
       },
       {
         "bytes": 14020,
@@ -2886,9 +3164,9 @@
         "sha256": "afa2800620b4bc0b49826604f6c11e81e5669f6b209f3e6733fa53e8827192bb"
       },
       {
-        "bytes": 10184,
+        "bytes": 10742,
         "path": "scripts/replay-autogenesis-authoritative-admission.sh",
-        "sha256": "27c2b6efd57159b9a03f02da835ce5764b71b6a86bd4509256c18b975d7faf93"
+        "sha256": "3c29473e4d3a02259a8076f1587c14a2a3a66e657311c370139c222d35d06b7b"
       },
       {
         "bytes": 19717,
@@ -2921,9 +3199,9 @@
         "sha256": "b8b8cd547a1626597e4c03c5d84bcf2e293703d451fce4a19a172c1218efdf39"
       },
       {
-        "bytes": 16111,
+        "bytes": 21975,
         "path": "scripts/validate-autogenesis-operations.py",
-        "sha256": "56804a2020502f42d40d11d2107eb4c78221ba334b6533aa91d81685b7923d73"
+        "sha256": "455166033e390294ee49b4f1bbe528d83d4aee024026a7449eebfce5d84d2383"
       },
       {
         "bytes": 2711,

@@ -9,7 +9,7 @@
       "baseline_outcome": "unsat",
       "decision_backend": "arith-dpll-exact-theory-enumeration",
       "dominant_candidate": true,
-      "elapsed_ms": 77.352087,
+      "elapsed_ms": 10.236042000000001,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -20,12 +20,12 @@
       "lean_fragment": "ArithDpll",
       "lean_module_bytes": 3151,
       "phase_timings_ms": {
-        "check_evidence": 0.125699,
-        "lean_reconstruction": 76.325287,
-        "parse_evidence": 0.132542,
-        "parse_lean": 0.031708999999999994,
-        "produce_evidence": 0.711495,
-        "read": 0.017196
+        "check_evidence": 0.113077,
+        "lean_reconstruction": 2.937131,
+        "parse_evidence": 0.105998,
+        "parse_lean": 0.025363,
+        "produce_evidence": 0.68015,
+        "read": 0.034341
       },
       "trust_holes": [],
       "trust_steps": []
@@ -37,7 +37,7 @@
       "baseline_outcome": "unsat",
       "decision_backend": "arith-dpll-exact-theory-enumeration",
       "dominant_candidate": true,
-      "elapsed_ms": 52.383217,
+      "elapsed_ms": 67.421926,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -48,23 +48,25 @@
       "lean_fragment": "ArithDpll",
       "lean_module_bytes": 3151,
       "phase_timings_ms": {
-        "check_evidence": 9.832967,
-        "lean_reconstruction": 30.444682,
-        "parse_evidence": 0.140865,
-        "parse_lean": 0.091161,
-        "produce_evidence": 11.830839,
-        "read": 0.036458000000000004
+        "check_evidence": 9.789086000000001,
+        "lean_reconstruction": 30.504572,
+        "parse_evidence": 0.12837800000000002,
+        "parse_lean": 0.086365,
+        "produce_evidence": 16.393967,
+        "read": 0.036474
       },
       "trust_holes": [],
       "trust_steps": []
     }
   ],
-  "limit": null,
+  "limit": 1000,
   "logic": "QF_UFLIA",
+  "prelude_warm_ms": 13041.367683,
+  "prelude_warmed": true,
   "slice": "qf-uflia-curated-named-solver-vs-z3-10s.json",
   "source_revision": {
     "dirty": false,
-    "sha": "2e207eba5",
+    "sha": "496288979",
     "source": "lane-snapshot"
   },
   "summary": {

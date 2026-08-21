@@ -12,19 +12,19 @@ implement a proof rule.
 
 | Population | Count |
 |---|---:|
-| Audit-row occurrences | 49 |
-| Schema-v2 occurrences with a decision backend | 49 |
+| Audit-row occurrences | 42 |
+| Schema-v2 occurrences with a decision backend | 42 |
 | Current audit `evidence_checked=true` despite no certificate | 0 |
 | Independently checked certificate occurrences | 0 |
-| Unique normalized paths | 47 |
-| Unique exact contents (SHA-256) | 40 |
+| Unique normalized paths | 40 |
+| Unique exact contents (SHA-256) | 33 |
 | Exact duplicate groups | 7 |
 | Unique contents with zero reachable parsed-IR terms | 0 |
-| Unique contents using bounded string/sequence lowering | 19 |
+| Unique contents using bounded string/sequence lowering | 16 |
 | Unique contents using word-only fallback | 0 |
 
-The raw 49 count contracts to **40 unique benchmark contents**.
-All 49 are uncertified and therefore have no independently checkable
+The raw 42 count contracts to **33 unique benchmark contents**.
+All 42 are uncertified and therefore have no independently checkable
 certificate. The affected schema-v1 rows historically contained 28
 vacuous `evidence_checked=true` values; the schema-v2 refresh records zero
 such values in the current residual population.
@@ -39,40 +39,40 @@ specific failed certificate route or reduction step.
 
 | Decision backend | Audit occurrences | Unique paths | Unique contents |
 |---|---:|---:|---:|
-| `smtlib-string-front-door` | 26 | 26 | 19 |
-| `auto-solve` | 15 | 13 | 13 |
-| `nra-linear-abstraction` | 8 | 8 | 8 |
+| `smtlib-string-front-door` | 23 | 23 | 16 |
+| `auto-solve` | 17 | 15 | 15 |
+| `nra-linear-abstraction` | 2 | 2 | 2 |
 
 ## Declared-logic population
 
 | Declared logic | Unique contents |
 |---|---:|
-| QF_SLIA | 12 |
-| QF_NIA | 9 |
-| QF_NRA | 8 |
-| QF_S | 6 |
+| QF_NIA | 10 |
+| QF_SLIA | 10 |
+| QF_S | 5 |
 | QF_AUFLIA | 2 |
+| QF_NRA | 2 |
 | QF_UFLIA | 2 |
+| QF_BVFP | 1 |
 | QF_SEQ | 1 |
 
 ## Non-exclusive structural families
 
 | Family | Unique contents | Audit occurrences | Structural criterion |
 |---|---:|---:|---|
-| `real-nonlinear` | 7 | 7 | Parsed IR contains real multiplication. |
-| `string-concat` | 6 | 10 | Source uses string concatenation. |
+| `int-nonlinear` | 6 | 8 | Parsed IR contains integer multiplication. |
 | `int-pow2` | 6 | 6 | Parsed IR contains cvc5 `int.pow2`. |
-| `int-nonlinear` | 5 | 7 | Parsed IR contains integer multiplication. |
+| `string-concat` | 5 | 9 | Source uses string concatenation. |
 | `string-regex` | 5 | 7 | Source uses regex construction or membership. |
+| `uf` | 5 | 7 | Parsed IR contains uninterpreted-function application. |
+| `int-divmod` | 5 | 5 | Parsed IR contains integer division or modulo. |
 | `string-replace` | 4 | 6 | Source uses a string replacement operator. |
-| `uf` | 4 | 6 | Parsed IR contains uninterpreted-function application. |
-| `int-divmod` | 4 | 4 | Parsed IR contains integer division or modulo. |
-| `string-code` | 3 | 4 | Source uses `str.to_code`. |
-| `string-length` | 3 | 3 | Source uses string length. |
 | `string-lex` | 2 | 4 | Source uses lexicographic string comparison. |
+| `string-code` | 2 | 3 | Source uses `str.to_code`. |
 | `arrays` | 2 | 2 | Parsed IR contains array select/store. |
 | `string-contains` | 2 | 2 | Source uses string containment. |
 | `real-division` | 1 | 1 | Parsed IR contains real division. |
+| `real-nonlinear` | 1 | 1 | Parsed IR contains real multiplication. |
 | `sequence-index` | 1 | 1 | Source uses sequence indexing. |
 
 ## Per-content census
@@ -81,6 +81,8 @@ specific failed certificate route or reduction step.
 |---|---|---:|---:|---:|---|
 | QF_AUFLIA | `corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress0__auflia__bug336.smt2` | 1 | 1 | 21 | `arrays`, `uf` |
 | QF_AUFLIA | `corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__swap_t1_pp_nf_ai_00010_004.cvc.smt2` | 1 | 1 | 90 | `arrays`, `uf` |
+| QF_BVFP | `corpus/public-curated/non-incremental/QF_BVFP/bitwuzla-regress-clean/solver__fp__Float-no-simp3-main.smt2` | 1 | 1 | 1878 | `uf` |
+| QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__arith__mod-simp.smt2` | 1 | 1 | 10 | `int-divmod`, `int-nonlinear` |
 | QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-2.smt2` | 1 | 1 | 8 | `int-pow2` |
 | QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-3.smt2` | 1 | 1 | 9 | `int-pow2` |
 | QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-4.smt2` | 1 | 1 | 5 | `int-pow2` |
@@ -91,15 +93,8 @@ specific failed certificate route or reduction step.
 | QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__arith__mod.02.smt2` | 1 | 1 | 6 | `int-divmod` |
 | QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__nl__rewriting-sums.smt2` | 1 | 1 | 27 | `int-nonlinear` |
 | QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__arith__div.07.smt2` | 1 | 1 | 12 | `real-division` |
-| QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__arith__mult.01.smt2` | 1 | 1 | 10 | `real-nonlinear` |
-| QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__approx-sqrt-unsat.smt2` | 1 | 1 | 29 | `real-nonlinear` |
-| QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__coeff-unsat.smt2` | 1 | 1 | 13 | `real-nonlinear` |
-| QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__combine.smt2` | 1 | 1 | 9 | `real-nonlinear` |
-| QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__ones.smt2` | 1 | 1 | 20 | `real-nonlinear` |
 | QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__red-exp.smt2` | 1 | 1 | 15 | `real-nonlinear` |
-| QF_NRA | `corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__simple-mono-unsat.smt2` | 1 | 1 | 17 | `real-nonlinear` |
 | QF_S | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_bug612.smt2` | 1 | 1 | 710 | `string-contains` |
-| QF_S | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_str005.smt2` | 1 | 1 | 398 | `string-length` |
 | QF_S | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_re-neg-unfold-rev-a.smt2` | 1 | 1 | 678 | `string-regex` |
 | QF_S | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_str002.smt2` | 1 | 1 | 1544 | `string-concat` |
 | QF_S | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__re_comp__a-in-comp-a.smt2` | 1 | 1 | 21633 | `string-regex` |
@@ -109,9 +104,7 @@ specific failed certificate route or reduction step.
 | QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_leq.smt2` | 2 | 2 | 1546 | `string-concat`, `string-lex` |
 | QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_norn-simp-rew.smt2` | 2 | 2 | 8519 | `string-concat`, `string-regex` |
 | QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_replace-find-base.smt2` | 2 | 2 | 9755 | `string-concat`, `string-replace` |
-| QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_str004.smt2` | 1 | 1 | 639 | `string-concat`, `string-length` |
 | QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_re-mod-eq.smt2` | 2 | 2 | 916 | `string-regex` |
-| QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-2.smt2` | 1 | 1 | 88 | `string-code`, `string-length` |
 | QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-3.smt2` | 2 | 2 | 297 | `string-code` |
 | QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat.smt2` | 1 | 1 | 238 | `string-code` |
 | QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-pred-small-rw_392.smt2` | 2 | 2 | 12903 | `string-replace` |
@@ -122,7 +115,7 @@ specific failed certificate route or reduction step.
 
 ## Research interpretation
 
-- The population is bifurcated: **21 arithmetic** and **19 string/sequence** unique contents. A single reconstruction feature cannot close the uncertified lane.
+- The population is bifurcated: **16 arithmetic** and **16 string/sequence** unique contents. A single reconstruction feature cannot close the uncertified lane.
 - Decision-backend attribution is complete for this population, but
   `auto-solve` and `smtlib-string-front-door` each bundle several
   certificate attempts and fallbacks. Backend prevalence selects the
@@ -132,7 +125,7 @@ specific failed certificate route or reduction step.
   a different nonlinear argument. The next producer must record the actual
   refuter/reduction identity and premises.
 - **0 unique contents have zero reachable parsed-IR terms** because front-end handling discharges them before the ordinary assertion DAG. Certificate provenance must begin at that early-fold seam.
-- **19 unique contents use bounded string/sequence lowering** and **0 use the word-only fallback**. A DRAT over the flat lowered arena is therefore not, by itself, a certificate for the source-level sequence obligation.
+- **16 unique contents use bounded string/sequence lowering** and **0 use the word-only fallback**. A DRAT over the flat lowered arena is therefore not, by itself, a certificate for the source-level sequence obligation.
 - String lowering frequently becomes BV structure in parsed IR. Source heads
   and lowered IR operators are therefore both retained; neither alone is an
   adequate proof taxonomy.
@@ -144,6 +137,6 @@ specific failed certificate route or reduction step.
 Before implementing a new proof mechanism, extend evidence production to
 record a stable route ID, source-to-lowered obligation map, checker identity,
 and the first uncertified reduction for every `bare-unsat`. Re-run this exact
-40-content population and select work only when one route appears across
+33-content population and select work only when one route appears across
 multiple independent source families. Syntax co-occurrence alone is not a
 causal mechanism.

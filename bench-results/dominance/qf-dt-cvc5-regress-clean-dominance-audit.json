@@ -9,7 +9,7 @@
       "baseline_outcome": "unsat",
       "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 3.77898,
+      "elapsed_ms": 0.915934,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -20,12 +20,12 @@
       "lean_fragment": "DatatypeStructural",
       "lean_module_bytes": 3169,
       "phase_timings_ms": {
-        "check_evidence": 0.00172,
-        "lean_reconstruction": 3.386169,
-        "parse_evidence": 0.12415700000000002,
-        "parse_lean": 0.025741999999999998,
-        "produce_evidence": 0.221583,
-        "read": 0.013121
+        "check_evidence": 0.001642,
+        "lean_reconstruction": 0.503572,
+        "parse_evidence": 0.114158,
+        "parse_lean": 0.023702,
+        "produce_evidence": 0.21573499999999998,
+        "read": 0.035204
       },
       "trust_holes": [],
       "trust_steps": []
@@ -37,7 +37,7 @@
       "baseline_outcome": "unsat",
       "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 0.45939800000000003,
+      "elapsed_ms": 0.44386000000000003,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -48,12 +48,12 @@
       "lean_fragment": "DatatypeStructural",
       "lean_module_bytes": 3169,
       "phase_timings_ms": {
-        "check_evidence": 0.002536,
-        "lean_reconstruction": 0.29504400000000003,
-        "parse_evidence": 0.043262,
-        "parse_lean": 0.0265,
-        "produce_evidence": 0.071759,
-        "read": 0.014235
+        "check_evidence": 0.0026869999999999997,
+        "lean_reconstruction": 0.227794,
+        "parse_evidence": 0.058424000000000004,
+        "parse_lean": 0.026373999999999998,
+        "produce_evidence": 0.088675,
+        "read": 0.028343
       },
       "trust_holes": [],
       "trust_steps": []
@@ -65,7 +65,7 @@
       "baseline_outcome": "unsat",
       "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 4.2749049999999995,
+      "elapsed_ms": 5.309201000000001,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -76,23 +76,25 @@
       "lean_fragment": "DatatypeStructural",
       "lean_module_bytes": 3169,
       "phase_timings_ms": {
-        "check_evidence": 0.588519,
-        "lean_reconstruction": 1.031428,
-        "parse_evidence": 0.631919,
-        "parse_lean": 0.621654,
-        "produce_evidence": 1.362949,
-        "read": 0.015053
+        "check_evidence": 0.586771,
+        "lean_reconstruction": 1.4805249999999999,
+        "parse_evidence": 0.6010120000000001,
+        "parse_lean": 0.5994,
+        "produce_evidence": 1.3567150000000001,
+        "read": 0.016658
       },
       "trust_holes": [],
       "trust_steps": []
     }
   ],
-  "limit": null,
+  "limit": 1000,
   "logic": "QF_DT",
+  "prelude_warm_ms": 15270.155293,
+  "prelude_warmed": true,
   "slice": "qf-dt-cvc5-regress-clean-solver-vs-z3-10s.json",
   "source_revision": {
     "dirty": false,
-    "sha": "2e207eba5",
+    "sha": "496288979",
     "source": "lane-snapshot"
   },
   "summary": {

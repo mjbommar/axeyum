@@ -9,7 +9,7 @@
       "baseline_outcome": "sat",
       "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 1.144281,
+      "elapsed_ms": 1.117302,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -20,12 +20,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.011204,
+        "check_evidence": 0.0076359999999999996,
         "lean_reconstruction": null,
-        "parse_evidence": 0.166693,
+        "parse_evidence": 0.136102,
         "parse_lean": null,
-        "produce_evidence": 0.946247,
-        "read": 0.016621
+        "produce_evidence": 0.93448,
+        "read": 0.036037
       },
       "trust_holes": [],
       "trust_steps": []
@@ -37,7 +37,7 @@
       "baseline_outcome": "unsat",
       "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 2.342318,
+      "elapsed_ms": 0.593509,
       "evidence_certified": true,
       "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
@@ -48,23 +48,25 @@
       "lean_fragment": "BoolUfExhaustive",
       "lean_module_bytes": 3167,
       "phase_timings_ms": {
-        "check_evidence": 0.0029560000000000003,
-        "lean_reconstruction": 2.2105390000000003,
-        "parse_evidence": 0.041789,
-        "parse_lean": 0.023433000000000002,
-        "produce_evidence": 0.04016,
-        "read": 0.016625
+        "check_evidence": 0.00294,
+        "lean_reconstruction": 0.42160400000000003,
+        "parse_evidence": 0.046862,
+        "parse_lean": 0.020927,
+        "produce_evidence": 0.025571999999999998,
+        "read": 0.020135
       },
       "trust_holes": [],
       "trust_steps": []
     }
   ],
-  "limit": null,
+  "limit": 1000,
   "logic": "QF_UFBV",
+  "prelude_warm_ms": 14288.080480999999,
+  "prelude_warmed": true,
   "slice": "qf-ufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json",
   "source_revision": {
     "dirty": false,
-    "sha": "2e207eba5",
+    "sha": "496288979",
     "source": "lane-snapshot"
   },
   "summary": {

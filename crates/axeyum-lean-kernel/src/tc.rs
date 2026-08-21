@@ -844,9 +844,22 @@ impl Kernel {
                         cursor = reduced;
                     } else if let Some(reduced) = self.reduce_nat_succ(cursor, ctx) {
                         cursor = reduced;
-                    } else if let Some(reduced) = self.reduce_nat_binop(cursor, ctx) {
-                        cursor = reduced;
                     } else {
+                        // The **binary** `Nat` acceleration is deliberately not
+                        // here. Lean's `reduce_nat` is called from `whnf`
+                        // (`type_checker.cpp:670`) and from
+                        // `lazy_delta_reduction` (`:978`), never from
+                        // `whnf_core` — and this function *is* Lean's
+                        // `whnf_core`. See `Kernel::whnf_core` and
+                        // `Kernel::lazy_delta_step` for the two sites, and
+                        // ADR-0536 for why the placement is a decision rather
+                        // than a refactor.
+                        //
+                        // `reduce_nat_succ` stays because it is guarded by an
+                        // interned-name comparison against `Nat.succ` before it
+                        // reduces anything, so a failing probe costs a compare;
+                        // the binary rule's failing probe δ-normalises two
+                        // arguments.
                         return cursor;
                     }
                 }
@@ -1038,6 +1051,24 @@ impl Kernel {
             }
             chain.push((cursor, self.reduction_ctx_reads));
             let whnfd = self.whnf_no_unfolding(cursor, ctx);
+            // Lean's `whnf`: `reduce_nat` is tried on the `whnf_core` result,
+            // **before** δ (`type_checker.cpp:670`), so a literal `Nat`
+            // operation is evaluated instead of unfolding its recursive
+            // definition. The `has_fvars` guard is Lean's own
+            // (`type_checker.cpp:978`) but Lean applies it only at the
+            // lazy-delta site; carrying it here too is strictly more
+            // conservative than Lean and is the decision recorded in ADR-0536.
+            //
+            // The head of a two-argument `Nat` application is a closed `Const`,
+            // so `!has_fvars(whnfd)` is exactly "neither argument mentions a
+            // free variable" — the condition under which the two `whnf_core`
+            // calls inside the rule can still land on literals.
+            if !self.has_fvars(whnfd)
+                && let Some(reduced) = self.reduce_nat_binop(whnfd, ctx)
+            {
+                cursor = reduced;
+                continue;
+            }
             match self.unfold_def(whnfd) {
                 Some(next) => cursor = next,
                 None => break whnfd,
@@ -1752,6 +1783,26 @@ impl Kernel {
         loop {
             if let Some(result) = self.def_eq_nat_offset(x, y, ctx) {
                 return DeltaResult::FoundEqResult(result);
+            }
+            // Lean's `lazy_delta_reduction` (`type_checker.cpp:971-984`): after
+            // offset equality and **before** the δ step, try the literal-`Nat`
+            // acceleration on either side — but only when *neither* side
+            // mentions a free variable. That guard is verbatim Lean's
+            // `(!has_fvar(t_n) && !has_fvar(s_n))` at `:978`; Lean's `m_eager_reduce`
+            // disjunct is an elaborator-only mode this kernel does not have.
+            //
+            // Without this site the rule would be unreachable from the route
+            // that matters: `def_eq_core_uncached` normalises both sides with
+            // `whnf_no_unfolding` (Lean's `whnf_core`, which carries no `Nat`
+            // rule) and then comes straight here, so `Nat.add 2 3 =?= 5` would
+            // grind through `Nat.add`'s recursive definition — exactly the
+            // pathology ADR-0459 exists to remove.
+            if !self.has_fvars(x) && !self.has_fvars(y) {
+                if let Some(reduced) = self.reduce_nat_binop(x, ctx) {
+                    return DeltaResult::FoundEqResult(self.def_eq_core(reduced, y, ctx));
+                } else if let Some(reduced) = self.reduce_nat_binop(y, ctx) {
+                    return DeltaResult::FoundEqResult(self.def_eq_core(x, reduced, ctx));
+                }
             }
             let r1 = self.get_applied_def(x);
             let r2 = self.get_applied_def(y);

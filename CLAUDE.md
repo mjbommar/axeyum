@@ -547,6 +547,27 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   this tree. Treat dirty files you don't own as off-limits.
 - Format single files with `rustfmt --edition 2024 <file>` — never
   `cargo fmt`/`cargo fmt -p` (workspace-wide; clobbers other lanes' WIP).
+- **MUTATION TESTING IN THE SHARED WORKTREE BREAKS OTHER LANES' BUILDS, and the
+  failures it causes look like their bug.** Deleting a guard to check that
+  exactly one test dies means editing a tracked source file in place. Every
+  other lane compiles from that same file, so for the seconds or minutes your
+  mutant is on disk, their build sees it.
+
+  Measured 2026-08-20: verifying a `MAX_UNARY_TERMS` budget by `sed`-ing the
+  constant to `4096` and then `2` made a sibling lane's
+  `cargo test --features full --lib reconstruct::` report **8 failures**, all in
+  `string_length::tests`, all complaining about "the **2** budget" while the
+  committed constant was `128`. That lane lost time re-running from a snapshot
+  before working out the failures were not theirs. Nothing in the output pointed
+  at another lane; a mutated constant is indistinguishable from a wrong one.
+
+  `scripts/tests/mutation_controls.py` does not have this problem, and that is
+  most of why it exists: it `copytree`s to a scratch root and mutates the copy.
+  Register a suite there instead. If you must mutate by hand, do it in
+  `W=$(scripts/lane-snapshot.sh HEAD)`, never in the shared checkout — and see
+  the `__pycache__` trap under Gotchas, which makes hand loops report the
+  *previous* mutant's result anyway.
+
 - **THE SESSION SCRATCHPAD IS SHARED BY EVERY LANE IN THE SESSION, and a
   fixed-name file in it is a shared append point.** `/tmp/claude-1000/<project>/
   <session>/scratchpad` is per SESSION, not per lane, so concurrent lanes write

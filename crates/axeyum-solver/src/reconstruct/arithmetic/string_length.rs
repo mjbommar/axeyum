@@ -411,7 +411,7 @@ fn unary_cost(atoms: &[FarkasAtom], multipliers: &[Rational]) -> Option<i128> {
 ///
 /// # Errors
 ///
-/// As [`reconstruct_string_length`], plus [`ReconstructError::KernelRejected`]
+/// As `reconstruct_string_length`, plus [`ReconstructError::KernelRejected`]
 /// if the integer development does not build in a fresh kernel.
 pub fn reconstruct_string_length_to_lean_module(
     certificate: &StringLengthRefutationCertificate,

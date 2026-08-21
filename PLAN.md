@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-21 | (pending) | All 35 dominance audits re-run at `496288979` from a `lane-snapshot` tree; `dominant_unsat` 262 / 324 → **269 / 326**, `lean-reconstruction-gap` 15 → **10**, certified/checked 278 → 280. Four rows moved: QF_NRA cvc5 (+3, `RealProduct`×2 + `MonomialBound`), QF_S (+2, `StringLength`), QF_NRA synthetic (+2, the prelude-warm instrument fix, proved by an A/B with the warm suppressed at two revisions), QF_SEQ (a `parse-error` became `sat`, no dominance change). `gen-proof-gap-matrix`, `gen-proof-gap-shape-census`, `gen-dominance-scoreboard` and `gen-autogenesis-baseline` regenerated; the six moved markers in `PROJECT-STATE.md` and the gap analysis renumbered **with** the account of what moved them, and the ten remaining Lean-reconstruction gaps recorded one line each with the fragment's own decline reason rather than the fallback route's. |
 | 2026-08-21 | `fc191b3e5` | Full stable statement-survival atlas is preregistered before the one authorized comparison pass |
 | 2026-08-21 | `7edebb579` | Full Nat/Int atlas classifies all 9,839 v4.30/v4.32.1 union names and isolates representation-wide drift |
 | 2026-08-21 | `030d82adb` | First proof-isolated joint quotient/remainder reconstruction fails closed with a measured `propext` footprint |
@@ -148,6 +149,7 @@ now. Nothing was deleted.
 | 2026-08-20 | `0797719a7` | Rational operands no longer defeat algebraic field arithmetic; the NRA `sat` witness replays and the evidence route matches the decision route |
 | 2026-08-20 | (pending) | `Evidence::UnsatRealHandelman`: multi-term Handelman/Positivstellensatz refutations for `QF_NRA`, with case splitting over a top-level disjunction and polynomial multipliers on asserted equalities. Certifies the three corpus rows `nra_product_cert` declined by design. 15 guards mutation-checked; 14 kill at least one test, and the fifteenth (the producer's own self-check) kills nothing and is documented as such at the function rather than pretended to be a guard. Three checks that provably could not fail were deleted instead of kept. `NamedPoly` is now shared with `nra_product_cert` rather than reimplemented — two name-keyed polynomial types would be two chances to disagree about what `a*b` means. |
 | 2026-08-20 | (pending) | `Kernel::whnf_core` is memoised — the second of Lean's two reduction caches (`m_whnf` beside `m_whnf_core`), which this kernel never had. `build_creal_prelude` 33.0 s → 13.0 s, template reuse 0.41 s → 0.15 s. Pure memoisation: same key discipline as the δ-free memo, split on `has_fvars`, cleared by `push`/`pop` and by environment revision, closed half covered by the `reduction_ctx_reads` tripwire. Six guards mutation-checked, each killing at least one test and four killing exactly one; a seventh looked unreachable and a `debug_assert_eq!` proved it is not, which is what the comment on it now records instead of the argument that was wrong. Root cause recorded: `502184d3f` did not slow the kernel down, it switched the literal-`Nat` acceleration ON for the first time, because `build_nat_binop_table` gates on `Bool`'s constructor order. |
+| 2026-08-20 | (pending) | `Kernel::reduce_nat_binop` moves out of the δ-free normaliser to Lean's two call sites — `whnf_core`'s δ loop (Lean `whnf`, `type_checker.cpp:670`) and `lazy_delta_step` (Lean `lazy_delta_reduction`, `:978`) — both under Lean's `!has_fvar` guard. `build_creal_prelude` 12.99 s → 6.79 s (median of three interleaved rounds), against 8.71 s before the acceleration was ever switched on. Measured separately: Lean's placement *without* the guard is 12.12 s, so the guard is the entire win and the placement is faithfulness, not speed. Identification unmoved — kernel lib 399/0; full kernel crate 609 passed / 1 failed, the one (`real_lean_wellfounded_elaborator_divergence`) failing byte-identically on an unmodified `HEAD` and being a real-Lean *elaborator* rejection rather than ours; solver `reconstruct::` 312/0; clippy 618/618 targets 0 diagnostics; prelude-reuse differential `compared=8 failures=0`; axiom ledger `axreal=30` and all others 0. Three new tests in `tests/nat_literal_arithmetic.rs` pin both call sites and both guards on an environment where the accelerated answer and the declared body disagree; each guard mutation kills exactly one. ADR-0536. |
 | 2026-08-20 | `b5c4bb48b` | Binder-info-insensitive kernel type-shape identity with adversarial controls |
 | 2026-08-20 | `24b16642e` | r082 overlap probe classifies kernel-compatible and structurally different types |
 | 2026-08-20 | `8dbd18c82` | Required Nat theorem closure census isolates a structurally unblocked first replay slice |
@@ -791,6 +793,111 @@ from inside `whnf_no_unfolding_uncached`, which *is* Lean's `whnf_core`, with no
 Moving it changes what the kernel identifies, so it needs an ADR and differential
 evidence, not a perf commit — but the prize is measured: with the rule off and
 this memo on, the same build is **6.56 s**, better than the pre-regression 8.7 s.
+
+**`Kernel::reduce_nat_binop` now sits where Lean calls `reduce_nat` — in the δ
+loop and in lazy-delta, never in the δ-free step — under Lean's `has_fvar`
+guard. `build_creal_prelude` 12.99 s → 6.79 s, and nothing stopped admitting**
+(`DONE`, agent-nat-rule-placement, 2026-08-20).
+
+ADR-0459 described the placement as "tried after `whnf_core` and before δ". The
+code called it from inside `whnf_no_unfolding_uncached`, and that function *is*
+Lean's `whnf_core` — one layer too deep, with no `has_fvar` guard anywhere. In
+the pinned reference (`v4.30.0`, `d024af09`) `reduce_nat` is called from
+`type_checker::whnf` at `:670` and from `lazy_delta_reduction` at `:978`, the
+second under `!has_fvar(t_n) && !has_fvar(s_n)`. Both are now ported; the
+`whnf_core` site also carries the guard, which is stricter than Lean and is the
+decision ADR-0536 records.
+
+**The placement alone buys nothing — the guard is the whole prize, and that
+distinction is the finding.** Three interleaved rounds, release,
+`AXEYUM_PRELUDE_CACHE=0`, `taskset -c 0-7`, median `creal` seconds: before
+**12.99**, Lean's placement unguarded **12.12**, Lean's placement + guard
+**6.79**. 12.99 → 12.12 is inside this workload's run-to-run spread on a shared
+box. The rule fires 1.19 M times per `build_creal_prelude` and produces a literal
+575 times, and 99.98% of the probes are on a term that mentions a free variable —
+so the O(1) structural guard removes essentially all of the cost, and moving the
+call site removes essentially none of it. For scale, 8.71 s was the time *before*
+the acceleration was ever switched on.
+
+**Identification is unmoved, measured rather than argued.** `axeyum-lean-kernel`
+lib **399 passed / 0 failed**; the full kernel crate (lib + all 46 integration
+suites) **609 passed / 1 failed**, the one being
+`real_lean_wellfounded_elaborator_divergence`, which fails **byte-identically on
+an unmodified `HEAD`** in a snapshot tree and is a *Lean elaborator* rejection,
+not ours — a live separate finding, flagged for whoever owns ADR-0517;
+`axeyum-solver --features full --lib reconstruct::` **312 passed / 0 failed**;
+clippy 618/618 targets, 0 diagnostics; `check-prelude-reuse-equivalence.sh`
+`compared=8 failures=0` with live counters;
+`gen-lean-axiom-ledger.py --check` exit 0 with
+`total=30 axreal=30` and every other prelude 0. No declaration stopped admitting.
+That is a measurement over this repository's corpora, not a proof: the class the
+guard gives up is nonempty and a fixture constructs one — `Nat.mod ((fun _ => 7)
+x) 0`, whose operands reduce to literals while `has_fvars` is structurally true.
+Our corpus simply does not reach it.
+
+Four mutations, each alone: dropping either `has_fvars` guard kills exactly one
+test, dropping the `whnf_core` call site kills exactly one, and dropping the
+lazy-delta call site kills five — one of them by **overflowing the stack** on
+`2^64`-scale literals, which is ADR-0459's unbounded-successor-chain hazard
+reproducing on demand. That is which of the two sites carries the rule's reason
+for existing.
+
+Next on this axis: `reduce_nat_succ` is still in the δ-free step, a residual
+divergence from Lean's `reduce_nat`. It is one interned-name comparison per
+constant-headed reduction step, so it is not a cost today — revisit only if a
+profile says otherwise, since moving it would change identification for no
+measured gain.
+
+**All 35 dominance audits re-run at `496288979`; the fully-dominant UNSAT count
+is 269 / 326, not 262 / 324, and five of the fifteen "Lean-reconstruction gap"
+rows were stale records rather than gaps** (`DONE`, agent-audit-refresh,
+2026-08-21).
+
+Every committed audit was stamped between `2e207eba5` and `562b65f13` — all of
+them before today's reconstruction work landed — so the artifact said "gap"
+about instances the code had already closed. Four rows moved and 31 are
+identical in every summary field, which is what makes the two runs comparable.
+
+**+5 of the +7 dominant outcomes are capability; +2 are the instrument.**
+
+- Capability, QF_NRA `qf-nra-cvc5-regress-clean` 21/32 → 24/32:
+  `coeff-unsat-base` and `simple-mono` reconstruct as `RealProduct`
+  (`71f1c29a0`), `ones` as `MonomialBound` (`77c70d3e0`).
+- Capability, QF_S `qf-s-cvc5-regress-clean` 9/93 → 11/93: `r0_QF_SLIA_str004`
+  and `r0_QF_S_str005` gained a kernel-checked `StringLength` module
+  (`b495a396e`).
+- Instrument, QF_NRA `qf-nra-synthetic-graduated` 31 → 33 audited: the two
+  `d01` instances were being billed for a process-wide ~32 s `CReal` prelude
+  build inside a 10 s per-instance cap. `562b65f13` moved that build outside the
+  timer. A/B, corpus and cap fixed: `1fff66825` 31, `cfc5f8078` 31,
+  `71f1c29a0` 33, `71f1c29a0` with the warm suppressed **31**, HEAD 33, HEAD
+  with the warm suppressed **33** — the last row because `0887ab652` made the
+  prelude cheap enough to pay for inside the cap. This is the whole baseline
+  denominator movement, 324 → 326.
+
+**A directory-backed audit row silently drops an instance it fails to decide.**
+That is how those two went missing while the row reported `timeouts 0`: the
+directory branch `continue`s past an undecided instance and leaves no record, so
+numerator and denominator shrink together. Only the two synthetic rows take that
+branch; the instances-array branch records the row instead. Not fixed here.
+
+**The audit's `lean_error` is the fallback route's message, not the fragment's
+reason.** All six QF_NRA gap rows classify as `Lra`, so the facade falls through
+to the generic LRA route and records *its* complaint (`QF_LRA: nonlinear real
+multiplication`). Calling the fragment entry points directly gives the real
+answer, and the three that matter split two ways: `simple-mono-unsat` and
+`subs0-unsat-confirm` are **principled declines** — their bound / zeroing case is
+only *entailed*, by `(or …)`, and minting it would put a proposition in the Lean
+module no assertion states; closing them needs kernel case analysis, not a
+looser mint. `mult.01` is **unimplemented and scoped**: the `Exactly` bound
+refuting `M != k` needs the upper bounds and an equality transport. The three
+`real-handelman-unsat` rows have no reconstruction at all and are the largest
+single QF_NRA item left. Per-instance table is in the gap analysis.
+
+Next on this axis: the three Handelman reconstructions; the `Or.rec` case
+analysis that would close the two principled declines; and the dir-branch drop,
+which makes a synthetic row's denominator depend on what the audit could decide
+that day.
 
 **Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction still retains the twice-reconstructed, empty-footprint private joint quotient/remainder invariant and the local primitive replacement for official `Nat.sub_add_cancel`, but both public-division routes remain declined. The complete public-equation closure localized quotient/remainder assumptions to proposition-valued wrappers, while the target-side coprime convenience roots likewise carried `Quot` plus `propext`. A reusable batch footprint auditor then measured the division-free gcd route without rendering proof material: all seven official subtraction/base conveniences were assumption-bearing; their pruned closure localized the official gcd computation seam through the private equation and generated `_unary.eq_def` to exactly `WellFounded.Nat.fix_eq`. The gcd-specific termination proof and generated argument pusher are empty-footprint. One zero-retry direct proof of public `Nat.gcd_def` then failed in both constructor branches—even `Nat.gcd 0 y` is not definitionally reducible—so no export or kernel submission occurred. No public Euclidean/gcd equation, balanced-Bézout replay, cancellation replay, Fibonacci target submission, executor invocation, receipt, evaluation credit, fact transition, or ledger write has followed.
 
