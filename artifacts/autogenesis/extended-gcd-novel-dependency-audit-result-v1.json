@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-extended-gcd-novel-dependency-audit-result",
+  "state": "imported-xgcd-route-closed-clean-gcd-induction-retained-for-target-owned-reconstruction",
+  "plan": {
+    "path": "artifacts/autogenesis/extended-gcd-novel-dependency-audit-plan-v1.json",
+    "sha256": "a64cf595b6eccb6620b3e932c461ec1af7699a5efe28fcf79025e47d18b3e0b1"
+  },
+  "pack_manifest": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/609241d91-extended-gcd-novel-dependency-audit-v1/manifest.json",
+    "sha256": "a5ea914683ec2bcc626e721d0ec0b7f1daed22867c6814e8a1ba6aaf58d0439a"
+  },
+  "classifications": {
+    "empty_footprint": [
+      "Nat.gcd.induction",
+      "add_comm",
+      "add_sub_assoc",
+      "implies_congr",
+      "mul_assoc",
+      "mul_comm"
+    ],
+    "other_assumption_bearing": [
+      "forall_congr"
+    ],
+    "propext_bearing": [
+      "Nat.xgcd.eq_1",
+      "Nat.xgcdAux_fst",
+      "Int.add_mul",
+      "Int.emod_def",
+      "Int.mul_sub",
+      "Nat.xgcdAux_rec",
+      "imp_self._simp_1",
+      "implies_true",
+      "sub_add_eq_add_sub",
+      "sub_sub"
+    ]
+  },
+  "terminal_projection_equation": {
+    "name": "Nat.xgcd.eq_1",
+    "declaration_sha256": "93cb521a13715e821f420ba47f8a460b77f0b9473157e7f748c4d3acc9455dc2",
+    "axiom_footprint": [
+      "propext"
+    ],
+    "direct_theorem_dependencies": []
+  },
+  "clean_induction_interface": {
+    "name": "Nat.gcd.induction",
+    "declaration_sha256": "8c24134b5a08d78b33cdc5d653ad36c081330004aacab1d2caf3f00f86a72e40",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [
+      "Nat.mod_lt",
+      "Nat.succ_pos"
+    ]
+  },
+  "summary": {
+    "population": 17,
+    "empty_footprint": 6,
+    "other_assumption_bearing": 1,
+    "propext_bearing": 10,
+    "imported_xgcd_route_open": false,
+    "target_owned_projection_replacement_required": true,
+    "clean_nat_gcd_induction_available": true,
+    "target_owned_reconstruction_authorized": false
+  },
+  "budget": {
+    "exporter_invocations": 0,
+    "batch_importer_runs": 1,
+    "proof_bearing_stream_reads": 1,
+    "retries": 0,
+    "reconstruction_source_compilations": 0,
+    "new_theorem_submissions": 0,
+    "exact_target_submissions": 0,
+    "executor_invocations": 0
+  },
+  "authority": {
+    "proof_terms_rendered": 0,
+    "theorem_types_rendered": 0,
+    "theorem_values_rendered": 0,
+    "support_theorem_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "limitations": "The official xgcd proof route is closed, not the mathematical coefficient route. A target-owned reconstruction must separately bind and test transparent projection equations over the clean Nat.gcd.induction interface."
+}
