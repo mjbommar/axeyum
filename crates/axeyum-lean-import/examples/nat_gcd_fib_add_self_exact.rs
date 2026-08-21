@@ -241,6 +241,14 @@ fn run() -> Result<(), String> {
         return run_fib_gcd_exists_rec_minor_type_diagnostic(args);
     }
     let mut args = std::env::args_os().skip(1);
+    if args.next().as_deref()
+        == Some(std::ffi::OsStr::new(
+            "--target-native-fib-gcd-gcd-recursion-bridge-audit",
+        ))
+    {
+        return run_fib_gcd_gcd_recursion_bridge_audit(args);
+    }
+    let mut args = std::env::args_os().skip(1);
     if args.next().as_deref() == Some(std::ffi::OsStr::new("--target-native-goal-audit")) {
         return run_target_native_goal_audit(args);
     }
@@ -1766,6 +1774,78 @@ fn run_fib_gcd_exists_rec_minor_type_diagnostic(
             "actual":{"type":d.kernel.render_lean(actual_minor),"sha256":canonical_expression_sha256(d.kernel,actual_minor)?},
             "definitionally_equal":definitionally_equal,
             "execution":{"complete_diagnostics":1,"helper_theorem_submissions":1,"type_inferences":2,"target_theorem_submissions":0,"proof_values_rendered":0,"capsule_writes":0,"retries":0,"ledger_writes":0}
+        }))
+        .map_err(|error| error.to_string())?
+    );
+    Ok(())
+}
+
+fn run_fib_gcd_gcd_recursion_bridge_audit(
+    mut args: impl Iterator<Item = std::ffi::OsString>,
+) -> Result<(), String> {
+    let greatest_path = path(&mut args)?;
+    let shift_path = path(&mut args)?;
+    if args.next().is_some() {
+        return Err("usage: nat_gcd_fib_add_self_exact \
+             --target-native-fib-gcd-gcd-recursion-bridge-audit \
+             <gcd-greatest> <gcd-fib-add-self>"
+            .to_owned());
+    }
+    let greatest = import_bound(&greatest_path, GCD_GREATEST_CAPSULE, "gcd-greatest")?;
+    let shift = import_bound(&shift_path, GCD_FIB_SHIFT_CAPSULE, "gcd-fib-add-self")?;
+    let composed = compose_checked_theorem_slice(shift.kernel(), greatest.kernel(), &[TARGET])
+        .map_err(|error| format!("GCD recursion audit composition declined: {error:?}"))?;
+    verify_checked_theorem_composition(
+        shift.kernel(),
+        greatest.kernel(),
+        composed.kernel(),
+        composed.receipt(),
+    )
+    .map_err(|error| format!("GCD recursion audit composition did not replay: {error:?}"))?;
+    let mut kernel = composed.kernel().clone();
+    let expected = {
+        let mut d = Dev::new(&mut kernel)?;
+        let nat = d.nat_ty();
+        let m_fv = d.fresh();
+        let m = d.kernel.fvar(m_fv);
+        let n_fv = d.fresh();
+        let n = d.kernel.fvar(n_fv);
+        let sm = d.succ(m);
+        let left = d.gcd(sm, n);
+        let remainder = d.modulo(n, sm)?;
+        let right = d.gcd(remainder, sm);
+        let body = d.eq(left, right);
+        let body = d.pi(n_fv, nat, body);
+        d.pi(m_fv, nat, body)
+    };
+    let expected_sha256 = canonical_expression_sha256(&kernel, expected)?;
+    let mut rows = Vec::new();
+    for candidate in [
+        "Axeyum.Autogenesis.officialNatGcdSuccClosedV1",
+        "Axeyum.Autogenesis.nat_gcd_succ",
+    ] {
+        if let Some(name) = optional_name(&kernel, candidate)? {
+            let ty = theorem_type(&kernel, name)?;
+            rows.push(json!({
+                "name":candidate,
+                "present":true,
+                "type_sha256":canonical_expression_sha256(&kernel,ty)?,
+                "definitionally_equal":kernel.def_eq(expected,ty),
+                "axiom_footprint":kernel.axiom_footprint(name).map_err(|error| format!("{candidate} footprint failed: {error:?}"))?.iter().map(|name| kernel.render_name(*name)).collect::<Vec<_>>()
+            }));
+        } else {
+            rows.push(json!({"name":candidate,"present":false}));
+        }
+    }
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "schema_version":1,
+            "kind":"axeyum-autogenesis-nat-fib-gcd-gcd-recursion-bridge-audit-v1",
+            "state":"ordered-gcd-recursion-candidates-audited",
+            "expected_type_sha256":expected_sha256,
+            "candidates":rows,
+            "execution":{"complete_audits":1,"kernel_submissions":0,"proof_values_rendered":0,"capsule_writes":0,"retries":0,"ledger_writes":0}
         }))
         .map_err(|error| error.to_string())?
     );
