@@ -1350,6 +1350,7 @@ fn run_fib_gcd_induction_argument_diagnostic(
     let quotient = d.exact("Axeyum.Autogenesis.modQuotientWitnessV4")?;
     let helper = d.exact(FIB_GCD_ITERATION)?;
     let gcd_comm = d.exact(CLEAN_GCD_COMM)?;
+    let gcd_rec = d.exact("Axeyum.Autogenesis.officialNatGcdSuccClosedV1")?;
     let nat = d.nat_ty();
     let base_n_fv = d.fresh();
     let base_n = d.kernel.fvar(base_n_fv);
@@ -1360,7 +1361,7 @@ fn run_fib_gcd_induction_argument_diagnostic(
         .kernel
         .infer(base)
         .map_err(|error| format!("base proof inference failed: {error:?}"))?;
-    let step = fib_gcd_step(&mut d, quotient, helper, gcd_comm)?;
+    let step = fib_gcd_step(&mut d, quotient, helper, gcd_comm, gcd_rec)?;
     let step_type = d
         .kernel
         .infer(step)
@@ -1408,6 +1409,7 @@ fn run_fib_gcd_step_branch_diagnostic(
     let quotient = d.exact("Axeyum.Autogenesis.modQuotientWitnessV4")?;
     let helper = d.exact(FIB_GCD_ITERATION)?;
     let gcd_comm = d.exact(CLEAN_GCD_COMM)?;
+    let gcd_rec = d.exact("Axeyum.Autogenesis.officialNatGcdSuccClosedV1")?;
     let nat = d.nat_ty();
     let n_fv = d.fresh();
     let n = d.kernel.fvar(n_fv);
@@ -1420,7 +1422,7 @@ fn run_fib_gcd_step_branch_diagnostic(
     let predecessor_fv = d.fresh();
     let predecessor = d.kernel.fvar(predecessor_fv);
     let successor_branch =
-        fib_gcd_step_successor_branch(&mut d, n, predecessor, quotient, helper, gcd_comm);
+        fib_gcd_step_successor_branch(&mut d, n, predecessor, quotient, helper, gcd_comm, gcd_rec);
     let closed_successor = d.lam(predecessor_fv, nat, successor_branch);
     let closed_successor = d.lam(n_fv, nat, closed_successor);
     let successor_type = d
@@ -1471,6 +1473,7 @@ fn run_fib_gcd_witness_elim_diagnostic(
     let quotient = d.exact("Axeyum.Autogenesis.modQuotientWitnessV4")?;
     let helper = d.exact(FIB_GCD_ITERATION)?;
     let gcd_comm = d.exact(CLEAN_GCD_COMM)?;
+    let gcd_rec = d.exact("Axeyum.Autogenesis.officialNatGcdSuccClosedV1")?;
     let nat = d.nat_ty();
     let n_fv = d.fresh();
     let n = d.kernel.fvar(n_fv);
@@ -1489,7 +1492,18 @@ fn run_fib_gcd_witness_elim_diagnostic(
     let ih_fv = d.fresh();
     let ih = d.kernel.fvar(ih_fv);
     let witness = d.lemma(quotient, &[m, n, hm]);
-    let parts = build_fib_gcd_witness_elim(&mut d, m, n, remainder, ih, witness, helper, gcd_comm);
+    let left_transport = fib_gcd_left_transport(&mut d, predecessor, n, gcd_rec);
+    let parts = build_fib_gcd_witness_elim(
+        &mut d,
+        m,
+        n,
+        remainder,
+        ih,
+        witness,
+        left_transport,
+        helper,
+        gcd_comm,
+    );
     let close_outer = |d: &mut Dev<'_>, value: ExprId, with_hm: bool, with_ih: bool| {
         let value = if with_ih {
             d.lam(ih_fv, ih_ty, value)
@@ -1599,6 +1613,7 @@ fn run_fib_gcd_exists_rec_prefix_diagnostic(
     let quotient = d.exact("Axeyum.Autogenesis.modQuotientWitnessV4")?;
     let helper = d.exact(FIB_GCD_ITERATION)?;
     let gcd_comm = d.exact(CLEAN_GCD_COMM)?;
+    let gcd_rec = d.exact("Axeyum.Autogenesis.officialNatGcdSuccClosedV1")?;
     let nat = d.nat_ty();
     let n_fv = d.fresh();
     let n = d.kernel.fvar(n_fv);
@@ -1617,7 +1632,18 @@ fn run_fib_gcd_exists_rec_prefix_diagnostic(
     let ih_fv = d.fresh();
     let ih = d.kernel.fvar(ih_fv);
     let witness = d.lemma(quotient, &[m, n, hm]);
-    let parts = build_fib_gcd_witness_elim(&mut d, m, n, remainder, ih, witness, helper, gcd_comm);
+    let left_transport = fib_gcd_left_transport(&mut d, predecessor, n, gcd_rec);
+    let parts = build_fib_gcd_witness_elim(
+        &mut d,
+        m,
+        n,
+        remainder,
+        ih,
+        witness,
+        left_transport,
+        helper,
+        gcd_comm,
+    );
     let close = |d: &mut Dev<'_>, value: ExprId, with_hm: bool, with_ih: bool| {
         let value = if with_ih {
             d.lam(ih_fv, ih_ty, value)
@@ -1716,6 +1742,7 @@ fn run_fib_gcd_exists_rec_minor_type_diagnostic(
     let quotient = d.exact("Axeyum.Autogenesis.modQuotientWitnessV4")?;
     let helper = d.exact(FIB_GCD_ITERATION)?;
     let gcd_comm = d.exact(CLEAN_GCD_COMM)?;
+    let gcd_rec = d.exact("Axeyum.Autogenesis.officialNatGcdSuccClosedV1")?;
     let nat = d.nat_ty();
     let n_fv = d.fresh();
     let n = d.kernel.fvar(n_fv);
@@ -1729,7 +1756,18 @@ fn run_fib_gcd_exists_rec_minor_type_diagnostic(
     let ih_fv = d.fresh();
     let ih = d.kernel.fvar(ih_fv);
     let witness = d.lemma(quotient, &[m, n, hm]);
-    let parts = build_fib_gcd_witness_elim(&mut d, m, n, remainder, ih, witness, helper, gcd_comm);
+    let left_transport = fib_gcd_left_transport(&mut d, predecessor, n, gcd_rec);
+    let parts = build_fib_gcd_witness_elim(
+        &mut d,
+        m,
+        n,
+        remainder,
+        ih,
+        witness,
+        left_transport,
+        helper,
+        gcd_comm,
+    );
     let prefix_nat = d.apply(parts.rec, &[parts.nat]);
     let prefix_predicate = d.apply(prefix_nat, &[parts.predicate]);
     let prefix_motive = d.apply(prefix_predicate, &[parts.motive]);
@@ -2016,6 +2054,7 @@ fn build_fib_gcd(kernel: &mut Kernel) -> Result<(NameId, ExprId, ExprId), String
     let quotient = d.exact("Axeyum.Autogenesis.modQuotientWitnessV4")?;
     let helper = d.exact(FIB_GCD_ITERATION)?;
     let gcd_comm = d.exact(CLEAN_GCD_COMM)?;
+    let gcd_rec = d.exact("Axeyum.Autogenesis.officialNatGcdSuccClosedV1")?;
     let nat = d.nat_ty();
     let m_fv = d.fresh();
     let m = d.kernel.fvar(m_fv);
@@ -2029,7 +2068,7 @@ fn build_fib_gcd(kernel: &mut Kernel) -> Result<(NameId, ExprId, ExprId), String
     let fib_base_n = d.fib(base_n);
     let base = d.refl(fib_base_n);
     let base = d.lam(base_n_fv, nat, base);
-    let step = fib_gcd_step(&mut d, quotient, helper, gcd_comm)?;
+    let step = fib_gcd_step(&mut d, quotient, helper, gcd_comm, gcd_rec)?;
     let induction = d.kernel.const_(gcd_induction, vec![]);
     let proof = d.apply(induction, &[motive, m, n, base, step]);
     let proof = d.lam(n_fv, nat, proof);
@@ -2045,6 +2084,7 @@ fn fib_gcd_step(
     quotient: NameId,
     helper: NameId,
     gcd_comm: NameId,
+    gcd_rec: NameId,
 ) -> Result<ExprId, String> {
     let nat = d.nat_ty();
     let m_fv = d.fresh();
@@ -2062,7 +2102,7 @@ fn fib_gcd_step(
     let hm = d.kernel.fvar(hm_fv);
     let ih_fv = d.fresh();
     let ih = d.kernel.fvar(ih_fv);
-    let body = fib_gcd_step_by_cases(d, m, n, quotient, helper, gcd_comm);
+    let body = fib_gcd_step_by_cases(d, m, n, quotient, helper, gcd_comm, gcd_rec);
     let body = d.apply(body, &[hm, ih]);
     let body = d.lam(ih_fv, ih_ty, body);
     let body = d.lam(hm_fv, hm_ty, body);
@@ -2077,6 +2117,7 @@ fn fib_gcd_step_by_cases(
     quotient: NameId,
     helper: NameId,
     gcd_comm: NameId,
+    gcd_rec: NameId,
 ) -> ExprId {
     let branch_motive = |d: &mut Dev<'_>, candidate: ExprId| -> ExprId {
         let hm_ty = {
@@ -2094,7 +2135,7 @@ fn fib_gcd_step_by_cases(
         &branch_motive,
         &|d| fib_gcd_step_zero_branch(d, n),
         &|d, predecessor, _case_ih| {
-            fib_gcd_step_successor_branch(d, n, predecessor, quotient, helper, gcd_comm)
+            fib_gcd_step_successor_branch(d, n, predecessor, quotient, helper, gcd_comm, gcd_rec)
         },
         m,
     )
@@ -2123,6 +2164,7 @@ fn fib_gcd_step_successor_branch(
     quotient: NameId,
     helper: NameId,
     gcd_comm: NameId,
+    gcd_rec: NameId,
 ) -> ExprId {
     let sm = d.succ(predecessor);
     let hm_ty = {
@@ -2137,9 +2179,36 @@ fn fib_gcd_step_successor_branch(
     let ih_fv = d.fresh();
     let ih = d.kernel.fvar(ih_fv);
     let witness = d.lemma(quotient, &[sm, n, hm]);
-    let result = fib_gcd_witness_elim(d, sm, n, remainder, ih, witness, helper, gcd_comm);
+    let left_transport = fib_gcd_left_transport(d, predecessor, n, gcd_rec);
+    let result = fib_gcd_witness_elim(
+        d,
+        sm,
+        n,
+        remainder,
+        ih,
+        witness,
+        left_transport,
+        helper,
+        gcd_comm,
+    );
     let result = d.lam(ih_fv, ih_ty, result);
     d.lam(hm_fv, hm_ty, result)
+}
+
+fn fib_gcd_left_transport(
+    d: &mut Dev<'_>,
+    predecessor: ExprId,
+    n: ExprId,
+    gcd_rec: NameId,
+) -> ExprId {
+    let m = d.succ(predecessor);
+    let source_index = d.gcd(m, n);
+    let remainder = d.modulo(n, m).expect("Nat.mod must exist");
+    let target_index = d.gcd(remainder, m);
+    let recursion = d.lemma(gcd_rec, &[predecessor, n]);
+    d.congr(source_index, target_index, recursion, &|d, index| {
+        d.fib(index)
+    })
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -2150,10 +2219,22 @@ fn fib_gcd_witness_elim(
     remainder: ExprId,
     ih: ExprId,
     witness: ExprId,
+    left_transport: ExprId,
     helper: NameId,
     gcd_comm: NameId,
 ) -> ExprId {
-    build_fib_gcd_witness_elim(d, m, n, remainder, ih, witness, helper, gcd_comm).result
+    build_fib_gcd_witness_elim(
+        d,
+        m,
+        n,
+        remainder,
+        ih,
+        witness,
+        left_transport,
+        helper,
+        gcd_comm,
+    )
+    .result
 }
 
 struct FibGcdWitnessElimParts {
@@ -2181,6 +2262,7 @@ fn build_fib_gcd_witness_elim(
     remainder: ExprId,
     ih: ExprId,
     witness: ExprId,
+    left_transport: ExprId,
     helper: NameId,
     gcd_comm: NameId,
 ) -> FibGcdWitnessElimParts {
@@ -2213,8 +2295,17 @@ fn build_fib_gcd_witness_elim(
     let gcd_m_r = d.gcd(fib_m, fib_r);
     let comm = d.lemma(gcd_comm, &[fib_r, fib_m]);
     let gcd_indices = d.gcd(remainder, m);
-    let left = d.fib(gcd_indices);
-    let left_to_mr = d.trans(left, gcd_r_m, gcd_m_r, ih, comm);
+    let recursive_left = d.fib(gcd_indices);
+    let recursive_to_mr = d.trans(recursive_left, gcd_r_m, gcd_m_r, ih, comm);
+    let target_indices = d.gcd(m, n);
+    let target_left = d.fib(target_indices);
+    let left_to_mr = d.trans(
+        target_left,
+        recursive_left,
+        gcd_m_r,
+        left_transport,
+        recursive_to_mr,
+    );
     let helper_proof = d.lemma(helper, &[m, remainder, q]);
     let fib_sum = d.fib(sum);
     let gcd_m_sum = d.gcd(fib_m, fib_sum);
@@ -2227,7 +2318,7 @@ fn build_fib_gcd_witness_elim(
     let fib_n = d.fib(n);
     let gcd_m_n = d.gcd(fib_m, fib_n);
     let mr_to_n = d.trans(gcd_m_r, gcd_m_sum, gcd_m_n, mr_to_sum, sum_to_n);
-    let body = d.trans(left, gcd_m_r, gcd_m_n, left_to_mr, mr_to_n);
+    let body = d.trans(target_left, gcd_m_r, gcd_m_n, left_to_mr, mr_to_n);
     let minor = d.lam(equation_fv, equation_ty, body);
     let minor = d.lam(q_fv, nat, minor);
     let rec = d.kernel.const_(d.exists_rec, vec![one]);

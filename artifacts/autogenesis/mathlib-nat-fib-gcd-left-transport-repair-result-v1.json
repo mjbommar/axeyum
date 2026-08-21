@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-left-transport-repair-result-v1",
+  "state": "explicit-gcd-left-transport-closes-target-proof-type",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-nat-fib-gcd-left-transport-repair-plan-v1.json",
+    "sha256": "bee745638649e7c78d38cda3592a924fb2641097e7c29d92abea0afddc2641ff"
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+    "sha256": "15cbfa5b690a7fe9d48a07e85ff56ca6f6d5c3449fcbcd1fff530dcc63418620"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/audits/db493e9af-nat-fib-gcd-left-transport-repair-v1",
+    "index_sha256": "441cb32be6c8eb81ac82bec09036e42369d694541099038dd0787da61f8ea213",
+    "observation_sha256": "013872e2e47bb413ffcc09e44c62d1d02ffd0cff2f06c67a01f16c17c34d3ca3",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "observation": {
+    "selected_theorem": "Axeyum.Autogenesis.officialNatGcdSuccClosedV1",
+    "expected_type_sha256": "eb65db781afc310abd8a714f7f5b426c7a11daae78e737ea40a81612f23277d5",
+    "inferred_type_sha256": "3e5f26c653b19c9ececfe657f4fcbf1844540a9a851cafeaa9a4148cbfa7f34c",
+    "definitionally_equal": true,
+    "target_submitted": false,
+    "proof_values_rendered": 0
+  },
+  "execution": {
+    "complete_diagnostics": 1,
+    "helper_theorem_submissions": 1,
+    "target_proof_inferences": 1,
+    "target_theorem_submissions": 0,
+    "proof_values_rendered": 0,
+    "capsule_writes": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "repair_credit": 1,
+    "target_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "preregister a fresh two-run exact helper-plus-target construction with no further source changes",
+  "limitations": "The complete target proof type now checks definitionally, but Nat.fib_gcd has not been submitted, exported, replayed, registered, or admitted."
+}
