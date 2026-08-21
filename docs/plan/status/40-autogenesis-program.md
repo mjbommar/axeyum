@@ -40,6 +40,7 @@
 | 2026-08-21 | `4278c8f43` | V3 closes all parity and Fibonacci obligations and isolates exactly two additive-group normalization goals |
 | 2026-08-21 | `4278c8f43` | V4 freezes deterministic abelian normalization after all substantive recurrence reasoning |
 | 2026-08-21 | (pending) | V4 stops at the unavailable tactic before elaboration; V5 freezes only the narrow Abel import plus mandatory footprint audit |
+| 2026-08-21 | (pending) | V5 compiles and reproduces but fails closed with a seven-name assumption footprint; all 23 direct dependencies are frozen for one audit |
 
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
