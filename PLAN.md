@@ -130,6 +130,9 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Private-root audit exposes 37 automation dependencies and selects direct target-owned recurrence instead of solver-internal descent |
 | 2026-08-21 | `a01ee6d07` | Two open recurrence supports are frozen for qualification before they may enter the negative-index proof |
 | 2026-08-21 | (pending) | Parent-closure batch fails with zero completed audit and selects a fresh root export for dependency-free `Int.fib_natCast` |
+| 2026-08-21 | `8107bfa44` | Dedicated root audit selects dependency-free `Int.fib_natCast` and freezes one direct definitional construction |
+| 2026-08-21 | `89d97d476` | Corrected build-library-root execution is frozen after the first export-path failure without changing the proof |
+| 2026-08-21 | (pending) | Direct `rfl` theorem reproduces twice but retains nine assumptions, localizing the obstruction to official `Int.fib` itself |
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
 | 2026-08-21 | `a9610560c` | The durable construction checker binds the separately stored target goal identity without weakening capsule checks |
@@ -1152,9 +1155,9 @@ declines any trigger outside an application tree over declared uninterpreted
 functions, which rules out arithmetic subterms — the first real workload with
 `(f (+ x 1))` as a pattern will want that.
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd` and `Nat.fib_dvd` remain durably proved. The `Int.fib_neg` descent rejected its automation expansion and selected direct recurrence, then caught two proposed premises (`Int.fib_natCast`, `Int.fib_add_two`) still open in the ledger. Their first two-root audit failed closed because the parent export did not yield a complete batch; no retry or theorem credit occurred.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd` and `Nat.fib_dvd` remain durably proved. The integer Fibonacci descent selected dependency-free `Int.fib_natCast`; its direct `rfl` proof compiles, exports, and reproduces twice byte-identically with zero theorem dependencies, but still carries the full nine-name footprint. Contamination is therefore below proof search, in the official `Int.fib` definition or representation.
 
-**Next:** preregister a fresh root-selected export and footprint audit for dependency-free `Int.fib_natCast`, then construct/admit it before using it to close `Int.fib_add_two` and the negative-index recurrence.
+**Next:** preregister a non-rendering declaration/definition closure audit of official `Int.fib`, then reconstruct the smallest target-owned clean integer Fibonacci representation before retrying `Int.fib_natCast`.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
