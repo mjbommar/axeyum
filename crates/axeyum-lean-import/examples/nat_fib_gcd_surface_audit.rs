@@ -6,10 +6,10 @@ use std::io::Cursor;
 use std::path::{Path, PathBuf};
 
 use axeyum_lean_import::{
-    ImportLimits, canonical_declaration_sha256, compose_checked_theorem_slice, import_ndjson,
-    verify_checked_theorem_composition,
+    ImportLimits, canonical_declaration_sha256, canonical_expression_sha256,
+    compose_checked_theorem_slice, import_ndjson, verify_checked_theorem_composition,
 };
-use axeyum_lean_kernel::{Declaration, Kernel, NameId};
+use axeyum_lean_kernel::{Declaration, ExprNode, Kernel, NameId};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
@@ -32,6 +32,13 @@ const CANDIDATES: [&str; 12] = [
     "congrArg",
 ];
 const USAGE: &str = "usage: nat_fib_gcd_surface_audit <gcd-greatest.ndjson> <gcd-fib-shift.ndjson>";
+const CONTRACT_USAGE: &str = "usage: nat_fib_gcd_surface_audit --helper-contracts <gcd-greatest.ndjson> <gcd-fib-shift.ndjson>";
+const CONTRACTS: [&str; 4] = [
+    "Nat.gcd.induction",
+    "Axeyum.Autogenesis.modQuotientWitnessV4",
+    "Nat.gcd_greatest",
+    "Nat.gcd_fib_add_self",
+];
 
 fn main() {
     if let Err(error) = run() {
@@ -42,10 +49,27 @@ fn main() {
 
 fn run() -> Result<(), String> {
     let mut arguments = std::env::args_os().skip(1);
-    let greatest_path = arguments.next().map(PathBuf::from).ok_or(USAGE)?;
-    let shift_path = arguments.next().map(PathBuf::from).ok_or(USAGE)?;
+    let first = arguments.next().ok_or(USAGE)?;
+    let helper_contracts = first == "--helper-contracts";
+    let greatest_path = if helper_contracts {
+        arguments.next().map(PathBuf::from).ok_or(CONTRACT_USAGE)?
+    } else {
+        PathBuf::from(first)
+    };
+    let shift_path = arguments
+        .next()
+        .map(PathBuf::from)
+        .ok_or(if helper_contracts {
+            CONTRACT_USAGE
+        } else {
+            USAGE
+        })?;
     if arguments.next().is_some() {
-        return Err(USAGE.to_owned());
+        return Err(if helper_contracts {
+            CONTRACT_USAGE.to_owned()
+        } else {
+            USAGE.to_owned()
+        });
     }
     let greatest = import_bound(&greatest_path, "gcd-greatest", GREATEST_SHA256)?;
     let shift = import_bound(&shift_path, "gcd-fib-shift", SHIFT_SHA256)?;
@@ -62,6 +86,10 @@ fn run() -> Result<(), String> {
     .map_err(|error| format!("root composition did not replay: {error:?}"))?;
     require_empty_root(composed.kernel(), GREATEST)?;
     require_empty_root(composed.kernel(), SHIFT)?;
+
+    if helper_contracts {
+        return output_helper_contracts(composed.kernel(), &composed.receipt().receipt_sha256);
+    }
 
     let mut present = Vec::new();
     let mut missing = Vec::new();
@@ -104,6 +132,72 @@ fn run() -> Result<(), String> {
         .map_err(|error| error.to_string())?
     );
     Ok(())
+}
+
+fn output_helper_contracts(kernel: &Kernel, receipt_sha256: &str) -> Result<(), String> {
+    let contracts = CONTRACTS
+        .into_iter()
+        .map(|expected| theorem_contract(kernel, expected))
+        .collect::<Result<Vec<_>, _>>()?;
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "schema_version": 1,
+            "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-helper-contract-result-v1",
+            "state": "four-helper-types-rendered-with-zero-proof-values-or-submissions",
+            "composition_receipt_sha256": receipt_sha256,
+            "contracts": contracts,
+            "execution": {
+                "driver_builds": 1,
+                "complete_audits": 1,
+                "capsule_reads": 2,
+                "fresh_imports": 2,
+                "rendered_theorem_types": 4,
+                "rendered_theorem_values": 0,
+                "theorem_submissions": 0,
+                "retries": 0,
+                "ledger_writes": 0
+            }
+        }))
+        .map_err(|error| error.to_string())?
+    );
+    Ok(())
+}
+
+fn theorem_contract(kernel: &Kernel, expected: &str) -> Result<Value, String> {
+    let name = find_name(kernel, expected)?;
+    let declaration = kernel
+        .environment()
+        .get(name)
+        .ok_or_else(|| format!("declaration disappeared: {expected}"))?;
+    let Declaration::Theorem { ty, .. } = declaration else {
+        return Err(format!("helper contract is not a theorem: {expected}"));
+    };
+    let mut cursor = *ty;
+    let mut binder_infos = Vec::new();
+    while let ExprNode::Pi(_, _, body, info) = kernel.expr_node(cursor) {
+        binder_infos.push(format!("{info:?}"));
+        cursor = *body;
+    }
+    let mut footprint = kernel
+        .axiom_footprint(name)
+        .into_iter()
+        .map(|dependency| kernel.display_name(dependency).to_string())
+        .collect::<Vec<_>>();
+    footprint.sort();
+    if !footprint.is_empty() {
+        return Err(format!("helper contract is assumption-bearing: {expected}"));
+    }
+    Ok(json!({
+        "name": expected,
+        "type": kernel.render_lean(*ty),
+        "type_sha256": canonical_expression_sha256(kernel, *ty)?,
+        "declaration_sha256": canonical_declaration_sha256(kernel, name)?,
+        "top_level_binders": binder_infos.len(),
+        "binder_info": binder_infos,
+        "axiom_footprint": footprint,
+        "proof_value_rendered": false
+    }))
 }
 
 fn import_bound(

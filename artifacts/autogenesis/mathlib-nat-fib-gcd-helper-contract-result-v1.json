@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-helper-contract-result-v1",
+  "state": "exact-euclidean-contracts-bound-zero-proof-values-or-submissions",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-nat-fib-gcd-helper-contract-plan-v1.json",
+    "sha256": "4099314e1dcec05e06c9c11b243729a8ba4d4e4d00bf70fa4c8ae6145d970a84"
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/nat_fib_gcd_surface_audit.rs",
+    "sha256": "1af696d732e93a1b518de21b40678b5e9ed2e6b93a17f58f7407e5d7e0877e9b"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/audits/665f0374a-nat-fib-gcd-helper-contract-v1",
+    "index_sha256": "1fdb05ee207cbe4c6358e8c76aff68ccf908bfa649f2959b43b3988f5d415733",
+    "observation_sha256": "e46bff382280d7b6f4cc86fad5efb0820349bb501542310ed3a6af818d1d3129"
+  },
+  "contracts": [
+    {
+      "name": "Nat.gcd.induction",
+      "type_sha256": "6f94cd9eecb8ce3bb0cf838fef7b2f0c2ffee479fb65e87320d32ba6b6f9bac4",
+      "declaration_sha256": "8c24134b5a08d78b33cdc5d653ad36c081330004aacab1d2caf3f00f86a72e40",
+      "top_level_binders": 5,
+      "binder_info": ["Implicit", "Default", "Default", "Default", "Default"]
+    },
+    {
+      "name": "Axeyum.Autogenesis.modQuotientWitnessV4",
+      "type_sha256": "0bbdf910d2e1edf5de77765eec2ea7a32f2b33a6da4ff9a3e2952edc1c244404",
+      "declaration_sha256": "6da60d36575a3aebdfd99ed4f01a5532ef925487e50d48a5d4f4210cf65e0a55",
+      "top_level_binders": 3,
+      "binder_info": ["Default", "Default", "Default"]
+    },
+    {
+      "name": "Nat.gcd_greatest",
+      "type_sha256": "0977f9584b62cf5c5140f32ea2d4bf726c9c42aa3cef9f98afdea5d13810af90",
+      "declaration_sha256": "b54b6ab061abba5ea42ca3b0451cd240071b4d535e77bed003d54c78115b03bc",
+      "top_level_binders": 6,
+      "binder_info": ["Implicit", "Implicit", "Implicit", "Default", "Default", "Default"]
+    },
+    {
+      "name": "Nat.gcd_fib_add_self",
+      "type_sha256": "0ac365e0654218862f44cc19391e699b85e495ab1b9608fc3eca79585c0e0475",
+      "declaration_sha256": "2d61bf57db3bc182300f1cc1317269eb68e94b5a05a1f0ed4e501f3049303e37",
+      "top_level_binders": 2,
+      "binder_info": ["Default", "Default"]
+    }
+  ],
+  "derived_route": {
+    "induction_step": "Nat.gcd.induction supplies 0 < m and the hypothesis at (n % m, m)",
+    "quotient_equation": "modQuotientWitnessV4 supplies q with m*q + n%m = n",
+    "right_side_transport": "iterate gcd_fib_add_self q times from n%m to m*q + n%m",
+    "left_side_transport": "case-split positive m to expose the official gcd recursion definitionally",
+    "base": "the m = 0 branch reduces definitionally after the same exact target motive is instantiated"
+  },
+  "execution": {
+    "complete_audits": 1,
+    "rendered_theorem_types": 4,
+    "rendered_theorem_values": 0,
+    "theorem_submissions": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "preregister two target-owned submissions per execution: quotient iteration first and exact Nat.fib_gcd second, with two deterministic executions and zero retries",
+  "limitations": "The four theorem types, not their proof values, were rendered. This result grants no helper, target, evaluation, or ledger credit."
+}
