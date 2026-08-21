@@ -25,6 +25,8 @@ use sha2::{Digest, Sha256};
 const R091_SHA256: &str = "fc1117679c743009e8548a25d1f73f71f6cd42555ea77b3efce07844673670b2";
 const GOAL_DEFINITION: &str = "Axeyum.Autogenesis.Coverage.r091";
 const GOAL_SHA256: &str = "297c9f4af4d63eff354223f9548ab1d4dd3d7e52aa701e88802d58b7929a1451";
+const TARGET_NATIVE_GOAL_SHA256: &str =
+    "0ac365e0654218862f44cc19391e699b85e495ab1b9608fc3eca79585c0e0475";
 const TARGET: &str = "Nat.gcd_fib_add_self";
 const CLEAN_ANTISYMM: &str = "Axeyum.Autogenesis.dvdAntisymmOfficialV1";
 const CLEAN_ANTISYMM_CAPSULE: &str =
@@ -830,8 +832,24 @@ fn run_target_native_exact_capsule(
         _ => return Err("r091 goal carrier is not a definition".to_owned()),
     };
     let goal_sha256 = canonical_expression_sha256(&kernel, goal)?;
-    if goal_sha256 != GOAL_SHA256 {
+    if goal_sha256 != TARGET_NATIVE_GOAL_SHA256 {
         return Err(format!("r091 goal identity changed: {goal_sha256}"));
+    }
+    let constructed_goal = {
+        let mut d = Dev::new(&mut kernel)?;
+        let nat = d.nat_ty();
+        let m_fv = d.fresh();
+        let m = d.kernel.fvar(m_fv);
+        let n_fv = d.fresh();
+        let n = d.kernel.fvar(n_fv);
+        let body = statement(&mut d, m, n);
+        let body = d.pi(n_fv, nat, body);
+        d.pi(m_fv, nat, body)
+    };
+    if !kernel.def_eq(goal, constructed_goal) {
+        return Err(
+            "r091 goal is not definitionally equal to the exact constructed statement".to_owned(),
+        );
     }
     let comm = declare_clean_gcd_comm(&mut kernel, true)?;
     require_empty(&kernel, comm, CLEAN_GCD_COMM)?;
