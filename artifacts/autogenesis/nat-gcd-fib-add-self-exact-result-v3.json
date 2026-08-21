@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-exact-result-v3",
+  "state": "first-complete-invocation-declined-at-cross-capsule-mul-zero-shape-second-skipped",
+  "implementation_commit": "ce1ea969e868eed73a4e53ba38bd669cebee42fb",
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/ce1ea969e-nat-gcd-fib-add-self-exact-v3",
+    "manifest_sha256": "e4f9e0e3ffec308b415a5099305ba81b816554b30bf35d4f001674975340582d",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "decline": {
+    "stage": "second-capsule-composition-before-local-or-target-submission",
+    "accepted_first_root": "Axeyum.Autogenesis.dvdAntisymmCleanV5",
+    "rejected_second_root": "Axeyum.Autogenesis.officialCoprimeFactorDivisibilityCancellationV1",
+    "class": "TypeShapeMismatch",
+    "name": "Nat.mul_zero",
+    "source_sha256": "7e4638f0b09fe9e8dbddcafc7fd46aefb12b4206f4a013ab9bf8dd3e0ffc3ece",
+    "target_sha256": "239b5fef2241e74e0e8bf9f1610c177ea3f26a86286a758ca4f9c8d810a67788",
+    "partial_kernel_published": false
+  },
+  "execution": {
+    "binary_builds": 1,
+    "complete_invocations": 1,
+    "input_stream_reads": 3,
+    "successful_capsule_compositions": 1,
+    "rejected_capsule_compositions": 1,
+    "local_gcd_comm_submissions": 0,
+    "exact_target_submissions": 0,
+    "retries": 0,
+    "second_complete_invocation_skipped": true
+  },
+  "authority": {"target_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_boundary": "Preregister an official-r091 clean-order reconstruction whose transitive multiplication leaves share the cancellation capsule representation.",
+  "limitations": "The result establishes a joint-composition incompatibility only. It does not reject the mathematical proof route or credit local gcd commutativity, the exact target, a fact transition, evaluation, or ledger state."
+}

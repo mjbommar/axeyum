@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-portable-support-capsules-result",
+  "state": "four-portable-support-capsules-accepted-empty-footprint-and-sealed",
+  "plan": {
+    "path": "artifacts/autogenesis/nat-gcd-fib-add-self-portable-support-capsules-plan-v1.json",
+    "sha256": "f22c37554374c2e6caa8ebf2cf084be2fd355b78b7d274687f78c948da31ef4a"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/9b21389e9-nat-gcd-fib-add-self-portable-support-capsules-v1",
+    "manifest_sha256": "92fcd7e46f2204569728ef89ecf1c9c41a78c606d48d16fcdd5e9c301fe65926",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "capsules": {
+    "clean_order": {
+      "root": "Axeyum.Autogenesis.dvdAntisymmCleanV5",
+      "declaration_sha256": "22be18951efa7c858663be0bdc682b469d6ae7dd4099ff35ba8f24f67c8a2570",
+      "capsule_sha256": "d3b881ce30488b188bb4f557afc125418fdc21f5707b233a00934c9c97faa434",
+      "bytes": 158285
+    },
+    "official_cancellation": {
+      "root": "Axeyum.Autogenesis.officialCoprimeFactorDivisibilityCancellationV1",
+      "declaration_sha256": "4696bda19c2353f795c95d700cc63c456d0fe750bfdf519c4646c76a1efdb147",
+      "capsule_sha256": "6f9a3983ba4b0e7b2c872615d796ceb5414d3bd2cf51843ecb496b3ba83a52b0",
+      "bytes": 888104
+    },
+    "fibonacci_addition": {
+      "root": "Axeyum.Autogenesis.NatFibSuccessorAddition",
+      "declaration_sha256": "049535cf7f432f14a0c93b4c7e9ecdcbd21feca4274b87be4a93e8838d6426ca",
+      "capsule_sha256": "f46e3dd4053c930984b3232ff98320021daa2fcdb3451e84bfbf011945a18621",
+      "bytes": 123353
+    },
+    "fibonacci_coprimality": {
+      "root": "Nat.fib_coprime_fib_succ",
+      "declaration_sha256": "7fd9a1e811b93f8021ded1e34de5a816a0e9b23940e15cfcd5cbe81309daede9",
+      "capsule_sha256": "9106a3442d75a5fdaf51e35436e6fdbea78714d743e666bec27ffd9641160b11",
+      "bytes": 734395
+    }
+  },
+  "verification": {
+    "fresh_exports": 8,
+    "raw_fresh_import_invocations": 16,
+    "budgeted_distinct_capsule_imports": 8,
+    "all_repeated_exports_byte_identical": true,
+    "all_repeated_run_evidence_byte_identical": true,
+    "all_declaration_identities_match": true,
+    "all_axiom_footprints": [],
+    "stderr_bytes": 0,
+    "rendered_material": {
+      "proof_terms": 0,
+      "theorem_types": 0,
+      "theorem_values": 0
+    }
+  },
+  "budget_accounting": {
+    "new_driver_binaries": 3,
+    "existing_driver_extended": 1,
+    "complete_reconstruction_invocations": 8,
+    "root_selected_exports": 8,
+    "distinct_capsule_import_checks": 8,
+    "raw_import_invocations": 16,
+    "exact_target_submissions": 0,
+    "retries": 0,
+    "interpretation": "Each of the eight output files was imported twice. Because each repeated export pair is byte-identical, this is sixteen raw imports and eight budgeted distinct-capsule checks; the stronger raw count is retained explicitly. Three new export binaries were introduced and the pre-existing exact-target driver was extended for the fourth root."
+  },
+  "authority": {
+    "capsule_credit": 0,
+    "exact_target_submissions": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Preregister and execute exact Nat.gcd_fib_add_self construction using only r091 and these four sealed capsules.",
+  "limitations": "This accepts portable support evidence only. It does not establish Nat.gcd_fib_add_self, issue a target receipt, change a fact, add evaluation credit, or write the ledger."
+}

@@ -234,6 +234,29 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | V5 clean zero-divisibility, divisor-bound, and divisibility-antisymmetry supports transport twice into r091 with byte-identical empty-footprint evidence |
 | 2026-08-21 | (pending) | Four portable root-selected support capsules are frozen before code or export so the exact target no longer depends on one monolithic reconstruction process |
 | 2026-08-21 | (pending) | Clean-order driver adds an explicit fail-if-present capsule path and two fresh independent imports before any proof-bearing stream write |
+| 2026-08-21 | (pending) | Clean divisibility antisymmetry exports twice as the same 158,285-byte root-selected capsule and independently reimports four times with unchanged empty-footprint evidence |
+| 2026-08-21 | (pending) | Official cancellation driver adds the same explicit capsule path, root selection, and two-import evidence check before writing |
+| 2026-08-21 | (pending) | Official cancellation exports twice as the same 888,104-byte root-selected capsule and independently reimports four times with unchanged empty-footprint evidence |
+| 2026-08-21 | (pending) | Dedicated Fibonacci-addition capsule driver reconstructs from the pinned recurrence and requires two independent imports before its fail-if-present write |
+| 2026-08-21 | `975bf5b47` | Exact Fibonacci coprimality gains a root-selected fail-if-present capsule boundary with two independent imports before write |
+| 2026-08-21 | (pending) | Four portable support roots export twice byte-identically, reimport sixteen raw times, and seal with unchanged identities and empty footprints |
+| 2026-08-21 | (pending) | Exact Fibonacci GCD-shift construction freezes induction, clean commutativity, mutual divisibility, and two zero-retry submissions before code |
+| 2026-08-21 | (pending) | First exact-target source build stops before execution at bounded naming and borrow diagnostics with zero stream reads or submissions |
+| 2026-08-21 | (pending) | V2 freezes only compiler-level corrections while preserving the exact proof route and zero-retry trusted-gate budget |
+| 2026-08-21 | (pending) | V2 clears all original diagnostics but stops before execution at one 103-line Clippy threshold with zero stream reads |
+| 2026-08-21 | (pending) | V3 freezes exactly one scoped line-count allowance with the proof body and target authority unchanged |
+| 2026-08-21 | (pending) | V3 exact-target driver compiles Clippy-clean over r091 plus four sealed roots without reading proof-bearing inputs |
+| 2026-08-21 | (pending) | First exact-target run declines before target submission at incompatible native and official `Nat.mul_zero` shapes; second run is skipped |
+| 2026-08-21 | (pending) | Official-r091 clean order freezes three target-owned proofs and requires cancellation compatibility before capsule export |
+| 2026-08-21 | (pending) | Official-r091 clean-order mode compiles Clippy-clean with cancellation compatibility checked before any capsule write |
+| 2026-08-21 | (pending) | First official-r091 support run stops before submission because pristine r091 lacks named `Nat.mul`; second run is skipped |
+| 2026-08-21 | (pending) | V2 freezes official cancellation composition before all clean-order handle resolution and proof construction |
+| 2026-08-21 | (pending) | V2 composes official cancellation before resolving clean-order proof handles and passes focused Clippy without stream access |
+| 2026-08-21 | (pending) | Cancellation-first V2 stops before support submission at missing recursive `Acc`; second run is skipped |
+| 2026-08-21 | (pending) | V3 freezes same-capsule `Nat.mod_lt` bootstrap before full cancellation composition and clean-order construction |
+| 2026-08-21 | (pending) | V3 composes and replays same-capsule `Nat.mod_lt` before cancellation and passes focused Clippy without stream access |
+| 2026-08-21 | (pending) | V3 bootstrap returns `NoAdditions`, confirming r091 already has `Nat.mod_lt`; second run is skipped before support submission |
+| 2026-08-21 | (pending) | V4 freezes exact checked reuse of existing r091 `Nat.mod_lt` as cancellation's sole target theorem leaf |
 | 2026-08-20 | `9eb81822f` | Isolate persistent pre-push worktree metadata from the caller lane and register the two-sided control |
 | 2026-08-20 | `24b16642e` | Confirm the repaired hook against a live Rust push with unchanged caller state and a clean exact-SHA gate checkout |
 | 2026-08-20 | (pending) | The string family's first re-derivable UNSAT artifact beyond word-clash/regex-emptiness: `Evidence::UnsatStringLength` abstracts every string term to an integer length keyed on its SOURCE NAME, names the five theory lemmas the argument uses, and closes with one nonnegative combination per case-split branch. The checker is two stages — bind each lemma to the conjunct that licenses it, then re-derive the arithmetic — and is arena-free, because a string script's flat view is the bounded packed-BV encoding rather than the query. 23 guards mutation-checked; two killed nothing and were fixed rather than kept (one was dead code the command allow-list already covered, one had no multi-`check-sat` fixture). Also: `diagnose_evidence` reported the ARENA front door for string files, i.e. a query nobody solves — it now reports the text front door too, and agreed with the dominance audit for the first time. |
@@ -1047,9 +1070,9 @@ budget guard to a real remaining-time attempt (this alone would move
 then `Fpa2Bv` certification, which is what both FP rows actually need for
 dominance.
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction now includes unconditional official balanced Bézout, official coprime-factor divisibility cancellation, and a clean divisibility-antisymmetry closure. The clean-order driver now has an explicit root-selected capsule boundary that reimports the generated stream twice and requires unchanged theorem evidence before writing it; focused gates are green without exporting.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. The exact-target decline remains sealed with zero credit. The V3 `Nat.mod_lt` bootstrap returned `NoAdditions`, proving r091 already carries the theorem; run 2 was skipped before support submission. V4 now freezes exact declaration and kernel-type-shape verification, empty-footprint checking, and use of existing r091 `Nat.mod_lt` as the sole explicit target theorem leaf during official cancellation composition.
 
-**Next:** pass the full Rust push gate for the clean-order capsule boundary, execute two fresh exports into the sealed NAS pack, and require byte identity plus two fresh imports per export before the first of four capsule credits.
+**Next:** implement only the V4 checked `Nat.mod_lt` target-leaf reuse, pass the full gate, then execute twice. Stop before support submission on compatibility or composition failure; do not submit the exact GCD-shift target.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement

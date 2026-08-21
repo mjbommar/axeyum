@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-r091-clean-dvd-antisymm-plan",
+  "state": "preregistered-official-representation-clean-order-reconstruction-after-cross-capsule-decline",
+  "predecessor": {"path": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-result-v3.json", "sha256": "cabfd8dcf458bcf0c0dd23410698b996b2c113c9a474edfc45ad3cb7a4377e81"},
+  "inputs": {
+    "r091": {"path": "/nas3/data/axeyum/autogenesis/coverage/26fcc2c2f-mathlib-v4.30.0-reflexivity-train-development-v1/streams/r091.ndjson", "sha256": "fc1117679c743009e8548a25d1f73f71f6cd42555ea77b3efce07844673670b2"},
+    "official_cancellation_capsule": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/9b21389e9-nat-gcd-fib-add-self-portable-support-capsules-v1/official-cancellation-1.ndjson", "sha256": "6f9a3983ba4b0e7b2c872615d796ceb5414d3bd2cf51843ecb496b3ba83a52b0", "root": "Axeyum.Autogenesis.officialCoprimeFactorDivisibilityCancellationV1"}
+  },
+  "construction": {
+    "kernel_base": "fresh r091 import with no native-prelude composition",
+    "theorems": [
+      {"name": "Axeyum.Autogenesis.eqZeroOfZeroDvdOfficialV1", "contract": "0 divides n implies n = 0", "route": "eliminate the official Nat.dvd existential witness and close with official Nat.zero_mul"},
+      {"name": "Axeyum.Autogenesis.leOfDvdOfficialV1", "contract": "a divides b and 0 < b implies a <= b", "route": "repeat the accepted primitive induction proof using only names resolved inside the r091 kernel"},
+      {"name": "Axeyum.Autogenesis.dvdAntisymmOfficialV1", "contract": "a divides b and b divides a implies a = b", "route": "repeat the accepted nested induction proof using the two official-representation target-owned leaves"}
+    ],
+    "compatibility_gate": "after all three empty-footprint submissions, compose the official cancellation capsule into that same kernel and require checked replay without TypeShapeMismatch",
+    "export": "root-select only dvdAntisymmOfficialV1 after the compatibility gate, import the bytes twice, and write only to an explicit fail-if-present path"
+  },
+  "forbidden": ["compose the earlier native-shaped clean-order capsule", "reuse assumption-bearing Nat.le_of_dvd", "reuse assumption-bearing Nat.dvd_antisymm", "weaken type-shape identity", "submit Nat.gcd_fib_add_self"],
+  "acceptance": {"fresh_complete_invocations": 2, "outputs_byte_identical": true, "each_output_imports": 2, "all_three_axiom_footprints": [], "official_cancellation_composes_and_replays": true, "exact_target_submissions": 0, "proof_material_rendered": false},
+  "budget": {"max_driver_builds": 1, "max_complete_invocations": 2, "max_support_submissions": 6, "max_capsule_compositions": 2, "max_root_exports": 2, "max_fresh_imports": 4, "max_exact_target_submissions": 0, "max_retries": 0},
+  "authority": {"support_credit_before_acceptance": 0, "target_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_on_accept": "Replace only the clean-order capsule input in the frozen exact-target driver and preregister a fresh two-run target attempt.",
+  "limitations": "This may establish one jointly compatible clean-order capsule only. It grants no gcd-shift theorem, fact, evaluation, or ledger credit."
+}
