@@ -15,6 +15,8 @@
 //! it applies to small instances (mirroring the exhaustive scenario self-checks),
 //! complementing the scalable DRAT proof that certifies only the clausal layer.
 
+use std::collections::{BTreeMap, BTreeSet};
+
 use axeyum_ir::{Assignment, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
 
 use crate::backend::SolverError;
@@ -115,6 +117,54 @@ fn certify_bv_by_enumeration(
     Ok(CertifyOutcome::CertifiedUnsat { cases })
 }
 
+/// Per-call memo tables for [`collect_enumerable_symbols_rec`].
+///
+/// # Why a memo is needed (and why it is sound)
+///
+/// The arena is a **shared DAG**, not a tree: `axeyum-ir` interns terms, so one
+/// node is reached along many paths. A plain structural recursion therefore
+/// walks the *tree unfolding*, whose size is exponential in the sharing depth.
+/// Measured on `QF_BVFP/.../solver__fp__Float-no-simp3-main.smt2` (a ~3,000-node
+/// arena): 1.28e10 calls in 90 s and still climbing, with flat RSS and a flat
+/// 136 kB stack — the signature of re-walking shared subtrees, not of deep
+/// recursion or allocation. It is the third instance of this same bug (after
+/// `contains_quantifier` and `lower_derived_bv`, both fixed in `e14a13b5d`).
+///
+/// The two things this walk computes have *different* purity, so they get
+/// different tables:
+///
+/// - **Free symbols** are scope-dependent: `bound` records the quantifier
+///   variables in scope, and a `Symbol` node is skipped exactly when it is
+///   bound. The same term under two different scopes can therefore contribute
+///   different symbols, so `visited` is keyed by `(term, scope)` — the whole
+///   bound stack, not just the term. That makes a memo hit mean "this exact
+///   `(term, scope)` pair already contributed everything it can", which is
+///   sound because the walk is deterministic and its only symbol effect is
+///   pushing onto `symbols`, which the caller sorts and dedups anyway.
+/// - **Quantified bits** are scope-*independent*: they depend only on which
+///   `Forall`/`Exists` nodes the subterm contains and on their variables'
+///   sorts. So `quantified_bits` is keyed by term alone.
+///
+/// Crucially, `quantified_bits` must stay a sum over the **tree unfolding**,
+/// not over distinct DAG nodes: it is the budget proxy for how much work the
+/// evaluator will do, and the evaluator re-enumerates a shared quantifier once
+/// per occurrence. Counting distinct nodes would undercount an exponentially
+/// shared nest and let a query that cannot be enumerated past the budget check.
+/// So the recursion *returns* its subtree's tree-sum and each caller adds it
+/// once per argument occurrence; the memo only avoids recomputing that number,
+/// it never collapses two occurrences into one.
+///
+/// Both tables are created per call and dropped with it, over a `&TermArena`
+/// that cannot change while they live — so a cached entry can never go stale
+/// against later arena growth.
+#[derive(Default)]
+struct EnumerableSymbolMemo {
+    /// `(term, bound-scope)` pairs whose free symbols are already in `symbols`.
+    visited: BTreeSet<(TermId, Vec<SymbolId>)>,
+    /// `term` → quantified bits in its **tree unfolding**.
+    quantified_bits: BTreeMap<TermId, u32>,
+}
+
 /// Collects the `(symbol, sort)` pairs to enumerate, rejecting anything not
 /// finitely enumerable from the symbol domain alone.
 fn collect_enumerable_symbols(
@@ -125,15 +175,19 @@ fn collect_enumerable_symbols(
     let mut symbols = Vec::new();
     let mut quantified_bits = 0u32;
     let mut bound = Vec::new();
+    let mut memo = EnumerableSymbolMemo::default();
     for &assertion in assertions {
-        collect_enumerable_symbols_rec(
+        // Per assertion, not per distinct node: two assertions sharing a
+        // quantified subterm each pay for it, exactly as the unmemoized walk did.
+        let bits = collect_enumerable_symbols_rec(
             arena,
             assertion,
             &mut bound,
             &mut symbols,
-            &mut quantified_bits,
             allow_quantifiers,
+            &mut memo,
         )?;
+        quantified_bits = add_bits(quantified_bits, bits)?;
     }
     // Deduplicate (a symbol may be reached via several terms) and order
     // deterministically by symbol id.
@@ -142,18 +196,38 @@ fn collect_enumerable_symbols(
     Ok((symbols, quantified_bits))
 }
 
+/// Adds two quantified-domain widths, reporting overflow as the same
+/// `Unsupported` decline the unmemoized walk produced.
+fn add_bits(left: u32, right: u32) -> Result<u32, SolverError> {
+    left.checked_add(right).ok_or_else(|| {
+        SolverError::Unsupported(
+            "enumeration certificate: quantified domain width overflow".to_owned(),
+        )
+    })
+}
+
+/// Walks `term`, pushing its free symbols onto `symbols`, and returns the
+/// quantified-domain width of its **tree unfolding** (see
+/// [`EnumerableSymbolMemo`] for why that is a tree sum and the memo is sound).
 fn collect_enumerable_symbols_rec(
     arena: &TermArena,
     term: TermId,
     bound: &mut Vec<SymbolId>,
     symbols: &mut Vec<(SymbolId, Sort)>,
-    quantified_bits: &mut u32,
     allow_quantifiers: bool,
-) -> Result<(), SolverError> {
+    memo: &mut EnumerableSymbolMemo,
+) -> Result<u32, SolverError> {
+    // A hit is recorded only after a subtree completed with `Ok`, so skipping it
+    // can never mask an error the unmemoized walk would have reported.
+    if memo.visited.contains(&(term, bound.clone())) {
+        return Ok(memo.quantified_bits.get(&term).copied().unwrap_or(0));
+    }
+    let mut bits = 0u32;
     match arena.node(term) {
         TermNode::Symbol(symbol) => {
             if bound.contains(symbol) {
-                return Ok(());
+                memo.visited.insert((term, bound.clone()));
+                return Ok(0);
             }
             let sort = arena.sort_of(term);
             if !matches!(sort, Sort::Bool | Sort::BitVec(_)) {
@@ -184,38 +258,38 @@ fn collect_enumerable_symbols_rec(
                              finitely enumerable"
                         )));
                     }
-                    *quantified_bits =
-                        quantified_bits
-                            .checked_add(sort_bits(sort))
-                            .ok_or_else(|| {
-                                SolverError::Unsupported(
-                                    "enumeration certificate: quantified domain width overflow"
-                                        .to_owned(),
-                                )
-                            })?;
+                    bits = add_bits(bits, sort_bits(sort))?;
                     bound.push(*var);
                     for &arg in &**args {
-                        collect_enumerable_symbols_rec(
+                        let arg_bits = collect_enumerable_symbols_rec(
                             arena,
                             arg,
                             bound,
                             symbols,
-                            quantified_bits,
                             allow_quantifiers,
-                        )?;
+                            memo,
+                        );
+                        match arg_bits {
+                            Ok(arg_bits) => bits = add_bits(bits, arg_bits)?,
+                            Err(error) => {
+                                bound.pop();
+                                return Err(error);
+                            }
+                        }
                     }
                     bound.pop();
                 }
                 _ => {
                     for &arg in &**args {
-                        collect_enumerable_symbols_rec(
+                        let arg_bits = collect_enumerable_symbols_rec(
                             arena,
                             arg,
                             bound,
                             symbols,
-                            quantified_bits,
                             allow_quantifiers,
+                            memo,
                         )?;
+                        bits = add_bits(bits, arg_bits)?;
                     }
                 }
             }
@@ -227,7 +301,9 @@ fn collect_enumerable_symbols_rec(
         }
         TermNode::BoolConst(_) | TermNode::BvConst { .. } | TermNode::WideBvConst(_) => {}
     }
-    Ok(())
+    memo.visited.insert((term, bound.clone()));
+    memo.quantified_bits.insert(term, bits);
+    Ok(bits)
 }
 
 fn satisfies_all(
