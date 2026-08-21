@@ -5336,6 +5336,16 @@ pub struct IdentityCylinderVarianceLevel {
     pub parent_count: usize,
     /// Sum of squared sibling differences at this level inside the cylinder.
     pub sibling_difference_square_sum: BigUint,
+    /// Sum of squared sibling differences over every parent at this level.
+    pub global_sibling_difference_square_sum: BigUint,
+    /// Whether the identity cylinder carries no more than its uniform share of
+    /// the global sibling square sum.
+    pub identity_share_at_most_uniform: bool,
+    /// Ceiling of `2^coarse_level` times the identity-cylinder share of the
+    /// global sibling square sum.
+    pub identity_localization_multiplier_ceiling: BigUint,
+    /// Whether that localization multiplier is at most `ell`.
+    pub identity_share_within_linear_carleson: bool,
     /// Contribution `2^(j-coarse_level-1) sum H_j(parent)^2` to
     /// `descendant_count * V_id`.
     pub conditional_variance_numerator_contribution: BigUint,
@@ -5450,6 +5460,37 @@ pub struct IdentityCylinderQuarterVarianceImplication {
     /// Integral saving over that full-family envelope required to reach the
     /// clean localized premise.
     pub global_weil_required_saving_ceiling: BigUint,
+}
+
+/// Symbolic implication from a linear local-Carleson estimate.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IdentityCylinderLinearCarlesonImplication {
+    /// Fine coefficient-prefix length.
+    pub ell: usize,
+    /// Lemire endpoint degree.
+    pub degree: usize,
+    /// Coarse quotient level `c_0`.
+    pub coarse_level: usize,
+    /// Number `R=2^(ell-c_0)` of descendants.
+    pub descendant_count: BigUint,
+    /// Assumed localization multiplier in
+    /// `2^c F_j(1) <= multiplier F_j(global)`.
+    pub assumed_localization_multiplier: BigUint,
+    /// Proved upper bound for `R V_id` under the local-Carleson premise and
+    /// the individual-character Weil second moment.
+    pub conditional_variance_numerator_bound: BigUint,
+    /// Clean sufficient target `R 2^(2ell-2)`.
+    pub quarter_scale_variance_target_numerator: BigUint,
+    /// Largest integral localization multiplier admitted by the clean target.
+    pub maximum_localization_multiplier_for_quarter_variance: BigUint,
+}
+
+impl IdentityCylinderLinearCarlesonImplication {
+    /// Whether the assumed local-Carleson estimate proves `(ICV)`, hence REL.
+    #[must_use]
+    pub fn proves_rel(&self) -> bool {
+        self.conditional_variance_numerator_bound <= self.quarter_scale_variance_target_numerator
+    }
 }
 
 impl IdentityCylinderQuarterVarianceImplication {
@@ -6138,6 +6179,67 @@ pub fn identity_cylinder_quarter_variance_implication(
     if !report.proves_rel() {
         return Err(HayesError::Invariant(
             "quarter-scale identity-cylinder variance does not imply REL".to_owned(),
+        ));
+    }
+    Ok(report)
+}
+
+/// Check a linear local-Carleson premise against `(ICV)` and `(REL)`.
+///
+/// For each `c<j<=ell`, write `F_j(1)` for the sum of squared level-`j`
+/// sibling differences over parents above the identity in `E_c`, and
+/// `F_j(global)` for the corresponding sum over every parent.  The premise is
+///
+/// ```text
+/// 2^c F_j(1) <= ell F_j(global).                       (LC2)
+/// ```
+///
+/// Exact-conductor Parseval and the individual-character Weil bound give
+/// `F_j(global)<=(j-1)^2 2^degree`.  The returned report substitutes those
+/// inequalities into the localized Haar identity and checks the clean
+/// quarter-scale variance target.  It proves only this arithmetic implication,
+/// not `(LC2)`.
+///
+/// # Errors
+///
+/// Rejects the same invalid endpoints as
+/// [`identity_cylinder_quarter_variance_implication`] and fails closed if the
+/// assumed multiplier does not imply that target.
+pub fn identity_cylinder_linear_carleson_implication(
+    ell: usize,
+    degree: usize,
+) -> Result<IdentityCylinderLinearCarlesonImplication, HayesError> {
+    let quarter = identity_cylinder_quarter_variance_implication(ell, degree)?;
+    let coarse_level = quarter.coarse_level;
+    let mut weighted_weil_sum = BigUint::from(0_u8);
+    for level in (coarse_level + 1)..=ell {
+        weighted_weil_sum += (BigUint::from(level - 1).pow(2)) << (level - coarse_level - 1);
+    }
+    let unit_multiplier_bound = weighted_weil_sum << (degree - coarse_level);
+    if unit_multiplier_bound == BigUint::from(0_u8) {
+        return Err(HayesError::Invariant(
+            "linear Carleson unit-multiplier bound vanished".to_owned(),
+        ));
+    }
+    let assumed_localization_multiplier = BigUint::from(ell);
+    let conditional_variance_numerator_bound =
+        &assumed_localization_multiplier * &unit_multiplier_bound;
+    let maximum_localization_multiplier_for_quarter_variance =
+        &quarter.assumed_conditional_variance * &quarter.descendant_count / &unit_multiplier_bound;
+    let report = IdentityCylinderLinearCarlesonImplication {
+        ell,
+        degree,
+        coarse_level,
+        descendant_count: quarter.descendant_count,
+        assumed_localization_multiplier,
+        conditional_variance_numerator_bound,
+        quarter_scale_variance_target_numerator: quarter.assumed_conditional_variance
+            * (BigUint::from(1_u8) << (ell - coarse_level)),
+        maximum_localization_multiplier_for_quarter_variance,
+    };
+    if !report.proves_rel() {
+        return Err(HayesError::Invariant(
+            "linear identity-cylinder Carleson premise does not imply REL".to_owned(),
         ));
     }
     Ok(report)
@@ -17191,6 +17293,12 @@ fn identity_cylinder_variance_levels(
     for level in (coarse_level + 1)..=ell {
         let level_factors = principal_unit_factors(level);
         let step = raw_population_refinement_step(counts, full_factors, &level_factors, level)?;
+        let global_duplicated_square_sum = step
+            .signed_child_differences
+            .iter()
+            .fold(BigUint::from(0_u8), |sum, difference| {
+                sum + difference.magnitude().pow(2)
+            });
         let mut duplicated_square_sum = BigUint::from(0_u8);
         for (child, difference) in step.signed_child_differences.iter().enumerate() {
             if project_mixed_radix_index(child, &level_factors, coarse_factors)? == 0 {
@@ -17203,6 +17311,27 @@ fn identity_cylinder_variance_levels(
             )));
         }
         let sibling_difference_square_sum = duplicated_square_sum >> 1;
+        let global_sibling_difference_square_sum = global_duplicated_square_sum >> 1;
+        let coarse_class_count = BigUint::from(1_u8) << coarse_level;
+        let scaled_identity_share = &coarse_class_count * &sibling_difference_square_sum;
+        let identity_share_at_most_uniform =
+            scaled_identity_share <= global_sibling_difference_square_sum;
+        let identity_localization_multiplier_ceiling = if global_sibling_difference_square_sum
+            == BigUint::from(0_u8)
+        {
+            if sibling_difference_square_sum == BigUint::from(0_u8) {
+                BigUint::from(0_u8)
+            } else {
+                return Err(HayesError::Invariant(format!(
+                    "identity-cylinder level {level} has local but no global square mass"
+                )));
+            }
+        } else {
+            (&scaled_identity_share + &global_sibling_difference_square_sum - BigUint::from(1_u8))
+                / &global_sibling_difference_square_sum
+        };
+        let identity_share_within_linear_carleson =
+            identity_localization_multiplier_ceiling <= BigUint::from(ell);
         let parent_exponent = level - coarse_level - 1;
         let parent_count = 1_usize
             .checked_shl(u32::try_from(parent_exponent).map_err(|_| {
@@ -17221,6 +17350,10 @@ fn identity_cylinder_variance_levels(
             level,
             parent_count,
             sibling_difference_square_sum,
+            global_sibling_difference_square_sum,
+            identity_share_at_most_uniform,
+            identity_localization_multiplier_ceiling,
+            identity_share_within_linear_carleson,
             conditional_variance_numerator_contribution: contribution,
         });
     }
@@ -21477,6 +21610,12 @@ mod tests {
                         .map(|exponent| 1_usize << exponent)
                         .collect::<Vec<_>>()
                 );
+                assert!(
+                    report
+                        .variance_levels
+                        .iter()
+                        .all(|level| level.identity_share_within_linear_carleson)
+                );
                 assert_eq!(
                     report.satisfies_quarter_scale_variance(),
                     ell >= 14 || (ell == 13 && degree == 27)
@@ -21526,6 +21665,28 @@ mod tests {
         eprintln!(
             "IDENTITY_CYLINDER_IMPLICATION|ell=200|degree=401|R={}|global_weil_save={}",
             first.descendant_count, first.global_weil_required_saving_ceiling
+        );
+    }
+
+    #[test]
+    fn linear_identity_carleson_closes_rel_with_exponential_margin() {
+        for ell in 200_usize..=1024 {
+            for degree in [2 * ell + 1, 2 * ell + 2] {
+                assert!(
+                    identity_cylinder_linear_carleson_implication(ell, degree)
+                        .unwrap()
+                        .proves_rel()
+                );
+            }
+        }
+        let report = identity_cylinder_linear_carleson_implication(200, 401).unwrap();
+        assert_eq!(
+            report.assumed_localization_multiplier,
+            BigUint::from(200_u16)
+        );
+        assert!(
+            report.maximum_localization_multiplier_for_quarter_variance
+                > (BigUint::from(1_u8) << 170)
         );
     }
 

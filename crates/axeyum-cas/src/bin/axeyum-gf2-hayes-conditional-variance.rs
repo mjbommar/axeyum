@@ -50,10 +50,14 @@ fn run() -> Result<(), String> {
         );
         for level in &report.variance_levels {
             println!(
-                "GF2_HAYES_CONDITIONAL_VARIANCE_LEVEL|status=PASS|ell={ell}|degree={degree}|level={}|parent_count={}|sibling_difference_square_sum={}|conditional_variance_numerator_contribution={}",
+                "GF2_HAYES_CONDITIONAL_VARIANCE_LEVEL|status=PASS|ell={ell}|degree={degree}|level={}|parent_count={}|sibling_difference_square_sum={}|global_sibling_difference_square_sum={}|identity_share_at_most_uniform={}|identity_localization_multiplier_ceiling={}|identity_share_within_linear_carleson={}|conditional_variance_numerator_contribution={}",
                 level.level,
                 level.parent_count,
                 level.sibling_difference_square_sum,
+                level.global_sibling_difference_square_sum,
+                level.identity_share_at_most_uniform,
+                level.identity_localization_multiplier_ceiling,
+                level.identity_share_within_linear_carleson,
                 level.conditional_variance_numerator_contribution,
             );
         }

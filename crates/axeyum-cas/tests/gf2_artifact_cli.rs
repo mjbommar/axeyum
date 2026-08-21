@@ -238,8 +238,9 @@ fn conditional_variance_cli_replays_the_local_haar_decomposition() {
         "|conditional_variance_numerator=1288331008|quarter_scale_variance_target_numerator=4294967296|"
     ));
     assert!(stdout.contains(
-        "GF2_HAYES_CONDITIONAL_VARIANCE_LEVEL|status=PASS|ell=14|degree=29|level=14|parent_count=32|sibling_difference_square_sum=18117780|conditional_variance_numerator_contribution=579768960"
+        "GF2_HAYES_CONDITIONAL_VARIANCE_LEVEL|status=PASS|ell=14|degree=29|level=14|parent_count=32|sibling_difference_square_sum=18117780|"
     ));
+    assert!(stdout.contains("|identity_share_within_linear_carleson=true|conditional_variance_numerator_contribution=579768960"));
     assert!(stdout.contains(
         "GF2_HAYES_CONDITIONAL_VARIANCE|status=PASS|ell=14|degree=30|coarse_level=8|descendant_count=64"
     ));
