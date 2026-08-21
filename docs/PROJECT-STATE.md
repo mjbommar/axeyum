@@ -72,7 +72,7 @@ termination evidence, the two no-answer rows **cannot be retroactively classifie
 This reproduction path is therefore not claimed to be **fully competition-faithful**.
 
 The append-only [`parity ledger`](../bench-results/PARITY.md) contains
-head-to-head entries for eleven divisions against division-appropriate reference
+head-to-head entries for nine divisions against division-appropriate reference
 binaries on identical committed 200-file lists and a 24-second/8-GiB protocol.
 The latest credited weak arithmetic and combination edges are:
 
@@ -84,7 +84,10 @@ The latest credited weak arithmetic and combination edges are:
 | QF_LRA | 86/200 | 146/200 | 58.9% | 0 |
 | QF_RDL | 105/200 | 155/200 | 67.7% | 0 |
 
-The stronger selected cells include QF_SLIA, QF_BV, UF, QF_ABV, and QF_LIA.
+The stronger selected cells include QF_SLIA, QF_BV, UF, and QF_LIA.
+`bench-results/parity-lists/` also carries committed QF_ABV and QF_UF lists that
+have never been run, so neither is a parity cell; a benchmark list is not a
+result, and this sentence named QF_ABV as one until 2026-08-21.
 Read the latest entry per division for exact solver revisions, reference
 configurations, load observations, and overlap; an older entry can have a higher
 score without being the current credited result.
