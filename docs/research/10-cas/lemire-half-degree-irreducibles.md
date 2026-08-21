@@ -3858,6 +3858,61 @@ Generic Cauchy and individual-Weil bounds remain trivial.  ADR-0583 records
 the identity and the fixed-`q` literature boundary without claiming the
 decorrelation.
 
+Expanding that shifted moment through `Lambda=mu*deg` does **not** immediately
+return to the restricted four-shift obstruction of ADR-0562.  Write
+
+```text
+D(g)=sum_(1<=d<ell) T_d(g),
+T_d(g)=d sum_(u in V_d) M_(n-d)(g u^(-1)).
+```
+
+For two orders, polarize the conditional variance inside each coarse fibre:
+
+```text
+w_(d,e)(q)
+ = R sum_(g in qK) T_d(g)T_e(g)
+   -(sum_(g in qK)T_d(g))(sum_(g in qK)T_e(g)).
+```
+
+Then `w=sum_d w_(d,d)+2sum_(d<e)w_(d,e)`, including after identity-cylinder
+selection and the exact-conductor layer difference.  Expanding the two
+`T` factors gives a bilinear sum with weight `mu(A)mu(C)`, hence on the
+squarefree locus the paired Berlekamp phase
+
+```text
+(-1)^(deg A+deg C+Berl(A)+Berl(C)).
+```
+
+There are exactly two Mobius factors before Cauchy; four appear only after
+squaring this new signed sum.  The native
+`identity_path_mobius_order_pair_report` reconstructs each layer from all
+symmetric order pairs and checks it against the independent spatial value.
+At `ell=8`, pairwise absolute values lose factors between about 26 and 57 on
+the nonzero pinned layers.  Translation gives more than aggregate zero at its
+forced layer.  The automorphism `f(x)->f(x+1)` preserves `mu`, every interval
+space `V_d`, and hence every `T_d` separately.  At `t=2^v_2(n)`, Lucas parity
+interchanges the two children after fixing their parent, so every `(d,e)`
+order-pair layer is exactly zero.  Both pinned endpoint rows check all 28
+cellwise equalities; the typed report fails closed on any contradiction.
+Thus the live Berlekamp target is a combined two-polynomial phase under the
+centered multiplicative Hayes-class kernel, with all orders retained.  The
+older inverse-additive energy and four-shift theorems would be regressions if
+inserted through another square.  ADR-0584 records the exact kernel and still
+assigns no contraction or endpoint credit.
+
+This target also sharpens the Hast--Matei boundary.  With
+`h=n-ell-1`, their `X_(2,n,h)` is the natural two-polynomial coefficient-pair
+space and their geometry is valid in characteristic two: the `p>n`
+restriction applies only when `m>2`.  But their published arithmetic estimate
+is untwisted, averages over all interval centers, and permits constants
+depending arbitrarily on the growing `(n,h)`.  The needed new statement is a
+rank-one principal-unit/Witt local-system trace bound on `X_(2,n,h)` after the
+coarse component is removed, projected onto the two long-cycle factors.  It
+must bound the complete signed `(BM2)` sum at the exact `(PRICE)` threshold.
+No canonical lift of the principal-unit action to ordered roots, and no such
+degree-uniform local-system theorem, has yet been proved; this is a precise
+geometric bridge rather than proof credit.
+
 The most direct zero-`2`-rank shortcut is now priced exactly and gives no
 endpoint information.  Deuring--Shafarevich gives `2`-rank zero at both
 Carlitz levels, hence also on the relative Jacobian quotient.  But the general

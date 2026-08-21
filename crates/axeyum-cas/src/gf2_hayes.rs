@@ -4787,6 +4787,70 @@ pub struct ConnectedOrderCumulantReport {
     pub direct_fourth_cumulant_numerator: BigInt,
 }
 
+/// One symmetric pair of Möbius convolution orders in a shifted
+/// high-conductor identity-path layer.
+///
+/// Each endpoint discrepancy order is linear in one classwise Möbius
+/// distribution.  Consequently this cell contains exactly two Möbius
+/// factors before any Cauchy or squaring step is applied.  Off-diagonal cells
+/// have multiplicity two in the square of the full discrepancy.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IdentityPathMobiusOrderPairCell {
+    /// The two interval degrees, in nondecreasing order.
+    pub interval_degrees: [usize; 2],
+    /// One on the diagonal and two off the diagonal.
+    pub permutation_multiplicity: usize,
+    /// Cross-covariance mass in the selected identity child.
+    pub child_conditional_covariance_numerator: BigInt,
+    /// Cross-covariance mass in its identity parent.
+    pub parent_conditional_covariance_numerator: BigInt,
+    /// Exact-conductor layer contribution
+    /// `2^i child-2^(i-1) parent`, before multiplicity.
+    pub signed_fourier_layer_sum: BigInt,
+}
+
+/// Exact two-Möbius expansion of one aggregate identity-path Fourier layer.
+///
+/// This report keeps every convolution-order pair signed.  Its reconstructed
+/// sum is the high-conductor shifted moment from ADR-0583, not the restricted
+/// four-shift Möbius parallelogram obtained only after a further square.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IdentityPathMobiusOrderPairReport {
+    /// Fine coefficient-prefix length.
+    pub ell: usize,
+    /// Lemire endpoint degree.
+    pub degree: usize,
+    /// Coarse quotient level defining the conditional variance.
+    pub coarse_level: usize,
+    /// Exact conductor layer `1<=layer<=coarse_level`.
+    pub layer: usize,
+    /// Whether translation proves that every order-pair cell vanishes on this
+    /// layer, rather than only proving cancellation after summing the cells.
+    pub translation_forces_cellwise_zero: bool,
+    /// Number of Möbius convolution orders, exactly `ell-1`.
+    pub order_count: usize,
+    /// Symmetric order-pair cells in lexicographic order.
+    pub cells: Vec<IdentityPathMobiusOrderPairCell>,
+    /// Sum of diagonal cells.
+    pub diagonal_signed_layer_sum: BigInt,
+    /// Sum of off-diagonal cells with multiplicity two.
+    pub off_diagonal_signed_layer_sum: BigInt,
+    /// Sum of absolute cell contributions after multiplicity.
+    pub order_pair_absolute_layer_sum: BigUint,
+    /// Signed reconstruction from every order pair.
+    pub reconstructed_signed_layer_sum: BigInt,
+    /// Independent spatial/Fourier-layer value from the aggregate path.
+    pub direct_signed_layer_sum: BigInt,
+    /// Aggregate identity-path mass before this split.
+    pub parent_aggregate_mass: BigUint,
+    /// Largest integral layer sum compatible with a three-quarter split.
+    pub maximum_layer_sum_for_three_quarter: BigUint,
+    /// Whether the reconstructed layer is nonpositive, equivalently a half split.
+    pub half_balance_holds: bool,
+    /// Whether the reconstructed layer satisfies the exact three-quarter price.
+    pub three_quarter_balance_holds: bool,
+}
+
 /// Exact removal of proper prime powers from one identity-class population.
 ///
 /// The checked identity is
@@ -16435,6 +16499,87 @@ fn symmetric_quadruple_multiplicity(indices: [usize; 4]) -> usize {
     24 / denominator
 }
 
+/// Classwise endpoint discrepancy vectors, one for each Möbius order.
+struct EndpointMobiusOrderVectors {
+    factors: Vec<PrincipalUnitFactor>,
+    values: Vec<Vec<i128>>,
+    distribution: ClassPopulationDistribution,
+}
+
+fn endpoint_mobius_order_vectors(
+    ell: usize,
+    degree: usize,
+    limits: HayesLimits,
+) -> Result<EndpointMobiusOrderVectors, HayesError> {
+    admit(ell, degree, limits)?;
+    let odd = ell.checked_mul(2).and_then(|value| value.checked_add(1));
+    let even = ell.checked_mul(2).and_then(|value| value.checked_add(2));
+    if Some(degree) != odd && Some(degree) != even {
+        return Err(HayesError::InvalidParameter(
+            "Mobius order vectors are Lemire-endpoint-only".to_owned(),
+        ));
+    }
+    let order_count = ell.saturating_sub(1);
+    let group_order = 1_usize
+        .checked_shl(u32::try_from(ell).map_err(|_| {
+            HayesError::InvalidParameter("Mobius order level exceeds u32".to_owned())
+        })?)
+        .ok_or_else(|| HayesError::InvalidParameter("Mobius order group overflow".to_owned()))?;
+    let (factors, unit_indices) = principal_unit_index_table(ell, limits)?;
+    let mut order_vectors = Vec::with_capacity(order_count);
+    for interval_degree in 1..ell {
+        let mobius = class_mobius_distribution(ell, degree - interval_degree, limits)?;
+        let mut inverse_indices = Vec::with_capacity(1_usize << interval_degree);
+        for tail in 0..1_u64 << interval_degree {
+            let unit = 1 | (tail << 1);
+            let inverse = principal_unit_inverse(unit, ell);
+            inverse_indices.push(unit_indices[&inverse]);
+        }
+        let weight = i128::try_from(interval_degree)
+            .map_err(|_| HayesError::InvalidParameter("interval degree exceeds i128".to_owned()))?;
+        let mut values = Vec::with_capacity(group_order);
+        for class in 0..group_order {
+            let sum = inverse_indices.iter().try_fold(0_i128, |sum, inverse| {
+                let shifted = add_mixed_radix_indices(class, *inverse, &factors)?;
+                sum.checked_add(mobius.values[shifted]).ok_or_else(|| {
+                    HayesError::InvalidParameter("order class sum overflow".to_owned())
+                })
+            })?;
+            values.push(sum.checked_mul(weight).ok_or_else(|| {
+                HayesError::InvalidParameter("weighted order class sum overflow".to_owned())
+            })?);
+        }
+        order_vectors.push(values);
+    }
+
+    let distribution = class_population_distribution(ell, degree, limits)?;
+    let mean = distribution.uniform_mean().ok_or_else(|| {
+        HayesError::InvalidParameter("endpoint distribution has no uniform mean".to_owned())
+    })?;
+    for class in 0..group_order {
+        let reconstructed = order_vectors.iter().try_fold(0_i128, |sum, values| {
+            sum.checked_add(values[class]).ok_or_else(|| {
+                HayesError::InvalidParameter("classwise order reconstruction overflow".to_owned())
+            })
+        })?;
+        let expected = i128::try_from(distribution.counts[class])
+            .and_then(|count| i128::try_from(mean).map(|mean| count - mean))
+            .map_err(|_| {
+                HayesError::InvalidParameter("class discrepancy exceeds i128".to_owned())
+            })?;
+        if reconstructed != expected {
+            return Err(HayesError::Invariant(format!(
+                "class {class}: order sum {reconstructed}, expected {expected}"
+            )));
+        }
+    }
+    Ok(EndpointMobiusOrderVectors {
+        factors,
+        values: order_vectors,
+        distribution,
+    })
+}
+
 /// Expand the exact endpoint fourth cumulant into convolution-order cells.
 ///
 /// For `1<=d<ell`, let
@@ -16505,54 +16650,9 @@ pub fn connected_order_cumulant_report(
         limits.max_table_cells,
     )?;
 
-    let (factors, unit_indices) = principal_unit_index_table(ell, limits)?;
-    let mut order_vectors = Vec::with_capacity(order_count);
-    for interval_degree in 1..ell {
-        let mobius = class_mobius_distribution(ell, degree - interval_degree, limits)?;
-        let mut inverse_indices = Vec::with_capacity(1_usize << interval_degree);
-        for tail in 0..1_u64 << interval_degree {
-            let unit = 1 | (tail << 1);
-            let inverse = principal_unit_inverse(unit, ell);
-            inverse_indices.push(unit_indices[&inverse]);
-        }
-        let weight = i128::try_from(interval_degree)
-            .map_err(|_| HayesError::InvalidParameter("interval degree exceeds i128".to_owned()))?;
-        let mut values = Vec::with_capacity(group_order);
-        for class in 0..group_order {
-            let sum = inverse_indices.iter().try_fold(0_i128, |sum, inverse| {
-                let shifted = add_mixed_radix_indices(class, *inverse, &factors)?;
-                sum.checked_add(mobius.values[shifted]).ok_or_else(|| {
-                    HayesError::InvalidParameter("order class sum overflow".to_owned())
-                })
-            })?;
-            values.push(sum.checked_mul(weight).ok_or_else(|| {
-                HayesError::InvalidParameter("weighted order class sum overflow".to_owned())
-            })?);
-        }
-        order_vectors.push(values);
-    }
-
-    let distribution = class_population_distribution(ell, degree, limits)?;
-    let mean = distribution.uniform_mean().ok_or_else(|| {
-        HayesError::InvalidParameter("endpoint distribution has no uniform mean".to_owned())
-    })?;
-    for class in 0..group_order {
-        let reconstructed = order_vectors.iter().try_fold(0_i128, |sum, values| {
-            sum.checked_add(values[class]).ok_or_else(|| {
-                HayesError::InvalidParameter("classwise order reconstruction overflow".to_owned())
-            })
-        })?;
-        let expected = i128::try_from(distribution.counts[class])
-            .and_then(|count| i128::try_from(mean).map(|mean| count - mean))
-            .map_err(|_| {
-                HayesError::InvalidParameter("class discrepancy exceeds i128".to_owned())
-            })?;
-        if reconstructed != expected {
-            return Err(HayesError::Invariant(format!(
-                "class {class}: order sum {reconstructed}, expected {expected}"
-            )));
-        }
-    }
+    let orders = endpoint_mobius_order_vectors(ell, degree, limits)?;
+    let order_vectors = orders.values;
+    let distribution = orders.distribution;
 
     let mut covariance = vec![vec![BigInt::from(0_i8); order_count]; order_count];
     for a in 0..order_count {
@@ -16612,6 +16712,229 @@ pub fn connected_order_cumulant_report(
         cells,
         reconstructed_fourth_cumulant_numerator: reconstructed,
         direct_fourth_cumulant_numerator: direct,
+    })
+}
+
+/// Expand one high-conductor shifted identity-path layer by Möbius order.
+///
+/// Write the endpoint discrepancy as `D=sum_(1<=d<ell) T_d`, where
+///
+/// ```text
+/// T_d(e)=d sum_(u in V_d) M_(degree-d)(e u^(-1)).
+/// ```
+///
+/// For the coarse quotient `Q=E_c`, `R=2^(ell-c)`, and two orders `d,e`, put
+///
+/// ```text
+/// w_(d,e)(q)
+///   = R sum_(g in qK) T_d(g)T_e(g)
+///       -(sum_(g in qK)T_d(g))(sum_(g in qK)T_e(g)).
+/// ```
+///
+/// Then `w=sum_d w_(d,d)+2 sum_(d<e)w_(d,e)`, and the same identity holds
+/// after selecting an identity cylinder and taking its exact-conductor Fourier
+/// difference.  Thus this expansion has two Möbius factors before any later
+/// squaring; it is not ADR-0562's four-shift Möbius parallelogram.
+///
+/// # Errors
+///
+/// Returns a typed endpoint, layer, resource, or arithmetic decline and fails
+/// closed unless the signed order-pair reconstruction equals the independent
+/// aggregate identity-path layer.
+#[allow(clippy::too_many_lines)]
+pub fn identity_path_mobius_order_pair_report(
+    ell: usize,
+    degree: usize,
+    layer: usize,
+    limits: HayesLimits,
+) -> Result<IdentityPathMobiusOrderPairReport, HayesError> {
+    let implication = population_refinement_one_sided_connected_implication(ell, degree)?;
+    let coarse_level = implication.first_top_level.checked_sub(1).ok_or_else(|| {
+        HayesError::InvalidParameter("identity-path coarse level underflow".to_owned())
+    })?;
+    if layer == 0 || layer > coarse_level {
+        return Err(HayesError::InvalidParameter(format!(
+            "identity-path Mobius layer must lie in 1..={coarse_level}"
+        )));
+    }
+    let order_count = ell.saturating_sub(1);
+    let pair_count = order_count
+        .checked_mul(order_count + 1)
+        .and_then(|value| value.checked_div(2))
+        .ok_or_else(|| HayesError::InvalidParameter("order-pair count overflow".to_owned()))?;
+    let group_order =
+        1_usize
+            .checked_shl(u32::try_from(ell).map_err(|_| {
+                HayesError::InvalidParameter("order-pair level exceeds u32".to_owned())
+            })?)
+            .ok_or_else(|| HayesError::InvalidParameter("order-pair group overflow".to_owned()))?;
+    let coarse_order = 1_usize
+        .checked_shl(u32::try_from(coarse_level).map_err(|_| {
+            HayesError::InvalidParameter("order-pair coarse level exceeds u32".to_owned())
+        })?)
+        .ok_or_else(|| {
+            HayesError::InvalidParameter("order-pair coarse group overflow".to_owned())
+        })?;
+    let work =
+        pair_count
+            .checked_mul(group_order.checked_add(coarse_order).ok_or_else(|| {
+                HayesError::InvalidParameter("order-pair work overflow".to_owned())
+            })?)
+            .ok_or_else(|| HayesError::InvalidParameter("order-pair work overflow".to_owned()))?;
+    check_limit(
+        "identity_path_mobius_order_pair_cells",
+        work,
+        limits.max_table_cells,
+    )?;
+
+    let orders = endpoint_mobius_order_vectors(ell, degree, limits)?;
+    let full_factors = orders.factors;
+    let order_vectors = orders.values;
+    let coarse_factors = principal_unit_factors(coarse_level);
+    let child_factors = principal_unit_factors(layer);
+    let parent_factors = principal_unit_factors(layer - 1);
+    let mut fine_to_coarse = Vec::with_capacity(group_order);
+    let mut fine_in_child = Vec::with_capacity(group_order);
+    let mut fine_in_parent = Vec::with_capacity(group_order);
+    for class in 0..group_order {
+        fine_to_coarse.push(project_mixed_radix_index(
+            class,
+            &full_factors,
+            &coarse_factors,
+        )?);
+        fine_in_child.push(project_mixed_radix_index(class, &full_factors, &child_factors)? == 0);
+        fine_in_parent.push(if layer == 1 {
+            true
+        } else {
+            project_mixed_radix_index(class, &full_factors, &parent_factors)? == 0
+        });
+    }
+    let mut coarse_in_child = Vec::with_capacity(coarse_order);
+    let mut coarse_in_parent = Vec::with_capacity(coarse_order);
+    for class in 0..coarse_order {
+        coarse_in_child
+            .push(project_mixed_radix_index(class, &coarse_factors, &child_factors)? == 0);
+        coarse_in_parent.push(if layer == 1 {
+            true
+        } else {
+            project_mixed_radix_index(class, &coarse_factors, &parent_factors)? == 0
+        });
+    }
+    let mut coarse_sums = vec![vec![BigInt::from(0_u8); coarse_order]; order_count];
+    for (order, values) in order_vectors.iter().enumerate() {
+        for (class, value) in values.iter().copied().enumerate() {
+            coarse_sums[order][fine_to_coarse[class]] += BigInt::from(value);
+        }
+    }
+
+    let descendant_count = BigInt::from(BigUint::from(1_u8) << (ell - coarse_level));
+    let child_scale = BigInt::from(BigUint::from(1_u8) << layer);
+    let parent_scale = BigInt::from(BigUint::from(1_u8) << (layer - 1));
+    let mut cells = Vec::with_capacity(pair_count);
+    let mut diagonal_signed_layer_sum = BigInt::from(0_u8);
+    let mut off_diagonal_signed_layer_sum = BigInt::from(0_u8);
+    let mut order_pair_absolute_layer_sum = BigUint::from(0_u8);
+    let mut reconstructed_signed_layer_sum = BigInt::from(0_u8);
+    for left in 0..order_count {
+        for right in left..order_count {
+            let mut child_inner = BigInt::from(0_u8);
+            let mut parent_inner = BigInt::from(0_u8);
+            for class in 0..group_order {
+                let product = BigInt::from(order_vectors[left][class])
+                    * BigInt::from(order_vectors[right][class]);
+                if fine_in_child[class] {
+                    child_inner += &product;
+                }
+                if fine_in_parent[class] {
+                    parent_inner += product;
+                }
+            }
+            let mut child_outer = BigInt::from(0_u8);
+            let mut parent_outer = BigInt::from(0_u8);
+            for class in 0..coarse_order {
+                let product = &coarse_sums[left][class] * &coarse_sums[right][class];
+                if coarse_in_child[class] {
+                    child_outer += &product;
+                }
+                if coarse_in_parent[class] {
+                    parent_outer += product;
+                }
+            }
+            let child = &descendant_count * child_inner - child_outer;
+            let parent = &descendant_count * parent_inner - parent_outer;
+            let signed = &child_scale * &child - &parent_scale * &parent;
+            let multiplicity = if left == right { 1 } else { 2 };
+            let weighted = BigInt::from(multiplicity) * &signed;
+            if left == right {
+                diagonal_signed_layer_sum += &weighted;
+            } else {
+                off_diagonal_signed_layer_sum += &weighted;
+            }
+            order_pair_absolute_layer_sum += weighted.magnitude();
+            reconstructed_signed_layer_sum += &weighted;
+            cells.push(IdentityPathMobiusOrderPairCell {
+                interval_degrees: [left + 1, right + 1],
+                permutation_multiplicity: multiplicity,
+                child_conditional_covariance_numerator: child,
+                parent_conditional_covariance_numerator: parent,
+                signed_fourier_layer_sum: signed,
+            });
+        }
+    }
+
+    let direct = identity_cylinder_conditional_variance(ell, degree, limits)?;
+    let direct_step = direct
+        .aggregate_identity_energy_path
+        .get(layer - 1)
+        .ok_or_else(|| HayesError::Invariant("aggregate identity path is truncated".to_owned()))?;
+    let direct_signed_layer_sum = direct_step.signed_fourier_layer_sum.clone();
+    if reconstructed_signed_layer_sum != direct_signed_layer_sum {
+        return Err(HayesError::Invariant(format!(
+            "Mobius order pairs reconstruct {reconstructed_signed_layer_sum}, expected {direct_signed_layer_sum}"
+        )));
+    }
+    let translation = identity_cylinder_translation_split_implication(ell, degree)?;
+    let translation_forces_cellwise_zero = translation.forced_split_within_identity_path
+        && layer == translation.first_odd_binomial_index;
+    if translation_forces_cellwise_zero
+        && cells
+            .iter()
+            .any(|cell| cell.signed_fourier_layer_sum != BigInt::from(0_u8))
+    {
+        return Err(HayesError::Invariant(
+            "translation-forced Mobius order-pair layer is nonzero".to_owned(),
+        ));
+    }
+    let parent_aggregate_mass = direct_step.parent_identity_square_mass.clone();
+    let maximum_layer_sum_for_three_quarter =
+        (&parent_aggregate_mass << (layer - 1)) / BigUint::from(2_u8);
+    let half_balance_holds = reconstructed_signed_layer_sum <= BigInt::from(0_u8);
+    let three_quarter_balance_holds =
+        reconstructed_signed_layer_sum <= BigInt::from(maximum_layer_sum_for_three_quarter.clone());
+    if half_balance_holds != direct_step.at_most_one_half
+        || three_quarter_balance_holds != direct_step.at_most_three_quarters
+    {
+        return Err(HayesError::Invariant(
+            "Mobius layer price disagrees with aggregate path comparison".to_owned(),
+        ));
+    }
+    Ok(IdentityPathMobiusOrderPairReport {
+        ell,
+        degree,
+        coarse_level,
+        layer,
+        translation_forces_cellwise_zero,
+        order_count,
+        cells,
+        diagonal_signed_layer_sum,
+        off_diagonal_signed_layer_sum,
+        order_pair_absolute_layer_sum,
+        reconstructed_signed_layer_sum,
+        direct_signed_layer_sum,
+        parent_aggregate_mass,
+        maximum_layer_sum_for_three_quarter,
+        half_balance_holds,
+        three_quarter_balance_holds,
     })
 }
 
@@ -20666,6 +20989,105 @@ mod tests {
             );
         }
         assert!(connected_top_mobius_convolution(4, 9, limits).is_err());
+    }
+
+    #[test]
+    fn high_conductor_shifted_layers_have_exactly_two_mobius_factors() {
+        let limits = HayesLimits::default();
+        let expected = [
+            (
+                17_usize,
+                1_usize,
+                [
+                    (0_i128, 0_i128, 0_i128, 0_u128),
+                    (-14_664_704, 10_563_584, -4_101_120, 130_719_232),
+                    (1_446_400, -5_357_568, -3_911_168, 178_778_624),
+                ],
+            ),
+            (
+                18,
+                2,
+                [
+                    (-16_757_248, 10_284_032, -6_473_216, 168_878_080),
+                    (0, 0, 0, 0),
+                    (-1_549_312, 9_531_392, 7_982_080, 451_683_328),
+                ],
+            ),
+        ];
+        for (degree, translation_layer, rows) in expected {
+            for (layer_index, (diagonal, off_diagonal, total, absolute)) in
+                rows.into_iter().enumerate()
+            {
+                let layer = layer_index + 1;
+                let report =
+                    identity_path_mobius_order_pair_report(8, degree, layer, limits).unwrap();
+                assert_eq!(report.coarse_level, 3);
+                assert_eq!(report.order_count, 7);
+                assert_eq!(report.cells.len(), 28);
+                assert_eq!(
+                    &report.diagonal_signed_layer_sum + &report.off_diagonal_signed_layer_sum,
+                    report.reconstructed_signed_layer_sum
+                );
+                assert_eq!(
+                    report.reconstructed_signed_layer_sum,
+                    report.direct_signed_layer_sum
+                );
+                assert!(
+                    &report.order_pair_absolute_layer_sum
+                        >= report.reconstructed_signed_layer_sum.magnitude()
+                );
+                assert!(report.cells.iter().all(|cell| {
+                    cell.permutation_multiplicity
+                        == if cell.interval_degrees[0] == cell.interval_degrees[1] {
+                            1
+                        } else {
+                            2
+                        }
+                }));
+                if layer == translation_layer {
+                    assert!(report.translation_forces_cellwise_zero);
+                    assert_eq!(report.direct_signed_layer_sum, BigInt::from(0_u8));
+                    assert!(
+                        report
+                            .cells
+                            .iter()
+                            .all(|cell| { cell.signed_fourier_layer_sum == BigInt::from(0_u8) })
+                    );
+                } else {
+                    assert!(!report.translation_forces_cellwise_zero);
+                }
+                assert_eq!(report.diagonal_signed_layer_sum, BigInt::from(diagonal));
+                assert_eq!(
+                    report.off_diagonal_signed_layer_sum,
+                    BigInt::from(off_diagonal)
+                );
+                assert_eq!(report.direct_signed_layer_sum, BigInt::from(total));
+                assert_eq!(
+                    report.order_pair_absolute_layer_sum,
+                    BigUint::from(absolute)
+                );
+                assert_eq!(report.half_balance_holds, total <= 0);
+                assert!(report.three_quarter_balance_holds);
+                assert!(
+                    report.direct_signed_layer_sum
+                        <= BigInt::from(report.maximum_layer_sum_for_three_quarter.clone())
+                );
+            }
+        }
+        assert!(identity_path_mobius_order_pair_report(8, 17, 0, limits).is_err());
+        assert!(identity_path_mobius_order_pair_report(8, 17, 4, limits).is_err());
+        assert!(
+            identity_path_mobius_order_pair_report(
+                8,
+                17,
+                1,
+                HayesLimits {
+                    max_table_cells: 7_000,
+                    ..limits
+                }
+            )
+            .is_err()
+        );
     }
 
     #[test]
