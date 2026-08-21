@@ -179,6 +179,7 @@ compounding, not automation theatre.
 | [Coprime-factor cancellation and the Euclidean seam](80-coprime-factor-cancellation-and-euclidean-seam.md) | Did the second support reconstruct independently, and what exact official/native boundary prevents target composition? |
 | [Constructive official Euclidean bridge plan](81-constructive-euclidean-bridge-plan.md) | Which bounded bottom-up route repairs the official division/Bézout foundation without importing an assumption-bearing proof or spending target credit? |
 | [Official division equation root audit](82-official-division-equation-root-audit.md) | Are the three generated quotient/remainder computation roots independently checkable with empty footprints before authored bridge work begins? |
+| [Proof-isolated Euclidean construction capsule](83-proof-isolated-euclidean-construction-capsule.md) | Can a fresh construction context receive every allowed statement and audited identity without being exposed to upstream proof material? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
