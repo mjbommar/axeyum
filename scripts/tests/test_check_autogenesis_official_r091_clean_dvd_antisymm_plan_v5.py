@@ -33,6 +33,11 @@ assert V9_SPEC and V9_SPEC.loader
 V9 = importlib.util.module_from_spec(V9_SPEC)
 V9_SPEC.loader.exec_module(V9)
 
+V10_SPEC = importlib.util.spec_from_file_location("v9_v10", ROOT / "scripts/check-autogenesis-official-r091-clean-dvd-antisymm-v9-v10.py")
+assert V10_SPEC and V10_SPEC.loader
+V10 = importlib.util.module_from_spec(V10_SPEC)
+V10_SPEC.loader.exec_module(V10)
+
 
 class PlanControls(unittest.TestCase):
     def test_live_plan_passes(self) -> None:
@@ -97,6 +102,18 @@ class V8V9BoundaryControls(unittest.TestCase):
         plan["correction"]["other_term_changes_authorized"] = True
         with self.assertRaises(V9.BoundaryError):
             V9.validate(result, plan)
+
+
+class V9V10BoundaryControls(unittest.TestCase):
+    def test_live_boundary_passes(self) -> None:
+        self.assertEqual(V10.validate()[0]["execution"]["locally_accepted_supports"], 4)
+
+    def test_induction_broadening_fails(self) -> None:
+        result, plan = V10.validate()
+        plan = copy.deepcopy(plan)
+        plan["correction"]["induction_structure_changed"] = True
+        with self.assertRaises(V10.BoundaryError):
+            V10.validate(result, plan)
 
 
 if __name__ == "__main__":
