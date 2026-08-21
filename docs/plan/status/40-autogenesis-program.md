@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction now includes unconditional official balanced Bézout and official coprime-factor divisibility cancellation. For the remaining gcd-extensionality obligation, one exact audit localizes `Nat.dvd_antisymm`'s `propext` footprint solely to `Nat.le_of_dvd`; its other four direct dependencies are clean.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction now includes unconditional official balanced Bézout and official coprime-factor divisibility cancellation. For the remaining gcd-extensionality obligation, one exact audit localizes `Nat.dvd_antisymm`'s `propext` footprint solely to `Nat.le_of_dvd`; its other four direct dependencies are clean. The bounded replacement driver now compiles without reading either proof-isolated input.
 
-**Next:** implement the preregistered clean `le_of_dvd` clone and target-owned divisibility antisymmetry in the exact r091 kernel. Require two byte-identical empty-footprint reconstructions and replayed compositions before support credit.
+**Next:** pass the full Rust push gate for the bounded replacement driver, then execute at most two complete invocations. Require byte-identical empty-footprint support evidence and replayed compositions before support credit.
 
 <!-- plan-section: landed-changes -->
 
@@ -155,3 +155,4 @@
 | 2026-08-21 | (pending) | Five direct dependencies beneath assumption-bearing `Nat.dvd_antisymm` are frozen for one nonrendering audit before the gcd-shift target |
 | 2026-08-21 | (pending) | One exact audit localizes `Nat.dvd_antisymm`'s sole `propext` carrier to `Nat.le_of_dvd`; four direct dependencies are clean |
 | 2026-08-21 | (pending) | Clean native `le_of_dvd` duplication and target-owned divisibility antisymmetry are frozen before code or stream access |
+| 2026-08-21 | (pending) | Bounded clean divisibility-antisymmetry driver compiles without reading either proof-isolated input |
