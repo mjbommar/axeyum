@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-gcd-greatest-plan-v2",
+  "state": "preregistered-minimal-gcd-helper-before-code-or-execution",
+  "predecessor": {
+    "path": "artifacts/autogenesis/mathlib-nat-gcd-greatest-result-v1.json",
+    "required_state": "declined-before-theorem-construction-missing-unrelated-fibonacci-root"
+  },
+  "target": {
+    "fact_id": "F:ml430-nat-gcd-greatest-0a04214a",
+    "name": "Nat.gcd_greatest",
+    "statement": "∀ {a b d : ℕ}, d ∣ a → d ∣ b → (∀ (e : ℕ), e ∣ a → e ∣ b → e ∣ d) → d = a.gcd b",
+    "method": "retain the exact V1 proof term but construct it through a dedicated GcdDev helper requiring only Nat, Nat.gcd, Nat.dvd, and Eq roots present in the sealed GCD capsule"
+  },
+  "input_capsule": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/527508a56-target-native-gcd-divisibility-v7/gcd-1.ndjson",
+    "sha256": "9ecf0b10d1390f880040790fb1845a11d7987b94c0d3a71acf4ad8dca0c5a304",
+    "bytes": 835637
+  },
+  "required_direct_theorem_dependencies": [
+    "Axeyum.Autogenesis.dvdAntisymmOfficialV1",
+    "Axeyum.Autogenesis.dvdGcdOfficialV1",
+    "Axeyum.Autogenesis.gcdDvdLeftOfficialV1",
+    "Axeyum.Autogenesis.gcdDvdRightOfficialV1"
+  ],
+  "acceptance": {
+    "one_driver_build": true,
+    "complete_invocations": 2,
+    "exact_target_submissions": 2,
+    "exports": 2,
+    "fresh_imports": 4,
+    "outputs_byte_identical": true,
+    "receipts_byte_identical": true,
+    "all_axiom_footprints": []
+  },
+  "budget": {
+    "max_driver_builds": 1,
+    "max_complete_invocations": 2,
+    "max_exact_target_submissions": 2,
+    "max_exports": 2,
+    "max_imports": 4,
+    "max_retries": 0,
+    "max_search_invocations": 0,
+    "max_evaluations": 0,
+    "max_ledger_writes": 0
+  },
+  "next_on_accept": "seal the exact target capsule and register its crash-safe fact admission",
+  "limitations": "This grants no theorem or fact credit before a fresh build and both exact V2 executions reproduce with empty footprints."
+}

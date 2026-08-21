@@ -40,9 +40,6 @@ CHECKED_THEOREM_RECEIPT_CHECKER = (
 DEPENDENCY_THEOREM_RECEIPT_CHECKER = (
     ROOT / "scripts/check-autogenesis-nat-fib-coprime-premise-plan.py"
 )
-SEALED_KERNEL_CAPSULE_CHECKER = (
-    ROOT / "scripts/check-autogenesis-sealed-kernel-capsule.py"
-)
 COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 EVIDENCE_RE = re.compile(
     r"^;\s*evidence\s+kind=(\S+)\s+certified=(\S+)\s+"
@@ -296,8 +293,9 @@ def sealed_kernel_capsule_contract(
 ) -> dict[str, Any]:
     """Replay the immutable capsule checker and bind it to the registered fact."""
     executor = operation["executor"]
+    checker_path = ROOT / operation["checker"]["implementation"]
     checker = load_module(
-        "sealed_kernel_capsule_checker_for_execution", SEALED_KERNEL_CAPSULE_CHECKER
+        "sealed_kernel_capsule_checker_for_execution", checker_path
     )
     try:
         checked = checker.validate()

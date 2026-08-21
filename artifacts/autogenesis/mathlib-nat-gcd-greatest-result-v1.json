@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-gcd-greatest-result-v1",
+  "state": "declined-before-theorem-construction-missing-unrelated-fibonacci-root",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-nat-gcd-greatest-plan-v1.json"
+  },
+  "implementation_commit": "5e18575b8",
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/5e18575b8-target-native-gcd-greatest-v2",
+    "index_sha256": "8a477db0c8a55318421f1deddeb3e6a6e2d9926cc47b3f43be32e5da0d9cfab7",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "decline": {
+    "stage": "post-input-import-development-helper-initialization",
+    "class": "MissingUnrelatedDevelopmentRoot",
+    "missing_name": "Nat.fib",
+    "cause": "the shared Dev constructor required Fibonacci even though the GCD-only proof and capsule do not",
+    "same_diagnostic_twice": true,
+    "stderr_sha256": "138862b165eaa59ed1bd90e3cd82acb5b25a047bb624bcc9abccca0fb5fcb564"
+  },
+  "execution": {
+    "complete_invocations": 2,
+    "successful_input_imports": 2,
+    "exact_target_submissions": 0,
+    "exports": 0,
+    "fresh_output_imports": 0,
+    "retries": 0
+  },
+  "authority": {
+    "target_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next": "preregister a dedicated minimal GCD development helper that requires only roots present in the accepted GCD capsule, then execute a fresh bounded plan",
+  "limitations": "No theorem or fact credit is granted. The earlier stale pre-build executable launch is preserved separately and performed no current-driver or kernel operation."
+}

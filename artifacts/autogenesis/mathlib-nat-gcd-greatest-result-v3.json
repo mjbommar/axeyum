@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-gcd-greatest-result-v3",
+  "state": "exact-target-reconstructed-twice-byte-identical-empty-footprint",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-nat-gcd-greatest-plan-v3.json",
+    "sha256": "3f49df0c01293b6ece2110cb6f78e350f75dd4c4f3ab22b0a789b0568ee9e032"
+  },
+  "implementation_commit": "85b9d4243",
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/85b9d4243-target-native-gcd-greatest-v4",
+    "manifest_sha256": "c932d1ec19c35fd0631a5595df6e1abced52d1179ea96812bf426a80c4df7f57",
+    "index_sha256": "a9bb79cc83f483e25a1feffa4a7e3d4fe1fbcf7fb1d0db852d19acbabf0f99b9",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "target": {
+    "name": "Nat.gcd_greatest",
+    "goal_sha256": "0977f9584b62cf5c5140f32ea2d4bf726c9c42aa3cef9f98afdea5d13810af90",
+    "declaration_sha256": "b54b6ab061abba5ea42ca3b0451cd240071b4d535e77bed003d54c78115b03bc",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [
+      "Axeyum.Autogenesis.dvdAntisymmOfficialV1",
+      "Axeyum.Autogenesis.dvdGcdOfficialV1",
+      "Axeyum.Autogenesis.gcdDvdLeftOfficialV1",
+      "Axeyum.Autogenesis.gcdDvdRightOfficialV1"
+    ]
+  },
+  "capsule": {
+    "sha256": "c233478948b4d4aedc01c839ef9013c3feb2ddb0009d8b57699d7efb755375e6",
+    "bytes": 856749
+  },
+  "execution": {
+    "driver_builds": 1,
+    "complete_invocations": 2,
+    "composition_receipts": 2,
+    "exact_target_submissions": 2,
+    "exports": 2,
+    "fresh_imports": 4,
+    "outputs_byte_identical": true,
+    "receipts_byte_identical": true,
+    "retries": 0,
+    "search_invocations": 0
+  },
+  "authority": {
+    "target_credit": 1,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next": "register the sealed capsule as an authoritative operation and admit only F:ml430-nat-gcd-greatest-0a04214a through the crash-safe transaction protocol",
+  "limitations": "The exact theorem is accepted as a reproducible kernel result. The fact remains open until its separately registered crash-safe admission succeeds."
+}

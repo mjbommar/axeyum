@@ -130,6 +130,9 @@ now. Nothing was deleted.
 | 2026-08-21 | `a475f13dd` | Sealed-capsule operation registration binds the exact target identity and reviews every gate coupling before dispatch |
 | 2026-08-21 | `07b0794ae` | Crash-safe recovery admits `Nat.gcd_fib_add_self` with one authoritative write and an empty kernel footprint |
 | 2026-08-21 | `dbfd95dce` | Immutable primary archive and isolated clean replay seal the Fibonacci GCD-shift admission |
+| 2026-08-21 | `916f32dbf` | Exact `Nat.gcd_greatest` reconstructs twice from four named premises with byte-identical empty-footprint evidence |
+| 2026-08-21 | `6e112b4bc` | The generic sealed-capsule operation driver registers the exact GCD universal-property theorem |
+| 2026-08-21 | `0b7f23e9b` | Crash-safe recovery admits `Nat.gcd_greatest` with one authoritative write and an empty kernel footprint |
 | 2026-08-21 | `fc191b3e5` | Full stable statement-survival atlas is preregistered before the one authorized comparison pass |
 | 2026-08-21 | `7edebb579` | Full Nat/Int atlas classifies all 9,839 v4.30/v4.32.1 union names and isolates representation-wide drift |
 | 2026-08-21 | `030d82adb` | First proof-isolated joint quotient/remainder reconstruction fails closed with a measured `propext` footprint |
@@ -1128,9 +1131,9 @@ declines any trigger outside an application tree over declared uninterpreted
 functions, which rules out arithmetic subterms — the first real workload with
 `(f (+ x 1))` as a pattern will want that.
 
-**Status:** `Nat.gcd_fib_add_self` is durably admitted as `proved` on `kernel-lean`. Its exact target-owned theorem reconstructs twice, has an empty axiom footprint, survives four independent imports, passes the registered fact-operation replay, and reproduces the same execution, transaction, event, and readiness identities from an isolated clean worktree after a successful after-intent crash test. The admission performed exactly one authoritative ledger write and honestly unlocked no child because no ledger fact currently names this theorem in `depends_on`.
+**Status:** `Nat.gcd_greatest` is durably admitted as `proved` on `kernel-lean`, following `Nat.gcd_fib_add_self`. Its exact target-owned theorem reconstructs twice from four named GCD/divisibility premises, has an empty axiom footprint, survives four independent imports, passes the registered fact-operation replay, and reproduces the same execution, transaction, event, and readiness identities from an isolated clean worktree after an after-intent crash test. The admission performed exactly one authoritative ledger write and honestly unlocked no child because no ledger fact currently names this theorem in `depends_on`.
 
-**Next:** reuse the accepted target-owned GCD universal-property theorems to construct the exact ready Mathlib proposition `Nat.gcd_greatest`; this closes a general GCD interface before returning to the strategic `Nat.fib_gcd` chain.
+**Next:** return to the strategic exact proposition `Nat.fib_gcd`, preregister its proof route over the now-accepted Fibonacci shift, coprimality, and GCD universal-property stack, then execute only after both historical gate couplings are reconciled monotonically.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement

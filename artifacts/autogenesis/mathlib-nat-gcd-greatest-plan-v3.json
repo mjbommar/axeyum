@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-gcd-greatest-plan-v3",
+  "state": "preregistered-two-capsule-gcd-greatest-before-code-or-execution",
+  "predecessor": {
+    "path": "artifacts/autogenesis/mathlib-nat-gcd-greatest-result-v2.json",
+    "required_state": "declined-before-theorem-construction-missing-separate-antisymmetry-root"
+  },
+  "target": {
+    "fact_id": "F:ml430-nat-gcd-greatest-0a04214a",
+    "name": "Nat.gcd_greatest",
+    "statement": "∀ {a b d : ℕ}, d ∣ a → d ∣ b → (∀ (e : ℕ), e ∣ a → e ∣ b → e ∣ d) → d = a.gcd b",
+    "method": "compose the exact clean divisibility-antisymmetry theorem into the GCD universal-property kernel, replay that composition receipt, then construct the unchanged direct proof"
+  },
+  "input_capsules": [
+    {
+      "role": "gcd-universal-properties",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/527508a56-target-native-gcd-divisibility-v7/gcd-1.ndjson",
+      "sha256": "9ecf0b10d1390f880040790fb1845a11d7987b94c0d3a71acf4ad8dca0c5a304",
+      "bytes": 835637
+    },
+    {
+      "role": "divisibility-antisymmetry",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/9ff54f11c-official-r091-clean-dvd-antisymm-v10/clean-order-1.ndjson",
+      "sha256": "bc147e08e6425ce8c31f3a10ccd5e9a7f7774ef0265b45784700588cb4bbcb25",
+      "bytes": 189710
+    }
+  ],
+  "required_direct_theorem_dependencies": [
+    "Axeyum.Autogenesis.dvdAntisymmOfficialV1",
+    "Axeyum.Autogenesis.dvdGcdOfficialV1",
+    "Axeyum.Autogenesis.gcdDvdLeftOfficialV1",
+    "Axeyum.Autogenesis.gcdDvdRightOfficialV1"
+  ],
+  "acceptance": {
+    "one_driver_build": true,
+    "complete_invocations": 2,
+    "composition_receipts": 2,
+    "exact_target_submissions": 2,
+    "exports": 2,
+    "fresh_imports": 4,
+    "outputs_byte_identical": true,
+    "receipts_byte_identical": true,
+    "all_axiom_footprints": []
+  },
+  "budget": {
+    "max_driver_builds": 1,
+    "max_complete_invocations": 2,
+    "max_compositions": 2,
+    "max_exact_target_submissions": 2,
+    "max_exports": 2,
+    "max_imports": 4,
+    "max_retries": 0,
+    "max_search_invocations": 0,
+    "max_evaluations": 0,
+    "max_ledger_writes": 0
+  },
+  "next_on_accept": "seal the exact target capsule and register its crash-safe fact admission",
+  "limitations": "This grants no theorem or fact credit before both fresh compositions replay and both exact target executions reproduce with empty footprints."
+}

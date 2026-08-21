@@ -22,10 +22,16 @@ SPEC.loader.exec_module(execution)
 REFLEXIVITY_FACT = "F:ml430-nat-descfactorial-zero-966b01df"
 FIB_FACT = "F:ml430-nat-fib-add-two-b86e0c82"
 FIB_COPRIME_FACT = "F:ml430-nat-fib-coprime-fib-succ-162fc738"
+GCD_GREATEST_FACT = "F:ml430-nat-gcd-greatest-0a04214a"
 
 
 def settle_reflexivity_fact(facts):
-    for fact_id in (REFLEXIVITY_FACT, FIB_FACT, FIB_COPRIME_FACT):
+    for fact_id in (
+        REFLEXIVITY_FACT,
+        FIB_FACT,
+        FIB_COPRIME_FACT,
+        GCD_GREATEST_FACT,
+    ):
         target = copy.deepcopy(facts[fact_id])
         target["epistemic_status"] = "proved"
         facts[fact_id] = target
@@ -429,6 +435,7 @@ class OperationExecutionTests(unittest.TestCase):
             "frontier_for_checked_theorem_execution_test", execution.FRONTIER_SCRIPT
         )
         facts = frontier_module.load()
+        settle_reflexivity_fact(facts)
         target = copy.deepcopy(facts[FIB_FACT])
         target["epistemic_status"] = "open"
         target["evidence"] = []

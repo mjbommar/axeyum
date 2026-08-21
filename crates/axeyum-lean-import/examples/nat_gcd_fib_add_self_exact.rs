@@ -941,21 +941,41 @@ fn run_target_native_exact_capsule(
 fn run_target_native_gcd_greatest(
     mut args: impl Iterator<Item = std::ffi::OsString>,
 ) -> Result<(), String> {
-    let input_path = path(&mut args)?;
+    let gcd_input_path = path(&mut args)?;
+    let antisymm_input_path = path(&mut args)?;
     let output_path = path(&mut args)?;
     if args.next().is_some() || output_path.exists() {
         return Err(
             "usage: nat_gcd_fib_add_self_exact --target-native-gcd-greatest \
-             <gcd-divisibility> <output>"
+             <gcd-divisibility> <clean-antisymmetry> <output>"
                 .to_owned(),
         );
     }
-    let source = import_bound(
-        &input_path,
+    let gcd_source = import_bound(
+        &gcd_input_path,
         "9ecf0b10d1390f880040790fb1845a11d7987b94c0d3a71acf4ad8dca0c5a304",
         "target-native GCD divisibility",
     )?;
-    let mut kernel = source.kernel().clone();
+    let antisymm_source = import_bound(
+        &antisymm_input_path,
+        CLEAN_ANTISYMM_CAPSULE,
+        "clean divisibility antisymmetry",
+    )?;
+    let composed = compose_checked_theorem_slice(
+        antisymm_source.kernel(),
+        gcd_source.kernel(),
+        &[CLEAN_ANTISYMM],
+    )
+    .map_err(|error| format!("Nat.gcd_greatest setup composition declined: {error:?}"))?;
+    verify_checked_theorem_composition(
+        antisymm_source.kernel(),
+        gcd_source.kernel(),
+        composed.kernel(),
+        composed.receipt(),
+    )
+    .map_err(|error| format!("Nat.gcd_greatest setup composition did not replay: {error:?}"))?;
+    let composition_receipt = composed.receipt().receipt_sha256.clone();
+    let mut kernel = composed.kernel().clone();
     let theorem = declare_target_native_gcd_greatest(&mut kernel)?;
     require_empty(&kernel, theorem, GCD_GREATEST_TARGET)?;
     let expected = evidence(&kernel, theorem)?;
@@ -992,6 +1012,7 @@ fn run_target_native_gcd_greatest(
             "schema_version":1,
             "kind":"axeyum-autogenesis-target-native-nat-gcd-greatest-capsule",
             "state":"exact-target-reconstructed-empty-footprint-roundtrip-checked",
+            "composition_receipt_sha256":composition_receipt,
             "target_goal_sha256":goal_sha256,
             "target":expected,
             "capsule":{"bytes":bytes.len(),"sha256":hex_sha256(bytes.as_bytes()),"fresh_imports":2},
@@ -1012,7 +1033,7 @@ fn declare_target_native_gcd_greatest(kernel: &mut Kernel) -> Result<NameId, Str
     if optional_name(kernel, GCD_GREATEST_TARGET)?.is_some() {
         return Err("Nat.gcd_greatest unexpectedly already exists".to_owned());
     }
-    let mut d = Dev::new(kernel)?;
+    let mut d = GcdDev::new(kernel)?;
     let antisymm = d.exact(CLEAN_ANTISYMM)?;
     let dvd_gcd = d.exact(TARGET_DVD_GCD)?;
     let gcd_left = d.exact(TARGET_GCD_DVD_LEFT)?;
@@ -1729,6 +1750,79 @@ struct Dev<'a> {
     eq_rec: NameId,
     exists_rec: NameId,
     next_fvar: u64,
+}
+
+struct GcdDev<'a> {
+    kernel: &'a mut Kernel,
+    anon: NameId,
+    nat: NameId,
+    gcd: NameId,
+    dvd: NameId,
+    eq: NameId,
+    next_fvar: u64,
+}
+
+impl<'a> GcdDev<'a> {
+    fn new(kernel: &'a mut Kernel) -> Result<Self, String> {
+        Ok(Self {
+            anon: kernel.anon(),
+            nat: find_name(kernel, "Nat")?,
+            gcd: find_name(kernel, "Nat.gcd")?,
+            dvd: find_name(kernel, "Nat.dvd")?,
+            eq: find_name(kernel, "Eq")?,
+            kernel,
+            next_fvar: 20_000,
+        })
+    }
+    fn exact(&self, expected: &str) -> Result<NameId, String> {
+        find_name(self.kernel, expected)
+    }
+    fn fresh(&mut self) -> u64 {
+        self.next_fvar += 1;
+        self.next_fvar
+    }
+    fn apply(&mut self, head: ExprId, args: &[ExprId]) -> ExprId {
+        args.iter()
+            .fold(head, |term, &argument| self.kernel.app(term, argument))
+    }
+    fn lemma(&mut self, name: NameId, args: &[ExprId]) -> ExprId {
+        let head = self.kernel.const_(name, vec![]);
+        self.apply(head, args)
+    }
+    fn nat_ty(&mut self) -> ExprId {
+        self.kernel.const_(self.nat, vec![])
+    }
+    fn gcd(&mut self, left: ExprId, right: ExprId) -> ExprId {
+        self.lemma(self.gcd, &[left, right])
+    }
+    fn dvd(&mut self, divisor: ExprId, value: ExprId) -> ExprId {
+        self.lemma(self.dvd, &[divisor, value])
+    }
+    fn eq(&mut self, left: ExprId, right: ExprId) -> ExprId {
+        let zero = self.kernel.level_zero();
+        let one = self.kernel.level_succ(zero);
+        let head = self.kernel.const_(self.eq, vec![one]);
+        let nat = self.nat_ty();
+        self.apply(head, &[nat, left, right])
+    }
+    fn arrow(&mut self, domain: ExprId, codomain: ExprId) -> ExprId {
+        self.kernel
+            .pi(self.anon, domain, codomain, BinderInfo::Default)
+    }
+    fn lam(&mut self, fv: u64, ty: ExprId, body: ExprId) -> ExprId {
+        self.lam_info(fv, ty, body, BinderInfo::Default)
+    }
+    fn lam_info(&mut self, fv: u64, ty: ExprId, body: ExprId, binder_info: BinderInfo) -> ExprId {
+        let body = self.kernel.abstract_fvars(body, &[fv]);
+        self.kernel.lam(self.anon, ty, body, binder_info)
+    }
+    fn pi(&mut self, fv: u64, ty: ExprId, body: ExprId) -> ExprId {
+        self.pi_info(fv, ty, body, BinderInfo::Default)
+    }
+    fn pi_info(&mut self, fv: u64, ty: ExprId, body: ExprId, binder_info: BinderInfo) -> ExprId {
+        let body = self.kernel.abstract_fvars(body, &[fv]);
+        self.kernel.pi(self.anon, ty, body, binder_info)
+    }
 }
 
 impl<'a> Dev<'a> {
