@@ -931,10 +931,10 @@ pub(crate) fn checked_refutation(
     })
 }
 
-/// Independently re-validate a certificate: [`checked_refutation`] succeeded.
+/// Independently re-validate a certificate: `checked_refutation` succeeded.
 ///
 /// The boolean form is the whole of the check — there is one derivation, and
-/// this is it, so the exported [`CheckedRefutation`] a reconstruction consumes
+/// this is it, so the exported `CheckedRefutation` a reconstruction consumes
 /// is by construction the one that was validated rather than a parallel reading
 /// of the same certificate.
 #[must_use]

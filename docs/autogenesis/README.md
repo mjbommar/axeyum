@@ -198,6 +198,22 @@ compounding, not automation theatre.
 | [Public Euclidean bounded-induction decline](99-public-euclidean-bounded-induction-decline.md) | Did primitive bounded induction remove generated recursion, and where is the remaining footprint now exposed? |
 | [Bounded-induction dependency-footprint audit plan](100-bounded-induction-dependency-footprint-audit-plan.md) | Which exact direct theorem dependencies carry the primitive-induction proof's remaining `propext` footprint? |
 | [Bounded-induction dependency-footprint audit result](101-bounded-induction-dependency-footprint-audit-result.md) | Which two public computation equations carry the complete remaining footprint, and which 20 dependencies are clean? |
+| [Public equation carrier audit plan](102-public-equation-carrier-audit-plan.md) | Which declarations immediately beneath `Nat.div_eq` and `Nat.mod_eq` carry their measured footprints? |
+| [Public equation carrier audit result](103-public-equation-carrier-audit-result.md) | Is quotient fuel congruence actually the blocker, or do proposition simplifiers and remainder wrappers carry the assumptions? |
+| [Target coprime-cancellation root audit plan](104-target-coprime-cancellation-root-audit-plan.md) | Can three official `Nat.Coprime` interfaces bypass the division wrapper and port cancellation into the exact target? |
+| [Target coprime-cancellation root audit result](105-target-coprime-cancellation-root-audit-result.md) | Which coprime interface is clean, and why do the two convenience cancellation roots still fail the trusted-base gate? |
+| [Subtractive gcd root audit plan](106-subtractive-gcd-root-audit-plan.md) | Can seven official subtraction/base equations support a division-free balanced-Bézout reconstruction? |
+| [Subtractive gcd root audit result](107-subtractive-gcd-root-audit-result.md) | Why do all seven official convenience proofs decline, and what exact dependency frontier comes next? |
+| [Subtractive gcd dependency audit plan](108-subtractive-gcd-dependency-audit-plan.md) | Which exact carriers contaminate the seven declined subtraction/base proofs? |
+| [Subtractive gcd dependency audit result](109-subtractive-gcd-dependency-audit-result.md) | Which dependency half is clean, and how does the viable subtraction route narrow? |
+| [Subtractive gcd route-frontier audit plan](110-subtractive-gcd-route-frontier-audit-plan.md) | Is the private gcd equation clean, and where do the remaining divisibility assumptions live? |
+| [Subtractive gcd route-frontier audit result](111-subtractive-gcd-route-frontier-audit-result.md) | Why is the official computational gcd base still assumption-bearing, and what generated carrier remains? |
+| [Generated gcd carrier audit plan](112-generated-gcd-carrier-audit-plan.md) | Is the last official gcd seam a bounded well-founded equation carrier or a broader contaminated closure? |
+| [Generated gcd carrier audit result](113-generated-gcd-carrier-audit-result.md) | Which three compiler-generated dependencies remain before a primitive gcd-equation decision? |
+| [Generated gcd novel-dependency audit plan](114-generated-gcd-novel-dependency-audit-plan.md) | Is `WellFounded.Nat.fix_eq` the sole remaining assumption carrier? |
+| [Generated gcd novel-dependency audit result](115-generated-gcd-novel-dependency-audit-result.md) | Why is a bounded official-gcd equation reconstruction now justified? |
+| [Public gcd definition direct-reconstruction plan](116-public-gcd-def-direct-reconstruction-plan.md) | Does the stable official equation follow without the isolated well-founded fix theorem? |
+| [Public gcd definition direct-reconstruction decline](117-public-gcd-def-direct-reconstruction-decline.md) | Why does direct reduction fail even for the zero constructor, and which target-side route remains? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

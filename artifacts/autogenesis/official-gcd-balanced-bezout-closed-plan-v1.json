@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-gcd-balanced-bezout-closed-plan",
+  "state": "preregistered-dependency-bound-specialization-before-code-or-execution-no-closed-credit",
+  "inputs": {
+    "generic_result": {"path": "artifacts/autogenesis/official-gcd-balanced-bezout-clean-result-v1.json", "sha256": "dd483ff460fb1ae7ef8038ef6eb214cd931d6a60bbb83e8330bd9c90a3b1290d"},
+    "generic_stream": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/13038b3ff-official-gcd-balanced-bezout-clean-v1/official-gcd-balanced-bezout-clean.ndjson", "sha256": "c106a1e03a329535042f17f6a9d3cf408361e4b4691b5ea6bac4d1a71186bb56"},
+    "mod_invariant_stream": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/667201932-lean430-nat-mod-invariant-v1/nat-mod-invariant.ndjson", "sha256": "5d945b100f3e2939d6ea3ffa67e10b4d78ff9efb7782a56f3d67468aa167ebf9"},
+    "target_stream": {"path": "/nas3/data/axeyum/autogenesis/coverage/26fcc2c2f-mathlib-v4.30.0-reflexivity-train-development-v1/streams/r082.ndjson", "sha256": "6afa79d79481403d3e3273ea3eea26b4d1194762f9bd623ec019f8e821323cfd"},
+    "gcd_bridge_stream": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/f94489c74-lean430-nat-gcd-succ-bridge-v1/nat-gcd-bridge.ndjson", "sha256": "6e99d4ae83b3916f8ee36c541bac18fc91b9f922252ca0af1cf658578b4e20db"},
+    "gcd_bridge_manifest": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/f94489c74-lean430-nat-gcd-succ-bridge-v1/manifest.json", "sha256": "7190676a198599fd7d4f14bb5cb0a83f2a8d9806be7d5803e3de920cf8e77637"},
+    "support_manifest": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/9e83ab67a-lean430-fibonacci-support-surface-v1/manifest.json", "sha256": "ed9f461b8f36018b91fa865e7b552bd06e3fcc438f08655ec2c3cbc2a793b16c"}
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/nat_gcd_succ_specialization.rs",
+    "new_mode": "--closed-balanced-bezout",
+    "method": "rebuild the accepted target-owned gcd support kernel, compose the generic theorem into it, then specialize with exactly Nat.gcd_zero_left and Nat.gcd_succ",
+    "generic_theorem": {"name": "Axeyum.Autogenesis.officialGcdBalancedBezoutCleanV1", "declaration_sha256": "feb1c3e41dd2f745261002b3876ddab750db5777226956ddbb07d805b4abc9ec"},
+    "arguments": [
+      {"name": "Nat.gcd_zero_left", "declaration_sha256": "f81aee8a1d8528ddf8b7be6007efbee190f2208cdef3dcfda9fa03a1f200175d"},
+      {"name": "Nat.gcd_succ", "declaration_sha256": "e41996f98e01e15b88e11773bb42db825bf271888ece2d002c193627a8392727"}
+    ],
+    "target": "Axeyum.Autogenesis.officialGcdBalancedBezoutClosedV1",
+    "contract": "forall m n, BalancedBezoutUpdateV2 m n (Nat.gcd m n)",
+    "proof_rendering_allowed": false
+  },
+  "acceptance": {
+    "fresh_complete_invocations": 2,
+    "outputs_must_be_byte_identical": true,
+    "generic_composition_must_replay": true,
+    "specialization_must_replay": true,
+    "target_axiom_footprint": [],
+    "required_direct_theorem_dependencies": ["Axeyum.Autogenesis.officialGcdBalancedBezoutCleanV1", "Nat.gcd_succ", "Nat.gcd_zero_left"],
+    "required_argument_identities_must_match": true,
+    "proof_terms_types_or_values_may_be_rendered": false
+  },
+  "budget": {"max_binary_builds": 1, "max_complete_invocations": 2, "max_input_stream_reads": 8, "max_specialization_operations": 8, "max_new_closed_theorem_submissions": 2, "max_retries": 0, "max_exact_fibonacci_target_submissions": 0, "max_executor_invocations": 0},
+  "authority": {"closed_gcd_balanced_bezout_credit": 0, "cancellation_credit": 0, "target_specialization_credit": 0, "exact_fibonacci_target_submissions": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_on_accept": "Use the unconditional balanced-Bezout theorem to reconstruct the retained coprime-factor cancellation support before any Fibonacci target submission.",
+  "output": "artifacts/autogenesis/official-gcd-balanced-bezout-closed-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-official-gcd-balanced-bezout-closed-plan.py",
+  "limitations": "This plan authorizes only a dependency-bound specialization of the accepted generic theorem. It grants no cancellation, target, evaluation, fact, or ledger credit."
+}

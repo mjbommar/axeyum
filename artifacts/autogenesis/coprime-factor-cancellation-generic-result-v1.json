@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-coprime-factor-cancellation-generic-result",
+  "state": "compilation-declined-missing-bound-support-module-no-retry",
+  "plan": {"path": "artifacts/autogenesis/coprime-factor-cancellation-generic-plan-v1.json", "sha256": "d4471e9299964edcb1af06285e10141cfa027ba847d502ec5ad58ec8778a4ec0", "commit": "3c2a2b29e"},
+  "source": {"path": "scripts/lean/autogenesis_coprime_factor_cancellation_generic_v1.lean", "sha256": "5353bdebe971dd3f9626429a5ba45abe5db1cf94cc6881170625d9767bbd254c"},
+  "evidence": {"pack": "/nas3/data/axeyum/autogenesis/reference-packs/58c5a9e71-coprime-factor-cancellation-generic-v1", "manifest_sha256": "66a2fa704c0a13b6e63fb4065e057eb392beda4e68a65641b3a9822e4e0f8543", "compile_stdout_sha256": "6f6c823a82355dc67247bcf90e88668dfce568a2bf80dd093371629f7e116cf6"},
+  "execution": {"source_copies": 1, "compiler_invocations": 1, "successful_compilations": 0, "exporter_invocations": 0, "importer_runs": 0, "proof_bearing_stream_reads": 0, "retries": 0},
+  "decline": {"stage": "module-resolution-before-elaboration", "missing_module": "AxeyumAutogenesisBalancedBezoutEuclideanUpdateV2", "theorem_submissions": 0, "proof_material_rendered": false},
+  "cleanup": {"exact_temporary_paths_removed": 1, "preexisting_baseline_unchanged": true},
+  "authority": {"generic_cancellation_credit": 0, "official_cancellation_credit": 0, "target_specialization_credit": 0, "exact_fibonacci_target_submissions": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_boundary": {"required_next_increment": "preregister a self-contained source with the balanced certificate definition inlined and no unbound local module import"},
+  "verification": "python3 scripts/check-autogenesis-coprime-factor-cancellation-generic-result.py",
+  "limitations": "The source did not reach elaboration. It establishes no cancellation theorem, official specialization, Fibonacci target, fact, evaluation, or ledger credit."
+}

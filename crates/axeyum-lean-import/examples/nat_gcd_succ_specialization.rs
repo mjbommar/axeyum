@@ -7,6 +7,7 @@ mod fib_coprime;
 #[path = "support/fib_gcd_shift.rs"]
 mod fib_gcd_shift;
 
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io::Cursor;
 use std::path::PathBuf;
@@ -14,7 +15,8 @@ use std::path::PathBuf;
 use axeyum_lean_import::{
     CHECKED_DEPENDENCY_THEOREM_RECEIPT_VERSION, CheckedDependencyTheoremAuthority,
     CheckedTheoremAuthority, CheckedTheoremCompositionError, CheckedTheoremDependency,
-    ImportLimits, canonical_declaration_sha256, canonical_expression_sha256,
+    ImportLimits, canonical_alpha_expression_sha256, canonical_declaration_sha256,
+    canonical_expression_sha256, canonical_kernel_type_shape_sha256,
     checked_reused_declaration_compatibility, compose_checked_theorem_slice,
     compose_checked_theorem_slice_with_target_leaves, import_ndjson,
     issue_checked_dependency_theorem_receipt, specialize_checked_theorem,
@@ -41,6 +43,13 @@ const MOD_LT_SUCC_GENERIC: &str = "Axeyum.Autogenesis.modLtSucc";
 const GCD_SUCC_GENERIC: &str = "Axeyum.Autogenesis.nat_gcd_succ";
 const MOD_LT_SUCC_TARGET: &str = "Axeyum.Autogenesis.ModLtSucc";
 const GCD_SUCC_TARGET: &str = "Nat.gcd_succ";
+const BALANCED_BEZOUT_GENERIC: &str = "Axeyum.Autogenesis.officialGcdBalancedBezoutCleanV1";
+const BALANCED_BEZOUT_GENERIC_SHA256: &str =
+    "feb1c3e41dd2f745261002b3876ddab750db5777226956ddbb07d805b4abc9ec";
+const BALANCED_BEZOUT_TARGET: &str = "Axeyum.Autogenesis.officialGcdBalancedBezoutClosedV1";
+const GCD_ZERO_LEFT_SHA256: &str =
+    "f81aee8a1d8528ddf8b7be6007efbee190f2208cdef3dcfda9fa03a1f200175d";
+const GCD_SUCC_SHA256: &str = "e41996f98e01e15b88e11773bb42db825bf271888ece2d002c193627a8392727";
 const FIB_RECURRENCE: &str = "Axeyum.Autogenesis.fibAddTwo";
 const FIB_COPRIME_TARGET: &str = "Nat.fib_coprime_fib_succ";
 const TARGET_STATEMENT: &str = "Axeyum.Autogenesis.Coverage.r082";
@@ -89,15 +98,21 @@ fn run() -> Result<(), String> {
         receipt_candidate_path,
         gcd_shift_support,
         gcd_shift_second_support,
+        balanced_bezout_path,
+        audit_balanced_bezout_fix,
     ) = match arguments.next() {
-        None => (false, None, false, None, false, false),
-        Some(flag) if flag == "--all-support" => (true, None, false, None, false, false),
+        None => (false, None, false, None, false, false, None, false),
+        Some(flag) if flag == "--all-support" => {
+            (true, None, false, None, false, false, None, false)
+        }
         Some(flag) if flag == "--exact-target" => (
             true,
             Some(required_path(&mut arguments, "fib-recurrence.ndjson")?),
             false,
             None,
             false,
+            false,
+            None,
             false,
         ),
         Some(flag) if flag == "--exact-authority" => (
@@ -107,6 +122,8 @@ fn run() -> Result<(), String> {
             None,
             false,
             false,
+            None,
+            false,
         ),
         Some(flag) if flag == "--issue-receipt" => (
             true,
@@ -114,6 +131,8 @@ fn run() -> Result<(), String> {
             false,
             Some(required_path(&mut arguments, "candidate-observation.json")?),
             false,
+            false,
+            None,
             false,
         ),
         Some(flag) if flag == "--gcd-fib-add-self-support" => (
@@ -123,6 +142,8 @@ fn run() -> Result<(), String> {
             None,
             true,
             false,
+            None,
+            false,
         ),
         Some(flag) if flag == "--gcd-fib-add-self-second-support" => (
             true,
@@ -130,6 +151,34 @@ fn run() -> Result<(), String> {
             false,
             None,
             true,
+            true,
+            None,
+            false,
+        ),
+        Some(flag) if flag == "--closed-balanced-bezout" => (
+            true,
+            None,
+            false,
+            None,
+            false,
+            false,
+            Some(required_path(
+                &mut arguments,
+                "official-gcd-balanced-bezout-clean.ndjson",
+            )?),
+            false,
+        ),
+        Some(flag) if flag == "--audit-balanced-bezout-fix" => (
+            true,
+            None,
+            false,
+            None,
+            false,
+            false,
+            Some(required_path(
+                &mut arguments,
+                "official-gcd-balanced-bezout-clean.ndjson",
+            )?),
             true,
         ),
         Some(_) => return Err("unexpected trailing argument".to_owned()),
@@ -161,10 +210,17 @@ fn run() -> Result<(), String> {
         .as_ref()
         .map(|path| import(path, "fib-recurrence"))
         .transpose()?;
+    let balanced_bezout = balanced_bezout_path
+        .as_ref()
+        .map(|path| import(path, "official-gcd-balanced-bezout-clean"))
+        .transpose()?;
     if !mod_invariant.report().axioms.is_empty()
         || !target.report().axioms.is_empty()
         || !gcd_bridge.report().axioms.is_empty()
         || exact_target
+            .as_ref()
+            .is_some_and(|imported| !imported.report().axioms.is_empty())
+        || balanced_bezout
             .as_ref()
             .is_some_and(|imported| !imported.report().axioms.is_empty())
     {
@@ -488,6 +544,36 @@ fn run() -> Result<(), String> {
         );
         return Ok(());
     }
+    if let Some(balanced_bezout) = balanced_bezout.as_ref() {
+        let completed = compose_checked_theorem_slice_with_target_leaves(
+            &native,
+            gcd_succ.kernel(),
+            &REQUIRED_SUPPORT_ROOTS,
+            &DVD_GCD_LEAVES,
+        )
+        .map_err(|error| format!("balanced-Bezout support composition declined: {error:?}"))?;
+        verify_checked_theorem_composition_with_target_leaves(
+            &native,
+            gcd_succ.kernel(),
+            completed.kernel(),
+            completed.receipt(),
+        )
+        .map_err(|error| {
+            format!("balanced-Bezout support composition did not replay: {error:?}")
+        })?;
+        require_empty_added_footprints(
+            completed
+                .receipt()
+                .added_theorems
+                .iter()
+                .map(|row| (row.name.as_str(), row.axiom_footprint.as_slice())),
+        )?;
+        return if audit_balanced_bezout_fix {
+            audit_balanced_bezout_fix_compatibility(balanced_bezout.kernel(), completed.kernel())
+        } else {
+            close_balanced_bezout(balanced_bezout.kernel(), completed.kernel())
+        };
+    }
     let frontier = retry_native_support(
         &native,
         gcd_succ.kernel(),
@@ -531,6 +617,296 @@ fn run() -> Result<(), String> {
         "{}",
         serde_json::to_string_pretty(&output).map_err(|error| error.to_string())?
     );
+    Ok(())
+}
+
+fn audit_balanced_bezout_fix_compatibility(source: &Kernel, target: &Kernel) -> Result<(), String> {
+    const ROOT: &str = "WellFounded.fix";
+    let source_root = find_name(source, ROOT)?;
+    let target_root = find_name(target, ROOT)?;
+    let source_closure = named_closure(source, source_root);
+    let target_closure = named_closure(target, target_root);
+    let union = source_closure
+        .keys()
+        .chain(target_closure.keys())
+        .cloned()
+        .collect::<BTreeSet<_>>();
+    if union.len() > 512 {
+        return Err(format!(
+            "WellFounded.fix closure union exceeded 512 names: {}",
+            union.len()
+        ));
+    }
+    let rows = union
+        .iter()
+        .map(|name| {
+            comparison_row(
+                source,
+                target,
+                name,
+                source_closure.get(name).copied(),
+                target_closure.get(name).copied(),
+            )
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let root_row = rows
+        .iter()
+        .find(|row| row["name"] == ROOT)
+        .ok_or("WellFounded.fix comparison row disappeared")?;
+    let source_shape = root_row["source"]["kernel_type_shape_sha256"]
+        .as_str()
+        .ok_or("WellFounded.fix source shape disappeared")?;
+    let target_shape = root_row["target"]["kernel_type_shape_sha256"]
+        .as_str()
+        .ok_or("WellFounded.fix target shape disappeared")?;
+    if source_shape != "f45b230503d6ddc03c61714008f6165dd055ff995d927507fc6d7aaffcf6afd6"
+        || target_shape != "0c2e9552a1056133fbd4e6a318344cfb1310468f7d2113efb37ebba0bf6ef32c"
+    {
+        return Err(format!(
+            "WellFounded.fix root shapes changed: source={source_shape} target={target_shape}"
+        ));
+    }
+    let mut class_counts = BTreeMap::<String, usize>::new();
+    for row in &rows {
+        let class = row["compatibility"]
+            .as_str()
+            .ok_or("compatibility class disappeared")?;
+        *class_counts.entry(class.to_owned()).or_default() += 1;
+    }
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "schema_version": 1,
+            "kind": "axeyum-official-gcd-balanced-bezout-fix-compatibility-audit",
+            "state": "proof-free-well-founded-fix-closure-classified",
+            "root": ROOT,
+            "source_closure_count": source_closure.len(),
+            "target_closure_count": target_closure.len(),
+            "closure_union_count": union.len(),
+            "class_counts": class_counts,
+            "rows": rows,
+            "rendered_material": {
+                "proof_terms": 0,
+                "theorem_types": 0,
+                "definition_values": 0,
+                "theorem_values": 0,
+            },
+            "composition_attempts": 0,
+            "closed_theorem_submissions": 0,
+            "compatibility_override_credit": 0,
+            "translation_credit": 0,
+            "target_reconstruction_credit": 0,
+            "fact_status_changes": 0,
+            "evaluation_credit": 0,
+            "ledger_writes": 0,
+        }))
+        .map_err(|error| error.to_string())?
+    );
+    Ok(())
+}
+
+fn named_closure(kernel: &Kernel, root: NameId) -> BTreeMap<String, NameId> {
+    std::iter::once(root)
+        .chain(kernel.declaration_dependency_closure(root))
+        .map(|name| (kernel.display_name(name).to_string(), name))
+        .collect()
+}
+
+fn comparison_row(
+    source: &Kernel,
+    target: &Kernel,
+    name: &str,
+    source_name: Option<NameId>,
+    target_name: Option<NameId>,
+) -> Result<Value, String> {
+    let source_metadata = source_name
+        .map(|id| declaration_metadata(source, id))
+        .transpose()?;
+    let target_metadata = target_name
+        .map(|id| declaration_metadata(target, id))
+        .transpose()?;
+    let compatibility = match (source_name, target_name) {
+        (None, Some(_)) => "missing-source",
+        (Some(_), None) => "missing-target",
+        (Some(source_id), Some(target_id)) => {
+            if canonical_declaration_sha256(source, source_id)?
+                == canonical_declaration_sha256(target, target_id)?
+            {
+                "exact-declaration"
+            } else {
+                match checked_reused_declaration_compatibility(source, target, name) {
+                    Ok(receipt) => receipt.compatibility.as_str(),
+                    Err(CheckedTheoremCompositionError::TypeShapeMismatch { .. }) => {
+                        "type-shape-mismatch"
+                    }
+                    Err(_) => "compatibility-declined",
+                }
+            }
+        }
+        (None, None) => return Err("closure union contained an absent name".to_owned()),
+    };
+    Ok(json!({
+        "name": name,
+        "compatibility": compatibility,
+        "source": source_metadata,
+        "target": target_metadata,
+    }))
+}
+
+fn declaration_metadata(kernel: &Kernel, name: NameId) -> Result<Value, String> {
+    let declaration = kernel
+        .environment()
+        .get(name)
+        .ok_or_else(|| format!("declaration disappeared: {}", kernel.display_name(name)))?;
+    let ty = declaration.ty();
+    Ok(json!({
+        "kind": declaration_kind(declaration),
+        "universe_parameter_count": declaration.uparams().len(),
+        "declaration_sha256": canonical_declaration_sha256(kernel, name)?,
+        "type_sha256": canonical_expression_sha256(kernel, ty)?,
+        "alpha_type_sha256": canonical_alpha_expression_sha256(kernel, ty)?,
+        "kernel_type_shape_sha256": canonical_kernel_type_shape_sha256(kernel, ty)?,
+    }))
+}
+
+fn declaration_kind(declaration: &Declaration) -> &'static str {
+    match declaration {
+        Declaration::Axiom { .. } => "axiom",
+        Declaration::Definition { .. } => "definition",
+        Declaration::Theorem { .. } => "theorem",
+        Declaration::Opaque { .. } => "opaque",
+        Declaration::Inductive { .. } => "inductive",
+        Declaration::Constructor { .. } => "constructor",
+        Declaration::Recursor { .. } => "recursor",
+        Declaration::Quotient { .. } => "quotient",
+    }
+}
+
+#[allow(clippy::too_many_lines)]
+fn close_balanced_bezout(source: &Kernel, target: &Kernel) -> Result<(), String> {
+    let composed = compose_checked_theorem_slice(source, target, &[BALANCED_BEZOUT_GENERIC])
+        .map_err(|error| format!("generic balanced-Bezout composition declined: {error:?}"))?;
+    verify_checked_theorem_composition(source, target, composed.kernel(), composed.receipt())
+        .map_err(|error| {
+            format!("generic balanced-Bezout composition did not replay: {error:?}")
+        })?;
+    require_empty_added_footprints(
+        composed
+            .receipt()
+            .added_theorems
+            .iter()
+            .map(|row| (row.name.as_str(), row.axiom_footprint.as_slice())),
+    )?;
+
+    let mut prepared = composed.kernel().clone();
+    let generic = find_name(&prepared, BALANCED_BEZOUT_GENERIC)?;
+    require_declaration_identity(
+        &prepared,
+        generic,
+        BALANCED_BEZOUT_GENERIC,
+        BALANCED_BEZOUT_GENERIC_SHA256,
+    )?;
+    let gcd_zero_left = find_name(&prepared, "Nat.gcd_zero_left")?;
+    require_declaration_identity(
+        &prepared,
+        gcd_zero_left,
+        "Nat.gcd_zero_left",
+        GCD_ZERO_LEFT_SHA256,
+    )?;
+    let gcd_succ = find_name(&prepared, GCD_SUCC_TARGET)?;
+    require_declaration_identity(&prepared, gcd_succ, GCD_SUCC_TARGET, GCD_SUCC_SHA256)?;
+    let target_name = nested_name(
+        &mut prepared,
+        &["Axeyum", "Autogenesis", "officialGcdBalancedBezoutClosedV1"],
+    );
+    let specialized =
+        specialize_checked_theorem(&prepared, generic, &[gcd_zero_left, gcd_succ], target_name)
+            .map_err(|error| {
+                format!("closed balanced-Bezout specialization declined: {error:?}")
+            })?;
+    verify_checked_theorem_specialization(
+        &prepared,
+        specialized.kernel(),
+        generic,
+        &[gcd_zero_left, gcd_succ],
+        target_name,
+        specialized.receipt(),
+    )
+    .map_err(|error| format!("closed balanced-Bezout specialization did not replay: {error:?}"))?;
+
+    let footprint = specialized
+        .kernel()
+        .axiom_footprint(target_name)
+        .into_iter()
+        .map(|name| specialized.kernel().display_name(name).to_string())
+        .collect::<Vec<_>>();
+    if !footprint.is_empty() {
+        return Err(format!(
+            "closed balanced-Bezout theorem reaches assumptions: {footprint:?}"
+        ));
+    }
+    let mut dependencies = specialized
+        .kernel()
+        .theorem_dependencies(target_name)
+        .into_iter()
+        .map(|name| specialized.kernel().display_name(name).to_string())
+        .collect::<Vec<_>>();
+    dependencies.sort();
+    let expected_dependencies = [
+        BALANCED_BEZOUT_GENERIC.to_owned(),
+        GCD_SUCC_TARGET.to_owned(),
+        "Nat.gcd_zero_left".to_owned(),
+    ];
+    if dependencies != expected_dependencies {
+        return Err(format!(
+            "closed balanced-Bezout dependencies changed: {dependencies:?}"
+        ));
+    }
+    let declaration_sha256 = canonical_declaration_sha256(specialized.kernel(), target_name)?;
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "schema_version": 1,
+            "kind": "axeyum-official-gcd-balanced-bezout-closed-specialization",
+            "state": "closed-gcd-balanced-bezout-reconstructed-empty-footprint",
+            "generic_composition_receipt_sha256": composed.receipt().receipt_sha256,
+            "specialization": {
+                "source": BALANCED_BEZOUT_GENERIC,
+                "source_declaration_sha256": BALANCED_BEZOUT_GENERIC_SHA256,
+                "arguments": [
+                    {"name": "Nat.gcd_zero_left", "declaration_sha256": GCD_ZERO_LEFT_SHA256},
+                    {"name": GCD_SUCC_TARGET, "declaration_sha256": GCD_SUCC_SHA256},
+                ],
+                "target": BALANCED_BEZOUT_TARGET,
+                "target_declaration_sha256": declaration_sha256,
+                "receipt_sha256": specialized.receipt().receipt_sha256,
+                "axiom_footprint": footprint,
+                "direct_theorem_dependencies": dependencies,
+            },
+            "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0},
+            "proof_search_invocations": 0,
+            "executor_invocations": 0,
+            "fact_status_changes": 0,
+            "evaluation_credit": 0,
+            "ledger_writes": 0,
+        }))
+        .map_err(|error| error.to_string())?
+    );
+    Ok(())
+}
+
+fn require_declaration_identity(
+    kernel: &Kernel,
+    name: NameId,
+    label: &str,
+    expected: &str,
+) -> Result<(), String> {
+    let actual = canonical_declaration_sha256(kernel, name)?;
+    if actual != expected {
+        return Err(format!(
+            "{label} declaration identity changed: expected {expected}, found {actual}"
+        ));
+    }
     Ok(())
 }
 

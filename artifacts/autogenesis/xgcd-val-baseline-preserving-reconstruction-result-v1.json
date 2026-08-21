@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-xgcd-val-baseline-preserving-reconstruction-result",
+  "state": "rfl-projection-remains-propext-bearing-public-xgcd-surface-closed",
+  "plan": {
+    "path": "artifacts/autogenesis/xgcd-val-baseline-preserving-reconstruction-plan-v1.json",
+    "sha256": "96739ef717856624b2934d205e58a1fcf5e598bdd864da7493bc014a7e671b6f"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/1e74d4601-xgcd-val-baseline-preserving-v1/manifest.json",
+    "sha256": "6d5838bded7408ada8a6e1babced0a2eb3d7ee4962c8ed0fe6106a5847d7fe00",
+    "mode": "0444"
+  },
+  "target": {
+    "reference_name": "Nat.xgcd_val",
+    "authored_name": "Axeyum.Autogenesis.xgcdValDirect",
+    "type": "∀ (x y : ℕ), x.xgcd y = (x.gcdA y, x.gcdB y)",
+    "type_sha256": "15f2274bf30c6540ff1415cd5f567ddc7e1438282b834a1bf0c7dc88d40ff79c"
+  },
+  "measured_row": {
+    "name": "Axeyum.Autogenesis.xgcdValDirect",
+    "declaration_sha256": "fc9c5089a789d624a685a42050b433edfeea329508ebb0ccf5a7b9425c4a374d",
+    "class": "propext-bearing",
+    "axiom_footprint": [
+      "propext"
+    ],
+    "direct_theorem_dependencies": []
+  },
+  "outcome": {
+    "source_compiled": true,
+    "compile_exit": 0,
+    "exported": true,
+    "kernel_imports": 2,
+    "audit_rows_identical": true,
+    "definitional_equality_elaborated": true,
+    "axiom_footprint_empty": false,
+    "projection_equation_accepted": false,
+    "preexisting_baseline_restored": true,
+    "planned_temporary_paths_present_after": 0,
+    "conclusion": "the public xgcd/gcdA/gcdB definitional surface itself reaches propext even for an rfl theorem"
+  },
+  "budget": {
+    "source_copies": 1,
+    "source_compilations": 1,
+    "exporter_invocations": 1,
+    "importer_runs": 2,
+    "proof_bearing_stream_reads": 2,
+    "retries": 0,
+    "new_theorem_submissions": 2,
+    "exact_target_submissions": 0,
+    "executor_invocations": 0
+  },
+  "authority": {
+    "preexisting_files_changed_or_removed": 0,
+    "projection_equation_credit": 0,
+    "extended_gcd_reconstructions": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Stop descending or wrapping the official xgcd/gcdA/gcdB surface. Preregister target-owned coefficient definitions over the native gcd carrier and use the measured empty-footprint Nat.gcd.induction interface to prove their Bezout invariant bottom-up.",
+  "limitations": "This result closes the official public xgcd coefficient surface under the current zero-assumption policy. It does not refute target-owned extended-gcd algorithms or the mathematical Bezout identity."
+}

@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-public-gcd-def-direct-reconstruction-plan",
+  "state": "preregistered-before-one-source-compilation-no-public-equation-credit",
+  "policy_version": "public-gcd-def-direct-reconstruction-v1",
+  "inputs": {
+    "carrier_result": {
+      "path": "artifacts/autogenesis/generated-gcd-novel-dependency-audit-result-v1.json",
+      "sha256": "30698c40a963f6d39880a366cb318bc4da60ae5907957cb9731961fda75ca107"
+    },
+    "statement_inventory": {
+      "path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-nat-int-statement-inventory-v2.ndjson",
+      "sha256": "4285e551680abf3b0cafb11709015f04b3aef3eb05ce23af2392b12cec31aecc",
+      "mode": "0444"
+    }
+  },
+  "target": {
+    "module": "Init.Data.Nat.Gcd",
+    "name": "Nat.gcd_def",
+    "source_row_sha256": "ae1e90ca23cf96c2d0f5775bf9e20ceb36ab02cce70a83cd5c12ca168171da7e",
+    "type": "∀ (x y : ℕ), x.gcd y = if x = 0 then y else (y % x).gcd x",
+    "type_sha256": "ef15d81bcf7761c4782f3e7e5626ae5c23840a467fb7a3443f4e184f787cb925",
+    "type_repr_sha256": "aa82c5420e72a0c3baf1340d7b9cefe29a32bf1a6436cf7150c5c3b65311c16d",
+    "authored_name": "Axeyum.Autogenesis.gcdDefDirect"
+  },
+  "construction": {
+    "source_path": "scripts/lean/autogenesis_gcd_def_direct.lean",
+    "method": "case split on x and definitional reduction only",
+    "proof_search_allowed": false,
+    "upstream_proof_bodies_read": false,
+    "forbidden_dependencies": [
+      "Nat.gcd_def",
+      "WellFounded.Nat.fix_eq",
+      "_private.Init.Data.Nat.Gcd.0.Nat.gcd.eq_def",
+      "_private.Init.Data.Nat.Gcd.0.Nat.gcd._unary.eq_def",
+      "Quot",
+      "Quot.lift",
+      "Quot.mk",
+      "Quot.sound"
+    ],
+    "forbidden_tactics": ["aesop", "simp", "simpa", "omega", "native_decide"]
+  },
+  "acceptance": {
+    "source_must_compile": true,
+    "exported_type_must_match_target": true,
+    "fresh_kernel_reconstructions_required": 2,
+    "axiom_footprint_must_be_empty": true,
+    "forbidden_dependencies_must_be_absent": true,
+    "failed_compilation_ends_increment": true
+  },
+  "budget": {
+    "max_source_compilations": 1,
+    "max_exporter_invocations": 1,
+    "max_importer_runs": 2,
+    "max_retries": 0,
+    "max_new_theorem_submissions": 2,
+    "max_exact_fibonacci_target_submissions": 0,
+    "max_executor_invocations": 0
+  },
+  "authority": {
+    "proof_bodies_readable_by_model": false,
+    "proof_search_allowed": false,
+    "public_gcd_equation_credit": 0,
+    "balanced_bezout_reconstruction_allowed": false,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/public-gcd-def-direct-reconstruction-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-public-gcd-def-direct-reconstruction-plan.py",
+  "limitations": "The attempt tests whether the public gcd equation follows by direct definitional reduction without the isolated fix equation. Failure does not refute a target-owned gcd; success still requires two empty-footprint kernel reconstructions."
+}

@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-xgcd-val-direct-reconstruction-result",
+  "state": "execution-boundary-decline-before-elaboration-source-outside-package-root",
+  "plan": {
+    "path": "artifacts/autogenesis/xgcd-val-direct-reconstruction-plan-v1.json",
+    "sha256": "561ed56fe4d9529292889e26ac7f95eeb38ab299ade0a149f85186aa9c362e66"
+  },
+  "source": {
+    "path": "scripts/lean/autogenesis_xgcd_val_direct.lean",
+    "sha256": "077e5c6320ac8972ca18edb0b75226faac0b062b726609e9d7a213b7f27d2e62"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/17cf9888b-xgcd-val-direct-v1/manifest.json",
+    "sha256": "9192ab6af236f36f68d16f59e1cc4ada80b2f22dae4dc740a945f93f7d0613c6",
+    "mode": "0444"
+  },
+  "target": {
+    "name": "Nat.xgcd_val",
+    "type": "∀ (x y : ℕ), x.xgcd y = (x.gcdA y, x.gcdB y)",
+    "type_sha256": "15f2274bf30c6540ff1415cd5f567ddc7e1438282b834a1bf0c7dc88d40ff79c"
+  },
+  "outcome": {
+    "source_compiled": false,
+    "compile_exit": 1,
+    "error_kind": "input-source-outside-mathlib-package-root",
+    "theorem_elaborated": false,
+    "definitional_equality_tested": false,
+    "exported": false,
+    "kernel_imports": 0,
+    "projection_equation_accepted": false,
+    "decline_reason": "Lean rejected the source path before elaboration because it was outside the Mathlib package root"
+  },
+  "budget": {
+    "source_compilations": 1,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "proof_bearing_stream_reads": 0,
+    "retries": 0,
+    "new_theorem_submissions": 0,
+    "exact_target_submissions": 0,
+    "executor_invocations": 0
+  },
+  "authority": {
+    "projection_equation_credit": 0,
+    "extended_gcd_reconstructions": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Preregister a corrected one-shot execution that copies the identical source under the pinned Mathlib package root, compiles there, exports only on success, and removes only its exact temporary source and build products after sealing evidence.",
+  "limitations": "This is an execution-boundary decline, not evidence for or against definitional equality of xgcd, gcdA, and gcdB. Lean never elaborated the theorem body."
+}

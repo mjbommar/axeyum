@@ -1,0 +1,70 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-balanced-bezout-euclidean-update-result",
+  "state": "parameterized-update-reconstructed-twice-empty-footprint",
+  "plan": {
+    "path": "artifacts/autogenesis/balanced-bezout-euclidean-update-plan-v2.json",
+    "sha256": "80f51dd208a8617d9529e16e1e7ffa87828775af1a7bc580a52252b4cd58cb87",
+    "commit": "7664c937ad815b94ec41505ab0b68fa3c5db92b1"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/0ffd2dbc9-balanced-bezout-euclidean-update-v2-v1/manifest.json",
+    "sha256": "0b06492d3c6c6a633f67ccdf88e54dc7a6a50dbc5e5c326143cf4d1a5859a949",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "execution": {
+    "source_copies": 1,
+    "compiler_invocations": 1,
+    "successful_compilations": 1,
+    "exporter_invocations": 1,
+    "importer_runs": 2,
+    "proof_bearing_stream_reads": 2,
+    "retries": 0
+  },
+  "theorem": {
+    "name": "Axeyum.Autogenesis.balancedBezoutEuclideanUpdateV2",
+    "contract": "clean mul-assoc -> clean right-distrib -> d*q + r = n -> BalancedBezout r d g -> BalancedBezout d n g",
+    "declaration_sha256": "3301a38265badc4cffa6d56c953fa3a5af99b37fc7fecce3cdf053110a536e8b",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [
+      "Eq.symm",
+      "Eq.trans",
+      "Nat.add_assoc",
+      "Nat.left_distrib",
+      "_private.AxeyumAutogenesisBalancedBezoutEuclideanUpdateV2.0.Axeyum.Autogenesis.rotateFourthThenSwapV2",
+      "_private.AxeyumAutogenesisBalancedBezoutEuclideanUpdateV2.0.Axeyum.Autogenesis.rotateLastFiveV2",
+      "congrArg"
+    ],
+    "forbidden_dependencies_present": [],
+    "audit_sha256": "7d59fe1659af3c96c39f5c51080495aeda6f39972a646b2172bb73104afa6c3b",
+    "fresh_reconstructions": 2,
+    "audits_byte_identical": true,
+    "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0}
+  },
+  "cleanup": {
+    "exact_temporary_paths_removed": 3,
+    "preexisting_status_entries_before": 3,
+    "preexisting_status_entries_after": 3,
+    "preexisting_baseline_unchanged": true
+  },
+  "next_boundary": {
+    "euclidean_update_accepted": true,
+    "required_next_increment": "preregister identity-gated composition of the two injected leaf contracts from clean native or target-owned theorems",
+    "leaf_composition_completed": false,
+    "generic_gcd_submission_authorized": false
+  },
+  "authority": {
+    "euclidean_update_credit": 1,
+    "leaf_composition_credit": 0,
+    "generic_balanced_bezout_credit": 0,
+    "target_specialization_credit": 0,
+    "cancellation_credit": 0,
+    "exact_fibonacci_target_submissions": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "verification": "python3 scripts/check-autogenesis-balanced-bezout-euclidean-update-result-v2.py",
+  "limitations": "This accepts only the parameterized arithmetic Euclidean update. It supplies neither injected leaf, generic gcd theorem, target specialization, cancellation result, Fibonacci target, receipt, evaluation result, fact transition, nor ledger write."
+}

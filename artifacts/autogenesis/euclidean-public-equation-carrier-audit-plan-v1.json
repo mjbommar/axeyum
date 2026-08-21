@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-euclidean-public-equation-carrier-audit-plan",
+  "state": "preregistered-before-one-importer-audit-no-replacement-authority",
+  "policy_version": "euclidean-public-equation-direct-closure-audit-v1",
+  "inputs": {
+    "parent_audit_result": {
+      "path": "artifacts/autogenesis/euclidean-bounded-induction-dependency-audit-result-v1.json",
+      "sha256": "bd839c84c4ec29d2a6a3a0615e14e8c6c32e42d7a949bf9a37930167695e3c07"
+    },
+    "evidence_manifest": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/6fe0cd29e-public-euclidean-bounded-induction-decline-v1/manifest.json",
+      "sha256": "e8c273c1550eeffbe1fd775a667a75c18539140880ab8c15f344d3a22df39054",
+      "mode": "0444"
+    },
+    "proof_bearing_stream": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/6fe0cd29e-public-euclidean-bounded-induction-decline-v1/bounded-induction.ndjson",
+      "sha256": "d71692e97b7bae7ab43043ed4490a79b2134650b4bfe4d8e20220693fe033844",
+      "bytes": 715764,
+      "mode": "0444",
+      "textual_read_allowed": false
+    }
+  },
+  "parent_carriers": [
+    "Nat.div_eq",
+    "Nat.mod_eq"
+  ],
+  "fixed_population": [
+    "Eq.symm",
+    "Eq.trans",
+    "Nat.div.go.eq_1",
+    "Nat.div_rec_fuel_lemma",
+    "Nat.lt_succ_self",
+    "Nat.modCore_eq",
+    "Nat.modCore_eq_mod",
+    "_private.Init.Data.Nat.Div.Basic.0.Nat.div.go.fuel_congr",
+    "and_false",
+    "and_self",
+    "congr",
+    "congrArg",
+    "congrFun'",
+    "dif_neg",
+    "dif_pos",
+    "eq_false",
+    "eq_self",
+    "eq_true",
+    "false_and",
+    "ite_cond_eq_false",
+    "ite_cond_eq_true",
+    "ite_congr",
+    "of_eq_true"
+  ],
+  "fixed_measurement": {
+    "tool_path": "crates/axeyum-lean-import/examples/euclidean_public_equation_carrier_audit.rs",
+    "population_relation": "sorted set union of the two parent carriers' direct theorem dependencies",
+    "per_declaration_fields": [
+      "name",
+      "declaration_sha256",
+      "axiom_footprint",
+      "direct_theorem_dependencies"
+    ],
+    "classes": [
+      "empty-footprint",
+      "propext-bearing",
+      "other-assumption-bearing"
+    ],
+    "proof_terms_or_values_may_be_rendered": false,
+    "all_population_names_must_resolve_as_theorems": true,
+    "aggregate_must_equal_per_declaration_rows": true
+  },
+  "known_before_audit": {
+    "parent_carrier_footprints": {
+      "Nat.div_eq": [
+        "propext"
+      ],
+      "Nat.mod_eq": [
+        "propext"
+      ]
+    },
+    "exact_child_carrier_population": "unknown"
+  },
+  "budget": {
+    "max_importer_runs": 1,
+    "max_proof_bearing_stream_reads": 1,
+    "max_retries": 0,
+    "max_replacement_source_compilations": 0,
+    "max_new_authored_theorem_submissions": 0,
+    "max_exact_target_submissions": 0,
+    "max_executor_invocations": 0
+  },
+  "authority": {
+    "proof_bodies_readable_by_model": false,
+    "theorem_values_readable_by_model": false,
+    "public_equation_replacement_allowed": false,
+    "support_theorem_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/euclidean-public-equation-carrier-audit-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-euclidean-public-equation-carrier-audit-plan.py",
+  "limitations": "The audit descends one direct-dependency layer beneath the two public equation carriers. It does not inspect proof material or authorize adapting either equation proof."
+}

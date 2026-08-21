@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-extended-gcd-dependency-audit-plan",
+  "state": "preregistered-before-twelve-root-sealed-stream-reread-no-reconstruction-authority",
+  "policy_version": "extended-gcd-direct-dependency-audit-v1",
+  "inputs": {
+    "root_result": {
+      "path": "artifacts/autogenesis/extended-gcd-root-audit-result-v1.json",
+      "sha256": "8e1622b359f9e0c1418cc139036162787c39843cbdff7229cb997bd7adceaa9f"
+    },
+    "sealed_stream": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/609241d91-extended-gcd-root-audit-v1/extended-gcd.ndjson",
+      "sha256": "97d21c35c8b86c425ce850d2774ed8c60a07ae9a7070c21df536e4e503e400fb",
+      "bytes": 2497293,
+      "mode": "0444"
+    }
+  },
+  "fixed_roots": [
+    "Eq.trans",
+    "Int.mul_zero",
+    "Nat.xgcdAux_val",
+    "Nat.xgcd_val",
+    "_private.Mathlib.Data.Int.GCD.0.Nat.xgcdAux_P",
+    "add_zero",
+    "congr",
+    "congrArg",
+    "eq_self",
+    "mul_one",
+    "of_eq_true",
+    "zero_add"
+  ],
+  "candidate_coefficient_core": [
+    "Nat.xgcdAux_val",
+    "Nat.xgcd_val",
+    "_private.Mathlib.Data.Int.GCD.0.Nat.xgcdAux_P"
+  ],
+  "fixed_measurement": {
+    "tool_path": "crates/axeyum-lean-import/examples/theorem_footprint_batch_audit.rs",
+    "tool_sha256": "38e40236fec86f1080af52bafb9394f9f1505ad161dae96e9c48979d00b1094a",
+    "root_order_must_match_plan": true,
+    "proof_terms_types_or_values_may_be_rendered": false,
+    "all_roots_must_resolve_as_theorems": true
+  },
+  "decision_rule": {
+    "all_candidate_core_empty_next": "preregister an explicit extended-gcd reconstruction from the measured direct interface",
+    "candidate_core_assumption_bearing_next": "preregister an audit of exactly the novel direct dependencies of the bearing candidate roots",
+    "authorize_either_successor_in_this_increment": false
+  },
+  "budget": {
+    "max_exporter_invocations": 0,
+    "max_batch_importer_runs": 1,
+    "max_proof_bearing_stream_reads": 1,
+    "max_retries": 0,
+    "max_reconstruction_source_compilations": 0,
+    "max_new_theorem_submissions": 0,
+    "max_exact_target_submissions": 0,
+    "max_executor_invocations": 0
+  },
+  "authority": {
+    "proof_bodies_readable_by_model": false,
+    "theorem_types_readable_by_model": false,
+    "theorem_values_readable_by_model": false,
+    "reconstruction_allowed": false,
+    "support_theorem_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/extended-gcd-dependency-audit-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-extended-gcd-dependency-audit-plan.py",
+  "limitations": "This pass classifies the twelve direct theorem dependencies already present in the sealed stream. It proves and credits no extended-gcd, Bezout, cancellation, or Fibonacci theorem."
+}

@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-balanced-bezout-euclidean-update-dependency-audit-plan",
+  "state": "preregistered-exact-nine-root-single-read-no-theorem-credit",
+  "inputs": {
+    "declined_update_result": {
+      "path": "artifacts/autogenesis/balanced-bezout-euclidean-update-result-v1.json",
+      "sha256": "68b8f696d52a4e077f3774ab467b47e7acd7e4ffad87fc2e6d36d846a7241a61"
+    },
+    "sealed_manifest": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/5a2d0d397-balanced-bezout-euclidean-update-v1/manifest.json",
+      "sha256": "20c86d1f3bf95b69cb2484e847393f126680f9453406713a0c080e1a8208126c"
+    },
+    "sealed_stream": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/5a2d0d397-balanced-bezout-euclidean-update-v1/balanced-bezout-update.ndjson",
+      "bytes": 201048,
+      "sha256": "85e133b5f0acee922cbbd0a6597bc9824ce8907e4326d76c4a195ac97ad1f44c",
+      "textual_read_allowed": false
+    }
+  },
+  "tool": {
+    "path": "crates/axeyum-lean-import/examples/theorem_footprint_batch_audit.rs",
+    "source_sha256": "38e40236fec86f1080af52bafb9394f9f1505ad161dae96e9c48979d00b1094a",
+    "binary": "target/debug/examples/theorem_footprint_batch_audit",
+    "binary_sha256": "d91507f272aafd6c816d640e42b68aceb3144e3245fe6ebfb4f9dfb14c38e954",
+    "renders_proof_terms_types_or_values": false
+  },
+  "ordered_roots": [
+    "Eq.symm",
+    "Eq.trans",
+    "Nat.add_assoc",
+    "Nat.left_distrib",
+    "Nat.mul_assoc",
+    "Nat.right_distrib",
+    "_private.AxeyumAutogenesisBalancedBezoutEuclideanUpdateV1.0.Axeyum.Autogenesis.rotateFourthThenSwapV1",
+    "_private.AxeyumAutogenesisBalancedBezoutEuclideanUpdateV1.0.Axeyum.Autogenesis.rotateLastFiveV1",
+    "congrArg"
+  ],
+  "execution": {
+    "evidence_pack": "/nas3/data/axeyum/autogenesis/reference-packs/029ce6f91-balanced-bezout-update-dependency-audit-v1",
+    "output": "audit.json",
+    "stderr": "audit.stderr",
+    "input_stream_may_not_be_copied_or_rendered": true,
+    "source_compilation_or_export_authorized": false
+  },
+  "acceptance": {
+    "single_import_must_succeed": true,
+    "ordered_rows_must_equal_ordered_roots": true,
+    "each_row_must_report_identity_footprint_and_direct_dependencies": true,
+    "rendered_material_must_be_zero": true,
+    "propext_carrier_set_must_be_reported_exactly": true
+  },
+  "budget": {
+    "max_compiler_invocations": 0,
+    "max_exporter_invocations": 0,
+    "max_importer_runs": 1,
+    "max_proof_bearing_stream_reads": 1,
+    "max_retries": 0,
+    "max_new_theorem_submissions": 0,
+    "max_executor_invocations": 0
+  },
+  "authority": {
+    "proof_bodies_readable_by_model": false,
+    "theorem_types_or_values_readable_by_model": false,
+    "dependency_classification_credit": 1,
+    "euclidean_update_credit": 0,
+    "generic_balanced_bezout_credit": 0,
+    "target_specialization_credit": 0,
+    "cancellation_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_on_result": "If the propext-bearing subset is nonempty, replace only those dependencies in a separately preregistered V2 source. If it is empty, treat the footprint as direct or definition/elaboration-borne and preregister a source-shape isolation before V2.",
+  "output": "artifacts/autogenesis/balanced-bezout-euclidean-update-dependency-audit-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-balanced-bezout-euclidean-update-dependency-audit-plan.py",
+  "limitations": "This audit may classify only the nine direct dependencies already measured in V1. It grants no theorem, target, evaluation, fact, or ledger credit."
+}

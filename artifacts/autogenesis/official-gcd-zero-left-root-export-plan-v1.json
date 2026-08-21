@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-gcd-zero-left-root-export-plan",
+  "state": "preregistered-exact-theorem-root-export-same-source-and-importer-limit-no-credit",
+  "inputs": {
+    "decline_result": {"path": "artifacts/autogenesis/official-gcd-zero-left-reconstruction-result-v1.json", "sha256": "bab2d8acb288390a997e90f5f9fc5011d833b0128b33617c49a67cc020d0da04"},
+    "authored_source": {"path": "scripts/lean/autogenesis_nat_gcd_fix_eq_v2.lean", "sha256": "a893175b87b5ddcab95a9fdf5abf5436880ba116d308e1f5169f5dd512bb83c1", "proof_change_from_decline": false}
+  },
+  "fixed_environment": {"ssh_alias": "s5", "hostname": "server5", "mathlib_checkout": "/home/mjbommar/lean-import-scale/mathlib4", "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f", "lean_version": "4.30.0", "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622", "lean4export_binary": "/home/mjbommar/lean-import-scale/lean4export/.lake/build/bin/lean4export", "lean4export_binary_sha256": "8e763913b03762488571a93ced6ec1a4e04f7d8eebbe40bd1215ba41a6bd4449"},
+  "export": {
+    "module": "AxeyumAutogenesisNatGcdFixEqV2",
+    "separator": "--",
+    "ordered_roots": ["Axeyum.Autogenesis.nat_gcd_zero_left"],
+    "command_tail": ["env", "/home/mjbommar/lean-import-scale/lean4export/.lake/build/bin/lean4export", "AxeyumAutogenesisNatGcdFixEqV2", "--", "Axeyum.Autogenesis.nat_gcd_zero_left"],
+    "max_stream_bytes": 2000000,
+    "importer_record_limit": 2000000
+  },
+  "preexisting_status_baseline": [
+    {"path": "AxeyumFibGeneric.lean", "status": "untracked", "bytes": 1595, "mode": "0664", "sha256": "f9d3ea9024497cf1aed34a071fe541e515fb4169738d3d369dd6bf9a7ad414be"},
+    {"path": "AxeyumNatFibRecurrencePointwise.lean", "status": "untracked", "bytes": 632, "mode": "0664", "sha256": "b339a3d8e4ce1700d367fa5fdf0ac0e05d411cc48c49ce6f6e30b702a9b7baf5"},
+    {"path": "AxeyumNatGcdFixEq.lean", "status": "untracked", "bytes": 3603, "mode": "0664", "sha256": "939d225a168b5a94d042ceab47c4dd265a81bf149ea8cfbe08012ca5089373a7"}
+  ],
+  "execution": {"evidence_pack": "/nas3/data/axeyum/autogenesis/reference-packs/0a73f8458-official-gcd-zero-left-root-v1", "remote_source": "AxeyumAutogenesisNatGcdFixEqV2.lean", "remote_output_stem": ".lake/build/lib/lean/AxeyumAutogenesisNatGcdFixEqV2", "all_three_temporary_paths_must_be_absent_before_copy": true, "status_must_equal_exact_baseline_before_copy": true, "status_must_equal_exact_baseline_after_cleanup": true, "proof_terms_types_or_values_may_be_rendered": false},
+  "acceptance": {"source_must_compile": true, "root_selected_stream_must_be_nonempty": true, "root_selected_stream_must_not_exceed_max_bytes": true, "fresh_kernel_imports_required": 2, "audits_must_be_byte_identical": true, "axiom_footprint_must_be_empty": true, "required_direct_dependency": "Axeyum.Autogenesis.gcdModel_zero_left", "forbidden_dependencies": ["Nat.gcd_zero_left", "WellFounded.Nat.fix_eq", "funext", "propext"], "failed_compilation_export_or_first_import_ends_increment": true},
+  "budget": {"max_source_copies": 1, "max_compiler_invocations": 1, "max_exporter_invocations": 1, "max_importer_runs": 2, "max_proof_bearing_stream_reads": 2, "max_retries": 0, "max_new_theorem_submissions": 1, "max_closed_balanced_bezout_submissions": 0, "max_executor_invocations": 0},
+  "authority": {"official_gcd_zero_left_credit": 0, "official_gcd_succ_credit": 0, "closed_gcd_balanced_bezout_credit": 0, "cancellation_credit": 0, "target_specialization_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_on_accept": "Preregister official-kernel composition of the accepted zero-left and successor leaves into the generic balanced-Bezout stream.",
+  "output": "artifacts/autogenesis/official-gcd-zero-left-root-export-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-official-gcd-zero-left-root-export-plan.py",
+  "limitations": "This retries only evidence extraction with bounded root selection. It cannot change the proof, increase importer limits, close balanced-Bezout, or grant downstream credit."
+}

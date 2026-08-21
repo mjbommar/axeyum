@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-subtractive-gcd-route-frontier-audit-result",
+  "state": "six-route-roots-declined-generated-gcd-recursor-carrier-exposed",
+  "plan": {
+    "path": "artifacts/autogenesis/subtractive-gcd-route-frontier-audit-plan-v1.json",
+    "sha256": "edd310e9ffa037394e2d7287c1705576b43d3dd960f8bc5691e9f64efb97639a"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/38e40236f-subtractive-gcd-route-frontier-audit-v1/manifest.json",
+    "sha256": "cd13ae221f70309ec586a1ace4f664b72404fb957325949b2d8d2f1a747b60b2",
+    "mode": "0444"
+  },
+  "summary": {
+    "population": 6,
+    "class_counts": {
+      "empty-footprint": 0,
+      "other-assumption-bearing": 1,
+      "propext-bearing": 5
+    },
+    "all_roots_empty": false,
+    "clean_computational_base_found": false,
+    "replacement_authorized": false
+  },
+  "rows": [
+    {
+      "name": "Nat.dvd_antisymm",
+      "declaration_sha256": "c1a42ca89ad51bffde7d1c9189799031aa57ec688fa9709b08756ce5fb28373c",
+      "axiom_footprint": ["propext"],
+      "direct_theorem_dependencies": ["Eq.symm", "Nat.eq_zero_of_zero_dvd", "Nat.le_antisymm", "Nat.le_of_dvd", "Nat.succ_pos"],
+      "class": "propext-bearing"
+    },
+    {
+      "name": "Nat.dvd_gcd",
+      "declaration_sha256": "921a5b8491ff0175b8fe82f691419aef69c4324ed52e532b060ee2b11b8f37de",
+      "axiom_footprint": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound", "propext"],
+      "direct_theorem_dependencies": ["Iff.mpr", "Nat.dvd_mod_iff", "Nat.gcd.induction", "Nat.gcd_rec", "Nat.gcd_zero_left", "congrArg"],
+      "class": "propext-bearing"
+    },
+    {
+      "name": "Nat.gcd_add_mul_right_right",
+      "declaration_sha256": "e7ed03c5cb3610f2f8ab01ad581854a06909811eeb04f62424ff8435ee6f6fea",
+      "axiom_footprint": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound", "propext"],
+      "direct_theorem_dependencies": ["Eq.trans", "Nat.add_mul_mod_self_right", "Nat.gcd_rec", "congr", "congrArg", "congrFun'", "eq_self", "of_eq_true"],
+      "class": "propext-bearing"
+    },
+    {
+      "name": "Nat.gcd_dvd_left",
+      "declaration_sha256": "83741dc3a66d00e1766e8e1d2b43b922769afda112a42e26080e4216569a5a85",
+      "axiom_footprint": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound", "propext"],
+      "direct_theorem_dependencies": ["And.left", "Nat.gcd_dvd"],
+      "class": "propext-bearing"
+    },
+    {
+      "name": "Nat.gcd_dvd_right",
+      "declaration_sha256": "17687412cac7352cf5e3a58f530589e235b526b2bdfd6d88092c24c568d27d0d",
+      "axiom_footprint": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound", "propext"],
+      "direct_theorem_dependencies": ["And.right", "Nat.gcd_dvd"],
+      "class": "propext-bearing"
+    },
+    {
+      "name": "_private.Init.Data.Nat.Gcd.0.Nat.gcd.eq_def",
+      "declaration_sha256": "d8aec57b7ec8c5e4bbb4ee382869057af60308f738ffc02c6123d035f1ce1481",
+      "axiom_footprint": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound"],
+      "direct_theorem_dependencies": ["_private.Init.Data.Nat.Gcd.0.Nat.gcd._unary.eq_def"],
+      "class": "other-assumption-bearing"
+    }
+  ],
+  "generated_gcd_carrier": {
+    "name": "_private.Init.Data.Nat.Gcd.0.Nat.gcd._unary.eq_def",
+    "inherited_axiom_footprint": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound"],
+    "direct_dependency_audit_pending": true
+  },
+  "budget": {
+    "exporter_invocations": 0,
+    "batch_importer_runs": 1,
+    "proof_bearing_stream_reads": 1,
+    "retries": 0,
+    "replacement_source_compilations": 0,
+    "new_theorem_submissions": 0,
+    "exact_target_submissions": 0,
+    "executor_invocations": 0
+  },
+  "authority": {
+    "proof_terms_rendered": 0,
+    "theorem_types_rendered": 0,
+    "theorem_values_rendered": 0,
+    "support_theorem_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Audit only the generated private gcd _unary.eq_def carrier from the sealed stream. If it localizes to generic well-founded fix congruence, preregister a primitive bounded reconstruction of the official gcd equation; otherwise prefer a target-owned gcd bridge.",
+  "limitations": "The result rejects the six selected official proofs and exposes one generated carrier. It neither proves that a local gcd equation is impossible nor authorizes reconstruction, theorem credit, target submission, or ledger mutation."
+}

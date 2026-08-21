@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-balanced-bezout-euclidean-update-closed-result",
+  "state": "closed-update-reconstructed-twice-empty-footprint-exact-three-dependencies",
+  "plan": {"path": "artifacts/autogenesis/balanced-bezout-euclidean-update-closed-plan-v1.json", "sha256": "ffa795f4eccdc079ced46bd35628aa9301f5643d0b8a6312b55c695dfa024e02", "commit": "8b60ed825530b4d4f90aeb35a4f89723add1731c"},
+  "evidence_pack": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/208efaef2-balanced-bezout-euclidean-update-closed-v1/manifest.json", "sha256": "f1b06c41b192ab9fd205a3af0400548788f0e24ebe8ab3ab02e7e5f56a5e9f35", "directory_mode": "0555", "file_mode": "0444"},
+  "execution": {"source_copies": 3, "compiler_invocations": 3, "successful_compilations": 3, "exporter_invocations": 1, "importer_runs": 2, "proof_bearing_stream_reads": 2, "retries": 0},
+  "theorem": {
+    "name": "Axeyum.Autogenesis.balancedBezoutEuclideanUpdateClosedV1",
+    "contract": "d*q + r = n -> BalancedBezout r d g -> BalancedBezout d n g",
+    "declaration_sha256": "06a337b7154949a4aaf2dd3ca17084cc0f608c6c4613bc40927280c74b135b91",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": ["Axeyum.Autogenesis.balancedBezoutEuclideanUpdateV2", "Axeyum.Autogenesis.balancedBezoutMulAssocLeafV1", "Axeyum.Autogenesis.balancedBezoutRightDistribLeafV1"],
+    "audit_sha256": "31d32a7ae940f4ccebc06f65a15949094b24beececa4beb42064c1d47c7e9bae",
+    "fresh_reconstructions": 2,
+    "audits_byte_identical": true,
+    "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0}
+  },
+  "cleanup": {"exact_temporary_paths_removed": 9, "preexisting_status_entries_before": 3, "preexisting_status_entries_after": 3, "preexisting_baseline_unchanged": true},
+  "next_boundary": {"closed_update_credit": 1, "required_next_increment": "preregister generic official-gcd balanced-Bezout induction using the accepted quotient witness, closed update, and clean gcd leaves", "generic_gcd_submission_authorized": false},
+  "authority": {"closed_update_credit": 1, "generic_balanced_bezout_credit": 0, "target_specialization_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "verification": "python3 scripts/check-autogenesis-balanced-bezout-euclidean-update-closed-result.py",
+  "limitations": "This accepts only the unconditional arithmetic Euclidean update. It grants no generic gcd theorem, target specialization, evaluation, fact, or ledger credit."
+}

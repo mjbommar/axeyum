@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-xgcd-val-rooted-reconstruction-plan",
+  "state": "preregistered-before-corrected-rooted-source-execution-no-projection-credit",
+  "policy_version": "xgcd-val-rooted-reconstruction-v1",
+  "inputs": {
+    "execution_boundary_decline": {
+      "path": "artifacts/autogenesis/xgcd-val-direct-reconstruction-result-v1.json",
+      "sha256": "932b622a69ef4fdc3bbeee5862c7e62d5e9e91d353dbfab52c73b7d40e224914"
+    },
+    "source": {
+      "path": "scripts/lean/autogenesis_xgcd_val_direct.lean",
+      "sha256": "077e5c6320ac8972ca18edb0b75226faac0b062b726609e9d7a213b7f27d2e62"
+    }
+  },
+  "target": {
+    "reference_name": "Nat.xgcd_val",
+    "authored_name": "Axeyum.Autogenesis.xgcdValDirect",
+    "type": "∀ (x y : ℕ), x.xgcd y = (x.gcdA y, x.gcdB y)",
+    "type_sha256": "15f2274bf30c6540ff1415cd5f567ddc7e1438282b834a1bf0c7dc88d40ff79c"
+  },
+  "fixed_environment": {
+    "ssh_alias": "s5",
+    "hostname": "server5",
+    "mathlib_checkout": "/home/mjbommar/lean-import-scale/mathlib4",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean_version": "4.30.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "lean4export_commit": "a3e35a584f59b390667db7269cd37fca8575e4bf",
+    "lean4export_binary_sha256": "8e763913b03762488571a93ced6ec1a4e04f7d8eebbe40bd1215ba41a6bd4449"
+  },
+  "execution": {
+    "evidence_pack": "/nas3/data/axeyum/autogenesis/reference-packs/9f135d4f0-xgcd-val-rooted-v1",
+    "remote_source": "/home/mjbommar/lean-import-scale/mathlib4/AxeyumAutogenesisXgcdVal.lean",
+    "remote_olean": "/home/mjbommar/lean-import-scale/mathlib4/.lake/build/lib/lean/AxeyumAutogenesisXgcdVal.olean",
+    "remote_ilean": "/home/mjbommar/lean-import-scale/mathlib4/.lake/build/lib/lean/AxeyumAutogenesisXgcdVal.ilean",
+    "all_temporary_paths_must_be_absent_before_copy": true,
+    "mathlib_status_entries_before": 0,
+    "mathlib_status_entries_after_cleanup": 0,
+    "cleanup_scope_is_exactly_the_three_named_paths": true,
+    "export_only_after_successful_compilation": true,
+    "proof_terms_types_or_values_may_be_rendered": false
+  },
+  "acceptance": {
+    "source_must_compile": true,
+    "exported_type_must_match_target": true,
+    "fresh_kernel_imports_required": 2,
+    "both_import_rows_must_match": true,
+    "axiom_footprint_must_be_empty": true,
+    "direct_theorem_dependencies_must_be_empty": true,
+    "failed_compilation_ends_increment": true
+  },
+  "budget": {
+    "max_source_copies": 1,
+    "max_source_compilations": 1,
+    "max_exporter_invocations": 1,
+    "max_importer_runs": 2,
+    "max_proof_bearing_stream_reads": 2,
+    "max_retries": 0,
+    "max_new_theorem_submissions": 2,
+    "max_exact_target_submissions": 0,
+    "max_executor_invocations": 0
+  },
+  "authority": {
+    "proof_bodies_readable_by_model": false,
+    "proof_search_allowed": false,
+    "projection_equation_credit": 0,
+    "extended_gcd_reconstruction_allowed": false,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/xgcd-val-rooted-reconstruction-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-xgcd-val-rooted-reconstruction-plan.py",
+  "limitations": "This corrected execution tests only the definitional projection equation and preserves the clean shared Mathlib checkout. Even two empty imports would not establish the extended-gcd coefficient identity."
+}
