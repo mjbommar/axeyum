@@ -210,6 +210,7 @@ compounding, not automation theatre.
 | [Subtractive gcd route-frontier audit result](111-subtractive-gcd-route-frontier-audit-result.md) | Why is the official computational gcd base still assumption-bearing, and what generated carrier remains? |
 | [Generated gcd carrier audit plan](112-generated-gcd-carrier-audit-plan.md) | Is the last official gcd seam a bounded well-founded equation carrier or a broader contaminated closure? |
 | [Generated gcd carrier audit result](113-generated-gcd-carrier-audit-result.md) | Which three compiler-generated dependencies remain before a primitive gcd-equation decision? |
+| [Generated gcd novel-dependency audit plan](114-generated-gcd-novel-dependency-audit-plan.md) | Is `WellFounded.Nat.fix_eq` the sole remaining assumption carrier? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
