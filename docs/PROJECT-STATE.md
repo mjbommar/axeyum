@@ -104,13 +104,15 @@ The newest QF_BV evidence run has 130 UNSAT decisions:
 These are deliberately different assurance claims. Fresh-arena checking must
 not be described as serialized proof replay.
 
-The broader audit still records 58 uncertified occurrences, eight independently
-checked results without Lean reconstruction, and two QF_NIA `IntPow2`
-proof-production errors. The current official-source proof-family population has
-a retained local Lean 4.30 result of 77/77 accepted. That number is modules Lean
-READ, not propositions Lean PROVED: measured 2026-08-17, 40 of the 77 families
-emit a structural attestation — an axiom pair Lean cannot fail on the merits —
-and 37 carry a theory reconstruction. The 75th is `qf_rdl_difference`, added
+The broader audit records 42 uncertified occurrences, ten independently
+checked results without Lean reconstruction, and four evidence-audit **timeouts**
+(not proof-production refusals — the earlier reading of that line as a QF_NIA
+`IntPow2` rejection was wrong). The current official-source proof-family
+population has a retained local Lean 4.30 result of **78/78 accepted**. That
+number is modules Lean READ, not propositions Lean PROVED: measured 2026-08-21,
+40 of the 78 families emit a structural attestation — an axiom pair Lean cannot
+fail on the merits — and 38 carry a theory reconstruction, the newest being
+`qf_s_string_length`. The 75th is `qf_rdl_difference`, added
 2026-08-17: real difference logic scans into the same `Lra` fragment as QF_LRA,
 so it reconstructs rather than attests, and the family slice had never contained
 a module from that logic. `scripts/check-lean-gate.sh` now reports

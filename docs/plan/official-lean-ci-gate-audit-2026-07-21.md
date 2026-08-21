@@ -160,6 +160,44 @@ structural attestation and 33 a theory reconstruction, so `74/74 accepted` is
 and floors the reasoning half precisely so this line cannot be quoted as the
 stronger claim.
 
+## 2026-08-21: 78 families, and the gate had been red for two days
+
+A `qf_s_string_length` family was added when the string-length certificate
+gained a Lean reconstruction over the **constructed** integers (`integer:
+axiom=0`). Re-run on this host against the same pinned Lean 4.30.0
+(`d024af099ca4bf2c86f649261ebf59565dc8c622`):
+
+```text
+LEAN_CROSSCHECK|label=representative|families=78|modules=78|checked=78|budget_skipped=0|failed=0
+```
+
+The added family reasons rather than attests: the split moved to **38 theory
+reconstructions against 40 structural attestations** (37/40 before), and the
+gate floors the reasoning half at 37 so this cannot be quoted as the stronger
+claim. Across all suites: 21 suites, 66 tests, **470 real-Lean checks** against
+a floor of 219.
+
+**`scripts/check-lean-gate.sh` itself exits 1 on this run**, and has since about
+2026-08-19, for a reason unrelated to the count above:
+`real_lean_wellfounded_elaborator_divergence` runs 1 test and reports **ZERO**
+real-Lean checks. That is not a flaky suite — the test asserts a specific
+account of a kernel/elaborator divergence and its failure message says the
+account is wrong:
+
+```text
+Lean's elaborator refused the module even with every proof spelled `def`, so the
+divergence is NOT the opacity of `theorem` and ADR-0517's account of it is wrong
+  Eq.refl has type      Eq AxNat axeyum_proof_share_1 axeyum_proof_share_1
+  but is expected to be Eq AxNat axeyum_proof_share_1 AxNat.zero.succ.succ
+```
+
+So a committed ADR is contradicted by a committed test, the gate that would say
+so is the one gate no host runs by default (`lean` is installed here under
+`~/.elan/bin` and not on `PATH` — the trap `check-lean-gate.sh`'s own header
+documents), and two separate lanes read the absent binary as "no Lean on this
+host". Tracked as an open item; the count above is unaffected, because it comes
+from `lean_crosscheck`, which passed 15 tests and 78 checks in the same run.
+
 ## First corrected remote attempt: executable identity failure
 
 GitHub Actions run
