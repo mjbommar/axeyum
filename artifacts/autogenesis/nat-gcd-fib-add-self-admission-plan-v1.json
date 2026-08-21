@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-admission-plan-v1",
+  "state": "preregistered-sealed-kernel-capsule-admission-before-registry-or-ledger-change",
+  "fact_id": "F:ml430-nat-gcd-fib-add-self-5a92d5e3",
+  "predecessor": {
+    "path": "artifacts/autogenesis/nat-gcd-fib-add-self-target-native-exact-result-v3.json"
+  },
+  "sealed_input": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/dfa79618c-target-native-exact-v3/target-1.ndjson",
+    "sha256": "279dc4db5daa6dc2f532f9876052500a7e278c54264b32ccbc9d4256907dfc24",
+    "root": "Nat.gcd_fib_add_self",
+    "declaration_sha256": "2d61bf57db3bc182300f1cc1317269eb68e94b5a05a1f0ed4e501f3049303e37",
+    "axiom_footprint": []
+  },
+  "operation": {
+    "id": "authoritative-mathlib-nat-gcd-fib-add-self-kernel-capsule-v1",
+    "driver": "axeyum-lean-import/sealed-kernel-capsule-v1",
+    "checker": "scripts/check-autogenesis-sealed-kernel-capsule.py",
+    "contract": "fixed registry fields select the fact, exact external bytes, theorem root, expected declaration identity, empty footprint, and evidence label; callers supply none of them"
+  },
+  "implementation": {
+    "audit_mode": "import the fixed capsule with default limits, require exactly the named theorem identity and empty kernel footprint, report canonical declaration identity and direct theorem dependencies without rendering proof terms or theorem types",
+    "registry": "extend the operation validator, executor, typed transaction preparer, and fact-operation checker with the new fixed sealed-capsule driver",
+    "transaction": "use the existing intent, fault-injection, recovery, apply, readiness-delta, archive, and clean-replay protocol"
+  },
+  "acceptance": {
+    "operation_registry_valid": true,
+    "checker_replays_capsule": true,
+    "fault_injection_after_intent_exit": 75,
+    "fact_unchanged_before_recovery": true,
+    "authoritative_ledger_writes": 1,
+    "axiom_footprint": [],
+    "clean_replay": true
+  },
+  "budget": {
+    "max_checker_builds": 1,
+    "max_fault_injection_executions": 1,
+    "max_authoritative_executions": 1,
+    "max_authoritative_ledger_writes": 1,
+    "max_retries": 0
+  },
+  "authority": {
+    "fact_status_before_transaction": "open",
+    "fact_status_changes_before_transaction": 0,
+    "evaluation_credit": 0
+  },
+  "next_on_accept": "Regenerate the frontier, record newly ready children, and select the next reachable kernel-lean fact.",
+  "limitations": "This plan grants no fact admission before the registered operation and crash-safe transaction complete and replay cleanly."
+}
