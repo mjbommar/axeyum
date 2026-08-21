@@ -653,3 +653,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0578](adr-0578-localize-rel-to-identity-cylinder-variance.md) | Reduce REL to a localized identity-cylinder Haar energy without claiming the open variance theorem | accepted |
 | [0579](adr-0579-price-newton-over-hodge-for-rel.md) | Record that characteristic-two Newton-over-Hodge gives only divisibility by eight for the endpoint connected trace | accepted |
 | [0580](adr-0580-reduce-identity-variance-to-linear-local-carleson.md) | Reduce the identity-cylinder variance to a polynomial delocalization estimate on each retained Haar layer | accepted |
+| [0581](adr-0581-factor-polynomial-share-along-the-identity-witt-path.md) | Reduce the polynomial identity-cylinder share to logarithmically many non-concentrating binary energy splits | accepted |

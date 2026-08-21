@@ -3752,6 +3752,33 @@ growing normalized kurtosis.  This is the correct price for importing an
 published degree-dependent constant is still not explicit enough to compare
 with `(WK2)`.
 
+There is now a multiplicative localization of `(PL2)` which avoids asking for
+one opaque cylinder estimate.  Fix a retained level `j`, put
+`M_0=F_j(global)`, and for `1<=i<=c_0` let `M_i` be the same sibling square
+mass restricted to parents above the identity in `E_i`.  These are nested
+nonnegative masses,
+
+```text
+M_0 >= M_1 >= ... >= M_c0 = F_j(1).
+```
+
+Consequently `(PL2)` follows if, for every retained `j`, at least
+
+```text
+ceil(log2(16 ell^2))
+```
+
+of the binary path steps satisfy `2 M_i<=M_(i-1)`; every unselected step may
+use only the tautology `M_i<=M_(i-1)`.  At `ell=200` this asks for 20
+half-balanced steps among 190 available coarse levels.  Alternatively, 47
+steps satisfying `4 M_i<=3 M_(i-1)` suffice.  The native
+`identity_cylinder_path_split_implication` report computes both prices with
+exact integers through `ell=1024`, while the exact finite conditional-variance
+report now reconstructs every intermediate path mass and comparison.  This is
+a stronger, potentially more local sufficient lemma rather than a proof:
+neither the half-balanced step count nor `(PL2)` is established.  ADR-0581
+records the boundary.
+
 The most direct zero-`2`-rank shortcut is now priced exactly and gives no
 endpoint information.  Deuring--Shafarevich gives `2`-rank zero at both
 Carlitz levels, hence also on the relative Jacobian quotient.  But the general

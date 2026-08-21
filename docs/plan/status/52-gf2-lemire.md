@@ -83,8 +83,14 @@ parities through `ell=1024`.  Equivalently, Cauchy reduces `(PL2)` to a global
 normalized Haar kurtosis as large as `2^c_0/(256ell^4)`, so neither Gaussian
 behavior nor an absolute fourth-moment constant is required.  The exact report
 now retains the global fourth powers and tests this weak threshold without
-division.  These are implication checkers and finite diagnostics; `(PL2)`
-remains an unproved polynomial-delocalization theorem.  Pinned fleet runs at
+division.  A second exact factorization now follows the nonnegative square
+mass of each retained Haar layer down the nested identity Witt path.  It is
+enough to find `ceil(log2(16ell^2))` half-balanced binary splits on each path;
+at `ell=200` this is only 20 of 190 available coarse levels.  The alternative
+three-quarter split price is 47.  The typed report reconstructs every parent
+and child mass and checks both implications without floating point.  These are
+implication checkers and finite diagnostics; the half-balanced path lemma and
+`(PL2)` remain unproved polynomial-delocalization theorems.  Pinned fleet runs at
 `19<=ell<=23` preserve the stronger `(LC2)` on all ten endpoint rows while
 refuting perfect uniform sharing on 39 retained layers, so the diagnostic is
 non-vacuous but remains non-credit-bearing.
@@ -97,7 +103,9 @@ leaving 406 bits missing.  It receives no `(REL)` proof credit.
 **Next:** prove `(REL)`, encode it as replayable evidence, remove the
 manuscript's fail-visible warning, and perform the final source audit.  The
 active sufficient form is the polynomial identity-cylinder Haar share `(PL2)`
-from ADR-0580; the stronger linear local-Carleson pattern is diagnostic only.
+from ADR-0580.  ADR-0581's stronger but more local continuation needs only
+`O(log ell)` half-balanced splits per retained layer; the stronger linear
+local-Carleson pattern is diagnostic only.
 Any proof must control the complete relative Witt
 weight/zero-fibre distribution before characterwise absolute values; zero
 `2`-rank, a scalar minimum distance, or an elementary-abelian cover theorem is

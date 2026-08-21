@@ -5341,6 +5341,13 @@ pub struct IdentityCylinderVarianceLevel {
     /// Sum of fourth powers of sibling differences over every parent at this
     /// level.
     pub global_sibling_difference_fourth_sum: BigUint,
+    /// Nested identity-path square masses from coarse level one through the
+    /// identity-cylinder coarse level.  These telescope multiplicatively:
+    /// the final mass is `sibling_difference_square_sum`, while the mass
+    /// before the first step is `global_sibling_difference_square_sum`.
+    pub identity_energy_path: Vec<IdentityCylinderEnergyPathStep>,
+    /// Observed balanced-step counts and their finite sufficient checks.
+    pub identity_path_balance: IdentityCylinderPathBalanceReport,
     /// Whether the identity cylinder carries no more than its uniform share of
     /// the global sibling square sum.
     pub identity_share_at_most_uniform: bool,
@@ -5356,6 +5363,66 @@ pub struct IdentityCylinderVarianceLevel {
     /// Contribution `2^(j-coarse_level-1) sum H_j(parent)^2` to
     /// `descendant_count * V_id`.
     pub conditional_variance_numerator_contribution: BigUint,
+}
+
+/// One nested split of a Haar layer's nonnegative square energy along the
+/// coarse identity path.
+///
+/// This is an exact finite diagnostic.  The inequalities recorded here are
+/// observations on the requested row, not universal analytic claims.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IdentityCylinderEnergyPathStep {
+    /// Coarse quotient level selected at this step.
+    pub coarse_level: usize,
+    /// Square mass in the identity child after this split.
+    pub identity_square_mass: BigUint,
+    /// Square mass in the identity parent before this split.
+    pub parent_identity_square_mass: BigUint,
+    /// Whether `2 * child <= parent`.
+    pub at_most_one_half: bool,
+    /// Whether `4 * child <= 3 * parent`.
+    pub at_most_three_quarters: bool,
+}
+
+/// Balanced-step summary for one exact finite identity-energy path.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IdentityCylinderPathBalanceReport {
+    /// Number of steps satisfying `2 * child <= parent`.
+    pub half_balanced_steps: usize,
+    /// Number of steps satisfying `4 * child <= 3 * parent`.
+    pub three_quarter_balanced_steps: usize,
+    /// Whether the half-balanced count implies `(PL2)` on this row.
+    pub half_balanced_implies_polynomial_share: bool,
+    /// Whether the three-quarter count implies `(PL2)` on this row.
+    pub three_quarter_implies_polynomial_share: bool,
+}
+
+/// Deterministic split-count implication for the polynomial identity share.
+///
+/// If every retained Haar level has at least
+/// `required_half_balanced_steps` nested identity-path steps satisfying
+/// `2 * child <= parent`, then `(PL2)` follows because every other nested
+/// child mass is at most its parent mass.  The analogous statement holds for
+/// the three-quarter count.  This report proves only those implications and
+/// the availability of enough path depth; it does not prove the split bounds.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IdentityCylinderPathSplitImplication {
+    /// Coefficient-prefix length.
+    pub ell: usize,
+    /// Lemire endpoint degree.
+    pub degree: usize,
+    /// Coarse identity-cylinder level.
+    pub coarse_level: usize,
+    /// Number of retained Haar levels requiring the same split theorem.
+    pub retained_level_count: usize,
+    /// Smallest `r` with `2^r >= 16 ell^2`.
+    pub required_half_balanced_steps: usize,
+    /// Smallest `r` with `(4/3)^r >= 16 ell^2`, compared exactly.
+    pub required_three_quarter_balanced_steps: usize,
+    /// Whether the identity path is deep enough for the half-balanced route.
+    pub half_balanced_depth_available: bool,
+    /// Whether the identity path is deep enough for the three-quarter route.
+    pub three_quarter_depth_available: bool,
 }
 
 /// Exact conditional variance and localized Haar reconstruction for the
@@ -6107,7 +6174,6 @@ pub fn identity_cylinder_conditional_variance(
     let variance_levels = identity_cylinder_variance_levels(
         &distribution.counts,
         &full_factors,
-        &coarse_factors,
         coarse_level,
         ell,
         &moments.conditional_variance_numerator,
@@ -6333,6 +6399,79 @@ pub fn identity_cylinder_polynomial_share_implication(
         ));
     }
     Ok(report)
+}
+
+/// Reduce `(PL2)` to logarithmically many non-concentrating identity-path
+/// splits on each retained Haar layer.
+///
+/// A nested identity child always carries at most its parent's nonnegative
+/// square mass.  Hence `r` steps satisfying `2 * child <= parent` give a
+/// factor `2^r`, while `r` steps satisfying `4 * child <= 3 * parent` give a
+/// factor `(4/3)^r`.  This operation computes, with exact integers, the least
+/// number of either kind of step that implies
+/// `16 ell^2 F_j(1) <= F_j(global)`.  It proves the deterministic implication
+/// and checks that the coarse path is deep enough; it does not prove that the
+/// required split inequalities hold.
+///
+/// # Errors
+///
+/// Rejects the same invalid endpoints as
+/// [`population_refinement_one_sided_connected_implication`] or a parameter
+/// whose exact split-count arithmetic overflows `usize`.
+pub fn identity_cylinder_path_split_implication(
+    ell: usize,
+    degree: usize,
+) -> Result<IdentityCylinderPathSplitImplication, HayesError> {
+    let implication = population_refinement_one_sided_connected_implication(ell, degree)?;
+    let coarse_level = implication.first_top_level.checked_sub(1).ok_or_else(|| {
+        HayesError::InvalidParameter("identity-cylinder coarse level underflow".to_owned())
+    })?;
+    let (required_half_balanced_steps, required_three_quarter_balanced_steps) =
+        required_identity_path_split_counts(ell)?;
+
+    Ok(IdentityCylinderPathSplitImplication {
+        ell,
+        degree,
+        coarse_level,
+        retained_level_count: ell - coarse_level,
+        required_half_balanced_steps,
+        required_three_quarter_balanced_steps,
+        half_balanced_depth_available: coarse_level >= required_half_balanced_steps,
+        three_quarter_depth_available: coarse_level >= required_three_quarter_balanced_steps,
+    })
+}
+
+fn required_identity_path_split_counts(ell: usize) -> Result<(usize, usize), HayesError> {
+    let target = BigUint::from(16_u8) * BigUint::from(ell).pow(2);
+
+    let mut required_half_balanced_steps = 0_usize;
+    let mut half_gain = BigUint::from(1_u8);
+    while half_gain < target {
+        half_gain <<= 1;
+        required_half_balanced_steps =
+            required_half_balanced_steps.checked_add(1).ok_or_else(|| {
+                HayesError::InvalidParameter("half-balanced split count overflow".to_owned())
+            })?;
+    }
+
+    let mut required_three_quarter_balanced_steps = 0_usize;
+    let mut three_quarter_gain_numerator = BigUint::from(1_u8);
+    let mut three_quarter_target = target;
+    while three_quarter_gain_numerator < three_quarter_target {
+        three_quarter_gain_numerator *= BigUint::from(4_u8);
+        three_quarter_target *= BigUint::from(3_u8);
+        required_three_quarter_balanced_steps = required_three_quarter_balanced_steps
+            .checked_add(1)
+            .ok_or_else(|| {
+                HayesError::InvalidParameter(
+                    "three-quarter-balanced split count overflow".to_owned(),
+                )
+            })?;
+    }
+    Ok((
+        required_half_balanced_steps,
+        required_three_quarter_balanced_steps,
+    ))
 }
 
 /// Price a Newton-over-Hodge theorem on the connected Carlitz trace.
@@ -17138,6 +17277,7 @@ fn project_mixed_radix_index(
 struct RawPopulationRefinementStep {
     report: PopulationRefinementLevel,
     signed_child_differences: Vec<BigInt>,
+    parent_signed_differences: Vec<BigInt>,
 }
 
 struct IdentityCylinderMoments {
@@ -17341,6 +17481,7 @@ fn raw_population_refinement_step(
         parent_children[parent].push(child);
     }
     let mut signed_child_differences = vec![BigInt::from(0_u8); level_order];
+    let mut parent_signed_differences = Vec::with_capacity(parent_order);
     let mut witness_parent = 0_usize;
     let mut maximum_sibling_difference = 0_u128;
     for (parent, children) in parent_children.iter().enumerate() {
@@ -17352,6 +17493,7 @@ fn raw_population_refinement_step(
         let left = children[0];
         let right = children[1];
         let signed = BigInt::from(buckets[left]) - BigInt::from(buckets[right]);
+        parent_signed_differences.push(signed.clone());
         signed_child_differences[left].clone_from(&signed);
         signed_child_differences[right] = -signed;
         let magnitude = buckets[left].abs_diff(buckets[right]);
@@ -17367,53 +17509,134 @@ fn raw_population_refinement_step(
             maximum_sibling_difference,
         },
         signed_child_differences,
+        parent_signed_differences,
     })
+}
+
+fn identity_cylinder_energy_path(
+    parent_signed_differences: &[BigInt],
+    parent_factors: &[PrincipalUnitFactor],
+    coarse_level: usize,
+    global_square_mass: &BigUint,
+) -> Result<Vec<IdentityCylinderEnergyPathStep>, HayesError> {
+    if coarse_level == 0 {
+        return Ok(Vec::new());
+    }
+    let path_factors = (1..=coarse_level)
+        .map(principal_unit_factors)
+        .collect::<Vec<_>>();
+    let mut identity_square_masses = vec![BigUint::from(0_u8); coarse_level];
+    for (parent, difference) in parent_signed_differences.iter().enumerate() {
+        let square = difference.magnitude().pow(2);
+        for (path_index, factors) in path_factors.iter().enumerate() {
+            if project_mixed_radix_index(parent, parent_factors, factors)? != 0 {
+                break;
+            }
+            identity_square_masses[path_index] += &square;
+        }
+    }
+
+    let mut previous = global_square_mass.clone();
+    let mut path = Vec::with_capacity(coarse_level);
+    for (path_index, identity_square_mass) in identity_square_masses.into_iter().enumerate() {
+        if identity_square_mass > previous {
+            return Err(HayesError::Invariant(format!(
+                "identity energy grows from coarse level {path_index} to {}",
+                path_index + 1
+            )));
+        }
+        let at_most_one_half = (&identity_square_mass << 1) <= previous;
+        let at_most_three_quarters =
+            BigUint::from(4_u8) * &identity_square_mass <= BigUint::from(3_u8) * &previous;
+        path.push(IdentityCylinderEnergyPathStep {
+            coarse_level: path_index + 1,
+            identity_square_mass: identity_square_mass.clone(),
+            parent_identity_square_mass: previous,
+            at_most_one_half,
+            at_most_three_quarters,
+        });
+        previous = identity_square_mass;
+    }
+    Ok(path)
+}
+
+fn identity_cylinder_path_diagnostics(
+    parent_signed_differences: &[BigInt],
+    parent_factors: &[PrincipalUnitFactor],
+    coarse_level: usize,
+    global_square_mass: &BigUint,
+    required_split_counts: (usize, usize),
+) -> Result<
+    (
+        Vec<IdentityCylinderEnergyPathStep>,
+        BigUint,
+        IdentityCylinderPathBalanceReport,
+    ),
+    HayesError,
+> {
+    let path = identity_cylinder_energy_path(
+        parent_signed_differences,
+        parent_factors,
+        coarse_level,
+        global_square_mass,
+    )?;
+    let local_square_mass = path.last().map_or_else(
+        || global_square_mass.clone(),
+        |step| step.identity_square_mass.clone(),
+    );
+    let half_balanced_steps = path.iter().filter(|step| step.at_most_one_half).count();
+    let three_quarter_balanced_steps = path
+        .iter()
+        .filter(|step| step.at_most_three_quarters)
+        .count();
+    let balance = IdentityCylinderPathBalanceReport {
+        half_balanced_steps,
+        three_quarter_balanced_steps,
+        half_balanced_implies_polynomial_share: half_balanced_steps >= required_split_counts.0,
+        three_quarter_implies_polynomial_share: three_quarter_balanced_steps
+            >= required_split_counts.1,
+    };
+    Ok((path, local_square_mass, balance))
 }
 
 fn identity_cylinder_variance_levels(
     counts: &[u128],
     full_factors: &[PrincipalUnitFactor],
-    coarse_factors: &[PrincipalUnitFactor],
     coarse_level: usize,
     ell: usize,
     expected_numerator: &BigUint,
 ) -> Result<Vec<IdentityCylinderVarianceLevel>, HayesError> {
     let mut levels = Vec::with_capacity(ell - coarse_level);
     let mut reconstructed = BigUint::from(0_u8);
+    let (required_half_balanced_steps, required_three_quarter_balanced_steps) =
+        required_identity_path_split_counts(ell)?;
     for level in (coarse_level + 1)..=ell {
         let level_factors = principal_unit_factors(level);
         let step = raw_population_refinement_step(counts, full_factors, &level_factors, level)?;
-        let global_duplicated_square_sum = step
-            .signed_child_differences
+        let global_sibling_difference_square_sum = step
+            .parent_signed_differences
             .iter()
             .fold(BigUint::from(0_u8), |sum, difference| {
                 sum + difference.magnitude().pow(2)
             });
-        let global_duplicated_fourth_sum = step
-            .signed_child_differences
+        let global_sibling_difference_fourth_sum = step
+            .parent_signed_differences
             .iter()
             .fold(BigUint::from(0_u8), |sum, difference| {
                 sum + difference.magnitude().pow(4)
             });
-        let mut duplicated_square_sum = BigUint::from(0_u8);
-        for (child, difference) in step.signed_child_differences.iter().enumerate() {
-            if project_mixed_radix_index(child, &level_factors, coarse_factors)? == 0 {
-                duplicated_square_sum += difference.magnitude().pow(2);
-            }
-        }
-        if duplicated_square_sum.bit(0) {
-            return Err(HayesError::Invariant(format!(
-                "identity-cylinder level {level} has an odd duplicated square sum"
-            )));
-        }
-        let sibling_difference_square_sum = duplicated_square_sum >> 1;
-        let global_sibling_difference_square_sum: BigUint = global_duplicated_square_sum >> 1;
-        if global_duplicated_fourth_sum.bit(0) {
-            return Err(HayesError::Invariant(format!(
-                "identity-cylinder level {level} has an odd duplicated fourth-power sum"
-            )));
-        }
-        let global_sibling_difference_fourth_sum: BigUint = global_duplicated_fourth_sum >> 1;
+        let parent_factors = principal_unit_factors(level - 1);
+        let (identity_energy_path, sibling_difference_square_sum, identity_path_balance) =
+            identity_cylinder_path_diagnostics(
+                &step.parent_signed_differences,
+                &parent_factors,
+                coarse_level,
+                &global_sibling_difference_square_sum,
+                (
+                    required_half_balanced_steps,
+                    required_three_quarter_balanced_steps,
+                ),
+            )?;
         let coarse_class_count = BigUint::from(1_u8) << coarse_level;
         let scaled_identity_share = &coarse_class_count * &sibling_difference_square_sum;
         let identity_share_at_most_uniform =
@@ -17462,6 +17685,8 @@ fn identity_cylinder_variance_levels(
             sibling_difference_square_sum,
             global_sibling_difference_square_sum,
             global_sibling_difference_fourth_sum,
+            identity_energy_path,
+            identity_path_balance,
             identity_share_at_most_uniform,
             identity_localization_multiplier_ceiling,
             identity_share_within_linear_carleson,
@@ -21818,6 +22043,61 @@ mod tests {
             report.assumed_global_share_denominator,
             BigUint::from(640_000_u32)
         );
+    }
+
+    #[test]
+    fn logarithmically_many_balanced_identity_path_splits_imply_polynomial_share() {
+        for ell in 200_usize..=1024 {
+            for degree in [2 * ell + 1, 2 * ell + 2] {
+                let report = identity_cylinder_path_split_implication(ell, degree).unwrap();
+                assert!(report.half_balanced_depth_available);
+                assert!(report.three_quarter_depth_available);
+                assert_eq!(report.retained_level_count, ell - report.coarse_level);
+            }
+        }
+        let first = identity_cylinder_path_split_implication(200, 401).unwrap();
+        assert_eq!(first.required_half_balanced_steps, 20);
+        assert_eq!(first.required_three_quarter_balanced_steps, 47);
+        let last = identity_cylinder_path_split_implication(1024, 2050).unwrap();
+        assert_eq!(last.required_half_balanced_steps, 24);
+        assert_eq!(last.required_three_quarter_balanced_steps, 58);
+    }
+
+    #[test]
+    fn exact_identity_energy_paths_are_nested_and_reconstruct_local_mass() {
+        let limits = HayesLimits::default();
+        for ell in 6_usize..=14 {
+            for degree in [2 * ell + 1, 2 * ell + 2] {
+                let report = identity_cylinder_conditional_variance(ell, degree, limits).unwrap();
+                for level in &report.variance_levels {
+                    assert_eq!(level.identity_energy_path.len(), report.coarse_level);
+                    let terminal_mass = level.identity_energy_path.last().map_or_else(
+                        || level.global_sibling_difference_square_sum.clone(),
+                        |step| step.identity_square_mass.clone(),
+                    );
+                    assert_eq!(terminal_mass, level.sibling_difference_square_sum);
+                    assert!(level.identity_energy_path.iter().all(|step| {
+                        step.identity_square_mass <= step.parent_identity_square_mass
+                    }));
+                    assert_eq!(
+                        level.identity_path_balance.half_balanced_steps,
+                        level
+                            .identity_energy_path
+                            .iter()
+                            .filter(|step| step.at_most_one_half)
+                            .count()
+                    );
+                    assert_eq!(
+                        level.identity_path_balance.three_quarter_balanced_steps,
+                        level
+                            .identity_energy_path
+                            .iter()
+                            .filter(|step| step.at_most_three_quarters)
+                            .count()
+                    );
+                }
+            }
+        }
     }
 
     #[test]
