@@ -72,6 +72,7 @@ pub use arithmetic::ordered_ring::{
 pub use arithmetic::signature::{
     RingEquality, RingSignature, RingSignatureReport, SIGNATURE_LAWS, SIGNATURE_SYMBOLS,
 };
+pub use arithmetic::string_length::reconstruct_string_length_to_lean_module;
 pub use arithmetic::{LraReconstructCtx, reconstruct_lra_proof, reconstruct_sos_proof};
 pub use bitblast::{
     prove_const_shift_lowering_to_lean_module, reconstruct_bitblast_step,

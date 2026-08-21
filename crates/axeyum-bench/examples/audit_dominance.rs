@@ -219,7 +219,7 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
         Evidence::UnsatFifoBc04(_) => "fifo-bc04-unsat",
         Evidence::UnsatRegexEmptiness { .. } => "regex-emptiness-unsat",
         Evidence::UnsatWordClash(_) => "word-clash-unsat",
-        Evidence::UnsatStringLength(_) => "string-length-unsat",
+        Evidence::UnsatStringLength { .. } => "string-length-unsat",
         Evidence::UnsatQuantInstanceSet(_) => "quant-instance-set-unsat",
         Evidence::Unknown(_) => "unknown",
     }
@@ -488,18 +488,30 @@ fn audit_instance(
     let mut lean_module_bytes = JsonValue::Null;
     let mut parse_lean_ms = JsonValue::Null;
     let mut lean_reconstruction_ms = JsonValue::Null;
-    // A string-script `unsat` that is the certified regex derivative-emptiness class carries a
-    // kernel-checked Lean `False` module that `check` re-derives from first principles; credit
-    // `lean_checked` only for that variant (and only when `evidence_checked` — the honest
-    // re-derivation — passed). Bare `Evidence::Unsat(None)` string unsats (word clash,
-    // concat/length) have no arena refutation and no Lean module, so they stay honestly false.
+    // A string script has no faithful arena view, so `prove_unsat_to_lean_module`
+    // is not the route: the two string classes that reconstruct carry (or
+    // re-derive) their own kernel-checked `False` module, and `check` re-derives
+    // it from first principles rather than reading the stored string back. Credit
+    // `lean_checked` only for those, and only when `evidence_checked` — the
+    // honest re-derivation — passed. Everything else stays honestly false: a
+    // word clash, a case-split length refutation, and a bare
+    // `Evidence::Unsat(None)` have no Lean module and do not pretend to.
     if is_string_script {
-        if let Evidence::UnsatRegexEmptiness { lean_module, .. } = &report.evidence
-            && evidence_checked
-        {
-            lean_fragment = json!("RegexEmptiness");
-            lean_module_bytes = json!(lean_module.len());
-            lean_checked = true;
+        match &report.evidence {
+            Evidence::UnsatRegexEmptiness { lean_module, .. } if evidence_checked => {
+                lean_fragment = json!("RegexEmptiness");
+                lean_module_bytes = json!(lean_module.len());
+                lean_checked = true;
+            }
+            Evidence::UnsatStringLength {
+                lean_module: Some(module),
+                ..
+            } if evidence_checked => {
+                lean_fragment = json!("StringLength");
+                lean_module_bytes = json!(module.len());
+                lean_checked = true;
+            }
+            _ => {}
         }
     } else if audit_outcome == Verdict::Unsat {
         mark_phase(progress, "parse-lean");

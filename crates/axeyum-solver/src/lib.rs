@@ -371,7 +371,8 @@ pub mod proofs {
             reconstruct_negated_existential_witness_to_lean_module, reconstruct_qf_bv_proof,
             reconstruct_qf_uf_proof, reconstruct_qf_ufbv_proof, reconstruct_quant_unsat_proof,
             reconstruct_resolution_proof, reconstruct_resolution_proof_compact,
-            reconstruct_skolem_unsat_proof, reconstruct_sos_proof, refutation_axiom_footprint,
+            reconstruct_skolem_unsat_proof, reconstruct_sos_proof,
+            reconstruct_string_length_to_lean_module, refutation_axiom_footprint,
             refutation_over_int_axioms, render_ordered_ring_module, residual_eq_constants,
             ring_interface_telescope, scan_proof_fragment, specialize_setoid_to_eq,
         };
@@ -1310,7 +1311,8 @@ macro_rules! full_exports {
             reconstruct_negated_existential_witness_to_lean_module, reconstruct_qf_bv_proof,
             reconstruct_qf_uf_proof, reconstruct_qf_ufbv_proof, reconstruct_quant_unsat_proof,
             reconstruct_resolution_proof, reconstruct_resolution_proof_compact,
-            reconstruct_skolem_unsat_proof, reconstruct_sos_proof, refutation_axiom_footprint,
+            reconstruct_skolem_unsat_proof, reconstruct_sos_proof,
+            reconstruct_string_length_to_lean_module, refutation_axiom_footprint,
             refutation_over_int_axioms, render_ordered_ring_module, residual_eq_constants,
             ring_interface_telescope, scan_proof_fragment, specialize_setoid_to_eq,
         };
