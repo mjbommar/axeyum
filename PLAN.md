@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-21 | `1a5f30b31` | Added the exact extension-field high-character/low-twist trace, proved `T_1(q)=0` and `T_2(q)=q^9(q-1)^2` at `(ell,n,c)=(3,7,2)`, and rejected repeated cohomology drops from affine-shell dimension alone. |
 | 2026-08-21 | `396dc81aa` | Matched the shifted high-character family to Sawin's joint Witt monodromy, proved its power-sum representation has no top-cohomology invariant at either endpoint, and isolated the fixed-binary lower-cohomology trace `(WITT-LOW)` as the remaining geometric estimate. |
 | 2026-08-21 | `8e8196f7a` | Expanded each high-conductor aggregate split into one signed two-Mobius order-pair correlation, proved translation kills every order cell at its forced layer, and isolated the missing characteristic-two Witt-local-system refinement of Hast--Matei `m=2`. |
 | 2026-08-21 | `231a3992e` | Combined every retained Haar level before identity-path localization, reducing the sharp first-endpoint price to one aggregate path with 17 odd or 18 even half-contractions still unproved after the exact translation split. |
@@ -583,6 +584,19 @@ by conductor- and Adams-power-dependent Betti complexity; Sawin's theorem
 fixes those inputs and sends `q` to infinity.  A fixed-`q=2`, degree-uniform
 bound for that signed lower trace `(WITT-LOW)` remains unproved, so `(REL)`
 remains open.
+The proposed shortcut from the dimension of the complete low-twist shell to
+repeated weight drops is now closed exactly.  A bounded extension-field
+operation reconstructs the joint high-character/exact-low-twist Frobenius
+trace before absolute values.  At `(ell,n,c)=(3,7,2)` the all-extension closed
+form is `T_1(q)=0`, `T_2(q)=q^9(q-1)^2`: the nonzero trace has q-degree 11
+against formal top degree 12.  Thus summing the affine twist shell realizes
+only the already proved top cancellation, not one drop per twist parameter.
+Full `GF(2)` and `GF(4)` enumeration independently checks the formula, and
+the next endpoint pair shows that unforced layer signs can change under
+extension.  Generic lissity, affineness, or perverse concentration is not the
+missing bridge.  A proof of `(WITT-LOW)` must now exploit the alternating
+lower trace, the two-Mobius virtual representation, or cancellation across
+conductor orders.
 The companion characteristic-two Newton-over-Hodge result has also been
 priced conditionally: it forces only divisibility of the connected endpoint
 trace by eight.  At `ell=200` the existing envelope is already divisible by
@@ -591,10 +605,14 @@ leaving 406 bits missing.  It receives no `(REL)` proof credit.
 
 **Next:** prove `(REL)`, encode it as replayable evidence, remove the
 manuscript's fail-visible warning, and perform the final source audit.  The
-active sufficient form is the polynomial identity-cylinder Haar share `(PL2)`
-from ADR-0580.  ADR-0581's stronger but more local continuation needs only
-`O(log ell)` half-balanced splits per retained layer; the stronger linear
-local-Carleson pattern is diagnostic only.
+active geometric form is the complete signed lower Witt trace `(WITT-LOW)`,
+with its exact contraction price supplied by the aggregate identity path.
+ADR-0586 rules out obtaining that price from affine-shell dimension alone;
+the next theorem attempt must retain the Adams/Mobius virtual signs or the
+cross-conductor sum.  The polynomial identity-cylinder Haar share `(PL2)`
+from ADR-0580 remains a sufficient fallback.  ADR-0581's stronger but more
+local continuation needs only `O(log ell)` half-balanced splits per retained
+layer; the stronger linear local-Carleson pattern is diagnostic only.
 Any proof must control the complete relative Witt
 weight/zero-fibre distribution before characterwise absolute values; zero
 `2`-rank, a scalar minimum distance, or an elementary-abelian cover theorem is
