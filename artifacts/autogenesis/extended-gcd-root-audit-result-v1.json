@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-extended-gcd-root-audit-result",
+  "state": "official-extended-gcd-root-is-propext-bearing-exact-dependency-descent-required",
+  "plan": {
+    "path": "artifacts/autogenesis/extended-gcd-root-audit-plan-v1.json",
+    "sha256": "2791de5262a079f785985b678842a50661b3d07187e5e980c2e5877ee98b6239"
+  },
+  "pack_manifest": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/609241d91-extended-gcd-root-audit-v1/manifest.json",
+    "sha256": "f7a9ad05d609a2fe54da044d5c30c964a53b9432fccf6548ca254026c4a95ab8"
+  },
+  "row": {
+    "name": "Nat.gcd_eq_gcd_ab",
+    "declaration_sha256": "e3089f3bbc88369a1449c5da8e0558e07114bd322bf8d6dc29100dd9d425747e",
+    "class": "propext-bearing",
+    "axiom_footprint": [
+      "Quot",
+      "Quot.lift",
+      "Quot.mk",
+      "Quot.sound",
+      "propext"
+    ],
+    "direct_theorem_dependencies": [
+      "Eq.trans",
+      "Int.mul_zero",
+      "Nat.xgcdAux_val",
+      "Nat.xgcd_val",
+      "_private.Mathlib.Data.Int.GCD.0.Nat.xgcdAux_P",
+      "add_zero",
+      "congr",
+      "congrArg",
+      "eq_self",
+      "mul_one",
+      "of_eq_true",
+      "zero_add"
+    ]
+  },
+  "summary": {
+    "population": 1,
+    "empty_footprint": 0,
+    "propext_bearing": 1,
+    "direct_theorem_dependency_count": 12,
+    "coefficient_adapter_authorized": false,
+    "exact_dependency_audit_required": true
+  },
+  "budget": {
+    "exporter_invocations": 1,
+    "batch_importer_runs": 1,
+    "proof_bearing_stream_reads": 1,
+    "retries": 0,
+    "reconstruction_source_compilations": 0,
+    "new_theorem_submissions": 0,
+    "exact_target_submissions": 0,
+    "executor_invocations": 0
+  },
+  "authority": {
+    "proof_terms_rendered": 0,
+    "theorem_types_rendered": 0,
+    "theorem_values_rendered": 0,
+    "support_theorem_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "limitations": "The official identity is reference evidence only. Its axiom footprint forbids direct admission, and this result authorizes no dependency audit, reconstruction, theorem credit, or ledger mutation by itself."
+}
