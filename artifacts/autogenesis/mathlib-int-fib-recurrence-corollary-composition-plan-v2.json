@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-exact-theorem-composition-plan",
+  "state": "preregistered-before-base-order-repair",
+  "predecessor": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-composition-result-v1.json",
+  "target": {
+    "fact_id": "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
+    "theorem": "Int.fib_eq_fib_add_two_sub_fib_add_one"
+  },
+  "inputs": "unchanged from artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-composition-plan-v1.json",
+  "driver": "crates/axeyum-lean-import/examples/int_fib_recurrence_corollary_composition.rs",
+  "only_code_change": "initialize the composition kernel from the checked recurrence capsule, compose the residual root next and native cancellation last; keep all hashes, specialization arguments, replay checks, evidence assertions, and target name unchanged",
+  "budget": {
+    "driver_repairs": 1,
+    "complete_invocations": 1,
+    "target_submissions": 1,
+    "exports": 1,
+    "fresh_imports": 2,
+    "retries": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "all_v1_acceptance_conditions_remain": true,
+    "recurrence_capsule_must_be_the_base": true,
+    "specialization_receipt_must_replay": true,
+    "target_axiom_footprint_must_be_empty": true,
+    "two_fresh_imports_must_preserve_evidence": true
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-composition-result-v2.json",
+  "limitations": "A successful exact capsule still receives zero ledger authority until a separately preregistered admission operation."
+}
