@@ -29,6 +29,7 @@ cargo run -p axeyum-bench --example curriculum_demo
 
 | Example | Crate | What it demonstrates |
 |---|---|---|
+| [`axeyum_cli`](../../crates/axeyum-bench/examples/axeyum_cli.rs) | `<script.smt2 \| -> [--timeout-ms N]` | The general-purpose SMT-LIB 2 driver: prints one verdict per `(check-sat)`, in order, honouring `push`/`pop` scoping and `check-sat-assuming`. This is the one to reach for when you want to run axeyum the way you would run `z3 file.smt2`; `smtcomp_cli` beside it is the single-query **competition** interface and must stay single-query (SMT-COMP §7.1.2 treats stray verdict text as a reported result). Does not yet answer `get-model`/`get-value`/`get-unsat-core`/`get-proof`, and `set-option` remains inert. |
 | [`first_smtlib_query`](../../crates/axeyum-solver/examples/first_smtlib_query.rs) | `axeyum-solver` | Parses one QF_BV script, obtains a typed model, and prints the wrapped 8-bit witness. Requires `--features full`. |
 | [`geometry_portfolio`](../../crates/axeyum-solver/examples/geometry_portfolio.rs) | `axeyum-solver` | Compares the specialized LRA and incomplete NRA routes on the same small geometry goals. Requires `--features full`; timings are measurements, not API guarantees. |
 | [`cas_tour`](../../crates/axeyum-cas/examples/cas_tour.rs) | `axeyum-cas` | Broad tour of exact and certified computer-algebra operations. |
@@ -120,6 +121,8 @@ artifact, start from a clean tree and review the complete diff.
 
 | Example | Invocation contract | Purpose / mutation boundary |
 |---|---|---|
+| [`fib_addition_capsule`](../../crates/axeyum-lean-import/examples/fib_addition_capsule.rs) | `<stream.ndjson> <output.json>` | Exports the accepted Fibonacci successor-addition theorem as a checked capsule — a sealed, replayable proof artifact other reconstructions consume rather than re-deriving. Writes the capsule file it is given. |
+| [`nat_gcd_fib_add_self_exact`](../../crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs) | `<capsule.json>… <output.json>` | Reconstructs the exact Mathlib `Nat.gcd_fib_add_self` statement from four sealed proof capsules and submits it to the kernel, writing the result record. This is the composition step of the Bézout/Fibonacci chain — the capsules above are its inputs. |
 | [`audit_dominance`](../../crates/axeyum-bench/examples/audit_dominance.rs) | `<baseline.json> [timeout_ms] [limit] [out.json]` | Re-runs baseline-decided rows through evidence and Lean reconstruction. Omitting `out.json` prints the report. |
 | [`cnf_core_bench`](../../crates/axeyum-bench/examples/cnf_core_bench.rs) | `<cnf-dir> <out.json> [repetitions] [kissat]` | Compares byte-identical DIMACS inputs across fresh SAT cores; the optional external solver includes process startup. |
 | [`cnf_stream_bench`](../../crates/axeyum-bench/examples/cnf_stream_bench.rs) | `<profile.jsonl> <snapshot-dir> <out.json> [repetitions] [timeout_ms]` | Replays captured append-only CNF streams through persistent BatSat and Z3. Requires `--features z3` and a usable Z3 link. |
