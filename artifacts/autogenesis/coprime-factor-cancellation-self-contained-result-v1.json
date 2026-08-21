@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-coprime-factor-cancellation-self-contained-result",
+  "state": "reconstructed-twice-propext-bearing-no-credit",
+  "plan": {"path": "artifacts/autogenesis/coprime-factor-cancellation-self-contained-plan-v1.json", "sha256": "419c45dbcbcae36163f79498727af19814efee0dc90d1975d6ea5972bca139f5", "commit": "cce486823"},
+  "source": {"path": "scripts/lean/autogenesis_coprime_factor_cancellation_generic_v2.lean", "sha256": "e233cbc3f64de6eff54c3aa5badddfc3cdfe9f42334e4c82058610b1027a89c8"},
+  "evidence": {"pack": "/nas3/data/axeyum/autogenesis/reference-packs/9140114b6-coprime-factor-cancellation-self-contained-v1", "manifest_sha256": "dd7ee6f04efc7aa6fed514dc7fb21db2115d263e19ff51cea422cbf00f47efb3", "stream_sha256": "e434f46f1ce7b23149cc0ea660c1d43792cd574217d4d8bfd36bc22a79815686", "audit_sha256": "c827ff9d3e61d34c27748c8055eb10c8ffcbe8db7a13caf5b3c0474de1bdf1c0"},
+  "execution": {"source_copies": 1, "compiler_invocations": 1, "successful_compilations": 1, "exporter_invocations": 1, "importer_runs": 2, "proof_bearing_stream_reads": 2, "retries": 0},
+  "theorem": {"name": "Axeyum.Autogenesis.coprimeFactorDivisibilityCancellationGenericV2", "declaration_sha256": "ba650f821a2f0f29a6259ba4ec20ef94fdf85fbafce7f662e58df331b18ac61b", "axiom_footprint": ["propext"], "fresh_reconstructions": 2, "audits_byte_identical": true, "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0}},
+  "authority": {"generic_cancellation_credit": 0, "official_cancellation_credit": 0, "target_specialization_credit": 0, "exact_fibonacci_target_submissions": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_boundary": {"required_next_increment": "preregister an exact direct-dependency footprint audit over the sealed stream before revising the proof"},
+  "verification": "python3 scripts/check-autogenesis-coprime-factor-cancellation-self-contained-result.py",
+  "limitations": "The theorem reconstructed deterministically but reaches propext. It receives no cancellation, official specialization, Fibonacci, fact, evaluation, or ledger credit."
+}

@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction has an unconditional official-representation balanced-Bézout theorem. The first generic cancellation source stopped before elaboration at one unbound local support-module import; zero export, import, theorem, retry, or downstream credit followed, and the exact `s5` baseline was restored.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction has an unconditional official-representation balanced-Bézout theorem. Self-contained generic cancellation reconstructs deterministically but reaches `propext`; its exact seventeen-root audit splits eleven clean dependencies from six named carriers, with no cancellation credit.
 
-**Next:** execute the preregistered self-contained generic cancellation source with only the pinned Mathlib gcd import and an inlined four-natural certificate definition. Preserve the same algebra, one-compilation boundary, and zero official-specialization/Fibonacci authority.
+**Next:** execute the preregistered residual cancellation source: two target-owned divisibility witness lemmas and a theorem parameterized only by balanced Bézout, clean right distributivity, and additive divisibility cancellation. Require two byte-identical empty-footprint imports and preserve zero official cancellation/Fibonacci authority.
 
 <!-- plan-section: landed-changes -->
 
@@ -134,4 +134,8 @@
 | 2026-08-21 | (pending) | Exact `Nat.mod_lt` reuse closes official-representation balanced Bézout twice with byte-identical empty-footprint evidence |
 | 2026-08-21 | `3c2a2b29e` | Generic coprime-factor cancellation is frozen over an explicit balanced-Bézout parameter before source construction |
 | 2026-08-21 | (pending) | First generic cancellation source stops before elaboration at an unbound local module and restores the exact baseline |
-| 2026-08-21 | (pending) | Self-contained cancellation V2 freezes the same proof with only its four-natural certificate definition inlined |
+| 2026-08-21 | `cce486823` | Self-contained cancellation V2 freezes the same proof with only its four-natural certificate definition inlined |
+| 2026-08-21 | (pending) | Self-contained cancellation reconstructs twice deterministically but localizes its rejected footprint to `propext` |
+| 2026-08-21 | `efe97708a` | All seventeen direct cancellation dependencies are frozen before one non-rendering sealed-stream audit |
+| 2026-08-21 | (pending) | One exact audit splits eleven clean cancellation dependencies from six `propext` carriers |
+| 2026-08-21 | (pending) | Residual cancellation freezes direct witness replacements and leaves exactly three explicit theorem parameters |
