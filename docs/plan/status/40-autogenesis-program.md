@@ -320,3 +320,4 @@
 | 2026-08-21 | (pending) | Recurrence audit isolates `Nat.mod_eq` as the sole direct assumption carrier; its four-edge `modCore` boundary is frozen next |
 | 2026-08-21 | (pending) | `Nat.modCore_eq` is the deepest assumption-bearing bridge; its finite direct closure is frozen to separate recursion from simp infrastructure |
 | 2026-08-21 | (pending) | All modulo recursion machinery is clean; only generic simp proposition equalities carry assumptions, so a manual branch proof is frozen |
+| 2026-08-21 | (pending) | Manual modulo-core V1 preserves the route and stops on three elaboration details; V2 freezes only those corrections |
