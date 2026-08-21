@@ -1,0 +1,775 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:int-mul-assoc",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-mul-assoc.json",
+            "sha256": "b45bf16d19bd3b2f2f6c542b3b858e0414726f755a3dcf89570300544a4101f2"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Multiplication on the integers is associative"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "2 of 2 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-mul-assoc.json",
+              "sha256": "b45bf16d19bd3b2f2f6c542b3b858e0414726f755a3dcf89570300544a4101f2"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-mul-assoc.json",
+            "sha256": "b45bf16d19bd3b2f2f6c542b3b858e0414726f755a3dcf89570300544a4101f2"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "kernel-lean"
+          ],
+          [
+            "axiom_footprint",
+            "[] -- axiom-free; only kernel-lean can deliver this"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-mul-assoc.json",
+              "sha256": "b45bf16d19bd3b2f2f6c542b3b858e0414726f755a3dcf89570300544a4101f2"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-mul-assoc.json",
+            "sha256": "b45bf16d19bd3b2f2f6c542b3b858e0414726f755a3dcf89570300544a4101f2"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-lean-kernel --lib int_prelude"
+        },
+        "summary": {
+          "text": "For all integers a, b and c, (a * b) * c = a * (b * c)."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-mul-assoc.json",
+            "sha256": "b45bf16d19bd3b2f2f6c542b3b858e0414726f755a3dcf89570300544a4101f2"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: kernel-Int.mul_assoc"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row kernel-Int.mul_assoc as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "kernel-Int.mul_assoc"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "Kernel::add_declaration (re-derives the type from the proof term), int_prelude_tests::derived_laws_have_no_axiom_footprint"
+          ],
+          [
+            "supports",
+            "For all integers a, b and c, (a * b) * c = a * (b * c)."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-mul-assoc.json",
+              "sha256": "b45bf16d19bd3b2f2f6c542b3b858e0414726f755a3dcf89570300544a4101f2"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-mul-assoc.json",
+            "sha256": "b45bf16d19bd3b2f2f6c542b3b858e0414726f755a3dcf89570300544a4101f2"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "`build_int_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so a green run of the command is a machine-checked proof. Measured 2026-08-15: 12 tests pass (a nonzero count -- the filter is not inert). A real Lean 4.30.0 kernel also read the module this prelude exports to: `scripts/check-lean-gate.sh` reports 12 suites, 49 tests, 112 real-Lean checks (floor 105).",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-mul-assoc.json",
+            "sha256": "b45bf16d19bd3b2f2f6c542b3b858e0414726f755a3dcf89570300544a4101f2"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "report-run",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run -q -p axeyum-lean-kernel --example int_theorem_inventory -- mul_assoc 2>/dev/null | grep -qE '^theorem[[:space:]]+Int\\.mul_assoc[[:space:]]+\\(\\('"
+        },
+        "summary": {
+          "text": "axiom_footprint: [] -- this theorem's trusted closure is empty"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-mul-assoc.json",
+            "sha256": "b45bf16d19bd3b2f2f6c542b3b858e0414726f755a3dcf89570300544a4101f2"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: footprint-Int.mul_assoc"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row footprint-Int.mul_assoc as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "footprint-Int.mul_assoc"
+          ],
+          [
+            "ledger kind",
+            "exhaustive-enumeration"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "Kernel::axiom_footprint, environment-wide trusted-surface enumeration (nat_axiom_inventory)"
+          ],
+          [
+            "supports",
+            "axiom_footprint: [] -- this theorem's trusted closure is empty"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-mul-assoc.json",
+              "sha256": "b45bf16d19bd3b2f2f6c542b3b858e0414726f755a3dcf89570300544a4101f2"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-mul-assoc.json",
+            "sha256": "b45bf16d19bd3b2f2f6c542b3b858e0414726f755a3dcf89570300544a4101f2"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "Two independent bounds, because either alone would be weaker than it looks. (1) `Kernel::axiom_footprint` walks THIS declaration's transitive dependencies; `int_theorem_inventory` prints it as the third tab-separated column, and the regex requires that column to be EMPTY -- the type must begin immediately after the name. The negative control is in the same output: `Int.euclidean_decomposition`, the one law still asserted, prints its own name in that column and fails the same regex (measured 2026-08-15). So the check discriminates rather than merely running. (2) `nat_axiom_inventory` reports `nat: axiom=0 opaque=0 quotient=0` for the development ZZ is constructed over. Counting `Declaration::Axiom` alone would not suffice: `Opaque` has no proof body and `Quotient` admits `Quot.sound` -- exactly the declaration a quotient-of-NxN construction would have added -- and the enumeration covers all three kinds and reports zero for each.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-mul-assoc.json",
+            "sha256": "b45bf16d19bd3b2f2f6c542b3b858e0414726f755a3dcf89570300544a4101f2"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "dependency-graph",
+      "kind": {
+        "alt": "Dependency graph around F:int-mul-assoc: 1 dependencies, 0 dependents",
+        "caption": {
+          "text": "Immediate dependencies and dependents of this fact"
+        },
+        "spec": {
+          "edges": [
+            {
+              "from": "F:int-mul-assoc",
+              "label": "depends_on",
+              "to": "F:nat-mul-assoc"
+            }
+          ],
+          "figure_type": "dep-graph",
+          "nodes": [
+            {
+              "group": "focus",
+              "href": "cards/F-int-mul-assoc.doc.json",
+              "id": "F:int-mul-assoc",
+              "label": "Multiplication on the integers is associative",
+              "status": "proved"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-mul-assoc.doc.json",
+              "id": "F:nat-mul-assoc",
+              "label": "Multiplication on the naturals is associative",
+              "status": "proved"
+            }
+          ],
+          "rankdir": "TB"
+        },
+        "type": "figure"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-mul-assoc.json",
+            "sha256": "b45bf16d19bd3b2f2f6c542b3b858e0414726f755a3dcf89570300544a4101f2"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Dependency neighbourhood"
+    },
+    {
+      "id": "depends-on",
+      "kind": {
+        "caption": {
+          "text": "Depends on"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:nat-mul-assoc",
+            "Multiplication on the naturals is associative",
+            "proved",
+            "cards/F-nat-mul-assoc.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-mul-assoc.json",
+              "sha256": "b45bf16d19bd3b2f2f6c542b3b858e0414726f755a3dcf89570300544a4101f2"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-mul-assoc.json",
+            "sha256": "b45bf16d19bd3b2f2f6c542b3b858e0414726f755a3dcf89570300544a4101f2"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depends on"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-15"
+          ],
+          [
+            "established_by",
+            "axeyum-lean-kernel build_int_prelude, lane int-remainder"
+          ],
+          [
+            "source",
+            "one of the six propositions build_int_prelude still ASSERTED after lane int-keystone constructed ZZ; this lane proved the `Int.subNatNat` borrow lemmas and derived it"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-mul-assoc.json",
+              "sha256": "b45bf16d19bd3b2f2f6c542b3b858e0414726f755a3dcf89570300544a4101f2"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-mul-assoc.json",
+            "sha256": "b45bf16d19bd3b2f2f6c542b3b858e0414726f755a3dcf89570300544a4101f2"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "concept-refs",
+      "kind": {
+        "caption": {
+          "text": "Concept references (gloss and provenance only, never substance)"
+        },
+        "columns": [
+          {
+            "header": "graph",
+            "key": "graph"
+          },
+          {
+            "header": "ref",
+            "key": "ref"
+          },
+          {
+            "header": "relation",
+            "key": "relation"
+          },
+          {
+            "header": "resolved",
+            "key": "resolved"
+          }
+        ],
+        "rows": [
+          [
+            "math-education",
+            "C:associativity",
+            "instance-of",
+            false
+          ],
+          [
+            "math-education",
+            "C:integers",
+            "about",
+            false
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-mul-assoc.json",
+              "sha256": "b45bf16d19bd3b2f2f6c542b3b858e0414726f755a3dcf89570300544a4101f2"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-mul-assoc.json",
+            "sha256": "b45bf16d19bd3b2f2f6c542b3b858e0414726f755a3dcf89570300544a4101f2"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "This one never needed the borrow, which is why it fell first. `Int.mul` on mixed signs produces `Int.negOfNat k`, a `Nat.rec` stuck on `k`; a triple product leaves one under a second multiplication in six of its eight branches. Four lemmas unstick it -- `ofNat m * negOfNat k = negOfNat (m*k)` and the three other placements -- and each is a two-case split whose branches close by `Eq.refl` or one `Nat.zero_mul`. After that every branch is `Nat.mul_assoc` wrapped in `ofNat` when the number of negative factors is even and `negOfNat` when it is odd. `formal.statement` is `Kernel::render_lean` of the admitted type, verbatim from `int_theorem_inventory`.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-mul-assoc.json",
+            "sha256": "b45bf16d19bd3b2f2f6c542b3b858e0414726f755a3dcf89570300544a4101f2"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-int-mul-assoc",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "genre": "result",
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:int-mul-assoc",
+    "title": "Multiplication on the integers is associative"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-int-mul-assoc.json",
+        "sha256": "b45bf16d19bd3b2f2f6c542b3b858e0414726f755a3dcf89570300544a4101f2"
+      }
+    ]
+  },
+  "schema_version": 1
+}

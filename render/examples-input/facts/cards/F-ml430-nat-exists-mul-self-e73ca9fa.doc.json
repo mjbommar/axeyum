@@ -1,0 +1,465 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:ml430-nat-exists-mul-self-e73ca9fa",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-exists-mul-self-e73ca9fa.json",
+            "sha256": "c6fce81b7f80f223c3ea8884e2327e513d95dff5ee3c85ab3ca5dc9847fc1fbd"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Mathlib v4.30 source proposition Nat.exists_mul_self"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "open",
+            "open",
+            "0 of 0 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ml430-nat-exists-mul-self-e73ca9fa.json",
+              "sha256": "c6fce81b7f80f223c3ea8884e2327e513d95dff5ee3c85ab3ca5dc9847fc1fbd"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-exists-mul-self-e73ca9fa.json",
+            "sha256": "c6fce81b7f80f223c3ea8884e2327e513d95dff5ee3c85ab3ca5dc9847fc1fbd"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "disagreement-import-backlog",
+      "kind": {
+        "text": "Import backlog: open in this ledger (epistemic_status: open) and settled in the literature (external_status: proved). That is a target for import, not a result of this project.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-exists-mul-self-e73ca9fa.json",
+            "sha256": "c6fce81b7f80f223c3ea8884e2327e513d95dff5ee3c85ab3ca5dc9847fc1fbd"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Import backlog"
+    },
+    {
+      "id": "dependency-graph",
+      "kind": {
+        "alt": "Dependency graph around F:ml430-nat-exists-mul-self-e73ca9fa: 1 dependencies, 0 dependents",
+        "caption": {
+          "text": "Immediate dependencies and dependents of this fact"
+        },
+        "spec": {
+          "edges": [
+            {
+              "from": "F:ml430-nat-exists-mul-self-e73ca9fa",
+              "label": "depends_on",
+              "to": "F:ml430-nat-sqrt-eq-79ae8eae"
+            }
+          ],
+          "figure_type": "dep-graph",
+          "nodes": [
+            {
+              "group": "focus",
+              "href": "cards/F-ml430-nat-exists-mul-self-e73ca9fa.doc.json",
+              "id": "F:ml430-nat-exists-mul-self-e73ca9fa",
+              "label": "Mathlib v4.30 source proposition Nat.exists_mul_self",
+              "status": "open"
+            },
+            {
+              "group": "unproved",
+              "href": "cards/F-ml430-nat-sqrt-eq-79ae8eae.doc.json",
+              "id": "F:ml430-nat-sqrt-eq-79ae8eae",
+              "label": "Mathlib v4.30 source proposition Nat.sqrt_eq",
+              "status": "open"
+            }
+          ],
+          "rankdir": "TB"
+        },
+        "type": "figure"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-exists-mul-self-e73ca9fa.json",
+            "sha256": "c6fce81b7f80f223c3ea8884e2327e513d95dff5ee3c85ab3ca5dc9847fc1fbd"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Dependency neighbourhood"
+    },
+    {
+      "id": "depends-on",
+      "kind": {
+        "caption": {
+          "text": "Depends on"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:ml430-nat-sqrt-eq-79ae8eae",
+            "Mathlib v4.30 source proposition Nat.sqrt_eq",
+            "open",
+            "cards/F-ml430-nat-sqrt-eq-79ae8eae.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ml430-nat-exists-mul-self-e73ca9fa.json",
+              "sha256": "c6fce81b7f80f223c3ea8884e2327e513d95dff5ee3c85ab3ca5dc9847fc1fbd"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-exists-mul-self-e73ca9fa.json",
+            "sha256": "c6fce81b7f80f223c3ea8884e2327e513d95dff5ee3c85ab3ca5dc9847fc1fbd"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depends on"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-18"
+          ],
+          [
+            "established_by",
+            "not established in this ledger"
+          ],
+          [
+            "source",
+            "statement-only extraction of `Nat.exists_mul_self` from Mathlib v4.30.0; no proof value was exposed"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ml430-nat-exists-mul-self-e73ca9fa.json",
+              "sha256": "c6fce81b7f80f223c3ea8884e2327e513d95dff5ee3c85ab3ca5dc9847fc1fbd"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-exists-mul-self-e73ca9fa.json",
+            "sha256": "c6fce81b7f80f223c3ea8884e2327e513d95dff5ee3c85ab3ca5dc9847fc1fbd"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "what",
+            "key": "what"
+          },
+          {
+            "header": "where",
+            "key": "where"
+          },
+          {
+            "header": "who",
+            "key": "who"
+          },
+          {
+            "header": "year",
+            "key": "year"
+          }
+        ],
+        "rows": [
+          [
+            "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted",
+            "the theorem declaration `Nat.exists_mul_self`",
+            "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
+            "the Mathlib contributors",
+            "2026"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ml430-nat-exists-mul-self-e73ca9fa.json",
+              "sha256": "c6fce81b7f80f223c3ea8884e2327e513d95dff5ee3c85ab3ca5dc9847fc1fbd"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-exists-mul-self-e73ca9fa.json",
+            "sha256": "c6fce81b7f80f223c3ea8884e2327e513d95dff5ee3c85ab3ca5dc9847fc1fbd"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-exists-mul-self-e73ca9fa.json",
+            "sha256": "c6fce81b7f80f223c3ea8884e2327e513d95dff5ee3c85ab3ca5dc9847fc1fbd"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-ml430-nat-exists-mul-self-e73ca9fa",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "genre": "result",
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:ml430-nat-exists-mul-self-e73ca9fa",
+    "title": "Mathlib v4.30 source proposition Nat.exists_mul_self"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-ml430-nat-exists-mul-self-e73ca9fa.json",
+        "sha256": "c6fce81b7f80f223c3ea8884e2327e513d95dff5ee3c85ab3ca5dc9847fc1fbd"
+      }
+    ]
+  },
+  "schema_version": 1
+}

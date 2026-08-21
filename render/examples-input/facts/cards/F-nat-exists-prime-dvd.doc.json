@@ -1,0 +1,954 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:nat-exists-prime-dvd",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+            "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Every natural number at least 2 has a prime divisor"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "2 of 2 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+              "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+            "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "kernel-lean"
+          ],
+          [
+            "axiom_footprint",
+            "[] -- axiom-free; only kernel-lean can deliver this"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+              "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+            "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- exists_prime_dvd 2>/dev/null | tr '\\t' ' ' | grep -qF 'Nat.exists_prime_dvd 4 ((x0 : AxNat) -> ((x1 : AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) -> Exists.{1} AxNat (fun (x2 : AxNat) => And (And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x2) (((x3 : AxNat) -> ((x4 : AxNat.dvd x3 x2) -> Or (Eq.{1} AxNat x3 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x3 x2))))) (AxNat.dvd x2 x0))))'"
+        },
+        "summary": {
+          "text": "For every m with 2 <= m there is a prime p dividing m, with primality spelled inline."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+            "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: kernel-Nat.exists_prime_dvd"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row kernel-Nat.exists_prime_dvd as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "kernel-Nat.exists_prime_dvd"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "For every m with 2 <= m there is a prime p dividing m, with primality spelled inline."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+              "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+            "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "The grep pins the WHOLE rendered type, not the name, and that is the point of this row rather than tidiness. `build_nat_prelude` admits the declaration through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type -- so the kernel already refuses a false theorem, and a witness that was not prime (say `m` itself at `m = 6`) never gets in. What the kernel cannot notice is a statement that is WEAKER than intended. Measured 2026-08-17: spelling the primality lower bound `1 <= p` instead of `2 <= p` still type-checks, still admits, still passes every existing test including axiom-freedom and the determinism count -- and is satisfied by `p = 1`, whose only divisor is 1, which closes nothing. That mutation was run: exactly one test died (`every_number_at_least_two_has_a_prime_divisor`, which compares the admitted type against an independently built term) and 288 others passed. A name-only grep would have survived it, so this command greps the `AxNat.succ (AxNat.succ AxNat.zero)` bound inside the existential explicitly. `nat_theorem_inventory` additionally exits non-zero for a name that does not exist.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+            "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "report-run",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat"
+        },
+        "summary": {
+          "text": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty, so this theorem's footprint is empty"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+            "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: footprint-Nat.exists_prime_dvd"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row footprint-Nat.exists_prime_dvd as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "footprint-Nat.exists_prime_dvd"
+          ],
+          [
+            "ledger kind",
+            "exhaustive-enumeration"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "axiom_footprint: [] -- the Nat prelude's trusted surface is empty, so this theorem's footprint is empty"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+              "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+            "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "`theorem_axiom_footprint` reports `nat Nat.exists_prime_dvd 0` and `integer Nat.exists_prime_dvd 0` directly, along with 0 for the three supporting theorems `le_of_dvd`, `two_le_succ_or_eq_one` and `least_divisor_search`. `nat_axiom_inventory` bounds all of them at once: the enumeration reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, and a theorem cannot depend on a trusted declaration the environment does not contain. Counting `Declaration::Axiom` alone would NOT suffice -- `Opaque` has no proof body and `Quotient` admits `Quot.sound` -- so the enumeration covers all three, and the flag makes the exit status depend on the finding rather than on the run completing.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+            "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "dependency-graph",
+      "kind": {
+        "alt": "Dependency graph around F:nat-exists-prime-dvd: 2 dependencies, 1 dependents",
+        "caption": {
+          "text": "Immediate dependencies and dependents of this fact"
+        },
+        "spec": {
+          "edges": [
+            {
+              "from": "F:nat-exists-prime-dvd",
+              "label": "depends_on",
+              "to": "F:nat-div-mod-exists"
+            },
+            {
+              "from": "F:nat-exists-prime-dvd",
+              "label": "depends_on",
+              "to": "F:nat-dvd-add"
+            },
+            {
+              "from": "F:nat-exists-prime-gt",
+              "label": "depends_on",
+              "to": "F:nat-dvd-add"
+            },
+            {
+              "from": "F:nat-exists-prime-gt",
+              "label": "depends_on",
+              "to": "F:nat-exists-prime-dvd"
+            }
+          ],
+          "figure_type": "dep-graph",
+          "nodes": [
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-div-mod-exists.doc.json",
+              "id": "F:nat-div-mod-exists",
+              "label": "Division with remainder always exists for a positive divisor",
+              "status": "proved"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-dvd-add.doc.json",
+              "id": "F:nat-dvd-add",
+              "label": "A common divisor of two numbers divides their sum",
+              "status": "proved"
+            },
+            {
+              "group": "focus",
+              "href": "cards/F-nat-exists-prime-dvd.doc.json",
+              "id": "F:nat-exists-prime-dvd",
+              "label": "Every natural number at least 2 has a prime divisor",
+              "status": "proved"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-exists-prime-gt.doc.json",
+              "id": "F:nat-exists-prime-gt",
+              "label": "There is no largest prime",
+              "status": "proved"
+            }
+          ],
+          "rankdir": "TB"
+        },
+        "type": "figure"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+            "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Dependency neighbourhood"
+    },
+    {
+      "id": "depends-on",
+      "kind": {
+        "caption": {
+          "text": "Depends on"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:nat-div-mod-exists",
+            "Division with remainder always exists for a positive divisor",
+            "proved",
+            "cards/F-nat-div-mod-exists.doc.json"
+          ],
+          [
+            "F:nat-dvd-add",
+            "A common divisor of two numbers divides their sum",
+            "proved",
+            "cards/F-nat-dvd-add.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+              "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+            "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depends on"
+    },
+    {
+      "id": "depended-on-by",
+      "kind": {
+        "caption": {
+          "text": "Depended on by"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:nat-exists-prime-gt",
+            "There is no largest prime",
+            "proved",
+            "cards/F-nat-exists-prime-gt.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+              "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+            "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depended on by"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-17"
+          ],
+          [
+            "established_by",
+            "axeyum-lean-kernel nat_prelude::primes (nat-prime-divisor lane)"
+          ],
+          [
+            "source",
+            "the second of the two ingredients `F:nat-exists-prime-gt` was recorded as missing; statement authored here"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+              "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+            "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "what",
+            "key": "what"
+          },
+          {
+            "header": "who",
+            "key": "who"
+          },
+          {
+            "header": "year",
+            "key": "year"
+          }
+        ],
+        "rows": [
+          [
+            "standard textbook attribution; this lane did not consult the primary source",
+            "Elements, Book VII, Proposition 31",
+            "Euclid",
+            "-300"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+              "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+            "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "concept-refs",
+      "kind": {
+        "caption": {
+          "text": "Concept references (gloss and provenance only, never substance)"
+        },
+        "columns": [
+          {
+            "header": "graph",
+            "key": "graph"
+          },
+          {
+            "header": "ref",
+            "key": "ref"
+          },
+          {
+            "header": "relation",
+            "key": "relation"
+          },
+          {
+            "header": "resolved",
+            "key": "resolved"
+          }
+        ],
+        "rows": [
+          [
+            "math-education",
+            "C:prime-number",
+            "about",
+            false
+          ],
+          [
+            "math-education",
+            "C:divisibility",
+            "about",
+            false
+          ],
+          [
+            "math-education",
+            "C:infinitude-of-primes",
+            "key-lemma-of",
+            false
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+              "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+            "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "Proved WITHOUT well-founded recursion, and the reason is worth recording because the previous lane's note predicted the opposite route. Strong induction on m through `lt_well_founded` needs to DECIDE primality of m, which is a bounded universal quantification; deciding one constructively is itself a bounded search, so the search is done directly instead, by ordinary `Nat.rec` on the bound. `Nat.least_divisor_search : forall k m, (exists x, 2 <= x AND (x | m AND forall e, 2 <= e -> e < x -> NOT (e | m))) OR (forall c, 2 <= c -> c <= k -> NOT (c | m))` returns the LEAST divisor >= 2, and leastness is what makes primality free: a divisor c of the least divisor d also divides m, is positive by `one_le_of_dvd_pos`, and is bounded by d by the new `le_of_dvd`, so it is 1, or it is >= 2 and below d -- which minimality refutes -- or it is d. Running the search at k = m always fires the left disjunct, since its right disjunct claims nothing in [2, m] divides m and `dvd_refl`/`le_refl` refute that. Nothing here is classical: each step decides `succ j | m` by reducing `beq (mod m (succ j)) 0`, with the two branches separated by the checked `div_mod_remainder_eq_zero_iff_dvd` applied to `div_mod_exec`. Three supporting theorems landed with it: `Nat.le_of_dvd` (a divisor of a positive number is bounded by it -- the positivity hypothesis is load-bearing, since 2 | 0 and 2 <= 0 is false), `Nat.two_le_succ_or_eq_one`, and `Nat.least_divisor_search`. formal.statement is written in the SAME core rendering the kernel emits for its own theorems; binders carry readable names rather than the kernel's positional `x0, x1, ...`, which is a pretty-printing difference only.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+            "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-nat-exists-prime-dvd",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "genre": "result",
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:nat-exists-prime-dvd",
+    "title": "Every natural number at least 2 has a prime divisor"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+        "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+      }
+    ]
+  },
+  "schema_version": 1
+}

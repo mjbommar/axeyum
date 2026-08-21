@@ -1,0 +1,747 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:fp16-fp32-roundtrip-identity",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp16-fp32-roundtrip-identity.json",
+            "sha256": "0a52f9ce402d58a9274233b31ddf4eaeb033953bff4d73a1b45d1b52fba3a16c"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Widening binary16 to binary32 and narrowing back is the identity"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "2 of 2 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-fp16-fp32-roundtrip-identity.json",
+              "sha256": "0a52f9ce402d58a9274233b31ddf4eaeb033953bff4d73a1b45d1b52fba3a16c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp16-fp32-roundtrip-identity.json",
+            "sha256": "0a52f9ce402d58a9274233b31ddf4eaeb033953bff4d73a1b45d1b52fba3a16c"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "smt-clausal"
+          ],
+          [
+            "axiom_footprint",
+            "ieee754-2019-conversion-semantics-as-encoded-by-axeyum-fp-to_fp-lowering; rounding-mode-roundNearestTiesToEven-on-both-legs; smtlib2-floatingpoint-sort-equality-one-nan-value-signed-zeros-distinct; tseitin-cnf-encoding-preserves-satisfiability; drat-refutation-semantics-as-implemented-by-axeyum-cnf-check-drat; formats-binary16-and-binary32-only-this-fact-is-not-format-generic"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-fp16-fp32-roundtrip-identity.json",
+              "sha256": "0a52f9ce402d58a9274233b31ddf4eaeb033953bff4d73a1b45d1b52fba3a16c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp16-fp32-roundtrip-identity.json",
+            "sha256": "0a52f9ce402d58a9274233b31ddf4eaeb033953bff4d73a1b45d1b52fba3a16c"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 332,
+            "path": "artifacts/facts/smt2/neg-fp16-fp32-roundtrip-identity.smt2",
+            "sha256": "8fc48982b2de4bdca912de5cd753386649157093a3edfcb04f837f2f3b9ca1b6"
+          }
+        ],
+        "cert_kind": "unsat-drat",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "test \"$(cargo run --release -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/neg-fp16-fp32-roundtrip-identity.smt2 | tail -1)\" = unsat"
+        },
+        "summary": {
+          "text": "The negation of formal.statement is unsatisfiable, so the round trip is the identity on every binary16 value."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp16-fp32-roundtrip-identity.json",
+            "sha256": "0a52f9ce402d58a9274233b31ddf4eaeb033953bff4d73a1b45d1b52fba3a16c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: fp16-fp32-roundtrip-unsat-drat"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row fp16-fp32-roundtrip-unsat-drat as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "fp16-fp32-roundtrip-unsat-drat"
+          ],
+          [
+            "ledger kind",
+            "unsat-certificate"
+          ],
+          [
+            "cert_kind",
+            "unsat-drat"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-smtcomp-cli-producing-solve, axeyum-check_drat-independent-proof-check, axeyum-Evidence::check-fresh-parse, z3-4.13.3, bitwuzla-0.9.1"
+          ],
+          [
+            "supports",
+            "The negation of formal.statement is unsatisfiable, so the round trip is the identity on every binary16 value."
+          ],
+          [
+            "artifact",
+            "artifacts/facts/smt2/neg-fp16-fp32-roundtrip-identity.smt2"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "8fc48982b2de4bdca912de5cd753386649157093a3edfcb04f837f2f3b9ca1b6"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-fp16-fp32-roundtrip-identity.json",
+              "sha256": "0a52f9ce402d58a9274233b31ddf4eaeb033953bff4d73a1b45d1b52fba3a16c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp16-fp32-roundtrip-identity.json",
+            "sha256": "0a52f9ce402d58a9274233b31ddf4eaeb033953bff4d73a1b45d1b52fba3a16c"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Ran 2026-08-14: `; evidence kind=unsat-drat certified=1 recheck=ok arena=ok ms=6409`, verdict `unsat`, 9.6s wall in a release build. `recheck=ok` is axeyum's own `check_drat` (RUP+RAT) re-checking the emitted refutation; `arena=ok` is `Evidence::check` against a fresh parse. Cross-checked independently: `z3 -smt2` reports `unsat` (0.1s) and `bitwuzla 0.9.1` reports `unsat` (0.1s).",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp16-fp32-roundtrip-identity.json",
+            "sha256": "0a52f9ce402d58a9274233b31ddf4eaeb033953bff4d73a1b45d1b52fba3a16c"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence fp16-fp32-roundtrip-unsat-drat"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/facts/smt2/neg-fp16-fp32-roundtrip-identity.smt2",
+        "render_hint": "code",
+        "sha256": "8fc48982b2de4bdca912de5cd753386649157093a3edfcb04f837f2f3b9ca1b6",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp16-fp32-roundtrip-identity.json",
+            "sha256": "0a52f9ce402d58a9274233b31ddf4eaeb033953bff4d73a1b45d1b52fba3a16c"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 19845,
+            "path": "crates/axeyum-fp/examples/kernel_equivalence.rs",
+            "sha256": "c5e139f8a11fdf0c7ec88871b8297800e714da9afa98b69fcf34a2d403c3c88a"
+          }
+        ],
+        "cert_kind": "report-run",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run --release -q -p axeyum-fp --example kernel_equivalence -- roundtrip-fp32"
+        },
+        "summary": {
+          "text": "All 65536 binary16 encodings round-tripped through binary32 by LLVM's APFloat: zero values changed."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp16-fp32-roundtrip-identity.json",
+            "sha256": "0a52f9ce402d58a9274233b31ddf4eaeb033953bff4d73a1b45d1b52fba3a16c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: fp16-fp32-roundtrip-exhaustive-apfloat"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row fp16-fp32-roundtrip-exhaustive-apfloat as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "fp16-fp32-roundtrip-exhaustive-apfloat"
+          ],
+          [
+            "ledger kind",
+            "exhaustive-enumeration"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "rustc_apfloat-0.2.3-llvm-apfloat-exhaustive-enumeration"
+          ],
+          [
+            "supports",
+            "All 65536 binary16 encodings round-tripped through binary32 by LLVM's APFloat: zero values changed."
+          ],
+          [
+            "artifact",
+            "crates/axeyum-fp/examples/kernel_equivalence.rs"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "c5e139f8a11fdf0c7ec88871b8297800e714da9afa98b69fcf34a2d403c3c88a"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-fp16-fp32-roundtrip-identity.json",
+              "sha256": "0a52f9ce402d58a9274233b31ddf4eaeb033953bff4d73a1b45d1b52fba3a16c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp16-fp32-roundtrip-identity.json",
+            "sha256": "0a52f9ce402d58a9274233b31ddf4eaeb033953bff4d73a1b45d1b52fba3a16c"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "Ran 2026-08-14, under a second. examined=65536 failures=0, sharing no code with axeyum's lowering. The same run also settles bfloat16 -> binary32 -> bfloat16 (2^16, zero failures) and fp8 E5M2 -> binary32 -> fp8 E5M2 (2^8, zero failures); those are neighbouring propositions, not this one. NaN is handled as SMT-LIB requires -- all NaN encodings are one value, so a NaN that returns with a different payload still counts as returning the same value; APFloat bit equality alone would have reported a spurious failure here.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp16-fp32-roundtrip-identity.json",
+            "sha256": "0a52f9ce402d58a9274233b31ddf4eaeb033953bff4d73a1b45d1b52fba3a16c"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence fp16-fp32-roundtrip-exhaustive-apfloat"
+        },
+        "max_bytes": 65536,
+        "path": "crates/axeyum-fp/examples/kernel_equivalence.rs",
+        "render_hint": "link",
+        "sha256": "c5e139f8a11fdf0c7ec88871b8297800e714da9afa98b69fcf34a2d403c3c88a",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp16-fp32-roundtrip-identity.json",
+            "sha256": "0a52f9ce402d58a9274233b31ddf4eaeb033953bff4d73a1b45d1b52fba3a16c"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-14"
+          ],
+          [
+            "established_by",
+            "fp-kernels lane; axeyum SMT front door (QF_FP -> fpa2bv -> CNF -> DRAT) plus an independent exhaustive LLVM-APFloat enumeration"
+          ],
+          [
+            "source",
+            "authored here; the mixed-precision-training question stated as a proposition rather than tested by sampling."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-fp16-fp32-roundtrip-identity.json",
+              "sha256": "0a52f9ce402d58a9274233b31ddf4eaeb033953bff4d73a1b45d1b52fba3a16c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp16-fp32-roundtrip-identity.json",
+            "sha256": "0a52f9ce402d58a9274233b31ddf4eaeb033953bff4d73a1b45d1b52fba3a16c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "what",
+            "key": "what"
+          },
+          {
+            "header": "where",
+            "key": "where"
+          },
+          {
+            "header": "who",
+            "key": "who"
+          },
+          {
+            "header": "year",
+            "key": "year"
+          }
+        ],
+        "rows": [
+          [
+            "standard textbook attribution; this lane did not consult the primary source, and records the citation as the received one. Nothing in the evidence above depends on it -- binary32 having strictly more of both is checked here by enumeration, not assumed.",
+            "That conversion to a format with both greater precision and greater exponent range is exact, hence invertible.",
+            "IEEE Standard for Floating-Point Arithmetic",
+            "IEEE 754-2019, clause 5.4.2 (conversion operations)",
+            "2019"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-fp16-fp32-roundtrip-identity.json",
+              "sha256": "0a52f9ce402d58a9274233b31ddf4eaeb033953bff4d73a1b45d1b52fba3a16c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp16-fp32-roundtrip-identity.json",
+            "sha256": "0a52f9ce402d58a9274233b31ddf4eaeb033953bff4d73a1b45d1b52fba3a16c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "THE INTERESTING NEIGHBOUR IS THE ONE THAT FAILS. This fact holds because binary32 dominates binary16 on BOTH axes: 24 significand bits against 11, and an exponent range that strictly contains binary16's. Drop either domination and the property dies -- see F:fp16-bf16-roundtrip-not-identity, where bfloat16 has the wider range but only 8 significand bits, and 83.6% of binary16 values do not survive the trip. The pair is the point: \"cast to a 16-bit format and back\" is not one operation with one answer, and which 16-bit format is chosen decides it.\n\nROUTE. `smt-clausal`, not `smt-term-level`: axeyum returned a DRAT refutation through CNF and re-checked it. The input domain is only 16 bits, but the fpa2bv lowering of a widen-then-narrow miter is far past the 20-bit `TERM_LEVEL_CERT_BITS` budget, so axeyum's own exhaustive-evaluation certificate is not available. The exhaustive route in the second evidence row is LLVM's APFloat, deliberately not axeyum's IR evaluator.\n\nSCOPE. Exhaustive at binary16: every one of the 2^16 inputs was enumerated, and the solver route settles the same 2^16 symbolically. No claim is made for any other pair of formats.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp16-fp32-roundtrip-identity.json",
+            "sha256": "0a52f9ce402d58a9274233b31ddf4eaeb033953bff4d73a1b45d1b52fba3a16c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-fp16-fp32-roundtrip-identity",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "genre": "result",
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:fp16-fp32-roundtrip-identity",
+    "title": "Widening binary16 to binary32 and narrowing back is the identity"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-fp16-fp32-roundtrip-identity.json",
+        "sha256": "0a52f9ce402d58a9274233b31ddf4eaeb033953bff4d73a1b45d1b52fba3a16c"
+      }
+    ]
+  },
+  "schema_version": 1
+}

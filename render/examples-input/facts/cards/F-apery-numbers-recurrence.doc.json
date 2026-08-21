@@ -1,0 +1,761 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:apery-numbers-recurrence",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-apery-numbers-recurrence.json",
+            "sha256": "631f3839db1012794a73ae319319ff50223ae5128f3b9e313581afb8ff050428"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "The Apery numbers satisfy Apery's second-order recurrence"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "2 of 2 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-apery-numbers-recurrence.json",
+              "sha256": "631f3839db1012794a73ae319319ff50223ae5128f3b9e313581afb8ff050428"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-apery-numbers-recurrence.json",
+            "sha256": "631f3839db1012794a73ae319319ff50223ae5128f3b9e313581afb8ff050428"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "cas-certificate"
+          ],
+          [
+            "axiom_footprint",
+            "cas.exact-rational-polynomial-normal-form; cas.gamma-functional-equation; cas.hyperterm-specification-denotes-the-summand; cas.telescoped-term-natural-boundary"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-apery-numbers-recurrence.json",
+              "sha256": "631f3839db1012794a73ae319319ff50223ae5128f3b9e313581afb8ff050428"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-apery-numbers-recurrence.json",
+            "sha256": "631f3839db1012794a73ae319319ff50223ae5128f3b9e313581afb8ff050428"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 25610,
+            "path": "crates/axeyum-cas/tests/telescoping_identities.rs",
+            "sha256": "65caca76320a2bbe433ef92219778352023e1d393cd4cb51bf2fcaa573a7df9a"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-cas --test telescoping_identities apery_numbers_get_aperys_own_recurrence"
+        },
+        "summary": {
+          "text": "an order-TWO creative-telescoping certificate for the deepest summand this route has reached, replayed by a checker that shares no code with the search that produced it"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-apery-numbers-recurrence.json",
+            "sha256": "631f3839db1012794a73ae319319ff50223ae5128f3b9e313581afb8ff050428"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: wz-apery-order-two"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row wz-apery-order-two as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "wz-apery-order-two"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "telescoping_check::symbolic_identity_holds (own shift-ratio derivation, polynomial cross-multiplication), telescoping_check::confirm_ratios (shift ratios against exact bignum factorials), telescoping_check::confirm_telescoping (pointwise identity and summed recurrence, exact bignum)"
+          ],
+          [
+            "supports",
+            "an order-TWO creative-telescoping certificate for the deepest summand this route has reached, replayed by a checker that shares no code with the search that produced it"
+          ],
+          [
+            "artifact",
+            "crates/axeyum-cas/tests/telescoping_identities.rs"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "65caca76320a2bbe433ef92219778352023e1d393cd4cb51bf2fcaa573a7df9a"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-apery-numbers-recurrence.json",
+              "sha256": "631f3839db1012794a73ae319319ff50223ae5128f3b9e313581afb8ff050428"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-apery-numbers-recurrence.json",
+            "sha256": "631f3839db1012794a73ae319319ff50223ae5128f3b9e313581afb8ff050428"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "This summand DECLINED before the multivariate GCD moved out of i128, and the reason was measured rather than guessed: the derived degree bound is 2, which is exactly where the certificate lives, so the search design was never at fault. What failed was the primitive pseudo-remainder sequence reducing the degree-8 shift quotient -- `MvPoly::gcd_cost` reports that sequence passing through a 4187-bit coefficient, against the 127 bits an i128 numerator holds, to produce a GCD whose own coefficients fit in three. The search now finds the certificate in 90 ms. The test also replays the recurrence against the Apery numbers 1, 5, 73, 1445, 33001, 819005, 21460825 in i128 arithmetic, which is a check separate from the certificate. One detail of the check options is load-bearing and deliberate: the summation window starts at k = 0 rather than at a negative k, because at n = 0 the summand is not evaluable at a negative k (C(n+k,k) becomes C(-1,-1)) and the checker refuses a window edge it cannot evaluate. The certificate numerator carries a factor k^4, so the telescoped term still vanishes at that edge, which is what the boundary layer requires.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-apery-numbers-recurrence.json",
+            "sha256": "631f3839db1012794a73ae319319ff50223ae5128f3b9e313581afb8ff050428"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence wz-apery-order-two"
+        },
+        "max_bytes": 65536,
+        "path": "crates/axeyum-cas/tests/telescoping_identities.rs",
+        "render_hint": "link",
+        "sha256": "65caca76320a2bbe433ef92219778352023e1d393cd4cb51bf2fcaa573a7df9a",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-apery-numbers-recurrence.json",
+            "sha256": "631f3839db1012794a73ae319319ff50223ae5128f3b9e313581afb8ff050428"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 2822,
+            "path": "artifacts/cas-certificates/apery-numbers-recurrence.json",
+            "sha256": "36acb9bbc8e3f1b76dfee38c3b6cf478233dde3031e032ac56b575f5f90e20cc"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-cas --test telescoping_certificate_artifacts"
+        },
+        "summary": {
+          "text": "the serialised certificate itself, re-checked from the committed file with no search run"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-apery-numbers-recurrence.json",
+            "sha256": "631f3839db1012794a73ae319319ff50223ae5128f3b9e313581afb8ff050428"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: cas-certificate-artifact-apery-numbers-recurrence"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row cas-certificate-artifact-apery-numbers-recurrence as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "cas-certificate-artifact-apery-numbers-recurrence"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "telescoping_json::from_json (exact [numerator, denominator] rationals; decimals, a foreign format tag and a truncated file are all refused), telescoping_check::check_certificate over the parsed certificate"
+          ],
+          [
+            "supports",
+            "the serialised certificate itself, re-checked from the committed file with no search run"
+          ],
+          [
+            "artifact",
+            "artifacts/cas-certificates/apery-numbers-recurrence.json"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "36acb9bbc8e3f1b76dfee38c3b6cf478233dde3031e032ac56b575f5f90e20cc"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-apery-numbers-recurrence.json",
+              "sha256": "631f3839db1012794a73ae319319ff50223ae5128f3b9e313581afb8ff050428"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-apery-numbers-recurrence.json",
+            "sha256": "631f3839db1012794a73ae319319ff50223ae5128f3b9e313581afb8ff050428"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "This row exists so the fact rests on an ARTIFACT rather than on re-running the producer. The sweep reads every committed certificate, parses it, and hands it to the independent checker; nothing in that path calls the search. Tamper controls in the same file: a certificate numerator edited by one, a recurrence coefficient edited by one, and a certificate re-pointed at a neighbouring file's summand are each rejected, and a truncated / foreign-format / decimal-bearing file is refused by the reader before the checker sees it.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-apery-numbers-recurrence.json",
+            "sha256": "631f3839db1012794a73ae319319ff50223ae5128f3b9e313581afb8ff050428"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence cas-certificate-artifact-apery-numbers-recurrence"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/cas-certificates/apery-numbers-recurrence.json",
+        "render_hint": "json",
+        "sha256": "36acb9bbc8e3f1b76dfee38c3b6cf478233dde3031e032ac56b575f5f90e20cc",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-apery-numbers-recurrence.json",
+            "sha256": "631f3839db1012794a73ae319319ff50223ae5128f3b9e313581afb8ff050428"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-14"
+          ],
+          [
+            "established_by",
+            "lane mvpoly-bignum: axeyum_cas::telescoping::zeilberger (untrusted Gosper-Petkovsek search) + axeyum_cas::telescoping_check (independent checker), unblocked by moving MvPoly::gcd into an unbounded-integer ring"
+          ],
+          [
+            "source",
+            "classical; the summand stated by this lane as a HyperTerm specification"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-apery-numbers-recurrence.json",
+              "sha256": "631f3839db1012794a73ae319319ff50223ae5128f3b9e313581afb8ff050428"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-apery-numbers-recurrence.json",
+            "sha256": "631f3839db1012794a73ae319319ff50223ae5128f3b9e313581afb8ff050428"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "what",
+            "key": "what"
+          },
+          {
+            "header": "where",
+            "key": "where"
+          },
+          {
+            "header": "who",
+            "key": "who"
+          },
+          {
+            "header": "year",
+            "key": "year"
+          }
+        ],
+        "rows": [
+          [
+            "standard textbook attribution; this lane did not consult the primary source",
+            "the recurrence for sum_k C(n,k)^2*C(n+k,k)^2, and the irrationality of zeta(3) that follows from it",
+            "Irrationalite de zeta(2) et zeta(3), Asterisque 61 (1979), 11-13",
+            "R. Apery",
+            "1979"
+          ],
+          [
+            "standard textbook attribution; this lane did not consult the primary source",
+            "the expository reconstruction of Apery's proof that made the recurrence widely known",
+            "A proof that Euler missed, Mathematical Intelligencer 1 (1979), 195-203",
+            "A. van der Poorten",
+            "1979"
+          ],
+          [
+            "standard textbook attribution; this lane did not consult the primary source",
+            "the creative-telescoping algorithm that mechanically produces this recurrence",
+            "The method of creative telescoping, J. Symbolic Computation 11 (1991), 195-204; see also Petkovsek-Wilf-Zeilberger, A=B (1996), ch. 6",
+            "Zeilberger",
+            "1991"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-apery-numbers-recurrence.json",
+              "sha256": "631f3839db1012794a73ae319319ff50223ae5128f3b9e313581afb8ff050428"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-apery-numbers-recurrence.json",
+            "sha256": "631f3839db1012794a73ae319319ff50223ae5128f3b9e313581afb8ff050428"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "Established on the `cas-certificate` route, and the deepest summand it has reached: two binomial coefficients each squared, four Gamma factors, a degree-8 shift quotient. `cas.symbolic-gamma-arguments-avoid-poles` is NOT in the footprint because no symbolic base case is involved -- the recurrence alone is the statement. The interesting part of this fact's history is negative: for a while the route reported `declined` on this summand, and a decline is a claim about the implementation that nobody could read. It turned out to be neither the search nor the mathematics but the width of an intermediate coefficient in a GCD, which is why `MvPoly::gcd_cost` now reports peak coefficient width in bits: so that the next such decline is a number and not a mystery.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-apery-numbers-recurrence.json",
+            "sha256": "631f3839db1012794a73ae319319ff50223ae5128f3b9e313581afb8ff050428"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-apery-numbers-recurrence",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "genre": "result",
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:apery-numbers-recurrence",
+    "title": "The Apery numbers satisfy Apery's second-order recurrence"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-apery-numbers-recurrence.json",
+        "sha256": "631f3839db1012794a73ae319319ff50223ae5128f3b9e313581afb8ff050428"
+      }
+    ]
+  },
+  "schema_version": 1
+}

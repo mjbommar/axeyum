@@ -1,0 +1,955 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:nat-add-comm",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-add-comm.json",
+            "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Addition on the naturals is commutative"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "2 of 2 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-add-comm.json",
+              "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-add-comm.json",
+            "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "kernel-lean"
+          ],
+          [
+            "axiom_footprint",
+            "[] -- axiom-free; only kernel-lean can deliver this"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-add-comm.json",
+              "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-add-comm.json",
+            "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- add_comm 2>/dev/null | grep -qE '^Nat\\.add_comm[[:space:]]'"
+        },
+        "summary": {
+          "text": "For all natural numbers a and b, a + b = b + a."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-add-comm.json",
+            "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: kernel-add-comm"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row kernel-add-comm as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "kernel-add-comm"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "For all natural numbers a and b, a + b = b + a."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-add-comm.json",
+              "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-add-comm.json",
+            "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "`build_nat_prelude` admits this theorem only through the trusted kernel gate, so a successful build IS the type-check; the command both performs it and prints the admitted type, which is copied verbatim into formal.statement. Nothing here is transcribed.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-add-comm.json",
+            "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "report-run",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat"
+        },
+        "summary": {
+          "text": "axiom_footprint: [] -- the Nat environment admits no trusted declaration"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-add-comm.json",
+            "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: footprint-add-comm"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row footprint-add-comm as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "footprint-add-comm"
+          ],
+          [
+            "ledger kind",
+            "instance-pin"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "axiom_footprint: [] -- the Nat environment admits no trusted declaration"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-add-comm.json",
+              "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-add-comm.json",
+            "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the FULL trusted surface rather than Declaration::Axiom alone. The enumeration is per-environment, not per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain. A per-theorem footprint (Lean's `#print axioms`) does not exist here yet.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-add-comm.json",
+            "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "dependency-graph",
+      "kind": {
+        "alt": "Dependency graph around F:nat-add-comm: 2 dependencies, 5 dependents",
+        "caption": {
+          "text": "Immediate dependencies and dependents of this fact"
+        },
+        "spec": {
+          "edges": [
+            {
+              "from": "F:int-add-assoc",
+              "label": "depends_on",
+              "to": "F:nat-add-comm"
+            },
+            {
+              "from": "F:int-add-assoc",
+              "label": "depends_on",
+              "to": "F:nat-succ-add"
+            },
+            {
+              "from": "F:int-add-comm",
+              "label": "depends_on",
+              "to": "F:nat-add-comm"
+            },
+            {
+              "from": "F:nat-add-comm",
+              "label": "depends_on",
+              "to": "F:nat-succ-add"
+            },
+            {
+              "from": "F:nat-add-comm",
+              "label": "depends_on",
+              "to": "F:nat-zero-add"
+            },
+            {
+              "from": "F:nat-add-sub-cancel-left",
+              "label": "depends_on",
+              "to": "F:nat-add-comm"
+            },
+            {
+              "from": "F:nat-euclid-lemma",
+              "label": "depends_on",
+              "to": "F:nat-add-comm"
+            },
+            {
+              "from": "F:nat-euclid-lemma",
+              "label": "depends_on",
+              "to": "F:nat-gcd-bezout"
+            },
+            {
+              "from": "F:nat-gcd-bezout",
+              "label": "depends_on",
+              "to": "F:nat-add-comm"
+            },
+            {
+              "from": "F:nat-gcd-bezout",
+              "label": "depends_on",
+              "to": "F:nat-zero-add"
+            }
+          ],
+          "figure_type": "dep-graph",
+          "nodes": [
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-int-add-assoc.doc.json",
+              "id": "F:int-add-assoc",
+              "label": "Addition on the integers is associative",
+              "status": "proved"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-int-add-comm.doc.json",
+              "id": "F:int-add-comm",
+              "label": "Addition on the integers is commutative",
+              "status": "proved"
+            },
+            {
+              "group": "focus",
+              "href": "cards/F-nat-add-comm.doc.json",
+              "id": "F:nat-add-comm",
+              "label": "Addition on the naturals is commutative",
+              "status": "proved"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-add-sub-cancel-left.doc.json",
+              "id": "F:nat-add-sub-cancel-left",
+              "label": "Subtraction undoes addition on the naturals",
+              "status": "proved"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-euclid-lemma.doc.json",
+              "id": "F:nat-euclid-lemma",
+              "label": "Euclid's lemma: a prime dividing a product divides a factor",
+              "status": "proved"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-gcd-bezout.doc.json",
+              "id": "F:nat-gcd-bezout",
+              "label": "Bezout's identity holds for the natural gcd",
+              "status": "proved"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-succ-add.doc.json",
+              "id": "F:nat-succ-add",
+              "label": "Nat succ_add",
+              "status": "proved"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-zero-add.doc.json",
+              "id": "F:nat-zero-add",
+              "label": "Nat zero_add",
+              "status": "proved"
+            }
+          ],
+          "rankdir": "TB"
+        },
+        "type": "figure"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-add-comm.json",
+            "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Dependency neighbourhood"
+    },
+    {
+      "id": "depends-on",
+      "kind": {
+        "caption": {
+          "text": "Depends on"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:nat-succ-add",
+            "Nat succ_add",
+            "proved",
+            "cards/F-nat-succ-add.doc.json"
+          ],
+          [
+            "F:nat-zero-add",
+            "Nat zero_add",
+            "proved",
+            "cards/F-nat-zero-add.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-add-comm.json",
+              "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-add-comm.json",
+            "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depends on"
+    },
+    {
+      "id": "depended-on-by",
+      "kind": {
+        "caption": {
+          "text": "Depended on by"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:int-add-assoc",
+            "Addition on the integers is associative",
+            "proved",
+            "cards/F-int-add-assoc.doc.json"
+          ],
+          [
+            "F:int-add-comm",
+            "Addition on the integers is commutative",
+            "proved",
+            "cards/F-int-add-comm.doc.json"
+          ],
+          [
+            "F:nat-add-sub-cancel-left",
+            "Subtraction undoes addition on the naturals",
+            "proved",
+            "cards/F-nat-add-sub-cancel-left.doc.json"
+          ],
+          [
+            "F:nat-euclid-lemma",
+            "Euclid's lemma: a prime dividing a product divides a factor",
+            "proved",
+            "cards/F-nat-euclid-lemma.doc.json"
+          ],
+          [
+            "F:nat-gcd-bezout",
+            "Bezout's identity holds for the natural gcd",
+            "proved",
+            "cards/F-nat-gcd-bezout.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-add-comm.json",
+              "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-add-comm.json",
+            "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depended on by"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-14"
+          ],
+          [
+            "established_by",
+            "axeyum-lean-kernel nat_prelude (lean-kernel lane)"
+          ],
+          [
+            "source",
+            "hand-built foundational library"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-add-comm.json",
+              "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-add-comm.json",
+            "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "concept-refs",
+      "kind": {
+        "caption": {
+          "text": "Concept references (gloss and provenance only, never substance)"
+        },
+        "columns": [
+          {
+            "header": "graph",
+            "key": "graph"
+          },
+          {
+            "header": "ref",
+            "key": "ref"
+          },
+          {
+            "header": "relation",
+            "key": "relation"
+          },
+          {
+            "header": "resolved",
+            "key": "resolved"
+          }
+        ],
+        "rows": [
+          [
+            "math-education",
+            "C:commutativity",
+            "instance-of",
+            false
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-add-comm.json",
+              "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-add-comm.json",
+            "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "Seed fact for fact.schema.json (the `proved` case). Statement and type are dumped from the kernel by nat_theorem_inventory, not hand-written: the first version of this file was transcribed from doc comments and named `rado.add_comm`, a shell declared in tests/rado_shell_arithmetic.rs, while citing `--lib nat_prelude` -- a filter that never compiles that integration test. Two of the three seeds were additionally unparseable.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-add-comm.json",
+            "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-nat-add-comm",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "genre": "result",
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:nat-add-comm",
+    "title": "Addition on the naturals is commutative"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-nat-add-comm.json",
+        "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+      }
+    ]
+  },
+  "schema_version": 1
+}

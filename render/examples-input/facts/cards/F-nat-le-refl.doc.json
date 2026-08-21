@@ -1,0 +1,773 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:nat-le-refl",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-le-refl.json",
+            "sha256": "1a00fa4dc556f3909ef37e7c2a1e4dbea6210ada68d98291ddcc7a2ce8d7030c"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "The order on the naturals is reflexive"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "2 of 2 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-le-refl.json",
+              "sha256": "1a00fa4dc556f3909ef37e7c2a1e4dbea6210ada68d98291ddcc7a2ce8d7030c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-le-refl.json",
+            "sha256": "1a00fa4dc556f3909ef37e7c2a1e4dbea6210ada68d98291ddcc7a2ce8d7030c"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "imported-kernel-lean"
+          ],
+          [
+            "axiom_footprint",
+            "lean4export-3.1.0-stream-faithfulness; axeyum-lean-import-wire-translation; lean4export-3.1.0-delivered-bytes-are-the-intended-export"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-le-refl.json",
+              "sha256": "1a00fa4dc556f3909ef37e7c2a1e4dbea6210ada68d98291ddcc7a2ce8d7030c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-le-refl.json",
+            "sha256": "1a00fa4dc556f3909ef37e7c2a1e4dbea6210ada68d98291ddcc7a2ce8d7030c"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 11490,
+            "path": "artifacts/lean-imports/nat-le-refl.ndjson",
+            "sha256": "087e3097a28dbbc88ed4d52a04ea17d01f96f9d1fbbf6b0c5a3eda6c5cb03cd6"
+          }
+        ],
+        "cert_kind": "kernel-admission",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-lean-import --test imported_fact_evidence -- --nocapture 2>/dev/null | grep -q 'AXEYUM-IMPORT-FACT|F:nat-le-refl|'"
+        },
+        "summary": {
+          "text": "`Nat.le_refl`'s Lean proof term type-checks against this statement in the independent Axeyum kernel."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-le-refl.json",
+            "sha256": "1a00fa4dc556f3909ef37e7c2a1e4dbea6210ada68d98291ddcc7a2ce8d7030c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: import-Nat.le_refl"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row import-Nat.le_refl as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "import-Nat.le_refl"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-lean-import fail-closed translation, Kernel::add_declaration (independent re-derivation of the type from the proof term), SHA-256 pin of the exported stream bytes"
+          ],
+          [
+            "supports",
+            "`Nat.le_refl`'s Lean proof term type-checks against this statement in the independent Axeyum kernel."
+          ],
+          [
+            "artifact",
+            "artifacts/lean-imports/nat-le-refl.ndjson"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "087e3097a28dbbc88ed4d52a04ea17d01f96f9d1fbbf6b0c5a3eda6c5cb03cd6"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-le-refl.json",
+              "sha256": "1a00fa4dc556f3909ef37e7c2a1e4dbea6210ada68d98291ddcc7a2ce8d7030c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-le-refl.json",
+            "sha256": "1a00fa4dc556f3909ef37e7c2a1e4dbea6210ada68d98291ddcc7a2ce8d7030c"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "The command greps for this fact's own marker line rather than trusting the exit status, so a suite that compiles to zero tests -- this repository's signature defect -- fails instead of exiting 0. Measured 2026-08-15: the stream hashes to the pin in `artifacts/lean-imports/MANIFEST.json`, the fail-closed importer admits 14 declarations (it publishes nothing unless the WHOLE stream translates and every declaration passes the trusted gate), and `Kernel::render_lean` of the admitted type is `((n : AxNat) -> LE.le.{0} AxNat instLENat n n)`. `formal.statement` is that string with `render_lean`'s emit-direction `AxNat` guard undone: the renderer rewrites a root `Nat` to `AxNat` so that emitting OUR prelude does not shadow Lean's builtin `Nat`, which is correct in the emit direction and exactly backwards for an import, where the `Nat` in the stream IS Lean's builtin. The test pins both strings.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-le-refl.json",
+            "sha256": "1a00fa4dc556f3909ef37e7c2a1e4dbea6210ada68d98291ddcc7a2ce8d7030c"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence import-Nat.le_refl"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/lean-imports/nat-le-refl.ndjson",
+        "render_hint": "link",
+        "sha256": "087e3097a28dbbc88ed4d52a04ea17d01f96f9d1fbbf6b0c5a3eda6c5cb03cd6",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-le-refl.json",
+            "sha256": "1a00fa4dc556f3909ef37e7c2a1e4dbea6210ada68d98291ddcc7a2ce8d7030c"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "report-run",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "scripts/check-imported-fact-lean-axioms.sh Nat.le_refl"
+        },
+        "summary": {
+          "text": "axiom_footprint: the imported proof term reaches no Lean axiom, opaque or quotient declaration"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-le-refl.json",
+            "sha256": "1a00fa4dc556f3909ef37e7c2a1e4dbea6210ada68d98291ddcc7a2ce8d7030c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: footprint-Nat.le_refl"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row footprint-Nat.le_refl as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "footprint-Nat.le_refl"
+          ],
+          [
+            "ledger kind",
+            "exhaustive-enumeration"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "Kernel::axiom_footprint (our kernel, over the imported environment), lean 4.30.0 `#print axioms` (the source system, independently)"
+          ],
+          [
+            "supports",
+            "axiom_footprint: the imported proof term reaches no Lean axiom, opaque or quotient declaration"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-le-refl.json",
+              "sha256": "1a00fa4dc556f3909ef37e7c2a1e4dbea6210ada68d98291ddcc7a2ce8d7030c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-le-refl.json",
+            "sha256": "1a00fa4dc556f3909ef37e7c2a1e4dbea6210ada68d98291ddcc7a2ce8d7030c"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "Two kernels, independently. `Kernel::axiom_footprint` walks this declaration's transitive dependencies in the IMPORTED environment and reports an empty footprint; a real Lean 4.30.0 binary's `#print axioms Nat.le_refl` reports no axioms. The first three entries are the assumptions the IMPORT adds and the constructed `kernel-lean` route does not make: that the exporter faithfully rendered Lean's environment, that our NDJSON-to-kernel-term translation preserves meaning, and that the delivered bytes are the producer's intended export -- format 3.1 has no footer, so completion is relative to the bytes handed over, which `axeyum-lean-import`'s own documentation states. They are why `axiom_footprint: []` is unavailable on this route and the validator rejects it (ADR-0454).",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-le-refl.json",
+            "sha256": "1a00fa4dc556f3909ef37e7c2a1e4dbea6210ada68d98291ddcc7a2ce8d7030c"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-15"
+          ],
+          [
+            "established_by",
+            "axeyum-lean-import, lane formalized-collect -- our independent kernel ADMITTED Lean's proof term. This project did NOT construct the proof; see proof_route."
+          ],
+          [
+            "source",
+            "official lean4export NDJSON 3.1.0 stream artifacts/lean-imports/nat-le-refl.ndjson, declaration `Nat.le_refl` from Lean 4.30.0 `Init`"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-le-refl.json",
+              "sha256": "1a00fa4dc556f3909ef37e7c2a1e4dbea6210ada68d98291ddcc7a2ce8d7030c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-le-refl.json",
+            "sha256": "1a00fa4dc556f3909ef37e7c2a1e4dbea6210ada68d98291ddcc7a2ce8d7030c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "what",
+            "key": "what"
+          },
+          {
+            "header": "where",
+            "key": "where"
+          },
+          {
+            "header": "who",
+            "key": "who"
+          },
+          {
+            "header": "year",
+            "key": "year"
+          }
+        ],
+        "rows": [
+          [
+            "read directly from the pinned `lean4export` stream that this fact cites, and cross-checked against a real Lean 4.30.0 binary; this lane did not consult a paper or a secondary source.",
+            "`Nat.le_refl` in the Lean 4 core library (`Init`), with its proof term",
+            "leanprover/lean4 v4.30.0, githash d024af099ca4bf2c86f649261ebf59565dc8c622",
+            "the Lean 4 developers (leanprover/lean4)",
+            "2026"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-le-refl.json",
+              "sha256": "1a00fa4dc556f3909ef37e7c2a1e4dbea6210ada68d98291ddcc7a2ce8d7030c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-le-refl.json",
+            "sha256": "1a00fa4dc556f3909ef37e7c2a1e4dbea6210ada68d98291ddcc7a2ce8d7030c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "concept-refs",
+      "kind": {
+        "caption": {
+          "text": "Concept references (gloss and provenance only, never substance)"
+        },
+        "columns": [
+          {
+            "header": "graph",
+            "key": "graph"
+          },
+          {
+            "header": "ref",
+            "key": "ref"
+          },
+          {
+            "header": "relation",
+            "key": "relation"
+          },
+          {
+            "header": "resolved",
+            "key": "resolved"
+          }
+        ],
+        "rows": [
+          [
+            "math-education",
+            "C:order-relation",
+            "instance-of",
+            false
+          ],
+          [
+            "math-education",
+            "C:natural-numbers",
+            "about",
+            false
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-le-refl.json",
+              "sha256": "1a00fa4dc556f3909ef37e7c2a1e4dbea6210ada68d98291ddcc7a2ce8d7030c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-le-refl.json",
+            "sha256": "1a00fa4dc556f3909ef37e7c2a1e4dbea6210ada68d98291ddcc7a2ce8d7030c"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "The smallest of the five first imports, and the one that shows the shape: 200 wire records and 14 admitted declarations, of which the theorem is one.\n\nA first draft of this note claimed our own Nat prelude `does not yet carry an order relation at all`. That was wrong and checking took one command: `nat_theorem_inventory` reports 119 theorems including `Nat.le_antisymm`, `Nat.le_total`, `Nat.le_dest` and a full `Nat.le` order theory. What is true is narrower and was verified by name: **`Nat.le_refl` itself is absent from it** (measured 2026-08-15). So this import adds a proposition we do not hold, next to an order theory we largely do -- which is the realistic shape of the import/build boundary `04-implement.md` argues about, and not the clean gap the draft asserted.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-le-refl.json",
+            "sha256": "1a00fa4dc556f3909ef37e7c2a1e4dbea6210ada68d98291ddcc7a2ce8d7030c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-nat-le-refl",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "genre": "result",
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:nat-le-refl",
+    "title": "The order on the naturals is reflexive"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-nat-le-refl.json",
+        "sha256": "1a00fa4dc556f3909ef37e7c2a1e4dbea6210ada68d98291ddcc7a2ce8d7030c"
+      }
+    ]
+  },
+  "schema_version": 1
+}

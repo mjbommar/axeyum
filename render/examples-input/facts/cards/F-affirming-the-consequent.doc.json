@@ -1,0 +1,639 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:affirming-the-consequent",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-affirming-the-consequent.json",
+            "sha256": "fb11e3482f4ad4b7cc4c59bf80f890c7539368129f6b82ef20bb3357bd12fed6"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Affirming the consequent is a valid inference"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "refuted",
+            "refuted",
+            "1 of 1 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "refuted",
+            "refuted",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-affirming-the-consequent.json",
+              "sha256": "fb11e3482f4ad4b7cc4c59bf80f890c7539368129f6b82ef20bb3357bd12fed6"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-affirming-the-consequent.json",
+            "sha256": "fb11e3482f4ad4b7cc4c59bf80f890c7539368129f6b82ef20bb3357bd12fed6"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "search-certificate"
+          ],
+          [
+            "axiom_footprint",
+            "absent -- not a claim of axiom-freedom"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-affirming-the-consequent.json",
+              "sha256": "fb11e3482f4ad4b7cc4c59bf80f890c7539368129f6b82ef20bb3357bd12fed6"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-affirming-the-consequent.json",
+            "sha256": "fb11e3482f4ad4b7cc4c59bf80f890c7539368129f6b82ef20bb3357bd12fed6"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 305,
+            "path": "artifacts/facts/smt2/affirming-the-consequent.smt2",
+            "sha256": "2cd44f171e7e0d0482075456bedcfd76c5812642d6e0f94c0de04a68e9da40f2"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "test \"$(cargo run -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/affirming-the-consequent.smt2 2>/dev/null | tail -1)\" = sat"
+        },
+        "summary": {
+          "text": "p := false, q := true satisfies the negation of the proposition, so the proposition is not a tautology"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-affirming-the-consequent.json",
+            "sha256": "fb11e3482f4ad4b7cc4c59bf80f890c7539368129f6b82ef20bb3357bd12fed6"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: affirming-the-consequent-countermodel"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row affirming-the-consequent-countermodel as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "affirming-the-consequent-countermodel"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-smtcomp-cli-producing-solve, axeyum-Evidence::check-fresh-parse, z3-independent-agreement"
+          ],
+          [
+            "supports",
+            "p := false, q := true satisfies the negation of the proposition, so the proposition is not a tautology"
+          ],
+          [
+            "artifact",
+            "artifacts/facts/smt2/affirming-the-consequent.smt2"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "2cd44f171e7e0d0482075456bedcfd76c5812642d6e0f94c0de04a68e9da40f2"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-affirming-the-consequent.json",
+              "sha256": "fb11e3482f4ad4b7cc4c59bf80f890c7539368129f6b82ef20bb3357bd12fed6"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-affirming-the-consequent.json",
+            "sha256": "fb11e3482f4ad4b7cc4c59bf80f890c7539368129f6b82ef20bb3357bd12fed6"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Ran 2026-08-14: the file asserts the NEGATION of formal.statement and the solver reported `sat` with `kind=sat-model certified=1 arena=ok`. `arena=ok` is Evidence::check replaying the model against a fresh parse of the file -- the model is evaluated against the original assertions, not against the lowered form. The witness is p := false, q := true: then (p implies q) is true and q is true while p is false. Independently cross-checked: `z3 -smt2` on the same file also reports `sat`.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-affirming-the-consequent.json",
+            "sha256": "fb11e3482f4ad4b7cc4c59bf80f890c7539368129f6b82ef20bb3357bd12fed6"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence affirming-the-consequent-countermodel"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/facts/smt2/affirming-the-consequent.smt2",
+        "render_hint": "code",
+        "sha256": "2cd44f171e7e0d0482075456bedcfd76c5812642d6e0f94c0de04a68e9da40f2",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-affirming-the-consequent.json",
+            "sha256": "fb11e3482f4ad4b7cc4c59bf80f890c7539368129f6b82ef20bb3357bd12fed6"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-14"
+          ],
+          [
+            "established_by",
+            "facts-logic lane, axeyum SAT/SMT front door"
+          ],
+          [
+            "source",
+            "authored from the S:logic-and-proof strand of the math-education concept graph; statement written here, not copied"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-affirming-the-consequent.json",
+              "sha256": "fb11e3482f4ad4b7cc4c59bf80f890c7539368129f6b82ef20bb3357bd12fed6"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-affirming-the-consequent.json",
+            "sha256": "fb11e3482f4ad4b7cc4c59bf80f890c7539368129f6b82ef20bb3357bd12fed6"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "citation",
+            "key": "citation"
+          },
+          {
+            "header": "establishes",
+            "key": "establishes"
+          }
+        ],
+        "rows": [
+          [
+            "standard textbook attribution; this lane did not consult the primary source, and records the citation as the received one",
+            "Aristotle, Sophistical Refutations; catalogued as a formal fallacy ever since",
+            "that the inference is invalid, i.e. that the proposition recorded by this fact is false"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-affirming-the-consequent.json",
+              "sha256": "fb11e3482f4ad4b7cc4c59bf80f890c7539368129f6b82ef20bb3357bd12fed6"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-affirming-the-consequent.json",
+            "sha256": "fb11e3482f4ad4b7cc4c59bf80f890c7539368129f6b82ef20bb3357bd12fed6"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "concept-refs",
+      "kind": {
+        "caption": {
+          "text": "Concept references (gloss and provenance only, never substance)"
+        },
+        "columns": [
+          {
+            "header": "graph",
+            "key": "graph"
+          },
+          {
+            "header": "ref",
+            "key": "ref"
+          },
+          {
+            "header": "relation",
+            "key": "relation"
+          },
+          {
+            "header": "resolved",
+            "key": "resolved"
+          }
+        ],
+        "rows": [
+          [
+            "math-education",
+            "C:fallacy",
+            "instance-of",
+            true
+          ],
+          [
+            "math-education",
+            "C:converse",
+            "related-to",
+            true
+          ],
+          [
+            "math-education",
+            "C:countermodel",
+            "uses",
+            true
+          ],
+          [
+            "math-education",
+            "C:contrapositive",
+            "contrasts-with",
+            true
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-affirming-the-consequent.json",
+              "sha256": "fb11e3482f4ad4b7cc4c59bf80f890c7539368129f6b82ef20bb3357bd12fed6"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-affirming-the-consequent.json",
+            "sha256": "fb11e3482f4ad4b7cc4c59bf80f890c7539368129f6b82ef20bb3357bd12fed6"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "The only `refuted` fact in this batch, and the reason the status exists. It is the converse of F:modus-ponens-valid and the negation-free shadow of F:contraposition, and one two-line countermodel separates it from both. Note the asymmetry in cost that this fact makes visible: refuting a universally quantified propositional claim needs one assignment, while establishing one needs the whole truth table -- which is why `sat` evidence is a replayable witness and `unsat` evidence is a certificate.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-affirming-the-consequent.json",
+            "sha256": "fb11e3482f4ad4b7cc4c59bf80f890c7539368129f6b82ef20bb3357bd12fed6"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-affirming-the-consequent",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "genre": "result",
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:affirming-the-consequent",
+    "title": "Affirming the consequent is a valid inference"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-affirming-the-consequent.json",
+        "sha256": "fb11e3482f4ad4b7cc4c59bf80f890c7539368129f6b82ef20bb3357bd12fed6"
+      }
+    ]
+  },
+  "schema_version": 1
+}

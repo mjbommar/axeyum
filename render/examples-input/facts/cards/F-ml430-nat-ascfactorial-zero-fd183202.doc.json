@@ -1,0 +1,537 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:ml430-nat-ascfactorial-zero-fd183202",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-ascfactorial-zero-fd183202.json",
+            "sha256": "15e5db2900595decd3330d63696b3a8f713a7284f158e54ae2d8953d9a9cdf33"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Mathlib v4.30 source proposition Nat.ascFactorial_zero"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "1 of 1 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ml430-nat-ascfactorial-zero-fd183202.json",
+              "sha256": "15e5db2900595decd3330d63696b3a8f713a7284f158e54ae2d8953d9a9cdf33"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-ascfactorial-zero-fd183202.json",
+            "sha256": "15e5db2900595decd3330d63696b3a8f713a7284f158e54ae2d8953d9a9cdf33"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "kernel-lean"
+          ],
+          [
+            "axiom_footprint",
+            "[] -- axiom-free; only kernel-lean can deliver this"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ml430-nat-ascfactorial-zero-fd183202.json",
+              "sha256": "15e5db2900595decd3330d63696b3a8f713a7284f158e54ae2d8953d9a9cdf33"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-ascfactorial-zero-fd183202.json",
+            "sha256": "15e5db2900595decd3330d63696b3a8f713a7284f158e54ae2d8953d9a9cdf33"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "label": "content digest; no file of this name in the tree",
+            "path": "sha256:9846be9e23ca38790303783b464ffa25fd3cfe8396e064b299bd90c940d1d391",
+            "sha256": "9846be9e23ca38790303783b464ffa25fd3cfe8396e064b299bd90c940d1d391"
+          }
+        ],
+        "cert_kind": "kernel-admission",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "python3 scripts/check-autogenesis-fact-operation.py --fact artifacts/facts/F-ml430-nat-ascfactorial-zero-fd183202.json"
+        },
+        "summary": {
+          "text": "The proposition declared as `Nat.ascFactorial_zero` in the pinned Mathlib v4.30 source."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-ascfactorial-zero-fd183202.json",
+            "sha256": "15e5db2900595decd3330d63696b3a8f713a7284f158e54ae2d8953d9a9cdf33"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: autogenesis-operation-9846be9e23ca3879"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row autogenesis-operation-9846be9e23ca3879 as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "autogenesis-operation-9846be9e23ca3879"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "bounded-pi-equality-reflexivity-v1, axeyum-lean-import/statement-reflexivity-operation-v1, axeyum-lean-import/statement-reflexivity-v1"
+          ],
+          [
+            "supports",
+            "The proposition declared as `Nat.ascFactorial_zero` in the pinned Mathlib v4.30 source."
+          ],
+          [
+            "artifact",
+            "sha256:9846be9e23ca38790303783b464ffa25fd3cfe8396e064b299bd90c940d1d391"
+          ],
+          [
+            "artifact state",
+            "content-hash-only"
+          ],
+          [
+            "artifact sha256",
+            "9846be9e23ca38790303783b464ffa25fd3cfe8396e064b299bd90c940d1d391"
+          ],
+          [
+            "checker_operation",
+            "{'execution_sha256': '9846be9e23ca38790303783b464ffa25fd3cfe8396e064b299bd90c940d1d391', 'external_artifact_sha256': '6aed5b73c80e039900027020cc088c7db67c6ae518c7d031584f3e4cb6e2e685', 'formal_statement_sha256': '2482f23d163bb946b92ac456667645047254faa3f575809e45609154b98b5dd7', 'frontier_sha256': '78cb1b70a4e93b86e59ee7689724644d654dd565e1227061faf3f7edf4e78566', 'goal_sha256': '87e37902bb8b3958514c5a6831b28ebff2824c8a30fb45601ff47736ee3853d7', 'id': 'authoritative-mathlib-statement-reflexivity-v1', 'max_binders': 8, 'max_constructed_nodes': 16, 'operation_sha256': 'e1e9fd6d47025c9119e41bb..."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ml430-nat-ascfactorial-zero-fd183202.json",
+              "sha256": "15e5db2900595decd3330d63696b3a8f713a7284f158e54ae2d8953d9a9cdf33"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-ascfactorial-zero-fd183202.json",
+            "sha256": "15e5db2900595decd3330d63696b3a8f713a7284f158e54ae2d8953d9a9cdf33"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Derived from a clean-commit typed execution receipt. The registered fact-operation checker replays the proof-isolated statement artifact through a fresh importer and requires the exact kernel-checked proof and dependency-free result; no caller-authored route, footprint, checker, or shell command is accepted.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-ascfactorial-zero-fd183202.json",
+            "sha256": "15e5db2900595decd3330d63696b3a8f713a7284f158e54ae2d8953d9a9cdf33"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-18"
+          ],
+          [
+            "established_by",
+            "axeyum-autogenesis execution d7120c2d8b6a547d083d6b1cd368682d6b054fef642be986888ae12c25d51caa"
+          ],
+          [
+            "source",
+            "statement-only extraction of `Nat.ascFactorial_zero` from Mathlib v4.30.0; no proof value was exposed"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ml430-nat-ascfactorial-zero-fd183202.json",
+              "sha256": "15e5db2900595decd3330d63696b3a8f713a7284f158e54ae2d8953d9a9cdf33"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-ascfactorial-zero-fd183202.json",
+            "sha256": "15e5db2900595decd3330d63696b3a8f713a7284f158e54ae2d8953d9a9cdf33"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "what",
+            "key": "what"
+          },
+          {
+            "header": "where",
+            "key": "where"
+          },
+          {
+            "header": "who",
+            "key": "who"
+          },
+          {
+            "header": "year",
+            "key": "year"
+          }
+        ],
+        "rows": [
+          [
+            "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted",
+            "the theorem declaration `Nat.ascFactorial_zero`",
+            "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
+            "the Mathlib contributors",
+            "2026"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ml430-nat-ascfactorial-zero-fd183202.json",
+              "sha256": "15e5db2900595decd3330d63696b3a8f713a7284f158e54ae2d8953d9a9cdf33"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-ascfactorial-zero-fd183202.json",
+            "sha256": "15e5db2900595decd3330d63696b3a8f713a7284f158e54ae2d8953d9a9cdf33"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "CLOSED BY AXEYUM AUTOGENESIS. The machine frontier selected this exact fact for registered operation `authoritative-mathlib-statement-reflexivity-v1`; execution receipt `9846be9e23ca38790303783b464ffa25fd3cfe8396e064b299bd90c940d1d391` produced a fresh-import axiom-free reflexivity proof, and the typed transaction derived this status, route, footprint, evidence row, checker, and provenance without caller-authored admission metadata.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-ascfactorial-zero-fd183202.json",
+            "sha256": "15e5db2900595decd3330d63696b3a8f713a7284f158e54ae2d8953d9a9cdf33"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-ml430-nat-ascfactorial-zero-fd183202",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "genre": "result",
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:ml430-nat-ascfactorial-zero-fd183202",
+    "title": "Mathlib v4.30 source proposition Nat.ascFactorial_zero"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-ml430-nat-ascfactorial-zero-fd183202.json",
+        "sha256": "15e5db2900595decd3330d63696b3a8f713a7284f158e54ae2d8953d9a9cdf33"
+      }
+    ]
+  },
+  "schema_version": 1
+}

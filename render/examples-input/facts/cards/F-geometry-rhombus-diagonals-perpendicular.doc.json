@@ -1,0 +1,746 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:geometry-rhombus-diagonals-perpendicular",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-rhombus-diagonals-perpendicular.json",
+            "sha256": "a98a8bc1632e68b8095005a478706e59a2e2c1795eccb35004352eb5a3b74e9f"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "the diagonals of a non-flat rhombus are perpendicular"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "2 of 2 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-rhombus-diagonals-perpendicular.json",
+              "sha256": "a98a8bc1632e68b8095005a478706e59a2e2c1795eccb35004352eb5a3b74e9f"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-rhombus-diagonals-perpendicular.json",
+            "sha256": "a98a8bc1632e68b8095005a478706e59a2e2c1795eccb35004352eb5a3b74e9f"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "cas-certificate"
+          ],
+          [
+            "axiom_footprint",
+            "cas.exact-rational-polynomial-normal-form; geometry.cartesian-coordinatisation-of-the-euclidean-plane; geometry.characteristic-zero-specialisation; geometry.rabinowitsch-inverse-specialisation; geometry.nondegeneracy.abd-not-collinear"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-rhombus-diagonals-perpendicular.json",
+              "sha256": "a98a8bc1632e68b8095005a478706e59a2e2c1795eccb35004352eb5a3b74e9f"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-rhombus-diagonals-perpendicular.json",
+            "sha256": "a98a8bc1632e68b8095005a478706e59a2e2c1795eccb35004352eb5a3b74e9f"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 8717,
+            "path": "artifacts/geometry-certificates/rhombus-diagonals-perpendicular.json",
+            "sha256": "fcb75a23b9efa805816e0b76bb64da72e09c4598998b1176adce0b8e2e16a2b4"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-cas --test geometry_certificate_artifacts"
+        },
+        "summary": {
+          "text": "the saturated cofactor certificate, re-checked from the committed artifact by a checker that shares no code with the search that produced it"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-rhombus-diagonals-perpendicular.json",
+            "sha256": "a98a8bc1632e68b8095005a478706e59a2e2c1795eccb35004352eb5a3b74e9f"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: geometry-certificate-rhombus-diagonals-perpendicular"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row geometry-certificate-rhombus-diagonals-perpendicular as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "geometry-certificate-rhombus-diagonals-perpendicular"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "geometry_check::check_certificate shape pass (the saturation generator is REBUILT here as `collinear(A,B,D) * Zinv0 - 1` from the condition polynomial the file declares, and compared with the generator the cofactors are taken against -- so a certificate cannot advertise one side condition and use another), geometry_check::check_certificate symbolic pass (the identity target = sum of cofactor times generator expanded with MvPoly add/mul alone -- no Groebner machinery, no monomial order, no S-polynomials; 34 cofactor terms over 4 generators), geometry_check::check_certificate numeric pass (the same identity re-evaluated at 24 deterministic integer points through MvPoly::evaluate, a different code path from the symbolic expansion), geometry_check::check_certificate usage pass (the saturation generator must carry a NONZERO cofactor, or the certificate would be advertising a weaker theorem than it proved), geometry_check::check_certificate degenerate-witness pass (A = (0,0), B = (1,0), C = (2,0), D = (5,0) replayed: all three hypotheses vanish, the condition polynomial vanishes, and the conclusion does NOT), geometry_check::check_certificate configuration pass (the unit square replayed: hypotheses vanish, the condition does not, the conclusion does)"
+          ],
+          [
+            "supports",
+            "the saturated cofactor certificate, re-checked from the committed artifact by a checker that shares no code with the search that produced it"
+          ],
+          [
+            "artifact",
+            "artifacts/geometry-certificates/rhombus-diagonals-perpendicular.json"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "fcb75a23b9efa805816e0b76bb64da72e09c4598998b1176adce0b8e2e16a2b4"
+          ],
+          [
+            "measurement",
+            "certified 2026-08-15 in 21-26 s under the degree-reverse-lexicographic monomial order: 253 S-pairs, a 23-element intermediate basis, a widest intermediate polynomial of 1678 monomials, 15788 reduction steps -- against ceilings of 2000, 200, 8000 and 50000 respectively, so 3-9x of headroom on every axis. Under the pure lexicographic order this same reduction DECLINED on the ReductionSteps ceiling after 288-302 s (measured independently by two lanes on two machines), which is why this fact did not exist before the default order changed. Reproduce the growth curve with `cargo run -p axeyum-cas..."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-rhombus-diagonals-perpendicular.json",
+              "sha256": "a98a8bc1632e68b8095005a478706e59a2e2c1795eccb35004352eb5a3b74e9f"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-rhombus-diagonals-perpendicular.json",
+            "sha256": "a98a8bc1632e68b8095005a478706e59a2e2c1795eccb35004352eb5a3b74e9f"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "The certificate uses the Rabinowitsch trick: a fresh variable Zinv0 and the generator `collinear(A,B,D) * Zinv0 - 1`. Specialising Zinv0 := 1/collinear(A,B,D) is legitimate exactly when A, B, D are not collinear, and that is the ONLY place the side condition enters. Three tamper controls in the same suite bear directly on this fact and every one of them now runs against EVERY saturated certificate rather than only the alphabetically first: DELETING the degenerate counterexample is rejected; REPLACING it with a generic configuration is rejected; and replacing it with A = (0,0), B = (1,0), C = (2,0), D = (1,0) -- which genuinely violates `abd-not-collinear` but does NOT falsify the conclusion -- is also rejected. That last one is the control that distinguishes a counterexample from a configuration that merely sits on the degeneracy locus.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-rhombus-diagonals-perpendicular.json",
+            "sha256": "a98a8bc1632e68b8095005a478706e59a2e2c1795eccb35004352eb5a3b74e9f"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence geometry-certificate-rhombus-diagonals-perpendicular"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/geometry-certificates/rhombus-diagonals-perpendicular.json",
+        "render_hint": "json",
+        "sha256": "fcb75a23b9efa805816e0b76bb64da72e09c4598998b1176adce0b8e2e16a2b4",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-rhombus-diagonals-perpendicular.json",
+            "sha256": "a98a8bc1632e68b8095005a478706e59a2e2c1795eccb35004352eb5a3b74e9f"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 10079,
+            "path": "crates/axeyum-cas/tests/geometry_encoding_agreement.rs",
+            "sha256": "b51268f90e5f54fbb332d5f7d115212da016c4869c027c7bb10ee16d80ee393b"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-cas --test geometry_encoding_agreement"
+        },
+        "summary": {
+          "text": "that the polynomials in the certificate mean the geometric predicates they are named after -- including the quadratic |AB| = |BC| hypothesis that distinguishes this theorem from `F:geometry-parallelogram-diagonals-bisect`, and the non-degeneracy condition, whose meaning is what makes or breaks this fact"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-rhombus-diagonals-perpendicular.json",
+            "sha256": "a98a8bc1632e68b8095005a478706e59a2e2c1795eccb35004352eb5a3b74e9f"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: geometry-coordinatisation-control-rhombus"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row geometry-coordinatisation-control-rhombus as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "geometry-coordinatisation-control-rhombus"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum_cas::geometry::Point::distance equality -- computed as EXACT SURDS through simplify_radicals over CasExpr, a completely different route from the squared-distance polynomial -- agreed with the `equidistant` polynomial on the 244-configuration integer sweep, axeyum_cas::geometry::Line::is_perpendicular (orthogonal `ax + by + c = 0` normals rather than a dot product) agreed with the perpendicularity polynomial on the same sweep, with both agreeing and disagreeing branches asserted to be exercised, axeyum_cas::geometry::Line::is_parallel agreed with the parallelism polynomial on the same sweep, axeyum_cas::geometry::Point::collinear agreed with the collinearity polynomial used as the non-degeneracy condition, on the same sweep"
+          ],
+          [
+            "supports",
+            "that the polynomials in the certificate mean the geometric predicates they are named after -- including the quadratic |AB| = |BC| hypothesis that distinguishes this theorem from `F:geometry-parallelogram-diagonals-bisect`, and the non-degeneracy condition, whose meaning is what makes or breaks this fact"
+          ],
+          [
+            "artifact",
+            "crates/axeyum-cas/tests/geometry_encoding_agreement.rs"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "b51268f90e5f54fbb332d5f7d115212da016c4869c027c7bb10ee16d80ee393b"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-rhombus-diagonals-perpendicular.json",
+              "sha256": "a98a8bc1632e68b8095005a478706e59a2e2c1795eccb35004352eb5a3b74e9f"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-rhombus-diagonals-perpendicular.json",
+            "sha256": "a98a8bc1632e68b8095005a478706e59a2e2c1795eccb35004352eb5a3b74e9f"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "The equidistance row is the one this fact adds over its parallelogram sibling. |AB| = |BC| is stated on SQUARED distances so it stays polynomial, and the control checks that against the exact irrational distances themselves rather than against another squaring -- the two are equal for non-negative reals, and that is the step a squared-distance encoding silently assumes.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-rhombus-diagonals-perpendicular.json",
+            "sha256": "a98a8bc1632e68b8095005a478706e59a2e2c1795eccb35004352eb5a3b74e9f"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence geometry-coordinatisation-control-rhombus"
+        },
+        "max_bytes": 65536,
+        "path": "crates/axeyum-cas/tests/geometry_encoding_agreement.rs",
+        "render_hint": "link",
+        "sha256": "b51268f90e5f54fbb332d5f7d115212da016c4869c027c7bb10ee16d80ee393b",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-rhombus-diagonals-perpendicular.json",
+            "sha256": "a98a8bc1632e68b8095005a478706e59a2e2c1795eccb35004352eb5a3b74e9f"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-15"
+          ],
+          [
+            "established_by",
+            "lane geometry-frontier: axeyum_cas::geometry_certify (untrusted cofactor-tracked Buchberger search, minimal condition subset) + axeyum_cas::geometry_check (independent re-derivation)"
+          ],
+          [
+            "source",
+            "classical; coordinatised by the `geometry` lane, with the non-degeneracy condition DERIVED by the certifier rather than supplied, and reached by the `geometry-frontier` lane after the default monomial order changed"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-rhombus-diagonals-perpendicular.json",
+              "sha256": "a98a8bc1632e68b8095005a478706e59a2e2c1795eccb35004352eb5a3b74e9f"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-rhombus-diagonals-perpendicular.json",
+            "sha256": "a98a8bc1632e68b8095005a478706e59a2e2c1795eccb35004352eb5a3b74e9f"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "what",
+            "key": "what"
+          },
+          {
+            "header": "where",
+            "key": "where"
+          },
+          {
+            "header": "who",
+            "key": "who"
+          }
+        ],
+        "rows": [
+          [
+            "standard textbook attribution; this lane did not consult the primary source",
+            "the diagonals of a rhombus bisect its angles and cut one another at right angles",
+            "Elements I.34 with the equilateral case; standard textbook corollary",
+            "Euclid"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-rhombus-diagonals-perpendicular.json",
+              "sha256": "a98a8bc1632e68b8095005a478706e59a2e2c1795eccb35004352eb5a3b74e9f"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-rhombus-diagonals-perpendicular.json",
+            "sha256": "a98a8bc1632e68b8095005a478706e59a2e2c1795eccb35004352eb5a3b74e9f"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "Established on the `cas-certificate` route, in the geometry family. The condition set is minimal ABSOLUTELY, not merely relative to the search budget: `certify` tries the empty subset first and it is DECIDED -- 0.7-0.9 s, nonzero remainder -- so the theorem is genuinely not unconditional, and no larger budget, different monomial order or better algorithm could report it as such. (Ideal membership does not depend on the monomial order; only whether a verdict is reached inside the ceilings does. That is what turns a decided subset into an absolute statement, and it is the reason the order was safe to change under this theorem as well as the six older ones.) (`geometry_order_audit` establishes the same for all six older facts, where it was previously only budget-scoped.) This theorem differs from `F:geometry-parallelogram-diagonals-bisect` by exactly one hypothesis, the quadratic |AB| = |BC|, and uses the same non-degeneracy condition; that one generator is the difference between a 72 ms reduction and a 21 s one, and under the previous default monomial order it was the difference between a proof and a decline. `geometry.nondegeneracy.abd-not-collinear` is listed in the footprint even though it also appears as a hypothesis of `formal.statement`, deliberately: on this route the footprint is the field a reader scans to see what a proof rests on, and a side condition invisible there is precisely how a mechanised geometry proof comes to be quoted as unconditional.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-rhombus-diagonals-perpendicular.json",
+            "sha256": "a98a8bc1632e68b8095005a478706e59a2e2c1795eccb35004352eb5a3b74e9f"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-geometry-rhombus-diagonals-perpendicular",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "genre": "result",
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:geometry-rhombus-diagonals-perpendicular",
+    "title": "the diagonals of a non-flat rhombus are perpendicular"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-geometry-rhombus-diagonals-perpendicular.json",
+        "sha256": "a98a8bc1632e68b8095005a478706e59a2e2c1795eccb35004352eb5a3b74e9f"
+      }
+    ]
+  },
+  "schema_version": 1
+}

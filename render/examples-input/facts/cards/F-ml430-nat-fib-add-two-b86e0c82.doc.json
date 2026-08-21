@@ -1,0 +1,697 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:ml430-nat-fib-add-two-b86e0c82",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
+            "sha256": "87f1fca2822e62e7940e189ff997746f0b4ac245bd98ee2265226d9c49479577"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Mathlib v4.30 source proposition Nat.fib_add_two"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "1 of 1 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
+              "sha256": "87f1fca2822e62e7940e189ff997746f0b4ac245bd98ee2265226d9c49479577"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
+            "sha256": "87f1fca2822e62e7940e189ff997746f0b4ac245bd98ee2265226d9c49479577"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "kernel-lean"
+          ],
+          [
+            "axiom_footprint",
+            "[] -- axiom-free; only kernel-lean can deliver this"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
+              "sha256": "87f1fca2822e62e7940e189ff997746f0b4ac245bd98ee2265226d9c49479577"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
+            "sha256": "87f1fca2822e62e7940e189ff997746f0b4ac245bd98ee2265226d9c49479577"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "label": "content digest; no file of this name in the tree",
+            "path": "sha256:d55dac246e5d4ffc5a6eb716fb236ab183cc84ca8f147a81d53073dc8c61bb85",
+            "sha256": "d55dac246e5d4ffc5a6eb716fb236ab183cc84ca8f147a81d53073dc8c61bb85"
+          }
+        ],
+        "cert_kind": "kernel-admission",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "python3 scripts/check-autogenesis-fact-operation.py --fact artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json"
+        },
+        "summary": {
+          "text": "The proposition declared as `Nat.fib_add_two` in the pinned Mathlib v4.30 source."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
+            "sha256": "87f1fca2822e62e7940e189ff997746f0b4ac245bd98ee2265226d9c49479577"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: autogenesis-operation-d55dac246e5d4ffc"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row autogenesis-operation-d55dac246e5d4ffc as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "autogenesis-operation-d55dac246e5d4ffc"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "bounded-iterate-recurrence-v3, axeyum-lean-import/checked-semantic-theorem-receipt-v1, axeyum-lean-import/checked-theorem-receipt-v1"
+          ],
+          [
+            "supports",
+            "The proposition declared as `Nat.fib_add_two` in the pinned Mathlib v4.30 source."
+          ],
+          [
+            "artifact",
+            "sha256:d55dac246e5d4ffc5a6eb716fb236ab183cc84ca8f147a81d53073dc8c61bb85"
+          ],
+          [
+            "artifact state",
+            "content-hash-only"
+          ],
+          [
+            "artifact sha256",
+            "d55dac246e5d4ffc5a6eb716fb236ab183cc84ca8f147a81d53073dc8c61bb85"
+          ],
+          [
+            "checker_operation",
+            "{'execution_sha256': 'd55dac246e5d4ffc5a6eb716fb236ab183cc84ca8f147a81d53073dc8c61bb85', 'formal_statement_sha256': 'd02d345e47fd89371e0929cde30b602d0105750679d230d9675546e468d6a1ab', 'frontier_sha256': '15a60980c1badc99163c5e47b6c84e87526264668983e6139de1c1595f6cdbf6', 'goal_sha256': '5433b34c4a138d615c488e4c7dfbee5dac8dc253e14680e114f40a55cf5eb16d', 'id': 'authoritative-mathlib-nat-fib-add-two-receipt-v1', 'observation_sha256': '28f313c405614fa9b9de47d76216e01669754c9f84e397ecc8845a551115182f', 'operation_sha256': 'f71712381c32aafe50dbe824859859aa5ce29d17ee0cc3909e349d5f8f69ad7c', 'proof_..."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
+              "sha256": "87f1fca2822e62e7940e189ff997746f0b4ac245bd98ee2265226d9c49479577"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
+            "sha256": "87f1fca2822e62e7940e189ff997746f0b4ac245bd98ee2265226d9c49479577"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Derived from a clean-commit typed execution receipt. The registered fact-operation checker replays the immutable source-bound semantic theorem receipt and requires its exact two-fresh-kernel proof, zero assumptions, and zero direct theorem dependencies; no caller-authored route, footprint, checker, or shell command is accepted.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
+            "sha256": "87f1fca2822e62e7940e189ff997746f0b4ac245bd98ee2265226d9c49479577"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "dependency-graph",
+      "kind": {
+        "alt": "Dependency graph around F:ml430-nat-fib-add-two-b86e0c82: 0 dependencies, 3 dependents",
+        "caption": {
+          "text": "Immediate dependencies and dependents of this fact"
+        },
+        "spec": {
+          "edges": [
+            {
+              "from": "F:ml430-int-fib-add-two-739358dd",
+              "label": "depends_on",
+              "to": "F:ml430-nat-fib-add-two-b86e0c82"
+            },
+            {
+              "from": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
+              "label": "depends_on",
+              "to": "F:ml430-nat-fib-add-two-b86e0c82"
+            },
+            {
+              "from": "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
+              "label": "depends_on",
+              "to": "F:ml430-nat-fib-add-two-b86e0c82"
+            }
+          ],
+          "figure_type": "dep-graph",
+          "nodes": [
+            {
+              "group": "unproved",
+              "href": "cards/F-ml430-int-fib-add-two-739358dd.doc.json",
+              "id": "F:ml430-int-fib-add-two-739358dd",
+              "label": "Mathlib v4.30 source proposition Int.fib_add_two",
+              "status": "open"
+            },
+            {
+              "group": "focus",
+              "href": "cards/F-ml430-nat-fib-add-two-b86e0c82.doc.json",
+              "id": "F:ml430-nat-fib-add-two-b86e0c82",
+              "label": "Mathlib v4.30 source proposition Nat.fib_add_two",
+              "status": "proved"
+            },
+            {
+              "group": "unproved",
+              "href": "cards/F-ml430-nat-fib-coprime-fib-succ-162fc738.doc.json",
+              "id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
+              "label": "Mathlib v4.30 source proposition Nat.fib_coprime_fib_succ",
+              "status": "open"
+            },
+            {
+              "group": "unproved",
+              "href": "cards/F-ml430-nat-fib-le-fib-succ-d1ef4a3d.doc.json",
+              "id": "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
+              "label": "Mathlib v4.30 source proposition Nat.fib_le_fib_succ",
+              "status": "open"
+            }
+          ],
+          "rankdir": "TB"
+        },
+        "type": "figure"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
+            "sha256": "87f1fca2822e62e7940e189ff997746f0b4ac245bd98ee2265226d9c49479577"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Dependency neighbourhood"
+    },
+    {
+      "id": "depended-on-by",
+      "kind": {
+        "caption": {
+          "text": "Depended on by"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:ml430-int-fib-add-two-739358dd",
+            "Mathlib v4.30 source proposition Int.fib_add_two",
+            "open",
+            "cards/F-ml430-int-fib-add-two-739358dd.doc.json"
+          ],
+          [
+            "F:ml430-nat-fib-coprime-fib-succ-162fc738",
+            "Mathlib v4.30 source proposition Nat.fib_coprime_fib_succ",
+            "open",
+            "cards/F-ml430-nat-fib-coprime-fib-succ-162fc738.doc.json"
+          ],
+          [
+            "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
+            "Mathlib v4.30 source proposition Nat.fib_le_fib_succ",
+            "open",
+            "cards/F-ml430-nat-fib-le-fib-succ-d1ef4a3d.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
+              "sha256": "87f1fca2822e62e7940e189ff997746f0b4ac245bd98ee2265226d9c49479577"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
+            "sha256": "87f1fca2822e62e7940e189ff997746f0b4ac245bd98ee2265226d9c49479577"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depended on by"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-18"
+          ],
+          [
+            "established_by",
+            "axeyum-autogenesis execution f0fb2c6f374ba6255e9acdd63582e10db41b8ba094fb97149df667acdfc0030b"
+          ],
+          [
+            "source",
+            "statement-only extraction of `Nat.fib_add_two` from Mathlib v4.30.0; no proof value was exposed"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
+              "sha256": "87f1fca2822e62e7940e189ff997746f0b4ac245bd98ee2265226d9c49479577"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
+            "sha256": "87f1fca2822e62e7940e189ff997746f0b4ac245bd98ee2265226d9c49479577"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "what",
+            "key": "what"
+          },
+          {
+            "header": "where",
+            "key": "where"
+          },
+          {
+            "header": "who",
+            "key": "who"
+          },
+          {
+            "header": "year",
+            "key": "year"
+          }
+        ],
+        "rows": [
+          [
+            "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted",
+            "the theorem declaration `Nat.fib_add_two`",
+            "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
+            "the Mathlib contributors",
+            "2026"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
+              "sha256": "87f1fca2822e62e7940e189ff997746f0b4ac245bd98ee2265226d9c49479577"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
+            "sha256": "87f1fca2822e62e7940e189ff997746f0b4ac245bd98ee2265226d9c49479577"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "CLOSED BY AXEYUM AUTOGENESIS. The machine frontier selected this exact fact for registered operation `authoritative-mathlib-nat-fib-add-two-receipt-v1`; execution receipt `d55dac246e5d4ffc5a6eb716fb236ab183cc84ca8f147a81d53073dc8c61bb85` produced a two-fresh-kernel axiom-free semantic theorem receipt, and the typed transaction derived this status, route, footprint, evidence row, checker, and provenance without caller-authored admission metadata.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
+            "sha256": "87f1fca2822e62e7940e189ff997746f0b4ac245bd98ee2265226d9c49479577"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-ml430-nat-fib-add-two-b86e0c82",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "genre": "result",
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:ml430-nat-fib-add-two-b86e0c82",
+    "title": "Mathlib v4.30 source proposition Nat.fib_add_two"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
+        "sha256": "87f1fca2822e62e7940e189ff997746f0b4ac245bd98ee2265226d9c49479577"
+      }
+    ]
+  },
+  "schema_version": 1
+}

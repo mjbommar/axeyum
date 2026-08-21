@@ -1,0 +1,242 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:ml430-mutation-edb05acf07d9ef3f9f8232fc",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-mutation-edb05acf07d9ef3f9f8232fc.json",
+            "sha256": "417ed7caffc9dc7419a1c1dcf9eb4083fb52eb50d4ce8e7cc2e065827750cc73"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Outcome-blind mutation of Nat.choose_self"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "open",
+            "open",
+            "0 of 0 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "unknown",
+            "unknown",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ml430-mutation-edb05acf07d9ef3f9f8232fc.json",
+              "sha256": "417ed7caffc9dc7419a1c1dcf9eb4083fb52eb50d4ce8e7cc2e065827750cc73"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-mutation-edb05acf07d9ef3f9f8232fc.json",
+            "sha256": "417ed7caffc9dc7419a1c1dcf9eb4083fb52eb50d4ce8e7cc2e065827750cc73"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-18"
+          ],
+          [
+            "established_by",
+            "not established in this ledger"
+          ],
+          [
+            "source",
+            "outcome-blind `boundary-value-substitution` mutation of Nat.choose_self"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ml430-mutation-edb05acf07d9ef3f9f8232fc.json",
+              "sha256": "417ed7caffc9dc7419a1c1dcf9eb4083fb52eb50d4ce8e7cc2e065827750cc73"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-mutation-edb05acf07d9ef3f9f8232fc.json",
+            "sha256": "417ed7caffc9dc7419a1c1dcf9eb4083fb52eb50d4ce8e7cc2e065827750cc73"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "Open generated mutation. No expected truth value, proof, witness, route, budget, or Axeyum outcome is recorded. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module. The nursery manifest, not depends_on, keeps this row in the same partition as its source.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-mutation-edb05acf07d9ef3f9f8232fc.json",
+            "sha256": "417ed7caffc9dc7419a1c1dcf9eb4083fb52eb50d4ce8e7cc2e065827750cc73"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-ml430-mutation-edb05acf07d9ef3f9f8232fc",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "genre": "result",
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:ml430-mutation-edb05acf07d9ef3f9f8232fc",
+    "title": "Outcome-blind mutation of Nat.choose_self"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-ml430-mutation-edb05acf07d9ef3f9f8232fc.json",
+        "sha256": "417ed7caffc9dc7419a1c1dcf9eb4083fb52eb50d4ce8e7cc2e065827750cc73"
+      }
+    ]
+  },
+  "schema_version": 1
+}

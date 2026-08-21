@@ -1,0 +1,1038 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:orders-candidate-keys-and-normal-forms",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+            "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "An order-line schema has exactly two candidate keys, is not in BCNF, and is not in 3NF -- with every subset of the attributes examined"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "3 of 3 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "unclassified",
+            "unclassified",
+            "field absent: nobody has looked (distinct from `unknown`, which means we checked)"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+              "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+            "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "search-certificate"
+          ],
+          [
+            "axiom_footprint",
+            "armstrong-axioms-are-sound-for-relational-fd-semantics; relational-attribute-domains-have-at-least-two-values; bcnf-and-3nf-are-decided-by-the-dependencies-of-F-alone; axeyum-scenarios.dbdesign-instance-parse-faithfulness; axeyum-scenarios.dbdesign-derivation-and-two-row-checker-replay-semantics"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+              "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+            "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 3229,
+            "path": "artifacts/instances/dbdesign/orders-schema.dbd",
+            "sha256": "62258183bf3449aa8a64faa17ede446a85764feabe76fea90d8c3b232be4a0f6"
+          }
+        ],
+        "cert_kind": "report-run",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run --release -q -p axeyum-bench --example db_design_certify -- artifacts/instances/dbdesign/orders-schema.dbd --expect-checks 11"
+        },
+        "summary": {
+          "text": "The candidate keys are EXACTLY {line_uuid} and {order_id, line_no}: all 1024 subsets of the ten attributes were examined and each non-superkey was issued a checked two-row relation."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+            "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: orders-candidate-key-sweep"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row orders-candidate-key-sweep as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "orders-candidate-key-sweep"
+          ],
+          [
+            "ledger kind",
+            "exhaustive-enumeration"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-scenarios.dbdesign-exhaustive-subset-sweep, axeyum-scenarios.dbdesign-two-row-relation-evaluation, axeyum-scenarios.dbdesign-armstrong-derivation-replay"
+          ],
+          [
+            "supports",
+            "The candidate keys are EXACTLY {line_uuid} and {order_id, line_no}: all 1024 subsets of the ten attributes were examined and each non-superkey was issued a checked two-row relation."
+          ],
+          [
+            "artifact",
+            "artifacts/instances/dbdesign/orders-schema.dbd"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "62258183bf3449aa8a64faa17ede446a85764feabe76fea90d8c3b232be4a0f6"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+              "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+            "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Measured 2026-08-15: 1024 subsets swept, 640 containing a reported key, 384 issued a counterexample relation and 384 of those checked. 3520 removal tests, ALL DECIDED -- attribute closure is a total function on a finite lattice, so no budget can make one `unknown`, and the minimality claim is therefore ABSOLUTE in the sense of ADR-0455 rather than budget-relative. The sweep also fails if a subset containing a reported key turns out not to be a superkey, or if a subset containing none turns out to be one, which is what makes the list COMPLETE rather than merely correct. Each reported key additionally carries a replayed Armstrong derivation of key -> R.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+            "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence orders-candidate-key-sweep"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/instances/dbdesign/orders-schema.dbd",
+        "render_hint": "link",
+        "sha256": "62258183bf3449aa8a64faa17ede446a85764feabe76fea90d8c3b232be4a0f6",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+            "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 3229,
+            "path": "artifacts/instances/dbdesign/orders-schema.dbd",
+            "sha256": "62258183bf3449aa8a64faa17ede446a85764feabe76fea90d8c3b232be4a0f6"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run --release -q -p axeyum-bench --example db_design_certify -- artifacts/instances/dbdesign/orders-schema.dbd --expect-checks 11"
+        },
+        "summary": {
+          "text": "The schema is in neither BCNF nor 3NF, each violation carrying the offending dependency plus a two-row relation showing its determinant is not a superkey."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+            "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: orders-normal-form-violation-witnesses"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row orders-normal-form-violation-witnesses as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "orders-normal-form-violation-witnesses"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-scenarios.dbdesign-two-row-relation-evaluation, axeyum-scenarios.dbdesign-exhaustive-subset-sweep"
+          ],
+          [
+            "supports",
+            "The schema is in neither BCNF nor 3NF, each violation carrying the offending dependency plus a two-row relation showing its determinant is not a superkey."
+          ],
+          [
+            "artifact",
+            "artifacts/instances/dbdesign/orders-schema.dbd"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "62258183bf3449aa8a64faa17ede446a85764feabe76fea90d8c3b232be4a0f6"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+              "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+            "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "Five of the seven dependencies violate BCNF; the same five violate 3NF because each has a non-prime attribute on the right. The prime attributes -- line_uuid, order_id, line_no -- come from the exhaustive sweep above, so the 3NF verdict inherits its completeness. The BCNF verdict examines only the dependencies IN F, which is sufficient by an argument recorded in the module documentation and carried in the axiom footprint as the one assumption here that is a theorem rather than a measurement.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+            "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence orders-normal-form-violation-witnesses"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/instances/dbdesign/orders-schema.dbd",
+        "render_hint": "link",
+        "sha256": "62258183bf3449aa8a64faa17ede446a85764feabe76fea90d8c3b232be4a0f6",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+            "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-002",
+      "kind": {
+        "artifact_refs": [
+          {
+            "label": "directory, not a single artifact",
+            "path": "artifacts/instances/dbdesign/negative-controls/"
+          }
+        ],
+        "cert_kind": "report-run",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "scripts/check-dbdesign-negative-controls.sh"
+        },
+        "summary": {
+          "text": "The checkers backing this fact REJECT a false claim of every kind it makes, so a passing run is evidence rather than a report that a tool finished."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+            "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: dbdesign-checkers-fail-closed"
+    },
+    {
+      "id": "evidence-002-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row dbdesign-checkers-fail-closed as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "dbdesign-checkers-fail-closed"
+          ],
+          [
+            "ledger kind",
+            "instance-pin"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-dbdesign-negative-control-sweep"
+          ],
+          [
+            "supports",
+            "The checkers backing this fact REJECT a false claim of every kind it makes, so a passing run is evidence rather than a report that a tool finished."
+          ],
+          [
+            "artifact",
+            "artifacts/instances/dbdesign/negative-controls/"
+          ],
+          [
+            "artifact state",
+            "directory"
+          ],
+          [
+            "artifact sha256",
+            "(not hashed)"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+              "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+            "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-002-notes",
+      "kind": {
+        "text": "22 assertions, 2.1 s warm. 13 committed instance files each pin exactly ONE false answer -- an unimplied dependency declared implied, a candidate-key list with a key missing, a list with a non-key added, a BCNF verdict flipped, a 3NF verdict flipped (which a checker conflating the two normal forms would accept), a lossy split declared lossless and the reverse, a preserved dependency set declared lost and the reverse, and a query containment in each direction -- and every one must exit non-zero. Four more assertions cover the shape of the gate itself: a wrong --expect-checks count, an instance run through the wrong checker, a --verify-formal script whose negation is SATISFIABLE, and a --verify-formal target that asserts nothing. One further control, no-expectations.dbd, pins nothing at all and must be REFUSED rather than swept -- the `40 of 162 checker runs exit 0 on completion alone` failure this ledger measured on 2026-08-15. Finally three assertions require the TRUE instances to still be accepted, without which a checker that rejected everything would pass the whole sweep. Measured this run: 22 of 22.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+            "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "dependency-graph",
+      "kind": {
+        "alt": "Dependency graph around F:orders-candidate-keys-and-normal-forms: 1 dependencies, 0 dependents",
+        "caption": {
+          "text": "Immediate dependencies and dependents of this fact"
+        },
+        "spec": {
+          "edges": [
+            {
+              "from": "F:orders-candidate-keys-and-normal-forms",
+              "label": "depends_on",
+              "to": "F:orders-fd-implication-certified"
+            }
+          ],
+          "figure_type": "dep-graph",
+          "nodes": [
+            {
+              "group": "focus",
+              "href": "cards/F-orders-candidate-keys-and-normal-forms.doc.json",
+              "id": "F:orders-candidate-keys-and-normal-forms",
+              "label": "An order-line schema has exactly two candidate keys, is not in BCNF, and is not in 3NF -- with every subset of the attributes examined",
+              "status": "proved"
+            },
+            {
+              "group": "search-certificate",
+              "href": "cards/F-orders-fd-implication-certified.doc.json",
+              "id": "F:orders-fd-implication-certified",
+              "label": "Two implied and two unimplied functional dependencies on a committed order-line schema, each with a replayable certificate",
+              "status": "proved"
+            }
+          ],
+          "rankdir": "TB"
+        },
+        "type": "figure"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+            "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Dependency neighbourhood"
+    },
+    {
+      "id": "depends-on",
+      "kind": {
+        "caption": {
+          "text": "Depends on"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:orders-fd-implication-certified",
+            "Two implied and two unimplied functional dependencies on a committed order-line schema, each with a replayable certificate",
+            "proved",
+            "cards/F-orders-fd-implication-certified.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+              "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+            "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depends on"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-15"
+          ],
+          [
+            "established_by",
+            "axeyum lane `db-design`, 2026-08-15: crates/axeyum-scenarios/src/dbdesign/normal_forms.rs over the committed instance"
+          ],
+          [
+            "source",
+            "schema authored by this lane; not extracted from any corpus"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+              "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+            "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "what",
+            "key": "what"
+          },
+          {
+            "header": "where",
+            "key": "where"
+          },
+          {
+            "header": "who",
+            "key": "who"
+          },
+          {
+            "header": "year",
+            "key": "year"
+          }
+        ],
+        "rows": [
+          [
+            "citation from the AHV bibliography p. 645; the three results read from the paper's abstract via a publisher landing page and corroborated by Maier, The Theory of Relational Databases (1983), Ch. 6 p. 122. This lane did not read the paper.",
+            "All candidate keys of a schema can be enumerated in time polynomial in the SIZE OF THE OUTPUT as well as the input, deciding whether a key of cardinality at most k exists is NP-complete, and deciding whether a specified attribute is prime is NP-complete. The exhaustive 2^n sweep used here is the brute-force alternative, affordable only because the instance is small -- and the fact says 1024 rather than implying a clever algorithm.",
+            "Candidate keys for relations, Journal of Computer and System Sciences 17(2):270-279",
+            "C. L. Lucchesi and S. L. Osborn",
+            "1978"
+          ],
+          [
+            "citation read on the AHV bibliography p. 630 and the attribution sentence at AHV p. 265 and Maier p. 122; primary source not consulted.",
+            "Boyce-Codd normal form: every non-trivial dependency has a superkey determinant. Both AHV (Ch. 11 notes, p. 265) and Maier (Ch. 6, p. 122) attribute BCNF to this paper, of which Codd is the sole author as cited; the popular attribution to Boyce and Codd jointly, and C. J. Date's claim that Heath (1971) has the definition first, are textbook lore this lane could not verify to a primary source.",
+            "Recent investigations in relational data base systems, Information Processing 74 (Proc. IFIP Congress, Stockholm), North-Holland, pp. 1017-1021",
+            "E. F. Codd",
+            "1974"
+          ],
+          [
+            "the easy half read at AHV Exercise 11.12(a) p. 267, the hard half at AHV Exercise 11.12(b) p. 267 (tagged [BB79]) and in the running text at AHV p. 256; Maier p. 122 states the same result with the opposite polarity. Primary source not consulted.",
+            "Testing whether a schema (R, F) is in BCNF is polynomial (in fact linear) when F is given explicitly -- it suffices to check the dependencies IN F, which is what this run does. Testing whether a SUBSCHEMA (V, pi_V(F)) is in BCNF is co-NP-complete (equivalently, deciding that it violates BCNF is NP-complete, which is how Maier and most textbooks phrase it).",
+            "Computational Problems Related to the Design of Normal Form Relational Schemas, ACM Transactions on Database Systems 4(1):30-59",
+            "Catriel Beeri and Philip A. Bernstein",
+            "1979"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+              "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+            "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "WHY THE SUFFICIENCY OF CHECKING F IS NOT AN ORACLE. `bcnf_violations` examines only the seven dependencies of F, which is sound because if every X -> Y in F with Y not contained in X has X+ = R, then any implied non-trivial A -> B has B inside A+ and B not inside A, so growing A+ used some L -> R of F with L inside A+, whence A+ contains L+ = R. That argument is in the module's documentation and is the one assumption in the footprint that is a theorem rather than a measurement.\n\nADR-0455 AND ADR-0460. Minimality here is absolute, and it is absolute for a stronger reason than 'every test returned a verdict'. ADR-0460's failure mode -- a decided test that is really a test of the producer's decomposition -- is structurally absent: attribute closure is defined by F alone, with no monomial order, no block decomposition, no budget and no heuristic anywhere in it. And the evidence for each negative verdict is not the closure computation but a two-row relation, an object that refutes superkey-hood on its own terms without mentioning closure at all.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+            "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-orders-candidate-keys-and-normal-forms",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "genre": "result",
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:orders-candidate-keys-and-normal-forms",
+    "title": "An order-line schema has exactly two candidate keys, is not in BCNF, and is not in 3NF -- with every subset of the attributes examined"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-orders-candidate-keys-and-normal-forms.json",
+        "sha256": "09dcce883b233a30ce771aee0292a67ae6672feb9520a93a65d55e17f4f73ad6"
+      }
+    ]
+  },
+  "schema_version": 1
+}

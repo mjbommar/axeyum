@@ -1,0 +1,1038 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:bcnf-decomposition-lossless-not-dependency-preserving",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+            "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "The BCNF repair of the street/city/zip schema rejoins exactly and cannot enforce its own dependency; two other splits lose information"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "3 of 3 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "unclassified",
+            "unclassified",
+            "field absent: nobody has looked (distinct from `unknown`, which means we checked)"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+              "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+            "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "search-certificate"
+          ],
+          [
+            "axiom_footprint",
+            "the-tableau-chase-is-sound-and-complete-for-lossless-join-under-fds; armstrong-axioms-are-sound-for-relational-fd-semantics; relational-attribute-domains-have-at-least-two-values; axeyum-scenarios.dbdesign-instance-parse-faithfulness; axeyum-scenarios.dbdesign-chase-and-spurious-tuple-checker-replay-semantics"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+              "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+            "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 1961,
+            "path": "artifacts/instances/dbdesign/addresses-zip.dbd",
+            "sha256": "f6794d1326393eff01648f09031af4485fcc88ec1009e76c4ad3c8c0336e3abf"
+          }
+        ],
+        "cert_kind": "unsat-drat",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run --release -q -p axeyum-bench --example db_design_certify -- artifacts/instances/dbdesign/addresses-zip.dbd --expect-checks 11 && cargo run --release -q -p axeyum-bench --example db_design_certify -- artifacts/instances/dbdesign/orders-schema.dbd --expect-checks 11"
+        },
+        "summary": {
+          "text": "The BCNF split of street/city/zip and the by-entity split of the order-line schema both have lossless joins, each by a chase trace replayed onto a freshly built tableau."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+            "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: chase-traces-replayed"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row chase-traces-replayed as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "chase-traces-replayed"
+          ],
+          [
+            "ledger kind",
+            "unsat-certificate"
+          ],
+          [
+            "cert_kind",
+            "unsat-drat"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-scenarios.dbdesign-chase-trace-replay, axeyum-scenarios.dbdesign-armstrong-derivation-replay"
+          ],
+          [
+            "supports",
+            "The BCNF split of street/city/zip and the by-entity split of the order-line schema both have lossless joins, each by a chase trace replayed onto a freshly built tableau."
+          ],
+          [
+            "artifact",
+            "artifacts/instances/dbdesign/addresses-zip.dbd"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "f6794d1326393eff01648f09031af4485fcc88ec1009e76c4ad3c8c0336e3abf"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+              "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+            "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Traces of 1 and 7 identifications. `check_chase_trace` rebuilds the initial tableau from the schema and the fragment list, and for each step requires that the cited dependency is in F, that the two named rows ALREADY agree on its determinant, that the column lies in its dependent, that the two cells actually hold the symbols the step names, and that the distinguished symbol is never the one eliminated. It never chases anything itself, so a bug in the chase cannot produce a trace it accepts. Dependency preservation for the by-entity split carries 7 derivations of F from G and 26 of G from F, all replayed -- both directions, so G cannot be smuggled in.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+            "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence chase-traces-replayed"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/instances/dbdesign/addresses-zip.dbd",
+        "render_hint": "link",
+        "sha256": "f6794d1326393eff01648f09031af4485fcc88ec1009e76c4ad3c8c0336e3abf",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+            "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 1961,
+            "path": "artifacts/instances/dbdesign/addresses-zip.dbd",
+            "sha256": "f6794d1326393eff01648f09031af4485fcc88ec1009e76c4ad3c8c0336e3abf"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run --release -q -p axeyum-bench --example db_design_certify -- artifacts/instances/dbdesign/addresses-zip.dbd --expect-checks 11 && cargo run --release -q -p axeyum-bench --example db_design_certify -- artifacts/instances/dbdesign/orders-schema.dbd --expect-checks 11"
+        },
+        "summary": {
+          "text": "The two lossy splits and the three lost dependencies, each by a concrete relation: a database exhibiting a spurious tuple, or two rows satisfying the projected dependency set and violating the lost dependency."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+            "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: spurious-tuple-and-lost-dependency-witnesses"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row spurious-tuple-and-lost-dependency-witnesses as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "spurious-tuple-and-lost-dependency-witnesses"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-scenarios.dbdesign-spurious-tuple-relation-evaluation, axeyum-scenarios.dbdesign-two-row-relation-evaluation"
+          ],
+          [
+            "supports",
+            "The two lossy splits and the three lost dependencies, each by a concrete relation: a database exhibiting a spurious tuple, or two rows satisfying the projected dependency set and violating the lost dependency."
+          ],
+          [
+            "artifact",
+            "artifacts/instances/dbdesign/addresses-zip.dbd"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "f6794d1326393eff01648f09031af4485fcc88ec1009e76c4ad3c8c0336e3abf"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+              "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+            "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "`check_spurious_tuple` discharges three obligations by array comparison: the relation satisfies every dependency of F, every fragment has a row projecting onto the claimed spurious tuple (so the join produces it), and the tuple is not a row. That is a complete refutation of losslessness needing NO theorem -- the negative half of this fact rests on strictly less than the positive half, which needs the soundness of the chase. Both lossy witnesses are 2-row relations. The lost-dependency witnesses are checked against the PROJECTED dependency set G (1 dependency for the zip instance, 65 for the order-line instance), which is where the claim actually lives.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+            "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence spurious-tuple-and-lost-dependency-witnesses"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/instances/dbdesign/addresses-zip.dbd",
+        "render_hint": "link",
+        "sha256": "f6794d1326393eff01648f09031af4485fcc88ec1009e76c4ad3c8c0336e3abf",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+            "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-002",
+      "kind": {
+        "artifact_refs": [
+          {
+            "label": "directory, not a single artifact",
+            "path": "artifacts/instances/dbdesign/negative-controls/"
+          }
+        ],
+        "cert_kind": "report-run",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "scripts/check-dbdesign-negative-controls.sh"
+        },
+        "summary": {
+          "text": "The checkers backing this fact REJECT a false claim of every kind it makes, so a passing run is evidence rather than a report that a tool finished."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+            "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: dbdesign-checkers-fail-closed"
+    },
+    {
+      "id": "evidence-002-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row dbdesign-checkers-fail-closed as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "dbdesign-checkers-fail-closed"
+          ],
+          [
+            "ledger kind",
+            "instance-pin"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-dbdesign-negative-control-sweep"
+          ],
+          [
+            "supports",
+            "The checkers backing this fact REJECT a false claim of every kind it makes, so a passing run is evidence rather than a report that a tool finished."
+          ],
+          [
+            "artifact",
+            "artifacts/instances/dbdesign/negative-controls/"
+          ],
+          [
+            "artifact state",
+            "directory"
+          ],
+          [
+            "artifact sha256",
+            "(not hashed)"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+              "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+            "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-002-notes",
+      "kind": {
+        "text": "22 assertions, 2.1 s warm. 13 committed instance files each pin exactly ONE false answer -- an unimplied dependency declared implied, a candidate-key list with a key missing, a list with a non-key added, a BCNF verdict flipped, a 3NF verdict flipped (which a checker conflating the two normal forms would accept), a lossy split declared lossless and the reverse, a preserved dependency set declared lost and the reverse, and a query containment in each direction -- and every one must exit non-zero. Four more assertions cover the shape of the gate itself: a wrong --expect-checks count, an instance run through the wrong checker, a --verify-formal script whose negation is SATISFIABLE, and a --verify-formal target that asserts nothing. One further control, no-expectations.dbd, pins nothing at all and must be REFUSED rather than swept -- the `40 of 162 checker runs exit 0 on completion alone` failure this ledger measured on 2026-08-15. Finally three assertions require the TRUE instances to still be accepted, without which a checker that rejected everything would pass the whole sweep. Measured this run: 22 of 22.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+            "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "dependency-graph",
+      "kind": {
+        "alt": "Dependency graph around F:bcnf-decomposition-lossless-not-dependency-preserving: 1 dependencies, 0 dependents",
+        "caption": {
+          "text": "Immediate dependencies and dependents of this fact"
+        },
+        "spec": {
+          "edges": [
+            {
+              "from": "F:bcnf-decomposition-lossless-not-dependency-preserving",
+              "label": "depends_on",
+              "to": "F:orders-fd-implication-certified"
+            }
+          ],
+          "figure_type": "dep-graph",
+          "nodes": [
+            {
+              "group": "focus",
+              "href": "cards/F-bcnf-decomposition-lossless-not-dependency-preserving.doc.json",
+              "id": "F:bcnf-decomposition-lossless-not-dependency-preserving",
+              "label": "The BCNF repair of the street/city/zip schema rejoins exactly and cannot enforce its own dependency; two other splits lose information",
+              "status": "proved"
+            },
+            {
+              "group": "search-certificate",
+              "href": "cards/F-orders-fd-implication-certified.doc.json",
+              "id": "F:orders-fd-implication-certified",
+              "label": "Two implied and two unimplied functional dependencies on a committed order-line schema, each with a replayable certificate",
+              "status": "proved"
+            }
+          ],
+          "rankdir": "TB"
+        },
+        "type": "figure"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+            "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Dependency neighbourhood"
+    },
+    {
+      "id": "depends-on",
+      "kind": {
+        "caption": {
+          "text": "Depends on"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:orders-fd-implication-certified",
+            "Two implied and two unimplied functional dependencies on a committed order-line schema, each with a replayable certificate",
+            "proved",
+            "cards/F-orders-fd-implication-certified.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+              "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+            "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depends on"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-15"
+          ],
+          [
+            "established_by",
+            "axeyum lane `db-design`, 2026-08-15: crates/axeyum-scenarios/src/dbdesign/decomposition.rs over the two committed instances"
+          ],
+          [
+            "source",
+            "the street/city/zip schema is the classical textbook example (AHV Example 11.2.10); the order-line schema was authored by this lane"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+              "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+            "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "what",
+            "key": "what"
+          },
+          {
+            "header": "where",
+            "key": "where"
+          },
+          {
+            "header": "who",
+            "key": "who"
+          },
+          {
+            "header": "year",
+            "key": "year"
+          }
+        ],
+        "rows": [
+          [
+            "citation from the AHV bibliography p. 622; the attribution sentence read on Maier, The Theory of Relational Databases (1983), Ch. 8 p. 194 and AHV p. 186. Primary source not consulted.",
+            "The tableau chase for functional dependencies: build one row per fragment with the distinguished symbol in the columns that fragment keeps, identify symbols forced equal by a dependency, and the join is lossless exactly when some row becomes all-distinguished. AHV's notes call this paper the ancestor of the chase and credit Maier, Mendelzon and Sagiv (TODS 4(4):455-469, 1979) with articulating the chase as a named general technique.",
+            "The theory of joins in relational databases, ACM Transactions on Database Systems 4(3):297-314",
+            "A. V. Aho, C. Beeri and J. D. Ullman",
+            "1979"
+          ],
+          [
+            "attribution sentence read on Maier, Ch. 8 p. 194; the criterion itself at Maier Exercise 8.35(c) and the sufficient direction at AHV Prop. 8.2.2 p. 164. Page ranges for the two primary papers came from search indexes, not from the papers.",
+            "For a two-fragment decomposition under functional dependencies alone, the join is lossless iff F implies (R1 inter R2) -> R1 or (R1 inter R2) -> R2. Maier credits the `if` direction to Delobel and Casey, IBM J. Research and Development 17(5):374-386 (1973), and the `only if` direction to Rissanen, Independent components of relations, ACM TODS 2(4):317-325 (1977). Neither AHV nor Maier credits Heath (1971) for this criterion, despite the popular name `Heath's theorem`.",
+            "as above",
+            "C. Delobel and R. G. Casey (sufficiency) and J. Rissanen (necessity)",
+            "1977"
+          ],
+          [
+            "theorem statements and the worked counterexample read on the cited pages of the free author PDF of AHV Ch. 11. The 3NF synthesis attribution is deliberately split between Bernstein 1976 and Biskup-Dayal-Bernstein 1979 on the strength of AHV p. 265 and Maier p. 122; citing Bernstein 1976 alone for the lossless guarantee would be wrong.",
+            "A BCNF decomposition always exists and always has the lossless join property, but is NOT guaranteed to preserve dependencies; the street/city/zip schema is the standard witness, and AHV state that NO BCNF decomposition of it preserves dependencies. 3NF, by contrast, always admits a decomposition that is both lossless and dependency-preserving -- Bernstein's synthesis algorithm (ACM TODS 1(4):277-298, 1976) delivers dependency preservation, and the lossless-join guarantee comes from the extra key fragment added by Biskup, Dayal and Bernstein (SIGMOD 1979).",
+            "AHV, Foundations of Databases, Theorem 11.2.8 and Example 11.2.10, pp. 256-257; Theorem 11.2.14, p. 258",
+            "E. F. Codd (BCNF) and Abiteboul, Hull and Vianu (the counterexample)",
+            "1995"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+              "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+            "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "THE TWO DIRECTIONS DO NOT REST ON THE SAME THING, and the difference is worth stating because it is the opposite of the usual asymmetry. A LOSSY verdict rests on no theorem at all: the certificate is a relation that satisfies F, whose projections demonstrably rejoin to a tuple it does not contain, and the three obligations are decided by comparing arrays. A LOSSLESS verdict rests on the soundness of the chase (Aho, Beeri and Ullman 1979) -- replaying the identifications to an all-distinguished row means the join is lossless only because that theorem says so. So the negative half of this fact is strictly better supported than the positive half, and the axiom footprint says which is which.\n\nWHY THE `naive` SPLIT IS IN THE INSTANCE. Splitting street/city/zip on `city` is the decomposition a designer reaches for when they see `zip -> city` and think in terms of lookup tables. It loses information outright, and the run prints the two-row database that proves it. A tool that only ever said `not in BCNF` would give that designer no way to tell the two repairs apart.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+            "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-bcnf-decomposition-lossless-not-dependency-preserving",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "genre": "result",
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:bcnf-decomposition-lossless-not-dependency-preserving",
+    "title": "The BCNF repair of the street/city/zip schema rejoins exactly and cannot enforce its own dependency; two other splits lose information"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-bcnf-decomposition-lossless-not-dependency-preserving.json",
+        "sha256": "3b13283ea328e049c081619248059d7106cb18262c1550e86856b7b46c47d4d9"
+      }
+    ]
+  },
+  "schema_version": 1
+}

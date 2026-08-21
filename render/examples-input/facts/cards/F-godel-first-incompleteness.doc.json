@@ -1,0 +1,430 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:godel-first-incompleteness",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-godel-first-incompleteness.json",
+            "sha256": "53bfffa7b7d92014cf3d8b3dd28a0c648ba6c903fc9d541d190f23f7e22468b0"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Godel's first incompleteness theorem"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "open",
+            "open",
+            "0 of 0 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-godel-first-incompleteness.json",
+              "sha256": "53bfffa7b7d92014cf3d8b3dd28a0c648ba6c903fc9d541d190f23f7e22468b0"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-godel-first-incompleteness.json",
+            "sha256": "53bfffa7b7d92014cf3d8b3dd28a0c648ba6c903fc9d541d190f23f7e22468b0"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "disagreement-import-backlog",
+      "kind": {
+        "text": "Import backlog: open in this ledger (epistemic_status: open) and settled in the literature (external_status: proved). That is a target for import, not a result of this project.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-godel-first-incompleteness.json",
+            "sha256": "53bfffa7b7d92014cf3d8b3dd28a0c648ba6c903fc9d541d190f23f7e22468b0"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Import backlog"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-14"
+          ],
+          [
+            "established_by",
+            "not established in this ledger"
+          ],
+          [
+            "source",
+            "authored from the S:logic-and-proof strand of the math-education concept graph; statement written here, not copied"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-godel-first-incompleteness.json",
+              "sha256": "53bfffa7b7d92014cf3d8b3dd28a0c648ba6c903fc9d541d190f23f7e22468b0"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-godel-first-incompleteness.json",
+            "sha256": "53bfffa7b7d92014cf3d8b3dd28a0c648ba6c903fc9d541d190f23f7e22468b0"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "citation",
+            "key": "citation"
+          },
+          {
+            "header": "establishes",
+            "key": "establishes"
+          }
+        ],
+        "rows": [
+          [
+            "Godel 1931",
+            "the theorem, long settled; also formalised and machine-checked in several proof assistants (Shankar in Nqthm 1986, Paulson in Isabelle/HOL 2014)"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-godel-first-incompleteness.json",
+              "sha256": "53bfffa7b7d92014cf3d8b3dd28a0c648ba6c903fc9d541d190f23f7e22468b0"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-godel-first-incompleteness.json",
+            "sha256": "53bfffa7b7d92014cf3d8b3dd28a0c648ba6c903fc9d541d190f23f7e22468b0"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "concept-refs",
+      "kind": {
+        "caption": {
+          "text": "Concept references (gloss and provenance only, never substance)"
+        },
+        "columns": [
+          {
+            "header": "graph",
+            "key": "graph"
+          },
+          {
+            "header": "ref",
+            "key": "ref"
+          },
+          {
+            "header": "relation",
+            "key": "relation"
+          },
+          {
+            "header": "resolved",
+            "key": "resolved"
+          }
+        ],
+        "rows": [
+          [
+            "math-education",
+            "C:godel-incompleteness",
+            "states",
+            true
+          ],
+          [
+            "math-education",
+            "C:incompleteness-theorem",
+            "states",
+            true
+          ],
+          [
+            "math-education",
+            "C:completeness-logical",
+            "bounds",
+            true
+          ],
+          [
+            "math-education",
+            "C:consistency",
+            "uses",
+            true
+          ],
+          [
+            "math-education",
+            "C:formal-system",
+            "uses",
+            true
+          ],
+          [
+            "math-education",
+            "C:self-reference",
+            "uses",
+            true
+          ],
+          [
+            "math-education",
+            "C:mathematical-certainty-limits",
+            "related-to",
+            true
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-godel-first-incompleteness.json",
+              "sha256": "53bfffa7b7d92014cf3d8b3dd28a0c648ba6c903fc9d541d190f23f7e22468b0"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-godel-first-incompleteness.json",
+            "sha256": "53bfffa7b7d92014cf3d8b3dd28a0c648ba6c903fc9d541d190f23f7e22468b0"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "The status is `open` and that is the WRONG WORD, used because the schema's enum offers nothing better. This proposition is a settled theorem; what is open is not the mathematics but whether this repository can say it. The vocabulary conflates the epistemic status OF A PROPOSITION with the evidence status IN THIS LEDGER, and those come apart exactly here -- see the lane diary for the proposed `established-elsewhere` value. What the gap actually is: our IR has terms for values and functions over sorts, and no term for a syntactic object. Godel numbering is not the obstacle -- arithmetic on codes we could do -- the obstacle is that `provable-in-T` would have to be a predicate over our own formulas, and formulas are not in the domain of discourse. Every fact in this batch that says 'this is a metatheorem we cannot state' (F:resolution-rule-sound on completeness, F:exportation on the deduction theorem, F:tseitin-and-gate on general equisatisfiability) is blocked by that same single missing thing: reflection.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-godel-first-incompleteness.json",
+            "sha256": "53bfffa7b7d92014cf3d8b3dd28a0c648ba6c903fc9d541d190f23f7e22468b0"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-godel-first-incompleteness",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "genre": "result",
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:godel-first-incompleteness",
+    "title": "Godel's first incompleteness theorem"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-godel-first-incompleteness.json",
+        "sha256": "53bfffa7b7d92014cf3d8b3dd28a0c648ba6c903fc9d541d190f23f7e22468b0"
+      }
+    ]
+  },
+  "schema_version": 1
+}

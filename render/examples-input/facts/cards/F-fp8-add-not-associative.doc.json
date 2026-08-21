@@ -1,0 +1,938 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:fp8-add-not-associative",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-not-associative.json",
+            "sha256": "99881c641656e30e7cdbbdacba78c9f939b306003cdd08c8af5bfa5d321d29a2"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "fp8 E5M2 addition under roundNearestTiesToEven is associative"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "refuted",
+            "refuted",
+            "3 of 3 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "refuted",
+            "refuted",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-fp8-add-not-associative.json",
+              "sha256": "99881c641656e30e7cdbbdacba78c9f939b306003cdd08c8af5bfa5d321d29a2"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-not-associative.json",
+            "sha256": "99881c641656e30e7cdbbdacba78c9f939b306003cdd08c8af5bfa5d321d29a2"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "search-certificate"
+          ],
+          [
+            "axiom_footprint",
+            "ieee754-2019-arithmetic-semantics-for-the-OCP-fp8-E5M2-layout; rounding-mode-roundNearestTiesToEven-for-the-headline-witness; smtlib2-floatingpoint-sort-equality-one-nan-value-signed-zeros-distinct; the-witness-replay-semantics-of-axeyum-Evidence::check-and-of-rustc_apfloat"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-fp8-add-not-associative.json",
+              "sha256": "99881c641656e30e7cdbbdacba78c9f939b306003cdd08c8af5bfa5d321d29a2"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-not-associative.json",
+            "sha256": "99881c641656e30e7cdbbdacba78c9f939b306003cdd08c8af5bfa5d321d29a2"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 643,
+            "path": "artifacts/facts/smt2/fp8-add-not-associative.smt2",
+            "sha256": "a9889c28abf858ffa2cd6095e5a03890f2e89fd9e0db228f4fca57592bb43cdb"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "test \"$(cargo run --release -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/fp8-add-not-associative.smt2 | tail -1)\" = sat"
+        },
+        "summary": {
+          "text": "The negation of formal.statement is satisfiable over fp8 E5M2, so the proposition does not hold for all triples."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-not-associative.json",
+            "sha256": "99881c641656e30e7cdbbdacba78c9f939b306003cdd08c8af5bfa5d321d29a2"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: fp8-assoc-counterexample-model"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row fp8-assoc-counterexample-model as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "fp8-assoc-counterexample-model"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-smtcomp-cli-producing-solve, axeyum-Evidence::check-fresh-parse-model-replay"
+          ],
+          [
+            "supports",
+            "The negation of formal.statement is satisfiable over fp8 E5M2, so the proposition does not hold for all triples."
+          ],
+          [
+            "artifact",
+            "artifacts/facts/smt2/fp8-add-not-associative.smt2"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "a9889c28abf858ffa2cd6095e5a03890f2e89fd9e0db228f4fca57592bb43cdb"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-fp8-add-not-associative.json",
+              "sha256": "99881c641656e30e7cdbbdacba78c9f939b306003cdd08c8af5bfa5d321d29a2"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-not-associative.json",
+            "sha256": "99881c641656e30e7cdbbdacba78c9f939b306003cdd08c8af5bfa5d321d29a2"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Ran 2026-08-14: `; evidence kind=sat-model certified=1 recheck=na arena=ok ms=27`, verdict `sat`. `arena=ok` is `Evidence::check` evaluating the produced model against a FRESH PARSE of the original assertions, so the witness is checked against the source formula, not the lowered form. NOT cross-checked by either external oracle, and that is the finding recorded in this fact's notes: neither z3 4.13.3 nor bitwuzla 0.9.1 can decide any fp8 E5M2 addition query at all.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-not-associative.json",
+            "sha256": "99881c641656e30e7cdbbdacba78c9f939b306003cdd08c8af5bfa5d321d29a2"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence fp8-assoc-counterexample-model"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/facts/smt2/fp8-add-not-associative.smt2",
+        "render_hint": "code",
+        "sha256": "a9889c28abf858ffa2cd6095e5a03890f2e89fd9e0db228f4fca57592bb43cdb",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-not-associative.json",
+            "sha256": "99881c641656e30e7cdbbdacba78c9f939b306003cdd08c8af5bfa5d321d29a2"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 1000,
+            "path": "artifacts/facts/smt2/fp8-add-not-associative-witness.smt2",
+            "sha256": "d49bb95e0b014728d3fb9c472366f2c18e4c7f3dec5d4eed991a9e1f4e0e6e65"
+          }
+        ],
+        "cert_kind": "report-run",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "test \"$(cargo run --release -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/fp8-add-not-associative-witness.smt2 | tail -1)\" = sat"
+        },
+        "summary": {
+          "text": "The specific triple a = b = 0x01 (the E5M2 subnormal 2^-16), c = 0x08 (the normal 2^-13), pinned as a GROUND formula: (a+b)+c = 0x09 while a+(b+c) = 0x08."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-not-associative.json",
+            "sha256": "99881c641656e30e7cdbbdacba78c9f939b306003cdd08c8af5bfa5d321d29a2"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: fp8-assoc-ground-witness"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row fp8-assoc-ground-witness as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "fp8-assoc-ground-witness"
+          ],
+          [
+            "ledger kind",
+            "instance-pin"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-smtcomp-cli-ground-evaluation, axeyum-Evidence::check-fresh-parse, z3-4.13.3-ground-instance"
+          ],
+          [
+            "supports",
+            "The specific triple a = b = 0x01 (the E5M2 subnormal 2^-16), c = 0x08 (the normal 2^-13), pinned as a GROUND formula: (a+b)+c = 0x09 while a+(b+c) = 0x08."
+          ],
+          [
+            "artifact",
+            "artifacts/facts/smt2/fp8-add-not-associative-witness.smt2"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "d49bb95e0b014728d3fb9c472366f2c18e4c7f3dec5d4eed991a9e1f4e0e6e65"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-fp8-add-not-associative.json",
+              "sha256": "99881c641656e30e7cdbbdacba78c9f939b306003cdd08c8af5bfa5d321d29a2"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-not-associative.json",
+            "sha256": "99881c641656e30e7cdbbdacba78c9f939b306003cdd08c8af5bfa5d321d29a2"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "Ran 2026-08-14: `sat`, 2ms. The file has NO free symbols -- it asserts the disequality AND both concrete results -- so a `sat` verdict is direct evaluation of fp8 E5M2 arithmetic rather than a search, and it pins the witness so the fact cannot drift from the solver. Cross-checked: `z3 -smt2` also reports `sat` on this file. That z3 can settle the GROUND instance while returning `unknown` on the quantifier-free SEARCH is not a contradiction: z3's refusal is in its symbolic fpa2bv tactic, and a closed term is constant-folded before that tactic is reached. bitwuzla 0.9.1 refuses the file outright (unsupported format).\n\nArithmetic, for a reader: a+b = 2^-15 exactly; (a+b)+c = 2^-13 * 1.25 = 0x09 exactly; but b+c = 2^-13 * 1.125 is a tie between 0x08 and 0x09 that RNE breaks toward the even significand, giving 0x08, and a + 0x08 ties again to 0x08. Two ties in one direction is what separates the two bracketings.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-not-associative.json",
+            "sha256": "99881c641656e30e7cdbbdacba78c9f939b306003cdd08c8af5bfa5d321d29a2"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence fp8-assoc-ground-witness"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/facts/smt2/fp8-add-not-associative-witness.smt2",
+        "render_hint": "code",
+        "sha256": "d49bb95e0b014728d3fb9c472366f2c18e4c7f3dec5d4eed991a9e1f4e0e6e65",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-not-associative.json",
+            "sha256": "99881c641656e30e7cdbbdacba78c9f939b306003cdd08c8af5bfa5d321d29a2"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-002",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 19845,
+            "path": "crates/axeyum-fp/examples/kernel_equivalence.rs",
+            "sha256": "c5e139f8a11fdf0c7ec88871b8297800e714da9afa98b69fcf34a2d403c3c88a"
+          }
+        ],
+        "cert_kind": "report-run",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run --release -q -p axeyum-fp --example kernel_equivalence -- assoc"
+        },
+        "summary": {
+          "text": "All 2^24 = 16777216 fp8 E5M2 triples enumerated by LLVM's APFloat: the two bracketings disagree at 427036 of them under RNE (2.55%)."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-not-associative.json",
+            "sha256": "99881c641656e30e7cdbbdacba78c9f939b306003cdd08c8af5bfa5d321d29a2"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: fp8-assoc-exhaustive-apfloat"
+    },
+    {
+      "id": "evidence-002-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row fp8-assoc-exhaustive-apfloat as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "fp8-assoc-exhaustive-apfloat"
+          ],
+          [
+            "ledger kind",
+            "exhaustive-enumeration"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "rustc_apfloat-0.2.3-llvm-apfloat-exhaustive-enumeration"
+          ],
+          [
+            "supports",
+            "All 2^24 = 16777216 fp8 E5M2 triples enumerated by LLVM's APFloat: the two bracketings disagree at 427036 of them under RNE (2.55%)."
+          ],
+          [
+            "artifact",
+            "crates/axeyum-fp/examples/kernel_equivalence.rs"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "c5e139f8a11fdf0c7ec88871b8297800e714da9afa98b69fcf34a2d403c3c88a"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-fp8-add-not-associative.json",
+              "sha256": "99881c641656e30e7cdbbdacba78c9f939b306003cdd08c8af5bfa5d321d29a2"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-not-associative.json",
+            "sha256": "99881c641656e30e7cdbbdacba78c9f939b306003cdd08c8af5bfa5d321d29a2"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-002-notes",
+      "kind": {
+        "text": "Ran 2026-08-14, 2.2s. Independent of axeyum's bit-blaster, CNF encoder and SAT core: `rustc_apfloat` 0.2.3 (LLVM APFloat), comparing SMT-LIB value classes. The failure count is mode-dependent and was measured for all five SMT-LIB rounding modes: RNE 427036, RNA 419652, RTP 4825040, RTN 4825040, RTZ 5375600 -- of 16777216 triples each. The directed modes fail an order of magnitude more often, and RTP/RTN fail equally often, which is the sign symmetry of the format. The first witness in enumeration order is the same triple under every mode. The binary exits non-zero if the claim ever stops failing.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-not-associative.json",
+            "sha256": "99881c641656e30e7cdbbdacba78c9f939b306003cdd08c8af5bfa5d321d29a2"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-002-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence fp8-assoc-exhaustive-apfloat"
+        },
+        "max_bytes": 65536,
+        "path": "crates/axeyum-fp/examples/kernel_equivalence.rs",
+        "render_hint": "link",
+        "sha256": "c5e139f8a11fdf0c7ec88871b8297800e714da9afa98b69fcf34a2d403c3c88a",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-not-associative.json",
+            "sha256": "99881c641656e30e7cdbbdacba78c9f939b306003cdd08c8af5bfa5d321d29a2"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-14"
+          ],
+          [
+            "established_by",
+            "fp-kernels lane; axeyum SMT front door (sat model, replayed) plus an independent exhaustive LLVM-APFloat enumeration of all 2^24 triples"
+          ],
+          [
+            "source",
+            "authored here. Non-associativity of floating-point addition is folklore; what is established here is the E5M2 instance with a named witness and a measured failure density, which folklore does not supply."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-fp8-add-not-associative.json",
+              "sha256": "99881c641656e30e7cdbbdacba78c9f939b306003cdd08c8af5bfa5d321d29a2"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-not-associative.json",
+            "sha256": "99881c641656e30e7cdbbdacba78c9f939b306003cdd08c8af5bfa5d321d29a2"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "what",
+            "key": "what"
+          },
+          {
+            "header": "where",
+            "key": "where"
+          },
+          {
+            "header": "who",
+            "key": "who"
+          },
+          {
+            "header": "year",
+            "key": "year"
+          }
+        ],
+        "rows": [
+          [
+            "standard textbook attribution; this lane did not consult the primary source, and records the citation as the received one.",
+            "That floating-point addition is not associative, with binary64 examples.",
+            "What Every Computer Scientist Should Know About Floating-Point Arithmetic, ACM Computing Surveys 23(1)",
+            "David Goldberg",
+            "1991"
+          ],
+          [
+            "cited for the FORMAT DEFINITION only; the arithmetic claims in this fact are established here and depend on nothing in that paper.",
+            "The E5M2 and E4M3 8-bit floating-point formats used here; E5M2 is the IEEE-754-conformant one.",
+            "FP8 Formats for Deep Learning, arXiv:2209.05433",
+            "Micikevicius et al. (OCP / NVIDIA, Arm, Intel)",
+            "2022"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-fp8-add-not-associative.json",
+              "sha256": "99881c641656e30e7cdbbdacba78c9f939b306003cdd08c8af5bfa5d321d29a2"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-not-associative.json",
+            "sha256": "99881c641656e30e7cdbbdacba78c9f939b306003cdd08c8af5bfa5d321d29a2"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "WHY A REFUTATION IS THE VALUABLE RESULT HERE. Every reduction kernel, every tensor-parallel all-reduce and every reordering optimizer relies on being allowed to re-bracket a sum. This fact says precisely how often that is wrong at fp8 E5M2: 427036 of 16777216 triples under RNE, and 5375600 -- nearly a third -- under round-toward-zero. That is a measured density with a named witness, not an aphorism.\n\nTHE FINDING ABOUT THE ORACLES. This claim could not be cross-checked against either industrial FP solver, for two DIFFERENT reasons, and both were measured on 2026-08-14 rather than assumed:\n  * z3 4.13.3 returns `unknown` with `(:reason-unknown \"addition/subtract with ebits > sbits not supported\")`. E5M2 has 5 exponent bits and 3 significand bits, so every fp8 addition query is outside its fpa2bv tactic.\n  * bitwuzla 0.9.1 errors out: \"Unsupported experimental floating-point format (non-experimental: Float16, Float32, Float64, Float128)\". The `--fpexp` escape named in that message is a BUILD option, not a runtime flag -- passing it to the binary is rejected as an invalid option, so this build cannot be talked into it.\nSo at exactly the width where a claim can be settled by brute force, the two solvers a practitioner would reach for decline. axeyum decides it, and the LLVM-APFloat enumeration is what independently confirms the answer. Note the complementary gap in the other direction: axeyum REFUSES fp8 E4M3, correctly, because E4M3 has no infinities and an all-ones NaN and is therefore not an IEEE format -- `arithmetic_format_supported` gates it out, while z3 accepts (_ FloatingPoint 4 4) happily.\n\nROUTE. `search-certificate`: the settlement is a replayable witness, matching the precedent of F:affirming-the-consequent. Refuting a universally quantified claim costs one triple; establishing one costs the whole space -- and here we paid both, because the enumeration also gives the density.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp8-add-not-associative.json",
+            "sha256": "99881c641656e30e7cdbbdacba78c9f939b306003cdd08c8af5bfa5d321d29a2"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-fp8-add-not-associative",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "genre": "result",
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:fp8-add-not-associative",
+    "title": "fp8 E5M2 addition under roundNearestTiesToEven is associative"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-fp8-add-not-associative.json",
+        "sha256": "99881c641656e30e7cdbbdacba78c9f939b306003cdd08c8af5bfa5d321d29a2"
+      }
+    ]
+  },
+  "schema_version": 1
+}

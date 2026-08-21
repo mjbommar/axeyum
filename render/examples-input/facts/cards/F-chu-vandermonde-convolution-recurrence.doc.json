@@ -1,0 +1,871 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:chu-vandermonde-convolution-recurrence",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-chu-vandermonde-convolution-recurrence.json",
+            "sha256": "5a632a5b3b5048a2bce63360230598e7ff2092dd26edd1c2e80e7c964dc9726e"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "The Chu-Vandermonde convolution satisfies a first-order recurrence in p"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "2 of 2 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-chu-vandermonde-convolution-recurrence.json",
+              "sha256": "5a632a5b3b5048a2bce63360230598e7ff2092dd26edd1c2e80e7c964dc9726e"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-chu-vandermonde-convolution-recurrence.json",
+            "sha256": "5a632a5b3b5048a2bce63360230598e7ff2092dd26edd1c2e80e7c964dc9726e"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "cas-certificate"
+          ],
+          [
+            "axiom_footprint",
+            "cas.exact-rational-polynomial-normal-form; cas.gamma-functional-equation; cas.hyperterm-specification-denotes-the-summand; cas.telescoped-term-natural-boundary"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-chu-vandermonde-convolution-recurrence.json",
+              "sha256": "5a632a5b3b5048a2bce63360230598e7ff2092dd26edd1c2e80e7c964dc9726e"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-chu-vandermonde-convolution-recurrence.json",
+            "sha256": "5a632a5b3b5048a2bce63360230598e7ff2092dd26edd1c2e80e7c964dc9726e"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 25610,
+            "path": "crates/axeyum-cas/tests/telescoping_identities.rs",
+            "sha256": "65caca76320a2bbe433ef92219778352023e1d393cd4cb51bf2fcaa573a7df9a"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-cas --test telescoping_identities"
+        },
+        "summary": {
+          "text": "the creative-telescoping certificate, replayed by a checker that shares no code with the search that produced it"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-chu-vandermonde-convolution-recurrence.json",
+            "sha256": "5a632a5b3b5048a2bce63360230598e7ff2092dd26edd1c2e80e7c964dc9726e"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: wz-chu-vandermonde-recurrence"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row wz-chu-vandermonde-recurrence as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "wz-chu-vandermonde-recurrence"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "telescoping_check::symbolic_identity_holds (own shift-ratio derivation, polynomial cross-multiplication), telescoping_check::confirm_ratios (shift ratios against exact bignum factorials), telescoping_check::confirm_telescoping (pointwise identity and summed recurrence, exact bignum)"
+          ],
+          [
+            "supports",
+            "the creative-telescoping certificate, replayed by a checker that shares no code with the search that produced it"
+          ],
+          [
+            "artifact",
+            "crates/axeyum-cas/tests/telescoping_identities.rs"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "65caca76320a2bbe433ef92219778352023e1d393cd4cb51bf2fcaa573a7df9a"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-chu-vandermonde-convolution-recurrence.json",
+              "sha256": "5a632a5b3b5048a2bce63360230598e7ff2092dd26edd1c2e80e7c964dc9726e"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-chu-vandermonde-convolution-recurrence.json",
+            "sha256": "5a632a5b3b5048a2bce63360230598e7ff2092dd26edd1c2e80e7c964dc9726e"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Certificate: order 1, recurrence coefficients a_0 = m + n - p, a_1 = -(p + 1), R(p,k) = k*(k + n - p) / (p - k + 1). The certificate identity is symbolic in ALL of m, n, p, k -- four variables -- so the recurrence is established for symbolic m and n, not merely at sample values. The closed form is not claimed by this fact; turning the recurrence into C(m+n,p) needs the base case S(0) = 1 at symbolic m and n, which lane `telescoping-scale` later established -- see F:chu-vandermonde-convolution.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-chu-vandermonde-convolution-recurrence.json",
+            "sha256": "5a632a5b3b5048a2bce63360230598e7ff2092dd26edd1c2e80e7c964dc9726e"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence wz-chu-vandermonde-recurrence"
+        },
+        "max_bytes": 65536,
+        "path": "crates/axeyum-cas/tests/telescoping_identities.rs",
+        "render_hint": "link",
+        "sha256": "65caca76320a2bbe433ef92219778352023e1d393cd4cb51bf2fcaa573a7df9a",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-chu-vandermonde-convolution-recurrence.json",
+            "sha256": "5a632a5b3b5048a2bce63360230598e7ff2092dd26edd1c2e80e7c964dc9726e"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 1889,
+            "path": "artifacts/cas-certificates/chu-vandermonde-convolution.json",
+            "sha256": "cf50b41e104c5d6416bdbc22ef73c3e2c2a45cbf4e5b800869b7059cdf865c48"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-cas --test telescoping_certificate_artifacts"
+        },
+        "summary": {
+          "text": "the serialised certificate itself, re-checked from the committed file with no search run"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-chu-vandermonde-convolution-recurrence.json",
+            "sha256": "5a632a5b3b5048a2bce63360230598e7ff2092dd26edd1c2e80e7c964dc9726e"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: cas-certificate-artifact-chu-vandermonde-convolution"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row cas-certificate-artifact-chu-vandermonde-convolution as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "cas-certificate-artifact-chu-vandermonde-convolution"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "telescoping_json::from_json (exact [numerator, denominator] rationals; decimals, a foreign format tag and a truncated file are all refused), telescoping_check::check_certificate over the parsed certificate, telescoping_check::check_closed_form / check_closed_form_symbolic over the parsed closed form, where one is claimed"
+          ],
+          [
+            "supports",
+            "the serialised certificate itself, re-checked from the committed file with no search run"
+          ],
+          [
+            "artifact",
+            "artifacts/cas-certificates/chu-vandermonde-convolution.json"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "cf50b41e104c5d6416bdbc22ef73c3e2c2a45cbf4e5b800869b7059cdf865c48"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-chu-vandermonde-convolution-recurrence.json",
+              "sha256": "5a632a5b3b5048a2bce63360230598e7ff2092dd26edd1c2e80e7c964dc9726e"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-chu-vandermonde-convolution-recurrence.json",
+            "sha256": "5a632a5b3b5048a2bce63360230598e7ff2092dd26edd1c2e80e7c964dc9726e"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "This row exists so the fact rests on an ARTIFACT rather than on re-running the producer. The sweep reads every committed certificate, parses it, and hands it to the independent checker; nothing in that path calls the search. Tamper controls in the same file: a certificate numerator edited by one, a recurrence coefficient edited by one, and a certificate re-pointed at a neighbouring file's summand are each rejected, and a truncated / foreign-format / decimal-bearing file is refused by the reader before the checker sees it.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-chu-vandermonde-convolution-recurrence.json",
+            "sha256": "5a632a5b3b5048a2bce63360230598e7ff2092dd26edd1c2e80e7c964dc9726e"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence cas-certificate-artifact-chu-vandermonde-convolution"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/cas-certificates/chu-vandermonde-convolution.json",
+        "render_hint": "json",
+        "sha256": "cf50b41e104c5d6416bdbc22ef73c3e2c2a45cbf4e5b800869b7059cdf865c48",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-chu-vandermonde-convolution-recurrence.json",
+            "sha256": "5a632a5b3b5048a2bce63360230598e7ff2092dd26edd1c2e80e7c964dc9726e"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "dependency-graph",
+      "kind": {
+        "alt": "Dependency graph around F:chu-vandermonde-convolution-recurrence: 0 dependencies, 1 dependents",
+        "caption": {
+          "text": "Immediate dependencies and dependents of this fact"
+        },
+        "spec": {
+          "edges": [
+            {
+              "from": "F:chu-vandermonde-convolution",
+              "label": "depends_on",
+              "to": "F:chu-vandermonde-convolution-recurrence"
+            }
+          ],
+          "figure_type": "dep-graph",
+          "nodes": [
+            {
+              "group": "cas-certificate",
+              "href": "cards/F-chu-vandermonde-convolution.doc.json",
+              "id": "F:chu-vandermonde-convolution",
+              "label": "Chu-Vandermonde convolution, closed form at symbolic parameters",
+              "status": "proved"
+            },
+            {
+              "group": "focus",
+              "href": "cards/F-chu-vandermonde-convolution-recurrence.doc.json",
+              "id": "F:chu-vandermonde-convolution-recurrence",
+              "label": "The Chu-Vandermonde convolution satisfies a first-order recurrence in p",
+              "status": "proved"
+            }
+          ],
+          "rankdir": "TB"
+        },
+        "type": "figure"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-chu-vandermonde-convolution-recurrence.json",
+            "sha256": "5a632a5b3b5048a2bce63360230598e7ff2092dd26edd1c2e80e7c964dc9726e"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Dependency neighbourhood"
+    },
+    {
+      "id": "depended-on-by",
+      "kind": {
+        "caption": {
+          "text": "Depended on by"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:chu-vandermonde-convolution",
+            "Chu-Vandermonde convolution, closed form at symbolic parameters",
+            "proved",
+            "cards/F-chu-vandermonde-convolution.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-chu-vandermonde-convolution-recurrence.json",
+              "sha256": "5a632a5b3b5048a2bce63360230598e7ff2092dd26edd1c2e80e7c964dc9726e"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-chu-vandermonde-convolution-recurrence.json",
+            "sha256": "5a632a5b3b5048a2bce63360230598e7ff2092dd26edd1c2e80e7c964dc9726e"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depended on by"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-14"
+          ],
+          [
+            "established_by",
+            "lane telescoping: axeyum_cas::telescoping::zeilberger (untrusted search) + axeyum_cas::telescoping_check (independent checker)"
+          ],
+          [
+            "source",
+            "classical binomial identity, stated by this lane as a HyperTerm specification"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-chu-vandermonde-convolution-recurrence.json",
+              "sha256": "5a632a5b3b5048a2bce63360230598e7ff2092dd26edd1c2e80e7c964dc9726e"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-chu-vandermonde-convolution-recurrence.json",
+            "sha256": "5a632a5b3b5048a2bce63360230598e7ff2092dd26edd1c2e80e7c964dc9726e"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "what",
+            "key": "what"
+          },
+          {
+            "header": "where",
+            "key": "where"
+          },
+          {
+            "header": "who",
+            "key": "who"
+          },
+          {
+            "header": "year",
+            "key": "year"
+          }
+        ],
+        "rows": [
+          [
+            "standard textbook attribution; this lane did not consult the primary source",
+            "the convolution identity",
+            "classical; see Petkovsek-Wilf-Zeilberger, A=B (1996), ch. 4-7",
+            "Chu Shih-Chieh; Vandermonde",
+            "1772"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-chu-vandermonde-convolution-recurrence.json",
+              "sha256": "5a632a5b3b5048a2bce63360230598e7ff2092dd26edd1c2e80e7c964dc9726e"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-chu-vandermonde-convolution-recurrence.json",
+            "sha256": "5a632a5b3b5048a2bce63360230598e7ff2092dd26edd1c2e80e7c964dc9726e"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "Established on the `cas-certificate` route: an untrusted linear-algebra search (axeyum_cas::telescoping::zeilberger) produced the certificate, and axeyum_cas::telescoping_check verified it with its own shift-ratio derivation, its own fraction arithmetic, and a cross-check of both against exact bignum factorial evaluation of the summand. The checker rejects perturbed certificates -- see the tamper controls in the same test file (P+1, 2P, Q+k, a wrong recurrence constant, a degree bump in a_j, a zeroed recurrence, a certificate re-pointed at a different summand, a clipped summation window, and two wrong closed forms are all rejected).",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-chu-vandermonde-convolution-recurrence.json",
+            "sha256": "5a632a5b3b5048a2bce63360230598e7ff2092dd26edd1c2e80e7c964dc9726e"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-chu-vandermonde-convolution-recurrence",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "genre": "result",
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:chu-vandermonde-convolution-recurrence",
+    "title": "The Chu-Vandermonde convolution satisfies a first-order recurrence in p"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-chu-vandermonde-convolution-recurrence.json",
+        "sha256": "5a632a5b3b5048a2bce63360230598e7ff2092dd26edd1c2e80e7c964dc9726e"
+      }
+    ]
+  },
+  "schema_version": 1
+}

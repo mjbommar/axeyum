@@ -1,0 +1,116 @@
+{
+  "artifacts": [
+    {
+      "bytes": 1257,
+      "label": "axiom-footprint and evidence-row counts, drawn from the rows above",
+      "media_type": "image/svg+xml",
+      "path": "render/tests/fixtures/fixture-footprints.svg",
+      "sha256": "0696c1164a3f15019d88fc32924aa60ff67b378f7a364a29f40fb615e6df160b"
+    }
+  ],
+  "claims": [
+    {
+      "key": "f-bool-and-comm",
+      "statement": "The ledger entry F:bool-and-comm validates against artifacts/ontology/fact.schema.json and records epistemic_status=proved on proof_route=imported-kernel-lean with an axiom footprint of 3 entries and 2 evidence row(s), 2 of them check_status=checked, naming 5 distinct checker(s).",
+      "status": "checked",
+      "supports": {
+        "id": "F:bool-and-comm",
+        "kind": "fact"
+      }
+    },
+    {
+      "key": "f-excluded-middle",
+      "statement": "The ledger entry F:excluded-middle validates against artifacts/ontology/fact.schema.json and records epistemic_status=proved on proof_route=smt-term-level with an axiom footprint of 2 entries and 1 evidence row(s), 1 of them check_status=checked, naming 3 distinct checker(s).",
+      "status": "checked",
+      "supports": {
+        "id": "F:excluded-middle",
+        "kind": "fact"
+      }
+    },
+    {
+      "key": "no-unearned-axiom-freedom",
+      "statement": "Neither fixture fact records an empty axiom_footprint on a route other than kernel-lean, so neither claims an axiom-freedom its route cannot deliver.",
+      "status": "checked"
+    }
+  ],
+  "id": "R:fixture-fact-ledger-check",
+  "notes": "Scope: this run checked the LEDGER'S RECORD of two facts. It did not check the mathematics, and no claim here says it did.",
+  "outcome": "established",
+  "provenance": {
+    "command": "python3 render/tests/fixtures/make_run_record.py",
+    "epoch": {
+      "commit": "10ef29f7f9764e29628e88d21184515c6cf6156a",
+      "source": "commit",
+      "unix": 1787312215
+    },
+    "exit_status": 0,
+    "generator": "render/tests/fixtures/make_run_record.py",
+    "inputs": [
+      {
+        "path": "artifacts/ontology/fact.schema.json",
+        "role": "schema",
+        "sha256": "ca3d41c6386a4d75424052a0f44ea4d794a8d139b8f98bd4d1c14e32913a19aa"
+      },
+      {
+        "path": "artifacts/facts/F-bool-and-comm.json",
+        "role": "fact",
+        "sha256": "4ee5d8ffcaf59f9092fd841ee4a6c8074847c17ab29d7ed19862534a99663242"
+      },
+      {
+        "path": "artifacts/facts/F-excluded-middle.json",
+        "role": "fact",
+        "sha256": "c4248a5a5019f103f171e24cc5ba3e51555ca98a965bb0f6ab4d398f15fbba85"
+      }
+    ]
+  },
+  "replay": {
+    "cwd": ".",
+    "expected_exit_status": 0,
+    "expected_seconds": 1,
+    "line": "python3 render/tests/fixtures/make_run_record.py --out /dev/stdout"
+  },
+  "schema_version": 1,
+  "stats": {
+    "checked_evidence_rows": 3,
+    "evidence_rows": 3,
+    "facts_checked": 2,
+    "findings": 0
+  },
+  "summary": "Validated 2 fact-ledger entries against artifacts/ontology/fact.schema.json and checked their recorded status, route, footprint and evidence rows: 0 finding(s).",
+  "tables": {
+    "fixture-facts": {
+      "columns": [
+        "fact",
+        "established here",
+        "externally",
+        "proof route",
+        "axiom footprint",
+        "evidence rows",
+        "checked rows",
+        "distinct checkers"
+      ],
+      "rows": [
+        [
+          "F:bool-and-comm",
+          "proved",
+          "proved",
+          "imported-kernel-lean",
+          3,
+          2,
+          2,
+          5
+        ],
+        [
+          "F:excluded-middle",
+          "proved",
+          "proved",
+          "smt-term-level",
+          2,
+          1,
+          1,
+          3
+        ]
+      ]
+    }
+  }
+}

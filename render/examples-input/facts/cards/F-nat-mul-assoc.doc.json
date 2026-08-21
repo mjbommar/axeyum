@@ -1,0 +1,920 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:nat-mul-assoc",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-mul-assoc.json",
+            "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Multiplication on the naturals is associative"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "2 of 2 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-mul-assoc.json",
+              "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-mul-assoc.json",
+            "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "kernel-lean"
+          ],
+          [
+            "axiom_footprint",
+            "[] -- axiom-free; only kernel-lean can deliver this"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-mul-assoc.json",
+              "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-mul-assoc.json",
+            "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- mul_assoc 2>/dev/null | grep -qE '^Nat\\.mul_assoc[[:space:]]'"
+        },
+        "summary": {
+          "text": "For all natural numbers a, b and c, (a * b) * c = a * (b * c)."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-mul-assoc.json",
+            "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: kernel-Nat.mul_assoc"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row kernel-Nat.mul_assoc as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "kernel-Nat.mul_assoc"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "For all natural numbers a, b and c, (a * b) * c = a * (b * c)."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-mul-assoc.json",
+              "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-mul-assoc.json",
+            "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing the row at all is a machine-checked proof. TIGHTENED 2026-08-16: the command was `cargo test -p axeyum-lean-kernel --lib nat_prelude`, a whole-suite run that passes or fails identically for every fact citing it and would stay green if THIS theorem were deleted. It now names its own subject twice over -- `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -q` requires the admitted declaration to be printed.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-mul-assoc.json",
+            "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "report-run",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat"
+        },
+        "summary": {
+          "text": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-mul-assoc.json",
+            "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: footprint-Nat.mul_assoc"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row footprint-Nat.mul_assoc as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "footprint-Nat.mul_assoc"
+          ],
+          [
+            "ledger kind",
+            "exhaustive-enumeration"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-mul-assoc.json",
+              "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-mul-assoc.json",
+            "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "`nat_axiom_inventory` enumerates the built Nat environment and reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0` (re-run 2026-08-14 by this lane). That is the whole environment, not this theorem, and that is what makes it sound as a footprint: a theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual footprint by []. Counting `Declaration::Axiom` alone would NOT have sufficed -- `Opaque` has no proof body and `Quotient` admits `Quot.sound`, one of Lean's own axioms -- so the enumeration covers all three.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-mul-assoc.json",
+            "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "dependency-graph",
+      "kind": {
+        "alt": "Dependency graph around F:nat-mul-assoc: 1 dependencies, 4 dependents",
+        "caption": {
+          "text": "Immediate dependencies and dependents of this fact"
+        },
+        "spec": {
+          "edges": [
+            {
+              "from": "F:int-mul-assoc",
+              "label": "depends_on",
+              "to": "F:nat-mul-assoc"
+            },
+            {
+              "from": "F:nat-euclid-lemma",
+              "label": "depends_on",
+              "to": "F:nat-gcd-bezout"
+            },
+            {
+              "from": "F:nat-euclid-lemma",
+              "label": "depends_on",
+              "to": "F:nat-mul-assoc"
+            },
+            {
+              "from": "F:nat-gcd-bezout",
+              "label": "depends_on",
+              "to": "F:nat-left-distrib"
+            },
+            {
+              "from": "F:nat-gcd-bezout",
+              "label": "depends_on",
+              "to": "F:nat-mul-assoc"
+            },
+            {
+              "from": "F:nat-mul-assoc",
+              "label": "depends_on",
+              "to": "F:nat-left-distrib"
+            },
+            {
+              "from": "F:nat-pow-add",
+              "label": "depends_on",
+              "to": "F:nat-mul-assoc"
+            }
+          ],
+          "figure_type": "dep-graph",
+          "nodes": [
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-int-mul-assoc.doc.json",
+              "id": "F:int-mul-assoc",
+              "label": "Multiplication on the integers is associative",
+              "status": "proved"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-euclid-lemma.doc.json",
+              "id": "F:nat-euclid-lemma",
+              "label": "Euclid's lemma: a prime dividing a product divides a factor",
+              "status": "proved"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-gcd-bezout.doc.json",
+              "id": "F:nat-gcd-bezout",
+              "label": "Bezout's identity holds for the natural gcd",
+              "status": "proved"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-left-distrib.doc.json",
+              "id": "F:nat-left-distrib",
+              "label": "Multiplication distributes over addition on the left",
+              "status": "proved"
+            },
+            {
+              "group": "focus",
+              "href": "cards/F-nat-mul-assoc.doc.json",
+              "id": "F:nat-mul-assoc",
+              "label": "Multiplication on the naturals is associative",
+              "status": "proved"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-pow-add.doc.json",
+              "id": "F:nat-pow-add",
+              "label": "The first index law: powers add over a product",
+              "status": "proved"
+            }
+          ],
+          "rankdir": "TB"
+        },
+        "type": "figure"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-mul-assoc.json",
+            "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Dependency neighbourhood"
+    },
+    {
+      "id": "depends-on",
+      "kind": {
+        "caption": {
+          "text": "Depends on"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:nat-left-distrib",
+            "Multiplication distributes over addition on the left",
+            "proved",
+            "cards/F-nat-left-distrib.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-mul-assoc.json",
+              "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-mul-assoc.json",
+            "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depends on"
+    },
+    {
+      "id": "depended-on-by",
+      "kind": {
+        "caption": {
+          "text": "Depended on by"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:int-mul-assoc",
+            "Multiplication on the integers is associative",
+            "proved",
+            "cards/F-int-mul-assoc.doc.json"
+          ],
+          [
+            "F:nat-euclid-lemma",
+            "Euclid's lemma: a prime dividing a product divides a factor",
+            "proved",
+            "cards/F-nat-euclid-lemma.doc.json"
+          ],
+          [
+            "F:nat-gcd-bezout",
+            "Bezout's identity holds for the natural gcd",
+            "proved",
+            "cards/F-nat-gcd-bezout.doc.json"
+          ],
+          [
+            "F:nat-pow-add",
+            "The first index law: powers add over a product",
+            "proved",
+            "cards/F-nat-pow-add.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-mul-assoc.json",
+              "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-mul-assoc.json",
+            "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depended on by"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-14"
+          ],
+          [
+            "established_by",
+            "axeyum-lean-kernel build_nat_prelude, re-measured by lane facts-number"
+          ],
+          [
+            "source",
+            "proposition extracted from the S:number / S:arithmetic-structure strands of the math-education concept graph; statement authored here, nothing copied"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-mul-assoc.json",
+              "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-mul-assoc.json",
+            "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "concept-refs",
+      "kind": {
+        "caption": {
+          "text": "Concept references (gloss and provenance only, never substance)"
+        },
+        "columns": [
+          {
+            "header": "graph",
+            "key": "graph"
+          },
+          {
+            "header": "ref",
+            "key": "ref"
+          },
+          {
+            "header": "relation",
+            "key": "relation"
+          },
+          {
+            "header": "resolved",
+            "key": "resolved"
+          }
+        ],
+        "rows": [
+          [
+            "math-education",
+            "C:associativity",
+            "instance-of",
+            false
+          ],
+          [
+            "math-education",
+            "C:multiplication",
+            "about",
+            false
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-mul-assoc.json",
+              "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-mul-assoc.json",
+            "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "formal.statement is the type the kernel admitted, taken verbatim from Kernel::render_lean over the environment build_nat_prelude produces; it was not transcribed by hand. The sort renders as `AxNat` (the prelude's own inductive) while declarations are rooted at `Nat`.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-mul-assoc.json",
+            "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-nat-mul-assoc",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "genre": "result",
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:nat-mul-assoc",
+    "title": "Multiplication on the naturals is associative"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-nat-mul-assoc.json",
+        "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+      }
+    ]
+  },
+  "schema_version": 1
+}

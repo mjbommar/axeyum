@@ -1,0 +1,742 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:geometry-parallelogram-diagonals-bisect",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-parallelogram-diagonals-bisect.json",
+            "sha256": "bb392cba6f861a514449e493ffcfdcf1b701d4cc7dbdc267d998ccc03cacb133"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "the diagonals of a non-flat parallelogram bisect each other"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "2 of 2 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-parallelogram-diagonals-bisect.json",
+              "sha256": "bb392cba6f861a514449e493ffcfdcf1b701d4cc7dbdc267d998ccc03cacb133"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-parallelogram-diagonals-bisect.json",
+            "sha256": "bb392cba6f861a514449e493ffcfdcf1b701d4cc7dbdc267d998ccc03cacb133"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "cas-certificate"
+          ],
+          [
+            "axiom_footprint",
+            "cas.exact-rational-polynomial-normal-form; geometry.cartesian-coordinatisation-of-the-euclidean-plane; geometry.characteristic-zero-specialisation; geometry.rabinowitsch-inverse-specialisation; geometry.nondegeneracy.abd-not-collinear"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-parallelogram-diagonals-bisect.json",
+              "sha256": "bb392cba6f861a514449e493ffcfdcf1b701d4cc7dbdc267d998ccc03cacb133"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-parallelogram-diagonals-bisect.json",
+            "sha256": "bb392cba6f861a514449e493ffcfdcf1b701d4cc7dbdc267d998ccc03cacb133"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 6346,
+            "path": "artifacts/geometry-certificates/parallelogram-diagonals-bisect.json",
+            "sha256": "1915d85965e6d5a3562793f6d933d3a880a87f86917e8b767a58b0f0ffa7746c"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-cas --test geometry_certificate_artifacts"
+        },
+        "summary": {
+          "text": "the saturated cofactor certificate, re-checked from the committed artifact by a checker that shares no code with the search that produced it"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-parallelogram-diagonals-bisect.json",
+            "sha256": "bb392cba6f861a514449e493ffcfdcf1b701d4cc7dbdc267d998ccc03cacb133"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: geometry-certificate-parallelogram-diagonals-bisect"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row geometry-certificate-parallelogram-diagonals-bisect as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "geometry-certificate-parallelogram-diagonals-bisect"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "geometry_check::check_certificate shape pass (the saturation generator is REBUILT here as `collinear(A,B,D) * Zinv0 - 1` from the condition polynomial the file declares, and compared with the generator the cofactors are taken against -- so a certificate cannot advertise one side condition and use another), geometry_check::check_certificate symbolic pass (the identity target = sum of cofactor times generator expanded with MvPoly add/mul alone -- no Groebner machinery, no monomial order, no S-polynomials), geometry_check::check_certificate numeric pass (the same identity re-evaluated at 24 deterministic integer points through MvPoly::evaluate, a different code path from the symbolic expansion), geometry_check::check_certificate usage pass (the saturation generator must carry a NONZERO cofactor, or the certificate would be advertising a weaker theorem than it proved), geometry_check::check_certificate degenerate-witness pass (A = (0,0), B = (1,0), C = (2,0), D = (5,0) replayed: both hypotheses vanish, the condition polynomial vanishes, and a conclusion does NOT), geometry_check::check_certificate configuration pass (the unit square replayed: hypotheses vanish, the condition does not, both conclusions do)"
+          ],
+          [
+            "supports",
+            "the saturated cofactor certificate, re-checked from the committed artifact by a checker that shares no code with the search that produced it"
+          ],
+          [
+            "artifact",
+            "artifacts/geometry-certificates/parallelogram-diagonals-bisect.json"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "1915d85965e6d5a3562793f6d933d3a880a87f86917e8b767a58b0f0ffa7746c"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-parallelogram-diagonals-bisect.json",
+              "sha256": "bb392cba6f861a514449e493ffcfdcf1b701d4cc7dbdc267d998ccc03cacb133"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-parallelogram-diagonals-bisect.json",
+            "sha256": "bb392cba6f861a514449e493ffcfdcf1b701d4cc7dbdc267d998ccc03cacb133"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "The certificate uses the Rabinowitsch trick: a fresh variable Zinv0 and the generator `collinear(A,B,D) * Zinv0 - 1`. Specialising Zinv0 := 1/collinear(A,B,D) is legitimate exactly when the parallelogram is not flat, and that is the ONLY place the side condition enters. The cofactor of the saturation generator is minus the conclusion itself, the signature shape of a Rabinowitsch witness. Tamper controls in the same suite that bear directly on this fact: DELETING the degenerate counterexample is rejected, and REPLACING it with a non-degenerate configuration (which therefore fails to break the theorem) is rejected.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-parallelogram-diagonals-bisect.json",
+            "sha256": "bb392cba6f861a514449e493ffcfdcf1b701d4cc7dbdc267d998ccc03cacb133"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence geometry-certificate-parallelogram-diagonals-bisect"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/geometry-certificates/parallelogram-diagonals-bisect.json",
+        "render_hint": "json",
+        "sha256": "1915d85965e6d5a3562793f6d933d3a880a87f86917e8b767a58b0f0ffa7746c",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-parallelogram-diagonals-bisect.json",
+            "sha256": "bb392cba6f861a514449e493ffcfdcf1b701d4cc7dbdc267d998ccc03cacb133"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 10079,
+            "path": "crates/axeyum-cas/tests/geometry_encoding_agreement.rs",
+            "sha256": "b51268f90e5f54fbb332d5f7d115212da016c4869c027c7bb10ee16d80ee393b"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-cas --test geometry_encoding_agreement"
+        },
+        "summary": {
+          "text": "that the polynomials in the certificate mean the geometric predicates they are named after -- including the non-degeneracy condition, whose meaning is what makes or breaks this fact"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-parallelogram-diagonals-bisect.json",
+            "sha256": "bb392cba6f861a514449e493ffcfdcf1b701d4cc7dbdc267d998ccc03cacb133"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: geometry-coordinatisation-control-parallelogram"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row geometry-coordinatisation-control-parallelogram as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "geometry-coordinatisation-control-parallelogram"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum_cas::geometry::Line::is_parallel (an older module deciding parallelism from `ax + by + c = 0` normals rather than from a cross product) agreed with the parallelism polynomial on every integer configuration of the sweep where it can build both lines, and the polynomial vanishes on every degenerate segment where it cannot -- both branches are asserted to be exercised, axeyum_cas::geometry::Point::collinear agreed with the collinearity polynomial used as the non-degeneracy condition, on the same 244-configuration sweep, axeyum_cas::geometry::Point::midpoint agreed with the constructed midpoints on the same sweep"
+          ],
+          [
+            "supports",
+            "that the polynomials in the certificate mean the geometric predicates they are named after -- including the non-degeneracy condition, whose meaning is what makes or breaks this fact"
+          ],
+          [
+            "artifact",
+            "crates/axeyum-cas/tests/geometry_encoding_agreement.rs"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "b51268f90e5f54fbb332d5f7d115212da016c4869c027c7bb10ee16d80ee393b"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-parallelogram-diagonals-bisect.json",
+              "sha256": "bb392cba6f861a514449e493ffcfdcf1b701d4cc7dbdc267d998ccc03cacb133"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-parallelogram-diagonals-bisect.json",
+            "sha256": "bb392cba6f861a514449e493ffcfdcf1b701d4cc7dbdc267d998ccc03cacb133"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "The parallelism row is where the degenerate branch is most instructive: when two points coincide the older module refuses to call the segment a line at all, while the determinant vanishes because the zero vector is parallel to everything. The test asserts that this is the ONLY way the two encodings can differ, rather than skipping the case quietly -- which is also exactly the configuration class the counterexample above lives in.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-parallelogram-diagonals-bisect.json",
+            "sha256": "bb392cba6f861a514449e493ffcfdcf1b701d4cc7dbdc267d998ccc03cacb133"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence geometry-coordinatisation-control-parallelogram"
+        },
+        "max_bytes": 65536,
+        "path": "crates/axeyum-cas/tests/geometry_encoding_agreement.rs",
+        "render_hint": "link",
+        "sha256": "b51268f90e5f54fbb332d5f7d115212da016c4869c027c7bb10ee16d80ee393b",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-parallelogram-diagonals-bisect.json",
+            "sha256": "bb392cba6f861a514449e493ffcfdcf1b701d4cc7dbdc267d998ccc03cacb133"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-14"
+          ],
+          [
+            "established_by",
+            "lane geometry: axeyum_cas::geometry_certify (untrusted cofactor-tracked Buchberger search, minimal condition subset) + axeyum_cas::geometry_check (independent re-derivation)"
+          ],
+          [
+            "source",
+            "classical; coordinatised by this lane, with the non-degeneracy condition DERIVED by the certifier rather than supplied"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-parallelogram-diagonals-bisect.json",
+              "sha256": "bb392cba6f861a514449e493ffcfdcf1b701d4cc7dbdc267d998ccc03cacb133"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-parallelogram-diagonals-bisect.json",
+            "sha256": "bb392cba6f861a514449e493ffcfdcf1b701d4cc7dbdc267d998ccc03cacb133"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "what",
+            "key": "what"
+          },
+          {
+            "header": "where",
+            "key": "where"
+          },
+          {
+            "header": "who",
+            "key": "who"
+          }
+        ],
+        "rows": [
+          [
+            "standard textbook attribution; this lane did not consult the primary source",
+            "in a parallelogram the diameters bisect one another",
+            "Elements I.34 (and its corollary)",
+            "Euclid"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-parallelogram-diagonals-bisect.json",
+              "sha256": "bb392cba6f861a514449e493ffcfdcf1b701d4cc7dbdc267d998ccc03cacb133"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-parallelogram-diagonals-bisect.json",
+            "sha256": "bb392cba6f861a514449e493ffcfdcf1b701d4cc7dbdc267d998ccc03cacb133"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "Established on the `cas-certificate` route, in the geometry family. The condition set is MINIMAL by cardinality among the subsets the search budget decided: the certifier tries the empty set first (10.8 ms, nonzero remainder -- so the theorem is genuinely not unconditional) and then the one-element set (197.1 ms, remainder zero). `geometry.nondegeneracy.abd-not-collinear` is listed in the footprint even though it also appears as a hypothesis of `formal.statement`, deliberately: on this route the footprint is the field a reader scans to see what a proof rests on, and a side condition invisible there is precisely how a mechanised geometry proof comes to be quoted as unconditional.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-parallelogram-diagonals-bisect.json",
+            "sha256": "bb392cba6f861a514449e493ffcfdcf1b701d4cc7dbdc267d998ccc03cacb133"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-geometry-parallelogram-diagonals-bisect",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "genre": "result",
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:geometry-parallelogram-diagonals-bisect",
+    "title": "the diagonals of a non-flat parallelogram bisect each other"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-geometry-parallelogram-diagonals-bisect.json",
+        "sha256": "bb392cba6f861a514449e493ffcfdcf1b701d4cc7dbdc267d998ccc03cacb133"
+      }
+    ]
+  },
+  "schema_version": 1
+}

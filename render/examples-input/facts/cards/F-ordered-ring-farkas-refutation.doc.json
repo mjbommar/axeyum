@@ -1,0 +1,923 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:ordered-ring-farkas-refutation",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
+            "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "A reconstructed Farkas refutation holds in every ordered commutative ring, and rests on no axiom"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "4 of 4 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
+              "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
+            "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "kernel-lean"
+          ],
+          [
+            "axiom_footprint",
+            "[] -- axiom-free; only kernel-lean can deliver this"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
+              "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
+            "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-solver --lib --features full ordered_ring"
+        },
+        "summary": {
+          "text": "The generalized refutation type-checks: its proof term is admitted through the trusted gate, which re-derives the stated type from the term."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
+            "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: kernel-ordered-ring-refutation"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row kernel-ordered-ring-refutation as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "kernel-ordered-ring-refutation"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "Kernel::add_declaration (re-checks the proof term against the inferred type), axeyum_solver::generalize_over_ordered_ring (abstracts the 30 constants out of the term; the kernel infers the resulting forall-telescope), ordered_ring_tests::generalized_refutation_has_an_empty_axiom_footprint"
+          ],
+          [
+            "supports",
+            "The generalized refutation type-checks: its proof term is admitted through the trusted gate, which re-derives the stated type from the term."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
+              "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
+            "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Seven tests, a nonzero count (the filter is not inert). The generalization is a lambda-abstraction of the 30 `Real` constants out of a term `reconstruct_lra_proof` already built and gated; the statement is whatever `Kernel::infer` returns for the abstracted term, never written by hand, so an axiom whose type changed would change the hypothesis rather than silently disagree with it. `--features full` is mandatory: without it the solver's full test surface is not compiled.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
+            "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "report-run",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run --release -q -p axeyum-solver --features full --example ordered_ring_refutation -- --footprint-table | awk -F'\\t' '$1==\"ordered-ring\" && $3==\"0\" {empty++} $1==\"real-specific\" && $3==\"0\" {control++} END {exit !(empty==5 && control==0 && NR==10)}'"
+        },
+        "summary": {
+          "text": "axiom_footprint: [] -- the generalized theorem's trusted closure is empty, while the statement it replaces rests on 18 trusted declarations."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
+            "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: footprint-ordered-ring-refutation"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row footprint-ordered-ring-refutation as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "footprint-ordered-ring-refutation"
+          ],
+          [
+            "ledger kind",
+            "exhaustive-enumeration"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "Kernel::axiom_footprint (the same call theorem_axiom_footprint makes, made where the declaration lives), real Lean 4.30.0 `#print axioms` on the committed module fixture"
+          ],
+          [
+            "supports",
+            "axiom_footprint: [] -- the generalized theorem's trusted closure is empty, while the statement it replaces rests on 18 trusted declarations."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
+              "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
+            "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "Two independent measurements, and a negative control inside the same output. (1) `Kernel::axiom_footprint` walks this declaration's transitive dependency closure and keeps Axiom/Opaque/Quotient; the checker requires all five `ordered-ring` rows to report size 0 AND all five `real-specific` control rows -- the SAME refutations before generalization -- to report NON-zero, over exactly 10 rows. The controls report 18, 22, 24, 7 and 10, so the check discriminates rather than merely running. It is written with `awk -F'\\t'` rather than a `\\t` regex on purpose: GNU grep does not interpret `\\t` in an ERE, and a `grep -qE '...\\t...'` form silently passed under the `ugrep` on one developer's PATH and failed under `/bin/sh`'s GNU grep -- a checker command that depends on which grep is installed is not a checker. (2) An INDEPENDENT kernel agrees: `crates/axeyum-solver/tests/fixtures/lean-modules/arithmetic-ordered-ring-farkas.lean` contains zero `axiom` lines, and Lean 4.30.0 answers `'axeyum_ordered_ring_refutation' does not depend on any axioms`. `theorem_axiom_footprint` itself CANNOT be pointed at this theorem: it builds the nat/integer/real preludes and nothing else, so grepping its output for an ordered-ring refutation returns nothing -- which reads exactly like axiom-freedom and would be evidence of nothing.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
+            "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-002",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "scripts/check-lean-gate.sh"
+        },
+        "summary": {
+          "text": "An independent Lean 4.30.0 kernel accepts the self-contained module and reports it axiom-free."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
+            "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: real-lean-ordered-ring-module"
+    },
+    {
+      "id": "evidence-002-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row real-lean-ordered-ring-module as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "real-lean-ordered-ring-module"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "Lean 4.30.0 (commit d024af099ca4bf2c86f649261ebf59565dc8c622), lean_module_fixtures::every_committed_module_fixture_is_accepted_by_real_lean, scripts/check-lean-gate.sh"
+          ],
+          [
+            "supports",
+            "An independent Lean 4.30.0 kernel accepts the self-contained module and reports it axiom-free."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
+              "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
+            "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-002-notes",
+      "kind": {
+        "text": "Measured 2026-08-15: 12 suites, 49 tests, 113 real-Lean checks (floor 105) -- one more than the 112 recorded before this fact, the added fixture. The suite also carries its own negative control (`a_mutated_fixture_is_rejected_by_real_lean`), so acceptance is not vacuous. Unlike every other arithmetic module this repository emits, this one declares no `axiom` at all; the assertion `!source.contains(\"\\naxiom \")` is part of the byte-stability test that produces it.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
+            "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-003",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run --release -q -p axeyum-solver --features full --example ordered_ring_refutation -- --require-empty"
+        },
+        "summary": {
+          "text": "Nothing is lost: applying the generalized theorem to the 30 `Real` constants and to the refutation's own variable/hypothesis axioms is a kernel-checked proof of `False` whose footprint is exactly the original statement's."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
+            "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: instantiation-recovers-the-real-statement"
+    },
+    {
+      "id": "evidence-003-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row instantiation-recovers-the-real-statement as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "instantiation-recovers-the-real-statement"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "Kernel::add_declaration (re-checks the application against False), Kernel::axiom_footprint on the instantiated theorem, ordered_ring_tests::instantiating_at_real_recovers_the_original_statement, ordered_ring_tests::used_scope_instantiation_reproduces_the_original_footprint_exactly"
+          ],
+          [
+            "supports",
+            "Nothing is lost: applying the generalized theorem to the 30 `Real` constants and to the refutation's own variable/hypothesis axioms is a kernel-checked proof of `False` whose footprint is exactly the original statement's."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
+              "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
+            "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-003-notes",
+      "kind": {
+        "text": "This is what makes the generalization a STRENGTHENING rather than a different claim: the old statement is a corollary, obtained by instantiation, and the kernel re-checks the application. Under the tight telescope (only the declarations the proof rests on) the recovered footprint is identical to the original's, name for name; under the full 30-binder interface it is a superset, because the instantiation deliberately mentions ring laws the proof never used. `--require-empty` fails the process if any fixture is not axiom-free or any instantiation does not recover the original.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
+            "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-15"
+          ],
+          [
+            "established_by",
+            "axeyum-solver reconstruct::arithmetic::ordered_ring, lane ordered-ring-reconstruct"
+          ],
+          [
+            "source",
+            "the route ADR-0456 named as the one that eliminates the Real prelude's 30 axioms without constructing a carrier: parameterise the consumer over the ordered-ring interface rather than build a model for it"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
+              "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
+            "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "concept-refs",
+      "kind": {
+        "caption": {
+          "text": "Concept references (gloss and provenance only, never substance)"
+        },
+        "columns": [
+          {
+            "header": "graph",
+            "key": "graph"
+          },
+          {
+            "header": "ref",
+            "key": "ref"
+          },
+          {
+            "header": "relation",
+            "key": "relation"
+          },
+          {
+            "header": "resolved",
+            "key": "resolved"
+          }
+        ],
+        "rows": [
+          [
+            "math-education",
+            "C:ordered-ring",
+            "about",
+            false
+          ],
+          [
+            "math-education",
+            "C:linear-programming-duality",
+            "about",
+            false
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
+              "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
+            "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "Read this next to `F:schedule-critical-chain-infeasible`, whose footprint lists 30 named axioms and which records `axiom_footprint: []` as 'not on offer and cannot be' for this route. It is on offer now, and the difference is not a stronger kernel: it is the same proof term with its assumptions moved from the environment into the theorem. The 30 declarations are still in `arith_prelude.rs` and `nat_axiom_inventory` still reports `real: axiom=30` -- reducing the trusted base was never the goal. What changed is that no reconstructed refutation DEPENDS on it. Measured across five fixtures (three Farkas shapes, one strict cycle, one sum-of-squares), 21 of the 30 are reached by at least one proof; the nine never reached are `le_trans`, `mul_le_mul_of_nonneg_left`, `add_lt_add_of_le_of_lt`, `mul_comm`, `mul_assoc`, `mul_one`, `mul_zero`, `left_distrib` and `mul_nonneg`. Scope: the generalization operates on a finished proof term, so it reaches exactly as far as the reconstructors do -- the QF_LIA routes, which have no Farkas path to a kernel at all, are untouched, and `prove_unsat_to_lean_module` still routes a pure-Real conjunctive unsat to the contentless `LraDpll` shim.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
+            "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-ordered-ring-farkas-refutation",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "genre": "result",
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:ordered-ring-farkas-refutation",
+    "title": "A reconstructed Farkas refutation holds in every ordered commutative ring, and rests on no axiom"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-ordered-ring-farkas-refutation.json",
+        "sha256": "6878594074505d7a93931f3197ebb89c570376a86a28fc3f7508a87db8abb34d"
+      }
+    ]
+  },
+  "schema_version": 1
+}

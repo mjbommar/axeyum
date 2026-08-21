@@ -1,0 +1,69 @@
+# Standalone package, deliberately NOT a member of the root workspace
+# (docs/render-2026-08/03-architecture.md, "Crate and ADR plan"): P0 builds
+# here as a tool, not as public surface. Promotion to a workspace crate
+# `axeyum-render` happens via ADR after the P0 exit criteria pass. It carries
+# its own lockfile; the root Cargo.toml is untouched.
+#
+# The empty `[workspace]` table is what makes this a standalone package WITHOUT
+# editing the root manifest: cargo otherwise refuses, since the directory sits
+# under a workspace root that does not list it. The alternative cargo suggests
+# is a `workspace.exclude` entry in the root Cargo.toml, which is exactly the
+# shared append point this repository has been clobbered on -- so it is declared
+# here, in the file this lane owns.
+[workspace]
+
+[package]
+name = "axeyum-render"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+license = "MIT OR Apache-2.0"
+description = "Doc-IR assembly and emitters: Axeyum artifacts rendered as documents that cannot lie."
+publish = false
+
+[lib]
+name = "axeyum_render"
+path = "src/lib.rs"
+
+[[bin]]
+name = "axeyum-render"
+path = "src/main.rs"
+
+# Dependency justification lives in docs/render-2026-08/10-core-diary.md and is
+# summarised here because the next person reads the manifest first.
+[dependencies]
+# The IR must round-trip JSON: the schema is the interchange format shared with
+# the Python producers, and hand-rolling (de)serialization for 30 schema
+# definitions is the actual risk.
+serde = { version = "1", features = ["derive"] }
+# Manifests, run records and fact-ledger entries in; canonical JSON out.
+# `preserve_order` is deliberately NOT enabled -- serde_json's default Map is a
+# BTreeMap, and sorted keys ARE the canonical form the round-trip test compares.
+serde_json = { version = "1" }
+# Pure-Rust SHA-256 for input-hash verification. It is the hash the schema
+# commits to and the one `sha256sum` prints, so a reader can check by hand, and
+# it keeps the no-C/C++-dependency promise (repo Hard Rules).
+sha2 = { version = "0.10" }
+
+# `pulldown-cmark` is deliberately NOT a dependency; see the diary. No emitter
+# here parses CommonMark: Markdown passes prose through verbatim and LaTeX needs
+# a small auditable escaper, not a parser.
+
+[features]
+default = []
+# Enables DESIGN's HTML emitter and SVG layout modules (render/src/emit_html.rs,
+# render/src/layout.rs). Off by default in round 1 so this package builds before
+# those files exist; round 2 integration turns it on.
+html = []
+
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+# Prose documentation in this package names things that are not code --
+# CommonMark, GitHub, Isabelle, Alectryon -- and backticking them to satisfy
+# `doc_markdown` makes the docs harder to read, not easier.
+doc_markdown = "allow"

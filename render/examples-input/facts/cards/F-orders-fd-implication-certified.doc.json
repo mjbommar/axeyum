@@ -1,0 +1,1049 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:orders-fd-implication-certified",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+            "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Two implied and two unimplied functional dependencies on a committed order-line schema, each with a replayable certificate"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "3 of 3 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "unclassified",
+            "unclassified",
+            "field absent: nobody has looked (distinct from `unknown`, which means we checked)"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+              "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+            "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "search-certificate"
+          ],
+          [
+            "axiom_footprint",
+            "armstrong-axioms-are-sound-for-relational-fd-semantics; relational-attribute-domains-have-at-least-two-values; axeyum-scenarios.dbdesign-instance-parse-faithfulness; axeyum-scenarios.dbdesign-derivation-and-two-row-checker-replay-semantics"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+              "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+            "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 3229,
+            "path": "artifacts/instances/dbdesign/orders-schema.dbd",
+            "sha256": "62258183bf3449aa8a64faa17ede446a85764feabe76fea90d8c3b232be4a0f6"
+          }
+        ],
+        "cert_kind": "unsat-drat",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run --release -q -p axeyum-bench --example db_design_certify -- artifacts/instances/dbdesign/orders-schema.dbd --expect-checks 11 --verify-formal artifacts/instances/dbdesign/orders-fd-claims.smt2"
+        },
+        "summary": {
+          "text": "F implies `order_id line_no -> region` and `line_uuid -> customer_email`, each by an Armstrong derivation replayed under reflexivity, augmentation and transitivity alone."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+            "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: orders-implied-derivations"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row orders-implied-derivations as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "orders-implied-derivations"
+          ],
+          [
+            "ledger kind",
+            "unsat-certificate"
+          ],
+          [
+            "cert_kind",
+            "unsat-drat"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-scenarios.dbdesign-armstrong-derivation-replay, axeyum-solver-horn-encoding-through-bitblast-and-sat, axeyum-solver-on-the-recorded-formal-statement"
+          ],
+          [
+            "supports",
+            "F implies `order_id line_no -> region` and `line_uuid -> customer_email`, each by an Armstrong derivation replayed under reflexivity, augmentation and transitivity alone."
+          ],
+          [
+            "artifact",
+            "artifacts/instances/dbdesign/orders-schema.dbd"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "62258183bf3449aa8a64faa17ede446a85764feabe76fea90d8c3b232be4a0f6"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+              "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+            "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Ran 2026-08-15 in 0.09 s warm. The derivations are 18 and 21 lines, bounded by 3|F|+3 = 24 regardless of how long the closure fixpoint took. Three INDEPENDENT re-derivations, not three names for one: (1) `check_derivation` implements the three axioms and the citation of a dependency of F and nothing else -- it does not know attribute closure exists; (2) the solver decides the same question on a Boolean Horn encoding through bit-blast, CNF and SAT, and must return `unsat`, with a disagreement between the two routes reported as a FAILURE rather than resolved; (3) `--verify-formal` dispatches artifacts/instances/dbdesign/orders-fd-claims.smt2, which asserts the NEGATION of this fact's `formal.statement`, and requires `unsat` -- so the proposition recorded in the ledger is itself machine-checked rather than transcribed.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+            "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence orders-implied-derivations"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/instances/dbdesign/orders-schema.dbd",
+        "render_hint": "link",
+        "sha256": "62258183bf3449aa8a64faa17ede446a85764feabe76fea90d8c3b232be4a0f6",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+            "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 3229,
+            "path": "artifacts/instances/dbdesign/orders-schema.dbd",
+            "sha256": "62258183bf3449aa8a64faa17ede446a85764feabe76fea90d8c3b232be4a0f6"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run --release -q -p axeyum-bench --example db_design_certify -- artifacts/instances/dbdesign/orders-schema.dbd --expect-checks 11 --verify-formal artifacts/instances/dbdesign/orders-fd-claims.smt2"
+        },
+        "summary": {
+          "text": "F does not imply `sku -> customer_id` or `warehouse -> order_id`, each by a two-row relation over the schema that satisfies all seven dependencies and violates the one in question."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+            "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: orders-counterexample-relations"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row orders-counterexample-relations as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "orders-counterexample-relations"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-solver-model-of-the-horn-encoding, axeyum-ir-ground-evaluator-model-replay, axeyum-scenarios.dbdesign-two-row-relation-evaluation, axeyum-scenarios.dbdesign-closure-route-cross-check"
+          ],
+          [
+            "supports",
+            "F does not imply `sku -> customer_id` or `warehouse -> order_id`, each by a two-row relation over the schema that satisfies all seven dependencies and violates the one in question."
+          ],
+          [
+            "artifact",
+            "artifacts/instances/dbdesign/orders-schema.dbd"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "62258183bf3449aa8a64faa17ede446a85764feabe76fea90d8c3b232be4a0f6"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+              "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+            "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "The relation is the SOLVER'S OWN MODEL, not a construction the checker then blesses: the set of attributes the model makes true is the agreement set of the two rows, and any model of the Horn encoding yields a valid counterexample, not only the least one. It passes through three gates before it counts -- `check_model` replays it against the encoding by the IR ground evaluator; `check_two_tuple_witness` evaluates all seven dependencies against the two concrete rows without ever computing a closure; and the closure route is asked the same question and must agree that the dependency is not implied. The measured agreement sets were {sku, unit_price} and {warehouse, region}.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+            "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence orders-counterexample-relations"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/instances/dbdesign/orders-schema.dbd",
+        "render_hint": "link",
+        "sha256": "62258183bf3449aa8a64faa17ede446a85764feabe76fea90d8c3b232be4a0f6",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+            "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-002",
+      "kind": {
+        "artifact_refs": [
+          {
+            "label": "directory, not a single artifact",
+            "path": "artifacts/instances/dbdesign/negative-controls/"
+          }
+        ],
+        "cert_kind": "report-run",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "scripts/check-dbdesign-negative-controls.sh"
+        },
+        "summary": {
+          "text": "The checkers backing this fact REJECT a false claim of every kind it makes, so a passing run is evidence rather than a report that a tool finished."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+            "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: dbdesign-checkers-fail-closed"
+    },
+    {
+      "id": "evidence-002-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row dbdesign-checkers-fail-closed as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "dbdesign-checkers-fail-closed"
+          ],
+          [
+            "ledger kind",
+            "instance-pin"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-dbdesign-negative-control-sweep"
+          ],
+          [
+            "supports",
+            "The checkers backing this fact REJECT a false claim of every kind it makes, so a passing run is evidence rather than a report that a tool finished."
+          ],
+          [
+            "artifact",
+            "artifacts/instances/dbdesign/negative-controls/"
+          ],
+          [
+            "artifact state",
+            "directory"
+          ],
+          [
+            "artifact sha256",
+            "(not hashed)"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+              "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+            "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-002-notes",
+      "kind": {
+        "text": "22 assertions, 2.1 s warm. 13 committed instance files each pin exactly ONE false answer -- an unimplied dependency declared implied, a candidate-key list with a key missing, a list with a non-key added, a BCNF verdict flipped, a 3NF verdict flipped (which a checker conflating the two normal forms would accept), a lossy split declared lossless and the reverse, a preserved dependency set declared lost and the reverse, and a query containment in each direction -- and every one must exit non-zero. Four more assertions cover the shape of the gate itself: a wrong --expect-checks count, an instance run through the wrong checker, a --verify-formal script whose negation is SATISFIABLE, and a --verify-formal target that asserts nothing. One further control, no-expectations.dbd, pins nothing at all and must be REFUSED rather than swept -- the `40 of 162 checker runs exit 0 on completion alone` failure this ledger measured on 2026-08-15. Finally three assertions require the TRUE instances to still be accepted, without which a checker that rejected everything would pass the whole sweep. Measured this run: 22 of 22.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+            "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "dependency-graph",
+      "kind": {
+        "alt": "Dependency graph around F:orders-fd-implication-certified: 0 dependencies, 2 dependents",
+        "caption": {
+          "text": "Immediate dependencies and dependents of this fact"
+        },
+        "spec": {
+          "edges": [
+            {
+              "from": "F:bcnf-decomposition-lossless-not-dependency-preserving",
+              "label": "depends_on",
+              "to": "F:orders-fd-implication-certified"
+            },
+            {
+              "from": "F:orders-candidate-keys-and-normal-forms",
+              "label": "depends_on",
+              "to": "F:orders-fd-implication-certified"
+            }
+          ],
+          "figure_type": "dep-graph",
+          "nodes": [
+            {
+              "group": "search-certificate",
+              "href": "cards/F-bcnf-decomposition-lossless-not-dependency-preserving.doc.json",
+              "id": "F:bcnf-decomposition-lossless-not-dependency-preserving",
+              "label": "The BCNF repair of the street/city/zip schema rejoins exactly and cannot enforce its own dependency; two other splits lose information",
+              "status": "proved"
+            },
+            {
+              "group": "search-certificate",
+              "href": "cards/F-orders-candidate-keys-and-normal-forms.doc.json",
+              "id": "F:orders-candidate-keys-and-normal-forms",
+              "label": "An order-line schema has exactly two candidate keys, is not in BCNF, and is not in 3NF -- with every subset of the attributes examined",
+              "status": "proved"
+            },
+            {
+              "group": "focus",
+              "href": "cards/F-orders-fd-implication-certified.doc.json",
+              "id": "F:orders-fd-implication-certified",
+              "label": "Two implied and two unimplied functional dependencies on a committed order-line schema, each with a replayable certificate",
+              "status": "proved"
+            }
+          ],
+          "rankdir": "TB"
+        },
+        "type": "figure"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+            "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Dependency neighbourhood"
+    },
+    {
+      "id": "depended-on-by",
+      "kind": {
+        "caption": {
+          "text": "Depended on by"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:bcnf-decomposition-lossless-not-dependency-preserving",
+            "The BCNF repair of the street/city/zip schema rejoins exactly and cannot enforce its own dependency; two other splits lose information",
+            "proved",
+            "cards/F-bcnf-decomposition-lossless-not-dependency-preserving.doc.json"
+          ],
+          [
+            "F:orders-candidate-keys-and-normal-forms",
+            "An order-line schema has exactly two candidate keys, is not in BCNF, and is not in 3NF -- with every subset of the attributes examined",
+            "proved",
+            "cards/F-orders-candidate-keys-and-normal-forms.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+              "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+            "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depended on by"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-15"
+          ],
+          [
+            "established_by",
+            "axeyum lane `db-design`, 2026-08-15: crates/axeyum-scenarios/src/dbdesign/ over the committed instance, driven by crates/axeyum-bench/examples/db_design_certify.rs"
+          ],
+          [
+            "source",
+            "schema authored by this lane; not extracted from any corpus"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+              "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+            "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "what",
+            "key": "what"
+          },
+          {
+            "header": "where",
+            "key": "where"
+          },
+          {
+            "header": "who",
+            "key": "who"
+          },
+          {
+            "header": "year",
+            "key": "year"
+          }
+        ],
+        "rows": [
+          [
+            "citation and page range read on the bibliography pages of Abiteboul, Hull and Vianu, Foundations of Databases (1995), p. 623, and independently in Deuser and Naumov, AAAI-18, p. 6350; the theorem statement read at AHV Thm 8.2.11 p. 168 and the completeness proof at AHV Prop. 8.2.8 p. 166. This lane did NOT consult Armstrong's 1974 paper itself.",
+            "The reflexivity/augmentation/transitivity rules are SOUND AND COMPLETE for logical implication of functional dependencies; the completeness half is proved by exhibiting the two-tuple relation that agrees exactly on X+, which is the certificate shape used here for the negative direction. Maier's bibliographic notes credit the rules themselves to Delobel and Casey (1973) and Armstrong with the soundness/completeness proof.",
+            "Dependency structures of data base relationships, Information Processing 74 (Proc. IFIP Congress, Stockholm), North-Holland, pp. 580-583",
+            "W. W. Armstrong",
+            "1974"
+          ],
+          [
+            "citation from dblp BibTeX and the AHV bibliography; the linear-time attribution read on Maier, The Theory of Relational Databases (1983), Ch. 4 p. 70 and AHV Exercise 8.7. This lane did not consult the TODS paper itself.",
+            "F |= X -> Y iff Y is contained in the attribute closure X+, and the closure is computable in linear time (LINCLOSURE). This is the FINDER used here; nothing in the fact rests on it, because its output is turned into an Armstrong derivation that an independent checker replays.",
+            "Computational Problems Related to the Design of Normal Form Relational Schemas, ACM Transactions on Database Systems 4(1):30-59",
+            "Catriel Beeri and Philip A. Bernstein",
+            "1979"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+              "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+            "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "WHAT THIS DOES NOT REST ON. The fact is deliberately independent of the COMPLETENESS half of Armstrong's theorem. The implied direction needs only SOUNDNESS of the three axioms, which is what makes a replayed derivation mean something. The unimplied direction needs no metatheorem at all: a two-row relation satisfying F and violating X -> Y is a semantic counterexample, so it refutes the implication directly rather than by appeal to a completeness result. Completeness is what guarantees such a relation always EXISTS when the implication fails; here one is exhibited, so the guarantee is not needed.\n\nIt does rest on one thing the classical statement leaves implicit and this ledger should not: every attribute domain must have at least two values, or a two-row counterexample is not constructible. That is in the axiom footprint.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+            "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-orders-fd-implication-certified",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "genre": "result",
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:orders-fd-implication-certified",
+    "title": "Two implied and two unimplied functional dependencies on a committed order-line schema, each with a replayable certificate"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-orders-fd-implication-certified.json",
+        "sha256": "85b08099a006b19a03ab2409007dc48d34bf0d7195825a38eb235c248cf4a5b4"
+      }
+    ]
+  },
+  "schema_version": 1
+}

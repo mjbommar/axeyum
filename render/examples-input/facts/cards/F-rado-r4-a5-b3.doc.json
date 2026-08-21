@@ -1,0 +1,1013 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:rado-r4-a5-b3",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+            "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "The four-colour Rado number of 5(x-y) = 3z is 625"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "computed",
+            "evidence",
+            "3 of 3 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "open",
+            "open",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+              "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+            "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "disagreement-novel",
+      "kind": {
+        "text": "Disagreement in our favour: this ledger has established the statement (epistemic_status: computed) while the literature has not (external_status: open). Both values are copied from the fact record; nothing here infers either.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+            "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Established here, not in the literature"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "search-certificate"
+          ],
+          [
+            "axiom_footprint",
+            "rado.encoder-faithfulness; rado.drat-checker-check_drat_backward; rado.certificate-not-re-checked-per-commit"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+              "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+            "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 7648,
+            "path": "artifacts/claims/rado/rado-r4-a5-b3/claim.json",
+            "sha256": "a3f6de260c858473355b2bf29f458b884174be7188d72d48fd5e572588d60834"
+          }
+        ],
+        "cert_kind": "report-run",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "python3 scripts/validate-claims.py"
+        },
+        "summary": {
+          "text": "R_4(5(x-y)=3z) = 625, both bounds, with pinned deciding instance and regeneration recipe"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+            "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: claim-rado-r4-a5-b3"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row claim-rado-r4-a5-b3 as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "claim-rado-r4-a5-b3"
+          ],
+          [
+            "ledger kind",
+            "claim-ref"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "validate-claims-schema-and-semantics"
+          ],
+          [
+            "supports",
+            "R_4(5(x-y)=3z) = 625, both bounds, with pinned deciding instance and regeneration recipe"
+          ],
+          [
+            "artifact",
+            "artifacts/claims/rado/rado-r4-a5-b3/claim.json"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "a3f6de260c858473355b2bf29f458b884174be7188d72d48fd5e572588d60834"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+              "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+            "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "The claim carries the pinned CNF, the replayable lower-bound colouring, and the DRAT regeneration recipe.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+            "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence claim-rado-r4-a5-b3"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/claims/rado/rado-r4-a5-b3/claim.json",
+        "render_hint": "json",
+        "sha256": "a3f6de260c858473355b2bf29f458b884174be7188d72d48fd5e572588d60834",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+            "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 1248,
+            "path": "artifacts/claims/rado/rado-r4-a5-b3/witness.txt",
+            "sha256": "eaf9ab5ca456b91ed8304fe241990c01ae34674c709b322290c8458d3f06990f"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run --release -q -p axeyum-search --example akb2_frontier -- verify 5 3 4 artifacts/claims/rado/rado-r4-a5-b3/witness.txt"
+        },
+        "summary": {
+          "text": "R_4(5(x-y)=3z) > 624"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+            "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: lower-bound-replay"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row lower-bound-replay as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "lower-bound-replay"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "akb2_frontier-encoder-view, akb2_frontier-independent-enumerator"
+          ],
+          [
+            "supports",
+            "R_4(5(x-y)=3z) > 624"
+          ],
+          [
+            "artifact",
+            "artifacts/claims/rado/rado-r4-a5-b3/witness.txt"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "eaf9ab5ca456b91ed8304fe241990c01ae34674c709b322290c8458d3f06990f"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+              "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+            "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "Cheap and real: re-verifies the colouring three ways from the stored file in ~0.1s.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+            "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence lower-bound-replay"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/claims/rado/rado-r4-a5-b3/witness.txt",
+        "render_hint": "text",
+        "sha256": "eaf9ab5ca456b91ed8304fe241990c01ae34674c709b322290c8458d3f06990f",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+            "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-002",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 6630913,
+            "path": "artifacts/claims/rado/rado-r4-a5-b3/F_625.cnf",
+            "sha256": "a59d88ed13b8256d1bcfdf247139beede7f93945129c8d607ac3410c391cb623"
+          }
+        ],
+        "cert_kind": "report-run",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "test \"$(cargo run --release -q -p axeyum-search --example rado_dump_cnf -- a=5 b=3 k=4 n=625 out=/tmp/rb3.cnf >/dev/null 2>&1; sha256sum /tmp/rb3.cnf | cut -d' ' -f1)\" = \"$(sha256sum artifacts/claims/rado/rado-r4-a5-b3/F_625.cnf | cut -d' ' -f1)\""
+        },
+        "summary": {
+          "text": "the refutation's verdict names this exact formula"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+            "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: deciding-instance-regeneration"
+    },
+    {
+      "id": "evidence-002-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row deciding-instance-regeneration as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "deciding-instance-regeneration"
+          ],
+          [
+            "ledger kind",
+            "instance-pin"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "rado_dump_cnf-regeneration"
+          ],
+          [
+            "supports",
+            "the refutation's verdict names this exact formula"
+          ],
+          [
+            "artifact",
+            "artifacts/claims/rado/rado-r4-a5-b3/F_625.cnf"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "a59d88ed13b8256d1bcfdf247139beede7f93945129c8d607ac3410c391cb623"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+              "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+            "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-002-notes",
+      "kind": {
+        "text": "Regeneration, not storage comparison: the bytes must come back out of the same encoder.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+            "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-002-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence deciding-instance-regeneration"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/claims/rado/rado-r4-a5-b3/F_625.cnf",
+        "render_hint": "code",
+        "sha256": "a59d88ed13b8256d1bcfdf247139beede7f93945129c8d607ac3410c391cb623",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+            "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-14"
+          ],
+          [
+            "established_by",
+            "axeyum native proof-producing CDCL (no external solver or checker, ADR-0002) on host s4, checked in-process by check_drat_backward"
+          ],
+          [
+            "source",
+            "blank cell of Chang-De Loera-Wesley Table 10; inside the a >= b+2, gcd(a,b)=1 hypotheses"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+              "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+            "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "citation",
+            "key": "citation"
+          },
+          {
+            "header": "establishes",
+            "key": "establishes"
+          }
+        ],
+        "rows": [
+          [
+            "campaign lane agent-c, 2026-08-14",
+            "solve killed mid-run at 3h11m with 15.51 GB of proof, because the check needed ~102 GiB against a 123 GiB maximum. At the 1.5x checking ratio landed later the same day it needs ~23 GiB and is reachable."
+          ],
+          [
+            "coordinator, 2026-08-14",
+            "closed: 220,077,720 steps, 19,877,980,843 bytes of DRAT, solve 8,762.2 s, check 14,499.6 s. Checking cost MORE than searching. The earlier estimate above was right that the 1.5x checking ratio made it reachable."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+              "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+            "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "concept-refs",
+      "kind": {
+        "caption": {
+          "text": "Concept references (gloss and provenance only, never substance)"
+        },
+        "columns": [
+          {
+            "header": "graph",
+            "key": "graph"
+          },
+          {
+            "header": "ref",
+            "key": "ref"
+          },
+          {
+            "header": "relation",
+            "key": "relation"
+          },
+          {
+            "header": "resolved",
+            "key": "resolved"
+          }
+        ],
+        "rows": [
+          [
+            "math-education",
+            "C:rado-number",
+            "instance-of",
+            true
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+              "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+            "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "The last blank cell of the a >= b+2 row at a=5, k=4, and the interesting one: b=3 is the LAST cell still INSIDE Chang-De Loera-Wesley's hypothesis (gcd(5,3)=1 and 5 >= 3+2 holds exactly), so 625 = a^4 confirms the k>=4 generalisation where it should hold. b=4 sits outside the hypothesis and breaks to 741, which is consistent rather than contradictory.\n\nThe certificate is NOT re-checked per commit -- a 4-hour re-check cannot be a gate -- and the axiom_footprint says so rather than implying the proof is re-derived on every run. The three checkers that DO run are cheap and real: the claim's schema and semantics, the lower-bound colouring replayed from its stored file, and the deciding CNF re-derived from the encoder and compared by hash.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+            "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-rado-r4-a5-b3",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "genre": "result",
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:rado-r4-a5-b3",
+    "title": "The four-colour Rado number of 5(x-y) = 3z is 625"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-rado-r4-a5-b3.json",
+        "sha256": "7652f9e404612a8cf9b6fb23946da55b7b0b7e18ce8ea47492b46631e0f33b09"
+      }
+    ]
+  },
+  "schema_version": 1
+}

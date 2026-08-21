@@ -1,0 +1,957 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:geometry-simson-line",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-simson-line.json",
+            "sha256": "7aad897115987cdcc2bb3d72ed1490175e4cd74712276f2214c956f9343a684c"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Simson's line: the feet of the perpendiculars from a concyclic point are collinear, and the minimal condition set depends on the FIELD rather than on the budget"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "3 of 3 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-simson-line.json",
+              "sha256": "7aad897115987cdcc2bb3d72ed1490175e4cd74712276f2214c956f9343a684c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-simson-line.json",
+            "sha256": "7aad897115987cdcc2bb3d72ed1490175e4cd74712276f2214c956f9343a684c"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "cas-certificate"
+          ],
+          [
+            "axiom_footprint",
+            "cas.exact-rational-polynomial-normal-form; geometry.cartesian-coordinatisation-of-the-euclidean-plane; geometry.characteristic-zero-specialisation; geometry.rabinowitsch-inverse-specialisation; geometry.nondegeneracy.bc-nonisotropic; geometry.nondegeneracy.ca-nonisotropic; geometry.nondegeneracy.ab-nonisotropic"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-simson-line.json",
+              "sha256": "7aad897115987cdcc2bb3d72ed1490175e4cd74712276f2214c956f9343a684c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-simson-line.json",
+            "sha256": "7aad897115987cdcc2bb3d72ed1490175e4cd74712276f2214c956f9343a684c"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 255289,
+            "path": "artifacts/geometry-certificates/simson-line.json",
+            "sha256": "5da7153e26148d6fa822752a680981784a4330b2b9c32f16460320105e05c14e"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-cas --test geometry_certificate_artifacts && python3 scripts/check-geometry-fact-transcription.py F:geometry-simson-line"
+        },
+        "summary": {
+          "text": "the saturated cofactor certificate over the three isotropy conditions, re-checked from the committed artifact by a checker that shares no code with the search that produced it"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-simson-line.json",
+            "sha256": "7aad897115987cdcc2bb3d72ed1490175e4cd74712276f2214c956f9343a684c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: geometry-certificate-simson-line"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row geometry-certificate-simson-line as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "geometry-certificate-simson-line"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "geometry_check::check_certificate shape pass (each of the three saturation generators is REBUILT here as `condition * Zinv_k - 1` from the condition polynomial the file declares, and compared with the generator the cofactors are taken against; the seven hypothesis generators are compared against the stated hypotheses unchanged, which is what stops a solved-form substitution from being passed off as a proof of the original statement), geometry_check::check_certificate symbolic pass (the identity target = sum of cofactor times generator expanded with MvPoly add/mul alone -- no Groebner machinery, no monomial order, no S-polynomials, no linear algebra; 1875 cofactor terms over 10 generators), geometry_check::check_certificate numeric pass (the same identity re-evaluated at 24 deterministic integer points through MvPoly::evaluate, a different code path from the symbolic expansion), geometry_check::check_certificate usage pass (all three saturation generators must carry a NONZERO cofactor, or the certificate would be advertising a weaker theorem than it proved), geometry_check::check_certificate degenerate-witness pass, over Q(i) (four configurations replayed: three Gaussian, one per condition, each satisfying all seven hypotheses, annihilating exactly its own condition and falsifying the conclusion; and one rational, A = B = C = (0,0) with P = (1,0), X = (0,1), Y = (2,0), Z = (4,0)), geometry_check::check_certificate configuration pass (A=(5,0), B=(0,5), C=(-3,4), P=(4,-3) on x^2+y^2=25 with feet X=(6/5,27/5), Y=(27/5,-1/5), Z=(6,-1) replayed: hypotheses vanish, all three conditions do not, the conclusion does), scripts/check-geometry-fact-transcription.py (the SMT-LIB `formal.statement` above split into its atoms and cross-evaluated against the certificate's own polynomials at 400 random rational configurations, 4400 comparisons, 0 mismatches -- the atoms match term for term, ratio 1, no sign carried)"
+          ],
+          [
+            "supports",
+            "the saturated cofactor certificate over the three isotropy conditions, re-checked from the committed artifact by a checker that shares no code with the search that produced it"
+          ],
+          [
+            "artifact",
+            "artifacts/geometry-certificates/simson-line.json"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "5da7153e26148d6fa822752a680981784a4330b2b9c32f16460320105e05c14e"
+          ],
+          [
+            "measurement",
+            "certified 2026-08-15 in 321-323 ms by `certify_any_route`, which reaches it on the linear-elimination route. Fourteen coordinates, seven hypotheses, three 2x2 blocks -- one per foot, each pinned by `lies on the side line` and `the segment from P is perpendicular to it`, both linear in that foot -- with determinants -|BC|^2, -|CA|^2, -|AB|^2, six terms each, each to the FIRST power. The multiplier is their product, 164 terms of degree 6, and it divides back out through the three Rabinowitsch generators. The residue the elimination cannot remove is 576 terms and goes to a SINGLE unconsumed ge..."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-simson-line.json",
+              "sha256": "7aad897115987cdcc2bb3d72ed1490175e4cd74712276f2214c956f9343a684c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-simson-line.json",
+            "sha256": "7aad897115987cdcc2bb3d72ed1490175e4cd74712276f2214c956f9343a684c"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "The certificate uses the Rabinowitsch trick three times: fresh variables Zinv0, Zinv1, Zinv2 and the generators `|BC|^2 * Zinv0 - 1`, `|CA|^2 * Zinv1 - 1`, `|AB|^2 * Zinv2 - 1`. Specialising each Zinv to the inverse of its condition is legitimate exactly when that condition is nonzero, and that is the ONLY place the side conditions enter. Every tamper control in the cited suite runs against this certificate: a cofactor edited by one is rejected, a conclusion edited by one is rejected, a swapped non-degeneracy condition is rejected, cofactors donated by a neighbouring certificate are rejected, deleting the counterexamples is rejected, and replacing one with the on-locus-but-harmless configuration (A = B = C = (0,0) with the three feet back on the x-axis, which annihilates all three conditions just as thoroughly and yet leaves X, Y, Z collinear) is rejected. One control is new and exists for this certificate: `a_gaussian_counterexample_with_its_imaginary_part_dropped_is_rejected` deletes the imaginary part of a Q(i) witness and requires rejection, because the same real parts alone are an ordinary configuration that SATISFIES the theorem -- a checker that read the file and ignored the new field would accept a certificate whose negative controls prove nothing, and would look exactly like a passing run.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-simson-line.json",
+            "sha256": "7aad897115987cdcc2bb3d72ed1490175e4cd74712276f2214c956f9343a684c"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence geometry-certificate-simson-line"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/geometry-certificates/simson-line.json",
+        "render_hint": "json",
+        "sha256": "5da7153e26148d6fa822752a680981784a4330b2b9c32f16460320105e05c14e",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-simson-line.json",
+            "sha256": "7aad897115987cdcc2bb3d72ed1490175e4cd74712276f2214c956f9343a684c"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 255289,
+            "path": "artifacts/geometry-certificates/simson-line.json",
+            "sha256": "5da7153e26148d6fa822752a680981784a4330b2b9c32f16460320105e05c14e"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-cas --test geometry_certificate_artifacts && cargo test -p axeyum-cas --lib geometry_corpus"
+        },
+        "summary": {
+          "text": "that the three-condition set is minimal ABSOLUTELY (ADR-0455) and independently of the producer's decomposition (ADR-0460) -- over characteristic zero, which is the field the certificate is a theorem of"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-simson-line.json",
+            "sha256": "7aad897115987cdcc2bb3d72ed1490175e4cd74712276f2214c956f9343a684c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: geometry-condition-minimality-simson-line"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row geometry-condition-minimality-simson-line as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "geometry-condition-minimality-simson-line"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "`every_used_condition_set_is_minimal_absolutely` replays, for every one of the seven PROPER subsets S of the three conditions, a committed configuration that satisfies every hypothesis, keeps every condition in S nonzero, and FALSIFIES the conclusion -- which refutes membership in the saturated ideal of S outright, since a member would have to vanish at every common zero of those generators, `each_simson_isotropy_condition_is_necessary_over_the_gaussian_rationals` asserts the sharper property the seven subsets rest on: each Gaussian witness annihilates its OWN condition and keeps the other two NONZERO. A witness that also killed its neighbours would satisfy the checker and establish nothing about minimality, which is the exact shape of the wrong three-condition answer `pappus-hexagon` carried before ADR-0460, the same configurations are independently replayed by geometry_check::check_certificate's degenerate-witness pass, from the artifact, by code that knows nothing about minimality, `a_counterexample_on_the_locus_that_falsifies_nothing_is_rejected` confirms the counterexamples do more than sit on a degeneracy locus, and asserts full coverage of every certificate's coordinatisation so this theorem cannot silently opt out of that control"
+          ],
+          [
+            "supports",
+            "that the three-condition set is minimal ABSOLUTELY (ADR-0455) and independently of the producer's decomposition (ADR-0460) -- over characteristic zero, which is the field the certificate is a theorem of"
+          ],
+          [
+            "artifact",
+            "artifacts/geometry-certificates/simson-line.json"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "5da7153e26148d6fa822752a680981784a4330b2b9c32f16460320105e05c14e"
+          ],
+          [
+            "measurement",
+            "7 proper subsets of 3 conditions refuted for this fact, 0 undecided; 12 proper subsets across the 6 saturated certificates in the corpus, 0 undecided. Three of this fact's four committed counterexamples are Gaussian and one is rational; the three Gaussian ones are the same four points A=(1,i), B=(1,0), C=(0,0), P=(-i,1) on the circle -(x^2+y^2) + x + i*y = 0 under a cyclic relabelling of the vertices, which carries the feet with it."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-simson-line.json",
+              "sha256": "7aad897115987cdcc2bb3d72ed1490175e4cd74712276f2214c956f9343a684c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-simson-line.json",
+            "sha256": "7aad897115987cdcc2bb3d72ed1490175e4cd74712276f2214c956f9343a684c"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "ADR-0460 asks two things of an absolute minimality claim: every removal test decided, and the test independent of anything the producer chose. Both hold here and neither is established by a search. The subset search is not consulted at all: each refutation is a single evaluation of the hypothesis, condition and conclusion polynomials at one exact point, with no budget, no monomial order and no algorithm in the argument. `searchable_subsets` now uses the same refutations to PRUNE the search rather than to audit it afterwards, which is ADR-0460's preferred remedy in its cleanest form -- a subset that is dropped because a counterexample refutes it cannot later be mistaken for a subset the producer's decomposition could not pay for. On this theorem that prunes all seven proper subsets and leaves one elimination to run; without it the search spends its budget on subsets that provably cannot succeed. The nine certificates that predate the change re-emit BYTE FOR BYTE -- `emit_geometry_certificates` reported `0 written, 10 unchanged` on the first full run after the pruning and the Q(i) format extension landed together, and `1 written, 9 unchanged` on a later one whose single write was this certificate's own witness prose. Either way the nine are untouched, so the change altered reach and cost and no evidence at all.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-simson-line.json",
+            "sha256": "7aad897115987cdcc2bb3d72ed1490175e4cd74712276f2214c956f9343a684c"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence geometry-condition-minimality-simson-line"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/geometry-certificates/simson-line.json",
+        "render_hint": "json",
+        "sha256": "5da7153e26148d6fa822752a680981784a4330b2b9c32f16460320105e05c14e",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-simson-line.json",
+            "sha256": "7aad897115987cdcc2bb3d72ed1490175e4cd74712276f2214c956f9343a684c"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-002",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 255289,
+            "path": "artifacts/geometry-certificates/simson-line.json",
+            "sha256": "5da7153e26148d6fa822752a680981784a4330b2b9c32f16460320105e05c14e"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-cas --test geometry_certificate_artifacts"
+        },
+        "summary": {
+          "text": "that the minimality above is NOT a claim about the real plane, and that over the reals the same theorem needs only ONE of the three conditions -- so a reader who takes the certificate's condition set for the classical hypothesis set overstates it"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-simson-line.json",
+            "sha256": "7aad897115987cdcc2bb3d72ed1490175e4cd74712276f2214c956f9343a684c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: geometry-real-versus-complex-simson-line"
+    },
+    {
+      "id": "evidence-002-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row geometry-real-versus-complex-simson-line as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "geometry-real-versus-complex-simson-line"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "the rational counterexample A = B = C = (0,0), P = (1,0), X = (0,1), Y = (2,0), Z = (4,0), replayed from the artifact by geometry_check::check_certificate: over the reals the theorem still needs a condition, and this is the configuration that shows it -- every hypothesis vacuous, all three conditions annihilated, the three feet a genuine triangle, the on-locus-but-harmless control is the other half and is a committed assertion rather than prose: the SAME configuration with X moved back to (0,0) still annihilates all three conditions, still satisfies every hypothesis, and does NOT break the theorem, so the checker rejects a certificate offering it as a counterexample, `each_simson_isotropy_condition_is_necessary_over_the_gaussian_rationals` is the contrast that makes the field distinction measured rather than argued: over Q(i) a configuration isolating ONE condition exists for each of the three, and the test replays all three; over Q none exists, and the absence is a theorem rather than a search that gave up (B = C forces lines CA and AB to coincide, hence Y = Z, hence the three feet collinear whatever X does)"
+          ],
+          [
+            "supports",
+            "that the minimality above is NOT a claim about the real plane, and that over the reals the same theorem needs only ONE of the three conditions -- so a reader who takes the certificate's condition set for the classical hypothesis set overstates it"
+          ],
+          [
+            "artifact",
+            "artifacts/geometry-certificates/simson-line.json"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "5da7153e26148d6fa822752a680981784a4330b2b9c32f16460320105e05c14e"
+          ],
+          [
+            "measurement",
+            "Over Q(i): 3 of 3 conditions individually necessitated, each by a configuration keeping the other two nonzero. Over Q: 0 of 3, and the 1 configuration that breaks the theorem annihilates all three at once. The gap is not a budget -- both sides are single evaluations at exact points."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-simson-line.json",
+              "sha256": "7aad897115987cdcc2bb3d72ed1490175e4cd74712276f2214c956f9343a684c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-simson-line.json",
+            "sha256": "7aad897115987cdcc2bb3d72ed1490175e4cd74712276f2214c956f9343a684c"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-002-notes",
+      "kind": {
+        "text": "This row exists because the two readings license different ledger entries and the difference is invisible in the certificate. A cofactor identity has rational coefficients, so it holds in every Q-algebra: what a certificate proves is a theorem of EVERY field of characteristic zero, and there is no way to make it a statement about the real plane specifically. The forward implication therefore needs no transfer principle at all -- substitute reals into a polynomial identity, take Zinv_k := 1/condition_k, and the conclusion follows -- which is the standard reading in this literature (Pottier 2010 states the certificate-level version; Harrison 2009 states the model-level one, `if a universal formula holds over C it also holds over R`). Where the two readings come apart is the CONDITIONS, and they come apart in the direction that inflates rather than deflates: the certificate's three conditions are minimal over characteristic zero and NOT minimal over the reals. The previous lane (`pappus-minimality`) posed exactly this as an open question and expected the real-plane answer to be the awkward one; it is the other way round, and the resolution is that both answers are true of different theorems. The ledger records the stronger hypothesis set because that is what the certificate consumes, and records here that the real-plane reading is weaker, rather than letting a characteristic-zero minimality claim be quoted as a real-plane one.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-simson-line.json",
+            "sha256": "7aad897115987cdcc2bb3d72ed1490175e4cd74712276f2214c956f9343a684c"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-002-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence geometry-real-versus-complex-simson-line"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/geometry-certificates/simson-line.json",
+        "render_hint": "json",
+        "sha256": "5da7153e26148d6fa822752a680981784a4330b2b9c32f16460320105e05c14e",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-simson-line.json",
+            "sha256": "7aad897115987cdcc2bb3d72ed1490175e4cd74712276f2214c956f9343a684c"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-15"
+          ],
+          [
+            "established_by",
+            "lane simson: axeyum_cas::linear_elim (adjugate elimination of the three licensed 2x2 foot blocks) + axeyum_cas::geometry_certify::certify_by_linear_elimination with licensed_blocks and the new witness-pruned subset search + axeyum_cas::geometry_check (independent re-derivation, extended to replay Q(i) counterexamples)"
+          ],
+          [
+            "source",
+            "classical; coordinatised, certified and filed by the `simson` lane after the `pappus-minimality` lane recorded the field question as the deliverable and deliberately did NOT state the problem, on the grounds that what was missing was a decision about which field rather than a GeometryProblem"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-simson-line.json",
+              "sha256": "7aad897115987cdcc2bb3d72ed1490175e4cd74712276f2214c956f9343a684c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-simson-line.json",
+            "sha256": "7aad897115987cdcc2bb3d72ed1490175e4cd74712276f2214c956f9343a684c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "what",
+            "key": "what"
+          },
+          {
+            "header": "where",
+            "key": "where"
+          },
+          {
+            "header": "who",
+            "key": "who"
+          },
+          {
+            "header": "year",
+            "key": "year"
+          }
+        ],
+        "rows": [
+          [
+            "standard historical attribution, cross-checked against Mackay's historical study and the MacTutor biography of Wallace; this lane did not consult Wallace's original, and did not establish its volume or page",
+            "if a triangle is inscribed in a circle and perpendiculars are dropped from any point of the circumference to the sides, the feet of those perpendiculars are collinear",
+            "T. Leybourn (ed.), Mathematical Repository, 1799; the attribution to Simson is traditional and mistaken, and the history is J. S. Mackay, 'The Wallace line and the Wallace point', Proceedings of the Edinburgh Mathematical Society 9 (1890), 83-91",
+            "William Wallace",
+            "1799"
+          ],
+          [
+            "read within this lane from the authors' copy at mmrc.iss.ac.cn (a delegated literature search, not a memory of the paper); the two quoted phrases are verbatim from that PDF. The condition set this fact certifies is the one that paper prescribes, which was found AFTER the coordinatisation was chosen rather than copied from it -- the agreement is a cross-check, not a derivation",
+            "Simson's theorem as the motivating example of a statement that Wu's method and the Groebner-basis method CANNOT confirm under 'A, B, C are not collinear' alone, and the isotropy conditions that fix it: isotropic(A,B) is defined as perpendicular(A,B,A,B), i.e. |AB|^2 = 0, which over the reals degenerates to A = B and over other models of metric geometry (e.g. C^2) does not",
+            "'A Class of Geometry Statements of Constructive Type and Geometry Theorem Proving', CADE-11, 1992, section 2, example 2.1",
+            "Shang-Ching Chou and Xiao-Shan Gao",
+            "1992"
+          ],
+          [
+            "read within this lane from the PDF at kwarc.info (a delegated literature search, not a memory of the book); both quotations are verbatim. Page numbers are as reported by that copy and were not cross-checked against the print edition",
+            "a Wu's-method run on Simson whose non-degeneracy output is squared-length conditions, with the field distinction stated explicitly: 'In the intended interpretation as real numbers, there is some redundancy, since bx - cx = 0 implies (bx - cx)^2 + (by - cy)^2 = 0. However, this is not in general the case over the complex numbers'; and the transfer direction this fact relies on, 'if a universal formula holds over C it also holds over R'",
+            "Handbook of Practical Logic and Automated Reasoning, Cambridge University Press, 2009, section 5.12, pp. 414-424 (Simson at pp. 422-423)",
+            "John Harrison",
+            "2009"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-simson-line.json",
+              "sha256": "7aad897115987cdcc2bb3d72ed1490175e4cd74712276f2214c956f9343a684c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-simson-line.json",
+            "sha256": "7aad897115987cdcc2bb3d72ed1490175e4cd74712276f2214c956f9343a684c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "Established on the `cas-certificate` route, in the geometry family, and it is the first fact here whose CONDITION SET is different over R and over C. That is the content, not the theorem -- Simson's line is 1799 and its mechanised proof is a 1992 benchmark. Two things this ledger had not previously been able to say are said here. First, what a geometry certificate is a theorem OF: a cofactor identity with rational coefficients holds in every Q-algebra, so the object is a characteristic-zero statement and the real-plane reading is a specialisation of it, not the other way round. That was the `pappus-minimality` lane's open question, and the answer for the FORWARD implication is that no transfer principle is needed at all -- substituting reals into a polynomial identity is the whole argument. Second, where the two readings genuinely diverge, which is not the implication but the minimality of the hypotheses: |BC|^2 != 0 is strictly stronger than B != C over C, and the three conditions are minimal there while any one of them suffices over R. That lane predicted the real-plane conditions would turn out redundant and that the witnesses showing otherwise would be irrational; both halves are right, and the consequence is that the honest fact carries BOTH kinds of witness. `DegenerateWitness` gained an optional imaginary part for exactly this, the checker replays it, and a control was added that deletes the imaginary part and requires rejection -- because the real parts alone satisfy the theorem, so a checker that ignored the new field would confirm a certificate whose negative controls prove nothing while looking green. The nine certificates that predate the extension re-emit byte for byte. The three isotropy conditions are listed in the axiom footprint even though they also appear as hypotheses of `formal.statement`, deliberately and for the reason the neighbouring geometry facts give: the footprint is the field a reader scans to see what a proof rests on, and a side condition invisible there is precisely how a mechanised geometry proof comes to be quoted as unconditional. This fact adds a second way that can happen, and guards it in the statement rather than only in the notes: a condition set can be minimal in the field the proof lives in and redundant in the field the reader has in mind.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-simson-line.json",
+            "sha256": "7aad897115987cdcc2bb3d72ed1490175e4cd74712276f2214c956f9343a684c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-geometry-simson-line",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "genre": "result",
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:geometry-simson-line",
+    "title": "Simson's line: the feet of the perpendiculars from a concyclic point are collinear, and the minimal condition set depends on the FIELD rather than on the budget"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-geometry-simson-line.json",
+        "sha256": "7aad897115987cdcc2bb3d72ed1490175e4cd74712276f2214c956f9343a684c"
+      }
+    ]
+  },
+  "schema_version": 1
+}

@@ -1,0 +1,768 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:double-negation-elimination",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-double-negation-elimination.json",
+            "sha256": "76c5c271a4ae4f32269c52a09c6a9f5228f8dc802a55de3e2308a8cc17b45071"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Double negation elimination"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "1 of 1 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-double-negation-elimination.json",
+              "sha256": "76c5c271a4ae4f32269c52a09c6a9f5228f8dc802a55de3e2308a8cc17b45071"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-double-negation-elimination.json",
+            "sha256": "76c5c271a4ae4f32269c52a09c6a9f5228f8dc802a55de3e2308a8cc17b45071"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "smt-term-level"
+          ],
+          [
+            "axiom_footprint",
+            "axeyum-ir.bool-evaluator; classical-two-valued-bool-semantics"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-double-negation-elimination.json",
+              "sha256": "76c5c271a4ae4f32269c52a09c6a9f5228f8dc802a55de3e2308a8cc17b45071"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-double-negation-elimination.json",
+            "sha256": "76c5c271a4ae4f32269c52a09c6a9f5228f8dc802a55de3e2308a8cc17b45071"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 284,
+            "path": "artifacts/facts/smt2/neg-double-negation-elimination.smt2",
+            "sha256": "04d6a100fec088aef267686f78d8ed09200096d143adccc37d815900e68c7e68"
+          }
+        ],
+        "cert_kind": "report-run",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "test \"$(cargo run -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/neg-double-negation-elimination.smt2 2>/dev/null | tail -1)\" = unsat"
+        },
+        "summary": {
+          "text": "For every proposition p, if not (not p) then p."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-double-negation-elimination.json",
+            "sha256": "76c5c271a4ae4f32269c52a09c6a9f5228f8dc802a55de3e2308a8cc17b45071"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: double-negation-elimination-term-level"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row double-negation-elimination-term-level as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "double-negation-elimination-term-level"
+          ],
+          [
+            "ledger kind",
+            "exhaustive-enumeration"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-smtcomp-cli-producing-solve, axeyum-Evidence::check-fresh-parse, z3-independent-agreement"
+          ],
+          [
+            "supports",
+            "For every proposition p, if not (not p) then p."
+          ],
+          [
+            "artifact",
+            "artifacts/facts/smt2/neg-double-negation-elimination.smt2"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "04d6a100fec088aef267686f78d8ed09200096d143adccc37d815900e68c7e68"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-double-negation-elimination.json",
+              "sha256": "76c5c271a4ae4f32269c52a09c6a9f5228f8dc802a55de3e2308a8cc17b45071"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-double-negation-elimination.json",
+            "sha256": "76c5c271a4ae4f32269c52a09c6a9f5228f8dc802a55de3e2308a8cc17b45071"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Ran 2026-08-14: the file asserts the NEGATION of formal.statement and the solver reported `unsat` with `kind=unsat-term-level certified=1 arena=ok`. `unsat-term-level` is exhaustive evaluation of the 2 Boolean assignments by the axeyum-ir evaluator alone -- it trusts neither the bit-blaster, the CNF encoder, nor the SAT solver. `arena=ok` means Evidence::check re-ran that enumeration against a FRESH PARSE of the file, independent of anything the producing solve held in memory. Independently cross-checked: `z3 -smt2` on the same file also reports `unsat`.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-double-negation-elimination.json",
+            "sha256": "76c5c271a4ae4f32269c52a09c6a9f5228f8dc802a55de3e2308a8cc17b45071"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence double-negation-elimination-term-level"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/facts/smt2/neg-double-negation-elimination.smt2",
+        "render_hint": "code",
+        "sha256": "04d6a100fec088aef267686f78d8ed09200096d143adccc37d815900e68c7e68",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-double-negation-elimination.json",
+            "sha256": "76c5c271a4ae4f32269c52a09c6a9f5228f8dc802a55de3e2308a8cc17b45071"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "dependency-graph",
+      "kind": {
+        "alt": "Dependency graph around F:double-negation-elimination: 1 dependencies, 0 dependents",
+        "caption": {
+          "text": "Immediate dependencies and dependents of this fact"
+        },
+        "spec": {
+          "edges": [
+            {
+              "from": "F:double-negation-elimination",
+              "label": "depends_on",
+              "to": "F:excluded-middle"
+            }
+          ],
+          "figure_type": "dep-graph",
+          "nodes": [
+            {
+              "group": "focus",
+              "href": "cards/F-double-negation-elimination.doc.json",
+              "id": "F:double-negation-elimination",
+              "label": "Double negation elimination",
+              "status": "proved"
+            },
+            {
+              "group": "smt-term-level",
+              "href": "cards/F-excluded-middle.doc.json",
+              "id": "F:excluded-middle",
+              "label": "Law of excluded middle",
+              "status": "proved"
+            }
+          ],
+          "rankdir": "TB"
+        },
+        "type": "figure"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-double-negation-elimination.json",
+            "sha256": "76c5c271a4ae4f32269c52a09c6a9f5228f8dc802a55de3e2308a8cc17b45071"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Dependency neighbourhood"
+    },
+    {
+      "id": "depends-on",
+      "kind": {
+        "caption": {
+          "text": "Depends on"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:excluded-middle",
+            "Law of excluded middle",
+            "proved",
+            "cards/F-excluded-middle.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-double-negation-elimination.json",
+              "sha256": "76c5c271a4ae4f32269c52a09c6a9f5228f8dc802a55de3e2308a8cc17b45071"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-double-negation-elimination.json",
+            "sha256": "76c5c271a4ae4f32269c52a09c6a9f5228f8dc802a55de3e2308a8cc17b45071"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depends on"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-14"
+          ],
+          [
+            "established_by",
+            "facts-logic lane, axeyum SAT/SMT front door"
+          ],
+          [
+            "source",
+            "authored from the S:logic-and-proof strand of the math-education concept graph; statement written here, not copied"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-double-negation-elimination.json",
+              "sha256": "76c5c271a4ae4f32269c52a09c6a9f5228f8dc802a55de3e2308a8cc17b45071"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-double-negation-elimination.json",
+            "sha256": "76c5c271a4ae4f32269c52a09c6a9f5228f8dc802a55de3e2308a8cc17b45071"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "citation",
+            "key": "citation"
+          },
+          {
+            "header": "establishes",
+            "key": "establishes"
+          }
+        ],
+        "rows": [
+          [
+            "standard textbook attribution; this lane did not consult the primary source, and records the citation as the received one",
+            "standard classical propositional logic; see e.g. Mendelson, Introduction to Mathematical Logic",
+            "the rule as a classical tautology"
+          ],
+          [
+            "standard textbook attribution; this lane did not consult the primary source, and records the citation as the received one",
+            "A. Heyting (1930), 'Die formalen Regeln der intuitionistischen Logik'",
+            "the formalisation in which the rule is NOT derivable, the contrast this fact records"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-double-negation-elimination.json",
+              "sha256": "76c5c271a4ae4f32269c52a09c6a9f5228f8dc802a55de3e2308a8cc17b45071"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-double-negation-elimination.json",
+            "sha256": "76c5c271a4ae4f32269c52a09c6a9f5228f8dc802a55de3e2308a8cc17b45071"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "concept-refs",
+      "kind": {
+        "caption": {
+          "text": "Concept references (gloss and provenance only, never substance)"
+        },
+        "columns": [
+          {
+            "header": "graph",
+            "key": "graph"
+          },
+          {
+            "header": "ref",
+            "key": "ref"
+          },
+          {
+            "header": "relation",
+            "key": "relation"
+          },
+          {
+            "header": "resolved",
+            "key": "resolved"
+          }
+        ],
+        "rows": [
+          [
+            "math-education",
+            "C:negation",
+            "uses",
+            true
+          ],
+          [
+            "math-education",
+            "C:proof-by-contradiction",
+            "underwrites",
+            true
+          ],
+          [
+            "math-education",
+            "C:non-constructive-proof",
+            "contrasts-with",
+            true
+          ],
+          [
+            "math-education",
+            "C:intuitionism",
+            "contrasts-with",
+            true
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-double-negation-elimination.json",
+              "sha256": "76c5c271a4ae4f32269c52a09c6a9f5228f8dc802a55de3e2308a8cc17b45071"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-double-negation-elimination.json",
+            "sha256": "76c5c271a4ae4f32269c52a09c6a9f5228f8dc802a55de3e2308a8cc17b45071"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "The rule that licenses proof by contradiction in its strong form: assume not p, derive a contradiction, conclude p. Classically equivalent to F:excluded-middle and, like it, not intuitionistically valid, so the classical entry in the axiom footprint is again load-bearing. Note what is NOT recorded here: the converse introduction direction (p implies not not p) is constructively fine, and our formalism has no way to mark that asymmetry on a per-direction basis.\n\nOn the axiom footprint: it names the trust base of the SMT ROUTE that established this fact -- the axeyum-ir Boolean evaluator, and the two-valued semantics of the SMT-LIB Bool sort that makes exhaustive truth-table enumeration a proof. It is deliberately NOT empty and deliberately NOT a Lean axiom list. Nothing here went through axeyum's Lean kernel. Measured 2026-08-14 with `cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory`: the `logic` prelude reports axiom=0 opaque=0 quotient=0, and its declarations are exactly True, False, And, Or, Iff, Not (as `a -> False`), Eq and Exists -- an intuitionistic core with no `Classical.em`, no `propext` and no `Quot.sound`. Zero trusted declarations there means the kernel assumes nothing, not that it can prove everything.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-double-negation-elimination.json",
+            "sha256": "76c5c271a4ae4f32269c52a09c6a9f5228f8dc802a55de3e2308a8cc17b45071"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-double-negation-elimination",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "genre": "result",
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:double-negation-elimination",
+    "title": "Double negation elimination"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-double-negation-elimination.json",
+        "sha256": "76c5c271a4ae4f32269c52a09c6a9f5228f8dc802a55de3e2308a8cc17b45071"
+      }
+    ]
+  },
+  "schema_version": 1
+}

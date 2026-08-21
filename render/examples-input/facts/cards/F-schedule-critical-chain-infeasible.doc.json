@@ -1,0 +1,749 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:schedule-critical-chain-infeasible",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-schedule-critical-chain-infeasible.json",
+            "sha256": "e98f29ab71bd4dea39c05ff3c3cee78bc6437ae5e48194f11c65cc5dee8363fd"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "A five-constraint critical chain against a delivery deadline, refuted in the Lean kernel"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "2 of 2 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "unclassified",
+            "unclassified",
+            "field absent: nobody has looked (distinct from `unknown`, which means we checked)"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-schedule-critical-chain-infeasible.json",
+              "sha256": "e98f29ab71bd4dea39c05ff3c3cee78bc6437ae5e48194f11c65cc5dee8363fd"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-schedule-critical-chain-infeasible.json",
+            "sha256": "e98f29ab71bd4dea39c05ff3c3cee78bc6437ae5e48194f11c65cc5dee8363fd"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "kernel-lean"
+          ],
+          [
+            "axiom_footprint",
+            "Real; Real.add; Real.add_assoc; Real.add_comm; Real.add_le_add; Real.add_neg; Real.add_zero; Real.le; Real.le_of_lt; Real.le_refl; Real.lt; Real.lt_irrefl; Real.lt_of_lt_of_le; Real.neg; Real.one; Real.zero; Real.zero_lt_one; axeyum.reconstruct.lra.hyp._2; axeyum.reconstruct.lra.hyp._4; axeyum.reconstruct.lra.hyp._6; axeyum.reconstruct.lra.hyp._7; axeyum.reconstruct.lra.hyp._8; axeyum.reconstruct.lra.x._0; axeyum.reconstruct.lra.x._1; axeyum.reconstruct.lra.x._3; axeyum.reconstruct.lra.x._5"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-schedule-critical-chain-infeasible.json",
+              "sha256": "e98f29ab71bd4dea39c05ff3c3cee78bc6437ae5e48194f11c65cc5dee8363fd"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-schedule-critical-chain-infeasible.json",
+            "sha256": "e98f29ab71bd4dea39c05ff3c3cee78bc6437ae5e48194f11c65cc5dee8363fd"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 4571,
+            "path": "artifacts/instances/infeasibility/schedule-deadline.smt2",
+            "sha256": "92ac390e02fcef4358e2d9fe9693b104cbdbc0e7ff52d2c482783c376e2edf14"
+          }
+        ],
+        "cert_kind": "kernel-admission",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run --release -q -p axeyum-solver --features full --example infeasibility_farkas_lean -- artifacts/instances/infeasibility/schedule-deadline.smt2 --require-kernel --expect-axioms 26"
+        },
+        "summary": {
+          "text": "The five constraints are jointly unsatisfiable, by a kernel-checked proof term of False."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-schedule-critical-chain-infeasible.json",
+            "sha256": "e98f29ab71bd4dea39c05ff3c3cee78bc6437ae5e48194f11c65cc5dee8363fd"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: schedule-chain-kernel-term"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row schedule-chain-kernel-term as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "schedule-chain-kernel-term"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-farkas-certificate-verify-from-scratch, axeyum-lean-kernel-infer-plus-def-eq-False, z3-4.13.3-independent-agreement"
+          ],
+          [
+            "supports",
+            "The five constraints are jointly unsatisfiable, by a kernel-checked proof term of False."
+          ],
+          [
+            "artifact",
+            "artifacts/instances/infeasibility/schedule-deadline.smt2"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "92ac390e02fcef4358e2d9fe9693b104cbdbc0e7ff52d2c482783c376e2edf14"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-schedule-critical-chain-infeasible.json",
+              "sha256": "e98f29ab71bd4dea39c05ff3c3cee78bc6437ae5e48194f11c65cc5dee8363fd"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-schedule-critical-chain-infeasible.json",
+            "sha256": "e98f29ab71bd4dea39c05ff3c3cee78bc6437ae5e48194f11c65cc5dee8363fd"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Ran 2026-08-14. `lra_farkas_certificate` on the five core rows returns five atoms with multipliers ALL EQUAL TO 1 -- the textbook negative-cycle refutation, 6+5+6+3 = 20 against a ceiling of 16, excess 4 -- and `FarkasCertificate::verify()` re-derives it from scratch in exact rationals (nonnegative multipliers, at least one positive, every variable cancels, surviving constant relation unsatisfiable), sharing no code with the Fourier-Motzkin elimination that found it. `reconstruct_lra_proof` then builds a Lean kernel term whose `infer` succeeds and whose inferred type is `def_eq` to `False`. The example ASSERTS that the term rests on exactly 5 hypothesis axioms, one per core row, and exits 1 otherwise. `--require-kernel` makes the whole route a ratchet: if the reconstruction ever declines this query, the command fails rather than reporting a stop.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-schedule-critical-chain-infeasible.json",
+            "sha256": "e98f29ab71bd4dea39c05ff3c3cee78bc6437ae5e48194f11c65cc5dee8363fd"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence schedule-chain-kernel-term"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/instances/infeasibility/schedule-deadline.smt2",
+        "render_hint": "code",
+        "sha256": "92ac390e02fcef4358e2d9fe9693b104cbdbc0e7ff52d2c482783c376e2edf14",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-schedule-critical-chain-infeasible.json",
+            "sha256": "e98f29ab71bd4dea39c05ff3c3cee78bc6437ae5e48194f11c65cc5dee8363fd"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "report-run",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run --release -q -p axeyum-solver --features full --example infeasibility_farkas_lean -- artifacts/instances/infeasibility/schedule-deadline.smt2 --require-kernel --expect-axioms 26"
+        },
+        "summary": {
+          "text": "axiom_footprint: the 30 axioms the kernel module actually rests on."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-schedule-critical-chain-infeasible.json",
+            "sha256": "e98f29ab71bd4dea39c05ff3c3cee78bc6437ae5e48194f11c65cc5dee8363fd"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: schedule-chain-module-shape"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row schedule-chain-module-shape as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "schedule-chain-module-shape"
+          ],
+          [
+            "ledger kind",
+            "instance-pin"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-lean-kernel-render-lean-module-declaration-count"
+          ],
+          [
+            "supports",
+            "axiom_footprint: the 30 axioms the kernel module actually rests on."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-schedule-critical-chain-infeasible.json",
+              "sha256": "e98f29ab71bd4dea39c05ff3c3cee78bc6437ae5e48194f11c65cc5dee8363fd"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-schedule-critical-chain-infeasible.json",
+            "sha256": "e98f29ab71bd4dea39c05ff3c3cee78bc6437ae5e48194f11c65cc5dee8363fd"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "The rendered module declares 30 axioms: 21 ordered-field prelude (the `Real` carrier, its operations, and the order/additive laws), 4 variable axioms (one abstract `Real` per start time), and 5 hypothesis axioms (one per core row, in the canonical `le L zero` form). This route IS NOT AXIOM-FREE and cannot presently be: `crates/axeyum-lean-kernel/src/arith_prelude.rs` declares `Real` and every field law through `declare_axiom`, with no theorems and no inductives, so `[]` here would be a lie the validator would have accepted (it only rejects `[]` off the kernel-lean route). CONTRAST WITH THE FACADE: `prove_unsat_to_lean_module` on the SAME five rows routes to `ProofFragment::LraDpll` and emits a 21-line STRUCTURAL SHIM -- `axiom prop : P`, `axiom hyp : Not P`, `theorem _ : False := hyp prop` -- which kernel-checks, is sorry-free, and contains no arithmetic whatsoever. Calling that 'the Farkas proof reached the kernel' would be false, so the example prints and labels both. SIZE: the real term is 5,099,060 bytes. The prelude has no numerals, so the constant 20 reconstructs as a 20-fold `Real.add Real.one` chain and every cancellation is an explicit Eq-rewrite; a 5-row explanation becomes a 5 MB proof term.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-schedule-critical-chain-infeasible.json",
+            "sha256": "e98f29ab71bd4dea39c05ff3c3cee78bc6437ae5e48194f11c65cc5dee8363fd"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "dependency-graph",
+      "kind": {
+        "alt": "Dependency graph around F:schedule-critical-chain-infeasible: 0 dependencies, 1 dependents",
+        "caption": {
+          "text": "Immediate dependencies and dependents of this fact"
+        },
+        "spec": {
+          "edges": [
+            {
+              "from": "F:schedule-deadline-iis",
+              "label": "depends_on",
+              "to": "F:schedule-critical-chain-infeasible"
+            }
+          ],
+          "figure_type": "dep-graph",
+          "nodes": [
+            {
+              "group": "focus",
+              "href": "cards/F-schedule-critical-chain-infeasible.doc.json",
+              "id": "F:schedule-critical-chain-infeasible",
+              "label": "A five-constraint critical chain against a delivery deadline, refuted in the Lean kernel",
+              "status": "proved"
+            },
+            {
+              "group": "search-certificate",
+              "href": "cards/F-schedule-deadline-iis.doc.json",
+              "id": "F:schedule-deadline-iis",
+              "label": "Five rows of a 60-row project schedule are an irreducible infeasible subsystem",
+              "status": "proved"
+            }
+          ],
+          "rankdir": "TB"
+        },
+        "type": "figure"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-schedule-critical-chain-infeasible.json",
+            "sha256": "e98f29ab71bd4dea39c05ff3c3cee78bc6437ae5e48194f11c65cc5dee8363fd"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Dependency neighbourhood"
+    },
+    {
+      "id": "depended-on-by",
+      "kind": {
+        "caption": {
+          "text": "Depended on by"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:schedule-deadline-iis",
+            "Five rows of a 60-row project schedule are an irreducible infeasible subsystem",
+            "proved",
+            "cards/F-schedule-deadline-iis.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-schedule-critical-chain-infeasible.json",
+              "sha256": "e98f29ab71bd4dea39c05ff3c3cee78bc6437ae5e48194f11c65cc5dee8363fd"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-schedule-critical-chain-infeasible.json",
+            "sha256": "e98f29ab71bd4dea39c05ff3c3cee78bc6437ae5e48194f11c65cc5dee8363fd"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depended on by"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-14"
+          ],
+          [
+            "established_by",
+            "axeyum lane `infeasibility`, 2026-08-14: crates/axeyum-solver/examples/infeasibility_farkas_lean.rs"
+          ],
+          [
+            "source",
+            "the measured irreducible core of an instance authored by this lane (scripts/gen-infeasibility-instances.py)"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-schedule-critical-chain-infeasible.json",
+              "sha256": "e98f29ab71bd4dea39c05ff3c3cee78bc6437ae5e48194f11c65cc5dee8363fd"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-schedule-critical-chain-infeasible.json",
+            "sha256": "e98f29ab71bd4dea39c05ff3c3cee78bc6437ae5e48194f11c65cc5dee8363fd"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "WHAT A `theorem _ : False` MEANS HERE, since it reads alarmingly out of context. The module declares the five constraints as hypothesis axioms and derives `False` FROM THEM; that is a refutation of their conjunction, i.e. exactly the proposition in `formal.statement`, and the kernel environment is discarded with them. `formal.language` is `smtlib2` and not `lean4` for this reason: the rendered `theorem infeasible : False` carries no content without its hypothesis axioms, so quoting it as the formal statement would be uninformative at best. SCOPE: this is the largest linear-arithmetic reconstruction this repository has run. Measured: all fourteen call sites of `reconstruct_lra_proof` outside this lane's example live in crates/axeyum-solver/src/reconstruct/tests.rs and pass an assertion slice of length 1 (a negative test), 2, or 3. This is 5 constraints over 4 variables with non-unit integer constants, and it went through `try_general_farkas` unchanged.\n\nAxiom footprint corrected 30 -> 26 on 2026-08-15 (coordinator), measured rather than transcribed. The four dropped entries -- False, Eq, Eq.refl, Eq.rec -- are no longer asserted: the rendered module declares False and Eq as `inductive`, with Eq.refl its constructor and Eq.rec its recursor, and Not as a `def`. The module still references all four (False 3x, Eq 7x), so this is a real shrink of the trusted surface, not their removal. It went unnoticed because the checker exited 0 whatever the count was; it now carries `--expect-axioms 26` and fails on drift in either direction, including when the kernel route is never reached.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-schedule-critical-chain-infeasible.json",
+            "sha256": "e98f29ab71bd4dea39c05ff3c3cee78bc6437ae5e48194f11c65cc5dee8363fd"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-schedule-critical-chain-infeasible",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "genre": "result",
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:schedule-critical-chain-infeasible",
+    "title": "A five-constraint critical chain against a delivery deadline, refuted in the Lean kernel"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-schedule-critical-chain-infeasible.json",
+        "sha256": "e98f29ab71bd4dea39c05ff3c3cee78bc6437ae5e48194f11c65cc5dee8363fd"
+      }
+    ]
+  },
+  "schema_version": 1
+}

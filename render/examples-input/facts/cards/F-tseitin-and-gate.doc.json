@@ -1,0 +1,633 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:tseitin-and-gate",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-tseitin-and-gate.json",
+            "sha256": "f946219a2fcb441c8019eb46af9a2270e6b4d203031771ead250d62eea2e248c"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "The Tseitin clauses for an AND gate define the gate"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "1 of 1 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-tseitin-and-gate.json",
+              "sha256": "f946219a2fcb441c8019eb46af9a2270e6b4d203031771ead250d62eea2e248c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-tseitin-and-gate.json",
+            "sha256": "f946219a2fcb441c8019eb46af9a2270e6b4d203031771ead250d62eea2e248c"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "smt-term-level"
+          ],
+          [
+            "axiom_footprint",
+            "axeyum-ir.bool-evaluator; classical-two-valued-bool-semantics"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-tseitin-and-gate.json",
+              "sha256": "f946219a2fcb441c8019eb46af9a2270e6b4d203031771ead250d62eea2e248c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-tseitin-and-gate.json",
+            "sha256": "f946219a2fcb441c8019eb46af9a2270e6b4d203031771ead250d62eea2e248c"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 377,
+            "path": "artifacts/facts/smt2/neg-tseitin-and-gate.smt2",
+            "sha256": "76fca3e6d40f678bca81ff1a4d5b05d4fbe8c5312ac481d8531680fe25acfb9a"
+          }
+        ],
+        "cert_kind": "report-run",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "test \"$(cargo run -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/neg-tseitin-and-gate.smt2 2>/dev/null | tail -1)\" = unsat"
+        },
+        "summary": {
+          "text": "For all propositions a, b, t: the conjunction of the three clauses ((not t) or a), ((not t) or b) and (t or (not a) or (not b)) is equivalent to t if and only if (a and b)."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-tseitin-and-gate.json",
+            "sha256": "f946219a2fcb441c8019eb46af9a2270e6b4d203031771ead250d62eea2e248c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: tseitin-and-gate-term-level"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row tseitin-and-gate-term-level as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "tseitin-and-gate-term-level"
+          ],
+          [
+            "ledger kind",
+            "exhaustive-enumeration"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-smtcomp-cli-producing-solve, axeyum-Evidence::check-fresh-parse, z3-independent-agreement"
+          ],
+          [
+            "supports",
+            "For all propositions a, b, t: the conjunction of the three clauses ((not t) or a), ((not t) or b) and (t or (not a) or (not b)) is equivalent to t if and only if (a and b)."
+          ],
+          [
+            "artifact",
+            "artifacts/facts/smt2/neg-tseitin-and-gate.smt2"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "76fca3e6d40f678bca81ff1a4d5b05d4fbe8c5312ac481d8531680fe25acfb9a"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-tseitin-and-gate.json",
+              "sha256": "f946219a2fcb441c8019eb46af9a2270e6b4d203031771ead250d62eea2e248c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-tseitin-and-gate.json",
+            "sha256": "f946219a2fcb441c8019eb46af9a2270e6b4d203031771ead250d62eea2e248c"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Ran 2026-08-14: the file asserts the NEGATION of formal.statement and the solver reported `unsat` with `kind=unsat-term-level certified=1 arena=ok`. `unsat-term-level` is exhaustive evaluation of the 8 Boolean assignments by the axeyum-ir evaluator alone -- it trusts neither the bit-blaster, the CNF encoder, nor the SAT solver. `arena=ok` means Evidence::check re-ran that enumeration against a FRESH PARSE of the file, independent of anything the producing solve held in memory. Independently cross-checked: `z3 -smt2` on the same file also reports `unsat`.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-tseitin-and-gate.json",
+            "sha256": "f946219a2fcb441c8019eb46af9a2270e6b4d203031771ead250d62eea2e248c"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence tseitin-and-gate-term-level"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/facts/smt2/neg-tseitin-and-gate.smt2",
+        "render_hint": "code",
+        "sha256": "76fca3e6d40f678bca81ff1a4d5b05d4fbe8c5312ac481d8531680fe25acfb9a",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-tseitin-and-gate.json",
+            "sha256": "f946219a2fcb441c8019eb46af9a2270e6b4d203031771ead250d62eea2e248c"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-14"
+          ],
+          [
+            "established_by",
+            "facts-logic lane, axeyum SAT/SMT front door"
+          ],
+          [
+            "source",
+            "authored from the S:logic-and-proof strand of the math-education concept graph; statement written here, not copied"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-tseitin-and-gate.json",
+              "sha256": "f946219a2fcb441c8019eb46af9a2270e6b4d203031771ead250d62eea2e248c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-tseitin-and-gate.json",
+            "sha256": "f946219a2fcb441c8019eb46af9a2270e6b4d203031771ead250d62eea2e248c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "citation",
+            "key": "citation"
+          },
+          {
+            "header": "establishes",
+            "key": "establishes"
+          }
+        ],
+        "rows": [
+          [
+            "standard textbook attribution; this lane did not consult the primary source, and records the citation as the received one",
+            "G. S. Tseitin (1968), 'On the complexity of derivation in propositional calculus', Studies in Constructive Mathematics and Mathematical Logic Part II",
+            "the linear-size clausal encoding of a formula by gate definitions, of which this AND gate is one case"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-tseitin-and-gate.json",
+              "sha256": "f946219a2fcb441c8019eb46af9a2270e6b4d203031771ead250d62eea2e248c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-tseitin-and-gate.json",
+            "sha256": "f946219a2fcb441c8019eb46af9a2270e6b4d203031771ead250d62eea2e248c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "concept-refs",
+      "kind": {
+        "caption": {
+          "text": "Concept references (gloss and provenance only, never substance)"
+        },
+        "columns": [
+          {
+            "header": "graph",
+            "key": "graph"
+          },
+          {
+            "header": "ref",
+            "key": "ref"
+          },
+          {
+            "header": "relation",
+            "key": "relation"
+          },
+          {
+            "header": "resolved",
+            "key": "resolved"
+          }
+        ],
+        "rows": [
+          [
+            "math-education",
+            "C:satisfiability",
+            "uses",
+            true
+          ],
+          [
+            "math-education",
+            "C:logical-equivalence",
+            "uses",
+            true
+          ],
+          [
+            "math-education",
+            "C:formal-proof-checking",
+            "related-to",
+            true
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+            "source": "commit",
+            "unix": 1787144076
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-tseitin-and-gate.json",
+              "sha256": "f946219a2fcb441c8019eb46af9a2270e6b4d203031771ead250d62eea2e248c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-tseitin-and-gate.json",
+            "sha256": "f946219a2fcb441c8019eb46af9a2270e6b4d203031771ead250d62eea2e248c"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "The correctness core of our own CNF encoder, stated as a proposition and checked. Not merely equisatisfiable: the clause set is EQUIVALENT to the gate definition, which is the stronger property that makes the encoding model-preserving and so makes model lifting through Tseitin sound. What remains unstated -- and is the real theorem -- is that the recursive Tseitin transformation of an ARBITRARY formula is equisatisfiable with it. That quantifies over formulas; we have no object for a formula, so this single gate is the largest instance we can pin.\n\nOn the axiom footprint: it names the trust base of the SMT ROUTE that established this fact -- the axeyum-ir Boolean evaluator, and the two-valued semantics of the SMT-LIB Bool sort that makes exhaustive truth-table enumeration a proof. It is deliberately NOT empty and deliberately NOT a Lean axiom list. Nothing here went through axeyum's Lean kernel. Measured 2026-08-14 with `cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory`: the `logic` prelude reports axiom=0 opaque=0 quotient=0, and its declarations are exactly True, False, And, Or, Iff, Not (as `a -> False`), Eq and Exists -- an intuitionistic core with no `Classical.em`, no `propext` and no `Quot.sound`. Zero trusted declarations there means the kernel assumes nothing, not that it can prove everything.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+          "source": "commit",
+          "unix": 1787144076
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-tseitin-and-gate.json",
+            "sha256": "f946219a2fcb441c8019eb46af9a2270e6b4d203031771ead250d62eea2e248c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-tseitin-and-gate",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "genre": "result",
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:tseitin-and-gate",
+    "title": "The Tseitin clauses for an AND gate define the gate"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "d637d83f77dbfa43c98eee4ab0ad78d235099006",
+      "source": "commit",
+      "unix": 1787144076
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-tseitin-and-gate.json",
+        "sha256": "f946219a2fcb441c8019eb46af9a2270e6b4d203031771ead250d62eea2e248c"
+      }
+    ]
+  },
+  "schema_version": 1
+}
