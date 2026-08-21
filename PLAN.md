@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-20 | `79c5c95c8` | Reduced REL to one exact identity-cylinder conditional variance, reconstructed its localized Haar/Carleson energy level by level, and proved that Newton-over-Hodge divisibility by eight gives no endpoint rounding gain. |
 | 2026-08-20 | `c59ae115d` | Refuted relative-trace positivity with exact negative odd/even rows after smooth localization, preventing unit local terms from being substituted for the still-required global REL comparison. |
 | 2026-08-20 | `838fd5e3e` | Proved that every proper odd-endpoint `Frob*c` orbit collapses to the cone vertex and every projective fixed point is smooth, transverse, and has unit local multiplicity, while retaining the unbounded global trace as REL. |
 | 2026-08-20 | `fbeb97a2b` | Proved the odd-endpoint projective cycle eigenlines smooth and transverse with exact Vandermonde Jacobians and tangent weights, while correcting the relative Lefschetz--Verdier source and retaining the distinct `Frob*c` trace as open. |
@@ -499,10 +500,26 @@ also refute a positivity shortcut: `C_(5,11)=-608` in the already smooth odd
 regime, and `C_(7,16)=-4608`.  A native regression pins both signs and the
 positive underlying populations.  The remaining virtual comparison can be
 negative even when every local term at each individual level is positive.
+The selected positive-square continuation is now exact rather than heuristic.
+Inside the single coarse identity cylinder, the connected trace is the
+identity child's displacement from the cylinder mean; the sharp zero-sum
+point inequality reduces `(REL)` to one conditional variance.  The cleaner
+premise `V_id<=2^(2ell-2)` implies `(REL)` for both endpoint parities at every
+`ell>=200`.  Its native report also reconstructs the exact localized Haar
+identity `R V_id=sum_j 2^(j-c_0-1)sum_p H_j(p)^2`, level by level.  The clean
+premise is false on some small rows but holds at both endpoints for every exact
+row `14<=ell<=23`; this remains finite evidence, not a theorem.  The missing
+statement is now a local Carleson-energy estimate on one ramified Witt subtree.
+The companion characteristic-two Newton-over-Hodge result has also been
+priced conditionally: it forces only divisibility of the connected endpoint
+trace by eight.  At `ell=200` the existing envelope is already divisible by
+eight, so it saves zero; divisibility-only rounding would need exponent 409,
+leaving 406 bits missing.  It receives no `(REL)` proof credit.
 
 **Next:** prove `(REL)`, encode it as replayable evidence, remove the
 manuscript's fail-visible warning, and perform the final source audit.  The
-next coding/geometric bridge must control the complete relative Witt
+active sufficient form is the localized identity-cylinder Haar/Carleson
+energy bound from ADR-0578.  Any proof must control the complete relative Witt
 weight/zero-fibre distribution before characterwise absolute values; zero
 `2`-rank, a scalar minimum distance, or an elementary-abelian cover theorem is
 not sufficient.  At the odd endpoint, merely smoothing or counting the cycle
