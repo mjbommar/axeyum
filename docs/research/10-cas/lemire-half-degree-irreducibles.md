@@ -4788,6 +4788,19 @@ forms at every level, and requires the rows to recover the cumulative totals
 (ADR-0588).  This rules out extracting a conductor-uniform density saving from
 translation alone.
 
+Spending every one of those zeros in the selected endpoint ledger does not
+change its integer-scale obstruction.  The adjusted report replaces the
+level-`j` Weil population `2^(j-1)` by `2^(j-1)-z_(j,n)` both below and inside
+the connected top window.  At `(ell,n)=(200,401)`, this removes exactly
+`2^94` low-window characters and `31*2^94` top-window characters.  Both raw
+envelopes improve strictly, but the saving required of the residual connected
+trace still rounds to `626`.  At `(200,402)` translation removes no character
+and changes nothing.  The symbolic ledger checks both parities through
+`ell=1024` and retains the baseline and adjusted integers side by side
+(ADR-0589).  Thus no translation cancellation remains unspent: the missing
+theorem must act on residual nonfixed characters or cancel the signed trace
+across conductors.
+
 The exact algebra is no longer trapped in that executable. ADR-0486 extracts a
 bounded `axeyum_cas::gf2_hayes` API for the principal-unit cyclic structure,
 identity-class populations, endpoint discrepancies, conductor layers, and the

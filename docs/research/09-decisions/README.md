@@ -661,3 +661,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0586](adr-0586-measure-the-complete-low-twist-shell-before-claiming-cohomology-concentration.md) | Reconstruct the joint high-character and exact-low-twist Frobenius trace over binary extension fields and refute repeated weight drops from affine-shell dimension alone | accepted |
 | [0587](adr-0587-promote-the-complete-translation-spectral-involution.md) | Prove the full Hayes-class translation functional equation and price all characters it forces to vanish | accepted |
 | [0588](adr-0588-price-translation-zeros-at-exact-conductor.md) | Separate cumulative translation-fixed characters from the exact-conductor zeros they force | accepted |
+| [0589](adr-0589-spend-translation-zeros-before-pricing-witt-low.md) | Remove every proved translation zero from the endpoint Weil ledger and retain the unchanged factor-626 odd price | accepted |

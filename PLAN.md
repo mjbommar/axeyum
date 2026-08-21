@@ -158,6 +158,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-21 | `1e6d1aeef` | Spent every exact translation-forced zero in the one-sided endpoint ledger; the odd endpoint improves strictly but still requires saving 626, while the even endpoint is unchanged. |
 | 2026-08-21 | `76e14f95e` | Refined translation cancellation by exact conductor, proving the odd-level forced-zero count is `2^((j-3)/2)` and zero at every even level and at every level of the even endpoint. |
 | 2026-08-21 | `56b2a94da` | Proved the translation-fixed dual has exact order `2^ceil(ell/2)` at every level and made the bounded CAS reject any disagreement with the triangular rank theorem. |
 | 2026-08-21 | `7d194f794` | Promoted the complete translation involution to the bounded CAS, proved its spectral functional equation, and showed it forces half of the fixed dual to vanish only at odd degrees and none at even degrees. |
@@ -625,6 +626,14 @@ fixedness, and sign, and rejects disagreement with the closed forms or
 cumulative totals.  This corrects the tempting factor-two overcount and proves
 that translation alone supplies no conductor-uniform density saving
 (ADR-0588).
+Every exact translation zero is now spent in the selected one-sided endpoint
+ledger.  At `(ell,n)=(200,401)` this removes `2^94` low-window and
+`31*2^94` top-window characters from the separate-Weil envelopes, but the
+remaining saving still rounds to 626.  At the even endpoint translation
+removes none.  The native symbolic report retains baseline and adjusted
+integers and checks monotonicity through `ell=1024`.  Consequently the
+residual `(WITT-LOW)` theorem is quantitatively unchanged; it must control the
+nonfixed connected trace rather than recount this symmetry (ADR-0589).
 The companion characteristic-two Newton-over-Hodge result has also been
 priced conditionally: it forces only divisibility of the connected endpoint
 trace by eight.  At `ell=200` the existing envelope is already divisible by
