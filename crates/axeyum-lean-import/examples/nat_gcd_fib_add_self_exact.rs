@@ -1012,7 +1012,7 @@ fn declare_target_native_gcd_greatest(kernel: &mut Kernel) -> Result<NameId, Str
     if optional_name(kernel, GCD_GREATEST_TARGET)?.is_some() {
         return Err("Nat.gcd_greatest unexpectedly already exists".to_owned());
     }
-    let mut d = Dev::new(kernel)?;
+    let mut d = GcdDev::new(kernel)?;
     let antisymm = d.exact(CLEAN_ANTISYMM)?;
     let dvd_gcd = d.exact(TARGET_DVD_GCD)?;
     let gcd_left = d.exact(TARGET_GCD_DVD_LEFT)?;
@@ -1729,6 +1729,79 @@ struct Dev<'a> {
     eq_rec: NameId,
     exists_rec: NameId,
     next_fvar: u64,
+}
+
+struct GcdDev<'a> {
+    kernel: &'a mut Kernel,
+    anon: NameId,
+    nat: NameId,
+    gcd: NameId,
+    dvd: NameId,
+    eq: NameId,
+    next_fvar: u64,
+}
+
+impl<'a> GcdDev<'a> {
+    fn new(kernel: &'a mut Kernel) -> Result<Self, String> {
+        Ok(Self {
+            anon: kernel.anon(),
+            nat: find_name(kernel, "Nat")?,
+            gcd: find_name(kernel, "Nat.gcd")?,
+            dvd: find_name(kernel, "Nat.dvd")?,
+            eq: find_name(kernel, "Eq")?,
+            kernel,
+            next_fvar: 20_000,
+        })
+    }
+    fn exact(&self, expected: &str) -> Result<NameId, String> {
+        find_name(self.kernel, expected)
+    }
+    fn fresh(&mut self) -> u64 {
+        self.next_fvar += 1;
+        self.next_fvar
+    }
+    fn apply(&mut self, head: ExprId, args: &[ExprId]) -> ExprId {
+        args.iter()
+            .fold(head, |term, &argument| self.kernel.app(term, argument))
+    }
+    fn lemma(&mut self, name: NameId, args: &[ExprId]) -> ExprId {
+        let head = self.kernel.const_(name, vec![]);
+        self.apply(head, args)
+    }
+    fn nat_ty(&mut self) -> ExprId {
+        self.kernel.const_(self.nat, vec![])
+    }
+    fn gcd(&mut self, left: ExprId, right: ExprId) -> ExprId {
+        self.lemma(self.gcd, &[left, right])
+    }
+    fn dvd(&mut self, divisor: ExprId, value: ExprId) -> ExprId {
+        self.lemma(self.dvd, &[divisor, value])
+    }
+    fn eq(&mut self, left: ExprId, right: ExprId) -> ExprId {
+        let zero = self.kernel.level_zero();
+        let one = self.kernel.level_succ(zero);
+        let head = self.kernel.const_(self.eq, vec![one]);
+        let nat = self.nat_ty();
+        self.apply(head, &[nat, left, right])
+    }
+    fn arrow(&mut self, domain: ExprId, codomain: ExprId) -> ExprId {
+        self.kernel
+            .pi(self.anon, domain, codomain, BinderInfo::Default)
+    }
+    fn lam(&mut self, fv: u64, ty: ExprId, body: ExprId) -> ExprId {
+        self.lam_info(fv, ty, body, BinderInfo::Default)
+    }
+    fn lam_info(&mut self, fv: u64, ty: ExprId, body: ExprId, binder_info: BinderInfo) -> ExprId {
+        let body = self.kernel.abstract_fvars(body, &[fv]);
+        self.kernel.lam(self.anon, ty, body, binder_info)
+    }
+    fn pi(&mut self, fv: u64, ty: ExprId, body: ExprId) -> ExprId {
+        self.pi_info(fv, ty, body, BinderInfo::Default)
+    }
+    fn pi_info(&mut self, fv: u64, ty: ExprId, body: ExprId, binder_info: BinderInfo) -> ExprId {
+        let body = self.kernel.abstract_fvars(body, &[fv]);
+        self.kernel.pi(self.anon, ty, body, binder_info)
+    }
 }
 
 impl<'a> Dev<'a> {
