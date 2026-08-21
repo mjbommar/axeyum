@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-clean-reconstruction-plan",
+  "state": "preregistered-before-first-constructor-level-compilation",
+  "predecessor": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-root-export-result-v1.json",
+    "required_decision": "target-owned generic integer recurrence rearrangement"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-add-neg-cancel-right-raw-v1.lean",
+    "theorem": "Axeyum.IntAlgebra.addNegCancelRightRaw"
+  },
+  "contract": "forall a b : Int, a + b + -b = a",
+  "method": "split only on the two primitive Int constructors and expose concrete addition and negation definitions; use no simp, omega, ring, group convenience theorem, classical principle, or official cancellation proof",
+  "budget": {
+    "compiler_invocations": 1,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "retries": 0,
+    "theorem_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "stop_rule": "The first compiler result ends V1. Any remaining constructor goal must be recorded exactly and a distinct revision preregistered before another compilation.",
+  "acceptance": {
+    "source_must_compile": true,
+    "later_kernel_audit_must_show_empty_axiom_footprint": true,
+    "official_Int_add_neg_cancel_right_forbidden": true
+  },
+  "output": "artifacts/autogenesis/mathlib-int-add-neg-cancel-right-raw-result-v1.json",
+  "limitations": "V1 authorizes one compilation diagnostic only. It grants no support, Fibonacci target, fact, or ledger credit."
+}
