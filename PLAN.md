@@ -1087,9 +1087,9 @@ budget guard to a real remaining-time attempt (this alone would move
 then `Fpa2Bv` certification, which is what both FP rows actually need for
 dominance.
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains proved; its ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Official clean divisibility antisymmetry reconstructs twice over r091 with six empty-footprint supports and byte-identical capsules. The exact Fibonacci GCD-shift route composes official order, cancellation, and addition and checks target-native GCD aliases. V9 proves theorem-leaf pruning cannot remove the foreign `WellFounded.fix` because `Nat.gcd_zero_left` retains source `Nat.gcd` type dependencies. No exact target was submitted; the next route is direct target-native reconstruction with the accepted `fib_coprime` constructor.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains proved; its ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Official clean divisibility antisymmetry reconstructs twice over r091 with six empty-footprint supports and byte-identical capsules. A single-read target-native premise map proves `fibAddTwo` exact and `Nat.add_comm` definitionally compatible, while six direct coprimality premises are absent. The primitive map confirms the composed target already has all-natural divisibility cancellation plus official GCD zero/successor equations. The first reconstruction batch freezes target-owned `dvd_add` and `eq_one_of_dvd_one` without importing `Iff`.
 
-**Next:** run one nonrendering map of the accepted `fib_coprime` constructor's eight direct premises against the three-root composed target, reconstruct any missing target-native premises, then admit coprimality directly and resume the exact GCD-shift target.
+**Next:** implement and reproduce the two simple divisibility supports, then reconstruct the target-native GCD divisibility family over the accepted computation equations. Adapt the unchanged `fib_coprime` argument to direct all-natural cancellation, admit coprimality, and resume the exact GCD-shift target.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
