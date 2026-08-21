@@ -1,0 +1,12 @@
+{
+  "schema_version":1,"kind":"axeyum-autogenesis-nat-gcd-fib-add-self-target-native-coprime-audit-plan-v1","state":"preregistered-direct-premise-map-before-code-or-input-read",
+  "predecessor":{"path":"artifacts/autogenesis/nat-gcd-fib-add-self-exact-result-v9.json"},
+  "constructor":{"path":"crates/axeyum-lean-import/examples/support/fib_coprime.rs","accepted_target":"Nat.fib_coprime_fib_succ","direct_premises":["Axeyum.Autogenesis.fibAddTwo","Nat.add_comm","Nat.dvd_add_iff_right","Nat.dvd_gcd","Nat.eq_one_of_dvd_one","Nat.gcd_dvd_left","Nat.gcd_dvd_right","Nat.gcd_zero_left"]},
+  "target":"r091 followed by official clean order, official cancellation, and Fibonacci addition",
+  "audit":{"report_exact_presence_and_hashes":true,"report_checked_compatible_names":true,"report_target_native_Axeyum_equivalents":true,"proof_terms_types_or_values_may_be_rendered":false,"kernel_submissions":0,"exports":0},
+  "budget":{"max_driver_builds":1,"max_complete_audits":1,"max_reads_per_input":1,"max_retries":0,"max_exact_target_submissions":0},
+  "authority":{"support_credit":0,"target_credit":0,"fact_status_changes":0,"evaluation_credit":0,"ledger_writes":0},
+  "selection_rule":"Reuse exact public premises; otherwise select an empty-footprint target-native theorem only after checked statement compatibility. If a premise is absent, reconstruct that premise before the coprimality target.",
+  "output":"artifacts/autogenesis/nat-gcd-fib-add-self-target-native-coprime-audit-result-v1.json",
+  "limitations":"This audit grants no theorem, support, target, fact, evaluation, or ledger credit."
+}

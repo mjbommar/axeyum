@@ -1,0 +1,13 @@
+{
+  "schema_version":1,
+  "kind":"axeyum-autogenesis-nat-gcd-fib-add-self-exact-result-v8",
+  "state":"checked-zero-left-alias-definitional-compatibility-policy-declined-second-skipped",
+  "plan":{"path":"artifacts/autogenesis/nat-gcd-fib-add-self-exact-plan-v8.json","sha256":"7eb02e30ba6102f085f68e4dbd76b104eb5062f2ef03413866368aa8158dcda4"},
+  "implementation_commit":"db2c81840",
+  "evidence_pack":{"path":"/nas3/data/axeyum/autogenesis/reference-packs/db2c81840-nat-gcd-fib-add-self-exact-v8","manifest_sha256":"ff172d9a4db11b0517efb96f3ac38a152e538614ad3e62f4ebce5040c58b2b4b","directory_mode":"0555","file_mode":"0444"},
+  "decline":{"stage":"post-check-public-zero-left-compatibility-policy","class":"CompatibilityClassPolicyMismatch","observed":"translated-definitional-equality","required":"kernel-type-shape","partial_kernel_published":false},
+  "execution":{"complete_invocations":1,"successful_capsule_compositions":3,"existing_zero_left_reuses":1,"zero_left_alias_submissions":1,"exact_target_submissions":0,"retries":0,"second_invocation_skipped":true},
+  "authority":{"target_credit":0,"fact_status_changes":0,"evaluation_credit":0,"ledger_writes":0},
+  "next_boundary":"Accept exactly the observed translated-definitional-equality receipt for the checked public alias, without changing the alias or downstream proof term, then rerun under a fresh zero-retry plan.",
+  "limitations":"The alias existed only in the ephemeral run and receives no credit; no exact target or ledger change occurred."
+}

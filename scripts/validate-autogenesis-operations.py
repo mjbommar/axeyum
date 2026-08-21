@@ -23,6 +23,7 @@ EXECUTION_DRIVERS = {
     "axeyum-lean-import/statement-reflexivity-v1",
     "axeyum-lean-import/checked-theorem-receipt-v1",
     "axeyum-lean-import/dependency-theorem-receipt-v1",
+    "axeyum-lean-import/sealed-kernel-capsule-v1",
 }
 ADMISSION_CONTRACTS = {
     ("proved", "kernel-lean", "kernel-term", "must-be-empty"),
@@ -152,6 +153,16 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             "dependency_set_sha256",
             "transitive_dependency_set_sha256",
         }
+    elif driver == "axeyum-lean-import/sealed-kernel-capsule-v1":
+        expected = common | {
+            "result_manifest",
+            "capsule_path",
+            "capsule_sha256",
+            "target_theorem",
+            "goal_sha256",
+            "declaration_sha256",
+            "receipt_sha256",
+        }
     else:
         expected = common
     exact_keys(value, expected, label)
@@ -267,6 +278,41 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             != "395f6e80e6addbc69cca8ad560b312dadc31d623fe05f6b1603b5fa523622329"
         ):
             raise RegistryError(f"{label} exceeds the exact checked-theorem receipt scope")
+    elif driver == "axeyum-lean-import/sealed-kernel-capsule-v1":
+        manifest_path = repository_file(
+            value["result_manifest"], f"{label}.result_manifest", root
+        )
+        expected_manifest = (
+            root
+            / "artifacts/autogenesis/nat-gcd-fib-add-self-target-native-exact-result-v3.json"
+        ).resolve()
+        manifest = json.loads(manifest_path.read_text())
+        theorem = manifest.get("target") or {}
+        execution = manifest.get("execution") or {}
+        if (
+            manifest_path != expected_manifest
+            or manifest.get("state")
+            != "exact-target-reconstructed-twice-byte-identical-empty-footprint"
+            or value["input_fact_id"]
+            != "F:ml430-nat-gcd-fib-add-self-5a92d5e3"
+            or value["capsule_path"]
+            != "/nas3/data/axeyum/autogenesis/reference-packs/dfa79618c-target-native-exact-v3/target-1.ndjson"
+            or value["capsule_sha256"]
+            != "279dc4db5daa6dc2f532f9876052500a7e278c54264b32ccbc9d4256907dfc24"
+            or value["target_theorem"] != "Nat.gcd_fib_add_self"
+            or theorem.get("name") != value["target_theorem"]
+            or theorem.get("goal_sha256") != value["goal_sha256"]
+            or theorem.get("declaration_sha256") != value["declaration_sha256"]
+            or theorem.get("axiom_footprint") != []
+            or execution.get("complete_invocations") != 2
+            or execution.get("exact_target_submissions") != 2
+            or execution.get("fresh_imports") != 4
+            or execution.get("outputs_byte_identical") is not True
+            or execution.get("receipts_byte_identical") is not True
+            or value["receipt_sha256"]
+            != "f7f568faf86f908de721b33de3fcbe766e12fae8fab4e1d738eb592eddf9306e"
+        ):
+            raise RegistryError(f"{label} sealed-kernel capsule contract disagrees")
     else:
         manifest_path = repository_file(
             value["receipt_manifest"], f"{label}.receipt_manifest", root
@@ -478,6 +524,7 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
             elif executor["driver"] in {
                 "axeyum-lean-import/checked-theorem-receipt-v1",
                 "axeyum-lean-import/dependency-theorem-receipt-v1",
+                "axeyum-lean-import/sealed-kernel-capsule-v1",
             }:
                 if (
                     applicability["formal_languages"] != ["lean4-surface"]

@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-exact-result-v6",
+  "state": "exact-gcd-successor-cut-accepted-well-founded-fix-shape-declined-second-skipped",
+  "plan": {"path": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-plan-v6.json", "sha256": "f859fad64818453e524fda81e9eb70aa76704018a0cddefc689c6334d9d2d513"},
+  "implementation_commit": "11c3938ed",
+  "evidence_pack": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/11c3938ed-nat-gcd-fib-add-self-exact-v6", "manifest_sha256": "a9dc7413d037830406120021b4d65167d6c09791f773b29fdde1170206226692", "directory_mode": "0555", "file_mode": "0444"},
+  "decline": {"stage": "coprimality-target-leaf-composition-after-exact-gcd-successor-cut", "class": "TypeShapeMismatch", "name": "WellFounded.fix", "source_sha256": "0c2e9552a1056133fbd4e6a318344cfb1310468f7d2113efb37ebba0bf6ef32c", "target_sha256": "f45b230503d6ddc03c61714008f6165dd055ff995d927507fc6d7aaffcf6afd6", "partial_kernel_published": false},
+  "execution": {"complete_invocations": 1, "successful_capsule_compositions": 3, "accepted_target_leaf_reuses": 1, "local_gcd_comm_submissions": 0, "exact_target_submissions": 0, "retries": 0, "second_invocation_skipped": true},
+  "authority": {"target_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_boundary": "Run the same single-read nonrendering carrier audit for Nat.fib_coprime_fib_succ to WellFounded.fix against the three-root composed target, then add no leaf unless an exact compatible parent is measured.",
+  "limitations": "The target-leaf cut advanced composition but no resulting kernel was published and no theorem or ledger credit is granted."
+}

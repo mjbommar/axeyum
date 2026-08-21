@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-r091-clean-dvd-antisymm-plan-v6",
+  "state": "preregistered-lazy-unused-iff-resolution-before-code-or-rerun",
+  "predecessor": {
+    "path": "artifacts/autogenesis/official-r091-clean-dvd-antisymm-result-v5.json"
+  },
+  "only_code_change": "remove eager Iff and Iff.rec lookup from Dev::new and resolve both inside iff_reverse, the only method that uses them",
+  "proof_route_unchanged": true,
+  "support_names_unchanged": [
+    "Axeyum.Autogenesis.eqZeroOfZeroDvdOfficialV1",
+    "Axeyum.Autogenesis.leOfDvdOfficialV1",
+    "Axeyum.Autogenesis.dvdAntisymmOfficialV1"
+  ],
+  "acceptance": {
+    "fresh_complete_invocations": 2,
+    "cancellation_compositions": 2,
+    "support_submissions": 6,
+    "exports": 2,
+    "outputs_byte_identical": true,
+    "fresh_imports_per_output": 2,
+    "all_axiom_footprints": [],
+    "exact_target_submissions": 0
+  },
+  "budget": {
+    "max_driver_builds": 1,
+    "max_complete_invocations": 2,
+    "max_support_submissions": 6,
+    "max_exports": 2,
+    "max_imports": 4,
+    "max_exact_target_submissions": 0,
+    "max_retries": 0
+  },
+  "authority": {
+    "support_credit_before_acceptance": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_on_accept": "Replace the portable clean-order input in the exact Fibonacci gcd-shift driver with the official-r091 capsule and preregister two exact-target runs.",
+  "output": "artifacts/autogenesis/official-r091-clean-dvd-antisymm-result-v6.json",
+  "verification": "python3 scripts/check-autogenesis-official-r091-clean-dvd-antisymm-v5-v6.py",
+  "limitations": "This authorizes one initialization-scope correction and official clean-order support only; it grants no Fibonacci target or ledger credit."
+}

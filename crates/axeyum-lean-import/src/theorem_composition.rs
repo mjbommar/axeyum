@@ -24,6 +24,14 @@ pub const CHECKED_THEOREM_COMPOSITION_VERSION: &str = "axeyum.checked-theorem-co
 pub const CHECKED_TARGET_LEAF_THEOREM_COMPOSITION_VERSION: &str =
     "axeyum.checked-theorem-composition.target-leaves.v1";
 
+/// Declaration-exact Lean 4.30 `Acc` package accepted by the recursive
+/// singleton gate. Names alone never authorize recursive reconstruction.
+const OFFICIAL_LEAN_4_30_ACC_PACKAGE_SHA256: [&str; 3] = [
+    "ae8b799311c1ef25f167d7413eb10abf55df398053cf994f953bd31624f96e27",
+    "73c42b8287c3b2b680731deb89003732efda90b571c0dd737a81cbcf2ef024c2",
+    "67cc978e963fa24e78a117380175be35753a051986230e1c5f2fd2b3a2df85ac",
+];
+
 /// The checked relation that authorized reuse of one target declaration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReusedTypeCompatibility {
@@ -888,6 +896,14 @@ fn is_canonical_native_acc_package(
         return Ok(false);
     }
 
+    let source_identity = [family, constructors[0], recursor]
+        .map(|name| declaration_sha256(source, name))
+        .into_iter()
+        .collect::<Result<Vec<_>, _>>()?;
+    if acc_package_identity_is_authorized(&source_identity) {
+        return Ok(true);
+    }
+
     let mut reference = Kernel::new();
     build_logic_prelude(&mut reference).map_err(|error| {
         CheckedTheoremCompositionError::Identity(format!(
@@ -895,23 +911,24 @@ fn is_canonical_native_acc_package(
         ))
     })?;
     let reference_names = declaration_names(&reference);
-    for (rendered, source_name) in [
-        ("Acc", family),
-        ("Acc.intro", constructors[0]),
-        ("Acc.rec", recursor),
-    ] {
+    let mut reference_identity = Vec::with_capacity(3);
+    for rendered in ["Acc", "Acc.intro", "Acc.rec"] {
         let Some(&reference_name) = reference_names.get(rendered) else {
             return Err(CheckedTheoremCompositionError::Identity(format!(
                 "canonical native Acc reference is missing {rendered}"
             )));
         };
-        if declaration_sha256(source, source_name)?
-            != declaration_sha256(&reference, reference_name)?
-        {
-            return Ok(false);
-        }
+        reference_identity.push(declaration_sha256(&reference, reference_name)?);
     }
-    Ok(true)
+    Ok(source_identity == reference_identity)
+}
+
+fn acc_package_identity_is_authorized(identity: &[String]) -> bool {
+    identity
+        == OFFICIAL_LEAN_4_30_ACC_PACKAGE_SHA256
+            .iter()
+            .map(|digest| (*digest).to_owned())
+            .collect::<Vec<_>>()
 }
 
 fn admit_one_singleton_inductive(

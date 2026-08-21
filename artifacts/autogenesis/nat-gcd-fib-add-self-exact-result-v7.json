@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-exact-result-v7",
+  "state": "zero-left-root-already-present-no-additions-second-skipped",
+  "plan": {"path": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-plan-v7.json", "sha256": "e615814cea22bf953ece210e910f373fc2b92e7f3fb3cc1547686505f1bf1f0b"},
+  "implementation_commit": "88a6d0c32",
+  "evidence_pack": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/88a6d0c32-nat-gcd-fib-add-self-exact-v7", "manifest_sha256": "b6e52aea0881eb6ac1d1b62af4ab4040558df48956d1ef9ea4e3c1cf07089d54", "directory_mode": "0555", "file_mode": "0444"},
+  "decline": {"stage": "official-gcd-zero-left-composition", "class": "NoAdditions", "interpretation": "Axeyum.Autogenesis.nat_gcd_zero_left is already present after the first three compositions", "partial_kernel_published": false},
+  "execution": {"complete_invocations": 1, "successful_capsule_compositions": 3, "zero_left_alias_submissions": 0, "exact_target_submissions": 0, "retries": 0, "second_invocation_skipped": true},
+  "authority": {"target_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_boundary": "Require the existing target generic zero-left declaration to have the accepted hash, omit the no-op composition and extra input, then submit only the checked public alias.",
+  "limitations": "No alias or exact target was submitted and no theorem or ledger credit is granted."
+}

@@ -1,0 +1,12 @@
+{
+  "schema_version":1,"kind":"axeyum-autogenesis-nat-gcd-fib-add-self-target-native-simple-support-plan-v1","state":"preregistered-two-simple-divisibility-supports-before-code-or-rerun",
+  "predecessor":{"path":"artifacts/autogenesis/nat-gcd-fib-add-self-target-native-coprime-audit-result-v2.json"},
+  "supports":[
+    {"name":"Axeyum.Autogenesis.dvdAddOfficialV1","statement":"forall k a b : Nat, k divides a -> k divides b -> k divides a+b","method":"eliminate both existential witnesses, add the witness factors, transport both equations, and close with Nat.mul_add","required_leaves":["Exists.rec","Exists.intro","Nat.mul_add"]},
+    {"name":"Axeyum.Autogenesis.eqOneOfDvdOneOfficialV1","statement":"forall d : Nat, d divides 1 -> d = 1","method":"construct 1 divides d with witness d and Nat.one_mul, then apply accepted clean divisibility antisymmetry","required_leaves":["Exists.intro","Nat.one_mul","Axeyum.Autogenesis.dvdAntisymmOfficialV1"]}
+  ],
+  "acceptance":{"one_driver_build":true,"fresh_complete_invocations":2,"support_submissions":4,"exports":2,"fresh_imports":4,"outputs_byte_identical":true,"all_axiom_footprints":[],"exact_coprime_submissions":0,"exact_gcd_shift_submissions":0},
+  "budget":{"max_driver_builds":1,"max_complete_invocations":2,"max_support_submissions":4,"max_exports":2,"max_imports":4,"max_retries":0,"max_exact_target_submissions":0},
+  "authority":{"support_credit_before_acceptance":0,"coprime_credit":0,"target_credit":0,"fact_status_changes":0,"evaluation_credit":0,"ledger_writes":0},
+  "next_on_accept":"Preregister target-native GCD divisibility reconstruction over the accepted zero-left and successor computation equations.","output":"artifacts/autogenesis/nat-gcd-fib-add-self-target-native-simple-support-result-v1.json","limitations":"This establishes at most two reusable simple supports and grants no coprimality, GCD-shift, fact, evaluation, or ledger credit."
+}

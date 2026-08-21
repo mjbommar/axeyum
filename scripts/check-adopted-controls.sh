@@ -75,3 +75,24 @@ python3 -m unittest scripts.tests.test_analyze_cnf_construction_profile \
   scripts.tests.test_validate_glaurung_llvm_direct_call_fixture \
   scripts.tests.test_validate_glaurung_policy_difference_adjudication \
   scripts.tests.test_validate_glaurung_symbolic_cve_execution
+
+# Autogenesis evidence controls added after the original adoption pass. Keep
+# this list explicit: adding a checker does not make its mutation controls part
+# of a gate until this runner names them.
+python3 -m unittest \
+  scripts.tests.test_check_autogenesis_coprime_factor_cancellation_generic_plan \
+  scripts.tests.test_check_autogenesis_nat_fib_child_qualification \
+  scripts.tests.test_check_autogenesis_nat_gcd_fib_add_self_clean_dvd_antisymm_plan_v3 \
+  scripts.tests.test_check_autogenesis_nat_gcd_fib_add_self_clean_dvd_antisymm_plan_v4 \
+  scripts.tests.test_check_autogenesis_nat_gcd_fib_add_self_clean_dvd_antisymm_plan_v5 \
+  scripts.tests.test_check_autogenesis_nat_gcd_fib_add_self_clean_dvd_antisymm_result_v2 \
+  scripts.tests.test_check_autogenesis_nat_gcd_fib_add_self_clean_dvd_antisymm_result_v3 \
+  scripts.tests.test_check_autogenesis_nat_gcd_fib_add_self_clean_dvd_antisymm_result_v4 \
+  scripts.tests.test_check_autogenesis_nat_gcd_fib_add_self_clean_dvd_antisymm_result_v5 \
+  scripts.tests.test_check_autogenesis_nat_gcd_fib_add_self_exact_plan \
+  scripts.tests.test_check_autogenesis_nat_gcd_fib_add_self_portable_support_capsules_plan \
+  scripts.tests.test_check_autogenesis_nat_gcd_fib_add_self_portable_support_capsules_result \
+  scripts.tests.test_check_autogenesis_official_gcd_balanced_bezout_exact_reuse_plan \
+  scripts.tests.test_check_autogenesis_official_gcd_balanced_bezout_exact_reuse_result \
+  scripts.tests.test_check_autogenesis_official_cancellation_acc_path_and_package \
+  scripts.tests.test_check_autogenesis_official_r091_clean_dvd_antisymm_plan_v5

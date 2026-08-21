@@ -24,9 +24,9 @@ class OperationRegistryTests(unittest.TestCase):
             (ROOT / "artifacts/autogenesis/operations.json").read_text()
         )
 
-    def test_committed_registry_has_one_fixture_and_seven_authoritative_operations(self) -> None:
+    def test_committed_registry_has_one_fixture_and_eight_authoritative_operations(self) -> None:
         registry_module.validate_registry(self.registry, ROOT)
-        self.assertEqual(len(self.registry["operations"]), 8)
+        self.assertEqual(len(self.registry["operations"]), 9)
         self.assertEqual(
             self.registry["operations"][0]["scope"], "counterfactual-fixture-only"
         )
@@ -89,6 +89,15 @@ class OperationRegistryTests(unittest.TestCase):
         self.assertEqual(
             fib_coprime["executor"]["driver"],
             "axeyum-lean-import/dependency-theorem-receipt-v1",
+        )
+        gcd_fib = self.registry["operations"][8]
+        self.assertEqual(
+            gcd_fib["applicability"]["fact_ids"],
+            ["F:ml430-nat-gcd-fib-add-self-5a92d5e3"],
+        )
+        self.assertEqual(
+            gcd_fib["executor"]["driver"],
+            "axeyum-lean-import/sealed-kernel-capsule-v1",
         )
 
     def test_duplicate_operation_id_is_rejected(self) -> None:
@@ -215,6 +224,22 @@ class OperationRegistryTests(unittest.TestCase):
                 with self.assertRaisesRegex(
                     registry_module.RegistryError,
                     "contract disagrees|exceeds the exact",
+                ):
+                    registry_module.validate_registry(mutated, ROOT)
+
+    def test_sealed_kernel_capsule_driver_is_exactly_manifest_bound(self) -> None:
+        for field, value in (
+            ("capsule_sha256", "0" * 64),
+            ("target_theorem", "Nat.wrong"),
+            ("goal_sha256", "1" * 64),
+            ("declaration_sha256", "2" * 64),
+            ("receipt_sha256", "3" * 64),
+        ):
+            with self.subTest(field=field):
+                mutated = copy.deepcopy(self.registry)
+                mutated["operations"][8]["executor"][field] = value
+                with self.assertRaisesRegex(
+                    registry_module.RegistryError, "contract disagrees"
                 ):
                     registry_module.validate_registry(mutated, ROOT)
 

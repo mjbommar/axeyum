@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-target-native-gcd-divisibility-plan-v1",
+  "state": "preregistered-generic-gcd-divisibility-family-before-source-or-execution",
+  "predecessor": {
+    "path": "artifacts/autogenesis/nat-gcd-fib-add-self-target-native-dvd-utilities-result-v2.json"
+  },
+  "generic_source": {
+    "name": "Axeyum.Autogenesis.gcdDivisibilityFamilyGenericV1",
+    "parameters": [
+      "gcdZeroLeft : forall n, gcd 0 n = n",
+      "gcdSucc : forall m n, gcd (succ m) n = gcd (mod n (succ m)) (succ m)",
+      "modQuotientWitness : forall m n, 0 < m -> exists q, m*q + mod n m = n",
+      "dvdRefl : forall n, n divides n",
+      "dvdMulRight : forall d a b, d divides a -> d divides a*b",
+      "dvdAdd : forall d a b, d divides a -> d divides b -> d divides a+b",
+      "dvdAddCancel : forall d a b, d divides a -> d divides a+b -> d divides b"
+    ],
+    "conclusion": "the conjunction of (forall m n, gcd m n divides m and gcd m n divides n) and (forall d m n, d divides m -> d divides n -> d divides gcd m n)",
+    "method": "two Nat.gcd.induction proofs; the common-divisor pair reconstructs n from quotient plus remainder, while the greatest-common-divisor direction cancels the quotient product from that same equation",
+    "forbidden_dependencies": ["propext", "Quot.sound", "Classical.choice", "Nat.div_eq", "Nat.mod_eq"]
+  },
+  "closed_outputs": [
+    "Axeyum.Autogenesis.gcdDvdLeftOfficialV1",
+    "Axeyum.Autogenesis.gcdDvdRightOfficialV1",
+    "Axeyum.Autogenesis.dvdGcdOfficialV1"
+  ],
+  "accepted_arguments": [
+    "Axeyum.Autogenesis.nat_gcd_zero_left",
+    "Axeyum.Autogenesis.nat_gcd_succ",
+    "Axeyum.Autogenesis.modQuotientWitnessV4",
+    "Axeyum.Autogenesis.dvdReflOfficialV1",
+    "Axeyum.Autogenesis.dvdMulRightOfficialV1",
+    "Axeyum.Autogenesis.dvdAddOfficialV1",
+    "Axeyum.Autogenesis.dvdAddCancelAllNatClosedV1"
+  ],
+  "acceptance": {
+    "fresh_complete_invocations": 2,
+    "closed_theorem_submissions": 6,
+    "exports": 2,
+    "fresh_imports": 4,
+    "outputs_byte_identical": true,
+    "all_axiom_footprints": []
+  },
+  "budget": {
+    "max_source_compilations": 1,
+    "max_source_exports": 1,
+    "max_driver_builds": 1,
+    "max_complete_invocations": 2,
+    "max_closed_theorem_submissions": 6,
+    "max_exports": 2,
+    "max_imports": 4,
+    "max_retries": 0,
+    "max_exact_target_submissions": 0
+  },
+  "authority": {
+    "support_credit_before_acceptance": 0,
+    "coprime_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_on_accept": "Specialize the unchanged Fibonacci coprimality proof over these target-native GCD supports, then resume the exact gcd_fib_add_self target.",
+  "limitations": "This grants no GCD theorem, coprimality, exact-target, fact, evaluation, or ledger credit before the generic source and all three specializations reproduce with empty footprints."
+}

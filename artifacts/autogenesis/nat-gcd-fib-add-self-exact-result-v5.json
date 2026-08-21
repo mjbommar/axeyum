@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-exact-result-v5",
+  "state": "three-capsules-composed-coprimality-gcd-model-shape-declined-second-skipped",
+  "plan": {"path": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-plan-v5.json", "sha256": "f7fdb6dd57a9b2ff93c1fd35ac365f601728aa5401cd2b9c2f0667f9734c3110"},
+  "implementation_commit": "5c1680853",
+  "evidence_pack": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/5c1680853-nat-gcd-fib-add-self-exact-v5", "manifest_sha256": "c41ac0eea1e724c562a4d17e7530bcce848af929c6fafe82c0edff30ed55fac0", "directory_mode": "0555", "file_mode": "0444"},
+  "decline": {"stage": "fourth-capsule-composition-before-local-or-target-submission", "accepted_roots": ["Axeyum.Autogenesis.dvdAntisymmOfficialV1", "Axeyum.Autogenesis.officialCoprimeFactorDivisibilityCancellationV1", "Axeyum.Autogenesis.NatFibSuccessorAddition"], "rejected_root": "Nat.fib_coprime_fib_succ", "class": "TypeShapeMismatch", "name": "Axeyum.Autogenesis.gcdModel_succ", "source_sha256": "77612bf8842d578e5ab50ee624df69dde8ac1e6a1a371cb4c000e735ca5d9ac3", "target_sha256": "498c4fc18196f8d89ec63f10684ff62288b3344811ba4e51105a5aa7c2efbc68", "partial_kernel_published": false},
+  "execution": {"explicit_binary_builds": 1, "complete_invocations": 1, "input_stream_reads": 5, "successful_capsule_compositions": 3, "rejected_capsule_compositions": 1, "local_gcd_comm_submissions": 0, "exact_target_submissions": 0, "retries": 0, "second_invocation_skipped": true},
+  "authority": {"target_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_boundary": "Audit the Nat.fib_coprime_fib_succ-to-gcdModel_succ carrier path against the in-memory kernel after the three accepted compositions, without rendering or submitting declarations, then select reordering or target-native reconstruction from measured compatibility.",
+  "limitations": "The first three compositions were ephemeral and receive no credit; no local gcd commutativity theorem, exact target, fact transition, evaluation, or ledger write was established."
+}

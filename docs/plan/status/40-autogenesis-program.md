@@ -2,11 +2,22 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. The exact-target decline remains sealed with zero credit. V4 verified exact empty-footprint `Nat.mod_lt` target-leaf reuse, but cancellation composition still found a different transitive path to missing `Acc`; no support was submitted and run 2 was skipped. A bounded read-only audit is now frozen to enumerate the cancellation-to-`Acc` declaration path, nearest carriers first, with source identities and r091 compatibility but no proof rendering.
+**Status:** `Nat.gcd_fib_add_self` is durably admitted as `proved` on `kernel-lean`. Its exact target-owned theorem reconstructs twice, has an empty axiom footprint, survives four independent imports, passes the registered fact-operation replay, and reproduces the same execution, transaction, event, and readiness identities from an isolated clean worktree after a successful after-intent crash test. The admission performed exactly one authoritative ledger write and honestly unlocked no child because no ledger fact currently names this theorem in `depends_on`.
 
-**Next:** implement and execute the one-pass cancellation-to-`Acc` declaration-path audit. Select no bootstrap until the nearest carrier, target presence, compatibility, and footprint are measured; do not submit any theorem.
+**Next:** reuse the accepted target-owned GCD universal-property theorems to construct the exact ready Mathlib proposition `Nat.gcd_greatest`; this closes a general GCD interface before returning to the strategic `Nat.fib_gcd` chain.
 
 <!-- plan-section: landed-changes -->
+
+| 2026-08-21 | `9ff54f11c` | Six clean order/divisibility supports reconstruct twice over r091 with empty footprints and byte-identical capsules |
+| 2026-08-21 | `dfc8874ca` | Target-owned divisibility addition and divisor-of-one supports reconstruct reproducibly without importing `Iff` |
+| 2026-08-21 | `5cdd964ba` | Divisibility reflexivity and multiplication utilities reconstruct twice and bind sealed evidence |
+| 2026-08-21 | `30d2c89b6` | Nonrendering parameter audit selects the official-representation successor GCD equation and typechecks all seven explicit inputs |
+| 2026-08-21 | `527508a56` | Target-owned `gcd_dvd_left`, `gcd_dvd_right`, and `dvd_gcd` reconstruct twice with byte-identical empty-footprint evidence |
+| 2026-08-21 | `71ba9fb1c` | Consecutive-Fibonacci coprimality reconstructs target-natively without `Iff` or foreign GCD convenience theorems |
+| 2026-08-21 | `dfa79618c` | Exact `Nat.gcd_fib_add_self` reconstructs twice with byte-identical empty-footprint evidence over the target-owned stack |
+| 2026-08-21 | `a475f13dd` | Sealed-capsule operation registration binds the exact target identity and reviews every gate coupling before dispatch |
+| 2026-08-21 | `07b0794ae` | Crash-safe recovery admits `Nat.gcd_fib_add_self` with one authoritative write and an empty kernel footprint |
+| 2026-08-21 | `dbfd95dce` | Immutable primary archive and isolated clean replay seal the Fibonacci GCD-shift admission |
 
 | 2026-08-19 | `1afe65473` | Native/imported Nat prelude composition probe |
 | 2026-08-19 | `d1eb38a13` | Alpha-stable cross-kernel expression identity |
@@ -197,3 +208,14 @@
 | 2026-08-21 | (pending) | V4 verifies `Nat.mod_lt` identity and type shape and composes cancellation through the explicit target-leaf API without stream access |
 | 2026-08-21 | (pending) | V4 accepts `Nat.mod_lt` reuse but still finds another transitive path to missing `Acc`; run 2 is skipped before support submission |
 | 2026-08-21 | (pending) | One nonrendering closure audit freezes the official cancellation-to-`Acc` path and nearest compatible carriers before more bootstrap code |
+| 2026-08-21 | `7d931d9d3` | Non-rendering declaration-path auditor reports nearest carriers and target compatibility |
+| 2026-08-21 | `fe47460bd` | Fourteen autogenesis checker suites become gate-reachable; expired SMT negative control is replaced |
+| 2026-08-21 | (pending) | Single-read cancellation audit localizes the exact missing `Acc` package and freezes declaration-exact reconstruction |
+| 2026-08-21 | `b26edf6aa` | Exact official `Acc` package authorization retains atomic reconstruction and mutation controls |
+| 2026-08-21 | (pending) | Official cancellation composes twice over r091 with exact `Acc`, byte-identical receipts, and an empty footprint |
+| 2026-08-21 | (pending) | V5 freezes official clean-order reconstruction after exact `Acc` and cancellation acceptance |
+| 2026-08-21 | (pending) | V5 cancellation composition succeeds but eager unused `Iff` lookup stops before support submission; V6 freezes lazy resolution only |
+| 2026-08-21 | `f37c82184` | Shared proof builder resolves `Iff` only at its sole consumer |
+| 2026-08-21 | (pending) | V6 advances to missing positive-product factor support; V7 freezes a primitive-induction replacement |
+| 2026-08-21 | `29c126c0e` | Target-owned positive-product right-factor proof is added without importing broader order theory |
+| 2026-08-21 | (pending) | V7 advances to multiplicative monotonicity; V8 freezes two target-owned order leaves |

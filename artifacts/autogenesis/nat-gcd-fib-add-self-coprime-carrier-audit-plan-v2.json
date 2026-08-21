@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-coprime-carrier-audit-plan-v2",
+  "state": "preregistered-single-well-founded-fix-path-audit-before-code-or-input-read",
+  "predecessor": {"path": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-result-v6.json"},
+  "inputs": {"inherit_exactly_from": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-plan-v4.json", "source_root": "Nat.fib_coprime_fib_succ", "blocked_dependency": "WellFounded.fix", "target_kernel": "r091 followed by official clean order, official cancellation, and Fibonacci addition"},
+  "authorized_code_change": "Generalize --coprime-carrier-audit with one required blocked-dependency name argument; report format and trust boundary remain unchanged.",
+  "audit": {"proof_terms_types_or_values_may_be_rendered": false, "kernel_submissions": 0, "exports": 0, "required_selection": "nearest exact compatible parent or explicit no-parent result"},
+  "budget": {"max_audit_driver_builds": 1, "max_complete_audits": 1, "max_reads_per_input": 1, "max_retries": 0, "max_exact_target_submissions": 0},
+  "authority": {"support_credit": 0, "target_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "output": "artifacts/autogenesis/nat-gcd-fib-add-self-coprime-carrier-audit-result-v2.json",
+  "verification": "python3 scripts/check-autogenesis-nat-gcd-fib-add-self-coprime-carrier-audit-plan-v2.py",
+  "limitations": "This audit grants no theorem, support, target, fact, evaluation, or ledger credit."
+}

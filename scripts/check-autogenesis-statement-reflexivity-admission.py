@@ -292,7 +292,7 @@ def validate_objects(
         or observation.get("retained_answer_dependencies")
         != expected_result["theorem_dependencies"]
         or observation.get("target_dependency")
-        != expected_result["target_dependency"]
+        != expected_result.get("target_dependency")
     ):
         raise AdmissionResultError("admission result semantics changed")
 
@@ -305,6 +305,7 @@ def validate(manifest_path: pathlib.Path = MANIFEST) -> dict[str, Any]:
             "axeyum-autogenesis-mathlib-statement-reflexivity-admission",
             "axeyum-autogenesis-mathlib-checked-theorem-receipt-admission",
             "axeyum-autogenesis-mathlib-dependency-theorem-receipt-admission",
+            "axeyum-autogenesis-mathlib-sealed-kernel-capsule-admission",
         }
         or manifest.get("state")
         != "durably-admitted-archived-and-clean-replayed"
@@ -376,6 +377,9 @@ def main() -> int:
             ),
             "axeyum-autogenesis-mathlib-dependency-theorem-receipt-admission": (
                 "AUTOGENESIS_DEPENDENCY_THEOREM_RECEIPT_ADMISSION_OK"
+            ),
+            "axeyum-autogenesis-mathlib-sealed-kernel-capsule-admission": (
+                "AUTOGENESIS_SEALED_KERNEL_CAPSULE_ADMISSION_OK"
             ),
         }[manifest["kind"]]
         print(

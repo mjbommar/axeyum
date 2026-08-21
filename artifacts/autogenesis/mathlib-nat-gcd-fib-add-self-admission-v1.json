@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-sealed-kernel-capsule-admission",
+  "state": "durably-admitted-archived-and-clean-replayed",
+  "fact_id": "F:ml430-nat-gcd-fib-add-self-5a92d5e3",
+  "operation_id": "authoritative-mathlib-nat-gcd-fib-add-self-kernel-capsule-v1",
+  "registration_commit": "a475f13ddff1ab9642b37c29aec4ddb7a9f08955",
+  "external_root": "/nas3/data/axeyum/autogenesis/admissions/a475f13dd-mathlib-nat-gcd-fib-add-self-v1",
+  "external_index_sha256": "53555b81f0334e9700bca0a124b3d04992351b1c0db2c0100974a50849ad2feb",
+  "source_bundle_sha256": "1d30a90581bd371d29228be589390a01456b12bbb943a137ba3df54510f35883",
+  "identities": {
+    "frontier_before_sha256": "c15cf6f99896d2c3a8b43cab6065c1aae1ed239f980066f61e9bb5954fbda613",
+    "execution_sha256": "8bcf8e56851b7ab1d7614c0fbe55eb6fd09ef4f6c33f85f518c378e035fc946b",
+    "transaction_sha256": "027a41f4380c7b23f73f831700d46069f1b23d319f4bc7a8e93328a5a8bd0efc",
+    "admission_event_sha256": "aef650b9933dc779c4d1b46d7b985de4b458dcc502bd6cadfee8a69452298712",
+    "frontier_after_sha256": "89c3a85eba08edd2c580f4247c87e16c437772adb1b18347411e03168b6346c1",
+    "readiness_delta_sha256": "d3bf8f4d578a1ba1f9436e2209e135db4a1e84df2c67b2ea5e92d95278b9b534",
+    "before_fact_sha256": "6b8a809b26cf558fd833e4de38ac21ff7db29d3025290e83a258987a2d3e8819",
+    "after_fact_sha256": "479c3736fbebb55bfdb8adacaa55d78f935de31cf695d210bbd08f3a04778d44"
+  },
+  "external_files": {
+    "frontier-before.json": "deabc03bf09ac075ae155a10c55a663f22c002f4353e227f15ae4215503f215f",
+    "execution.json": "46f3ff4e37b6eafebcb25a29dc67b6df5512bc6bfa5b563ecb1ea7eef940bd72",
+    "transaction.json": "ec004e2e5cc741a1679ffbe8f2e598f3b0481521169e8a279fe13b0648610547",
+    "admission-event.json": "785601a62901bdfe5c5cfd41107f6e44808bb971f198ce56950e77249c8c2399",
+    "frontier-after.json": "c0373ae983c95c4525bbb0a6fec5e43b3a4f04e0e21463910d1c534cfb58eeb4",
+    "readiness.json": "2f8a34506ef94d92e656bcba013eb36126e0c3672770303180d710150b238960",
+    "before-fact.json": "f5752e5060191ff58837f9f3a5f589dd0174827ba2a836bfdb2fbb775aaa733a",
+    "after-fact.json": "8062f8b42cd8a2f7c131b438b4c20d9d48f226fd65b403930b22c4e6d8bf3f47"
+  },
+  "fault_injection": {
+    "boundary": "after-intent",
+    "exit_status": 75,
+    "fact_unchanged_before_recovery": true
+  },
+  "result": {
+    "authoritative_ledger_writes": 1,
+    "fixture_writes": 0,
+    "newly_ready": [],
+    "axiom_footprint": [],
+    "theorem_dependencies": [
+      "Axeyum.Autogenesis.NatFibSuccessorAddition",
+      "Axeyum.Autogenesis.dvdAddCancelAllNatClosedV1",
+      "Axeyum.Autogenesis.dvdAddOfficialV1",
+      "Axeyum.Autogenesis.dvdAntisymmOfficialV1",
+      "Axeyum.Autogenesis.dvdGcdOfficialV1",
+      "Axeyum.Autogenesis.dvdMulRightOfficialV1",
+      "Axeyum.Autogenesis.fibCoprimeFibSuccOfficialV1",
+      "Axeyum.Autogenesis.gcdCommCleanV1",
+      "Axeyum.Autogenesis.gcdDvdLeftOfficialV1",
+      "Axeyum.Autogenesis.gcdDvdRightOfficialV1",
+      "Axeyum.Autogenesis.officialCoprimeFactorDivisibilityCancellationV1",
+      "Nat.mul_comm"
+    ],
+    "target_dependency": null
+  },
+  "clean_replay": {
+    "source_commit": "a475f13ddff1ab9642b37c29aec4ddb7a9f08955",
+    "external_root": "/nas3/data/axeyum/autogenesis/replays/a475f13dd-nat-gcd-fib-add-self-v1",
+    "external_index_sha256": "34d5472e38078b9a8d48934278a2b4f13ab73fb30c6d0aed13e076a561aa4ca8",
+    "replay_file_sha256": "d9dc5c8596781db19d0e7b5b170cd744893942e84fcffa7e84537689e9f1d361",
+    "replay_sha256": "a4a32e68bd39bd9983fec846bbebdcae30b2e8b73fba6c8fdcffe3ad46cc3422",
+    "fresh_execution_sha256": "8bcf8e56851b7ab1d7614c0fbe55eb6fd09ef4f6c33f85f518c378e035fc946b",
+    "fresh_transaction_sha256": "027a41f4380c7b23f73f831700d46069f1b23d319f4bc7a8e93328a5a8bd0efc",
+    "fresh_event_sha256": "aef650b9933dc779c4d1b46d7b985de4b458dcc502bd6cadfee8a69452298712",
+    "fresh_readiness_delta_sha256": "d3bf8f4d578a1ba1f9436e2209e135db4a1e84df2c67b2ea5e92d95278b9b534"
+  },
+  "reproduction": "python3 scripts/check-autogenesis-statement-reflexivity-admission.py --manifest artifacts/autogenesis/mathlib-nat-gcd-fib-add-self-admission-v1.json",
+  "limitations": "This admits one exact Mathlib v4.30 theorem from a fixed target-native capsule. It grants no held-out evaluation credit, no authority to transport same-name declarations, and no credit beyond the named theorem and its empty kernel axiom footprint."
+}

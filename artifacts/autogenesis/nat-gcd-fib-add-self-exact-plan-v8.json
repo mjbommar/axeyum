@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-exact-plan-v8",
+  "state": "preregistered-exact-existing-zero-left-reuse-before-code-or-rerun",
+  "predecessor": {"path": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-result-v7.json"},
+  "correction": {"remove_extra_zero_left_input": true, "omit_no_additions_composition": true, "existing_root": "Axeyum.Autogenesis.nat_gcd_zero_left", "required_existing_declaration_sha256": "e4f6c7e3971f5751bd1e889e9bfc28b7035d9f47204f7aafa5efc06b97cf3555", "submit_public_alias": "Nat.gcd_zero_left", "coprimality_target_leaves": ["Axeyum.Autogenesis.nat_gcd_succ", "Nat.gcd_zero_left"], "other_source_changes_authorized": false},
+  "acceptance": {"one_driver_build": true, "fresh_complete_invocations": 2, "capsule_compositions": 8, "existing_zero_left_reuses": 2, "target_leaf_reuses": 4, "zero_left_alias_submissions": 2, "local_gcd_comm_submissions": 2, "exact_target_submissions": 2, "outputs_byte_identical": true, "target_axiom_footprint": []},
+  "budget": {"max_driver_builds": 1, "max_complete_invocations": 2, "max_capsule_compositions": 8, "max_existing_zero_left_reuses": 2, "max_target_leaf_reuses": 4, "max_zero_left_alias_submissions": 2, "max_local_gcd_comm_submissions": 2, "max_exact_target_submissions": 2, "max_retries": 0},
+  "authority": {"target_credit_before_acceptance": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_on_accept": "Issue a dependency-bound theorem receipt, admit the exact fact through the crash-safe ledger transaction, and verify the newly unlocked frontier.",
+  "output": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-result-v8.json",
+  "limitations": "This authorizes exact reuse of one already-present theorem and no other proof-route change."
+}

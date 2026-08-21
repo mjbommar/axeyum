@@ -21,6 +21,17 @@ def addressed(value, field):
 
 
 class StatementReflexivityAdmissionResultTests(unittest.TestCase):
+    def test_sealed_kernel_capsule_admission_archive_is_accepted(self):
+        manifest = (
+            Path(__file__).parents[2]
+            / "artifacts/autogenesis/mathlib-nat-gcd-fib-add-self-admission-v1.json"
+        )
+        result = MODULE.validate(manifest)
+        self.assertEqual(
+            result["kind"],
+            "axeyum-autogenesis-mathlib-sealed-kernel-capsule-admission",
+        )
+
     def inputs(self):
         fact_id = "F:ml430-nat-ascfactorial-zero-fd183202"
         operation_id = "authoritative-mathlib-statement-reflexivity-v1"

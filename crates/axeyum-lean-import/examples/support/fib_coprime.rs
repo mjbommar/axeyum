@@ -2,13 +2,33 @@
 
 use axeyum_lean_kernel::{BinderInfo, Declaration, ExprId, ExprNode, Kernel, LevelId, NameId};
 
+#[allow(dead_code)]
 pub(crate) fn admit(
     kernel: &mut Kernel,
     target: NameId,
     goal: ExprId,
     recurrence_name: &str,
 ) -> Result<(NameId, ExprId, ExprId), String> {
-    let proof = proof(kernel, goal, recurrence_name)?;
+    admit_with_mode(kernel, target, goal, recurrence_name, false)
+}
+
+pub(crate) fn admit_target_native(
+    kernel: &mut Kernel,
+    target: NameId,
+    goal: ExprId,
+    recurrence_name: &str,
+) -> Result<(NameId, ExprId, ExprId), String> {
+    admit_with_mode(kernel, target, goal, recurrence_name, true)
+}
+
+fn admit_with_mode(
+    kernel: &mut Kernel,
+    target: NameId,
+    goal: ExprId,
+    recurrence_name: &str,
+    target_native: bool,
+) -> Result<(NameId, ExprId, ExprId), String> {
+    let proof = proof(kernel, goal, recurrence_name, target_native)?;
     require_inferred_type(kernel, proof, goal, "Fibonacci coprimality")?;
     kernel
         .add_declaration(Declaration::Theorem {
@@ -22,7 +42,12 @@ pub(crate) fn admit(
 }
 
 #[allow(clippy::too_many_lines)]
-fn proof(kernel: &mut Kernel, goal: ExprId, recurrence_name: &str) -> Result<ExprId, String> {
+fn proof(
+    kernel: &mut Kernel,
+    goal: ExprId,
+    recurrence_name: &str,
+    target_native: bool,
+) -> Result<ExprId, String> {
     let ExprNode::Pi(name, nat, body, info) = kernel.expr_node(goal).clone() else {
         return Err("Fibonacci coprimality goal has no Nat binder".to_owned());
     };
@@ -40,7 +65,12 @@ fn proof(kernel: &mut Kernel, goal: ExprId, recurrence_name: &str) -> Result<Exp
     let motive = close_lam(kernel, motive_id, "n", nat, motive_body);
 
     let fib_one = kernel.app(fib, one);
-    let base = apply_named(kernel, "Nat.gcd_zero_left", &[fib_one])?;
+    let gcd_zero_left = if target_native {
+        "Axeyum.Autogenesis.nat_gcd_zero_left"
+    } else {
+        "Nat.gcd_zero_left"
+    };
+    let base = apply_named(kernel, gcd_zero_left, &[fib_one])?;
     let base_goal = kernel.instantiate(body, &[zero]);
     let base_type = kernel
         .infer(base)
@@ -77,25 +107,48 @@ fn proof(kernel: &mut Kernel, goal: ExprId, recurrence_name: &str) -> Result<Exp
     let common = apply(kernel, gcd, &[b, sum_ba]);
     let gcd_bridge = congr_arg(kernel, nat, nat, gcd_function, c, sum_ba, c_eq_sum_ba)?;
 
-    let common_divides_b = apply_named(kernel, "Nat.gcd_dvd_left", &[b, sum_ba])?;
-    let common_divides_sum = apply_named(kernel, "Nat.gcd_dvd_right", &[b, sum_ba])?;
-    let common_divides_a_type = apply(kernel, dvd, &[common, a]);
-    let common_divides_sum_type = apply(kernel, dvd, &[common, sum_ba]);
-    let add_characterization = apply_named(
-        kernel,
-        "Nat.dvd_add_iff_right",
-        &[common, b, a, common_divides_b],
-    )?;
-    let sum_to_a = iff_reverse(
-        kernel,
-        common_divides_a_type,
-        common_divides_sum_type,
-        add_characterization,
-    )?;
-    let common_divides_a = kernel.app(sum_to_a, common_divides_sum);
+    let gcd_dvd_left = if target_native {
+        "Axeyum.Autogenesis.gcdDvdLeftOfficialV1"
+    } else {
+        "Nat.gcd_dvd_left"
+    };
+    let gcd_dvd_right = if target_native {
+        "Axeyum.Autogenesis.gcdDvdRightOfficialV1"
+    } else {
+        "Nat.gcd_dvd_right"
+    };
+    let common_divides_b = apply_named(kernel, gcd_dvd_left, &[b, sum_ba])?;
+    let common_divides_sum = apply_named(kernel, gcd_dvd_right, &[b, sum_ba])?;
+    let common_divides_a = if target_native {
+        apply_named(
+            kernel,
+            "Axeyum.Autogenesis.dvdAddCancelAllNatClosedV1",
+            &[common, b, a, common_divides_b, common_divides_sum],
+        )?
+    } else {
+        let common_divides_a_type = apply(kernel, dvd, &[common, a]);
+        let common_divides_sum_type = apply(kernel, dvd, &[common, sum_ba]);
+        let add_characterization = apply_named(
+            kernel,
+            "Nat.dvd_add_iff_right",
+            &[common, b, a, common_divides_b],
+        )?;
+        let sum_to_a = iff_reverse(
+            kernel,
+            common_divides_a_type,
+            common_divides_sum_type,
+            add_characterization,
+        )?;
+        kernel.app(sum_to_a, common_divides_sum)
+    };
+    let dvd_gcd = if target_native {
+        "Axeyum.Autogenesis.dvdGcdOfficialV1"
+    } else {
+        "Nat.dvd_gcd"
+    };
     let common_divides_previous_gcd = apply_named(
         kernel,
-        "Nat.dvd_gcd",
+        dvd_gcd,
         &[common, a, b, common_divides_a, common_divides_b],
     )?;
     let previous_gcd = apply(kernel, gcd, &[a, b]);
@@ -112,11 +165,12 @@ fn proof(kernel: &mut Kernel, goal: ExprId, recurrence_name: &str) -> Result<Exp
         divides_predicate,
         common_divides_previous_gcd,
     )?;
-    let common_is_one = apply_named(
-        kernel,
-        "Nat.eq_one_of_dvd_one",
-        &[common, common_divides_one],
-    )?;
+    let eq_one = if target_native {
+        "Axeyum.Autogenesis.eqOneOfDvdOneOfficialV1"
+    } else {
+        "Nat.eq_one_of_dvd_one"
+    };
+    let common_is_one = apply_named(kernel, eq_one, &[common, common_divides_one])?;
     let step_body = equality_trans(kernel, nat, gcd_b_c, common, one, gcd_bridge, common_is_one)?;
     let step_body = close_lam(kernel, ih_id, "ih", induction_hypothesis_type, step_body);
     let step = close_lam(kernel, n_id, "n", nat, step_body);

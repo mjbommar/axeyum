@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-gcd-fib-add-self-exact-plan-v5",
+  "state": "preregistered-explicit-binary-build-with-unchanged-source-before-execution",
+  "predecessor": {"path": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-result-v4.json"},
+  "execution_correction": {"source_commit": "5c1680853", "source_changes_authorized": false, "required_command": "cargo build -p axeyum-lean-import --example nat_gcd_fib_add_self_exact --all-features", "reason": "cargo clippy checked source but did not replace target/debug/examples/nat_gcd_fib_add_self_exact", "other_changes_authorized": false},
+  "inputs_inherited_byte_exactly_from": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-plan-v4.json",
+  "acceptance": {"explicit_driver_builds": 1, "fresh_complete_invocations": 2, "capsule_compositions": 8, "local_gcd_comm_submissions": 2, "exact_target_submissions": 2, "outputs_byte_identical": true, "target_goal_sha256": "297c9f4af4d63eff354223f9548ab1d4dd3d7e52aa701e88802d58b7929a1451", "target_axiom_footprint": [], "all_four_capsule_roots_required_transitively": true, "proof_terms_types_or_values_may_be_rendered": false},
+  "budget": {"max_explicit_driver_builds": 1, "max_complete_invocations": 2, "max_capsule_compositions": 8, "max_local_gcd_comm_submissions": 2, "max_exact_target_submissions": 2, "max_retries": 0},
+  "authority": {"target_credit_before_acceptance": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "next_on_accept": "Issue a dependency-bound theorem receipt, admit the exact fact through the crash-safe ledger transaction, and verify the newly unlocked frontier from a clean worktree.",
+  "output": "artifacts/autogenesis/nat-gcd-fib-add-self-exact-result-v5.json",
+  "verification": "python3 scripts/check-autogenesis-nat-gcd-fib-add-self-exact-v4-v5.py",
+  "limitations": "This authorizes one explicit rebuild and the unchanged exact V4 execution only; it grants no credit before both runs pass."
+}

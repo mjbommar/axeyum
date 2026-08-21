@@ -23,6 +23,9 @@ CHECKED_THEOREM_RECEIPT_CHECKER = (
 DEPENDENCY_THEOREM_RECEIPT_CHECKER = (
     ROOT / "scripts/check-autogenesis-nat-fib-coprime-premise-plan.py"
 )
+SEALED_KERNEL_CAPSULE_CHECKER = (
+    ROOT / "scripts/check-autogenesis-sealed-kernel-capsule.py"
+)
 
 
 class FactOperationError(RuntimeError):
@@ -284,6 +287,33 @@ def check_fact(
                 ),
             }
         )
+    elif executor["driver"] == "axeyum-lean-import/sealed-kernel-capsule-v1":
+        capsule_checker = load_module(
+            "sealed_kernel_capsule_for_fact_operation", SEALED_KERNEL_CAPSULE_CHECKER
+        )
+        try:
+            checked = capsule_checker.validate()
+        except capsule_checker.CapsuleError as error:
+            raise FactOperationError(f"sealed kernel capsule failed: {error}") from error
+        authority = checked["authority"]
+        expected_binding.update(
+            {
+                "result_manifest": executor["result_manifest"],
+                "result_manifest_sha256": authority["result_manifest_sha256"],
+                "capsule_path": executor["capsule_path"],
+                "capsule_sha256": authority["capsule_sha256"],
+                "receipt_sha256": checked["receipt_sha256"],
+                "formal_statement_sha256": byte_digest(
+                    fact["formal"]["statement"].encode()
+                ),
+                "target_theorem": executor["target_theorem"],
+                "goal_sha256": authority["goal_sha256"],
+                "declaration_sha256": authority["declaration_sha256"],
+                "direct_theorem_dependencies": authority[
+                    "direct_theorem_dependencies"
+                ],
+            }
+        )
     else:
         raise FactOperationError("fact operation uses an unsupported driver")
     if binding != expected_binding:
@@ -415,6 +445,34 @@ def check_fact(
                 "transitive_dependency_set_sha256"
             ],
             "ledger_writes": archived["ledger_writes"],
+        }
+    elif executor["driver"] == "axeyum-lean-import/sealed-kernel-capsule-v1":
+        capsule_checker = load_module(
+            "sealed_kernel_capsule_observation_for_fact_operation",
+            SEALED_KERNEL_CAPSULE_CHECKER,
+        )
+        try:
+            checked = capsule_checker.validate()
+        except capsule_checker.CapsuleError as error:
+            raise FactOperationError(f"sealed kernel capsule failed: {error}") from error
+        authority = checked["authority"]
+        expected_observation = {
+            "verdict": "proved",
+            "evidence_label": executor["expected_evidence_label"],
+            "receipt_sha256": checked["receipt_sha256"],
+            "result_manifest_sha256": authority["result_manifest_sha256"],
+            "capsule_sha256": authority["capsule_sha256"],
+            "goal_sha256": authority["goal_sha256"],
+            "declaration_sha256": authority["declaration_sha256"],
+            "fresh_imports": authority["fresh_imports"],
+            "fixed_plan_reconstructions": authority["fixed_plan_reconstructions"],
+            "search_invocations": authority["search_invocations"],
+            "target_theorem_submissions": authority["target_theorem_submissions"],
+            "axiom_footprint": authority["axiom_footprint"],
+            "retained_answer_dependencies": authority[
+                "direct_theorem_dependencies"
+            ],
+            "ledger_writes": authority["ledger_writes"],
         }
     else:
         premise_candidate = (

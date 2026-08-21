@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-r091-clean-dvd-antisymm-result-v6",
+  "state": "lazy-iff-cleared-first-run-declined-at-missing-positive-product-factor-second-skipped",
+  "plan": {
+    "path": "artifacts/autogenesis/official-r091-clean-dvd-antisymm-plan-v6.json",
+    "sha256": "c59d15ad7ef5a6433c606c41bbaf672bc2f9594c6e9693839b87ae2aa51d66ed"
+  },
+  "implementation_commit": "f37c82184",
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/f37c82184-official-r091-clean-dvd-antisymm-v6",
+    "manifest_sha256": "2e0718bb4d8f609c11976cbcd80ad7c8f0f867c756694c53122f5b884bc8198b",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "decline": {
+    "stage": "official-le-of-dvd-handle-resolution-after-eq-zero-ready",
+    "class": "MissingDeclaration",
+    "name": "Nat.one_le_right_of_mul",
+    "partial_kernel_published": false
+  },
+  "execution": {
+    "complete_invocations": 1,
+    "successful_cancellation_compositions": 1,
+    "support_submissions": 1,
+    "exports": 0,
+    "imports": 0,
+    "exact_target_submissions": 0,
+    "retries": 0,
+    "second_invocation_skipped": true
+  },
+  "authority": {
+    "support_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Preregister one target-owned positive-product-right-factor theorem by primitive induction using only existing empty-footprint mul_zero, not_succ_le_zero, False.rec, zero_le, and le_succ_succ leaves.",
+  "limitations": "The local eq-zero support was not exported or credited. No clean order or Fibonacci target was established."
+}
