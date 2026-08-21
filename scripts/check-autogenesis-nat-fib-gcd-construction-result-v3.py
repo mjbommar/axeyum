@@ -25,6 +25,8 @@ def validate() -> dict:
     pack_path = pathlib.Path(pack["path"])
     first = json.loads((pack_path / "observation-1.json").read_text())
     second = json.loads((pack_path / "observation-2.json").read_text())
+    target = dict(result["target"])
+    target_goal_sha256 = target.pop("goal_sha256")
     if (
         result.get("state") != "exact-target-reconstructed-twice-byte-identical-empty-footprint"
         or sha(ROOT / plan["path"]) != plan["sha256"]
@@ -37,7 +39,8 @@ def validate() -> dict:
         or any(stat.S_IMODE(path.stat().st_mode) != 0o444 for path in pack_path.iterdir())
         or first != second
         or first.get("helper") != result.get("helper")
-        or first.get("target") != result.get("target")
+        or first.get("target") != target
+        or first.get("target_goal_sha256") != target_goal_sha256
         or first.get("capsule", {}).get("bytes") != result.get("capsule", {}).get("bytes")
         or first.get("capsule", {}).get("sha256") != result.get("capsule", {}).get("sha256")
         or result.get("execution") != {
