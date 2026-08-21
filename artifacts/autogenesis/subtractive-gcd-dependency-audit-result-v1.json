@@ -1,0 +1,160 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-subtractive-gcd-dependency-audit-result",
+  "state": "fourteen-direct-dependencies-classified-seven-clean-seven-assumption-bearing",
+  "plan": {
+    "path": "artifacts/autogenesis/subtractive-gcd-dependency-audit-plan-v1.json",
+    "sha256": "a5c9c20c1d2d5f8eb9399b8d22bd7f955bb43edb3ad4111f0c6db15049613fe1"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/38e40236f-subtractive-gcd-dependency-audit-v1/manifest.json",
+    "sha256": "f93cd95d1126efbcc028b57e051441ced525d2ef4a321b6e352ce099f2fc6b4c",
+    "mode": "0444"
+  },
+  "summary": {
+    "population": 14,
+    "class_counts": {
+      "empty-footprint": 7,
+      "other-assumption-bearing": 2,
+      "propext-bearing": 5
+    },
+    "all_roots_empty": false,
+    "replacement_authorized": false
+  },
+  "rows": [
+    {
+      "name": "Eq.symm",
+      "declaration_sha256": "fb271ec2ea3431e3c34737664fb7b6e308edb40ce00c7f038724eb0e4a08245f",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": [],
+      "class": "empty-footprint"
+    },
+    {
+      "name": "Eq.trans",
+      "declaration_sha256": "5169663bb77a2a10781eacda54658f96a269f7ac16a3807eae3b75d1378c3e2e",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": [],
+      "class": "empty-footprint"
+    },
+    {
+      "name": "Nat.gcd_comm",
+      "declaration_sha256": "e36f3b9697c690cc7c1f42cc5cd56045f11f9dcc03278e60fd480d27de36bc07",
+      "axiom_footprint": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound", "propext"],
+      "direct_theorem_dependencies": ["Nat.dvd_antisymm", "Nat.dvd_gcd", "Nat.gcd_dvd_left", "Nat.gcd_dvd_right"],
+      "class": "propext-bearing"
+    },
+    {
+      "name": "Nat.gcd_sub_mul_right_left",
+      "declaration_sha256": "489d37184ff502d9d9a7aaf71440a4442c193fb8b7e31e6be2eac2f03cdd9f58",
+      "axiom_footprint": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound", "propext"],
+      "direct_theorem_dependencies": ["Nat.gcd_comm", "Nat.gcd_sub_mul_right_right", "congrArg"],
+      "class": "propext-bearing"
+    },
+    {
+      "name": "Nat.gcd_sub_mul_right_right",
+      "declaration_sha256": "c2b856febe872720b998c10f7888d35128e191aa9219e57c587be3512e8d17bd",
+      "axiom_footprint": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound", "propext"],
+      "direct_theorem_dependencies": ["Eq.symm", "Nat.gcd_add_mul_right_right", "Nat.sub_add_cancel", "congrArg"],
+      "class": "propext-bearing"
+    },
+    {
+      "name": "Nat.gcd_succ",
+      "declaration_sha256": "5508f854491d6efee655061a69710e2b7250883f6a4d08afa0f1472cee94e217",
+      "axiom_footprint": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound"],
+      "direct_theorem_dependencies": ["_private.Init.Data.Nat.Gcd.0.Nat.gcd.eq_1", "congrArg"],
+      "class": "other-assumption-bearing"
+    },
+    {
+      "name": "Nat.mod_one",
+      "declaration_sha256": "91c1ced40ab8dd4c87fb62c21e10d806ee6dc6c6e1d0a91cf8f816fe111d071a",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": ["Eq.symm", "Nat.lt_of_succ_lt_succ", "Nat.mod_lt", "Nat.not_lt_zero", "of_decide_eq_true"],
+      "class": "empty-footprint"
+    },
+    {
+      "name": "Nat.mod_self",
+      "declaration_sha256": "d5a78f1e34a1ce11ac2cd20938d741677b590322adec8aa74fd6bf8cc09e4661",
+      "axiom_footprint": ["propext"],
+      "direct_theorem_dependencies": ["Nat.le_refl", "Nat.mod_eq_sub_mod", "Nat.sub_self", "Nat.zero_mod", "congrArg"],
+      "class": "propext-bearing"
+    },
+    {
+      "name": "Nat.one_mul",
+      "declaration_sha256": "ae3ec9ffb4c065a7658c1a7cabd7973cc22578eef8c4cccbe67283e3675f6457",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": ["Nat.mul_comm", "Nat.mul_one"],
+      "class": "empty-footprint"
+    },
+    {
+      "name": "_private.Init.Data.Nat.Gcd.0.Nat.gcd.eq_1",
+      "declaration_sha256": "9673ec16e49e53dffb698e4a2f7a8ff7c2791c5730805485d94d1ddd254f8bee",
+      "axiom_footprint": ["Quot", "Quot.lift", "Quot.mk", "Quot.sound"],
+      "direct_theorem_dependencies": ["Eq.trans", "_private.Init.Data.Nat.Gcd.0.Nat.gcd.eq_def"],
+      "class": "other-assumption-bearing"
+    },
+    {
+      "name": "congrArg",
+      "declaration_sha256": "d39a34eb11556f4a80414b3cbda6ae21118baba14aa37ba6bff92265bf3a853b",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": [],
+      "class": "empty-footprint"
+    },
+    {
+      "name": "congrFun'",
+      "declaration_sha256": "8e56cb8737c7c3c5b3314918f833cb7ff7885cc45a2f0e89ccd94d327e69f2db",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": [],
+      "class": "empty-footprint"
+    },
+    {
+      "name": "eq_self",
+      "declaration_sha256": "aea63c83e1f7eee68d34d6a3cf61a1e988318c51459a8c9eb8c5476abc0f5a48",
+      "axiom_footprint": ["propext"],
+      "direct_theorem_dependencies": ["eq_true"],
+      "class": "propext-bearing"
+    },
+    {
+      "name": "of_eq_true",
+      "declaration_sha256": "154d47c359f3d2cfb876896c432e67b289cf246c56079cedfbe7fc5fbd6ed839",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": ["Eq.symm", "trivial"],
+      "class": "empty-footprint"
+    }
+  ],
+  "route_relevant_assumption_carriers": [
+    "Nat.gcd_comm",
+    "Nat.gcd_sub_mul_right_left",
+    "Nat.gcd_sub_mul_right_right",
+    "_private.Init.Data.Nat.Gcd.0.Nat.gcd.eq_1"
+  ],
+  "route_relevant_novel_dependency_frontier": [
+    "Nat.dvd_antisymm",
+    "Nat.dvd_gcd",
+    "Nat.gcd_add_mul_right_right",
+    "Nat.gcd_dvd_left",
+    "Nat.gcd_dvd_right",
+    "Nat.sub_add_cancel",
+    "_private.Init.Data.Nat.Gcd.0.Nat.gcd.eq_def"
+  ],
+  "budget": {
+    "exporter_invocations": 0,
+    "batch_importer_runs": 1,
+    "proof_bearing_stream_reads": 1,
+    "retries": 0,
+    "replacement_source_compilations": 0,
+    "new_theorem_submissions": 0,
+    "exact_target_submissions": 0,
+    "executor_invocations": 0
+  },
+  "authority": {
+    "proof_terms_rendered": 0,
+    "theorem_types_rendered": 0,
+    "theorem_values_rendered": 0,
+    "support_theorem_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Audit the seven route-relevant novel dependencies, reusing the sealed stream. Bind the previously measured Nat.sub_add_cancel replacement rather than treating it as unknown, then decide whether to reconstruct the gcd equation/divisibility carriers or abandon this route.",
+  "limitations": "The result classifies only one dependency layer. It does not authorize adapting any proof, compiling a replacement, or crediting a theorem, target, evaluation, fact, or ledger transition."
+}
