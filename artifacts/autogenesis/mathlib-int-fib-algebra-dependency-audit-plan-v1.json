@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-algebra-dependency-audit-plan",
+  "state": "preregistered-before-single-read-dependency-classification",
+  "input": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-algebra-leaves-v2/leaves.ndjson",
+    "bytes": 1428492,
+    "sha256": "205bb2dcf8ec703d912380bad0f8f2749379d23192d97af5a2422ad6f6ab4a53"
+  },
+  "roots": ["Eq.symm", "Eq.trans", "Int.add_comm", "Int.neg_add_cancel_right", "congrArg", "neg_add_rev", "Int.add_neg_cancel_right"],
+  "budget": {"max_importer_runs": 1, "max_proof_bearing_stream_reads": 1, "max_compiler_invocations": 0, "max_exporter_invocations": 0, "max_theorem_submissions": 0, "max_ledger_writes": 0},
+  "output": "artifacts/autogenesis/mathlib-int-fib-algebra-dependency-audit-result-v1.json",
+  "limitations": "Dependency classification grants no algebra support or target theorem credit."
+}

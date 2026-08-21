@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-add-two-algebra-leaves-result",
+  "state": "direct-cancellation-leaves-compile-but-propext-rejected",
+  "plan_sha256": "fcaae47e6df3b8840152bd70f331a6a3252fda8ee074cdf3dd575fff43c2ae00",
+  "source": {"path": "artifacts/autogenesis/sources/int-fib-add-two-algebra-leaves-v2.lean", "sha256": "bfc7e7932ee7efc5c494b3204ee31604bd93089fd60ba3da0fe4d9e319c28e71"},
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-algebra-leaves-v2",
+    "manifest_sha256": "5c8221af467ffd19c4022b0e56887b15e37960189998a9abc06e5cd3d9b62c17",
+    "stream_sha256": "205bb2dcf8ec703d912380bad0f8f2749379d23192d97af5a2422ad6f6ab4a53",
+    "stream_bytes": 1428492,
+    "audit_sha256": "019ec2e95740aed2e3b0c9548214ce05699c51ea44ac86e77cfc4535075ec246"
+  },
+  "roots": [
+    {"name": "Axeyum.IntFib.evenAdd", "declaration_sha256": "05d2ee5caad707bd5f5573fd61fcb744c668c6301fa7e1bee6922863473d1a1c", "axiom_footprint": ["propext"], "direct_theorem_dependencies": ["Eq.symm", "Eq.trans", "Int.add_comm", "Int.neg_add_cancel_right", "congrArg", "neg_add_rev"]},
+    {"name": "Axeyum.IntFib.oddAdd", "declaration_sha256": "7bd3bffd7551b94f047c7d1714024df1897926de636fbfbc5c57006bdc6e0c32", "axiom_footprint": ["propext"], "direct_theorem_dependencies": ["Eq.symm", "Int.add_neg_cancel_right"]}
+  ],
+  "execution": {"compiler_invocations": 1, "exporter_invocations": 1, "importer_runs": 1, "theorem_submissions": 2, "retries": 0, "ledger_writes": 0},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}
