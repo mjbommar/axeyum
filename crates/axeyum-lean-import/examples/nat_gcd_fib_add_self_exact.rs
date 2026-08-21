@@ -152,6 +152,10 @@ fn run() -> Result<(), String> {
         return run_target_native_gcd_divisibility_capsule(args);
     }
     let mut args = std::env::args_os().skip(1);
+    if args.next().as_deref() == Some(std::ffi::OsStr::new("--target-native-gcd-parameter-audit")) {
+        return run_target_native_gcd_parameter_audit(args);
+    }
+    let mut args = std::env::args_os().skip(1);
     let r091_path = path(&mut args)?;
     let capsules = [
         (CLEAN_ANTISYMM, path(&mut args)?, CLEAN_ANTISYMM_CAPSULE),
@@ -508,6 +512,108 @@ fn run_target_native_gcd_divisibility_capsule(
             "supports":expected,
             "capsule":{"bytes":bytes.len(),"sha256":hex_sha256(bytes.as_bytes()),"fresh_imports":2},
             "execution":{"closed_theorem_submissions":3,"exports":1,"fresh_imports":2,"retries":0},
+            "rendered_material":{"proof_terms":0,"theorem_types":0,"theorem_values":0},
+            "exact_target_submissions":0,
+            "fact_status_changes":0,
+            "evaluation_credit":0,
+            "ledger_writes":0
+        }))
+        .map_err(|error| error.to_string())?
+    );
+    Ok(())
+}
+
+#[allow(clippy::too_many_lines)]
+fn run_target_native_gcd_parameter_audit(
+    mut args: impl Iterator<Item = std::ffi::OsString>,
+) -> Result<(), String> {
+    let r091_path = path(&mut args)?;
+    let inputs = [
+        (
+            path(&mut args)?,
+            CLEAN_ANTISYMM_CAPSULE,
+            vec![CLEAN_ANTISYMM],
+        ),
+        (path(&mut args)?, CANCELLATION_CAPSULE, vec![CANCELLATION]),
+        (path(&mut args)?, ADDITION_CAPSULE, vec![ADDITION]),
+        (
+            path(&mut args)?,
+            "ce0db76dc93690e1e345627ce555e9f53b532a396643581fe554a7bcdce18322",
+            vec![TARGET_DVD_ADD, TARGET_EQ_ONE_OF_DVD_ONE],
+        ),
+        (
+            path(&mut args)?,
+            "51f5e30677457cb0e6f39799fe062c11d115b1120c04dd23e17dbed596ff3cf3",
+            vec![TARGET_DVD_REFL, TARGET_DVD_MUL_RIGHT],
+        ),
+        (
+            path(&mut args)?,
+            GCD_DIVISIBILITY_GENERIC_CAPSULE,
+            vec![GCD_DIVISIBILITY_GENERIC],
+        ),
+    ];
+    if args.next().is_some() {
+        return Err("usage: nat_gcd_fib_add_self_exact --target-native-gcd-parameter-audit <r091> <official-clean-order> <cancellation> <addition> <simple-support> <dvd-utilities> <generic-family>".to_owned());
+    }
+    let r091 = import_bound(&r091_path, R091_SHA256, "r091")?;
+    let mut kernel = r091.kernel().clone();
+    for (source_path, expected_sha256, roots) in inputs {
+        let source = import_bound(&source_path, expected_sha256, roots[0])?;
+        let completed = compose_checked_theorem_slice(source.kernel(), &kernel, &roots)
+            .map_err(|error| format!("GCD parameter audit composition declined: {error:?}"))?;
+        verify_checked_theorem_composition(
+            source.kernel(),
+            &kernel,
+            completed.kernel(),
+            completed.receipt(),
+        )
+        .map_err(|error| format!("GCD parameter audit composition did not replay: {error:?}"))?;
+        kernel = completed.kernel().clone();
+    }
+    let generic = find_name(&kernel, GCD_DIVISIBILITY_GENERIC)?;
+    let argument_names = [
+        GCD_ZERO_LEFT_GENERIC,
+        COPRIME_GCD_SUCC_LEAF,
+        "Axeyum.Autogenesis.modQuotientWitnessV4",
+        TARGET_DVD_REFL,
+        TARGET_DVD_MUL_RIGHT,
+        TARGET_DVD_ADD,
+        "Axeyum.Autogenesis.dvdAddCancelAllNatClosedV1",
+    ];
+    let mut proof = kernel.const_(generic, vec![]);
+    let mut rows = Vec::new();
+    let mut first_incompatible = None;
+    for (position, expected_name) in argument_names.iter().enumerate() {
+        let argument = find_name(&kernel, expected_name)?;
+        let argument_constant = kernel.const_(argument, vec![]);
+        let candidate = kernel.app(proof, argument_constant);
+        let inferred = kernel.infer(candidate);
+        let compatible = inferred.is_ok();
+        let error = inferred.err().map(|value| format!("{value:?}"));
+        rows.push(json!({
+            "position":position,
+            "name":expected_name,
+            "declaration_sha256":canonical_declaration_sha256(&kernel,argument)?,
+            "kernel_type_shape_sha256":canonical_kernel_type_shape_sha256(&kernel,argument)?,
+            "application_typechecks":compatible,
+            "error":error,
+        }));
+        if !compatible {
+            first_incompatible = Some(position);
+            break;
+        }
+        proof = candidate;
+    }
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "schema_version":1,
+            "kind":"axeyum-autogenesis-target-native-gcd-parameter-audit",
+            "state":"generic-parameters-checked-without-rendering",
+            "generic":{"name":GCD_DIVISIBILITY_GENERIC,"declaration_sha256":canonical_declaration_sha256(&kernel,generic)?},
+            "parameters":rows,
+            "first_incompatible_position":first_incompatible,
+            "execution":{"complete_audits":1,"kernel_submissions":0,"exports":0,"retries":0},
             "rendered_material":{"proof_terms":0,"theorem_types":0,"theorem_values":0},
             "exact_target_submissions":0,
             "fact_status_changes":0,
