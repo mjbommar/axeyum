@@ -33,11 +33,20 @@ reduces the required separate-Weil saving from 1,583 to 626, asymptotically
 `4ell+O(log ell)`.  The two-page LaTeX manuscript carries a fail-visible
 warning, states `(REL)` as its sole open lemma, and contains the checked Haar,
 parity, proper-power, and finite-handoff implications needed once that lemma
-lands.
+lands.  The relative quotient's zero `2`-rank has now been priced at source
+level rather than treated heuristically: Cramer--Xing supplies only trace
+parity because its relative abelian dimension exceeds the endpoint extension
+degree.  The resulting rounding gain is at most one integer, versus REL's
+factor-626 saving at `ell=200`.  Scalar Artin--Schreier code bounds and
+elementary-abelian point-count bounds do not apply to the complete
+non-elementary Witt zero fibre.
 
 **Next:** prove `(REL)`, encode it as replayable evidence, remove the
 manuscript's fail-visible warning, and perform the final source audit.  The
-stronger sufficient fourth-moment bound is
+next coding/geometric bridge must control the complete relative Witt
+weight/zero-fibre distribution before characterwise absolute values; zero
+`2`-rank, a scalar minimum distance, or an elementary-abelian cover theorem is
+not sufficient.  The stronger sufficient fourth-moment bound is
 experimentally true for `6<=ell<=23` but remains an open fact; curve positivity
 alone is non-strict.  The exact half-level Möbius sieve now has a native
 positive-composite counterexample, so the elementary divisor-density route
@@ -717,6 +726,7 @@ proofs, controls, and literature record:
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-20 | `7e1c34a41` | Applied the zero-2-rank trace theorem to the exact relative Carlitz Jacobian quotient, proved its endpoint content is only parity, and stopped scalar Artin--Schreier or elementary-abelian bounds from receiving REL credit. |
 | 2026-08-20 | `33a259776` | Replaced the uniform TOP-POLY maxima by the exact one-sided relative identity trace, lowered the first endpoint saving price from 1,583 to 626, and rewrote the two-page manuscript around the weaker REL obligation. |
 | 2026-08-20 | `604504e20` | Wrote the two-page paper-facing Lemire reduction, marked TOP-POLY as its sole open lemma, and froze the fail-closed manuscript contract in ADR-0571. |
 | 2026-08-20 | `2530ff1cb` | Repriced the surviving endpoint argument against the proved Haar triangle, selected the weaker TOP-POLY saving on only the top logarithmic conductor window, and added an exact parity-safe implication through the degree-400 handoff. |
