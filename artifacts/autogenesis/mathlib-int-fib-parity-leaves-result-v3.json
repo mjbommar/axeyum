@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-parity-leaves-result",
+  "state": "two-step-unfold-stops-at-overloaded-nat-add",
+  "plan_sha256": "f497960a63d01440e9798f627d08d18afcd376c42bea69c41ba7a25cdaf86462",
+  "source": {"path": "artifacts/autogenesis/sources/int-fib-parity-leaves-v3.lean", "sha256": "48583c082db89f35cf93aabbb9f2f37b3e0376c75ad122770de57920c07c1fc3"},
+  "execution": {"compiler_invocations": 1, "compiler_exit_status": 1, "exporter_invocations": 0, "importer_runs": 0, "theorem_submissions": 0, "retries": 0, "ledger_writes": 0},
+  "diagnostic": {"failed_operation": "unfold Nat.add", "cause": "two-step statement still uses overloaded Add/HAdd projections", "repair": "dsimp Add.add, HAdd.hAdd, and Nat.add before unfolding Nat.mod"},
+  "cleanup": {"temporary_source_removed": true, "temporary_olean_removed": true, "checkout_baseline_restored": true},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}
