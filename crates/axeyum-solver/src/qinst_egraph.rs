@@ -2849,7 +2849,17 @@ struct CompiledUniversal {
     vars: Vec<SymbolId>,
     var_terms: Vec<TermId>,
     body: TermId,
+    /// Every compiled pattern this universal can fire on, deduplicated — the
+    /// flat union of [`Self::pattern_groups`]. Scheduling, indexing and the
+    /// diagnostics read this; the JOIN does not.
     pattern_indices: Vec<usize>,
+    /// The alternatives. Each inner vector is one **multi-pattern**: its
+    /// patterns' substitutions are joined (all must match together), and the
+    /// alternatives' tuple sets are unioned (any one firing is enough). Auto
+    /// trigger selection produces exactly one alternative; a user `:pattern`
+    /// annotation may produce several, which is the whole reason this is not
+    /// just [`Self::pattern_indices`].
+    pattern_groups: Vec<Vec<usize>>,
     /// Whether instances of this universal may be **asserted**. `true` for every
     /// universal that is itself an assertion (the historical case, and the only
     /// case when the nested layout is off). `false` for a [`NestedRegistration`]:
@@ -3532,6 +3542,17 @@ impl IncrementalEmatchSession {
             }))
             .collect();
 
+        // Every symbol bound by ANY binder in the compiled set. A user trigger
+        // naming one of these that this universal does not itself bind is a
+        // trigger over a variable frozen to a constant that no ground term can
+        // equal — it would compile and then never fire, starving the universal
+        // where auto-selection would have worked.
+        let mut binders: HashSet<SymbolId> = HashSet::new();
+        for (assertion, _, body, _, _) in &compiled {
+            collect_binder_symbols(arena, *assertion, &mut binders);
+            collect_binder_symbols(arena, *body, &mut binders);
+        }
+
         for (assertion, vars, body, active, context) in compiled {
             let var_terms = vars.iter().map(|&var| arena.var(var)).collect();
             let var_index: HashMap<SymbolId, u32> = vars
@@ -3539,27 +3560,50 @@ impl IncrementalEmatchSession {
                 .enumerate()
                 .map(|(index, &var)| (var, u32::try_from(index).expect("variable count fits u32")))
                 .collect();
-            let mut pattern_indices = Vec::new();
+            let mut pattern_indices: Vec<usize> = Vec::new();
+            let mut pattern_groups: Vec<Vec<usize>> = Vec::new();
             if !vars.is_empty() {
-                for trigger in select_triggers(arena, body, &var_index) {
-                    let pattern = bridge.trigger_to_pattern(arena, trigger, &var_index);
-                    let index = if let Some(&index) = pattern_ids.get(&pattern) {
-                        index
-                    } else {
-                        let index = patterns.len();
-                        patterns.push(pattern.clone());
-                        let mut trigger_vars = std::collections::HashSet::new();
-                        collect_vars(arena, trigger, &var_index, &mut trigger_vars);
-                        let mut ordered: Vec<SymbolId> = trigger_vars.into_iter().collect();
-                        ordered.sort_by_key(|symbol| var_index[symbol]);
-                        pattern_triggers.push(Some(PatternTrigger {
-                            trigger,
-                            var_terms: ordered.iter().map(|&var| arena.var(var)).collect(),
-                        }));
-                        pattern_ids.insert(pattern, index);
-                        index
-                    };
-                    pattern_indices.push(index);
+                // A user `:pattern` annotation REPLACES trigger selection for
+                // this universal; auto-selection is the fallback when there is
+                // none, or when none of the alternatives survives
+                // [`usable_trigger_groups`]. Replacing rather than adding is
+                // what makes the annotation mean what the author wrote — and it
+                // is also the only direction that can cost anything, so it costs
+                // *completeness*: fewer proposed tuples, never a wrong verdict.
+                // See [`usable_trigger_groups`] for why that asymmetry holds.
+                let user_groups = user_trigger_groups(arena, assertion)
+                    .map(|groups| usable_trigger_groups(arena, &groups, &var_index, &binders))
+                    .filter(|groups| !groups.is_empty());
+                let source_groups =
+                    user_groups.unwrap_or_else(|| vec![select_triggers(arena, body, &var_index)]);
+                for group in source_groups {
+                    let mut group_indices = Vec::with_capacity(group.len());
+                    for trigger in group {
+                        let pattern = bridge.trigger_to_pattern(arena, trigger, &var_index);
+                        let index = if let Some(&index) = pattern_ids.get(&pattern) {
+                            index
+                        } else {
+                            let index = patterns.len();
+                            patterns.push(pattern.clone());
+                            let mut trigger_vars = std::collections::HashSet::new();
+                            collect_vars(arena, trigger, &var_index, &mut trigger_vars);
+                            let mut ordered: Vec<SymbolId> = trigger_vars.into_iter().collect();
+                            ordered.sort_by_key(|symbol| var_index[symbol]);
+                            pattern_triggers.push(Some(PatternTrigger {
+                                trigger,
+                                var_terms: ordered.iter().map(|&var| arena.var(var)).collect(),
+                            }));
+                            pattern_ids.insert(pattern, index);
+                            index
+                        };
+                        group_indices.push(index);
+                        if !pattern_indices.contains(&index) {
+                            pattern_indices.push(index);
+                        }
+                    }
+                    if !group_indices.is_empty() {
+                        pattern_groups.push(group_indices);
+                    }
                 }
             }
             quantifiers.push(CompiledUniversal {
@@ -3568,6 +3612,7 @@ impl IncrementalEmatchSession {
                 var_terms,
                 body,
                 pattern_indices,
+                pattern_groups,
                 active,
                 context,
             });
@@ -4423,6 +4468,15 @@ impl IncrementalEmatchSession {
         .map(|(tuples, _)| tuples)
     }
 
+    /// Joins each trigger **alternative** and unions the resulting tuples.
+    ///
+    /// Auto-selected triggers give exactly one alternative, in which case this
+    /// is the historical single join with the historical budget. A user
+    /// `:pattern` annotation may give several; they are disjunctive (any one
+    /// firing is enough), so the tuple sets are unioned, while the terms
+    /// *within* one alternative stay conjunctive. The shared `join_budget` is
+    /// threaded across alternatives rather than reset per alternative, so N
+    /// alternatives cannot buy N times the work.
     fn witness_tuples_with_overrides(
         &self,
         quantifier: &CompiledUniversal,
@@ -4431,7 +4485,58 @@ impl IncrementalEmatchSession {
         join_budget: usize,
         deadline: Option<Instant>,
     ) -> Option<(Vec<Vec<TermId>>, usize)> {
-        if join_budget == 0 || quantifier.vars.is_empty() || quantifier.pattern_indices.is_empty() {
+        if quantifier.pattern_groups.len() <= 1 {
+            return self.witness_tuples_for_group(
+                quantifier,
+                quantifier.pattern_indices.as_slice(),
+                pattern_matches,
+                overrides,
+                join_budget,
+                deadline,
+            );
+        }
+        let mut all: Vec<Vec<TermId>> = Vec::new();
+        let mut remaining = join_budget;
+        let mut any = false;
+        for group in &quantifier.pattern_groups {
+            let Some((tuples, consumed)) = self.witness_tuples_for_group(
+                quantifier,
+                group.as_slice(),
+                pattern_matches,
+                overrides,
+                remaining,
+                deadline,
+            ) else {
+                continue;
+            };
+            any = true;
+            remaining = remaining.saturating_sub(consumed);
+            all.extend(tuples);
+        }
+        if !any {
+            return None;
+        }
+        all.sort_by(|left, right| {
+            left.iter()
+                .map(|term| term.index())
+                .cmp(right.iter().map(|term| term.index()))
+        });
+        all.dedup();
+        Some((all, join_budget - remaining))
+    }
+
+    /// One alternative's conjunctive join: merge the substitutions of every
+    /// pattern in `group` and keep the tuples that bind all variables.
+    fn witness_tuples_for_group(
+        &self,
+        quantifier: &CompiledUniversal,
+        group: &[usize],
+        pattern_matches: &[Vec<Substitution>],
+        overrides: Option<&BTreeMap<usize, Vec<Substitution>>>,
+        join_budget: usize,
+        deadline: Option<Instant>,
+    ) -> Option<(Vec<Vec<TermId>>, usize)> {
+        if join_budget == 0 || quantifier.vars.is_empty() || group.is_empty() {
             return None;
         }
         let nvars = quantifier.vars.len();
@@ -4442,7 +4547,7 @@ impl IncrementalEmatchSession {
         // attempts and consult the wall clock at a coarse block size so this
         // loop cannot silently overrun the shared query deadline.
         let mut attempts_since_clock_check = 0usize;
-        for &pattern_index in &quantifier.pattern_indices {
+        for &pattern_index in group {
             let matches = overrides
                 .and_then(|matches| matches.get(&pattern_index))
                 .or_else(|| pattern_matches.get(pattern_index))?;
@@ -5128,12 +5233,20 @@ fn witness_matches_via_egraph(
         .map(|(i, &v)| (v, u32::try_from(i).expect("variable count fits u32")))
         .collect();
 
-    // Infer a (possibly multi-pattern) trigger: a set of function-application
-    // subterms whose bound variables together cover all of them. A single term is
-    // used when one covers all variables; otherwise a greedy set cover (matched
-    // and joined below) handles patterns like `∀x,y. f(x) = g(y)`.
-    let triggers = select_triggers(arena, body, &var_index);
-    if triggers.is_empty() {
+    // A user `:pattern` annotation, if the quantifier carries a usable one;
+    // otherwise infer a (possibly multi-pattern) trigger: a set of
+    // function-application subterms whose bound variables together cover all of
+    // them. A single term is used when one covers all variables; otherwise a
+    // greedy set cover (matched and joined below) handles patterns like
+    // `∀x,y. f(x) = g(y)`. Each group is one alternative — conjunctive within,
+    // disjunctive across — so the tuple sets are unioned at the end.
+    let mut binders: HashSet<SymbolId> = HashSet::new();
+    collect_binder_symbols(arena, forall_term, &mut binders);
+    let trigger_groups = user_trigger_groups(arena, forall_term)
+        .map(|groups| usable_trigger_groups(arena, &groups, &var_index, &binders))
+        .filter(|groups| !groups.is_empty())
+        .unwrap_or_else(|| vec![select_triggers(arena, body, &var_index)]);
+    if trigger_groups.iter().all(Vec::is_empty) {
         return None;
     }
 
@@ -5156,26 +5269,36 @@ fn witness_matches_via_egraph(
     // Match each trigger and join the per-trigger substitutions into full
     // substitutions consistent on shared variables.
     let nvars = vars.len();
-    let mut joined: Vec<Vec<Option<ENodeId>>> = vec![vec![None; nvars]];
-    for trigger in triggers {
-        let pattern = bridge.trigger_to_pattern(arena, trigger, &var_index);
-        let matches = bridge.egraph.ematch(&pattern);
-        let mut next = Vec::new();
-        for partial in &joined {
-            for m in &matches {
-                if let Some(merged) = merge_substitutions(partial, m) {
-                    next.push(merged);
+    let mut all_joined: Vec<Vec<Option<ENodeId>>> = Vec::new();
+    for triggers in trigger_groups {
+        if triggers.is_empty() {
+            continue;
+        }
+        let mut joined: Vec<Vec<Option<ENodeId>>> = vec![vec![None; nvars]];
+        for trigger in triggers {
+            let pattern = bridge.trigger_to_pattern(arena, trigger, &var_index);
+            let matches = bridge.egraph.ematch(&pattern);
+            let mut next = Vec::new();
+            for partial in &joined {
+                for m in &matches {
+                    if let Some(merged) = merge_substitutions(partial, m) {
+                        next.push(merged);
+                    }
                 }
             }
+            joined = next;
+            if joined.is_empty() {
+                break;
+            }
         }
-        joined = next;
-        if joined.is_empty() {
-            return None;
-        }
+        all_joined.extend(joined);
+    }
+    if all_joined.is_empty() {
+        return None;
     }
 
     let mut tuples: Vec<Vec<TermId>> = Vec::new();
-    for subst in joined {
+    for subst in all_joined {
         // Build the witness tuple from every bound variable's matched class
         // representative; skip incomplete matches.
         let mut tuple: Vec<TermId> = Vec::with_capacity(nvars);
@@ -5934,6 +6057,128 @@ fn contains_any_symbol(arena: &TermArena, term: TermId, symbols: &HashSet<Symbol
         }
     }
     false
+}
+
+/// The user-supplied trigger alternatives (SMT-LIB `:pattern`) for a universal,
+/// or `None` when it carries no annotation.
+///
+/// The annotation is recorded against the binder *in whose scope it was
+/// written*. For the ordinary spelling `(forall ((x U) (y U)) (! B :pattern (…)))`
+/// that is the outermost link of the chain; for a genuinely nested
+/// `(forall ((x U)) (forall ((y U)) (! B :pattern (…))))` it is the inner one.
+/// [`peel_foralls`] collapses both spellings to the same `(vars, body)` pair, so
+/// the lookup has to walk the chain rather than read only its head — reading only
+/// the head silently loses the second spelling, which is the shape a hand-written
+/// trigger most often appears in.
+fn user_trigger_groups(arena: &TermArena, forall_term: TermId) -> Option<Vec<Vec<TermId>>> {
+    let mut term = forall_term;
+    loop {
+        if let Some(groups) = arena.quantifier_patterns(term) {
+            return Some(groups.to_vec());
+        }
+        match arena.node(term) {
+            TermNode::App {
+                op: Op::Forall(_) | Op::Exists(_),
+                args,
+            } => term = args[0],
+            _ => return None,
+        }
+    }
+}
+
+/// Filters user trigger alternatives down to the ones this matcher can fire.
+///
+/// **A trigger proposes; it never justifies.** Every instance this loop admits is
+/// `replace_subterms(body, x ↦ t)`, and `∀x. B ⊨ B[x := t]` holds for *every*
+/// ground `t` — it does not depend on where `t` came from. So a trigger only
+/// chooses which `t` to try. That is why dropping an alternative here can cost a
+/// decision and can never cost soundness, and why nothing downstream is allowed
+/// to read "a trigger matched" as a reason an instance is entailed: the two are
+/// separated by construction, because the trigger's only output is a
+/// substitution and the entailment is a property of `body` alone.
+///
+/// An alternative survives only if
+/// 1. every term is an uninterpreted application — [`Pattern::Var`] carries no
+///    root declaration, so `patterns_by_root` can never schedule it;
+/// 2. its terms *jointly* bind every variable of this universal — a tuple with an
+///    unbound slot is discarded by the join, so a partial alternative fires
+///    forever and produces nothing;
+/// 3. it names no binder variable this universal does not bind — that symbol is
+///    frozen to a constant no ground term equals.
+///
+/// Failing any of these declines the alternative whole. If no alternative
+/// survives, the caller falls back to [`select_triggers`], so an annotation the
+/// matcher cannot use leaves it exactly where it was before the annotation
+/// existed.
+fn usable_trigger_groups(
+    arena: &TermArena,
+    groups: &[Vec<TermId>],
+    var_index: &HashMap<SymbolId, u32>,
+    binders: &HashSet<SymbolId>,
+) -> Vec<Vec<TermId>> {
+    groups
+        .iter()
+        .filter(|group| {
+            let mut covered: HashSet<SymbolId> = HashSet::new();
+            for &term in *group {
+                if !matches!(
+                    arena.node(term),
+                    TermNode::App {
+                        op: Op::Apply(_),
+                        ..
+                    }
+                ) {
+                    return false;
+                }
+                if mentions_foreign_binder(arena, term, var_index, binders) {
+                    return false;
+                }
+                collect_vars(arena, term, var_index, &mut covered);
+            }
+            covered.len() == var_index.len()
+        })
+        .cloned()
+        .collect()
+}
+
+/// Whether `term` mentions a symbol bound by some binder other than the one
+/// whose variables are `var_index`.
+fn mentions_foreign_binder(
+    arena: &TermArena,
+    term: TermId,
+    var_index: &HashMap<SymbolId, u32>,
+    binders: &HashSet<SymbolId>,
+) -> bool {
+    let mut stack = vec![term];
+    while let Some(current) = stack.pop() {
+        match arena.node(current) {
+            TermNode::Symbol(symbol) => {
+                if binders.contains(symbol) && !var_index.contains_key(symbol) {
+                    return true;
+                }
+            }
+            TermNode::App { args, .. } => stack.extend(args.iter().copied()),
+            _ => {}
+        }
+    }
+    false
+}
+
+/// Collects every symbol bound by a `forall`/`exists` anywhere in `term`.
+fn collect_binder_symbols(arena: &TermArena, term: TermId, out: &mut HashSet<SymbolId>) {
+    let mut stack = vec![term];
+    let mut seen: HashSet<TermId> = HashSet::new();
+    while let Some(current) = stack.pop() {
+        if !seen.insert(current) {
+            continue;
+        }
+        if let TermNode::App { op, args } = arena.node(current) {
+            if let Op::Forall(symbol) | Op::Exists(symbol) = op {
+                out.insert(*symbol);
+            }
+            stack.extend(args.iter().copied());
+        }
+    }
 }
 
 /// Infers a trigger: a set of function-application subterms whose bound variables
@@ -10935,5 +11180,153 @@ mod tests {
         assert!(admitted.is_empty() && promoted.is_empty());
         assert_eq!(discovery.rejected, 1, "the untrusted owner was refused");
         assert!(ground.is_empty());
+    }
+
+    // -----------------------------------------------------------------------
+    // User trigger admission (`usable_trigger_groups`).
+    //
+    // These are unit tests rather than end-to-end ones because two of the three
+    // guards are unreachable from a plain SMT-LIB file: the driver peels a whole
+    // `∀x. ∀y.` chain into ONE universal, so a pattern spanning the chain is not
+    // foreign, and the foreign case arises only for a nested REGISTRATION whose
+    // binder prefix is a strict suffix. A guard tested only where it cannot fire
+    // is a guard that cannot fail.
+    // -----------------------------------------------------------------------
+
+    /// `∀x. f(x) = a` over an uninterpreted sort, with `g`, `h` and a constant
+    /// `a` also declared. Returns the arena, the variable index, and a builder
+    /// for application terms over the bound variable.
+    fn trigger_fixture() -> (TermArena, HashMap<SymbolId, u32>, SymbolId) {
+        let mut arena = TermArena::new();
+        let u = Sort::Uninterpreted(arena.declare_uninterpreted_sort("U"));
+        arena.declare_fun("f", &[u], u).expect("f");
+        arena.declare_fun("g", &[u], u).expect("g");
+        let x = arena.declare("x", u).expect("x");
+        let var_index: HashMap<SymbolId, u32> = [(x, 0)].into_iter().collect();
+        (arena, var_index, x)
+    }
+
+    #[test]
+    fn a_usable_user_trigger_survives_admission() {
+        let (mut arena, var_index, x) = trigger_fixture();
+        let g = arena.find_function("g").expect("g");
+        let xt = arena.var(x);
+        let gx = arena.apply(g, &[xt]).expect("g x");
+        let kept = usable_trigger_groups(&arena, &[vec![gx]], &var_index, &HashSet::new());
+        assert_eq!(kept, vec![vec![gx]]);
+    }
+
+    #[test]
+    fn a_non_application_trigger_is_refused() {
+        let (mut arena, var_index, x) = trigger_fixture();
+        let xt = arena.var(x);
+        assert!(
+            usable_trigger_groups(&arena, &[vec![xt]], &var_index, &HashSet::new()).is_empty(),
+            "a bare variable has no root declaration to index by"
+        );
+    }
+
+    #[test]
+    fn a_trigger_that_leaves_a_variable_unbound_is_refused() {
+        let mut arena = TermArena::new();
+        let u = Sort::Uninterpreted(arena.declare_uninterpreted_sort("U"));
+        arena.declare_fun("g", &[u], u).expect("g");
+        let x = arena.declare("x", u).expect("x");
+        let y = arena.declare("y", u).expect("y");
+        let var_index: HashMap<SymbolId, u32> = [(x, 0), (y, 1)].into_iter().collect();
+        let g = arena.find_function("g").expect("g");
+        let xt = arena.var(x);
+        let gx = arena.apply(g, &[xt]).expect("g x");
+        assert!(
+            usable_trigger_groups(&arena, &[vec![gx]], &var_index, &HashSet::new()).is_empty(),
+            "every tuple this could produce leaves y unbound, and the join \
+             discards those — the universal would be starved, not triggered"
+        );
+    }
+
+    #[test]
+    fn a_trigger_naming_a_foreign_binder_is_refused() {
+        let (mut arena, var_index, x) = trigger_fixture();
+        let u = Sort::Uninterpreted(arena.find_uninterpreted_sort("U").expect("U"));
+        let outer = arena.declare("outer", u).expect("outer");
+        let f = arena.find_function("f").expect("f");
+        let g = arena.find_function("g").expect("g");
+        let xt = arena.var(x);
+        let outer_t = arena.var(outer);
+        // `g(x)` alone is fine; `f(outer)` names a variable this universal does
+        // not bind, so the multi-pattern must be refused whole.
+        let gx = arena.apply(g, &[xt]).expect("g x");
+        let f_outer = arena.apply(f, &[outer_t]).expect("f outer");
+        let binders: HashSet<SymbolId> = [outer].into_iter().collect();
+        assert!(
+            usable_trigger_groups(&arena, &[vec![gx, f_outer]], &var_index, &binders).is_empty(),
+            "`outer` freezes into a constant no ground term equals, so this \
+             trigger would compile and never fire"
+        );
+        assert_eq!(
+            usable_trigger_groups(&arena, &[vec![gx, f_outer]], &var_index, &HashSet::new()).len(),
+            1,
+            "the SAME group is admitted when `outer` is not a binder — the \
+             refusal is about binder identity, not about the extra term"
+        );
+    }
+
+    #[test]
+    fn admission_keeps_the_usable_alternatives_and_drops_the_rest() {
+        let (mut arena, var_index, x) = trigger_fixture();
+        let g = arena.find_function("g").expect("g");
+        let xt = arena.var(x);
+        let gx = arena.apply(g, &[xt]).expect("g x");
+        let kept = usable_trigger_groups(
+            &arena,
+            &[vec![xt], vec![gx], vec![xt, gx]],
+            &var_index,
+            &HashSet::new(),
+        );
+        assert_eq!(
+            kept,
+            vec![vec![gx]],
+            "alternatives are independent: a bad one must not take a good one with it"
+        );
+    }
+
+    #[test]
+    fn quantifier_patterns_are_a_hint_and_not_part_of_the_term() {
+        // The interner does not key on the annotation, and it must not: two
+        // quantifiers differing only in their triggers ARE the same formula.
+        // What makes the side table safe is that the parser mints a fresh
+        // binder symbol per occurrence, so distinct source quantifiers are
+        // distinct terms. This pins the half that lives in the IR.
+        let (mut arena, _, x) = trigger_fixture();
+        let f = arena.find_function("f").expect("f");
+        let g = arena.find_function("g").expect("g");
+        let xt = arena.var(x);
+        let fx = arena.apply(f, &[xt]).expect("f x");
+        let gx = arena.apply(g, &[xt]).expect("g x");
+        let body = arena.eq(fx, gx).expect("body");
+        let forall = arena.forall(x, body).expect("forall");
+        assert!(arena.quantifier_patterns(forall).is_none());
+        arena.set_quantifier_patterns(forall, vec![vec![gx]]);
+        assert_eq!(
+            arena.quantifier_patterns(forall),
+            Some([vec![gx]].as_slice())
+        );
+        // Rebuilding the identical term returns the identical id, annotation
+        // and all — the annotation is not part of the key.
+        assert_eq!(arena.forall(x, body).expect("forall again"), forall);
+        // An empty annotation is the same state as no annotation, so a consumer
+        // cannot be narrowed by something it could not use.
+        arena.set_quantifier_patterns(forall, vec![vec![]]);
+        assert!(arena.quantifier_patterns(forall).is_none());
+    }
+
+    #[test]
+    #[should_panic(expected = "forall/exists")]
+    fn triggers_cannot_be_recorded_against_a_non_binder() {
+        let (mut arena, _, x) = trigger_fixture();
+        let f = arena.find_function("f").expect("f");
+        let xt = arena.var(x);
+        let fx = arena.apply(f, &[xt]).expect("f x");
+        arena.set_quantifier_patterns(fx, vec![vec![fx]]);
     }
 }

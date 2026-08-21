@@ -6051,3 +6051,275 @@ fn an_unexpired_ingest_deadline_parses_identically() {
     assert_eq!(baseline.assertions.len(), far.assertions.len());
     assert_eq!(baseline.logic, far.logic);
 }
+
+// ---------------------------------------------------------------------------
+// User-supplied quantifier triggers (SMT-LIB `:pattern`).
+//
+// Before this, `:pattern` was parsed and dropped. These tests pin the parse →
+// IR half of threading it through: what is recorded, what is declined, and the
+// one distinction the recording could plausibly fail to express (two
+// syntactically identical quantifiers annotated differently).
+// ---------------------------------------------------------------------------
+
+/// Root function name of a recorded trigger term, or `None` when it is not an
+/// uninterpreted application.
+fn trigger_root(arena: &axeyum_ir::TermArena, term: axeyum_ir::TermId) -> Option<String> {
+    match arena.node(term) {
+        axeyum_ir::TermNode::App {
+            op: axeyum_ir::Op::Apply(func),
+            ..
+        } => Some(arena.function(*func).0.to_owned()),
+        _ => None,
+    }
+}
+
+const TRIGGER_PRELUDE: &str = r"
+    (set-logic UF)
+    (declare-sort U 0)
+    (declare-fun f (U) U)
+    (declare-fun g (U) U)
+    (declare-fun h (U U) U)
+    (declare-const a U)
+";
+
+#[test]
+fn single_pattern_is_recorded_against_the_quantifier_term() {
+    let text = format!(
+        "{TRIGGER_PRELUDE}
+         (assert (forall ((x U)) (! (= (f x) a) :pattern ((g x)))))
+         (check-sat)"
+    );
+    let script = parse_script(&text).unwrap();
+    let groups = script
+        .arena
+        .quantifier_patterns(script.assertions[0])
+        .expect("annotation recorded");
+    assert_eq!(groups.len(), 1, "one alternative");
+    assert_eq!(groups[0].len(), 1, "one term in the alternative");
+    assert_eq!(
+        trigger_root(&script.arena, groups[0][0]).as_deref(),
+        Some("g"),
+        "the USER's trigger, not the body's own `f x`"
+    );
+}
+
+#[test]
+fn a_multi_pattern_records_every_term_in_one_alternative() {
+    let text = format!(
+        "{TRIGGER_PRELUDE}
+         (assert (forall ((x U) (y U)) (! (= (h x y) a) :pattern ((f x) (g y)))))
+         (check-sat)"
+    );
+    let script = parse_script(&text).unwrap();
+    let groups = script
+        .arena
+        .quantifier_patterns(script.assertions[0])
+        .expect("annotation recorded");
+    assert_eq!(groups.len(), 1);
+    let roots: Vec<Option<String>> = groups[0]
+        .iter()
+        .map(|&t| trigger_root(&script.arena, t))
+        .collect();
+    assert_eq!(
+        roots,
+        vec![Some("f".to_owned()), Some("g".to_owned())],
+        "both terms of the multi-pattern, in source order"
+    );
+}
+
+#[test]
+fn two_pattern_attributes_record_two_alternatives() {
+    let text = format!(
+        "{TRIGGER_PRELUDE}
+         (assert (forall ((x U)) (! (= (f x) a) :pattern ((f x)) :pattern ((g x)))))
+         (check-sat)"
+    );
+    let script = parse_script(&text).unwrap();
+    let groups = script
+        .arena
+        .quantifier_patterns(script.assertions[0])
+        .expect("annotation recorded");
+    assert_eq!(
+        groups.len(),
+        2,
+        "alternatives, not one merged multi-pattern"
+    );
+    assert_eq!(
+        trigger_root(&script.arena, groups[0][0]).as_deref(),
+        Some("f")
+    );
+    assert_eq!(
+        trigger_root(&script.arena, groups[1][0]).as_deref(),
+        Some("g")
+    );
+}
+
+#[test]
+fn an_unbuildable_pattern_is_declined_and_does_not_fail_the_parse() {
+    // `(+ x 1)` is an interpreted application; the e-matcher indexes patterns
+    // by an uninterpreted root, so this is declined. The parse must still
+    // succeed — dropping the annotation is exactly the old behaviour, and an
+    // annotation must never turn a parsable file into an error.
+    let text = "
+        (set-logic UFLIA)
+        (declare-fun p (Int) Bool)
+        (assert (forall ((x Int)) (! (p x) :pattern ((+ x 1)))))
+        (check-sat)";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 1);
+    assert!(
+        script
+            .arena
+            .quantifier_patterns(script.assertions[0])
+            .is_none(),
+        "declined, not partially recorded"
+    );
+}
+
+#[test]
+fn one_unbuildable_term_declines_its_whole_multi_pattern() {
+    let text = "
+        (set-logic UFLIA)
+        (declare-fun p (Int Int) Bool)
+        (declare-fun q (Int) Int)
+        (assert (forall ((x Int) (y Int)) (! (p x y) :pattern ((q x) (+ y 1)))))
+        (check-sat)";
+    let script = parse_script(text).unwrap();
+    assert!(
+        script
+            .arena
+            .quantifier_patterns(script.assertions[0])
+            .is_none(),
+        "a multi-pattern is all-or-nothing: keeping only `q x` would bind y to \
+         nothing and starve the quantifier"
+    );
+}
+
+#[test]
+fn a_bare_variable_pattern_is_declined() {
+    let text = format!(
+        "{TRIGGER_PRELUDE}
+         (assert (forall ((x U)) (! (= (f x) a) :pattern (x))))
+         (check-sat)"
+    );
+    let script = parse_script(&text).unwrap();
+    assert!(
+        script
+            .arena
+            .quantifier_patterns(script.assertions[0])
+            .is_none(),
+        "a variable has no root symbol to index by and would match everything"
+    );
+}
+
+#[test]
+fn an_unannotated_quantifier_records_nothing() {
+    let text = format!(
+        "{TRIGGER_PRELUDE}
+         (assert (forall ((x U)) (= (f x) a)))
+         (check-sat)"
+    );
+    let script = parse_script(&text).unwrap();
+    assert!(
+        script
+            .arena
+            .quantifier_patterns(script.assertions[0])
+            .is_none()
+    );
+}
+
+#[test]
+fn a_pattern_may_mention_an_outer_binders_variable() {
+    let text = format!(
+        "{TRIGGER_PRELUDE}
+         (assert (forall ((x U)) (forall ((y U)) (! (= (h x y) a) :pattern ((h x y))))))
+         (check-sat)"
+    );
+    let script = parse_script(&text).unwrap();
+    // The annotation sits on the INNER binder, so it is recorded against the
+    // inner quantifier term, not the asserted outer one.
+    let inner = match script.arena.node(script.assertions[0]) {
+        axeyum_ir::TermNode::App { args, .. } => args[0],
+        node => panic!("outer forall expected, got {node:?}"),
+    };
+    let groups = script
+        .arena
+        .quantifier_patterns(inner)
+        .expect("inner annotation recorded");
+    assert_eq!(groups[0].len(), 1);
+    assert_eq!(
+        trigger_root(&script.arena, groups[0][0]).as_deref(),
+        Some("h")
+    );
+}
+
+#[test]
+fn identical_quantifiers_with_different_triggers_stay_distinguishable() {
+    // The hazard a side table keyed by `TermId` invites: the arena is
+    // hash-consed, so if two syntactically identical `forall`s interned to ONE
+    // term, one annotation would silently overwrite the other. They do not,
+    // because every binder occurrence mints a fresh symbol — this test is what
+    // makes that load-bearing property visible instead of assumed.
+    let text = format!(
+        "{TRIGGER_PRELUDE}
+         (assert (forall ((x U)) (! (= (f x) a) :pattern ((f x)))))
+         (assert (forall ((x U)) (! (= (f x) a) :pattern ((g x)))))
+         (check-sat)"
+    );
+    let script = parse_script(&text).unwrap();
+    assert_ne!(
+        script.assertions[0], script.assertions[1],
+        "identical source quantifiers must not intern to one term"
+    );
+    let first = script
+        .arena
+        .quantifier_patterns(script.assertions[0])
+        .unwrap();
+    let second = script
+        .arena
+        .quantifier_patterns(script.assertions[1])
+        .unwrap();
+    assert_eq!(
+        trigger_root(&script.arena, first[0][0]).as_deref(),
+        Some("f")
+    );
+    assert_eq!(
+        trigger_root(&script.arena, second[0][0]).as_deref(),
+        Some("g")
+    );
+}
+
+#[test]
+fn an_annotation_does_not_change_the_formula() {
+    // A trigger is a hint. `(! B :pattern (p))` and `B` denote the same thing,
+    // and the recording must not perturb the term that is built.
+    let bare = format!(
+        "{TRIGGER_PRELUDE}
+         (assert (forall ((x U)) (= (f x) a)))
+         (check-sat)"
+    );
+    let annotated = format!(
+        "{TRIGGER_PRELUDE}
+         (assert (forall ((x U)) (! (= (f x) a) :pattern ((g x)))))
+         (check-sat)"
+    );
+    let bare = parse_script(&bare).unwrap();
+    let annotated = parse_script(&annotated).unwrap();
+    assert_eq!(
+        axeyum_ir::render(&bare.arena, bare.assertions[0]),
+        axeyum_ir::render(&annotated.arena, annotated.assertions[0]),
+        "same formula with and without the annotation"
+    );
+    // Not the same *TermId*, and that is expected rather than a defect: the
+    // trigger `g x` is interned before the body, so it takes an earlier dense
+    // id. Ids are arena-local and never compared across arenas; the formula is
+    // what must agree.
+    assert!(
+        annotated
+            .arena
+            .quantifier_patterns(annotated.assertions[0])
+            .is_some()
+            && bare.arena.quantifier_patterns(bare.assertions[0]).is_none(),
+        "the only difference is the hint channel"
+    );
+}
