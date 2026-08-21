@@ -536,6 +536,34 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   an explicit file — `git add -A -- <file>` cannot stage anything else. It fires
   on a pathspec naming a **directory**, which is what actually happened. A suite
   without that case would let the guard be deleted while staying green.
+- **A MERGE CANNOT USE A PRIVATE INDEX, SO ANOTHER LANE'S STAGED FILE BLOCKS
+  YOURS — USE A DETACHED WORKTREE.** The `GIT_INDEX_FILE` remedy above covers
+  *commits*. A merge has to write the index, and git refuses when the shared one
+  holds a staged path the merge would touch:
+
+      error: Your local changes to the following files would be overwritten by merge:
+        docs/plan/status/117-parity-freshness.md
+      Merge with strategy ort failed.
+
+  Measured 2026-08-21. That file was another lane's, staged and uncommitted, and
+  **no incoming commit touched it** — git is conservative about any staged path.
+  Unstaging it is exactly the "you would drop their staging" mistake this section
+  already warns against, and `git stash` is worse (it corrupted a file the same
+  day: the pop conflicted and wrote `<<<<<<<` markers into a source file while
+  `git status` still showed the expected shape).
+
+  The way through is an index that is genuinely yours:
+
+      W=/data0/axeyum/scratch/wt-$AXEYUM_AGENT-push
+      git worktree add --detach "$W" HEAD
+      cd "$W" && git merge --no-edit origin/main && scripts/lane-push.sh --to main
+      cd - && git worktree remove --force "$W"
+
+  A worktree has its own index and its own `HEAD`, so the merge, the regeneration
+  and the push all happen without touching the shared checkout. Verify afterwards
+  that their entry survived — `git ls-files -s <path>` should print the same blob
+  hash it did before you started.
+
 - **Lane identity lives in the environment, not in git config.**
   `export AXEYUM_AGENT=<lane>`; the `hooks/commit-msg` hook stamps an
   `Agent:` trailer and refuses an unidentified commit. Do **not** use
