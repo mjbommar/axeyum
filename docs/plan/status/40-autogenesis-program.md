@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. The exact-target decline remains sealed with zero credit. One preregistered non-rendering read of the official cancellation capsule and r091 measured 16 `Acc`-bearing carriers: all are empty-footprint and absent from r091, and the nearest complete carrier is exactly the recursive package `Acc` / `Acc.intro` / `Acc.rec`. No theorem was submitted. The next increment is frozen to authorize only those three exact declaration identities through the existing atomic singleton-inductive reconstruction gate.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. The exact-target decline remains sealed with zero credit. The exact official `Acc` / `Acc.intro` / `Acc.rec` package is now declaration-authorized, atomically reconstructed, and independently identity-checked. Two fresh cancellation compositions over r091 are byte-identical; the official cancellation root is reproduced with an empty footprint and a replayed receipt. No clean-order or Fibonacci target theorem was submitted.
 
-**Next:** implement declaration-exact official `Acc` package authorization with mutation controls, then compose the official cancellation root twice. Do not submit clean order or `Nat.gcd_fib_add_self` until that composition is deterministic, replayable, and empty-footprint.
+**Next:** preregister and reconstruct official clean divisibility antisymmetry over the accepted cancellation environment, export it twice, and require four fresh imports. Do not submit `Nat.gcd_fib_add_self` until that support capsule is deterministic and empty-footprint.
 
 <!-- plan-section: landed-changes -->
 
@@ -200,3 +200,5 @@
 | 2026-08-21 | `7d931d9d3` | Non-rendering declaration-path auditor reports nearest carriers and target compatibility |
 | 2026-08-21 | `fe47460bd` | Fourteen autogenesis checker suites become gate-reachable; expired SMT negative control is replaced |
 | 2026-08-21 | (pending) | Single-read cancellation audit localizes the exact missing `Acc` package and freezes declaration-exact reconstruction |
+| 2026-08-21 | `b26edf6aa` | Exact official `Acc` package authorization retains atomic reconstruction and mutation controls |
+| 2026-08-21 | (pending) | Official cancellation composes twice over r091 with exact `Acc`, byte-identical receipts, and an empty footprint |

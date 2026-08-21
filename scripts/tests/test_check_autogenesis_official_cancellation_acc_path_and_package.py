@@ -20,6 +20,7 @@ def module(name: str, path: str):
 
 AUDIT = module("acc_path_result", "scripts/check-autogenesis-official-cancellation-acc-path-audit-result.py")
 PLAN = module("acc_package_plan", "scripts/check-autogenesis-official-cancellation-acc-package-composition-plan.py")
+COMPOSED = module("acc_package_result", "scripts/check-autogenesis-official-cancellation-acc-package-composition-result.py")
 
 
 class AuditResultControls(unittest.TestCase):
@@ -48,6 +49,17 @@ class PackagePlanControls(unittest.TestCase):
         plan["authorized_recursive_package"]["exact_source_declaration_sha256"]["Acc"] = "0" * 64
         with self.assertRaises(PLAN.CompositionPlanError):
             PLAN.validate(plan)
+
+
+class PackageCompositionResultControls(unittest.TestCase):
+    def test_live_composition_result_passes(self) -> None:
+        self.assertEqual(COMPOSED.validate()["authority"]["cancellation_composition_credit"], 1)
+
+    def test_downstream_authority_mutation_fails(self) -> None:
+        result = copy.deepcopy(COMPOSED.load(COMPOSED.RESULT))
+        result["authority"]["target_credit"] = 1
+        with self.assertRaises(COMPOSED.CompositionResultError):
+            COMPOSED.validate(result)
 
     def test_budget_mutation_fails(self) -> None:
         plan = copy.deepcopy(PLAN.load(PLAN.PLAN))

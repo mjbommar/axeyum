@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-cancellation-acc-package-composition-result",
+  "state": "exact-official-acc-and-cancellation-compose-twice-byte-identically-empty-footprint",
+  "plan": {
+    "path": "artifacts/autogenesis/official-cancellation-acc-package-composition-plan-v1.json",
+    "sha256": "5f92ad135d33a8715d327755055b48a81cd5ebb61a8262eb0c242aec6d2c63c6"
+  },
+  "implementation_commit": "b26edf6aa",
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/b26edf6aa-official-cancellation-acc-package-composition-v1",
+    "manifest_sha256": "fda89891b57fa88c8453c16f4d5175638a40b1dfa6e360b89bbfb9c8af43ee1b",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "execution": {
+    "binary_builds": 1,
+    "complete_invocations": 2,
+    "source_reads": 2,
+    "target_reads": 2,
+    "cancellation_compositions": 2,
+    "clean_order_submissions": 0,
+    "exact_target_submissions": 0,
+    "retries": 0
+  },
+  "result": {
+    "receipts_byte_identical": true,
+    "receipt_sha256": "bef90af9e0873162281365f8bbdb0902c096d04790b56c57bb8dc0daca5cd626",
+    "reused_declarations": 250,
+    "added_definitions": 51,
+    "added_singleton_inductives": 8,
+    "added_theorems": 75,
+    "official_acc_source_equals_target": true,
+    "cancellation_root": "Axeyum.Autogenesis.officialCoprimeFactorDivisibilityCancellationV1",
+    "cancellation_declaration_sha256": "4696bda19c2353f795c95d700cc63c456d0fe750bfdf519c4646c76a1efdb147",
+    "cancellation_axiom_footprint": []
+  },
+  "authority": {
+    "acc_package_credit": 1,
+    "cancellation_composition_credit": 1,
+    "support_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Preregister official clean divisibility antisymmetry over this accepted cancellation composition; export it twice before authorizing another Fibonacci gcd-shift attempt.",
+  "verification": "python3 scripts/check-autogenesis-official-cancellation-acc-package-composition-result.py",
+  "limitations": "This accepts exact package and cancellation composition only. It does not establish clean order, Nat.gcd_fib_add_self, fact status, evaluation credit, or a ledger write."
+}
