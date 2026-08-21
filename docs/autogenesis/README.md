@@ -173,6 +173,7 @@ compounding, not automation theatre.
 | [Fibonacci receipt authority](74-fibonacci-receipt-authority.md) | Which exact library-premise identities may the semantic receipt authorize, and how are they frozen before issuance? |
 | [Exact Fibonacci semantic receipt](75-exact-fibonacci-semantic-receipt.md) | Did two fresh complete official reconstructions issue one identical dependency-bound receipt, and which transaction boundary still keeps the fact open? |
 | [Exact Fibonacci coprimality admission](76-exact-fibonacci-coprimality-admission.md) | Did the dependency-bound receipt survive crash-safe ledger admission and clean replay, and which descendant became ready? |
+| [`Nat.gcd_fib_add_self` qualification](77-nat-gcd-fib-add-self-qualification.md) | What exact relation and reusable support obligations lie between the newly ready child and its first honest bounded target submission? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-gcd-fib-add-self-qualification",
+  "state": "newly-ready-exact-equality-qualified-no-proof-credit",
+  "inputs": {
+    "unlock_admission": {
+      "path": "artifacts/autogenesis/mathlib-nat-fib-coprime-admission-v1.json",
+      "sha256": "b0fe0713d09bdca250d7911c3e8e776a6db4f5e749d5b97914c5941e16b1a844"
+    },
+    "reviewed_nursery": {
+      "path": "artifacts/autogenesis/mathlib-nat-int-reviewed-nursery-v1.json",
+      "sha256": "c03b129cc2c576a8d5661ac026ad6a8adc7ae548f8bfa903c4d8b851f6c577b0"
+    },
+    "dispatch_baseline": {
+      "path": "artifacts/autogenesis/mathlib-nursery-dispatch-baseline-v1.json",
+      "sha256": "923ea43ce7119db2c2107bae4d836ea2a47f818ffe62bca4320a422fc8219714"
+    },
+    "producer_census": {
+      "path": "/nas3/data/axeyum/autogenesis/producer-census/10ab370a9-mathlib-v4.30.0-reflexivity-v1/observation.json",
+      "sha256": "849cdcb67f0428b17db811d27fead774c099777bff8996b5ef8d952def18dd54"
+    },
+    "proof_isolated_stream": {
+      "path": "/nas3/data/axeyum/autogenesis/coverage/26fcc2c2f-mathlib-v4.30.0-reflexivity-train-development-v1/streams/r091.ndjson",
+      "sha256": "fc1117679c743009e8548a25d1f73f71f6cd42555ea77b3efce07844673670b2"
+    },
+    "relation_probe": {
+      "path": "crates/axeyum-lean-import/examples/relation_goal_probe.rs",
+      "sha256": "afe7f20e7e3dd7ee657a3e190e1066a6486a754c37a4712e829ac95e91b1cd43",
+      "tooling_commit": "3dac4f57b11ec19bae23c300a78839b6e4ac48c8"
+    }
+  },
+  "candidate": {
+    "fact_id": "F:ml430-nat-gcd-fib-add-self-5a92d5e3",
+    "candidate_id": "5a92d5e3a2e1adbd9f94ff325825fa9c3dee0ae5ad082f98754e40f9fc761c70",
+    "source_name": "Nat.gcd_fib_add_self",
+    "partition": "train",
+    "module": "Mathlib.Data.Nat.Fib.Basic",
+    "statement": "∀ (m n : ℕ), (Nat.fib m).gcd (Nat.fib (n + m)) = (Nat.fib m).gcd (Nat.fib n)",
+    "depends_on": [
+      "F:ml430-nat-fib-coprime-fib-succ-162fc738"
+    ],
+    "unlock_event_sha256": "9b925a433c03e2cb61b3334d3805c7721fddf903fdac3fbaad9a73c1530d9582",
+    "readiness_delta_sha256": "95eba953aebbc2935b5a4021fd122b54cf1b0873d8609e7a9c98acb9833ae21c"
+  },
+  "prior_dispatch": {
+    "outcome": "declined-before-execution",
+    "decline_reason": "no-exact-authoritative-operation",
+    "registered_operation_ids": [],
+    "executor_budget_consumed": 0,
+    "statement_adapter_ready": false,
+    "reflexivity_candidate_checked": false
+  },
+  "proof_free_measurement": {
+    "artifact_file": "r091.ndjson",
+    "target_definition": "Axeyum.Autogenesis.Coverage.r091",
+    "lean_version": "4.30.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "type_slice_receipt_sha256": "7accd6b1df4831c6fc6cbaeb48ca246467e1a183fafdb9bbb58beb19f0ce7f6b",
+    "slice_retained": 46,
+    "slice_abstractions": [
+      {
+        "source_name": "Nat.gcd",
+        "source_occurrences": 2,
+        "source_content_sha256": "b62119563ad5d092a2002c91344c50d8e996f5c29f8396149917d00e05ab82f2"
+      }
+    ],
+    "prior_producer": {
+      "name": "bounded-pi-equality-reflexivity-v1",
+      "outcome": "kernel-rejection:candidate-typecheck-failed",
+      "binders": 3,
+      "constructed_nodes": 6,
+      "max_binders": 8,
+      "max_constructed_nodes": 16,
+      "proof_sha256": "2aa7ce1159679c3cf951e9f58332b7cd09da3869bb94374c5c6f33d8e9199035"
+    },
+    "relation_probe": {
+      "binders": 2,
+      "original_head": "Eq",
+      "whnf_head": "Eq",
+      "whnf_goal": "Eq.{1} AxNat (AxNat.gcd (AxNat.fib #1) (AxNat.fib (HAdd.hAdd.{0, 0, 0} AxNat AxNat AxNat (instHAdd.{0} AxNat instAddNat) #0 #1))) (AxNat.gcd (AxNat.fib #1) (AxNat.fib #0))"
+    }
+  },
+  "qualified_boundary": {
+    "classification": "non-reflexive-exact-equality-requiring-mathematical-composition",
+    "established_input": "the exact dependency-bound Nat.fib_coprime_fib_succ ledger theorem",
+    "smallest_honest_route": "split m into zero and successor; for successor k, prove the independently authored Fibonacci addition identity fib (n + (k + 1)) = fib (k + 1) * fib (n + 1) + fib k * fib n, remove the first gcd-divisible summand, and cancel the coprime fib k factor using fib k coprime fib (k + 1)",
+    "required_local_constructions": [
+      "Fibonacci successor-addition identity",
+      "coprime-factor divisibility cancellation",
+      "gcd equality from the same divisors"
+    ],
+    "existing_checked_support": [
+      "Axeyum.Autogenesis.fibAddTwo",
+      "Nat.dvd_add_iff_right",
+      "Nat.dvd_gcd",
+      "Nat.gcd_dvd_left",
+      "Nat.gcd_dvd_right"
+    ],
+    "next_action": "preregister one bounded support-first construction plan before any r091 target submission"
+  },
+  "authority": {
+    "partitions_inspected": [
+      "train"
+    ],
+    "held_out_inspected": false,
+    "proof_bodies_inspected": false,
+    "proof_search_invocations": 0,
+    "kernel_submissions": 0,
+    "executor_invocations": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "verification": "python3 scripts/check-autogenesis-nat-gcd-fib-add-self-qualification.py",
+  "limitations": "This qualifies one newly ready train fact and records an independently derived route. It does not prove the addition or cancellation supports, register or execute a target operation, inspect the Mathlib proof body or held-out outcomes, grant evaluation credit, or change the fact ledger."
+}
