@@ -7,6 +7,7 @@ mod fib_coprime;
 #[path = "support/fib_gcd_shift.rs"]
 mod fib_gcd_shift;
 
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io::Cursor;
 use std::path::PathBuf;
@@ -14,7 +15,8 @@ use std::path::PathBuf;
 use axeyum_lean_import::{
     CHECKED_DEPENDENCY_THEOREM_RECEIPT_VERSION, CheckedDependencyTheoremAuthority,
     CheckedTheoremAuthority, CheckedTheoremCompositionError, CheckedTheoremDependency,
-    ImportLimits, canonical_declaration_sha256, canonical_expression_sha256,
+    ImportLimits, canonical_alpha_expression_sha256, canonical_declaration_sha256,
+    canonical_expression_sha256, canonical_kernel_type_shape_sha256,
     checked_reused_declaration_compatibility, compose_checked_theorem_slice,
     compose_checked_theorem_slice_with_target_leaves, import_ndjson,
     issue_checked_dependency_theorem_receipt, specialize_checked_theorem,
@@ -97,9 +99,12 @@ fn run() -> Result<(), String> {
         gcd_shift_support,
         gcd_shift_second_support,
         balanced_bezout_path,
+        audit_balanced_bezout_fix,
     ) = match arguments.next() {
-        None => (false, None, false, None, false, false, None),
-        Some(flag) if flag == "--all-support" => (true, None, false, None, false, false, None),
+        None => (false, None, false, None, false, false, None, false),
+        Some(flag) if flag == "--all-support" => {
+            (true, None, false, None, false, false, None, false)
+        }
         Some(flag) if flag == "--exact-target" => (
             true,
             Some(required_path(&mut arguments, "fib-recurrence.ndjson")?),
@@ -108,6 +113,7 @@ fn run() -> Result<(), String> {
             false,
             false,
             None,
+            false,
         ),
         Some(flag) if flag == "--exact-authority" => (
             true,
@@ -117,6 +123,7 @@ fn run() -> Result<(), String> {
             false,
             false,
             None,
+            false,
         ),
         Some(flag) if flag == "--issue-receipt" => (
             true,
@@ -126,6 +133,7 @@ fn run() -> Result<(), String> {
             false,
             false,
             None,
+            false,
         ),
         Some(flag) if flag == "--gcd-fib-add-self-support" => (
             true,
@@ -135,6 +143,7 @@ fn run() -> Result<(), String> {
             true,
             false,
             None,
+            false,
         ),
         Some(flag) if flag == "--gcd-fib-add-self-second-support" => (
             true,
@@ -144,6 +153,7 @@ fn run() -> Result<(), String> {
             true,
             true,
             None,
+            false,
         ),
         Some(flag) if flag == "--closed-balanced-bezout" => (
             true,
@@ -156,6 +166,20 @@ fn run() -> Result<(), String> {
                 &mut arguments,
                 "official-gcd-balanced-bezout-clean.ndjson",
             )?),
+            false,
+        ),
+        Some(flag) if flag == "--audit-balanced-bezout-fix" => (
+            true,
+            None,
+            false,
+            None,
+            false,
+            false,
+            Some(required_path(
+                &mut arguments,
+                "official-gcd-balanced-bezout-clean.ndjson",
+            )?),
+            true,
         ),
         Some(_) => return Err("unexpected trailing argument".to_owned()),
     };
@@ -544,7 +568,11 @@ fn run() -> Result<(), String> {
                 .iter()
                 .map(|row| (row.name.as_str(), row.axiom_footprint.as_slice())),
         )?;
-        return close_balanced_bezout(balanced_bezout.kernel(), completed.kernel());
+        return if audit_balanced_bezout_fix {
+            audit_balanced_bezout_fix_compatibility(balanced_bezout.kernel(), completed.kernel())
+        } else {
+            close_balanced_bezout(balanced_bezout.kernel(), completed.kernel())
+        };
     }
     let frontier = retry_native_support(
         &native,
@@ -590,6 +618,168 @@ fn run() -> Result<(), String> {
         serde_json::to_string_pretty(&output).map_err(|error| error.to_string())?
     );
     Ok(())
+}
+
+fn audit_balanced_bezout_fix_compatibility(source: &Kernel, target: &Kernel) -> Result<(), String> {
+    const ROOT: &str = "WellFounded.fix";
+    let source_root = find_name(source, ROOT)?;
+    let target_root = find_name(target, ROOT)?;
+    let source_closure = named_closure(source, source_root);
+    let target_closure = named_closure(target, target_root);
+    let union = source_closure
+        .keys()
+        .chain(target_closure.keys())
+        .cloned()
+        .collect::<BTreeSet<_>>();
+    if union.len() > 512 {
+        return Err(format!(
+            "WellFounded.fix closure union exceeded 512 names: {}",
+            union.len()
+        ));
+    }
+    let rows = union
+        .iter()
+        .map(|name| {
+            comparison_row(
+                source,
+                target,
+                name,
+                source_closure.get(name).copied(),
+                target_closure.get(name).copied(),
+            )
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let root_row = rows
+        .iter()
+        .find(|row| row["name"] == ROOT)
+        .ok_or("WellFounded.fix comparison row disappeared")?;
+    let source_shape = root_row["source"]["kernel_type_shape_sha256"]
+        .as_str()
+        .ok_or("WellFounded.fix source shape disappeared")?;
+    let target_shape = root_row["target"]["kernel_type_shape_sha256"]
+        .as_str()
+        .ok_or("WellFounded.fix target shape disappeared")?;
+    if source_shape != "f45b230503d6ddc03c61714008f6165dd055ff995d927507fc6d7aaffcf6afd6"
+        || target_shape != "0c2e9552a1056133fbd4e6a318344cfb1310468f7d2113efb37ebba0bf6ef32c"
+    {
+        return Err(format!(
+            "WellFounded.fix root shapes changed: source={source_shape} target={target_shape}"
+        ));
+    }
+    let mut class_counts = BTreeMap::<String, usize>::new();
+    for row in &rows {
+        let class = row["compatibility"]
+            .as_str()
+            .ok_or("compatibility class disappeared")?;
+        *class_counts.entry(class.to_owned()).or_default() += 1;
+    }
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "schema_version": 1,
+            "kind": "axeyum-official-gcd-balanced-bezout-fix-compatibility-audit",
+            "state": "proof-free-well-founded-fix-closure-classified",
+            "root": ROOT,
+            "source_closure_count": source_closure.len(),
+            "target_closure_count": target_closure.len(),
+            "closure_union_count": union.len(),
+            "class_counts": class_counts,
+            "rows": rows,
+            "rendered_material": {
+                "proof_terms": 0,
+                "theorem_types": 0,
+                "definition_values": 0,
+                "theorem_values": 0,
+            },
+            "composition_attempts": 0,
+            "closed_theorem_submissions": 0,
+            "compatibility_override_credit": 0,
+            "translation_credit": 0,
+            "target_reconstruction_credit": 0,
+            "fact_status_changes": 0,
+            "evaluation_credit": 0,
+            "ledger_writes": 0,
+        }))
+        .map_err(|error| error.to_string())?
+    );
+    Ok(())
+}
+
+fn named_closure(kernel: &Kernel, root: NameId) -> BTreeMap<String, NameId> {
+    std::iter::once(root)
+        .chain(kernel.declaration_dependency_closure(root))
+        .map(|name| (kernel.display_name(name).to_string(), name))
+        .collect()
+}
+
+fn comparison_row(
+    source: &Kernel,
+    target: &Kernel,
+    name: &str,
+    source_name: Option<NameId>,
+    target_name: Option<NameId>,
+) -> Result<Value, String> {
+    let source_metadata = source_name
+        .map(|id| declaration_metadata(source, id))
+        .transpose()?;
+    let target_metadata = target_name
+        .map(|id| declaration_metadata(target, id))
+        .transpose()?;
+    let compatibility = match (source_name, target_name) {
+        (None, Some(_)) => "missing-source",
+        (Some(_), None) => "missing-target",
+        (Some(source_id), Some(target_id)) => {
+            if canonical_declaration_sha256(source, source_id)?
+                == canonical_declaration_sha256(target, target_id)?
+            {
+                "exact-declaration"
+            } else {
+                match checked_reused_declaration_compatibility(source, target, name) {
+                    Ok(receipt) => receipt.compatibility.as_str(),
+                    Err(CheckedTheoremCompositionError::TypeShapeMismatch { .. }) => {
+                        "type-shape-mismatch"
+                    }
+                    Err(_) => "compatibility-declined",
+                }
+            }
+        }
+        (None, None) => return Err("closure union contained an absent name".to_owned()),
+    };
+    Ok(json!({
+        "name": name,
+        "compatibility": compatibility,
+        "source": source_metadata,
+        "target": target_metadata,
+    }))
+}
+
+fn declaration_metadata(kernel: &Kernel, name: NameId) -> Result<Value, String> {
+    let declaration = kernel
+        .environment()
+        .get(name)
+        .ok_or_else(|| format!("declaration disappeared: {}", kernel.display_name(name)))?;
+    let ty = declaration.ty();
+    Ok(json!({
+        "kind": declaration_kind(declaration),
+        "universe_parameter_count": declaration.uparams().len(),
+        "declaration_sha256": canonical_declaration_sha256(kernel, name)?,
+        "type_sha256": canonical_expression_sha256(kernel, ty)?,
+        "alpha_type_sha256": canonical_alpha_expression_sha256(kernel, ty)?,
+        "kernel_type_shape_sha256": canonical_kernel_type_shape_sha256(kernel, ty)?,
+    }))
+}
+
+fn declaration_kind(declaration: &Declaration) -> &'static str {
+    match declaration {
+        Declaration::Axiom { .. } => "axiom",
+        Declaration::Definition { .. } => "definition",
+        Declaration::Theorem { .. } => "theorem",
+        Declaration::Opaque { .. } => "opaque",
+        Declaration::Inductive { .. } => "inductive",
+        Declaration::Constructor { .. } => "constructor",
+        Declaration::Recursor { .. } => "recursor",
+        Declaration::Quotient { .. } => "quotient",
+    }
 }
 
 #[allow(clippy::too_many_lines)]

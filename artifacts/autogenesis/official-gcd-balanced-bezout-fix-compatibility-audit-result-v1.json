@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-official-gcd-balanced-bezout-fix-compatibility-audit-result",
+  "state": "well-founded-fix-closure-classified-twice-source-official-target-native-incompatible",
+  "plan": {"path": "artifacts/autogenesis/official-gcd-balanced-bezout-fix-compatibility-audit-plan-v1.json", "sha256": "8bcdce7de9f955a77aaf1a3a07d6766d0ec1e15f8cb439c19025de6b6b57f2dc", "commit": "7550b31c4"},
+  "evidence_pack": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/7550b31c4-official-gcd-balanced-bezout-fix-audit-v1/manifest.json", "sha256": "b6cfa19fadc1651daca57bae21dad29d501cd8938b1bc493211b2eac6196d423", "directory_mode": "0555", "file_mode": "0444"},
+  "execution": {"binary_builds": 1, "complete_invocations": 2, "input_stream_reads": 8, "intermediate_specialization_operations": 6, "closure_audits": 2, "closed_theorem_submissions": 0, "retries": 0},
+  "observation": {
+    "audit_sha256": "3275b3cab096ec016702b175dfb1aa63e0e450747ad1bb88d4cbfb6727d5f4e7",
+    "audits_byte_identical": true,
+    "source_closure_count": 9,
+    "target_closure_count": 5,
+    "closure_union_count": 9,
+    "class_counts": {"kernel-type-shape": 4, "missing-target": 4, "type-shape-mismatch": 1},
+    "root": "WellFounded.fix",
+    "source_root_kind": "definition",
+    "target_root_kind": "definition",
+    "source_root_type_shape_sha256": "f45b230503d6ddc03c61714008f6165dd055ff995d927507fc6d7aaffcf6afd6",
+    "target_root_type_shape_sha256": "0c2e9552a1056133fbd4e6a318344cfb1310468f7d2113efb37ebba0bf6ef32c",
+    "missing_target_names": ["WellFounded.apply", "WellFounded.fixF", "WellFounded.intro", "WellFounded.rec"],
+    "representation_conclusion": "generic source retains the official inductive WellFounded package while the target support kernel uses the native definition representation",
+    "rendered_material": {"proof_terms": 0, "theorem_types": 0, "definition_values": 0, "theorem_values": 0}
+  },
+  "selected_next_boundary": {"repair": "reconstruct clean gcd computation leaves inside the official generic kernel without importing the native WellFounded representation", "translation_authorized": false, "compatibility_override_authorized": false, "closed_specialization_retry_authorized": false},
+  "authority": {"compatibility_audit_credit": 1, "compatibility_override_credit": 0, "translation_credit": 0, "target_reconstruction_credit": 0, "closed_gcd_balanced_bezout_credit": 0, "cancellation_credit": 0, "target_specialization_credit": 0, "fact_status_changes": 0, "evaluation_credit": 0, "ledger_writes": 0},
+  "verification": "python3 scripts/check-autogenesis-official-gcd-balanced-bezout-fix-compatibility-audit-result.py",
+  "limitations": "The audit selects a repair direction but authorizes no translation, compatibility override, target-side theorem reconstruction, closed specialization retry, cancellation, fact, evaluation, or ledger action."
+}

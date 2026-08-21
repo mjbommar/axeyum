@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction includes an accepted generic official-gcd balanced-Bézout theorem. Its first dependency-bound closure attempt declined at different `WellFounded.fix` type shapes (`f45b2305…` versus `0c2e9552…`). A proof-free two-run compatibility audit is now preregistered over the exact failed kernels and the union of their named dependency closures. It may emit only structural identities/classes and grants zero transport, reconstruction, closed-theorem, cancellation, target, or ledger authority.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction includes an accepted generic official-gcd balanced-Bézout theorem. Two byte-identical proof-free audits now classify its closure blocker: the generic source retains the complete nine-name official inductive `WellFounded` package, while the native gcd-support kernel has a five-name definition representation, lacks `apply`/`fixF`/`intro`/`rec`, and disagrees structurally at `WellFounded.fix`. No transport, retry, theorem, cancellation, target, or ledger authority was issued.
 
-**Next:** implement only `--audit-balanced-bezout-fix` in the existing specialization example. Rebuild the exact failed kernels, classify `WellFounded.fix` and its closure without rendering proof/type/value material, and run twice. Use the byte-identical structural report to select one later repair; do not retry composition or submit a theorem in this increment.
+**Next:** preregister reconstruction of clean `Nat.gcd_zero_left` and `Nat.gcd_succ` leaves inside the official generic kernel itself. Extend the pointwise official-gcd source only as needed for zero-left, compose it into the generic stream without the native Nat prelude, specialize the two exact leaves there, and only then retry the accepted generic balanced-Bézout theorem under a separate gate.
 
 <!-- plan-section: landed-changes -->
 
@@ -115,4 +115,5 @@
 | 2026-08-21 | `c8fae7455` | Generic official-gcd balanced-Bézout reconstructs twice with an empty footprint and preserves zero specialization authority |
 | 2026-08-21 | `0e23382f8` | Dependency-bound closure freezes exact accepted zero-left and successor gcd identities before implementation |
 | 2026-08-21 | `496e916b8` | First closed specialization declines at an exact `WellFounded.fix` type-shape mismatch with zero retry or theorem credit |
-| 2026-08-21 | (pending) | Proof-free `WellFounded.fix` closure audit is frozen before code or stream access |
+| 2026-08-21 | `7550b31c4` | Proof-free `WellFounded.fix` closure audit is frozen before code or stream access |
+| 2026-08-21 | (pending) | Twice-reproduced audit selects official-kernel gcd-leaf reconstruction over native representation transport |
