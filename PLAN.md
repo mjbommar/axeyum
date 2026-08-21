@@ -145,6 +145,7 @@ now. Nothing was deleted.
 | 2026-08-21 | `f6937f80d` | Complete immutable archive v4 binds all primary identities; one isolated clean semantic replay is frozen before execution |
 | 2026-08-21 | (pending) | Isolated replay repeats selection, exit-75 recovery, exact checked result, one write, and the empty readiness delta from source commit `6dd5cd1c2` |
 | 2026-08-21 | (pending) | The remaining `Int.fib_add_one` orientation is frozen as a function-parameterized right-cancellation residual before source construction or trusted execution |
+| 2026-08-21 | (pending) | V1 fails closed before source construction because it reverses the admitted recurrence summands; V2 freezes explicit clean commutativity plus right cancellation |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
