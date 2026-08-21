@@ -56,6 +56,13 @@ SEALED_CAPSULE_CONTRACTS = {
         "target_theorem": "Nat.fib_gcd",
         "receipt_sha256": "1e65caac2183d493f517a9d78dc789b78a530cbaaf90a95fd07cf19dd7940bc8",
     },
+    "F:ml430-nat-fib-dvd-f80f3de1": {
+        "result_manifest": "artifacts/autogenesis/mathlib-nat-fib-dvd-construction-result-v1.json",
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/c2266de88-nat-fib-dvd-v1/target-1.ndjson",
+        "capsule_sha256": "52acbd5a51f2163ab5b712483c582adb916ab198567c2b0b6c3678f7316d86d7",
+        "target_theorem": "Nat.fib_dvd",
+        "receipt_sha256": "cefba64b0f9f892400df93bbbfd7be1ba454cc618384cafad3cc3ca72a5472f1",
+    },
 }
 
 

@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-dvd-admission-plan-v1",
+  "state": "preregistered-sealed-capsule-admission-before-operation-code-or-ledger-write",
+  "target": {
+    "fact_id": "F:ml430-nat-fib-dvd-f80f3de1",
+    "fact_sha256": "523804a5730bc72f1865e1415126e4d1825df8285fef01ae99ca9f57ae6230ff",
+    "name": "Nat.fib_dvd"
+  },
+  "evidence": {
+    "result_manifest": "artifacts/autogenesis/mathlib-nat-fib-dvd-construction-result-v1.json",
+    "result_manifest_sha256": "6f4592a4398db32fdaad2833f4eab4bdd13f51db8dc75e751e5a02c5beab7ea0",
+    "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/c2266de88-nat-fib-dvd-v1/target-1.ndjson",
+    "capsule_sha256": "52acbd5a51f2163ab5b712483c582adb916ab198567c2b0b6c3678f7316d86d7",
+    "goal_sha256": "defae168bc8fade914418702407acf8fff8f35009596a30a4e468f80852779ac",
+    "declaration_sha256": "eef50a6cf5d2d19c80ed894f11d14bbe3521b86982a960e381fff8076be55237",
+    "axiom_footprint": []
+  },
+  "protocol": {
+    "register_exact_operation": true,
+    "derive_transaction_from_clean_commit": true,
+    "fault_injection_after_intent_exit": 75,
+    "require_fact_unchanged_before_recovery": true,
+    "authoritative_ledger_writes": 1,
+    "fixture_writes": 0,
+    "archive_primary_run": true,
+    "isolated_clean_replay": true
+  },
+  "budget": {
+    "max_operation_registrations": 1,
+    "max_fault_injection_executions": 1,
+    "max_authoritative_ledger_writes": 1,
+    "max_recovery_executions": 1,
+    "max_clean_replays": 1,
+    "max_search_invocations": 0,
+    "max_evaluations": 0
+  },
+  "expected_newly_ready": [],
+  "next_on_accept": "return to the strategic horizon and qualify Int.fib_neg, the remaining premise of Int.gcd_fib",
+  "limitations": "This authorizes only one exact fact transition from the named immutable capsule and grants no authority to close another proposition."
+}
