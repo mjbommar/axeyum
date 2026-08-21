@@ -1092,6 +1092,16 @@ pub enum ProofFragment {
     /// kernel-checked over the CONSTRUCTED reals, since `lra_ctx()` builds
     /// `CReal` (trusted surface 0), not the 30-axiom `AxReal` package.
     RealProduct,
+    /// A monomial LOWER-BOUND NRA refutation: every variable of a monomial
+    /// carries a nonnegative lower bound stated by the query, so the monomial is
+    /// bounded below by their product, which contradicts an asserted `M < k`.
+    ///
+    /// A THEORY reconstruction — the bound is propagated through the product by
+    /// `mul_le_mul_of_nonneg_left` and the closing numeral comparison is a fold
+    /// of `add_le_add`, all applied to terms built from the certificate's own
+    /// factors — and kernel-checked over the CONSTRUCTED reals, since `lra_ctx()`
+    /// builds `CReal` (trusted surface 0), not the 30-axiom `AxReal` package.
+    MonomialBound,
     /// A top-level universal quantifier.
     Forall,
     /// A closed universal integer equality/disequality refuted by one evaluator-
@@ -1280,6 +1290,7 @@ impl ProofFragment {
             // --- Theory reconstructions: the term is built from the query. ---
             ProofFragment::RealZeroProduct
             | ProofFragment::RealProduct
+            | ProofFragment::MonomialBound
             | ProofFragment::IntFarkas
             | ProofFragment::QfBv
             | ProofFragment::ReflexiveDisequality
@@ -1861,6 +1872,12 @@ fn scan_arithmetic_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> P
         // this one is a theory reconstruction and that one is an attestation:
         // when both could apply, the tier Lean can fail on should win.
         ProofFragment::RealZeroProduct
+    } else if monomial_bound_reconstruction_covers(arena, assertions) {
+        // A monomial lower bound. Ahead of `NraEvenPower` for the same reason as
+        // the two routes above: this one is a theory reconstruction and that one
+        // is an attestation, so when both could apply the tier Lean can fail on
+        // should win.
+        ProofFragment::MonomialBound
     } else if crate::nra_even_power::nra_even_power_refutation(arena, assertions).is_some() {
         // Higher even-power nonnegativity (e.g. `x^4 < 0`) is outside the
         // degree-2 SOS/LDLᵀ certificate, but has its own checked structural
@@ -2700,6 +2717,9 @@ fn reconstruct_proof_fragment_to_lean_module(
             reconstruct_real_zero_product_to_lean_module(arena, assertions)?
         }
         ProofFragment::RealProduct => reconstruct_real_product_to_lean_module(arena, assertions)?,
+        ProofFragment::MonomialBound => {
+            reconstruct_monomial_bound_to_lean_module(arena, assertions)?
+        }
         ProofFragment::Diophantine => {
             // The integer Diophantine reconstructor builds its own integer-prelude
             // kernel, gates the `False` proof, and renders the module (ADR-0042).
@@ -3104,6 +3124,85 @@ pub fn reconstruct_real_product_to_lean_module(
     let term =
         arithmetic::product_positivstellensatz::reconstruct_real_product(&mut ctx, &certificate)?;
     gate_and_render_lra_module(&mut ctx, term, "RealProduct")
+}
+
+/// Does the monomial-bound reconstruction cover `assertions`?
+///
+/// A cheap syntactic predicate, deliberately not "the reconstruction builds":
+/// the honest gate would need a `CReal` kernel, and the classifier is a pure
+/// predicate on `&TermArena` that runs on every arithmetic query. It mirrors the
+/// module's own scope checks, so a query it claims here is one
+/// [`reconstruct_monomial_bound`](arithmetic::monomial_bound::reconstruct_monomial_bound)
+/// accepts; anything else keeps the route it has today.
+fn monomial_bound_reconstruction_covers(arena: &TermArena, assertions: &[TermId]) -> bool {
+    use crate::nra_monomial_bound_cert::{MonomialBound, RefutedAtom};
+
+    let Some(certificate) =
+        crate::nra_monomial_bound_cert::monomial_bound_refutation(arena, assertions)
+    else {
+        return false;
+    };
+    if certificate.refuted_kind() != RefutedAtom::LessThan {
+        return false;
+    }
+    let MonomialBound::AtLeast(_) = certificate.bound() else {
+        return false;
+    };
+    let asserted =
+        crate::nra_monomial_bound_cert::directly_asserted_lower_bounds(arena, assertions);
+    let integral_in_range = |w: (i128, i128)| {
+        axeyum_ir::Rational::checked_new(w.0, w.1)
+            .is_some_and(|v| v.denominator() == 1 && (0..=64).contains(&v.numerator()))
+    };
+    if !integral_in_range(certificate.refuted_against()) {
+        return false;
+    }
+    let mut non_unit = 0_u32;
+    for (name, exponent, lower) in certificate.factors() {
+        let Some(w) = lower else { return false };
+        if *exponent == 0 || !integral_in_range(*w) {
+            return false;
+        }
+        let Some(value) = asserted.get(name) else {
+            return false;
+        };
+        if value.0 != axeyum_ir::Rational::checked_new(w.0, w.1).expect("checked above") {
+            return false;
+        }
+        if w.0 != 1 || w.1 != 1 {
+            non_unit += exponent;
+        }
+    }
+    non_unit <= 1
+}
+
+/// Reconstruct a monomial lower-bound refutation into a Lean module.
+///
+/// # Errors
+///
+/// [`ReconstructError`] when the query carries no monomial-bound certificate, or
+/// the reconstruction does not kernel-check to `False` over the constructed
+/// reals.
+pub fn reconstruct_monomial_bound_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    let Some(certificate) =
+        crate::nra_monomial_bound_cert::monomial_bound_refutation(arena, assertions)
+    else {
+        return Err(ReconstructError::MalformedStep {
+            rule: "reconstruct_monomial_bound".to_owned(),
+            detail: "query carries no monomial lower-bound certificate".to_owned(),
+        });
+    };
+    let mut ctx = lra_ctx()?;
+    let term = arithmetic::monomial_bound::reconstruct_monomial_bound(
+        &mut ctx,
+        arena,
+        assertions,
+        &certificate,
+    )?;
+    gate_and_render_lra_module(&mut ctx, term, "MonomialBound")
 }
 
 /// Reconstruct a monomial-divisibility refutation into a Lean module.

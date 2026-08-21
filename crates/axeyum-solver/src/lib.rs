@@ -460,8 +460,8 @@ pub mod certificates {
             check_handelman_refutation, handelman_refutation,
         };
         pub use crate::nra_monomial_bound_cert::{
-            MonomialBound, MonomialBoundRefutationCertificate, check_monomial_bound_refutation,
-            monomial_bound_refutation,
+            MonomialBound, MonomialBoundRefutationCertificate, RefutedAtom,
+            check_monomial_bound_refutation, monomial_bound_refutation,
         };
         pub use crate::nra_product_cert::{
             AtomSign, RealProductRefutationCertificate, check_real_product_refutation,

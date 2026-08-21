@@ -650,6 +650,29 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   agents are routinely pointed at it for string triage — a whole lever can get
   built on a fabricated `unsat`. Cross-check any verdict it reports against the
   reference binary and the file's declared `:status` before believing it.
+- **A CERTIFICATE MUST CARRY EVERY DISTINCTION ITS PRODUCER MAKES, or the checker
+  cannot re-derive the refutation — and mutation testing will not find the gap.**
+  Measured 2026-08-20 in `nra_monomial_bound_cert.rs`. The producer distinguished
+  `M < k` from `M <= k` (the first is refuted by `M >= k`, the second only by the
+  strictly stronger `M > k`), but the certificate recorded only the CONSTANT `k`.
+  So `check_monomial_bound_refutation` could not tell them apart and returned
+  `true` for a certificate refuting `a >= 1 ∧ b >= 1 ∧ a*b <= 1` — **satisfiable
+  at a = b = 1**. No wrong `unsat` shipped, because the producer declines that
+  query; but the *independent re-validator*, whose entire job is to catch a
+  producer that is wrong, would have accepted a forged refutation of a SAT query.
+
+  **Mutation testing could not have caught this, and it is important to see why.**
+  Mutation deletes guards that EXIST and asks whether a test dies. A guard that
+  was never written has nothing to delete. Nine guards in that module were each
+  killed by exactly one test, and the module was still unsound. The technique
+  measures the strength of the guards you have; it says nothing about the ones
+  you are missing.
+
+  What does find them: for every case the PRODUCER distinguishes, write an
+  adversarial fixture over a **satisfiable** query in which every other guard
+  passes. If the certificate cannot express the distinction, that fixture is
+  impossible to write — and the impossibility is the finding.
+
 - **BANNED SHELL IDIOMS. Every one of these has printed a WRONG ANSWER that was
   then reported as fact, and none of them look broken when they fail.** The
   shared failure mode: the command exits 0 and prints something plausible.
