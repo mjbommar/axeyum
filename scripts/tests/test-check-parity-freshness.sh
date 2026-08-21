@@ -28,6 +28,16 @@
 #   `if age > max_days: state = "STALE"` removed   stale, voided-does-not-refresh
 #   `elif age > warn_days` collapsed to ok         warn-band
 #   `unmeasured` forced empty                      unmeasured-reported
+#   SOLVER_COMMIT_RE never matches                 solver-currency-no-git,
+#                                                  real-solver-currency
+#   the `no-git` early return removed              solver-currency-no-git
+#   the `behind=` rev-list broken                  real-solver-currency
+#   solver currency made FATAL                     fresh, warn-band,
+#                                                  evidence-mode-counts,
+#                                                  correction-tolerated,
+#                                                  unmeasured-reported,
+#                                                  solver-currency-unresolvable,
+#                                                  solver-currency-is-advisory
 #
 # Six of the nine kill exactly one case. The three that kill more do so for a
 # reason worth stating rather than tidying away:
@@ -40,6 +50,12 @@
 #     would stay green if the shipped ledger's own format drifted away from
 #     ENTRY_RE. They are supposed to die whenever the parser stops seeing the
 #     real file.
+#   * Making solver currency FATAL kills seven cases, which is the point: the
+#     gate's header argues at length that currency must stay advisory (a
+#     commit-count bound is red-by-construction during a commit burst, and
+#     non-ancestry is legitimate when another lane measures from its own
+#     branch). `solver-currency-is-advisory` exists so that decision has a
+#     control of its own rather than being an emergent property of the others.
 #   * Deleting the STALE branch deletes the gate's ONLY failure condition, so
 #     both cases whose fixture is stale die. That is not the "everything
 #     rejects through one shared check" defect CLAUDE.md warns about -- the
@@ -56,10 +72,13 @@ fail=0
 asserted=0
 
 NOW="2026-08-21T12:00:00Z"
+# Valid-looking but deliberately NOT a real object, so the currency probe has a
+# defined answer ("unresolvable") in fixtures instead of accidentally resolving.
+FIXTURE_SHA="deadbee1234"
 
-# entry <file> <logic> <iso-ts> <disagreements> [label]
+# entry <file> <logic> <iso-ts> <disagreements> [label] [solver-sha]
 entry() {
-  local f="$1" logic="$2" ts="$3" dis="$4" label="${5:-}"
+  local f="$1" logic="$2" ts="$3" dis="$4" label="${5:-}" sha="${6:-$FIXTURE_SHA}"
   {
     if [ -n "$label" ]; then
       echo "## ${logic} — ${ts} — ${label}"
@@ -75,6 +94,7 @@ entry() {
     echo "| **disagreements** | **${dis}** |"
     echo "| soundness | $([ "$dis" = 0 ] && echo SOUND || echo FAIL) |"
     echo "| protocol | 24s wall, 8GiB, per-file |"
+    echo "| solver commit | \`${sha}\` |"
     echo
   } >> "$f"
 }
@@ -112,6 +132,28 @@ case_() {
     # at the first match, SIGPIPEs the producer, and the pipeline status 141
     # reads as "not found". Same trap documented in
     # scripts/check-control-registration.sh.
+    hits=$(printf '%s\n' "$out" | grep -cF "$pat")
+    if [ "${hits:-0}" -eq 0 ]; then
+      echo "FAIL case:$name rc ok but missing '$pat' — $(printf '%s' "$out" | tr '\n' '|')"
+      fail=1; return
+    fi
+  done
+  echo "ok   case:$name -> rc=$got_rc"
+}
+
+# case_repo <name> <ledger> <lists> <repo> <want-rc> <want-substring...>
+case_repo() {
+  local name="$1" ledger="$2" lists="$3" repo="$4" want_rc="$5"; shift 5
+  local out got_rc pat hits
+  out="$(python3 "$SCRIPT" --ledger "$ledger" --lists "$lists" --repo "$repo" \
+         --now "$NOW" 2>&1)"
+  got_rc=$?
+  asserted=$((asserted + 1))
+  if [ "$got_rc" != "$want_rc" ]; then
+    echo "FAIL case:$name rc=$got_rc (want $want_rc) — $(printf '%s' "$out" | tr '\n' '|')"
+    fail=1; return
+  fi
+  for pat in "$@"; do
     hits=$(printf '%s\n' "$out" | grep -cF "$pat")
     if [ "${hits:-0}" -eq 0 ]; then
       echo "FAIL case:$name rc ok but missing '$pat' — $(printf '%s' "$out" | tr '\n' '|')"
@@ -202,6 +244,30 @@ L="$WORK/fresh.md"
 LISTS2="$WORK/lists2"; cp -r "$LISTS" "$LISTS2"; echo "x.smt2" > "$LISTS2/QF_ABV.txt"
 case_ unmeasured-reported "$L" "$LISTS2" 0 "verdict=PASS" "|unmeasured=1" "QF_ABV"
 
+# --- 11a. SOLVER CURRENCY, degradation: pointed at a directory that is not a
+#          checkout, the currency probe must say NO-GIT and must not stop the
+#          gate. A staleness gate that cannot run because a diagnostic could not
+#          reach git would be a worse gate than one with no diagnostic. -------
+L="$WORK/fresh.md"
+case_repo solver-currency-no-git "$L" "$LISTS" "$WORK" 0 \
+  "verdict=PASS" "NO-GIT" "|max_solver_lag=0"
+
+# --- 11b. SOLVER CURRENCY, unresolvable sha: valid hex that names no object in
+#          this checkout. Counted and shown, never fatal -- a sha can legitimately
+#          vanish (a rewritten or unmerged branch), and two 2026-08-02 entries in
+#          the real ledger already have. ---------------------------------------
+case_repo solver-currency-unresolvable "$L" "$LISTS" "$PWD" 0 \
+  "verdict=PASS" "UNRESOLVABLE" "|unresolvable_solver_commit=9"
+
+# --- 11c. SOLVER CURRENCY IS ADVISORY, asserted as its own case rather than as
+#          a side effect of 11a/11b. A board every one of whose entries has an
+#          unusable solver commit is still FRESH, so the exit status must be 0
+#          and the verdict PASS. If a later change makes currency fatal, this
+#          is the control that dies -- deliberately, because the gate's header
+#          argues at length that it must not be. ------------------------------
+case_repo solver-currency-is-advisory "$L" "$LISTS" "$PWD" 0 \
+  "verdict=PASS" "|stale=0"
+
 # --- 11. COVERAGE, not a fixture: point the gate at the REAL committed ledger
 #         and assert a specific NONZERO population. A fixture-only suite stays
 #         green if the shipped ledger's format drifts away from ENTRY_RE, which
@@ -233,7 +299,22 @@ else
   echo "ok   case:real-ledger-evidence-entry -> $qfbv_line"
 fi
 
-if [ "$asserted" -lt 10 ]; then
+# --- 13. SOLVER CURRENCY against the REAL ledger and the REAL checkout: at
+#         least one row must report a resolvable `behind=` count. This is the
+#         case that fails if the `solver commit` row stops being parsed, or if
+#         the lag computation silently returns nothing -- both of which would
+#         otherwise read as "no currency problems anywhere", the empty answer
+#         that looks like a clean bill of health. ---------------------------
+asserted=$((asserted + 1))
+behind_rows=$(printf '%s\n' "$real_out" | grep -cE '\[[0-9a-f]{7,9} behind=[0-9]+\]')
+if [ "${behind_rows:-0}" -lt 1 ]; then
+  echo "FAIL case:real-solver-currency no row reported a resolvable behind= count"
+  fail=1
+else
+  echo "ok   case:real-solver-currency -> $behind_rows row(s) with a behind= count"
+fi
+
+if [ "$asserted" -lt 15 ]; then
   echo "PARITY_FRESHNESS_CONTROLS|ERROR only $asserted case(s) ran; a suite that" \
        "runs (almost) nothing exits 0 for the wrong reason" >&2
   exit 1

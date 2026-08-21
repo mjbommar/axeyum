@@ -232,17 +232,35 @@ total=$(grep -cve '^\s*$' "$list")
 # a coin flip. Observed 38.8 load average on 24 cores with six unrelated `java`
 # processes burning ~1100% CPU. Without this recorded, a depressed run is
 # indistinguishable after the fact from a real regression.
-# The bias is one-directional -- contention only LOSES files and cannot produce a
-# wrong verdict -- so every ratio here is a LOWER BOUND.
+# The bias is one-directional ON EACH SOLVER'S OWN COUNT -- contention only LOSES
+# files and cannot produce a wrong verdict. IT IS NOT ONE-DIRECTIONAL ON THE
+# RATIO, and this file said for weeks that it was. See the WARN block below.
 load_start=$(cut -d' ' -f1-3 /proc/loadavg 2>/dev/null || echo "?")
 
 # WARN when the box is already loaded enough to cost files.
 #
-# Every ratio here is a LOWER bound -- contention only ever loses files and
-# cannot produce a wrong verdict -- but "lower bound" stops being a footnote and
-# starts being the headline once the load is high. Measured on 2026-08-02: the
-# same UF list was swept at load 2 and at load 32 on this box, and a scored file
-# that decides at 20.5s of its 24s budget when quiet is a coin flip when loaded.
+# Contention only ever loses files and cannot produce a wrong verdict, so each
+# solver's own COUNT is a floor. Measured on 2026-08-02: the same UF list was
+# swept at load 2 and at load 32 on this box, and a scored file that decides at
+# 20.5s of its 24s budget when quiet is a coin flip when loaded.
+#
+# THE RATIO IS NOT A FLOOR, AND THIS SCRIPT CLAIMED IT WAS. "Both counts are
+# floors" does not make their quotient one: it is a floor only if contention
+# costs US at least as much as the reference, and that is an assumption about
+# the two solvers' timing profiles, not a property of the arithmetic. Measured
+# 2026-08-21 it was false in our FAVOUR, which is the dangerous direction. The
+# QF_LRA list swept at load 32.05 on 16 cores scored 89/127 = 70.1%; the same
+# list on the same binary at load 4.49 scored 88/137 = 64.2%. Contention cost
+# the reference ten files and cost us none, so the load-32 run reported a ratio
+# SIX POINTS HIGHER than the quiet one. A lane reading "the ratio is a floor"
+# would have published the 70.1% as a conservative number.
+#
+# So: read a high-load entry as a floor on `axeyum solved`, and as NOTHING AT
+# ALL on the ratio. Re-run on a quiet box before comparing a ratio to any other
+# entry -- and note the entries record `both / axeyum-only / reference-only`,
+# whose collapse in the `both` cell is the visible signature of a run where
+# borderline files were flipping (UF, 2026-08-21: 77/8/14 quiet on 2026-08-03
+# versus 58/23/35 under load).
 #
 # This warns rather than refuses on purpose. Refusing would make the harness
 # unusable on a shared machine, and an operator who knowingly measures under
@@ -253,9 +271,13 @@ load_one=$(cut -d' ' -f1 /proc/loadavg 2>/dev/null || echo 0)
 cores=$(nproc 2>/dev/null || echo 1)
 if awk -v l="$load_one" -v c="$cores" 'BEGIN { exit !(l > c / 2) }'; then
   echo "parity-run: WARNING — load ${load_one} on ${cores} cores before the sweep." >&2
-  echo "            Contention only LOSES files, so the ratio you get is a floor," >&2
-  echo "            not an estimate. Re-run on a quiet box before treating a" >&2
-  echo "            regression here as real. The entry records the load." >&2
+  echo "            Contention only LOSES files, so \`axeyum solved\` is a floor." >&2
+  echo "            THE RATIO IS NOT: it is a floor only if contention costs us" >&2
+  echo "            at least as much as the reference, and on 2026-08-21 QF_LRA" >&2
+  echo "            it did the opposite -- 70.1% at load 32 versus 64.2% quiet," >&2
+  echo "            because the reference lost ten files and we lost none." >&2
+  echo "            Re-run on a quiet box before comparing this ratio to any" >&2
+  echo "            other entry. The entry records the load." >&2
 fi
 
 # Declared :status, when the benchmark carries one. Absent is not an excuse to

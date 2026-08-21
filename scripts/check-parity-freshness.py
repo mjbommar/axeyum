@@ -102,6 +102,46 @@ enforced, so a lane can batch a sweep into machine time it was already using
 rather than being ambushed by a red on the day it wanted to land something.
 The warning never changes the exit status.
 
+FRESHNESS IS NOT CORRECTNESS, AND THIS GATE MEASURES ONLY THE FIRST
+------------------------------------------------------------------
+A date says when a number was produced, not whether the tree that produced it
+still resembles HEAD.  The failure this permits is worse than the one the gate
+prevents, and it nearly happened on the day the gate landed: a QF_UFLIA sweep
+was in flight from a tree that did not contain `40a1ab969` (ADR-0538), a
+one-file change to `crates/axeyum-solver/src/dpll_lia.rs` worth +22 files on
+that division.  An entry stamped with today's date carrying the pre-fix number
+would have been **fresher-looking and more wrong** than the two-week-old entry
+it replaced, and this gate would have gone green over it -- the gate's own front
+door used to defeat the gate.
+
+So every row also reports the currency of the tree it was measured on, read out
+of the entry's `solver commit` field, which `scripts/parity-run.sh` has always
+recorded:
+
+  * whether that sha is resolvable in this checkout at all,
+  * whether it is an ancestor of HEAD, and
+  * `behind=N`, the number of commits touching `crates/` between it and HEAD.
+
+All three are ADVISORY and none changes the exit status.  That is deliberate,
+not timidity, and the reasoning is the same one that fixes the 14-day budget:
+
+  * a commit-count bound is exactly the trap the threshold section rejects --
+    velocity here is bursty (171 commits in one 24 h window, quiet weekends), so
+    any fixed `behind=` ceiling is red-by-construction during a burst;
+  * NON-ANCESTRY IS LEGITIMATE in this repository.  Lanes measure from their own
+    branches and worktrees, so an entry another lane appended can carry a sha
+    that is simply not on your line of history.  Failing on it would red your
+    aggregate gate for something you cannot fix, which is how gates get
+    overridden reflexively;
+  * a sha can vanish from a shared checkout (a rewritten or unmerged branch);
+    two 2026-08-02 entries in this very ledger already have.
+
+What the numbers ARE for: they put "was fix X in this measurement?" one
+`git merge-base --is-ancestor <solver-commit> <fix>` away, mechanically, instead
+of leaving it to whoever happens to remember.  When `behind=` is large on a
+division somebody just improved, re-measure that division -- do not reason about
+whether it matters.
+
 WHAT TO DO WHEN THIS REDS.  Almost always: run the sweep it names.
 
     cargo build --release -p axeyum-bench --example smtcomp_cli
@@ -132,6 +172,7 @@ from __future__ import annotations
 import argparse
 import os
 import re
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -162,6 +203,11 @@ RATIO_RE = re.compile(
     re.MULTILINE,
 )
 SOLVED_RE = re.compile(r"^\| axeyum solved \| (?P<value>[^|]+) \|$", re.MULTILINE)
+# `scripts/parity-run.sh` writes this on every entry. It may carry a trailing
+# " (DIRTY WORKTREE — result not reproducible)" stamp, so match only the sha.
+SOLVER_COMMIT_RE = re.compile(
+    r"^\| solver commit \| `(?P<value>[0-9a-f]{7,40})`", re.MULTILINE
+)
 REFERENCE_SOLVED_RE = re.compile(
     r"^\| reference solved \| (?P<value>[^|]+) \|$", re.MULTILINE
 )
@@ -171,6 +217,43 @@ REFERENCE_SOLVED_RE = re.compile(
 # near-empty read is a broken glob or a moved file, and a gate that passes
 # vacuously on it is worse than no gate.
 MIN_LOGICS = 5
+
+
+def solver_currency(sha: str, repo: Path) -> tuple[str, int | None]:
+    """Classify an entry's `solver commit` against this checkout.
+
+    Returns (state, behind) where state is one of "ok" (resolvable ancestor of
+    HEAD), "non-ancestor", "unresolvable", or "no-git", and `behind` counts the
+    commits touching `crates/` between that sha and HEAD when computable.
+
+    Every branch is ADVISORY -- see this script's header for why none of them
+    may fail the gate. Returns "no-git" rather than raising when git is absent
+    or the path is not a checkout, because a fixture-driven control points this
+    script at a throwaway directory and a currency probe must never be the
+    reason a staleness gate cannot run.
+    """
+    if not sha:
+        return ("unresolvable", None)
+
+    def git(*args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            ["git", "-C", str(repo), *args],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    if git("rev-parse", "--git-dir").returncode != 0:
+        return ("no-git", None)
+    if git("cat-file", "-e", f"{sha}^{{commit}}").returncode != 0:
+        return ("unresolvable", None)
+    if git("merge-base", "--is-ancestor", sha, "HEAD").returncode != 0:
+        return ("non-ancestor", None)
+    counted = git("rev-list", "--count", f"{sha}..HEAD", "--", "crates")
+    behind = None
+    if counted.returncode == 0 and counted.stdout.strip().isdigit():
+        behind = int(counted.stdout.strip())
+    return ("ok", behind)
 
 
 class LedgerError(Exception):
@@ -227,6 +310,11 @@ def parse_ledger(text: str, source: str) -> list[dict]:
                 ),
                 "label": m.group("label") or "",
                 "disagreements": int(dis.group("value")),
+                "solver_commit": (
+                    SOLVER_COMMIT_RE.search(body).group("value")
+                    if SOLVER_COMMIT_RE.search(body)
+                    else ""
+                ),
                 "ratio": (ratio.group("value").strip(" `*") if ratio else "?"),
                 "solved": (solved.group("value").strip(" `*") if solved else "?"),
                 "reference_solved": (
@@ -247,6 +335,12 @@ def main() -> int:
         default=None,
         help="evaluate as of this instant (ISO8601 Z); default: real time. "
         "Exists so the control suite is deterministic.",
+    )
+    ap.add_argument(
+        "--repo",
+        default=str(ROOT),
+        help="checkout whose HEAD the `solver commit` currency is read against; "
+        "advisory only, and degrades to 'no-git' when this is not a checkout.",
     )
     ap.add_argument("--max-age-days", type=float, default=None)
     ap.add_argument("--warn-age-days", type=float, default=None)
@@ -334,17 +428,34 @@ def main() -> int:
     stale = [t for t in rows if t[3] in ("STALE", "NEVER-VALID")]
     warned = [t for t in rows if t[3] == "warn"]
 
+    currency: dict[str, tuple[str, int | None]] = {}
+    for lg, r in asof.items():
+        currency[lg] = solver_currency(r["solver_commit"], Path(args.repo))
+    lags = [b for (_st, b) in currency.values() if b is not None]
+    max_lag = max(lags) if lags else 0
+    unresolvable = sum(1 for (st, _b) in currency.values() if st == "unresolvable")
+    non_ancestor = sum(1 for (st, _b) in currency.values() if st == "non-ancestor")
+
     print(f"parity ledger freshness — {ledger} as of {now:%Y-%m-%dT%H:%M:%SZ}")
     print(f"  budget: warn > {warn_days:g}d, FAIL > {max_days:g}d (per logic)")
-    print(f"  {'logic':<10} {'age(d)':>7}  {'measured':<20} {'ratio':>7}  state")
+    print(
+        f"  {'logic':<10} {'age(d)':>7}  {'measured':<20} {'ratio':>7}  "
+        "state  [solver commit / currency — ADVISORY]"
+    )
     for lg, r, age, state in rows:
         if r is None:
             print(f"  {lg:<10} {'--':>7}  {'(no valid entry)':<20} {'--':>7}  {state}")
             continue
         label = "evidence" if "EVIDENCE" in r["label"] else ""
+        cur_state, behind = currency.get(lg, ("no-git", None))
+        if cur_state == "ok":
+            cur = f"{r['solver_commit'][:9]} behind={behind}"
+        else:
+            cur = f"{r['solver_commit'][:9] or '?'} {cur_state.upper()}"
         print(
             f"  {lg:<10} {age:>7.1f}  {r['ts']:%Y-%m-%dT%H:%MZ}  "
             f"{r['ratio']:>7}  {state}{(' [' + label + ']') if label else ''}"
+            f"  [{cur}]"
         )
 
     stalest_name = rows[0][0] if rows else "-"
@@ -377,6 +488,9 @@ def main() -> int:
         f"|warn={len(warned)}"
         f"|voided={len(voided)}"
         f"|unmeasured={len(unmeasured)}"
+        f"|max_solver_lag={max_lag}"
+        f"|unresolvable_solver_commit={unresolvable}"
+        f"|non_ancestor_solver_commit={non_ancestor}"
         f"|verdict={'FAIL' if stale else 'PASS'}"
     )
 
