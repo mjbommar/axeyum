@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-fib-gcd-construction-result-v2",
+  "state": "helper-accepted-target-type-mismatch-second-run-skipped-zero-credit",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-nat-fib-gcd-construction-plan-v2.json",
+    "sha256": "3fb1c80778e3cfe439bcd56d991a9d58eeaa246d58555af2f50e9e1a53065c3c"
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/nat_gcd_fib_add_self_exact.rs",
+    "sha256": "db962586e3c4285f6fdcfea3279e28a4b5af60ec9ffb1c049ce60074012392e3"
+  },
+  "evidence_pack": {
+    "path": "/nas3/data/axeyum/autogenesis/audits/6fb917e19-nat-fib-gcd-construction-v2",
+    "index_sha256": "3975f7f3932b6cc1b8de42070843cbb98f2821b5c0bab704cb87ca9f93ed5ede",
+    "observation_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "c4ddd4b84f71f1c2df23a583b5eb16010fc714ae23b3bb8f877d39bfd3bdabc3",
+    "directory_mode": "0555",
+    "file_mode": "0444"
+  },
+  "observation": {
+    "invocation": 1,
+    "helper": "Axeyum.Autogenesis.fibGcdQuotientIterationV1",
+    "helper_submission_accepted": true,
+    "target": "Nat.fib_gcd",
+    "target_submission_accepted": false,
+    "error": "exact Nat.fib_gcd rejected: TypeMismatch { expected: ExprId(112698), got: ExprId(112922) }",
+    "process_local_expression_ids_are_not_semantic_evidence": true,
+    "capsule_output_written": false,
+    "second_invocation_skipped": true
+  },
+  "execution": {
+    "complete_invocations": 0,
+    "capsule_reads": 2,
+    "fresh_output_imports": 0,
+    "helper_theorem_submissions": 1,
+    "target_theorem_submissions": 1,
+    "proof_search_invocations": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "helper_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "preregister one no-submission diagnostic that infers and renders only the target proof type and compares it with the frozen Nat.fib_gcd type",
+  "limitations": "The accepted process-local helper submission was not exported and grants no durable helper credit. The target was rejected, no capsule was written, run two was skipped, and no fact changed."
+}
