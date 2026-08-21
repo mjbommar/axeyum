@@ -63,6 +63,40 @@ orders form only `O(log log ell)` bands at each conductor, but no known
 argument establishes their cancellation.  At `ell=200`, 20 of the 67 initial
 order layers are already discharged; only 47 high-order layers remain.
 
+## Elementary symmetry audit: no free high-order zero
+
+One possible shortcut is now ruled out exactly.  Let `q=2^s` and write
+
+```text
+c_j(q) = h_(j,s)-h_(j-1,s)
+       = 2^(j-floor(j/q)) - 2^(j-1-floor((j-1)/q)).
+```
+
+This is the number of conductor-`j` characters of order dividing `q`; the
+exact-order count is `c_j(q)-c_j(q/2)`.  If `q` divides `j`, the two powers in
+`c_j(q)` agree, so `c_j(q)=0`.  Since `q/2` also divides `j`, the exact-order
+count is then zero.  Therefore every nonempty exact-order/conductor layer has
+`q` not dividing `j`.
+
+This matters because the power-subgroup condition then forces the newly
+exposed coefficient to be zero.  Writing
+
+```text
+Delta_(j,s) = 2 P_(j,s) - P_(j-1,s),
+```
+
+every nonempty layer is consequently in the forced regime and has the exact
+form
+
+```text
+T_(j,s) = h_(j-1,s) Delta_(j,s) - h_(j-1,s-1) Delta_(j,s-1).
+```
+
+So the apparent `q | j` automatic cancellation cannot remove a charged
+layer: it occurs only where that exact layer is empty.  A proof of `HWO` must
+control this difference of two nested sparse-coefficient imbalances, rather
+than exploit periodicity of the exposed coefficient.
+
 ## What is established, and what must not be silently reused
 
 - Wrapped characteristic-two inverse-additive energy is proved.  It supplies

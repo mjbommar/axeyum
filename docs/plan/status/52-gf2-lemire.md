@@ -278,6 +278,11 @@ primary-source check rules out the nearby uniform high-conductor result of
 Gorodetsky--Kovaleva as a direct bridge: over `F_2` it concerns a special
 order-two additive character, whereas every order-two through `Q` layer has
 already been paid and the remaining `HWO` families have higher Witt order.
+An elementary exact-count audit also closes the last apparent coefficient
+periodicity shortcut: if `2^s` divides the conductor level then its
+exact-order layer is empty, so every nonempty high-Witt layer instead has a
+forced new coefficient and is a difference of two nested sparse-population
+imbalances.  There is no free `2^s | j` zero to spend in the endpoint ledger.
 
 **Next:** prove `(REL)`, encode it as replayable evidence, remove the
 manuscript's fail-visible warning, and perform the final source audit.  The
