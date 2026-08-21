@@ -257,6 +257,19 @@ jobs:
           test ! -L "$destination"
           test "$("$destination" --version)" = "just 1.57.0"
       - run: ./scripts/check-foundational-resources.sh
+      # The parity ledger's freshness. `scripts/parity-run.sh` writes this
+      # repository's declared headline and was invoked by NO gate -- not
+      # `just check`, not `scripts/check.sh`, and not here -- so the board froze
+      # on 2026-08-06 for fifteen days and nothing went red. This is cheap: it
+      # reads a committed markdown file and re-measures nothing.
+      #
+      # `fetch-depth: 0` above is load-bearing for the ADVISORY solver-currency
+      # column, which resolves each entry's `solver commit` and counts the
+      # `crates/` commits since. On a shallow clone those degrade to
+      # UNRESOLVABLE rather than failing -- deliberately, but the useful signal
+      # is gone, so do not shallow this job.
+      - run: ./scripts/tests/test-check-parity-freshness.sh
+      - run: ./scripts/check-parity-freshness.py
       - run: python3 -m unittest scripts.tests.test_lean_u2_test_authority
       - run: python3 scripts/gen-lean-u2-test-authority.py --check
       - run: python3 -m unittest scripts.tests.test_lean_u2_official_ci_profiles
