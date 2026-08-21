@@ -100,6 +100,13 @@ three-quarter steps separately on every retained Haar level.
 - The CLI emits the symbolic envelope, sharp terminal allowance, required and
   residual counts, every exact aggregate parent/child mass, and whether either
   finite count closes its row.
+- Exact-source fleet controls at commit `e046d1d05` cover both endpoint
+  degrees for every `19<=ell<=23`.  All 140 aggregate parent/child comparisons
+  satisfy `4A_i<=3A_(i-1)`, while only 69 satisfy the stronger
+  `2A_i<=A_(i-1)`.  The odd `ell=23` row has 11 half-balanced steps and thereby
+  closes its finite `(REL)` implication; the other nine rows do not close from
+  the symbolic Weil envelope.  These are falsification controls only, not
+  evidence for a uniform contraction theorem.
 - The fact ledger records `(AP-HB)` as conjectured with no proof evidence or
   Autogenesis registration.
 

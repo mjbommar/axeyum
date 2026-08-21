@@ -6169,14 +6169,18 @@ pub fn population_refinement_connected_top_implication(
 ///
 /// If a=ell-ceil(log2(ell))-1, Haar telescoping gives
 ///
-///     C = sum_(j=a)^ell 2^(j-1) H_j(1)
-///       = 2^ell N_ell(1) - 2^(a-1) N_(a-1)(1).
+/// ```text
+/// C = sum_(j=a)^ell 2^(j-1) H_j(1)
+///   = 2^ell N_ell(1) - 2^(a-1) N_(a-1)(1).
+/// ```
 ///
 /// The lower levels have absolute value at most `W_low`, computed exactly by
 /// [`population_refinement_connected_top_implication`]. Therefore the sole
 /// premise
 ///
-///     C > -(2^(2ell) - W_low)
+/// ```text
+/// C > -(2^(2ell) - W_low)
+/// ```
 ///
 /// implies `N_ell(1) > 2^(degree-ell)-2^ell`. This is strictly weaker than
 /// the earlier symmetric assumption abs(C)<=2^(2ell-2) and weaker in logical

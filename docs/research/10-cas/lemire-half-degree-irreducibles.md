@@ -3824,6 +3824,12 @@ every retained level.  The native aggregate implication and exact path
 reconstruction preserve the strict boundary and all Haar weights.  The
 remaining aggregate contractions are still unproved; ADR-0582 records the
 new selected positive-square bridge without granting `(REL)` proof credit.
+On the exact-source `e046d1d05` fleet controls for both endpoints and every
+`19<=ell<=23`, all 140 aggregate path steps satisfy the weaker
+`4A_i<=3A_(i-1)` comparison, whereas only 69 are half-balanced.  The contrast
+shows that pooling repairs the levelwise three-quarter failures and that the
+new diagnostic is non-vacuous.  It remains finite evidence: no universal
+three-quarter contraction is claimed.
 
 The most direct zero-`2`-rank shortcut is now priced exactly and gives no
 endpoint information.  Deuring--Shafarevich gives `2`-rank zero at both

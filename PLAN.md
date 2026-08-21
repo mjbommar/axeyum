@@ -546,7 +546,11 @@ against the sharp one-sided `(REL)` allowance lowers the first endpoint from
 20 separate half splits to 18 aggregate splits for `n=401` and 19 for
 `n=402`; translation leaves 17 and 18 respectively.  This is the selected
 positive-square bridge, but the remaining aggregate contractions are still an
-unproved uniform theorem rather than finite proof evidence.
+unproved uniform theorem rather than finite proof evidence.  Exact-source
+fleet controls at `e046d1d05` cover both endpoints for `19<=ell<=23`: every
+one of the 140 aggregate steps satisfies the weaker three-quarter contraction,
+while 69 are half-balanced.  This directly tests the selected candidate but
+remains non-credit-bearing finite evidence.
 The companion characteristic-two Newton-over-Hodge result has also been
 priced conditionally: it forces only divisibility of the connected endpoint
 trace by eight.  At `ell=200` the existing envelope is already divisible by
