@@ -1,0 +1,110 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-official-gcd-balanced-bezout-reconstruction-plan",
+  "state": "preregistered-corrected-source-before-compilation-no-specialization-credit",
+  "policy_version": "official-gcd-balanced-bezout-generic-v2",
+  "inputs": {
+    "v1_decline": {
+      "path": "artifacts/autogenesis/official-gcd-balanced-bezout-reconstruction-result-v1.json",
+      "sha256": "0c868e6fe4bb2e82f6db35d821d47065b93ed246d0f0036a264c97eb9193c127"
+    },
+    "private_joint_invariant_source": {
+      "path": "scripts/lean/autogenesis_div_mod_go_reconstruct_v2.lean",
+      "sha256": "d6daa848bea4fe5a86e9d180f2256a8b0851d44b3dd9c7245ab0c71d344599bf"
+    },
+    "corrected_source": {
+      "path": "scripts/lean/autogenesis_official_gcd_balanced_bezout_v2.lean",
+      "sha256": "30fc9fcf5edf9d467110ce36b3796efb2102d9bd6d5401af9d3537b9ae8e71d8"
+    }
+  },
+  "corrections": [
+    {
+      "v1_diagnostic": "Nat.mod equations did not match elaborated HMod notation",
+      "v2_change": "helper statement and proof use direct Nat.mod applications"
+    },
+    {
+      "v1_diagnostic": "global quotient rewrite changed the gcd remainder subterm",
+      "v2_change": "congrArg derives two multiplication-specific equalities and each is rewritten only in its coefficient context"
+    }
+  ],
+  "preexisting_status_baseline": [
+    {"path": "AxeyumFibGeneric.lean", "status": "untracked", "bytes": 1595, "mode": "0664", "sha256": "f9d3ea9024497cf1aed34a071fe541e515fb4169738d3d369dd6bf9a7ad414be"},
+    {"path": "AxeyumNatFibRecurrencePointwise.lean", "status": "untracked", "bytes": 632, "mode": "0664", "sha256": "b339a3d8e4ce1700d367fa5fdf0ac0e05d411cc48c49ce6f6e30b702a9b7baf5"},
+    {"path": "AxeyumNatGcdFixEq.lean", "status": "untracked", "bytes": 3603, "mode": "0664", "sha256": "939d225a168b5a94d042ceab47c4dd265a81bf149ea8cfbe08012ca5089373a7"}
+  ],
+  "fixed_environment": {
+    "ssh_alias": "s5",
+    "hostname": "server5",
+    "mathlib_checkout": "/home/mjbommar/lean-import-scale/mathlib4",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean_version": "4.30.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "lake_binary": "/home/mjbommar/.elan/toolchains/leanprover--lean4---v4.30.0/bin/lake",
+    "lake_binary_sha256": "d3e1f322c08d87f0d5850132a0b0309c1edbe53d641276b344717da448c8bc8b",
+    "lean4export_commit": "a3e35a584f59b390667db7269cd37fca8575e4bf",
+    "lean4export_binary_sha256": "8e763913b03762488571a93ced6ec1a4e04f7d8eebbe40bd1215ba41a6bd4449"
+  },
+  "targets": [
+    "Axeyum.Autogenesis.modQuotientWitnessV2",
+    "Axeyum.Autogenesis.officialGcdBalancedBezoutV2"
+  ],
+  "construction": {
+    "carrier_definition": "Axeyum.Autogenesis.OfficialBalancedBezout",
+    "public_quotient_used": false,
+    "official_gcd_equation_proofs_used": false,
+    "gcd_equations_are_explicit_specialization_parameters": true,
+    "required_clean_interface": ["Nat.gcd.induction", "Nat.mod.eq_1", "Nat.mod.eq_2", "Axeyum.Autogenesis.divModGoReconstruct"],
+    "forbidden_dependencies": ["Nat.div_add_mod", "Nat.div_eq", "Nat.mod_eq", "Nat.div_mod_exec", "Nat.gcd_zero_left", "Nat.gcd_succ", "Nat.gcd_eq_gcd_ab", "Nat.xgcd_val", "Nat.xgcd.eq_1"]
+  },
+  "execution": {
+    "evidence_pack": "/nas3/data/axeyum/autogenesis/reference-packs/1de1558f7-official-gcd-balanced-bezout-v2-v1",
+    "remote_support_source": "/home/mjbommar/lean-import-scale/mathlib4/autogenesis_div_mod_go_reconstruct_v2.lean",
+    "remote_main_source": "/home/mjbommar/lean-import-scale/mathlib4/AxeyumAutogenesisOfficialGcdBalancedBezoutV2.lean",
+    "temporary_output_stems": [
+      "/home/mjbommar/lean-import-scale/mathlib4/.lake/build/lib/lean/autogenesis_div_mod_go_reconstruct_v2",
+      "/home/mjbommar/lean-import-scale/mathlib4/.lake/build/lib/lean/AxeyumAutogenesisOfficialGcdBalancedBezoutV2"
+    ],
+    "all_temporary_paths_must_be_absent_before_copy": true,
+    "status_must_equal_exact_baseline_before_copy": true,
+    "status_must_equal_exact_baseline_after_cleanup": true,
+    "cleanup_scope_is_exactly_the_two_sources_and_four_outputs": true,
+    "proof_terms_types_or_values_may_be_rendered": false
+  },
+  "acceptance": {
+    "both_sources_must_compile": true,
+    "fresh_kernel_imports_required": 2,
+    "both_targets_audited_per_import": true,
+    "rows_must_match_by_target": true,
+    "axiom_footprints_must_be_empty": true,
+    "forbidden_dependencies_must_be_absent": true,
+    "failed_compilation_or_first_import_ends_increment": true,
+    "specialization_authorized_in_this_increment": false
+  },
+  "budget": {
+    "max_source_copies": 2,
+    "max_source_compilations": 2,
+    "max_exporter_invocations": 1,
+    "max_importer_runs": 2,
+    "max_proof_bearing_stream_reads": 2,
+    "max_retries": 0,
+    "max_new_theorem_submissions": 4,
+    "max_exact_fibonacci_target_submissions": 0,
+    "max_executor_invocations": 0
+  },
+  "authority": {
+    "proof_bodies_readable_by_model": false,
+    "upstream_proof_sources_readable_by_model": false,
+    "preexisting_files_may_be_opened_by_model": false,
+    "preexisting_files_may_be_changed_or_removed": false,
+    "generic_balanced_bezout_credit_requires_acceptance": true,
+    "target_specialization_credit": 0,
+    "cancellation_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_on_accept": "Preregister checked target specialization with the existing empty-footprint Nat.gcd_zero_left and Nat.gcd_succ declarations.",
+  "output": "artifacts/autogenesis/official-gcd-balanced-bezout-reconstruction-result-v2.json",
+  "verification": "python3 scripts/check-autogenesis-official-gcd-balanced-bezout-reconstruction-plan-v2.py",
+  "limitations": "V2 may establish only the two generic theorems. It grants no closed target specialization, cancellation, Fibonacci target, receipt, evaluation, fact, or ledger credit."
+}
