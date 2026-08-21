@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction retains the accepted pointwise quotient witness, while the explicit four-Nat balanced-Bézout update V1 is declined at one `propext`. The exact nine-root dependency audit has now localized that footprint: seven roots, including both private permutation helpers, are clean; only official Lean 4.30 `Nat.mul_assoc` and `Nat.right_distrib` carry `propext`. The sealed one-read result rendered no proof/type/value material and grants only classification credit.
+**Status:** Exact official Lean 4.30 `Nat.fib_coprime_fib_succ` remains durably `proved` through dependency-bound receipt `34b9aad06fc8a640c81df0951b1af37a464f2d9305c048784e4f590b83ff0d0e`, and its sole newly ready child `F:ml430-nat-gcd-fib-add-self-5a92d5e3` remains open. Bottom-up Euclidean reconstruction retains the accepted pointwise quotient witness. V1's balanced-Bézout update footprint was localized exactly to official `Nat.mul_assoc` and `Nat.right_distrib`; V2 is now preregistered with their exact clean contracts as proof parameters. Its diff retains the witness map, permutation helpers, and equality chain, changing only versioned names, two parameters, and four call sites. One compile/export and two fresh imports are authorized; leaf composition, gcd induction, targets, and ledger writes remain forbidden.
 
-**Next:** preregister V2 with exact clean multiplication-associativity and right-distributivity contracts injected as specialization parameters. Retain the V1 witness map, permutation helpers, and equality chain byte-for-byte except for those two leaf calls. Measure the generic update twice before any native/official leaf composition or gcd induction. Preserve every prior source and sealed pack, the exact three-file baseline, and zero Fibonacci/ledger authority until each independent gate passes.
+**Next:** execute V2 exactly once on pinned `s5`. Accept only two byte-identical empty-footprint audits that omit the two official contaminated leaves. On acceptance, separately preregister identity-gated composition of the injected contracts from clean native or target-owned theorems before any gcd induction. Preserve every prior source and sealed pack, the exact three-file baseline, and zero Fibonacci/ledger authority until each independent gate passes.
 
 <!-- plan-section: landed-changes -->
 
@@ -105,3 +105,4 @@
 | 2026-08-21 | (pending) | Explicit update compiles but its first audit retains one `propext`; exact nine-dependency descent replaces source guessing |
 | 2026-08-21 | (pending) | Exact nine-root dependency-local audit is frozen before one non-rendering sealed-stream read |
 | 2026-08-21 | (pending) | One sealed-stream read localizes the V1 footprint exactly to `Nat.mul_assoc` and `Nat.right_distrib` |
+| 2026-08-21 | (pending) | V2 injects exactly two clean leaf contracts while retaining the explicit balanced-Bézout update chain |
