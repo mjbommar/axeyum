@@ -2,13 +2,18 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** The exact `Nat.fib_gcd` route is now past its first proof-term defect. One preregistered source edit corrected the quotient-iteration helper's final associativity transport from `m*q + (m + r)` to the already-derived `m*q + (r + m)`. The existing no-submission diagnostic now infers the complete helper proof and confirms it definitionally equal to the frozen target type. No theorem was submitted, no capsule was written, and no ledger state changed; the spent first construction attempt remains spent.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd` is durably proved on the authoritative ledger. The repaired target reconstructed twice to the same 1,053,571-byte capsule, survived four fresh imports with an empty axiom footprint, and then passed one crash-injected authoritative admission plus an isolated clean-worktree replay. The measured DAG delta made `Nat.fib_dvd` ready; `Int.gcd_fib` remains blocked by its separate open `Int.fib_neg` premise.
 
-**Next:** preregister a fresh bounded helper-plus-target construction attempt over the unchanged exact route, reconcile the two historical `Nat.fib_gcd` gate couplings monotonically, and only then execute its first zero-retry reconstruction.
+**Next:** qualify the newly ready exact `Nat.fib_dvd` proposition, measure its smallest proof-isolated dependency boundary, and preregister one bounded construction before any target submission. Keep `Int.fib_neg` as the parallel horizon prerequisite for `Int.gcd_fib`.
 
 <!-- plan-section: landed-changes -->
 
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
+| 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
+| 2026-08-21 | `a9610560c` | The durable construction checker binds the separately stored target goal identity without weakening capsule checks |
+| 2026-08-21 | `d357b3307` | A registered sealed-capsule operation makes the frontier select exactly `Nat.fib_gcd` |
+| 2026-08-21 | `e242b72b3` | Crash-safe recovery admits exact `Nat.fib_gcd` with one authoritative write and unlocks `Nat.fib_dvd` |
+| 2026-08-21 | (pending) | Immutable primary evidence and isolated clean replay seal the exact `Nat.fib_gcd` admission |
 
 | 2026-08-21 | `9ff54f11c` | Six clean order/divisibility supports reconstruct twice over r091 with empty footprints and byte-identical capsules |
 | 2026-08-21 | `dfc8874ca` | Target-owned divisibility addition and divisor-of-one supports reconstruct reproducibly without importing `Iff` |
