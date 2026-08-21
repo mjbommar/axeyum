@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-primitive-algebra-result",
+  "state": "surface-constructor-induction-stops-at-opaque-int-operations",
+  "plan_sha256": "e39aebc89ecc0ef6ee5ea2d60309a2a890b09f20dd682a14147d4b034a94dfab",
+  "source": {"path": "artifacts/autogenesis/sources/int-fib-primitive-algebra-v2.lean", "sha256": "cc6b946f574119f32421e0e565c9a5437667aad52859eb4d1e2f8af3e8c88c61"},
+  "execution": {"compiler_invocations": 1, "compiler_exit_status": 1, "exporter_invocations": 0, "importer_runs": 0, "theorem_submissions": 0, "retries": 0, "ledger_writes": 0},
+  "diagnostic": {
+    "zero_cases": "Int.ofNat 0 remains behind the public operation representation, so Int.add_zero does not match syntactically",
+    "successor_cases": "splitting both Nat indices still leaves public Int.add and negation opaque to definitional reduction",
+    "selected_route": "audit and reuse the kernel-level private integer arithmetic auxiliaries, replacing only contaminated convenience carriers"
+  },
+  "cleanup": {"temporary_source_removed": true, "temporary_olean_removed": true, "checkout_baseline_restored": true},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}
