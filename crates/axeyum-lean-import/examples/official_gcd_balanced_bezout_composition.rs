@@ -277,15 +277,23 @@ fn run() -> Result<(), String> {
         BALANCED_BEZOUT_CLOSED,
     )?;
 
-    let with_mul_leaves = compose_roots(
+    let mul_assoc_reuse = checked_reused_declaration_compatibility(
         clean_mul.kernel(),
         closed.kernel(),
-        &[MUL_ASSOC_LEAF, RIGHT_DISTRIB_LEAF],
-        "clean-multiplication-leaves",
-    )?;
+        MUL_ASSOC_LEAF,
+    )
+    .map_err(|error| format!("multiplication-associativity checked reuse declined: {error:?}"))?;
+    require_exact_kernel_type_shape_reuse(&mul_assoc_reuse, MUL_ASSOC_LEAF)?;
+    let right_distrib_reuse = checked_reused_declaration_compatibility(
+        clean_mul.kernel(),
+        closed.kernel(),
+        RIGHT_DISTRIB_LEAF,
+    )
+    .map_err(|error| format!("right-distributivity checked reuse declined: {error:?}"))?;
+    require_exact_kernel_type_shape_reuse(&right_distrib_reuse, RIGHT_DISTRIB_LEAF)?;
     let with_residual = compose_root(
         residual.kernel(),
-        with_mul_leaves.kernel(),
+        closed.kernel(),
         RESIDUAL_CANCELLATION,
         "residual-cancellation",
     )?;
@@ -398,8 +406,8 @@ fn run() -> Result<(), String> {
 
     let output = json!({
         "schema_version": 1,
-        "kind": "axeyum-official-gcd-balanced-bezout-official-kernel-composition",
-        "state": "closed-balanced-bezout-reconstructed-empty-footprint",
+        "kind": "axeyum-official-coprime-factor-cancellation-exact-reuse-composition",
+        "state": "official-coprime-factor-cancellation-reconstructed-empty-footprint",
         "input_streams": {
             "target_base_sha256": TARGET_STREAM_SHA256,
             "mod_lt_adapter_sha256": MOD_ADAPTER_STREAM_SHA256,
@@ -418,12 +426,25 @@ fn run() -> Result<(), String> {
                 "target_type_shape_sha256": mod_lt_reuse.target_type_shape_sha256,
                 "compatibility": mod_lt_reuse.compatibility.as_str(),
             },
+            MUL_ASSOC_LEAF: {
+                "source_declaration_sha256": mul_assoc_reuse.source_declaration_sha256,
+                "target_declaration_sha256": mul_assoc_reuse.target_declaration_sha256,
+                "source_type_shape_sha256": mul_assoc_reuse.source_type_shape_sha256,
+                "target_type_shape_sha256": mul_assoc_reuse.target_type_shape_sha256,
+                "compatibility": mul_assoc_reuse.compatibility.as_str(),
+            },
+            RIGHT_DISTRIB_LEAF: {
+                "source_declaration_sha256": right_distrib_reuse.source_declaration_sha256,
+                "target_declaration_sha256": right_distrib_reuse.target_declaration_sha256,
+                "source_type_shape_sha256": right_distrib_reuse.source_type_shape_sha256,
+                "target_type_shape_sha256": right_distrib_reuse.target_type_shape_sha256,
+                "compatibility": right_distrib_reuse.compatibility.as_str(),
+            },
         },
         "compositions": {
             "mod_lt_adapter_receipt_sha256": with_adapter.receipt().receipt_sha256,
             "zero_left_receipt_sha256": with_zero.receipt().receipt_sha256,
             "successor_receipt_sha256": with_successor.receipt().receipt_sha256,
-            "clean_mul_leaves_receipt_sha256": with_mul_leaves.receipt().receipt_sha256,
             "residual_cancellation_receipt_sha256": with_residual.receipt().receipt_sha256,
             "all_nat_adapter_receipt_sha256": with_all_nat_adapter.receipt().receipt_sha256,
             "native_positive_cancellation_receipt_sha256": with_positive.receipt().receipt_sha256,
@@ -518,27 +539,6 @@ fn compose_root(
     Ok(composed)
 }
 
-fn compose_roots(
-    source: &Kernel,
-    target: &Kernel,
-    roots: &[&str],
-    label: &str,
-) -> Result<axeyum_lean_import::CompletedTheoremComposition, String> {
-    let composed = compose_checked_theorem_slice(source, target, roots)
-        .map_err(|error| format!("{label} composition declined: {error:?}"))?;
-    verify_checked_theorem_composition(source, target, composed.kernel(), composed.receipt())
-        .map_err(|error| format!("{label} composition did not replay: {error:?}"))?;
-    for theorem in &composed.receipt().added_theorems {
-        if !theorem.axiom_footprint.is_empty() {
-            return Err(format!(
-                "{label} composition added assumption-bearing theorem {}: {:?}",
-                theorem.name, theorem.axiom_footprint
-            ));
-        }
-    }
-    Ok(composed)
-}
-
 fn theorem_evidence(kernel: &Kernel, name: NameId) -> Result<Value, String> {
     if !matches!(
         kernel.environment().get(name),
@@ -589,6 +589,25 @@ fn require_identity(kernel: &Kernel, name: &str, expected_sha256: &str) -> Resul
     if actual_sha256 != expected_sha256 {
         return Err(format!(
             "{name} identity changed: expected {expected_sha256}, got {actual_sha256}"
+        ));
+    }
+    Ok(())
+}
+
+fn require_exact_kernel_type_shape_reuse(
+    receipt: &axeyum_lean_import::ReusedDeclarationReceipt,
+    name: &str,
+) -> Result<(), String> {
+    if receipt.source_declaration_sha256 != receipt.target_declaration_sha256 {
+        return Err(format!(
+            "{name} declaration identity differs across pinned kernels: source {}, target {}",
+            receipt.source_declaration_sha256, receipt.target_declaration_sha256,
+        ));
+    }
+    if receipt.compatibility != ReusedTypeCompatibility::KernelTypeShape {
+        return Err(format!(
+            "{name} reuse is not exact kernel-type-shape compatibility: {}",
+            receipt.compatibility.as_str(),
         ));
     }
     Ok(())

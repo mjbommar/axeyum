@@ -14,9 +14,9 @@ from typing import Any
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 RESULT = ROOT / "artifacts/autogenesis/official-coprime-factor-cancellation-composition-result-v1.json"
 PLAN = ROOT / "artifacts/autogenesis/official-coprime-factor-cancellation-composition-plan-v1.json"
-WRAPPER = ROOT / "crates/axeyum-lean-import/examples/official_coprime_factor_cancellation_composition.rs"
-BODY = ROOT / "crates/axeyum-lean-import/examples/official_gcd_balanced_bezout_composition.rs"
 MANIFEST = pathlib.Path("/nas3/data/axeyum/autogenesis/reference-packs/dd15493b6-official-coprime-factor-cancellation-v1/manifest.json")
+WRAPPER = MANIFEST.parent / "executed-wrapper.rs"
+BODY = MANIFEST.parent / "executed-body.rs"
 PLAN_SHA256 = "8ffb90ee24e5ae9e30a34ab07b422feb69167227444c319566ed6224334b0632"
 WRAPPER_SHA256 = "f61420c2a83c61ef83e780216273639b77c0cb9286e846964972bdcb7cdf285a"
 BODY_SHA256 = "4c193eed8a110c08127bdbecb494a946d1050aceff5de4f431b824a1127bfa66"
