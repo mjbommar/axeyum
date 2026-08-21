@@ -175,6 +175,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | All three `subNat` conveniences remain propext-bearing; nine raw branch and constructor lemmas are frozen to select the true kernel composition boundary |
 | 2026-08-21 | (pending) | Nine branch conveniences are rejected, exposing eight raw computation/constructor roots for the final diagnostic descent and wrapper-free composition stop rule |
 | 2026-08-21 | (pending) | Five raw integer computation/constructor roots are empty-footprint; descent stops and a three-name type probe begins the upward cancellation reconstruction |
+| 2026-08-21 | (pending) | Raw zero/successor `subNatNat` types align with odd/even cancellation; wrapper-free upward composition is frozen before source construction |
 | 2026-08-21 | (pending) | One localized associativity-middle repair makes the Fibonacci quotient-iteration helper's inferred and expected types definitionally equal with zero submissions |
 | 2026-08-21 | `04a9a6b2b` | Exact `Nat.fib_gcd` reconstructs twice byte-identically, survives four fresh imports, and has an empty kernel footprint |
 | 2026-08-21 | `a9610560c` | The durable construction checker binds the separately stored target goal identity without weakening capsule checks |

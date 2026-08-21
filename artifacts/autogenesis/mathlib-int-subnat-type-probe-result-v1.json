@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-subnat-type-probe-result",
+  "state": "raw-zero-successor-equations-bound-for-upward-composition",
+  "plan": {"path": "artifacts/autogenesis/mathlib-int-subnat-type-probe-plan-v1.json", "sha256": "1bd989b62f2c2324a070df7bf6bc260dc4b010f11840a8c06ab0eecb8a0c229a"},
+  "source": {"path": "artifacts/autogenesis/sources/int-subnat-type-probe-v1.lean", "sha256": "509fa6c89f9de8b1fa74144c4fb7fa0e59fecd80e73d194d6d5a45a05a273d5b"},
+  "types": {
+    "Int.subNatNat_of_sub_eq_zero": "{m n : Nat} -> n - m = 0 -> Int.subNatNat m n = Int.ofNat (m - n)",
+    "Int.subNatNat_of_sub_eq_succ": "{m n k : Nat} -> n - m = Nat.succ k -> Int.subNatNat m n = Int.negSucc k",
+    "Nat.add_sub_cancel_left": "forall n m : Nat, n + m - n = m"
+  },
+  "execution": {"compiler_invocations": 1, "compiler_exit_status": 0, "theorem_submissions": 0, "exporter_invocations": 0, "importer_runs": 0, "retries": 0, "ledger_writes": 0},
+  "authority": {"theorem_credit": 0, "ledger_writes": 0}
+}
