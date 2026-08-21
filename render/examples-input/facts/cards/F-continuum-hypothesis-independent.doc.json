@@ -1,0 +1,430 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:continuum-hypothesis-independent",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-continuum-hypothesis-independent.json",
+            "sha256": "cea111fc91df99815d104a6c9d746e263eb731ff44ac1427fa3b85444b598202"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "The continuum hypothesis is independent of ZFC"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "open",
+            "open",
+            "0 of 0 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-continuum-hypothesis-independent.json",
+              "sha256": "cea111fc91df99815d104a6c9d746e263eb731ff44ac1427fa3b85444b598202"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-continuum-hypothesis-independent.json",
+            "sha256": "cea111fc91df99815d104a6c9d746e263eb731ff44ac1427fa3b85444b598202"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "disagreement-import-backlog",
+      "kind": {
+        "text": "Import backlog: open in this ledger (epistemic_status: open) and settled in the literature (external_status: proved). That is a target for import, not a result of this project.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-continuum-hypothesis-independent.json",
+            "sha256": "cea111fc91df99815d104a6c9d746e263eb731ff44ac1427fa3b85444b598202"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Import backlog"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-14"
+          ],
+          [
+            "established_by",
+            "not established in this ledger"
+          ],
+          [
+            "source",
+            "authored from the S:logic-and-proof strand of the math-education concept graph; statement written here, not copied"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-continuum-hypothesis-independent.json",
+              "sha256": "cea111fc91df99815d104a6c9d746e263eb731ff44ac1427fa3b85444b598202"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-continuum-hypothesis-independent.json",
+            "sha256": "cea111fc91df99815d104a6c9d746e263eb731ff44ac1427fa3b85444b598202"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "citation",
+            "key": "citation"
+          },
+          {
+            "header": "establishes",
+            "key": "establishes"
+          }
+        ],
+        "rows": [
+          [
+            "Godel 1940 (consistency of CH); Cohen 1963 (consistency of not-CH)",
+            "the independence, long settled"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-continuum-hypothesis-independent.json",
+              "sha256": "cea111fc91df99815d104a6c9d746e263eb731ff44ac1427fa3b85444b598202"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-continuum-hypothesis-independent.json",
+            "sha256": "cea111fc91df99815d104a6c9d746e263eb731ff44ac1427fa3b85444b598202"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "concept-refs",
+      "kind": {
+        "caption": {
+          "text": "Concept references (gloss and provenance only, never substance)"
+        },
+        "columns": [
+          {
+            "header": "graph",
+            "key": "graph"
+          },
+          {
+            "header": "ref",
+            "key": "ref"
+          },
+          {
+            "header": "relation",
+            "key": "relation"
+          },
+          {
+            "header": "resolved",
+            "key": "resolved"
+          }
+        ],
+        "rows": [
+          [
+            "math-education",
+            "C:continuum-hypothesis",
+            "states",
+            true
+          ],
+          [
+            "math-education",
+            "C:independence-of-axioms",
+            "instance-of",
+            true
+          ],
+          [
+            "math-education",
+            "C:zfc-intuition",
+            "uses",
+            true
+          ],
+          [
+            "math-education",
+            "C:axiomatic-system",
+            "about",
+            true
+          ],
+          [
+            "math-education",
+            "C:undecidable-statement",
+            "instance-of",
+            true
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-continuum-hypothesis-independent.json",
+              "sha256": "cea111fc91df99815d104a6c9d746e263eb731ff44ac1427fa3b85444b598202"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-continuum-hypothesis-independent.json",
+            "sha256": "cea111fc91df99815d104a6c9d746e263eb731ff44ac1427fa3b85444b598202"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "Third and last of the deliberately-unstatable entries, chosen because it fails for a DIFFERENT reason than the other two and so maps a different edge of the frontier. F:godel-first-incompleteness and F:fol-validity-undecidable are blocked by the absence of reflection alone; this one is blocked by reflection AND by order -- there is no second-order quantification and no cardinality anywhere in the stack, and a 'complete framework for general reasoning' that intends to reach ordinary mathematics eventually has to answer for that. Recorded also as a warning label for the self-extension loop: an `open` fact with `formal.fragment: none` must never be dispatched to a solver, and a consumer that filters only on status will do exactly that.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-continuum-hypothesis-independent.json",
+            "sha256": "cea111fc91df99815d104a6c9d746e263eb731ff44ac1427fa3b85444b598202"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-continuum-hypothesis-independent",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#index",
+        "label": "Unconnected: see the index",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:continuum-hypothesis-independent",
+    "title": "The continuum hypothesis is independent of ZFC"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-continuum-hypothesis-independent.json",
+        "sha256": "cea111fc91df99815d104a6c9d746e263eb731ff44ac1427fa3b85444b598202"
+      }
+    ]
+  },
+  "schema_version": 1
+}

@@ -1,0 +1,761 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:franel-numbers-recurrence",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-franel-numbers-recurrence.json",
+            "sha256": "d3f2570447b25056dedad7d8072eef4546e4a6f28c4433d614afaf3ef84857df"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "The Franel numbers satisfy a second-order recurrence"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "2 of 2 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-franel-numbers-recurrence.json",
+              "sha256": "d3f2570447b25056dedad7d8072eef4546e4a6f28c4433d614afaf3ef84857df"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-franel-numbers-recurrence.json",
+            "sha256": "d3f2570447b25056dedad7d8072eef4546e4a6f28c4433d614afaf3ef84857df"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "cas-certificate"
+          ],
+          [
+            "axiom_footprint",
+            "cas.exact-rational-polynomial-normal-form; cas.gamma-functional-equation; cas.hyperterm-specification-denotes-the-summand; cas.telescoped-term-natural-boundary"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-franel-numbers-recurrence.json",
+              "sha256": "d3f2570447b25056dedad7d8072eef4546e4a6f28c4433d614afaf3ef84857df"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-franel-numbers-recurrence.json",
+            "sha256": "d3f2570447b25056dedad7d8072eef4546e4a6f28c4433d614afaf3ef84857df"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 25610,
+            "path": "crates/axeyum-cas/tests/telescoping_identities.rs",
+            "sha256": "65caca76320a2bbe433ef92219778352023e1d393cd4cb51bf2fcaa573a7df9a"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-cas --test telescoping_identities franel_numbers_get_an_order_two_recurrence"
+        },
+        "summary": {
+          "text": "an order-TWO creative-telescoping certificate, replayed by a checker that shares no code with the search that produced it"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-franel-numbers-recurrence.json",
+            "sha256": "d3f2570447b25056dedad7d8072eef4546e4a6f28c4433d614afaf3ef84857df"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: wz-franel-order-two"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row wz-franel-order-two as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "wz-franel-order-two"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "telescoping_check::symbolic_identity_holds (own shift-ratio derivation, polynomial cross-multiplication), telescoping_check::confirm_ratios (shift ratios against exact bignum factorials), telescoping_check::confirm_telescoping (pointwise identity and summed recurrence, exact bignum)"
+          ],
+          [
+            "supports",
+            "an order-TWO creative-telescoping certificate, replayed by a checker that shares no code with the search that produced it"
+          ],
+          [
+            "artifact",
+            "crates/axeyum-cas/tests/telescoping_identities.rs"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "65caca76320a2bbe433ef92219778352023e1d393cd4cb51bf2fcaa573a7df9a"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-franel-numbers-recurrence.json",
+              "sha256": "d3f2570447b25056dedad7d8072eef4546e4a6f28c4433d614afaf3ef84857df"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-franel-numbers-recurrence.json",
+            "sha256": "d3f2570447b25056dedad7d8072eef4546e4a6f28c4433d614afaf3ef84857df"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "The first order-2 (J >= 2) certificate on this route. The sweep-based search that established the earlier binomial facts DECLINED on this summand after 9.8 s of release-build search, because the certificate numerator has degree 3 in k with coefficients of degree 5 in n and the old ansatz swept total degree over all variables. Deriving the denominator and the k-degree from the Gosper-Petkovsek normal form reduces the whole search to three linear systems and finds it in 86 ms. The test also replays the recurrence against the Franel numbers 1, 2, 10, 56, 346, 2252, 15184 in i128 arithmetic, which is a separate check from the certificate.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-franel-numbers-recurrence.json",
+            "sha256": "d3f2570447b25056dedad7d8072eef4546e4a6f28c4433d614afaf3ef84857df"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence wz-franel-order-two"
+        },
+        "max_bytes": 65536,
+        "path": "crates/axeyum-cas/tests/telescoping_identities.rs",
+        "render_hint": "link",
+        "sha256": "65caca76320a2bbe433ef92219778352023e1d393cd4cb51bf2fcaa573a7df9a",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-franel-numbers-recurrence.json",
+            "sha256": "d3f2570447b25056dedad7d8072eef4546e4a6f28c4433d614afaf3ef84857df"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 3770,
+            "path": "artifacts/cas-certificates/franel-numbers-recurrence.json",
+            "sha256": "b1488f582fc84aa5218ea4101068c6c698bd80e3b2f4098414deb15ed289be8f"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-cas --test telescoping_certificate_artifacts"
+        },
+        "summary": {
+          "text": "the serialised certificate itself, re-checked from the committed file with no search run"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-franel-numbers-recurrence.json",
+            "sha256": "d3f2570447b25056dedad7d8072eef4546e4a6f28c4433d614afaf3ef84857df"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: cas-certificate-artifact-franel-numbers-recurrence"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row cas-certificate-artifact-franel-numbers-recurrence as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "cas-certificate-artifact-franel-numbers-recurrence"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "telescoping_json::from_json (exact [numerator, denominator] rationals; decimals, a foreign format tag and a truncated file are all refused), telescoping_check::check_certificate over the parsed certificate, telescoping_check::check_closed_form / check_closed_form_symbolic over the parsed closed form, where one is claimed"
+          ],
+          [
+            "supports",
+            "the serialised certificate itself, re-checked from the committed file with no search run"
+          ],
+          [
+            "artifact",
+            "artifacts/cas-certificates/franel-numbers-recurrence.json"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "b1488f582fc84aa5218ea4101068c6c698bd80e3b2f4098414deb15ed289be8f"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-franel-numbers-recurrence.json",
+              "sha256": "d3f2570447b25056dedad7d8072eef4546e4a6f28c4433d614afaf3ef84857df"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-franel-numbers-recurrence.json",
+            "sha256": "d3f2570447b25056dedad7d8072eef4546e4a6f28c4433d614afaf3ef84857df"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "This row exists so the fact rests on an ARTIFACT rather than on re-running the producer. The sweep reads every committed certificate, parses it, and hands it to the independent checker; nothing in that path calls the search. Tamper controls in the same file: a certificate numerator edited by one, a recurrence coefficient edited by one, and a certificate re-pointed at a neighbouring file's summand are each rejected, and a truncated / foreign-format / decimal-bearing file is refused by the reader before the checker sees it.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-franel-numbers-recurrence.json",
+            "sha256": "d3f2570447b25056dedad7d8072eef4546e4a6f28c4433d614afaf3ef84857df"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence cas-certificate-artifact-franel-numbers-recurrence"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/cas-certificates/franel-numbers-recurrence.json",
+        "render_hint": "json",
+        "sha256": "b1488f582fc84aa5218ea4101068c6c698bd80e3b2f4098414deb15ed289be8f",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-franel-numbers-recurrence.json",
+            "sha256": "d3f2570447b25056dedad7d8072eef4546e4a6f28c4433d614afaf3ef84857df"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-14"
+          ],
+          [
+            "established_by",
+            "lane telescoping-scale: axeyum_cas::telescoping::zeilberger (untrusted Gosper-Petkovsek search) + axeyum_cas::telescoping_check (independent checker)"
+          ],
+          [
+            "source",
+            "classical; the summand stated by this lane as a HyperTerm specification"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-franel-numbers-recurrence.json",
+              "sha256": "d3f2570447b25056dedad7d8072eef4546e4a6f28c4433d614afaf3ef84857df"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-franel-numbers-recurrence.json",
+            "sha256": "d3f2570447b25056dedad7d8072eef4546e4a6f28c4433d614afaf3ef84857df"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "what",
+            "key": "what"
+          },
+          {
+            "header": "where",
+            "key": "where"
+          },
+          {
+            "header": "who",
+            "key": "who"
+          },
+          {
+            "header": "year",
+            "key": "year"
+          }
+        ],
+        "rows": [
+          [
+            "standard textbook attribution; this lane did not consult the primary source",
+            "the recurrence for sum_k C(n,k)^3",
+            "L'Intermediaire des Mathematiciens 1 (1894), 45-47; see also OEIS A000172 and Petkovsek-Wilf-Zeilberger, A=B (1996)",
+            "J. Franel",
+            "1894"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-franel-numbers-recurrence.json",
+              "sha256": "d3f2570447b25056dedad7d8072eef4546e4a6f28c4433d614afaf3ef84857df"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-franel-numbers-recurrence.json",
+            "sha256": "d3f2570447b25056dedad7d8072eef4546e4a6f28c4433d614afaf3ef84857df"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "Established on the `cas-certificate` route. Franel is the standard demonstration that a definite hypergeometric sum can be P-recursive without being hypergeometric: there is a recurrence, there is no closed form, and this fact claims exactly the former. `cas.symbolic-gamma-arguments-avoid-poles` is NOT in the footprint because no symbolic base case is involved -- the recurrence alone is the statement.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-franel-numbers-recurrence.json",
+            "sha256": "d3f2570447b25056dedad7d8072eef4546e4a6f28c4433d614afaf3ef84857df"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-franel-numbers-recurrence",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#index",
+        "label": "Unconnected: see the index",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:franel-numbers-recurrence",
+    "title": "The Franel numbers satisfy a second-order recurrence"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-franel-numbers-recurrence.json",
+        "sha256": "d3f2570447b25056dedad7d8072eef4546e4a6f28c4433d614afaf3ef84857df"
+      }
+    ]
+  },
+  "schema_version": 1
+}

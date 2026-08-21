@@ -1,0 +1,1221 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:int-categoricity",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-categoricity.json",
+            "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "The constructed Int is THE integers: every generated aperiodic Z-structure is in structure-preserving bijection with it"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "5 of 5 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-categoricity.json",
+              "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-categoricity.json",
+            "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "kernel-lean"
+          ],
+          [
+            "axiom_footprint",
+            "[] -- axiom-free; only kernel-lean can deliver this"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-categoricity.json",
+              "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-categoricity.json",
+            "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^int-categoricity[[:space:]]+Int[.]Characterization[.]categorical[[:space:]]+\\[\\][[:space:]]'"
+        },
+        "summary": {
+          "text": "Every generated aperiodic Z-structure is in structure-preserving bijection with the constructed Int, and the axiom footprint of the witness is empty."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-categoricity.json",
+            "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: kernel-Int.Characterization.categorical"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row kernel-Int.Characterization.categorical as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "kernel-Int.Characterization.categorical"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "Every generated aperiodic Z-structure is in structure-preserving bijection with the constructed Int, and the axiom footprint of the witness is empty."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-categoricity.json",
+              "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-categoricity.json",
+            "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "The grep is anchored on the declaration name AND on an EMPTY footprint column, so neither a rename nor a theorem that grew a dependency on a trusted declaration can satisfy it. The `&&` is load-bearing: `characterization_status` is itself a checker that exits non-zero when any entry is not a `Declaration::Theorem`, when any footprint is non-empty, when the population changes, or when any injected `Weakening` is ACCEPTED by the kernel or is refused BEFORE the declaration it was aimed at. Verified 2026-08-18: the command exits 0, and the same command with a non-existent declaration name exits 1.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-categoricity.json",
+            "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^int-categoricity[[:space:]]+Int[.]Characterization[.]categorical_at_int[[:space:]]+\\[\\][[:space:]]'"
+        },
+        "summary": {
+          "text": "NON-VACUITY: the hypothesis list is inhabited -- `categorical` instantiated at (Int, 0, (.+1), (.-1)) with every premise discharged by a real theorem, admitted by the kernel with an empty footprint."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-categoricity.json",
+            "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: kernel-Int.Characterization.categorical-at-int"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row kernel-Int.Characterization.categorical-at-int as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "kernel-Int.Characterization.categorical-at-int"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "NON-VACUITY: the hypothesis list is inhabited -- `categorical` instantiated at (Int, 0, (.+1), (.-1)) with every premise discharged by a real theorem, admitted by the kernel with an empty footprint."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-categoricity.json",
+              "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-categoricity.json",
+            "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "A categoricity theorem whose premises nothing satisfies is axiom-free and worthless, so this witness is a DECLARATION OF THE SHIPPED PACKAGE rather than a test: the inverse laws come from `add_assoc`/`add_neg`/`add_zero`/`add_comm`, generation is `Int.Characterization.induction` verbatim, and aperiodicity is `Nat.Peano.zero_ne_succ` composed with `Int.natAbs` through `Int.Characterization.iter_at_int`. It is checked on every build and printed as its own row.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-categoricity.json",
+            "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-002",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^int-universal-property[[:space:]]+Int[.]Characterization[.]iter_succ[[:space:]]+\\[\\][[:space:]]'"
+        },
+        "summary": {
+          "text": "The EXISTENCE half of the universal property, which is what F:int-characterization was missing: the comparison map exists and preserves the +1 recurrence."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-categoricity.json",
+            "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: kernel-Int.Characterization.iter-succ"
+    },
+    {
+      "id": "evidence-002-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row kernel-Int.Characterization.iter-succ as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "kernel-Int.Characterization.iter-succ"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "The EXISTENCE half of the universal property, which is what F:int-characterization was missing: the comparison map exists and preserves the +1 recurrence."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-categoricity.json",
+              "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-categoricity.json",
+            "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-002-notes",
+      "kind": {
+        "text": "`iter_zero` is definitional; `iter_succ` needs ONLY `up (down x) = x` and `iter_pred` needs ONLY `down (up x) = x`, because in the normalized ofNat/negSucc representation each is definitional except at the branch that crosses zero. Two `Weakening` variants replace exactly those hypotheses with `True` and the kernel refuses each at its own declaration. With `rec_unique` (uniqueness) this makes Int the initial Z-structure.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-categoricity.json",
+            "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-003",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^int-categoricity[[:space:]]+Int[.]Characterization[.]iso[[:space:]]+\\[\\][[:space:]]'"
+        },
+        "summary": {
+          "text": "The CONSTRUCTED isomorphism, as opposed to the Prop-level bijection: given any structure-preserving psi : R -> Int, iter . psi = id_R and psi . iter = id_Int."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-categoricity.json",
+            "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: kernel-Int.Characterization.iso"
+    },
+    {
+      "id": "evidence-003-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row kernel-Int.Characterization.iso as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "kernel-Int.Characterization.iso"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "The CONSTRUCTED isomorphism, as opposed to the Prop-level bijection: given any structure-preserving psi : R -> Int, iter . psi = id_R and psi . iter = id_Int."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-categoricity.json",
+              "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-categoricity.json",
+            "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-003-notes",
+      "kind": {
+        "text": "This is the honest statement of the stronger form and of its price. The R-side identity is proved by the target's generation principle; the Int-side identity is `rec_unique` applied to psi . iter against the identity map. What is NOT proved, and does not follow from these premises, is that such a psi exists -- a Prop-valued generation principle can prove `forall y, exists t, iter t = y` and cannot define a function R -> Int.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-categoricity.json",
+            "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-004",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "report-run",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free integer --require-axiom-free nat --require-axiom-free logic"
+        },
+        "summary": {
+          "text": "axiom_footprint: [] -- the integer prelude everything here rests on has an empty trusted surface."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-categoricity.json",
+            "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: integer-trusted-surface-empty-categoricity"
+    },
+    {
+      "id": "evidence-004-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row integer-trusted-surface-empty-categoricity as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "integer-trusted-surface-empty-categoricity"
+          ],
+          [
+            "ledger kind",
+            "exhaustive-enumeration"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "axiom_footprint: [] -- the integer prelude everything here rests on has an empty trusted surface."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-categoricity.json",
+              "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-categoricity.json",
+            "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-004-notes",
+      "kind": {
+        "text": "Enumerates the built environments over the FULL trusted surface (Axiom/Opaque/Quotient), not `Declaration::Axiom` alone, and exits non-zero on any member. Measured 2026-08-18: logic=0, nat=0, integer=0.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-categoricity.json",
+            "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "dependency-graph",
+      "kind": {
+        "alt": "Dependency graph around F:int-categoricity: 2 dependencies, 0 dependents",
+        "caption": {
+          "text": "Immediate dependencies and dependents of this fact"
+        },
+        "spec": {
+          "edges": [
+            {
+              "from": "F:int-categoricity",
+              "label": "depends_on",
+              "to": "F:int-characterization"
+            },
+            {
+              "from": "F:int-categoricity",
+              "label": "depends_on",
+              "to": "F:nat-peano-categoricity"
+            }
+          ],
+          "figure_type": "dep-graph",
+          "nodes": [
+            {
+              "group": "focus",
+              "href": "F-int-categoricity.doc.json",
+              "id": "F:int-categoricity",
+              "label": "int-categoricity",
+              "status": "proved",
+              "tooltip": "The constructed Int is THE integers: every generated aperiodic Z-structure is in structure-preserving bijection with it"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "F-int-characterization.doc.json",
+              "id": "F:int-characterization",
+              "label": "int-characterization",
+              "status": "proved",
+              "tooltip": "The constructed Int is a discretely ordered ring generated by 1, with unique maps out"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "F-nat-peano-categoricity.doc.json",
+              "id": "F:nat-peano-categoricity",
+              "label": "nat-peano-categoricity",
+              "status": "proved",
+              "tooltip": "The constructed Nat is THE natural numbers, up to unique isomorphism"
+            }
+          ],
+          "rankdir": "TB"
+        },
+        "type": "figure"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-categoricity.json",
+            "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Dependency neighbourhood"
+    },
+    {
+      "id": "depends-on",
+      "kind": {
+        "caption": {
+          "text": "Depends on"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:int-characterization",
+            "The constructed Int is a discretely ordered ring generated by 1, with unique maps out",
+            "proved",
+            "F-int-characterization.doc.json"
+          ],
+          [
+            "F:nat-peano-categoricity",
+            "The constructed Nat is THE natural numbers, up to unique isomorphism",
+            "proved",
+            "F-nat-peano-categoricity.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-categoricity.json",
+              "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-categoricity.json",
+            "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depends on"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-18"
+          ],
+          [
+            "established_by",
+            "axeyum-lean-kernel characterization module, `int_categoricity` (agent-int-categoricity lane)"
+          ],
+          [
+            "source",
+            "hand-built foundational library; the statement is the standard categoricity of the integers as the free Z-set on one generator, authored here rather than imported"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-categoricity.json",
+              "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-categoricity.json",
+            "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "concept-refs",
+      "kind": {
+        "caption": {
+          "text": "Concept references (gloss and provenance only, never substance)"
+        },
+        "columns": [
+          {
+            "header": "graph",
+            "key": "graph"
+          },
+          {
+            "header": "ref",
+            "key": "ref"
+          },
+          {
+            "header": "relation",
+            "key": "relation"
+          },
+          {
+            "header": "resolved",
+            "key": "resolved"
+          }
+        ],
+        "rows": [
+          [
+            "math-education",
+            "C:integers",
+            "about",
+            false
+          ],
+          [
+            "math-education",
+            "C:peano-axioms",
+            "uses",
+            false
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-categoricity.json",
+              "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-categoricity.json",
+            "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "WHY THIS FACT EXISTS. F:int-characterization proved the properties that separate Z from Q and from lexicographic Z[x] HOLD of `Int`, and said in its own notes that it was not proved they DETERMINE it -- only the uniqueness half of the universal property was checked. This closes the gap by constructing the map out of an arbitrary target and proving it a bijection. FRAMING MATTERS: the theorem is about Z-structures (point + automorphism), NOT about discretely ordered rings; `every discretely ordered ring generated by 1 is isomorphic to Int` would need the order axioms as hypotheses and a derivation of the automorphism from them. What is proved is that the order properties hold of Int (F:int-characterization) and that the Z-structure properties determine it (here). WHAT IS NOT PROVED: no inverse FUNCTION is extracted -- surjectivity is a Prop-level existential, exactly as in F:nat-peano-categoricity, because the generation hypothesis is Prop-valued. `iso` gives the constructed two-sided inverse but HYPOTHESISES the back-map. LOAD-BEARING: thirteen new injected `Weakening` variants (22 in the package) replace one hypothesis with `True` and the kernel must refuse each ONE AT THE DECLARATION IT WAS AIMED AT, with the declaration immediately before it in build order still admitted. Both guards were mutation-probed on 2026-08-18: making one injection inert killed exactly one test, and aiming one defect at the wrong declaration made both the test and the example fail.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-categoricity.json",
+            "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-int-categoricity",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c01",
+        "label": "Component 1 of 38 (43 facts)",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:int-categoricity",
+    "title": "The constructed Int is THE integers: every generated aperiodic Z-structure is in structure-preserving bijection with it"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-int-categoricity.json",
+        "sha256": "26183e3477022ce430de545ffde3ed60af66c613dee0e59483483ea3a4787efe"
+      }
+    ]
+  },
+  "schema_version": 1
+}

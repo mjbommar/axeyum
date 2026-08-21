@@ -1,0 +1,916 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:int-add-comm",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-add-comm.json",
+            "sha256": "bfecb6b33482f487f115ecd2e6f45a226f930bb9a380e1624657e19105abae4c"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Addition on the integers is commutative"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "2 of 2 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-add-comm.json",
+              "sha256": "bfecb6b33482f487f115ecd2e6f45a226f930bb9a380e1624657e19105abae4c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-add-comm.json",
+            "sha256": "bfecb6b33482f487f115ecd2e6f45a226f930bb9a380e1624657e19105abae4c"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "kernel-lean"
+          ],
+          [
+            "axiom_footprint",
+            "[] -- axiom-free; only kernel-lean can deliver this"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-add-comm.json",
+              "sha256": "bfecb6b33482f487f115ecd2e6f45a226f930bb9a380e1624657e19105abae4c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-add-comm.json",
+            "sha256": "bfecb6b33482f487f115ecd2e6f45a226f930bb9a380e1624657e19105abae4c"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-lean-kernel --lib int_prelude"
+        },
+        "summary": {
+          "text": "For all integers a and b, a + b = b + a."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-add-comm.json",
+            "sha256": "bfecb6b33482f487f115ecd2e6f45a226f930bb9a380e1624657e19105abae4c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: kernel-Int.add_comm"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row kernel-Int.add_comm as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "kernel-Int.add_comm"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "For all integers a and b, a + b = b + a."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-add-comm.json",
+              "sha256": "bfecb6b33482f487f115ecd2e6f45a226f930bb9a380e1624657e19105abae4c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-add-comm.json",
+            "sha256": "bfecb6b33482f487f115ecd2e6f45a226f930bb9a380e1624657e19105abae4c"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "`build_int_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so a green run of the command is a machine-checked proof. Measured 2026-08-14: 12 tests pass (a nonzero count -- the filter is not inert).",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-add-comm.json",
+            "sha256": "bfecb6b33482f487f115ecd2e6f45a226f930bb9a380e1624657e19105abae4c"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "report-run",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run -q -p axeyum-lean-kernel --example int_theorem_inventory -- add_comm 2>/dev/null | grep -qE '^theorem[[:space:]]+Int\\.add_comm[[:space:]]'"
+        },
+        "summary": {
+          "text": "axiom_footprint: [] -- this theorem's trusted closure is empty"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-add-comm.json",
+            "sha256": "bfecb6b33482f487f115ecd2e6f45a226f930bb9a380e1624657e19105abae4c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: footprint-Int.add_comm"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row footprint-Int.add_comm as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "footprint-Int.add_comm"
+          ],
+          [
+            "ledger kind",
+            "exhaustive-enumeration"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "Kernel::axiom_footprint, environment-wide trusted-surface enumeration"
+          ],
+          [
+            "supports",
+            "axiom_footprint: [] -- this theorem's trusted closure is empty"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-add-comm.json",
+              "sha256": "bfecb6b33482f487f115ecd2e6f45a226f930bb9a380e1624657e19105abae4c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-add-comm.json",
+            "sha256": "bfecb6b33482f487f115ecd2e6f45a226f930bb9a380e1624657e19105abae4c"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "Two independent bounds, because either alone would be weaker than it looks. (1) `Kernel::axiom_footprint` walks THIS declaration's transitive dependencies and prints an empty footprint column -- this is the kernel's `#print axioms`, and it is the check that matters, since an integer law IS still asserted (`Int.euclidean_decomposition`; it was 6 until lane int-remainder proved the `subNatNat` borrow, and the check mattered more then) and Int.add_comm could have reached for one and still type-checked. (2) `nat_axiom_inventory` reports `nat: axiom=0 opaque=0 quotient=0` for the development ZZ is constructed over, so the foundation admits no trusted declaration at all. Counting `Declaration::Axiom` alone would not have sufficed: `Opaque` has no proof body and `Quotient` admits `Quot.sound`, which is exactly the declaration the quotient-of-NxN construction would have added -- the enumeration covers all three kinds and reports zero for each.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-add-comm.json",
+            "sha256": "bfecb6b33482f487f115ecd2e6f45a226f930bb9a380e1624657e19105abae4c"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "dependency-graph",
+      "kind": {
+        "alt": "Dependency graph around F:int-add-comm: 1 dependencies, 3 dependents",
+        "caption": {
+          "text": "Immediate dependencies and dependents of this fact"
+        },
+        "spec": {
+          "edges": [
+            {
+              "from": "F:int-add-comm",
+              "label": "depends_on",
+              "to": "F:nat-add-comm"
+            },
+            {
+              "from": "F:int-add-le-add",
+              "label": "depends_on",
+              "to": "F:int-add-comm"
+            },
+            {
+              "from": "F:int-add-lt-add-of-le-of-lt",
+              "label": "depends_on",
+              "to": "F:int-add-comm"
+            },
+            {
+              "from": "F:int-add-lt-add-of-le-of-lt",
+              "label": "depends_on",
+              "to": "F:int-add-le-add"
+            },
+            {
+              "from": "F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
+              "label": "depends_on",
+              "to": "F:int-add-comm"
+            }
+          ],
+          "figure_type": "dep-graph",
+          "nodes": [
+            {
+              "group": "focus",
+              "href": "F-int-add-comm.doc.json",
+              "id": "F:int-add-comm",
+              "label": "int-add-comm",
+              "status": "proved",
+              "tooltip": "Addition on the integers is commutative"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "F-int-add-le-add.doc.json",
+              "id": "F:int-add-le-add",
+              "label": "int-add-le-add",
+              "status": "proved",
+              "tooltip": "The order on the integers is compatible with addition"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "F-int-add-lt-add-of-le-of-lt.doc.json",
+              "id": "F:int-add-lt-add-of-le-of-lt",
+              "label": "int-add-lt-add-of-le-of-lt",
+              "status": "proved",
+              "tooltip": "A strict integer inequality survives addition of a non-strict one"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "F-nat-add-comm.doc.json",
+              "id": "F:nat-add-comm",
+              "label": "nat-add-comm",
+              "status": "proved",
+              "tooltip": "Addition on the naturals is commutative"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.doc.json",
+              "id": "F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
+              "label": "ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
+              "status": "proved",
+              "tooltip": "The ordered-ring interface telescope is byte-identical over Real and over the axiom-free Int development"
+            }
+          ],
+          "rankdir": "TB"
+        },
+        "type": "figure"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-add-comm.json",
+            "sha256": "bfecb6b33482f487f115ecd2e6f45a226f930bb9a380e1624657e19105abae4c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Dependency neighbourhood"
+    },
+    {
+      "id": "depends-on",
+      "kind": {
+        "caption": {
+          "text": "Depends on"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:nat-add-comm",
+            "Addition on the naturals is commutative",
+            "proved",
+            "F-nat-add-comm.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-add-comm.json",
+              "sha256": "bfecb6b33482f487f115ecd2e6f45a226f930bb9a380e1624657e19105abae4c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-add-comm.json",
+            "sha256": "bfecb6b33482f487f115ecd2e6f45a226f930bb9a380e1624657e19105abae4c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depends on"
+    },
+    {
+      "id": "depended-on-by",
+      "kind": {
+        "caption": {
+          "text": "Depended on by"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:int-add-le-add",
+            "The order on the integers is compatible with addition",
+            "proved",
+            "F-int-add-le-add.doc.json"
+          ],
+          [
+            "F:int-add-lt-add-of-le-of-lt",
+            "A strict integer inequality survives addition of a non-strict one",
+            "proved",
+            "F-int-add-lt-add-of-le-of-lt.doc.json"
+          ],
+          [
+            "F:ordered-ring-interface-is-the-same-over-the-axiom-free-integers",
+            "The ordered-ring interface telescope is byte-identical over Real and over the axiom-free Int development",
+            "proved",
+            "F-ordered-ring-interface-is-the-same-over-the-axiom-free-integers.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-add-comm.json",
+              "sha256": "bfecb6b33482f487f115ecd2e6f45a226f930bb9a380e1624657e19105abae4c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-add-comm.json",
+            "sha256": "bfecb6b33482f487f115ecd2e6f45a226f930bb9a380e1624657e19105abae4c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depended on by"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-14"
+          ],
+          [
+            "established_by",
+            "axeyum-lean-kernel build_int_prelude, lane int-keystone"
+          ],
+          [
+            "source",
+            "one of the 34 propositions build_int_prelude previously ASSERTED; this lane constructed ZZ over the proved Nat development and derived it"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-add-comm.json",
+              "sha256": "bfecb6b33482f487f115ecd2e6f45a226f930bb9a380e1624657e19105abae4c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-add-comm.json",
+            "sha256": "bfecb6b33482f487f115ecd2e6f45a226f930bb9a380e1624657e19105abae4c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "concept-refs",
+      "kind": {
+        "caption": {
+          "text": "Concept references (gloss and provenance only, never substance)"
+        },
+        "columns": [
+          {
+            "header": "graph",
+            "key": "graph"
+          },
+          {
+            "header": "ref",
+            "key": "ref"
+          },
+          {
+            "header": "relation",
+            "key": "relation"
+          },
+          {
+            "header": "resolved",
+            "key": "resolved"
+          }
+        ],
+        "rows": [
+          [
+            "math-education",
+            "C:commutativity",
+            "instance-of",
+            false
+          ],
+          [
+            "math-education",
+            "C:integers",
+            "about",
+            false
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-add-comm.json",
+              "sha256": "bfecb6b33482f487f115ecd2e6f45a226f930bb9a380e1624657e19105abae4c"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-add-comm.json",
+            "sha256": "bfecb6b33482f487f115ecd2e6f45a226f930bb9a380e1624657e19105abae4c"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "`depends_on: F:nat-add-comm` is literal, not thematic: the two same-sign branches of the proof ARE `Nat.add_comm` transported through `Int.ofNat` and `Int.negSucc`. The two mixed-sign branches need no argument at all -- `Int.add` was defined so that `ofNat m + negSucc n` and `negSucc n + ofNat m` are literally the same term `Int.subNatNat m (succ n)`, so `Eq.refl` closes them. formal.statement is `Kernel::render_lean` of the admitted type, verbatim from `int_theorem_inventory`.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-add-comm.json",
+            "sha256": "bfecb6b33482f487f115ecd2e6f45a226f930bb9a380e1624657e19105abae4c"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-int-add-comm",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c01",
+        "label": "Component 1 of 38 (43 facts)",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:int-add-comm",
+    "title": "Addition on the integers is commutative"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-int-add-comm.json",
+        "sha256": "bfecb6b33482f487f115ecd2e6f45a226f930bb9a380e1624657e19105abae4c"
+      }
+    ]
+  },
+  "schema_version": 1
+}

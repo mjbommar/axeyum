@@ -1,0 +1,1181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pilot, dense alternative: Euclid's lemma and the infinitude of primes</title>
+<meta name="description" content="17 facts, 27 depends_on edges">
+<style>
+/* Axeyum render strand -- HTML emitter stylesheet.
+ *
+ * Inlined verbatim into every emitted document by render/src/emit_html.rs.
+ * ZERO external references are permitted here: no stylesheet imports, no
+ * resource URIs other than data:, no webfonts. The function
+ * render::emit_html::lint_self_contained enforces that on the emitted
+ * document, and a unit test enforces it on this file -- which is why this
+ * comment spells the forbidden constructs out in words instead of writing
+ * them literally. The lint is textual, and a lint that its own documentation
+ * can trip is a lint that is actually looking.
+ *
+ * Design system (see docs/render-2026-08/11-design-diary.md):
+ *   type   serif for prose, sans for apparatus, mono for machine text
+ *   scale  1.125 minor-third-ish, base 17px, measure 68ch
+ *   space  4px grid, --sp-1 .. --sp-9
+ *   colour one hue family per epistemic status; badges carry a SHAPE too,
+ *          so status survives greyscale printing and colour blindness
+ */
+
+/* ---------- tokens ---------- */
+:root {
+  color-scheme: light dark;
+
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua",
+                Georgia, "Times New Roman", Times, serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+               "DejaVu Sans Mono", "Liberation Mono", monospace;
+  /* A MATH-table font is needed only for stretchy delimiters; the P0 corpus
+     avoids them, and the chain degrades to the prose serif. */
+  --font-math: "STIX Two Math", "Cambria Math", "Latin Modern Math",
+               var(--font-serif);
+
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.8125rem;
+  --fs-ui: 0.875rem;
+  --fs-base: 1rem;
+  --fs-md: 1.125rem;
+  --fs-lg: 1.375rem;
+  --fs-xl: 1.75rem;
+  --fs-2xl: 2.25rem;
+
+  --sp-1: 0.25rem; --sp-2: 0.5rem;  --sp-3: 0.75rem; --sp-4: 1rem;
+  --sp-5: 1.5rem;  --sp-6: 2rem;    --sp-7: 3rem;    --sp-8: 4rem;
+  --sp-9: 6rem;
+
+  /* In rem, not ch: `ch` resolves against the element's OWN font, so a
+     `ch`-based column silently narrows on every small-sans block and the page
+     stops lining up. 36rem is ~68 characters at the body serif. */
+  --measure: 36rem;
+  --radius: 3px;
+  --radius-lg: 6px;
+
+  /* light palette: warm paper, near-black ink */
+  --bg:        #fcfcfa;
+  --bg-sunk:   #f3f2ed;
+  --surface:   #ffffff;
+  --rule:      #e0ded5;
+  --rule-firm: #c9c6ba;
+  --ink:       #1a1a17;
+  --ink-2:     #46453f;
+  --ink-3:     #74726a;
+  --link:      #1c5480;
+  --link-visited: #5b3f7a;
+  --accent:    #1c5480;
+  --shadow:    0 1px 2px rgba(26, 26, 23, 0.06), 0 4px 12px rgba(26, 26, 23, 0.05);
+
+  /* status hues: --s-*-fg on --s-*-bg, both AA on their own ground */
+  --s-proved-fg:      #17603c; --s-proved-bg:      #e4f1e8;
+  --s-checked-fg:     #12566e; --s-checked-bg:     #e0eef3;
+  --s-evidence-fg:    #3f3d8e; --s-evidence-bg:    #e8e7f5;
+  --s-computed-fg:    #6a3583; --s-computed-bg:    #f0e7f5;
+  --s-empirical-fg:   #1f5a5f; --s-empirical-bg:   #e0efef;
+  --s-advisory-fg:    #7a5400; --s-advisory-bg:    #f7eed6;
+  --s-conjectured-fg: #6b4a1f; --s-conjectured-bg: #f3ebdd;
+  --s-refuted-fg:     #9a2222; --s-refuted-bg:     #f7e3e1;
+  --s-open-fg:        #4e5560; --s-open-bg:        #eceef1;
+  --s-axiom-fg:       #7c4a12; --s-axiom-bg:       #f6e9d9;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:        #14151a;
+    --bg-sunk:   #101116;
+    --surface:   #1b1d24;
+    --rule:      #2b2e37;
+    --rule-firm: #3d414c;
+    --ink:       #e8e6e0;
+    --ink-2:     #b9b6ad;
+    --ink-3:     #8d8a82;
+    --link:      #8fbde6;
+    --link-visited: #c0a8dd;
+    --accent:    #8fbde6;
+    --shadow:    0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 18px rgba(0, 0, 0, 0.3);
+
+    --s-proved-fg:      #7fd3a4; --s-proved-bg:      #14291e;
+    --s-checked-fg:     #7ec8e3; --s-checked-bg:     #10262f;
+    --s-evidence-fg:    #a9a7ef; --s-evidence-bg:    #1c1b33;
+    --s-computed-fg:    #d3a6e8; --s-computed-bg:    #291a30;
+    --s-empirical-fg:   #7fcbcf; --s-empirical-bg:   #12282a;
+    --s-advisory-fg:    #e0bb63; --s-advisory-bg:    #2c2410;
+    --s-conjectured-fg: #d5b183; --s-conjectured-bg: #2a2115;
+    --s-refuted-fg:     #f09a92; --s-refuted-bg:     #331716;
+    --s-open-fg:        #a5adba; --s-open-bg:        #1d2027;
+    --s-axiom-fg:       #dfab6e; --s-axiom-bg:       #2c2013;
+  }
+}
+
+/* ---------- reset-ish ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 17px;
+  line-height: 1.62;
+  text-rendering: optimizeLegibility;
+}
+img, svg { max-width: 100%; }
+/* Without `height: auto` an SVG with width/height attributes is shrunk in one
+   axis only and the drawing letterboxes inside a tall empty box. */
+svg.ax-graph, svg.ax-plot { height: auto; }
+a { color: var(--link); text-underline-offset: 2px; text-decoration-thickness: 1px; }
+a:visited { color: var(--link-visited); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+
+.ax-skip {
+  position: absolute; left: -9999px; top: 0;
+  background: var(--surface); color: var(--ink);
+  padding: var(--sp-2) var(--sp-3); z-index: 10;
+}
+.ax-skip:focus { left: var(--sp-3); top: var(--sp-3); }
+
+/* ---------- page frame ---------- */
+.ax-doc { max-width: var(--measure); margin: 0 auto; padding: 0 var(--sp-5); }
+
+/* Figures escape the text measure -- without a transform trick, which depends
+   on the containing block's width and breaks quietly when that changes. The
+   BODY column is wide; every direct child of <main> is re-narrowed to the
+   measure, and `.ax-wide` opts back out. Prose reads at ~68ch; a dependency
+   graph is a different kind of object and should not be squeezed to match. */
+main.ax-doc { max-width: 68rem; }
+main.ax-doc > * { max-width: var(--measure); margin-left: auto; margin-right: auto; }
+main.ax-doc > .ax-wide { max-width: 100%; }
+header.ax-head > .ax-doc, footer.ax-foot > .ax-doc { padding: 0; }
+
+header.ax-head {
+  border-bottom: 1px solid var(--rule);
+  padding: var(--sp-7) 0 var(--sp-5);
+  margin-bottom: var(--sp-6);
+}
+header.ax-head .ax-kicker {
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 0 0 var(--sp-2);
+}
+h1.ax-title {
+  font-size: var(--fs-2xl);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin: 0 0 var(--sp-3);
+  font-weight: 600;
+}
+p.ax-subtitle {
+  font-size: var(--fs-md);
+  color: var(--ink-2);
+  margin: 0 0 var(--sp-4);
+  max-width: 58ch;
+}
+
+/* Cross-document navigation. The corpus is a SITE -- an atlas, two pilots and
+   324 fact cards emitted together -- and these are the only relative links a
+   page carries. Each page is still self-contained: nothing is fetched on load.
+   render/tests/link_integrity.rs fails if one of them does not resolve. */
+.ax-crumbs {
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+  margin: 0 0 var(--sp-4);
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-2);
+}
+.ax-crumbs .ax-crumb-sep { color: var(--rule-firm); }
+a.ax-doclink { font-family: var(--font-sans); }
+a.ax-doclink code { font-family: var(--font-mono); }
+
+/* The single provenance line for a page whose blocks all come from one run.
+   Fifteen identical copies of it, one under each block, was the most repeated
+   element on a fact card; it is said once, here. */
+.ax-source-all { margin: var(--sp-2) 0 0; }
+
+/* metadata chips */
+.ax-meta { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); margin: 0; padding: 0; list-style: none; }
+.ax-meta li {
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+}
+.ax-meta li b { font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.ax-meta code { font-size: var(--fs-xs); }
+
+h2, h3, h4 { font-family: var(--font-sans); font-weight: 600; letter-spacing: -0.01em; line-height: 1.25; }
+h2 { font-size: var(--fs-xl); margin: var(--sp-7) 0 var(--sp-3); }
+h3 { font-size: var(--fs-lg); margin: var(--sp-6) 0 var(--sp-2); }
+h4 { font-size: var(--fs-md); margin: var(--sp-5) 0 var(--sp-2); }
+
+p { margin: 0 0 var(--sp-4); }
+code, kbd, samp, pre { font-family: var(--font-mono); font-size: 0.86em; }
+code { background: var(--bg-sunk); padding: 0.1em 0.32em; border-radius: var(--radius); }
+pre {
+  background: var(--bg-sunk);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: var(--sp-3);
+  overflow-x: auto;
+  line-height: 1.45;
+}
+pre code { background: none; padding: 0; }
+math { font-family: var(--font-math); }
+
+/* ---------- reading level ---------- */
+.ax-levels {
+  display: inline-flex;
+  border: 1px solid var(--rule-firm);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  background: var(--surface);
+}
+.ax-levels button {
+  appearance: none;
+  border: 0;
+  border-left: 1px solid var(--rule);
+  background: transparent;
+  color: var(--ink-2);
+  padding: var(--sp-2) var(--sp-3);
+  cursor: pointer;
+  font: inherit;
+  letter-spacing: 0.04em;
+}
+.ax-levels button:first-child { border-left: 0; }
+.ax-levels button[aria-pressed="true"] { background: var(--accent); color: var(--bg); }
+.ax-levels button:hover:not([aria-pressed="true"]) { background: var(--bg-sunk); }
+
+/* Level gating. The document is authored at "full"; with JS off nothing is
+   hidden, which is the required degradation. */
+body[data-level="summary"] .t-detail,
+body[data-level="summary"] .t-archive { display: none; }
+body[data-level="full"] .t-archive { display: none; }
+.ax-levelnote { font-family: var(--font-sans); font-size: var(--fs-xs); color: var(--ink-3); }
+
+/* ---------- blocks ---------- */
+.blk { margin: 0 0 var(--sp-5); }
+.blk.t-detail { border-left: 2px solid var(--rule); padding-left: var(--sp-4); }
+details.blk.t-detail { padding-left: 0; border-left: 0; }
+
+details.ax-fold {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 0;
+  /* `auto` on the inline axis, not `0`. `main.ax-doc > *` centres every direct
+     child inside the 68rem frame by setting margin-left/right to auto, and a
+     `margin: 0 0 X` shorthand here has the SAME specificity and comes later,
+     so it silently won and every fold on a fact card sat 190px left of the
+     text above it. Found by screenshot; no test could see it. */
+  margin: 0 auto var(--sp-5);
+}
+details.ax-fold > summary {
+  cursor: pointer;
+  padding: var(--sp-3) var(--sp-4);
+  font-family: var(--font-sans);
+  font-size: var(--fs-ui);
+  color: var(--ink-2);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+details.ax-fold > summary::-webkit-details-marker { display: none; }
+details.ax-fold > summary::before {
+  content: "";
+  width: 0; height: 0;
+  border-left: 5px solid currentColor;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform 120ms ease;
+  flex: none;
+}
+details.ax-fold[open] > summary::before { transform: rotate(90deg); }
+details.ax-fold > summary:hover { background: var(--bg-sunk); }
+details.ax-fold > .ax-foldbody { padding: 0 var(--sp-4) var(--sp-4); border-top: 1px solid var(--rule); padding-top: var(--sp-4); }
+
+/* archive tier: a link to what was left out, never silent omission */
+.blk.t-archive {
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+  border-left: 2px dotted var(--rule-firm);
+  padding-left: var(--sp-3);
+}
+
+/* ---------- badges: colour AND shape ---------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.18em 0.55em 0.18em 0.42em;
+  border-radius: var(--radius);
+  border: 1px solid currentColor;
+  white-space: nowrap;
+  vertical-align: 0.08em;
+}
+.badge svg { width: 0.85em; height: 0.85em; flex: none; fill: currentColor; }
+/* The badge with its word removed, for a place that has already said it (an
+   evidence row inside a claim card whose header carries the same status).
+   The SHAPE is what survives, because the shape is what makes a badge legible
+   in greyscale and to a colour-blind reader; the word survives as the
+   accessible name on the element. */
+.badge-compact { padding: 0.18em 0.32em; gap: 0; }
+.badge-compact svg { width: 0.95em; height: 0.95em; }
+.badge-proved      { color: var(--s-proved-fg);      background: var(--s-proved-bg); }
+.badge-checked     { color: var(--s-checked-fg);     background: var(--s-checked-bg); }
+.badge-evidence    { color: var(--s-evidence-fg);    background: var(--s-evidence-bg); }
+.badge-computed    { color: var(--s-computed-fg);    background: var(--s-computed-bg); }
+.badge-empirical   { color: var(--s-empirical-fg);   background: var(--s-empirical-bg); }
+.badge-advisory    { color: var(--s-advisory-fg);    background: var(--s-advisory-bg); }
+.badge-conjectured { color: var(--s-conjectured-fg); background: var(--s-conjectured-bg); }
+.badge-refuted     { color: var(--s-refuted-fg);     background: var(--s-refuted-bg); }
+.badge-open        { color: var(--s-open-fg);        background: var(--s-open-bg); }
+.badge-axiom       { color: var(--s-axiom-fg);       background: var(--s-axiom-bg); }
+.badge-unknown     { color: var(--ink-3);            background: var(--bg-sunk); }
+
+.ax-axes { display: inline-flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.ax-axes .ax-axis-label {
+  font-family: var(--font-sans); font-size: var(--fs-xs);
+  color: var(--ink-3); letter-spacing: 0.04em;
+}
+
+/* the interesting combination: ours ahead of the literature */
+.ax-newresult {
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--s-computed-fg);
+  border: 1px dashed currentColor;
+  border-radius: var(--radius);
+  padding: 0.18em 0.5em;
+}
+
+/* ---------- claim / fact card ---------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--rule-firm);
+  border-radius: var(--radius);
+  padding: var(--sp-4) var(--sp-5);
+  /* See `details.ax-fold`: `auto` keeps a card centred in the reading frame. */
+  margin: 0 auto var(--sp-5);
+  box-shadow: var(--shadow);
+}
+.card.s-proved      { border-left-color: var(--s-proved-fg); }
+.card.s-checked     { border-left-color: var(--s-checked-fg); }
+.card.s-evidence    { border-left-color: var(--s-evidence-fg); }
+.card.s-computed    { border-left-color: var(--s-computed-fg); }
+.card.s-empirical   { border-left-color: var(--s-empirical-fg); }
+.card.s-advisory    { border-left-color: var(--s-advisory-fg); }
+.card.s-conjectured { border-left-color: var(--s-conjectured-fg); }
+.card.s-refuted     { border-left-color: var(--s-refuted-fg); }
+.card.s-open        { border-left-color: var(--s-open-fg); }
+.card.s-axiom       { border-left-color: var(--s-axiom-fg); }
+
+.card > .card-head {
+  display: flex; flex-wrap: wrap; align-items: baseline;
+  gap: var(--sp-2) var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+.card h3, .card h4 { margin: 0; flex: 1 1 20ch; }
+.card .card-id {
+  font-family: var(--font-mono); font-size: var(--fs-xs);
+  color: var(--ink-3);
+}
+.card .card-statement { margin: 0 0 var(--sp-3); }
+.card .card-formal { margin: 0 0 var(--sp-3); }
+.card .card-formal pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
+.ax-tinylabel {
+  font-family: var(--font-sans); font-size: var(--fs-xs);
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink-3); margin: 0 0 var(--sp-1);
+}
+
+/* ---------- evidence rows ---------- */
+.ax-evidence { list-style: none; margin: 0; padding: 0; }
+.ax-evidence > li {
+  border-top: 1px solid var(--rule);
+  padding: var(--sp-3) 0 var(--sp-2);
+  font-size: var(--fs-ui);
+  font-family: var(--font-sans);
+}
+.ax-evidence > li:first-child { border-top: 0; }
+.ax-ev-head { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; }
+.ax-ev-kind {
+  font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--ink-3);
+}
+.ax-ev-supports { color: var(--ink-2); margin: var(--sp-1) 0 var(--sp-2); }
+.ax-noevidence {
+  font-family: var(--font-sans); font-size: var(--fs-ui);
+  color: var(--s-open-fg); background: var(--s-open-bg);
+  border: 1px dashed currentColor; border-radius: var(--radius);
+  padding: var(--sp-2) var(--sp-3);
+}
+
+/* ---------- command + copy ---------- */
+.ax-cmd {
+  display: flex; align-items: stretch; gap: 0;
+  border: 1px solid var(--rule); border-radius: var(--radius);
+  background: var(--bg-sunk);
+  overflow: hidden;
+  margin: 0 0 var(--sp-2);
+}
+.ax-cmd > code {
+  /* `min-width: 0` is load-bearing, not tidying: a flex item's default
+     min-width is `auto`, i.e. its content width, so `overflow-x: auto` never
+     engages and a long replay command is CLIPPED by the row's `overflow:
+     hidden` instead of scrolling. Found in a screenshot of certificate.html,
+     where the command a reader is invited to paste ended mid-path. */
+  flex: 1 1 auto; min-width: 0; background: none; border-radius: 0;
+  padding: var(--sp-2) var(--sp-3);
+  overflow-x: auto; white-space: pre; font-size: var(--fs-xs);
+}
+.ax-cmd > button {
+  flex: none; appearance: none; cursor: pointer;
+  border: 0; border-left: 1px solid var(--rule);
+  background: var(--surface); color: var(--ink-2);
+  font-family: var(--font-sans); font-size: var(--fs-xs); letter-spacing: 0.05em;
+  padding: 0 var(--sp-3);
+}
+.ax-cmd > button:hover { background: var(--bg); color: var(--ink); }
+.ax-cmd > button[data-copied="1"] { color: var(--s-proved-fg); }
+
+/* ---------- tables ---------- */
+/* A table with five or more columns opts out of the 36rem reading measure and
+   uses the full 68rem frame (`.ax-wide`). The atlas index has twelve columns:
+   at the reading measure its last four -- including the link to the fact's own
+   card -- were scrolled out of sight, so the page's navigation was hiding
+   behind a horizontal scrollbar. It still scrolls when it needs to; it just
+   does not need to as often. */
+.ax-tablewrap { overflow-x: auto; margin: 0 0 var(--sp-2); }
+/* A table of four or more columns breaks out of the 36rem reading measure,
+   CENTRED ON IT, so its heading and the prose above stay aligned. (Putting the
+   break-out on the section instead shifted the heading left and made the page
+   look ragged.) Only above a width where 52rem fits; below it the table stays
+   at the measure and the wrapper scrolls, which is the pre-existing
+   behaviour. */
+@media (min-width: 62rem) {
+  .blk.ax-widetable > .ax-tablewrap {
+    width: 52rem; max-width: none;
+    margin-left: calc((var(--measure) - 52rem) / 2);
+  }
+}
+table.ax-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-family: var(--font-sans);
+  font-size: var(--fs-ui);
+  font-variant-numeric: tabular-nums;
+}
+table.ax-table caption {
+  caption-side: top; text-align: left;
+  font-size: var(--fs-ui); color: var(--ink-2);
+  padding-bottom: var(--sp-2);
+}
+table.ax-table th, table.ax-table td {
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  vertical-align: baseline;
+  /* Machine values (`kernel-lean`, `QF_BV`) must not break at their hyphens;
+     the wrapper scrolls instead. The first column is prose and may wrap. */
+  white-space: nowrap;
+}
+table.ax-table td:first-child, table.ax-table th:first-child { white-space: normal; }
+/* ...and so may any cell the emitter marked as prose: a value containing a
+   space is a sentence, not a machine token, and on a fact card the `supports`
+   and `axiom_footprint` cells are sentences. See `table()` in emit_html.rs. */
+table.ax-table td.wrap { white-space: normal; }
+table.ax-table thead th {
+  border-bottom: 1px solid var(--rule-firm);
+  font-weight: 600; color: var(--ink-2);
+  font-size: var(--fs-xs); letter-spacing: 0.05em; text-transform: uppercase;
+}
+table.ax-table td.num, table.ax-table th.num { text-align: right; }
+table.ax-table tbody tr:hover { background: var(--bg-sunk); }
+.ax-source {
+  font-family: var(--font-sans); font-size: var(--fs-xs);
+  color: var(--ink-3); margin: 0 0 var(--sp-5);
+}
+
+/* ---------- steps player ---------- */
+ol.ax-steps { list-style: none; counter-reset: step; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+ol.ax-steps > li {
+  counter-increment: step;
+  display: grid;
+  grid-template-columns: 2.2rem 1fr;
+  gap: 0 var(--sp-3);
+  padding: var(--sp-3) var(--sp-3) var(--sp-3) var(--sp-2);
+  border-bottom: 1px solid var(--rule);
+  scroll-margin-top: var(--sp-6);
+}
+ol.ax-steps > li::before {
+  content: counter(step);
+  font-family: var(--font-mono); font-size: var(--fs-xs);
+  color: var(--ink-3); text-align: right; padding-top: 0.15em;
+}
+ol.ax-steps > li[aria-current="step"] { background: var(--bg-sunk); }
+ol.ax-steps > li[aria-current="step"]::before { color: var(--accent); font-weight: 700; }
+.ax-step-op { font-family: var(--font-sans); font-size: var(--fs-xs); letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-3); }
+.ax-step-io { font-family: var(--font-mono); font-size: var(--fs-sm); overflow-x: auto; }
+.ax-step-note { color: var(--ink-2); font-size: var(--fs-ui); font-family: var(--font-sans); }
+.ax-stepbar {
+  display: flex; gap: var(--sp-3); align-items: center;
+  font-family: var(--font-sans); font-size: var(--fs-xs); color: var(--ink-3);
+  padding: var(--sp-2) 0;
+}
+kbd {
+  border: 1px solid var(--rule-firm); border-bottom-width: 2px;
+  border-radius: var(--radius); padding: 0.05em 0.35em;
+  font-size: 0.9em; background: var(--surface);
+}
+
+/* ---------- certificate ---------- */
+.ax-cert { border-left-width: 3px; }
+.ax-cert .ax-cert-grid {
+  display: grid; grid-template-columns: max-content 1fr;
+  gap: var(--sp-1) var(--sp-3);
+  font-family: var(--font-sans); font-size: var(--fs-ui);
+  margin: 0 0 var(--sp-3);
+}
+.ax-cert .ax-cert-grid dt { color: var(--ink-3); font-size: var(--fs-xs); letter-spacing: 0.05em; text-transform: uppercase; padding-top: 0.25em; }
+.ax-cert .ax-cert-grid dd { margin: 0; word-break: break-word; }
+.ax-exit-ok { color: var(--s-proved-fg); font-weight: 600; }
+.ax-exit-bad { color: var(--s-refuted-fg); font-weight: 700; }
+/* Neither green nor red: a certificate that deliberately does not re-run. */
+.ax-exit-none { color: var(--s-advisory-fg); font-weight: 600; white-space: nowrap; }
+/* The full "why there is no recorded run" sentence, inside the fold. */
+.ax-noexit {
+  font-family: var(--font-sans); font-size: var(--fs-ui);
+  color: var(--s-advisory-fg); background: var(--s-advisory-bg);
+  border: 1px dashed currentColor; border-radius: var(--radius);
+  padding: var(--sp-2) var(--sp-3); margin: 0 0 var(--sp-3);
+}
+.ax-hash { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--ink-2); }
+
+/* ---------- figures ---------- */
+figure.ax-fig { margin: var(--sp-6) 0; }
+figure.ax-fig figcaption {
+  font-family: var(--font-sans); font-size: var(--fs-ui);
+  color: var(--ink-2); margin-top: var(--sp-3);
+  /* A caption is prose and reads at the prose measure even when the figure
+     it belongs to is three times as wide. */
+  max-width: var(--measure); margin-left: auto; margin-right: auto;
+}
+figure.ax-fig figcaption b { color: var(--ink); font-weight: 600; }
+.ax-figframe {
+  border: 1px solid var(--rule); border-radius: var(--radius);
+  background: var(--surface); padding: var(--sp-3);
+  overflow-x: auto;
+}
+
+/* dependency graph */
+svg.ax-graph { display: block; margin: 0 auto; }
+/* Wider than the column: render at natural size and let `.ax-figframe`'s
+   horizontal scroll do the work, rather than scaling the labels away. */
+svg.ax-graph.ax-graph-natural { max-width: none; margin: 0; }
+svg.ax-graph .gedge { fill: none; stroke: var(--rule-firm); stroke-width: 1.15; opacity: 0.85; }
+svg.ax-graph .gnode rect {
+  fill: var(--surface); stroke: var(--rule-firm); stroke-width: 1;
+  rx: 3;
+}
+svg.ax-graph .gnode text {
+  font-family: var(--font-sans); font-size: 11.5px; fill: var(--ink-2);
+  dominant-baseline: middle;
+}
+svg.ax-graph .gnode .gdot { stroke: none; }
+svg.ax-graph .gnode.s-proved      .gdot { fill: var(--s-proved-fg); }
+svg.ax-graph .gnode.s-checked     .gdot { fill: var(--s-checked-fg); }
+svg.ax-graph .gnode.s-evidence    .gdot { fill: var(--s-evidence-fg); }
+svg.ax-graph .gnode.s-computed    .gdot { fill: var(--s-computed-fg); }
+svg.ax-graph .gnode.s-empirical   .gdot { fill: var(--s-empirical-fg); }
+svg.ax-graph .gnode.s-advisory    .gdot { fill: var(--s-advisory-fg); }
+svg.ax-graph .gnode.s-conjectured .gdot { fill: var(--s-conjectured-fg); }
+svg.ax-graph .gnode.s-refuted     .gdot { fill: var(--s-refuted-fg); }
+svg.ax-graph .gnode.s-open        .gdot { fill: var(--s-open-fg); }
+svg.ax-graph .gnode.s-axiom       .gdot { fill: var(--s-axiom-fg); }
+svg.ax-graph .gnode { cursor: pointer; }
+/* A node that links to another document is wrapped in a real SVG anchor, so
+   the browser navigates with scripting off. Underlining every node label would
+   be noise at 300 nodes; the pointer and the focus ring carry the affordance,
+   and the anchor gives the reader the target in the status bar. */
+svg.ax-graph a.gnode-link { cursor: pointer; text-decoration: none; }
+svg.ax-graph a.gnode-link:focus-visible .gnode rect,
+svg.ax-graph a.gnode-link:hover .gnode rect { stroke: var(--accent); stroke-width: 1.8; }
+svg.ax-graph .gnode:hover rect, svg.ax-graph .gnode:focus rect { stroke: var(--accent); stroke-width: 1.8; }
+/* cone highlighting, driven by a class on the <svg> root */
+svg.ax-graph.coning .gnode { opacity: 0.22; }
+svg.ax-graph.coning .gedge { opacity: 0.1; }
+svg.ax-graph.coning .gnode.cone-self rect { stroke: var(--accent); stroke-width: 2; }
+svg.ax-graph.coning .gnode.cone-self,
+svg.ax-graph.coning .gnode.cone-anc,
+svg.ax-graph.coning .gnode.cone-desc { opacity: 1; }
+svg.ax-graph.coning .gedge.cone-edge { opacity: 1; stroke: var(--accent); stroke-width: 1.6; }
+.ax-legend {
+  display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4);
+  font-family: var(--font-sans); font-size: var(--fs-xs); color: var(--ink-3);
+  margin-top: var(--sp-3); padding: 0; list-style: none;
+}
+.ax-legend li { display: inline-flex; align-items: center; gap: 0.4em; }
+.ax-legend .swatch { width: 0.7em; height: 0.7em; border-radius: 50%; display: inline-block; }
+
+/* xy plot */
+svg.ax-plot { display: block; margin: 0 auto; }
+svg.ax-plot .axis { stroke: var(--rule-firm); stroke-width: 1; fill: none; }
+svg.ax-plot .grid { stroke: var(--rule); stroke-width: 1; stroke-dasharray: 2 3; }
+svg.ax-plot .tick { font-family: var(--font-sans); font-size: 10px; fill: var(--ink-3); }
+svg.ax-plot .axlabel { font-family: var(--font-sans); font-size: 11px; fill: var(--ink-2); }
+svg.ax-plot .series { fill: none; stroke: var(--accent); stroke-width: 1.8; stroke-linejoin: round; }
+svg.ax-plot .series-fill { fill: var(--accent); opacity: 0.08; stroke: none; }
+svg.ax-plot .series-bar { fill: var(--accent); opacity: 0.72; stroke: none; }
+svg.ax-plot .series-bar:hover, svg.ax-plot .series-bar:focus { opacity: 1; }
+svg.ax-plot .vertex { fill: var(--surface); stroke: var(--accent); stroke-width: 1.6; }
+svg.ax-plot .vertex:hover { fill: var(--accent); }
+svg.ax-plot .vlabel { font-family: var(--font-mono); font-size: 10px; fill: var(--ink-2); }
+
+/* ---------- footer ---------- */
+footer.ax-foot {
+  margin-top: var(--sp-8);
+  border-top: 1px solid var(--rule);
+  padding: var(--sp-5) 0 var(--sp-8);
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+}
+footer.ax-foot p { margin: 0 0 var(--sp-2); }
+footer.ax-foot code { font-size: var(--fs-xs); }
+
+.ax-unrenderable {
+  border: 2px dashed var(--s-refuted-fg);
+  color: var(--s-refuted-fg);
+  background: var(--s-refuted-bg);
+  padding: var(--sp-3);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+
+/* ---------- narrow screens ---------- */
+@media (max-width: 46rem) {
+  body { font-size: 16px; }
+  .ax-doc { padding: 0 var(--sp-4); }
+  h1.ax-title { font-size: var(--fs-xl); }
+  .card { padding: var(--sp-4); }
+  .ax-cert .ax-cert-grid { grid-template-columns: 1fr; }
+  .ax-cert .ax-cert-grid dt { padding-top: var(--sp-2); }
+
+  /* THE REPLAY COMMAND WRAPS ON A NARROW SCREEN INSTEAD OF SCROLLING.
+     Reader review gripe 4, checked at 420px: the `min-width: 0` fix made the
+     row scroll rather than clip, which is correct and still leaves a phone
+     reader looking at 30 characters of a 300-character command through a
+     letterbox. Wrapping shows the whole thing.
+
+     `pre-wrap` INSERTS NOTHING -- it only permits a break at an existing space
+     -- so the bytes the copy button puts on the clipboard are unchanged, and
+     `overflow-wrap: anywhere` lets a single long path break rather than push
+     the row wide again. The hanging indent is the visual cue that a run of
+     lines is one command: a continuation is inset, the way a wrapped shell
+     line is. */
+  .ax-cmd { align-items: flex-start; }
+  .ax-cmd > code {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    overflow-x: visible;
+    padding-left: calc(var(--sp-3) + 2ch);
+    text-indent: -2ch;
+  }
+  .ax-cmd > button { position: sticky; top: 0; align-self: stretch; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+/* ---------- print ---------- */
+@media print {
+  :root {
+    --bg: #fff; --bg-sunk: #f6f6f6; --surface: #fff;
+    --ink: #000; --ink-2: #222; --ink-3: #555;
+    --rule: #ccc; --rule-firm: #999; --shadow: none;
+  }
+  body { font-size: 10.5pt; background: #fff; color: #000; }
+  .ax-levels, .ax-cmd > button, .ax-stepbar, .ax-skip { display: none !important; }
+  /* Print is the forensic level: nothing is hidden on paper. */
+  .t-detail, .t-archive { display: block !important; }
+  details.ax-fold > .ax-foldbody { display: block !important; }
+  .card, figure.ax-fig, .ax-cert, ol.ax-steps > li { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  .ax-cmd > code { white-space: pre-wrap; word-break: break-all; }
+  a[data-external="1"]::after { content: " (" attr(href) ")"; font-size: 0.85em; color: #555; word-break: break-all; }
+  svg.ax-graph .gnode rect { stroke: #666; }
+}
+
+</style>
+</head>
+<body data-level="full">
+<a class="ax-skip" href="#ax-main">Skip to content</a>
+<header class="ax-head"><div class="ax-doc">
+<h1 class="ax-title">Pilot, dense alternative: Euclid's lemma and the infinitude of primes</h1>
+<p class="ax-subtitle">17 facts, 27 depends_on edges</p>
+<nav class="ax-crumbs" aria-label="document navigation">
+<a class="ax-doclink" href="facts-atlas.html" rel="up">Fact atlas</a>
+</nav>
+<ul class="ax-meta">
+<li><b>document</b> fact-pilot-arith</li>
+<li><b>genre</b> result</li>
+<li><b>source</b> <code>733126c0f351f0931f7eaf0b4f5f9f569f3aef44</code></li>
+<li><b>epoch</b> <code>1787338967 (commit)</code></li>
+</ul>
+<p class="ax-source ax-source-all">Every block on this page comes from one run &#x2014; generated by <code>render/producers-py/facts_to_docir.py</code> &middot; exit <span class="ax-exit-ok">0</span></p>
+<p style="margin-top:var(--sp-4)"><span class="ax-levelnote">reading level</span> <span class="ax-levels" role="group" aria-label="reading level"><button type="button" data-level="summary" aria-pressed="false">summary</button><button type="button" data-level="full" aria-pressed="true">full</button><button type="button" data-level="forensic" aria-pressed="false">forensic</button></span></p>
+</div></header>
+<main id="ax-main" class="ax-doc">
+<section class="blk prose t-essential" id="intro">
+<p>The <code>depends_on</code> ancestor closure of F:nat-euclid-lemma, F:nat-exists-prime-gt, F:nat-pow-add inside the ledger's largest component (17 facts, 27 edges). Every fact here is proved on the <code>kernel-lean</code> route with an empty axiom footprint, so it exercises graph layout and branching rather than badge variety &#x2014; the complement of the primary pilot.</p>
+</section>
+<figure class="ax-fig blk t-essential ax-wide" id="dep-graph">
+<div class="ax-figframe">
+<svg class="ax-graph ax-graph-natural" viewBox="0 0 1045 494" width="1045" height="494" role="group" aria-label="`depends_on` over 17 facts, 27 edges. An edge runs from the dependent fact to the fact it rests on. Node status is the conservative mapping of the ledger&#39;s epistemic_status.">
+<g class="edges">
+<path class="gedge" data-from="1" data-to="15" d="M 417.4 262.0 C 417.4 301.0, 283.0 301.0, 283.0 340.0"/>
+<path class="gedge" data-from="1" data-to="15" style="fill:var(--rule-firm);stroke:none" d="M 283.0 340.0 L 287.1 334.1 L 290.1 339.3 Z"/>
+<path class="gedge" data-from="1" data-to="16" d="M 417.4 262.0 C 417.4 301.0, 409.8 301.0, 409.8 340.0"/>
+<path class="gedge" data-from="1" data-to="16" style="fill:var(--rule-firm);stroke:none" d="M 409.8 340.0 L 407.4 333.2 L 413.4 333.8 Z"/>
+<path class="gedge" data-from="3" data-to="10" d="M 812.6 262.0 C 812.6 301.0, 555.4 301.0, 555.4 340.0"/>
+<path class="gedge" data-from="3" data-to="10" style="fill:var(--rule-firm);stroke:none" d="M 555.4 340.0 L 560.7 335.2 L 562.5 341.0 Z"/>
+<path class="gedge" data-from="5" data-to="0" d="M 495.8 46.0 L 495.8 139.0 L 495.8 247.0 C 495.8 301.0, 476.2 301.0, 476.2 355.0 C 476.2 401.5, 366.7 401.5, 366.7 448.0"/>
+<path class="gedge" data-from="5" data-to="0" style="fill:var(--rule-firm);stroke:none" d="M 366.7 448.0 L 369.7 441.5 L 373.5 446.1 Z"/>
+<path class="gedge" data-from="5" data-to="1" d="M 495.8 46.0 C 495.8 92.5, 427.8 92.5, 427.8 139.0 C 427.8 185.5, 417.4 185.5, 417.4 232.0"/>
+<path class="gedge" data-from="5" data-to="1" style="fill:var(--rule-firm);stroke:none" d="M 417.4 232.0 L 415.1 225.2 L 421.1 225.9 Z"/>
+<path class="gedge" data-from="5" data-to="3" d="M 495.8 46.0 C 495.8 92.5, 594.1 92.5, 594.1 139.0 C 594.1 185.5, 812.6 185.5, 812.6 232.0"/>
+<path class="gedge" data-from="5" data-to="3" style="fill:var(--rule-firm);stroke:none" d="M 812.6 232.0 L 805.4 232.2 L 807.8 226.7 Z"/>
+<path class="gedge" data-from="5" data-to="4" d="M 495.8 46.0 C 495.8 85.0, 80.0 85.0, 80.0 124.0"/>
+<path class="gedge" data-from="5" data-to="4" style="fill:var(--rule-firm);stroke:none" d="M 80.0 124.0 L 85.8 119.9 L 86.9 125.8 Z"/>
+<path class="gedge" data-from="5" data-to="8" d="M 495.8 46.0 C 495.8 85.0, 355.0 85.0, 355.0 124.0"/>
+<path class="gedge" data-from="5" data-to="8" style="fill:var(--rule-firm);stroke:none" d="M 355.0 124.0 L 359.2 118.2 L 362.1 123.5 Z"/>
+<path class="gedge" data-from="5" data-to="11" d="M 495.8 46.0 C 495.8 92.5, 565.4 92.5, 565.4 139.0 L 565.4 232.0"/>
+<path class="gedge" data-from="5" data-to="11" style="fill:var(--rule-firm);stroke:none" d="M 565.4 232.0 L 562.4 225.5 L 568.4 225.5 Z"/>
+<path class="gedge" data-from="5" data-to="12" d="M 495.8 46.0 C 495.8 85.0, 660.5 85.0, 660.5 124.0"/>
+<path class="gedge" data-from="5" data-to="12" style="fill:var(--rule-firm);stroke:none" d="M 660.5 124.0 L 653.3 123.9 L 655.9 118.5 Z"/>
+<path class="gedge" data-from="6" data-to="2" d="M 901.6 154.0 C 901.6 193.0, 955.4 193.0, 955.4 232.0"/>
+<path class="gedge" data-from="6" data-to="2" style="fill:var(--rule-firm);stroke:none" d="M 955.4 232.0 L 949.2 228.3 L 954.1 224.9 Z"/>
+<path class="gedge" data-from="6" data-to="3" d="M 901.6 154.0 C 901.6 193.0, 812.6 193.0, 812.6 232.0"/>
+<path class="gedge" data-from="6" data-to="3" style="fill:var(--rule-firm);stroke:none" d="M 812.6 232.0 L 815.5 225.5 L 819.4 230.0 Z"/>
+<path class="gedge" data-from="7" data-to="3" d="M 864.2 46.0 C 864.2 92.5, 809.6 92.5, 809.6 139.0 C 809.6 185.5, 812.6 185.5, 812.6 232.0"/>
+<path class="gedge" data-from="7" data-to="3" style="fill:var(--rule-firm);stroke:none" d="M 812.6 232.0 L 809.4 225.6 L 815.4 225.4 Z"/>
+<path class="gedge" data-from="7" data-to="6" d="M 864.2 46.0 C 864.2 85.0, 901.6 85.0, 901.6 124.0"/>
+<path class="gedge" data-from="7" data-to="6" style="fill:var(--rule-firm);stroke:none" d="M 901.6 124.0 L 896.1 119.4 L 901.5 116.8 Z"/>
+<path class="gedge" data-from="8" data-to="0" d="M 355.0 154.0 C 355.0 200.5, 216.6 200.5, 216.6 247.0 L 216.6 355.0 C 216.6 401.5, 366.7 401.5, 366.7 448.0"/>
+<path class="gedge" data-from="8" data-to="0" style="fill:var(--rule-firm);stroke:none" d="M 366.7 448.0 L 359.5 447.1 L 362.7 442.0 Z"/>
+<path class="gedge" data-from="8" data-to="1" d="M 355.0 154.0 C 355.0 193.0, 417.4 193.0, 417.4 232.0"/>
+<path class="gedge" data-from="8" data-to="1" style="fill:var(--rule-firm);stroke:none" d="M 417.4 232.0 L 411.0 228.8 L 415.6 225.1 Z"/>
+<path class="gedge" data-from="8" data-to="9" d="M 355.0 154.0 C 355.0 193.0, 96.1 193.0, 96.1 232.0"/>
+<path class="gedge" data-from="8" data-to="9" style="fill:var(--rule-firm);stroke:none" d="M 96.1 232.0 L 101.5 227.3 L 103.2 233.0 Z"/>
+<path class="gedge" data-from="8" data-to="10" d="M 355.0 154.0 C 355.0 200.5, 483.8 200.5, 483.8 247.0 C 483.8 293.5, 555.4 293.5, 555.4 340.0"/>
+<path class="gedge" data-from="8" data-to="10" style="fill:var(--rule-firm);stroke:none" d="M 555.4 340.0 L 549.0 336.7 L 553.8 333.0 Z"/>
+<path class="gedge" data-from="8" data-to="11" d="M 355.0 154.0 C 355.0 193.0, 565.4 193.0, 565.4 232.0"/>
+<path class="gedge" data-from="8" data-to="11" style="fill:var(--rule-firm);stroke:none" d="M 565.4 232.0 L 558.2 232.6 L 560.3 226.9 Z"/>
+<path class="gedge" data-from="8" data-to="13" d="M 355.0 154.0 C 355.0 193.0, 692.2 193.0, 692.2 232.0"/>
+<path class="gedge" data-from="8" data-to="13" style="fill:var(--rule-firm);stroke:none" d="M 692.2 232.0 L 685.2 233.5 L 686.5 227.6 Z"/>
+<path class="gedge" data-from="8" data-to="16" d="M 355.0 154.0 C 355.0 200.5, 351.0 200.5, 351.0 247.0 C 351.0 293.5, 409.8 293.5, 409.8 340.0"/>
+<path class="gedge" data-from="8" data-to="16" style="fill:var(--rule-firm);stroke:none" d="M 409.8 340.0 L 403.8 336.1 L 408.8 332.9 Z"/>
+<path class="gedge" data-from="10" data-to="0" d="M 555.4 370.0 C 555.4 409.0, 366.7 409.0, 366.7 448.0"/>
+<path class="gedge" data-from="10" data-to="0" style="fill:var(--rule-firm);stroke:none" d="M 366.7 448.0 L 371.5 442.7 L 373.8 448.3 Z"/>
+<path class="gedge" data-from="11" data-to="10" d="M 565.4 262.0 C 565.4 301.0, 555.4 301.0, 555.4 340.0"/>
+<path class="gedge" data-from="11" data-to="10" style="fill:var(--rule-firm);stroke:none" d="M 555.4 340.0 L 553.2 333.2 L 559.2 333.9 Z"/>
+<path class="gedge" data-from="13" data-to="16" d="M 692.2 262.0 C 692.2 301.0, 409.8 301.0, 409.8 340.0"/>
+<path class="gedge" data-from="13" data-to="16" style="fill:var(--rule-firm);stroke:none" d="M 409.8 340.0 L 415.2 335.4 L 416.8 341.2 Z"/>
+<path class="gedge" data-from="14" data-to="11" d="M 718.2 46.0 C 718.2 92.5, 726.9 92.5, 726.9 139.0 C 726.9 185.5, 565.4 185.5, 565.4 232.0"/>
+<path class="gedge" data-from="14" data-to="11" style="fill:var(--rule-firm);stroke:none" d="M 565.4 232.0 L 569.5 226.2 L 572.5 231.4 Z"/>
+<path class="gedge" data-from="14" data-to="12" d="M 718.2 46.0 C 718.2 85.0, 660.5 85.0, 660.5 124.0"/>
+<path class="gedge" data-from="14" data-to="12" style="fill:var(--rule-firm);stroke:none" d="M 660.5 124.0 L 661.9 117.0 L 666.7 120.6 Z"/>
+<path class="gedge" data-from="14" data-to="13" d="M 718.2 46.0 C 718.2 92.5, 738.9 92.5, 738.9 139.0 C 738.9 185.5, 692.2 185.5, 692.2 232.0"/>
+<path class="gedge" data-from="14" data-to="13" style="fill:var(--rule-firm);stroke:none" d="M 692.2 232.0 L 692.4 224.8 L 697.8 227.5 Z"/>
+</g>
+<g class="nodes">
+<a class="gnode-link" href="cards/F-nat-add-assoc.html">
+<g class="gnode s-proved" data-n="0" data-anc="3 5 6 7 8 10 11 14" data-desc="" tabindex="0" role="listitem">
+<title>Addition on the naturals is associative &#x2014; proved &#x2014; 8 upstream, 0 downstream</title>
+<rect x="309.1" y="448.0" width="115.2" height="30.0"/>
+<circle class="gdot" cx="318.1" cy="463.0" r="3.2"/>
+<text x="326.1" y="463.0">nat-add-assoc</text>
+</g>
+</a>
+<a class="gnode-link" href="cards/F-nat-add-comm.html">
+<g class="gnode s-proved" data-n="1" data-anc="5 8" data-desc="15 16" tabindex="0" role="listitem">
+<title>Addition on the naturals is commutative &#x2014; proved &#x2014; 2 upstream, 2 downstream</title>
+<rect x="363.0" y="232.0" width="108.8" height="30.0"/>
+<circle class="gdot" cx="372.0" cy="247.0" r="3.2"/>
+<text x="380.0" y="247.0">nat-add-comm</text>
+</g>
+</a>
+<a class="gnode-link" href="cards/F-nat-div-mod-exists.html">
+<g class="gnode s-proved" data-n="2" data-anc="6 7" data-desc="" tabindex="0" role="listitem">
+<title>Division with remainder always exists for a positive divisor &#x2014; proved &#x2014; 2 upstream, 0 downstream</title>
+<rect x="881.8" y="232.0" width="147.2" height="30.0"/>
+<circle class="gdot" cx="890.8" cy="247.0" r="3.2"/>
+<text x="898.8" y="247.0">nat-div-mod-exists</text>
+</g>
+</a>
+<a class="gnode-link" href="cards/F-nat-dvd-add.html">
+<g class="gnode s-proved" data-n="3" data-anc="5 6 7" data-desc="0 10" tabindex="0" role="listitem">
+<title>A common divisor of two numbers divides their sum &#x2014; proved &#x2014; 3 upstream, 2 downstream</title>
+<rect x="761.4" y="232.0" width="102.4" height="30.0"/>
+<circle class="gdot" cx="770.4" cy="247.0" r="3.2"/>
+<text x="778.4" y="247.0">nat-dvd-add</text>
+</g>
+</a>
+<a class="gnode-link" href="cards/F-nat-dvd-gcd-iff.html">
+<g class="gnode s-proved" data-n="4" data-anc="5" data-desc="" tabindex="0" role="listitem">
+<title>The gcd is exactly the common divisors' upper bound &#x2014; proved &#x2014; 1 upstream, 0 downstream</title>
+<rect x="16.0" y="124.0" width="128.0" height="30.0"/>
+<circle class="gdot" cx="25.0" cy="139.0" r="3.2"/>
+<text x="33.0" y="139.0">nat-dvd-gcd-iff</text>
+</g>
+</a>
+<a class="gnode-link" href="cards/F-nat-euclid-lemma.html">
+<g class="gnode s-proved" data-n="5" data-anc="" data-desc="0 1 3 4 8 9 10 11 12 13 15 16" tabindex="0" role="listitem">
+<title>Euclid's lemma: a prime dividing a product divides a factor &#x2014; proved &#x2014; 0 upstream, 12 downstream</title>
+<rect x="428.6" y="16.0" width="134.4" height="30.0"/>
+<circle class="gdot" cx="437.6" cy="31.0" r="3.2"/>
+<text x="445.6" y="31.0">nat-euclid-lemma</text>
+</g>
+</a>
+<a class="gnode-link" href="cards/F-nat-exists-prime-dvd.html">
+<g class="gnode s-proved" data-n="6" data-anc="7" data-desc="0 2 3 10" tabindex="0" role="listitem">
+<title>Every natural number at least 2 has a prime divisor &#x2014; proved &#x2014; 1 upstream, 4 downstream</title>
+<rect x="821.6" y="124.0" width="160.0" height="30.0"/>
+<circle class="gdot" cx="830.6" cy="139.0" r="3.2"/>
+<text x="838.6" y="139.0">nat-exists-prime-dvd</text>
+</g>
+</a>
+<a class="gnode-link" href="cards/F-nat-exists-prime-gt.html">
+<g class="gnode s-proved" data-n="7" data-anc="" data-desc="0 2 3 6 10" tabindex="0" role="listitem">
+<title>There is no largest prime &#x2014; proved &#x2014; 0 upstream, 5 downstream</title>
+<rect x="787.4" y="16.0" width="153.6" height="30.0"/>
+<circle class="gdot" cx="796.4" cy="31.0" r="3.2"/>
+<text x="804.4" y="31.0">nat-exists-prime-gt</text>
+</g>
+</a>
+<a class="gnode-link" href="cards/F-nat-gcd-bezout.html">
+<g class="gnode s-proved" data-n="8" data-anc="5" data-desc="0 1 9 10 11 13 15 16" tabindex="0" role="listitem">
+<title>Bezout's identity holds for the natural gcd &#x2014; proved &#x2014; 1 upstream, 8 downstream</title>
+<rect x="294.2" y="124.0" width="121.6" height="30.0"/>
+<circle class="gdot" cx="303.2" cy="139.0" r="3.2"/>
+<text x="311.2" y="139.0">nat-gcd-bezout</text>
+</g>
+</a>
+<a class="gnode-link" href="cards/F-nat-gcd-succ.html">
+<g class="gnode s-proved" data-n="9" data-anc="5 8" data-desc="" tabindex="0" role="listitem">
+<title>The Euclidean algorithm's descent step is correct &#x2014; proved &#x2014; 2 upstream, 0 downstream</title>
+<rect x="41.7" y="232.0" width="108.8" height="30.0"/>
+<circle class="gdot" cx="50.7" cy="247.0" r="3.2"/>
+<text x="58.7" y="247.0">nat-gcd-succ</text>
+</g>
+</a>
+<a class="gnode-link" href="cards/F-nat-left-distrib.html">
+<g class="gnode s-proved" data-n="10" data-anc="3 5 6 7 8 11 14" data-desc="0" tabindex="0" role="listitem">
+<title>Multiplication distributes over addition on the left &#x2014; proved &#x2014; 7 upstream, 1 downstream</title>
+<rect x="488.2" y="340.0" width="134.4" height="30.0"/>
+<circle class="gdot" cx="497.2" cy="355.0" r="3.2"/>
+<text x="505.2" y="355.0">nat-left-distrib</text>
+</g>
+</a>
+<a class="gnode-link" href="cards/F-nat-mul-assoc.html">
+<g class="gnode s-proved" data-n="11" data-anc="5 8 14" data-desc="0 10" tabindex="0" role="listitem">
+<title>Multiplication on the naturals is associative &#x2014; proved &#x2014; 3 upstream, 2 downstream</title>
+<rect x="507.8" y="232.0" width="115.2" height="30.0"/>
+<circle class="gdot" cx="516.8" cy="247.0" r="3.2"/>
+<text x="524.8" y="247.0">nat-mul-assoc</text>
+</g>
+</a>
+<a class="gnode-link" href="cards/F-nat-mul-comm.html">
+<g class="gnode s-proved" data-n="12" data-anc="5 14" data-desc="" tabindex="0" role="listitem">
+<title>Multiplication on the naturals is commutative &#x2014; proved &#x2014; 2 upstream, 0 downstream</title>
+<rect x="606.1" y="124.0" width="108.8" height="30.0"/>
+<circle class="gdot" cx="615.1" cy="139.0" r="3.2"/>
+<text x="623.1" y="139.0">nat-mul-comm</text>
+</g>
+</a>
+<a class="gnode-link" href="cards/F-nat-mul-one.html">
+<g class="gnode s-proved" data-n="13" data-anc="5 8 14" data-desc="16" tabindex="0" role="listitem">
+<title>One is a right identity for multiplication on the naturals &#x2014; proved &#x2014; 3 upstream, 1 downstream</title>
+<rect x="641.0" y="232.0" width="102.4" height="30.0"/>
+<circle class="gdot" cx="650.0" cy="247.0" r="3.2"/>
+<text x="658.0" y="247.0">nat-mul-one</text>
+</g>
+</a>
+<a class="gnode-link" href="cards/F-nat-pow-add.html">
+<g class="gnode s-proved" data-n="14" data-anc="" data-desc="0 10 11 12 13 16" tabindex="0" role="listitem">
+<title>The first index law: powers add over a product &#x2014; proved &#x2014; 0 upstream, 6 downstream</title>
+<rect x="667.0" y="16.0" width="102.4" height="30.0"/>
+<circle class="gdot" cx="676.0" cy="31.0" r="3.2"/>
+<text x="684.0" y="31.0">nat-pow-add</text>
+</g>
+</a>
+<a class="gnode-link" href="cards/F-nat-succ-add.html">
+<g class="gnode s-proved" data-n="15" data-anc="1 5 8" data-desc="" tabindex="0" role="listitem">
+<title>Nat succ_add &#x2014; proved &#x2014; 3 upstream, 0 downstream</title>
+<rect x="228.6" y="340.0" width="108.8" height="30.0"/>
+<circle class="gdot" cx="237.6" cy="355.0" r="3.2"/>
+<text x="245.6" y="355.0">nat-succ-add</text>
+</g>
+</a>
+<a class="gnode-link" href="cards/F-nat-zero-add.html">
+<g class="gnode s-proved" data-n="16" data-anc="1 5 8 13 14" data-desc="" tabindex="0" role="listitem">
+<title>Nat zero_add &#x2014; proved &#x2014; 5 upstream, 0 downstream</title>
+<rect x="355.4" y="340.0" width="108.8" height="30.0"/>
+<circle class="gdot" cx="364.4" cy="355.0" r="3.2"/>
+<text x="372.4" y="355.0">nat-zero-add</text>
+</g>
+</a>
+</g>
+</svg>
+<ul class="ax-legend">
+<li><span class="swatch" style="background:var(--s-proved-fg)"></span>proved</li>
+<li>17 nodes, 27 edges, 14 crossings</li>
+</ul>
+<p class="ax-source" id="dep-graph-note">Hover or keyboard-focus a node to isolate its cone; press Enter on one that links to a card.</p>
+</div>
+<figcaption><code>depends_on</code> over 17 facts, 27 edges. An edge runs from the dependent fact to the fact it rests on. Node status is the conservative mapping of the ledger's epistemic_status.</figcaption>
+</figure>
+<section class="blk t-essential" id="spread">
+<h2 id="spread">Spread</h2>
+<div class="ax-tablewrap"><table class="ax-table">
+<caption>Ledger spread over the documented facts</caption>
+<thead><tr><th class="">axis</th><th class="">value</th><th class="">facts</th></tr></thead>
+<tbody>
+<tr><td class="">epistemic_status</td><td class="">proved</td><td class="">17</td></tr>
+<tr><td class="">external_status</td><td class="">proved</td><td class="">17</td></tr>
+<tr><td class="">proof_route</td><td class="">kernel-lean</td><td class="">17</td></tr>
+<tr><td class="">formal.language</td><td class="">lean4</td><td class="">17</td></tr>
+</tbody>
+</table></div>
+</section>
+<section class="blk t-essential ax-widetable" id="index">
+<h2 id="index">Index</h2>
+<div class="ax-tablewrap"><table class="ax-table">
+<caption>Fact index</caption>
+<thead><tr><th class="">fact</th><th class="">title</th><th class="">language</th><th class="">fragment</th><th class="">proof_route</th><th class="">epistemic</th><th class="">external</th><th class="">badge</th><th class="">flag</th><th class="">evidence</th><th class="">checked</th><th class="">card</th></tr></thead>
+<tbody>
+<tr><td class="">F:nat-add-assoc</td><td class=" wrap">Addition on the naturals is associative</td><td class="">lean4</td><td class="">Nat</td><td class="">kernel-lean</td><td class="">proved</td><td class="">proved</td><td class="">proved</td><td class="">-</td><td class="">2</td><td class="">2</td><td class=""><a class="ax-doclink" href="cards/F-nat-add-assoc.html"><code>F-nat-add-assoc</code></a></td></tr>
+<tr><td class="">F:nat-add-comm</td><td class=" wrap">Addition on the naturals is commutative</td><td class="">lean4</td><td class="">Nat</td><td class="">kernel-lean</td><td class="">proved</td><td class="">proved</td><td class="">proved</td><td class="">-</td><td class="">2</td><td class="">2</td><td class=""><a class="ax-doclink" href="cards/F-nat-add-comm.html"><code>F-nat-add-comm</code></a></td></tr>
+<tr><td class="">F:nat-div-mod-exists</td><td class=" wrap">Division with remainder always exists for a positive divisor</td><td class="">lean4</td><td class="">Nat</td><td class="">kernel-lean</td><td class="">proved</td><td class="">proved</td><td class="">proved</td><td class="">-</td><td class="">2</td><td class="">2</td><td class=""><a class="ax-doclink" href="cards/F-nat-div-mod-exists.html"><code>F-nat-div-mod-exists</code></a></td></tr>
+<tr><td class="">F:nat-dvd-add</td><td class=" wrap">A common divisor of two numbers divides their sum</td><td class="">lean4</td><td class="">Nat</td><td class="">kernel-lean</td><td class="">proved</td><td class="">proved</td><td class="">proved</td><td class="">-</td><td class="">2</td><td class="">2</td><td class=""><a class="ax-doclink" href="cards/F-nat-dvd-add.html"><code>F-nat-dvd-add</code></a></td></tr>
+<tr><td class="">F:nat-dvd-gcd-iff</td><td class=" wrap">The gcd is exactly the common divisors' upper bound</td><td class="">lean4</td><td class="">Nat</td><td class="">kernel-lean</td><td class="">proved</td><td class="">proved</td><td class="">proved</td><td class="">-</td><td class="">2</td><td class="">2</td><td class=""><a class="ax-doclink" href="cards/F-nat-dvd-gcd-iff.html"><code>F-nat-dvd-gcd-iff</code></a></td></tr>
+<tr><td class="">F:nat-euclid-lemma</td><td class=" wrap">Euclid's lemma: a prime dividing a product divides a factor</td><td class="">lean4</td><td class="">Nat</td><td class="">kernel-lean</td><td class="">proved</td><td class="">proved</td><td class="">proved</td><td class="">-</td><td class="">2</td><td class="">2</td><td class=""><a class="ax-doclink" href="cards/F-nat-euclid-lemma.html"><code>F-nat-euclid-lemma</code></a></td></tr>
+<tr><td class="">F:nat-exists-prime-dvd</td><td class=" wrap">Every natural number at least 2 has a prime divisor</td><td class="">lean4</td><td class="">Nat</td><td class="">kernel-lean</td><td class="">proved</td><td class="">proved</td><td class="">proved</td><td class="">-</td><td class="">2</td><td class="">2</td><td class=""><a class="ax-doclink" href="cards/F-nat-exists-prime-dvd.html"><code>F-nat-exists-prime-dvd</code></a></td></tr>
+<tr><td class="">F:nat-exists-prime-gt</td><td class=" wrap">There is no largest prime</td><td class="">lean4</td><td class="">Nat</td><td class="">kernel-lean</td><td class="">proved</td><td class="">proved</td><td class="">proved</td><td class="">-</td><td class="">2</td><td class="">2</td><td class=""><a class="ax-doclink" href="cards/F-nat-exists-prime-gt.html"><code>F-nat-exists-prime-gt</code></a></td></tr>
+<tr><td class="">F:nat-gcd-bezout</td><td class=" wrap">Bezout's identity holds for the natural gcd</td><td class="">lean4</td><td class="">Nat</td><td class="">kernel-lean</td><td class="">proved</td><td class="">proved</td><td class="">proved</td><td class="">-</td><td class="">2</td><td class="">2</td><td class=""><a class="ax-doclink" href="cards/F-nat-gcd-bezout.html"><code>F-nat-gcd-bezout</code></a></td></tr>
+<tr><td class="">F:nat-gcd-succ</td><td class=" wrap">The Euclidean algorithm's descent step is correct</td><td class="">lean4</td><td class="">Nat</td><td class="">kernel-lean</td><td class="">proved</td><td class="">proved</td><td class="">proved</td><td class="">-</td><td class="">2</td><td class="">2</td><td class=""><a class="ax-doclink" href="cards/F-nat-gcd-succ.html"><code>F-nat-gcd-succ</code></a></td></tr>
+<tr><td class="">F:nat-left-distrib</td><td class=" wrap">Multiplication distributes over addition on the left</td><td class="">lean4</td><td class="">Nat</td><td class="">kernel-lean</td><td class="">proved</td><td class="">proved</td><td class="">proved</td><td class="">-</td><td class="">2</td><td class="">2</td><td class=""><a class="ax-doclink" href="cards/F-nat-left-distrib.html"><code>F-nat-left-distrib</code></a></td></tr>
+<tr><td class="">F:nat-mul-assoc</td><td class=" wrap">Multiplication on the naturals is associative</td><td class="">lean4</td><td class="">Nat</td><td class="">kernel-lean</td><td class="">proved</td><td class="">proved</td><td class="">proved</td><td class="">-</td><td class="">2</td><td class="">2</td><td class=""><a class="ax-doclink" href="cards/F-nat-mul-assoc.html"><code>F-nat-mul-assoc</code></a></td></tr>
+<tr><td class="">F:nat-mul-comm</td><td class=" wrap">Multiplication on the naturals is commutative</td><td class="">lean4</td><td class="">Nat</td><td class="">kernel-lean</td><td class="">proved</td><td class="">proved</td><td class="">proved</td><td class="">-</td><td class="">2</td><td class="">2</td><td class=""><a class="ax-doclink" href="cards/F-nat-mul-comm.html"><code>F-nat-mul-comm</code></a></td></tr>
+<tr><td class="">F:nat-mul-one</td><td class=" wrap">One is a right identity for multiplication on the naturals</td><td class="">lean4</td><td class="">Nat</td><td class="">kernel-lean</td><td class="">proved</td><td class="">proved</td><td class="">proved</td><td class="">-</td><td class="">2</td><td class="">2</td><td class=""><a class="ax-doclink" href="cards/F-nat-mul-one.html"><code>F-nat-mul-one</code></a></td></tr>
+<tr><td class="">F:nat-pow-add</td><td class=" wrap">The first index law: powers add over a product</td><td class="">lean4</td><td class="">Nat</td><td class="">kernel-lean</td><td class="">proved</td><td class="">proved</td><td class="">proved</td><td class="">-</td><td class="">2</td><td class="">2</td><td class=""><a class="ax-doclink" href="cards/F-nat-pow-add.html"><code>F-nat-pow-add</code></a></td></tr>
+<tr><td class="">F:nat-succ-add</td><td class=" wrap">Nat succ_add</td><td class="">lean4</td><td class="">Nat</td><td class="">kernel-lean</td><td class="">proved</td><td class="">proved</td><td class="">proved</td><td class="">-</td><td class="">2</td><td class="">2</td><td class=""><a class="ax-doclink" href="cards/F-nat-succ-add.html"><code>F-nat-succ-add</code></a></td></tr>
+<tr><td class="">F:nat-zero-add</td><td class=" wrap">Nat zero_add</td><td class="">lean4</td><td class="">Nat</td><td class="">kernel-lean</td><td class="">proved</td><td class="">proved</td><td class="">proved</td><td class="">-</td><td class="">2</td><td class="">2</td><td class=""><a class="ax-doclink" href="cards/F-nat-zero-add.html"><code>F-nat-zero-add</code></a></td></tr>
+</tbody>
+</table></div>
+</section>
+</main>
+<footer class="ax-foot"><div class="ax-doc">
+<p>This file is self-contained: it embeds its own stylesheet, script and figures and makes no network request when opened. Every status badge above is data carried by the document, not a judgement made while rendering it.</p>
+<p>Build epoch <code>1787338967 (commit)</code>. No wall clock was read.</p>
+</div></footer>
+<script>
+/* Axeyum render strand -- inlined page script.
+ *
+ * Rules this file lives by:
+ *   - Every feature is optional. The document is fully readable with this
+ *     script removed: detail blocks are <details>, the graph is static SVG,
+ *     plot tooltips are native <title>, and the reading level defaults to
+ *     "full" via a body attribute the emitter writes.
+ *   - Nothing here may reach the network. No fetch, no XHR, no dynamic
+ *     import, no new Image(). lint_self_contained() rejects those tokens.
+ *   - Each feature is installed inside its own try/catch so one failure
+ *     cannot take the others down.
+ */
+(function () {
+  "use strict";
+
+  function guard(name, fn) {
+    try { fn(); } catch (e) {
+      if (window.console && console.warn) { console.warn("axeyum: " + name + " disabled: " + e); }
+    }
+  }
+
+  var $ = function (sel, root) { return (root || document).querySelector(sel); };
+  var $$ = function (sel, root) {
+    return Array.prototype.slice.call((root || document).querySelectorAll(sel));
+  };
+
+  /* -------- 1. reading level: summary / full / forensic -------- */
+  guard("reading-level", function () {
+    var group = $(".ax-levels");
+    if (!group) { return; }
+    var buttons = $$("button[data-level]", group);
+    function apply(level) {
+      document.body.setAttribute("data-level", level);
+      buttons.forEach(function (b) {
+        b.setAttribute("aria-pressed", b.getAttribute("data-level") === level ? "true" : "false");
+      });
+      // Forensic means "show me everything", so folds open; leaving the other
+      // levels alone preserves whatever the reader opened by hand.
+      if (level === "forensic") {
+        $$("details.ax-fold").forEach(function (d) { d.open = true; });
+      }
+    }
+    buttons.forEach(function (b) {
+      b.addEventListener("click", function () { apply(b.getAttribute("data-level")); });
+    });
+    apply(document.body.getAttribute("data-level") || "full");
+  });
+
+  /* -------- 2. copy-to-clipboard for replay commands -------- */
+  guard("copy", function () {
+    $$("button[data-copy-target]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var src = document.getElementById(btn.getAttribute("data-copy-target"));
+        if (!src) { return; }
+        var text = src.textContent;
+        var done = function (ok) {
+          btn.setAttribute("data-copied", ok ? "1" : "0");
+          var was = btn.getAttribute("data-label") || btn.textContent;
+          btn.setAttribute("data-label", was);
+          btn.textContent = ok ? "copied" : "select it";
+          window.setTimeout(function () {
+            btn.textContent = was;
+            btn.removeAttribute("data-copied");
+          }, 1400);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(false); });
+        } else {
+          // Older engines: select the text so the reader can copy it manually.
+          var r = document.createRange();
+          r.selectNodeContents(src);
+          var sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(r);
+          done(false);
+        }
+      });
+    });
+  });
+
+  /* -------- 3. dependency graph: ancestor/descendant cone -------- */
+  guard("graph-cone", function () {
+    $$("svg.ax-graph").forEach(function (svg) {
+      var nodes = $$("g.gnode", svg);
+      var edges = $$("path.gedge", svg);
+      function clear() {
+        svg.classList.remove("coning");
+        nodes.forEach(function (n) { n.classList.remove("cone-self", "cone-anc", "cone-desc"); });
+        edges.forEach(function (e) { e.classList.remove("cone-edge"); });
+      }
+      function ids(el, attr) {
+        var v = el.getAttribute(attr);
+        return v ? v.split(" ") : [];
+      }
+      function light(node) {
+        clear();
+        var self = node.getAttribute("data-n");
+        var anc = ids(node, "data-anc");
+        var desc = ids(node, "data-desc");
+        var inCone = {};
+        inCone[self] = "self";
+        anc.forEach(function (i) { inCone[i] = "anc"; });
+        desc.forEach(function (i) { inCone[i] = "desc"; });
+        nodes.forEach(function (n) {
+          var k = inCone[n.getAttribute("data-n")];
+          if (k) { n.classList.add("cone-" + k); }
+        });
+        edges.forEach(function (e) {
+          var a = e.getAttribute("data-from"), b = e.getAttribute("data-to");
+          if (inCone[a] && inCone[b]) { e.classList.add("cone-edge"); }
+        });
+        svg.classList.add("coning");
+      }
+      nodes.forEach(function (n) {
+        n.addEventListener("mouseenter", function () { light(n); });
+        n.addEventListener("focus", function () { light(n); });
+        n.addEventListener("blur", clear);
+        n.addEventListener("click", function () {
+          var href = n.getAttribute("data-href");
+          if (!href) { return; }
+          var target = document.getElementById(href);
+          if (target) {
+            target.scrollIntoView({ block: "start", behavior: "smooth" });
+            target.setAttribute("tabindex", "-1");
+            target.focus({ preventScroll: true });
+          }
+        });
+        n.addEventListener("keydown", function (ev) {
+          if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); n.dispatchEvent(new Event("click")); }
+        });
+      });
+      svg.addEventListener("mouseleave", clear);
+    });
+  });
+
+  /* -------- 4. steps player: j / k walk the derivation -------- */
+  guard("steps", function () {
+    $$("ol.ax-steps").forEach(function (list) {
+      var items = $$("li", list);
+      if (!items.length) { return; }
+      var cur = -1;
+      function show(i, scroll) {
+        if (i < 0) { i = 0; }
+        if (i >= items.length) { i = items.length - 1; }
+        if (i === cur) { return; }
+        if (cur >= 0) { items[cur].removeAttribute("aria-current"); }
+        cur = i;
+        items[cur].setAttribute("aria-current", "step");
+        items[cur].setAttribute("tabindex", "0");
+        if (scroll) { items[cur].scrollIntoView({ block: "nearest" }); }
+      }
+      items.forEach(function (li, i) {
+        li.addEventListener("click", function () { show(i, false); });
+      });
+      list.setAttribute("tabindex", "0");
+      list.addEventListener("keydown", function (ev) {
+        var k = ev.key;
+        if (k === "j" || k === "ArrowDown") { show(cur + 1, true); ev.preventDefault(); }
+        else if (k === "k" || k === "ArrowUp") { show(cur < 0 ? 0 : cur - 1, true); ev.preventDefault(); }
+        else if (k === "Home") { show(0, true); ev.preventDefault(); }
+        else if (k === "End") { show(items.length - 1, true); ev.preventDefault(); }
+      });
+      var bar = list.previousElementSibling;
+      if (bar && bar.classList.contains("ax-stepbar")) {
+        var prev = $("button[data-step='prev']", bar);
+        var next = $("button[data-step='next']", bar);
+        if (prev) { prev.addEventListener("click", function () { show(cur < 0 ? 0 : cur - 1, true); }); }
+        if (next) { next.addEventListener("click", function () { show(cur + 1, true); }); }
+      }
+    });
+  });
+})();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,393 @@
+{
+  "entries": [
+    {
+      "claim_key": "nat-add-assoc-footprint-nat-add-assoc",
+      "claim_status": "checked",
+      "evidence_kind": "exhaustive-enumeration",
+      "evidence_row": "footprint-Nat.add_assoc",
+      "exit_status": 0,
+      "fact_id": "F:nat-add-assoc",
+      "record_id": "R:shared-nat-axiom-inventory-b5515894",
+      "run_record": "R-shared-nat-axiom-inventory-b5515894.json"
+    },
+    {
+      "claim_key": "nat-add-assoc-kernel-nat-add-assoc",
+      "claim_status": "checked",
+      "evidence_kind": "kernel-term",
+      "evidence_row": "kernel-Nat.add_assoc",
+      "exit_status": 0,
+      "fact_id": "F:nat-add-assoc",
+      "record_id": "R:nat-add-assoc-kernel-nat-add-assoc",
+      "run_record": "R-nat-add-assoc-kernel-nat-add-assoc.json"
+    },
+    {
+      "claim_key": "nat-add-comm-footprint-add-comm",
+      "claim_status": "checked",
+      "evidence_kind": "instance-pin",
+      "evidence_row": "footprint-add-comm",
+      "exit_status": 0,
+      "fact_id": "F:nat-add-comm",
+      "record_id": "R:shared-nat-axiom-inventory-b5515894",
+      "run_record": "R-shared-nat-axiom-inventory-b5515894.json"
+    },
+    {
+      "claim_key": "nat-add-comm-kernel-add-comm",
+      "claim_status": "checked",
+      "evidence_kind": "kernel-term",
+      "evidence_row": "kernel-add-comm",
+      "exit_status": 0,
+      "fact_id": "F:nat-add-comm",
+      "record_id": "R:nat-add-comm-kernel-add-comm",
+      "run_record": "R-nat-add-comm-kernel-add-comm.json"
+    },
+    {
+      "claim_key": "nat-div-mod-exists-footprint-nat-div-mod-exists",
+      "claim_status": "checked",
+      "evidence_kind": "exhaustive-enumeration",
+      "evidence_row": "footprint-Nat.div_mod_exists",
+      "exit_status": 0,
+      "fact_id": "F:nat-div-mod-exists",
+      "record_id": "R:shared-nat-axiom-inventory-b5515894",
+      "run_record": "R-shared-nat-axiom-inventory-b5515894.json"
+    },
+    {
+      "claim_key": "nat-div-mod-exists-kernel-nat-div-mod-exists",
+      "claim_status": "checked",
+      "evidence_kind": "kernel-term",
+      "evidence_row": "kernel-Nat.div_mod_exists",
+      "exit_status": 0,
+      "fact_id": "F:nat-div-mod-exists",
+      "record_id": "R:nat-div-mod-exists-kernel-nat-div-mod-exists",
+      "run_record": "R-nat-div-mod-exists-kernel-nat-div-mod-exists.json"
+    },
+    {
+      "claim_key": "nat-dvd-add-footprint-nat-dvd-add",
+      "claim_status": "checked",
+      "evidence_kind": "exhaustive-enumeration",
+      "evidence_row": "footprint-Nat.dvd_add",
+      "exit_status": 0,
+      "fact_id": "F:nat-dvd-add",
+      "record_id": "R:shared-nat-axiom-inventory-b5515894",
+      "run_record": "R-shared-nat-axiom-inventory-b5515894.json"
+    },
+    {
+      "claim_key": "nat-dvd-add-kernel-nat-dvd-add",
+      "claim_status": "checked",
+      "evidence_kind": "kernel-term",
+      "evidence_row": "kernel-Nat.dvd_add",
+      "exit_status": 0,
+      "fact_id": "F:nat-dvd-add",
+      "record_id": "R:nat-dvd-add-kernel-nat-dvd-add",
+      "run_record": "R-nat-dvd-add-kernel-nat-dvd-add.json"
+    },
+    {
+      "claim_key": "nat-dvd-gcd-iff-footprint-nat-dvd-gcd-iff",
+      "claim_status": "checked",
+      "evidence_kind": "exhaustive-enumeration",
+      "evidence_row": "footprint-Nat.dvd_gcd_iff",
+      "exit_status": 0,
+      "fact_id": "F:nat-dvd-gcd-iff",
+      "record_id": "R:shared-nat-axiom-inventory-b5515894",
+      "run_record": "R-shared-nat-axiom-inventory-b5515894.json"
+    },
+    {
+      "claim_key": "nat-dvd-gcd-iff-kernel-nat-dvd-gcd-iff",
+      "claim_status": "checked",
+      "evidence_kind": "kernel-term",
+      "evidence_row": "kernel-Nat.dvd_gcd_iff",
+      "exit_status": 0,
+      "fact_id": "F:nat-dvd-gcd-iff",
+      "record_id": "R:nat-dvd-gcd-iff-kernel-nat-dvd-gcd-iff",
+      "run_record": "R-nat-dvd-gcd-iff-kernel-nat-dvd-gcd-iff.json"
+    },
+    {
+      "claim_key": "nat-euclid-lemma-footprint-nat-euclid-lemma",
+      "claim_status": "checked",
+      "evidence_kind": "exhaustive-enumeration",
+      "evidence_row": "footprint-Nat.euclid_lemma",
+      "exit_status": 0,
+      "fact_id": "F:nat-euclid-lemma",
+      "record_id": "R:shared-nat-axiom-inventory-b5515894",
+      "run_record": "R-shared-nat-axiom-inventory-b5515894.json"
+    },
+    {
+      "claim_key": "nat-euclid-lemma-kernel-nat-euclid-lemma",
+      "claim_status": "proved",
+      "evidence_kind": "kernel-term",
+      "evidence_row": "kernel-Nat.euclid_lemma",
+      "exit_status": 0,
+      "fact_id": "F:nat-euclid-lemma",
+      "record_id": "R:nat-euclid-lemma-kernel-nat-euclid-lemma",
+      "run_record": "R-nat-euclid-lemma-kernel-nat-euclid-lemma.json"
+    },
+    {
+      "claim_key": "nat-exists-prime-dvd-footprint-nat-exists-prime-dvd",
+      "claim_status": "checked",
+      "evidence_kind": "exhaustive-enumeration",
+      "evidence_row": "footprint-Nat.exists_prime_dvd",
+      "exit_status": 0,
+      "fact_id": "F:nat-exists-prime-dvd",
+      "record_id": "R:shared-nat-axiom-inventory-b5515894",
+      "run_record": "R-shared-nat-axiom-inventory-b5515894.json"
+    },
+    {
+      "claim_key": "nat-exists-prime-dvd-kernel-nat-exists-prime-dvd",
+      "claim_status": "proved",
+      "evidence_kind": "kernel-term",
+      "evidence_row": "kernel-Nat.exists_prime_dvd",
+      "exit_status": 0,
+      "fact_id": "F:nat-exists-prime-dvd",
+      "record_id": "R:nat-exists-prime-dvd-kernel-nat-exists-prime-dvd",
+      "run_record": "R-nat-exists-prime-dvd-kernel-nat-exists-prime-dvd.json"
+    },
+    {
+      "claim_key": "nat-exists-prime-gt-footprint-nat-exists-prime-gt",
+      "claim_status": "checked",
+      "evidence_kind": "exhaustive-enumeration",
+      "evidence_row": "footprint-Nat.exists_prime_gt",
+      "exit_status": 0,
+      "fact_id": "F:nat-exists-prime-gt",
+      "record_id": "R:shared-nat-axiom-inventory-b5515894",
+      "run_record": "R-shared-nat-axiom-inventory-b5515894.json"
+    },
+    {
+      "claim_key": "nat-exists-prime-gt-kernel-nat-exists-prime-gt",
+      "claim_status": "proved",
+      "evidence_kind": "kernel-term",
+      "evidence_row": "kernel-Nat.exists_prime_gt",
+      "exit_status": 0,
+      "fact_id": "F:nat-exists-prime-gt",
+      "record_id": "R:nat-exists-prime-gt-kernel-nat-exists-prime-gt",
+      "run_record": "R-nat-exists-prime-gt-kernel-nat-exists-prime-gt.json"
+    },
+    {
+      "claim_key": "nat-gcd-bezout-footprint-nat-gcd-bezout",
+      "claim_status": "checked",
+      "evidence_kind": "exhaustive-enumeration",
+      "evidence_row": "footprint-Nat.gcd_bezout",
+      "exit_status": 0,
+      "fact_id": "F:nat-gcd-bezout",
+      "record_id": "R:shared-nat-axiom-inventory-b5515894",
+      "run_record": "R-shared-nat-axiom-inventory-b5515894.json"
+    },
+    {
+      "claim_key": "nat-gcd-bezout-kernel-nat-gcd-bezout",
+      "claim_status": "checked",
+      "evidence_kind": "kernel-term",
+      "evidence_row": "kernel-Nat.gcd_bezout",
+      "exit_status": 0,
+      "fact_id": "F:nat-gcd-bezout",
+      "record_id": "R:nat-gcd-bezout-kernel-nat-gcd-bezout",
+      "run_record": "R-nat-gcd-bezout-kernel-nat-gcd-bezout.json"
+    },
+    {
+      "claim_key": "nat-gcd-succ-footprint-nat-gcd-succ",
+      "claim_status": "checked",
+      "evidence_kind": "exhaustive-enumeration",
+      "evidence_row": "footprint-Nat.gcd_succ",
+      "exit_status": 0,
+      "fact_id": "F:nat-gcd-succ",
+      "record_id": "R:shared-nat-axiom-inventory-b5515894",
+      "run_record": "R-shared-nat-axiom-inventory-b5515894.json"
+    },
+    {
+      "claim_key": "nat-gcd-succ-kernel-nat-gcd-succ",
+      "claim_status": "checked",
+      "evidence_kind": "kernel-term",
+      "evidence_row": "kernel-Nat.gcd_succ",
+      "exit_status": 0,
+      "fact_id": "F:nat-gcd-succ",
+      "record_id": "R:nat-gcd-succ-kernel-nat-gcd-succ",
+      "run_record": "R-nat-gcd-succ-kernel-nat-gcd-succ.json"
+    },
+    {
+      "claim_key": "nat-left-distrib-footprint-nat-left-distrib",
+      "claim_status": "checked",
+      "evidence_kind": "exhaustive-enumeration",
+      "evidence_row": "footprint-Nat.left_distrib",
+      "exit_status": 0,
+      "fact_id": "F:nat-left-distrib",
+      "record_id": "R:shared-nat-axiom-inventory-b5515894",
+      "run_record": "R-shared-nat-axiom-inventory-b5515894.json"
+    },
+    {
+      "claim_key": "nat-left-distrib-kernel-nat-left-distrib",
+      "claim_status": "checked",
+      "evidence_kind": "kernel-term",
+      "evidence_row": "kernel-Nat.left_distrib",
+      "exit_status": 0,
+      "fact_id": "F:nat-left-distrib",
+      "record_id": "R:nat-left-distrib-kernel-nat-left-distrib",
+      "run_record": "R-nat-left-distrib-kernel-nat-left-distrib.json"
+    },
+    {
+      "claim_key": "nat-mul-assoc-footprint-nat-mul-assoc",
+      "claim_status": "checked",
+      "evidence_kind": "exhaustive-enumeration",
+      "evidence_row": "footprint-Nat.mul_assoc",
+      "exit_status": 0,
+      "fact_id": "F:nat-mul-assoc",
+      "record_id": "R:shared-nat-axiom-inventory-b5515894",
+      "run_record": "R-shared-nat-axiom-inventory-b5515894.json"
+    },
+    {
+      "claim_key": "nat-mul-assoc-kernel-nat-mul-assoc",
+      "claim_status": "checked",
+      "evidence_kind": "kernel-term",
+      "evidence_row": "kernel-Nat.mul_assoc",
+      "exit_status": 0,
+      "fact_id": "F:nat-mul-assoc",
+      "record_id": "R:nat-mul-assoc-kernel-nat-mul-assoc",
+      "run_record": "R-nat-mul-assoc-kernel-nat-mul-assoc.json"
+    },
+    {
+      "claim_key": "nat-mul-comm-footprint-nat-mul-comm",
+      "claim_status": "checked",
+      "evidence_kind": "exhaustive-enumeration",
+      "evidence_row": "footprint-Nat.mul_comm",
+      "exit_status": 0,
+      "fact_id": "F:nat-mul-comm",
+      "record_id": "R:shared-nat-axiom-inventory-b5515894",
+      "run_record": "R-shared-nat-axiom-inventory-b5515894.json"
+    },
+    {
+      "claim_key": "nat-mul-comm-kernel-nat-mul-comm",
+      "claim_status": "checked",
+      "evidence_kind": "kernel-term",
+      "evidence_row": "kernel-Nat.mul_comm",
+      "exit_status": 0,
+      "fact_id": "F:nat-mul-comm",
+      "record_id": "R:nat-mul-comm-kernel-nat-mul-comm",
+      "run_record": "R-nat-mul-comm-kernel-nat-mul-comm.json"
+    },
+    {
+      "claim_key": "nat-mul-one-footprint-nat-mul-one",
+      "claim_status": "checked",
+      "evidence_kind": "exhaustive-enumeration",
+      "evidence_row": "footprint-Nat.mul_one",
+      "exit_status": 0,
+      "fact_id": "F:nat-mul-one",
+      "record_id": "R:shared-nat-axiom-inventory-b5515894",
+      "run_record": "R-shared-nat-axiom-inventory-b5515894.json"
+    },
+    {
+      "claim_key": "nat-mul-one-kernel-nat-mul-one",
+      "claim_status": "checked",
+      "evidence_kind": "kernel-term",
+      "evidence_row": "kernel-Nat.mul_one",
+      "exit_status": 0,
+      "fact_id": "F:nat-mul-one",
+      "record_id": "R:nat-mul-one-kernel-nat-mul-one",
+      "run_record": "R-nat-mul-one-kernel-nat-mul-one.json"
+    },
+    {
+      "claim_key": "nat-pow-add-footprint-nat-pow-add",
+      "claim_status": "checked",
+      "evidence_kind": "exhaustive-enumeration",
+      "evidence_row": "footprint-Nat.pow_add",
+      "exit_status": 0,
+      "fact_id": "F:nat-pow-add",
+      "record_id": "R:shared-nat-axiom-inventory-b5515894",
+      "run_record": "R-shared-nat-axiom-inventory-b5515894.json"
+    },
+    {
+      "claim_key": "nat-pow-add-kernel-nat-pow-add",
+      "claim_status": "proved",
+      "evidence_kind": "kernel-term",
+      "evidence_row": "kernel-Nat.pow_add",
+      "exit_status": 0,
+      "fact_id": "F:nat-pow-add",
+      "record_id": "R:nat-pow-add-kernel-nat-pow-add",
+      "run_record": "R-nat-pow-add-kernel-nat-pow-add.json"
+    },
+    {
+      "claim_key": "nat-succ-add-footprint-succ-add",
+      "claim_status": "checked",
+      "evidence_kind": "instance-pin",
+      "evidence_row": "footprint-succ-add",
+      "exit_status": 0,
+      "fact_id": "F:nat-succ-add",
+      "record_id": "R:shared-nat-axiom-inventory-b5515894",
+      "run_record": "R-shared-nat-axiom-inventory-b5515894.json"
+    },
+    {
+      "claim_key": "nat-succ-add-kernel-succ-add",
+      "claim_status": "checked",
+      "evidence_kind": "kernel-term",
+      "evidence_row": "kernel-succ-add",
+      "exit_status": 0,
+      "fact_id": "F:nat-succ-add",
+      "record_id": "R:nat-succ-add-kernel-succ-add",
+      "run_record": "R-nat-succ-add-kernel-succ-add.json"
+    },
+    {
+      "claim_key": "nat-zero-add-footprint-zero-add",
+      "claim_status": "checked",
+      "evidence_kind": "instance-pin",
+      "evidence_row": "footprint-zero-add",
+      "exit_status": 0,
+      "fact_id": "F:nat-zero-add",
+      "record_id": "R:shared-nat-axiom-inventory-b5515894",
+      "run_record": "R-shared-nat-axiom-inventory-b5515894.json"
+    },
+    {
+      "claim_key": "nat-zero-add-kernel-zero-add",
+      "claim_status": "checked",
+      "evidence_kind": "kernel-term",
+      "evidence_row": "kernel-zero-add",
+      "exit_status": 0,
+      "fact_id": "F:nat-zero-add",
+      "record_id": "R:nat-zero-add-kernel-zero-add",
+      "run_record": "R-nat-zero-add-kernel-zero-add.json"
+    },
+    {
+      "claim_key": "rado-r4-a5-b3-claim-rado-r4-a5-b3",
+      "claim_status": "evidence",
+      "evidence_kind": "claim-ref",
+      "evidence_row": "claim-rado-r4-a5-b3",
+      "exit_status": 0,
+      "fact_id": "F:rado-r4-a5-b3",
+      "record_id": "R:rado-r4-a5-b3-claim-rado-r4-a5-b3",
+      "run_record": "R-rado-r4-a5-b3-claim-rado-r4-a5-b3.json"
+    },
+    {
+      "claim_key": "rado-r4-a5-b3-deciding-instance-regeneration",
+      "claim_status": "checked",
+      "evidence_kind": "instance-pin",
+      "evidence_row": "deciding-instance-regeneration",
+      "exit_status": 0,
+      "fact_id": "F:rado-r4-a5-b3",
+      "record_id": "R:rado-r4-a5-b3-deciding-instance-regeneration",
+      "run_record": "R-rado-r4-a5-b3-deciding-instance-regeneration.json"
+    },
+    {
+      "claim_key": "rado-r4-a5-b3-lower-bound-replay",
+      "claim_status": "evidence",
+      "evidence_kind": "witness-replay",
+      "evidence_row": "lower-bound-replay",
+      "exit_status": 0,
+      "fact_id": "F:rado-r4-a5-b3",
+      "record_id": "R:rado-r4-a5-b3-lower-bound-replay",
+      "run_record": "R-rado-r4-a5-b3-lower-bound-replay.json"
+    },
+    {
+      "claim_key": "rado-r4-a5-b4-claim-741",
+      "claim_status": "evidence",
+      "evidence_kind": "claim-ref",
+      "evidence_row": "claim-741",
+      "exit_status": 0,
+      "fact_id": "F:rado-r4-a5-b4",
+      "record_id": "R:rado-r4-a5-b4-claim-741",
+      "run_record": "R-rado-r4-a5-b4-claim-741.json"
+    }
+  ],
+  "epoch": {
+    "commit": "839d1e50a287fa816490dd2ee7ec19d6a202c25d",
+    "source": "commit",
+    "unix": 1787319265
+  },
+  "kind": "runrec-index",
+  "not_runnable": [],
+  "note": "NOT a Doc-IR document and NOT a run record: a lookup table from (fact id, evidence row) to the run record that replayed that row. Do not pass it to scripts/validate-docir.py. Several rows may share one record when they share one command; that is one check, not many.",
+  "schema_version": 1
+}

@@ -1,0 +1,910 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:conjunctive-query-containment-homomorphism-certified",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-conjunctive-query-containment-homomorphism-certified.json",
+            "sha256": "bf94647a0c86bbdf5f6576f715582cbd43e43f501e72bda5fa37dfbdb25297e1"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Six conjunctive-query containment questions decided by homomorphism and by counterexample database, agreeing across three independent routes"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "3 of 3 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "unclassified",
+            "unclassified",
+            "field absent: nobody has looked (distinct from `unknown`, which means we checked)"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-conjunctive-query-containment-homomorphism-certified.json",
+              "sha256": "bf94647a0c86bbdf5f6576f715582cbd43e43f501e72bda5fa37dfbdb25297e1"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-conjunctive-query-containment-homomorphism-certified.json",
+            "sha256": "bf94647a0c86bbdf5f6576f715582cbd43e43f501e72bda5fa37dfbdb25297e1"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "search-certificate"
+          ],
+          [
+            "axiom_footprint",
+            "chandra-merlin-soundness-a-homomorphism-into-the-frozen-body-implies-containment; conjunctive-query-set-semantics-over-the-active-domain; axeyum-scenarios.dbdesign-instance-parse-faithfulness; axeyum-scenarios.dbdesign-homomorphism-and-complete-evaluator-replay-semantics"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-conjunctive-query-containment-homomorphism-certified.json",
+              "sha256": "bf94647a0c86bbdf5f6576f715582cbd43e43f501e72bda5fa37dfbdb25297e1"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-conjunctive-query-containment-homomorphism-certified.json",
+            "sha256": "bf94647a0c86bbdf5f6576f715582cbd43e43f501e72bda5fa37dfbdb25297e1"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 1998,
+            "path": "artifacts/instances/dbdesign/view-reuse.cq",
+            "sha256": "0de9160abbd9fc36313028e38cec92268b3919a7de4ffe2498d8223fb04f8a46"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run --release -q -p axeyum-bench --example cq_containment_certify -- artifacts/instances/dbdesign/view-reuse.cq --expect-checks 6"
+        },
+        "summary": {
+          "text": "The three containments that hold, each by a homomorphism from the containing query into the frozen body of the contained one, replayed atom by atom."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-conjunctive-query-containment-homomorphism-certified.json",
+            "sha256": "bf94647a0c86bbdf5f6576f715582cbd43e43f501e72bda5fa37dfbdb25297e1"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: view-reuse-homomorphisms"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row view-reuse-homomorphisms as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "view-reuse-homomorphisms"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-scenarios.dbdesign-homomorphism-replay, axeyum-scenarios.dbdesign-backtracking-search, axeyum-solver-one-hot-encoding-through-bitblast-and-sat, axeyum-ir-ground-evaluator-model-replay"
+          ],
+          [
+            "supports",
+            "The three containments that hold, each by a homomorphism from the containing query into the frozen body of the contained one, replayed atom by atom."
+          ],
+          [
+            "artifact",
+            "artifacts/instances/dbdesign/view-reuse.cq"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "0de9160abbd9fc36313028e38cec92268b3919a7de4ffe2498d8223fb04f8a46"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-conjunctive-query-containment-homomorphism-certified.json",
+              "sha256": "bf94647a0c86bbdf5f6576f715582cbd43e43f501e72bda5fa37dfbdb25297e1"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-conjunctive-query-containment-homomorphism-certified.json",
+            "sha256": "bf94647a0c86bbdf5f6576f715582cbd43e43f501e72bda5fa37dfbdb25297e1"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Ran 2026-08-15 in 0.11 s warm. Four genuinely independent routes, not four names for one. The backtracking search proposes a map; `check_homomorphism` applies it to each atom and looks the image up in the frozen database, then checks the image of the head is the frozen head -- no search, no backtracking, no Chandra-Merlin. The solver decides the SAME question on a one-hot Boolean encoding (totality, functionality, one disjunction per body atom over the matching facts), its model is replayed against that encoding by the IR ground evaluator, and the decoded map is then put through the same `check_homomorphism`. Search and solver disagreeing is reported as a FAILURE. Largest certificate: four variable-to-element pairs.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-conjunctive-query-containment-homomorphism-certified.json",
+            "sha256": "bf94647a0c86bbdf5f6576f715582cbd43e43f501e72bda5fa37dfbdb25297e1"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence view-reuse-homomorphisms"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/instances/dbdesign/view-reuse.cq",
+        "render_hint": "link",
+        "sha256": "0de9160abbd9fc36313028e38cec92268b3919a7de4ffe2498d8223fb04f8a46",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-conjunctive-query-containment-homomorphism-certified.json",
+            "sha256": "bf94647a0c86bbdf5f6576f715582cbd43e43f501e72bda5fa37dfbdb25297e1"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 1998,
+            "path": "artifacts/instances/dbdesign/view-reuse.cq",
+            "sha256": "0de9160abbd9fc36313028e38cec92268b3919a7de4ffe2498d8223fb04f8a46"
+          }
+        ],
+        "cert_kind": "report-run",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run --release -q -p axeyum-bench --example cq_containment_certify -- artifacts/instances/dbdesign/view-reuse.cq --expect-checks 6"
+        },
+        "summary": {
+          "text": "The three containments that fail, each by the frozen body of the left query as a concrete counterexample database on which the two queries return different answer sets."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-conjunctive-query-containment-homomorphism-certified.json",
+            "sha256": "bf94647a0c86bbdf5f6576f715582cbd43e43f501e72bda5fa37dfbdb25297e1"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: view-reuse-counterexample-databases"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row view-reuse-counterexample-databases as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "view-reuse-counterexample-databases"
+          ],
+          [
+            "ledger kind",
+            "exhaustive-enumeration"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-scenarios.dbdesign-complete-evaluator-over-the-frozen-database, axeyum-scenarios.dbdesign-backtracking-search, axeyum-solver-one-hot-encoding-through-bitblast-and-sat"
+          ],
+          [
+            "supports",
+            "The three containments that fail, each by the frozen body of the left query as a concrete counterexample database on which the two queries return different answer sets."
+          ],
+          [
+            "artifact",
+            "artifacts/instances/dbdesign/view-reuse.cq"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "0de9160abbd9fc36313028e38cec92268b3919a7de4ffe2498d8223fb04f8a46"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-conjunctive-query-containment-homomorphism-certified.json",
+              "sha256": "bf94647a0c86bbdf5f6576f715582cbd43e43f501e72bda5fa37dfbdb25297e1"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-conjunctive-query-containment-homomorphism-certified.json",
+            "sha256": "bf94647a0c86bbdf5f6576f715582cbd43e43f501e72bda5fa37dfbdb25297e1"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "16, 16 and 27 variable assignments enumerated with NO pruning and no early exit -- the point being that an exhausted search space and an unsearched one are the same output unless the count is reported, and that a space over the cap is an ERROR here rather than a silent `no`. The counterexample databases are 1 and 2 facts. Note what this does NOT use: the negative direction never appeals to Chandra-Merlin's converse (containment implies a homomorphism), which needs an infinite domain, because a concrete finite database separating the two queries refutes the containment on its own.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-conjunctive-query-containment-homomorphism-certified.json",
+            "sha256": "bf94647a0c86bbdf5f6576f715582cbd43e43f501e72bda5fa37dfbdb25297e1"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence view-reuse-counterexample-databases"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/instances/dbdesign/view-reuse.cq",
+        "render_hint": "link",
+        "sha256": "0de9160abbd9fc36313028e38cec92268b3919a7de4ffe2498d8223fb04f8a46",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-conjunctive-query-containment-homomorphism-certified.json",
+            "sha256": "bf94647a0c86bbdf5f6576f715582cbd43e43f501e72bda5fa37dfbdb25297e1"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-002",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "report-run",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "scripts/check-dbdesign-negative-controls.sh"
+        },
+        "summary": {
+          "text": "The checkers backing this fact REJECT a false claim of every kind it makes, so a passing run is evidence rather than a report that a tool finished."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-conjunctive-query-containment-homomorphism-certified.json",
+            "sha256": "bf94647a0c86bbdf5f6576f715582cbd43e43f501e72bda5fa37dfbdb25297e1"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: dbdesign-checkers-fail-closed"
+    },
+    {
+      "id": "evidence-002-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row dbdesign-checkers-fail-closed as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "dbdesign-checkers-fail-closed"
+          ],
+          [
+            "ledger kind",
+            "instance-pin"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-dbdesign-negative-control-sweep"
+          ],
+          [
+            "supports",
+            "The checkers backing this fact REJECT a false claim of every kind it makes, so a passing run is evidence rather than a report that a tool finished."
+          ],
+          [
+            "artifact",
+            "artifacts/instances/dbdesign/negative-controls/"
+          ],
+          [
+            "artifact state",
+            "directory"
+          ],
+          [
+            "artifact sha256",
+            "(not hashed)"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-conjunctive-query-containment-homomorphism-certified.json",
+              "sha256": "bf94647a0c86bbdf5f6576f715582cbd43e43f501e72bda5fa37dfbdb25297e1"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-conjunctive-query-containment-homomorphism-certified.json",
+            "sha256": "bf94647a0c86bbdf5f6576f715582cbd43e43f501e72bda5fa37dfbdb25297e1"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-002-notes",
+      "kind": {
+        "text": "22 assertions, 2.1 s warm. 13 committed instance files each pin exactly ONE false answer -- an unimplied dependency declared implied, a candidate-key list with a key missing, a list with a non-key added, a BCNF verdict flipped, a 3NF verdict flipped (which a checker conflating the two normal forms would accept), a lossy split declared lossless and the reverse, a preserved dependency set declared lost and the reverse, and a query containment in each direction -- and every one must exit non-zero. Four more assertions cover the shape of the gate itself: a wrong --expect-checks count, an instance run through the wrong checker, a --verify-formal script whose negation is SATISFIABLE, and a --verify-formal target that asserts nothing. One further control, no-expectations.dbd, pins nothing at all and must be REFUSED rather than swept -- the `40 of 162 checker runs exit 0 on completion alone` failure this ledger measured on 2026-08-15. Finally three assertions require the TRUE instances to still be accepted, without which a checker that rejected everything would pass the whole sweep. Measured this run: 22 of 22.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-conjunctive-query-containment-homomorphism-certified.json",
+            "sha256": "bf94647a0c86bbdf5f6576f715582cbd43e43f501e72bda5fa37dfbdb25297e1"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-15"
+          ],
+          [
+            "established_by",
+            "axeyum lane `db-design`, 2026-08-15: crates/axeyum-scenarios/src/dbdesign/cq.rs over the committed instance, driven by crates/axeyum-bench/examples/cq_containment_certify.rs"
+          ],
+          [
+            "source",
+            "queries authored by this lane; the two-hop/one-hop pair is the classical textbook example"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-conjunctive-query-containment-homomorphism-certified.json",
+              "sha256": "bf94647a0c86bbdf5f6576f715582cbd43e43f501e72bda5fa37dfbdb25297e1"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-conjunctive-query-containment-homomorphism-certified.json",
+            "sha256": "bf94647a0c86bbdf5f6576f715582cbd43e43f501e72bda5fa37dfbdb25297e1"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "what",
+            "key": "what"
+          },
+          {
+            "header": "where",
+            "key": "where"
+          },
+          {
+            "header": "who",
+            "key": "who"
+          },
+          {
+            "header": "year",
+            "key": "year"
+          }
+        ],
+        "rows": [
+          [
+            "citation and page range from the dblp BibTeX record; the theorem read verbatim at AHV Theorem 6.2.3 p. 117 with the direction confirmed independently in Chekuri and Rajaraman, Conjunctive query containment revisited, TCS 239 (2000) p. 213; the NP-completeness at AHV Theorem 6.2.10 p. 120 and its attribution to [CM77] at AHV p. 135. This lane did not consult the STOC paper itself.",
+            "The Homomorphism Theorem: for conjunctive queries q and q', q is contained in q' if and only if there is a homomorphism FROM q' TO q -- from the containing query to the contained one. Containment and equivalence of conjunctive queries are NP-complete, in the same paper. The proof of the `only if` direction freezes q's body into a database by replacing each variable with a fresh constant, which is the object used here as the counterexample database.",
+            "Optimal Implementation of Conjunctive Queries in Relational Data Bases, Proc. 9th Annual ACM Symposium on Theory of Computing (STOC '77), Boulder, ACM, pp. 77-90, DOI 10.1145/800105.803397",
+            "Ashok K. Chandra and Philip M. Merlin",
+            "1977"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-conjunctive-query-containment-homomorphism-certified.json",
+              "sha256": "bf94647a0c86bbdf5f6576f715582cbd43e43f501e72bda5fa37dfbdb25297e1"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-conjunctive-query-containment-homomorphism-certified.json",
+            "sha256": "bf94647a0c86bbdf5f6576f715582cbd43e43f501e72bda5fa37dfbdb25297e1"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "WHICH HALF OF CHANDRA-MERLIN THIS USES, AND WHY THAT MATTERS. Only the SOUND half -- a homomorphism implies containment -- is load-bearing for the three positive answers. The converse (containment implies a homomorphism) is the deeper direction and, as AHV Exercise 6.12a notes, it needs the underlying domain to be INFINITE. This fact never invokes it: the three negative answers are not 'no homomorphism was found, therefore no containment', they are 'here is a concrete finite database on which the two queries return different answer sets', established by enumerating every assignment. So the infinite-domain hypothesis is not in the footprint, because the argument that needs it is not in the proof.\n\nWHY THIS IS THE BEST SHOWCASE IN THE LEDGER FOR THE PROJECT'S OWN SENTENCE. Finding the homomorphism is NP-complete. Checking it is a nested loop over the atoms of one query. `untrusted fast search, trusted small checking` is not an analogy here, it is the literal shape of the artifact: the certificate for `Q_terse is contained in Q_verbose` is four variable-to-element pairs.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-conjunctive-query-containment-homomorphism-certified.json",
+            "sha256": "bf94647a0c86bbdf5f6576f715582cbd43e43f501e72bda5fa37dfbdb25297e1"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-conjunctive-query-containment-homomorphism-certified",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#index",
+        "label": "Unconnected: see the index",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:conjunctive-query-containment-homomorphism-certified",
+    "title": "Six conjunctive-query containment questions decided by homomorphism and by counterexample database, agreeing across three independent routes"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-conjunctive-query-containment-homomorphism-certified.json",
+        "sha256": "bf94647a0c86bbdf5f6576f715582cbd43e43f501e72bda5fa37dfbdb25297e1"
+      }
+    ]
+  },
+  "schema_version": 1
+}

@@ -1,0 +1,1236 @@
+{
+  "blocks": [
+    {
+      "id": "intro",
+      "kind": {
+        "text": "The `depends_on` ancestor closure of F:nat-euclid-lemma, F:nat-exists-prime-gt, F:nat-pow-add inside the ledger's largest component (17 facts, 27 edges). Every fact here is proved on the `kernel-lean` route with an empty axiom footprint, so it exercises graph layout and branching rather than badge variety -- the complement of the primary pilot.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-add-assoc.json",
+            "sha256": "bd18999eb6c6c6c4de419ae716d27f21ce391b43fb3f518e7294a6bee3ac101e"
+          },
+          {
+            "path": "artifacts/facts/F-nat-add-comm.json",
+            "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+          },
+          {
+            "path": "artifacts/facts/F-nat-div-mod-exists.json",
+            "sha256": "3ff422e395249991b71a63c1aa733ecb7fc7ec971c950b4d3029e401a0e96539"
+          },
+          {
+            "path": "artifacts/facts/F-nat-dvd-add.json",
+            "sha256": "b769d28a2b7b952e4ad0397625e9254e9aff47b32636c83b26adea3f28596425"
+          },
+          {
+            "path": "artifacts/facts/F-nat-dvd-gcd-iff.json",
+            "sha256": "4ff93f5783c75a1c0ca128df329e60554778c230c6cb29bcf87f5b33044bfbc1"
+          },
+          {
+            "path": "artifacts/facts/F-nat-euclid-lemma.json",
+            "sha256": "a2c108ceba74d3171346e5b6d3ce3c21f710d214c320eb65c831a3f4d3a13db0"
+          },
+          {
+            "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+            "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+          },
+          {
+            "path": "artifacts/facts/F-nat-exists-prime-gt.json",
+            "sha256": "6cb7eb93bf72e59f86ac344e6053ecb5f4418de77f8d30cb4ce68f077bd4d03e"
+          },
+          {
+            "path": "artifacts/facts/F-nat-gcd-bezout.json",
+            "sha256": "f74c9064a3014d8cf691f1d0b8ffec233ef40585a1689f026d5ed0afaf8d2d82"
+          },
+          {
+            "path": "artifacts/facts/F-nat-gcd-succ.json",
+            "sha256": "e0fb1cf85f0d8e52770b9bf457242d4f15d76dbac82671a507f17d5884ca93ef"
+          },
+          {
+            "path": "artifacts/facts/F-nat-left-distrib.json",
+            "sha256": "6a25df7aec622c1a773a56290463275ea50e5301f80e64c7f53aee6e161f3b1e"
+          },
+          {
+            "path": "artifacts/facts/F-nat-mul-assoc.json",
+            "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+          },
+          {
+            "path": "artifacts/facts/F-nat-mul-comm.json",
+            "sha256": "1a0fdadda76cc90edec73adb119933a3cb3c130ab11c4f83d55fff53aab3e020"
+          },
+          {
+            "path": "artifacts/facts/F-nat-mul-one.json",
+            "sha256": "3f5cba9ea3a950081dc762e74ab433385503dbb37ead805723d4d18b01944480"
+          },
+          {
+            "path": "artifacts/facts/F-nat-pow-add.json",
+            "sha256": "4da8efbb7943f23c0ab6fc3de1ef54badfdc75525ded899480a4134d5ed12b63"
+          },
+          {
+            "path": "artifacts/facts/F-nat-succ-add.json",
+            "sha256": "982b8c151d6d5432d029fcb86759b37c91f400cef1eaff5bb9ca1cacf9e2ccb2"
+          },
+          {
+            "path": "artifacts/facts/F-nat-zero-add.json",
+            "sha256": "3fdb7a9949fdf181416c28403449e55f181c9b9938626285f2f7001dfeda86ce"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Pilot, dense alternative: Euclid's lemma and the infinitude of primes"
+    },
+    {
+      "id": "dep-graph",
+      "kind": {
+        "alt": "Dependency graph of 17 facts with 27 edges",
+        "caption": {
+          "text": "`depends_on` over 17 facts, 27 edges. An edge runs from the dependent fact to the fact it rests on. Node status is the conservative mapping of the ledger's epistemic_status."
+        },
+        "spec": {
+          "edges": [
+            {
+              "from": "F:nat-add-comm",
+              "label": "depends_on",
+              "to": "F:nat-succ-add"
+            },
+            {
+              "from": "F:nat-add-comm",
+              "label": "depends_on",
+              "to": "F:nat-zero-add"
+            },
+            {
+              "from": "F:nat-dvd-add",
+              "label": "depends_on",
+              "to": "F:nat-left-distrib"
+            },
+            {
+              "from": "F:nat-euclid-lemma",
+              "label": "depends_on",
+              "to": "F:nat-add-assoc"
+            },
+            {
+              "from": "F:nat-euclid-lemma",
+              "label": "depends_on",
+              "to": "F:nat-add-comm"
+            },
+            {
+              "from": "F:nat-euclid-lemma",
+              "label": "depends_on",
+              "to": "F:nat-dvd-add"
+            },
+            {
+              "from": "F:nat-euclid-lemma",
+              "label": "depends_on",
+              "to": "F:nat-dvd-gcd-iff"
+            },
+            {
+              "from": "F:nat-euclid-lemma",
+              "label": "depends_on",
+              "to": "F:nat-gcd-bezout"
+            },
+            {
+              "from": "F:nat-euclid-lemma",
+              "label": "depends_on",
+              "to": "F:nat-mul-assoc"
+            },
+            {
+              "from": "F:nat-euclid-lemma",
+              "label": "depends_on",
+              "to": "F:nat-mul-comm"
+            },
+            {
+              "from": "F:nat-exists-prime-dvd",
+              "label": "depends_on",
+              "to": "F:nat-div-mod-exists"
+            },
+            {
+              "from": "F:nat-exists-prime-dvd",
+              "label": "depends_on",
+              "to": "F:nat-dvd-add"
+            },
+            {
+              "from": "F:nat-exists-prime-gt",
+              "label": "depends_on",
+              "to": "F:nat-dvd-add"
+            },
+            {
+              "from": "F:nat-exists-prime-gt",
+              "label": "depends_on",
+              "to": "F:nat-exists-prime-dvd"
+            },
+            {
+              "from": "F:nat-gcd-bezout",
+              "label": "depends_on",
+              "to": "F:nat-add-assoc"
+            },
+            {
+              "from": "F:nat-gcd-bezout",
+              "label": "depends_on",
+              "to": "F:nat-add-comm"
+            },
+            {
+              "from": "F:nat-gcd-bezout",
+              "label": "depends_on",
+              "to": "F:nat-gcd-succ"
+            },
+            {
+              "from": "F:nat-gcd-bezout",
+              "label": "depends_on",
+              "to": "F:nat-left-distrib"
+            },
+            {
+              "from": "F:nat-gcd-bezout",
+              "label": "depends_on",
+              "to": "F:nat-mul-assoc"
+            },
+            {
+              "from": "F:nat-gcd-bezout",
+              "label": "depends_on",
+              "to": "F:nat-mul-one"
+            },
+            {
+              "from": "F:nat-gcd-bezout",
+              "label": "depends_on",
+              "to": "F:nat-zero-add"
+            },
+            {
+              "from": "F:nat-left-distrib",
+              "label": "depends_on",
+              "to": "F:nat-add-assoc"
+            },
+            {
+              "from": "F:nat-mul-assoc",
+              "label": "depends_on",
+              "to": "F:nat-left-distrib"
+            },
+            {
+              "from": "F:nat-mul-one",
+              "label": "depends_on",
+              "to": "F:nat-zero-add"
+            },
+            {
+              "from": "F:nat-pow-add",
+              "label": "depends_on",
+              "to": "F:nat-mul-assoc"
+            },
+            {
+              "from": "F:nat-pow-add",
+              "label": "depends_on",
+              "to": "F:nat-mul-comm"
+            },
+            {
+              "from": "F:nat-pow-add",
+              "label": "depends_on",
+              "to": "F:nat-mul-one"
+            }
+          ],
+          "figure_type": "dep-graph",
+          "nodes": [
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-add-assoc.doc.json",
+              "id": "F:nat-add-assoc",
+              "label": "nat-add-assoc",
+              "status": "proved",
+              "tooltip": "Addition on the naturals is associative"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-add-comm.doc.json",
+              "id": "F:nat-add-comm",
+              "label": "nat-add-comm",
+              "status": "proved",
+              "tooltip": "Addition on the naturals is commutative"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-div-mod-exists.doc.json",
+              "id": "F:nat-div-mod-exists",
+              "label": "nat-div-mod-exists",
+              "status": "proved",
+              "tooltip": "Division with remainder always exists for a positive divisor"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-dvd-add.doc.json",
+              "id": "F:nat-dvd-add",
+              "label": "nat-dvd-add",
+              "status": "proved",
+              "tooltip": "A common divisor of two numbers divides their sum"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-dvd-gcd-iff.doc.json",
+              "id": "F:nat-dvd-gcd-iff",
+              "label": "nat-dvd-gcd-iff",
+              "status": "proved",
+              "tooltip": "The gcd is exactly the common divisors' upper bound"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-euclid-lemma.doc.json",
+              "id": "F:nat-euclid-lemma",
+              "label": "nat-euclid-lemma",
+              "status": "proved",
+              "tooltip": "Euclid's lemma: a prime dividing a product divides a factor"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-exists-prime-dvd.doc.json",
+              "id": "F:nat-exists-prime-dvd",
+              "label": "nat-exists-prime-dvd",
+              "status": "proved",
+              "tooltip": "Every natural number at least 2 has a prime divisor"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-exists-prime-gt.doc.json",
+              "id": "F:nat-exists-prime-gt",
+              "label": "nat-exists-prime-gt",
+              "status": "proved",
+              "tooltip": "There is no largest prime"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-gcd-bezout.doc.json",
+              "id": "F:nat-gcd-bezout",
+              "label": "nat-gcd-bezout",
+              "status": "proved",
+              "tooltip": "Bezout's identity holds for the natural gcd"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-gcd-succ.doc.json",
+              "id": "F:nat-gcd-succ",
+              "label": "nat-gcd-succ",
+              "status": "proved",
+              "tooltip": "The Euclidean algorithm's descent step is correct"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-left-distrib.doc.json",
+              "id": "F:nat-left-distrib",
+              "label": "nat-left-distrib",
+              "status": "proved",
+              "tooltip": "Multiplication distributes over addition on the left"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-mul-assoc.doc.json",
+              "id": "F:nat-mul-assoc",
+              "label": "nat-mul-assoc",
+              "status": "proved",
+              "tooltip": "Multiplication on the naturals is associative"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-mul-comm.doc.json",
+              "id": "F:nat-mul-comm",
+              "label": "nat-mul-comm",
+              "status": "proved",
+              "tooltip": "Multiplication on the naturals is commutative"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-mul-one.doc.json",
+              "id": "F:nat-mul-one",
+              "label": "nat-mul-one",
+              "status": "proved",
+              "tooltip": "One is a right identity for multiplication on the naturals"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-pow-add.doc.json",
+              "id": "F:nat-pow-add",
+              "label": "nat-pow-add",
+              "status": "proved",
+              "tooltip": "The first index law: powers add over a product"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-succ-add.doc.json",
+              "id": "F:nat-succ-add",
+              "label": "nat-succ-add",
+              "status": "proved",
+              "tooltip": "Nat succ_add"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-nat-zero-add.doc.json",
+              "id": "F:nat-zero-add",
+              "label": "nat-zero-add",
+              "status": "proved",
+              "tooltip": "Nat zero_add"
+            }
+          ],
+          "rankdir": "TB"
+        },
+        "type": "figure"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-add-assoc.json",
+            "sha256": "bd18999eb6c6c6c4de419ae716d27f21ce391b43fb3f518e7294a6bee3ac101e"
+          },
+          {
+            "path": "artifacts/facts/F-nat-add-comm.json",
+            "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+          },
+          {
+            "path": "artifacts/facts/F-nat-div-mod-exists.json",
+            "sha256": "3ff422e395249991b71a63c1aa733ecb7fc7ec971c950b4d3029e401a0e96539"
+          },
+          {
+            "path": "artifacts/facts/F-nat-dvd-add.json",
+            "sha256": "b769d28a2b7b952e4ad0397625e9254e9aff47b32636c83b26adea3f28596425"
+          },
+          {
+            "path": "artifacts/facts/F-nat-dvd-gcd-iff.json",
+            "sha256": "4ff93f5783c75a1c0ca128df329e60554778c230c6cb29bcf87f5b33044bfbc1"
+          },
+          {
+            "path": "artifacts/facts/F-nat-euclid-lemma.json",
+            "sha256": "a2c108ceba74d3171346e5b6d3ce3c21f710d214c320eb65c831a3f4d3a13db0"
+          },
+          {
+            "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+            "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+          },
+          {
+            "path": "artifacts/facts/F-nat-exists-prime-gt.json",
+            "sha256": "6cb7eb93bf72e59f86ac344e6053ecb5f4418de77f8d30cb4ce68f077bd4d03e"
+          },
+          {
+            "path": "artifacts/facts/F-nat-gcd-bezout.json",
+            "sha256": "f74c9064a3014d8cf691f1d0b8ffec233ef40585a1689f026d5ed0afaf8d2d82"
+          },
+          {
+            "path": "artifacts/facts/F-nat-gcd-succ.json",
+            "sha256": "e0fb1cf85f0d8e52770b9bf457242d4f15d76dbac82671a507f17d5884ca93ef"
+          },
+          {
+            "path": "artifacts/facts/F-nat-left-distrib.json",
+            "sha256": "6a25df7aec622c1a773a56290463275ea50e5301f80e64c7f53aee6e161f3b1e"
+          },
+          {
+            "path": "artifacts/facts/F-nat-mul-assoc.json",
+            "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+          },
+          {
+            "path": "artifacts/facts/F-nat-mul-comm.json",
+            "sha256": "1a0fdadda76cc90edec73adb119933a3cb3c130ab11c4f83d55fff53aab3e020"
+          },
+          {
+            "path": "artifacts/facts/F-nat-mul-one.json",
+            "sha256": "3f5cba9ea3a950081dc762e74ab433385503dbb37ead805723d4d18b01944480"
+          },
+          {
+            "path": "artifacts/facts/F-nat-pow-add.json",
+            "sha256": "4da8efbb7943f23c0ab6fc3de1ef54badfdc75525ded899480a4134d5ed12b63"
+          },
+          {
+            "path": "artifacts/facts/F-nat-succ-add.json",
+            "sha256": "982b8c151d6d5432d029fcb86759b37c91f400cef1eaff5bb9ca1cacf9e2ccb2"
+          },
+          {
+            "path": "artifacts/facts/F-nat-zero-add.json",
+            "sha256": "3fdb7a9949fdf181416c28403449e55f181c9b9938626285f2f7001dfeda86ce"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Dependency graph"
+    },
+    {
+      "id": "spread",
+      "kind": {
+        "caption": {
+          "text": "Ledger spread over the documented facts"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          },
+          {
+            "header": "facts",
+            "key": "facts"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic_status",
+            "proved",
+            17
+          ],
+          [
+            "external_status",
+            "proved",
+            17
+          ],
+          [
+            "proof_route",
+            "kernel-lean",
+            17
+          ],
+          [
+            "formal.language",
+            "lean4",
+            17
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-add-assoc.json",
+              "sha256": "bd18999eb6c6c6c4de419ae716d27f21ce391b43fb3f518e7294a6bee3ac101e"
+            },
+            {
+              "path": "artifacts/facts/F-nat-add-comm.json",
+              "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+            },
+            {
+              "path": "artifacts/facts/F-nat-div-mod-exists.json",
+              "sha256": "3ff422e395249991b71a63c1aa733ecb7fc7ec971c950b4d3029e401a0e96539"
+            },
+            {
+              "path": "artifacts/facts/F-nat-dvd-add.json",
+              "sha256": "b769d28a2b7b952e4ad0397625e9254e9aff47b32636c83b26adea3f28596425"
+            },
+            {
+              "path": "artifacts/facts/F-nat-dvd-gcd-iff.json",
+              "sha256": "4ff93f5783c75a1c0ca128df329e60554778c230c6cb29bcf87f5b33044bfbc1"
+            },
+            {
+              "path": "artifacts/facts/F-nat-euclid-lemma.json",
+              "sha256": "a2c108ceba74d3171346e5b6d3ce3c21f710d214c320eb65c831a3f4d3a13db0"
+            },
+            {
+              "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+              "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+            },
+            {
+              "path": "artifacts/facts/F-nat-exists-prime-gt.json",
+              "sha256": "6cb7eb93bf72e59f86ac344e6053ecb5f4418de77f8d30cb4ce68f077bd4d03e"
+            },
+            {
+              "path": "artifacts/facts/F-nat-gcd-bezout.json",
+              "sha256": "f74c9064a3014d8cf691f1d0b8ffec233ef40585a1689f026d5ed0afaf8d2d82"
+            },
+            {
+              "path": "artifacts/facts/F-nat-gcd-succ.json",
+              "sha256": "e0fb1cf85f0d8e52770b9bf457242d4f15d76dbac82671a507f17d5884ca93ef"
+            },
+            {
+              "path": "artifacts/facts/F-nat-left-distrib.json",
+              "sha256": "6a25df7aec622c1a773a56290463275ea50e5301f80e64c7f53aee6e161f3b1e"
+            },
+            {
+              "path": "artifacts/facts/F-nat-mul-assoc.json",
+              "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+            },
+            {
+              "path": "artifacts/facts/F-nat-mul-comm.json",
+              "sha256": "1a0fdadda76cc90edec73adb119933a3cb3c130ab11c4f83d55fff53aab3e020"
+            },
+            {
+              "path": "artifacts/facts/F-nat-mul-one.json",
+              "sha256": "3f5cba9ea3a950081dc762e74ab433385503dbb37ead805723d4d18b01944480"
+            },
+            {
+              "path": "artifacts/facts/F-nat-pow-add.json",
+              "sha256": "4da8efbb7943f23c0ab6fc3de1ef54badfdc75525ded899480a4134d5ed12b63"
+            },
+            {
+              "path": "artifacts/facts/F-nat-succ-add.json",
+              "sha256": "982b8c151d6d5432d029fcb86759b37c91f400cef1eaff5bb9ca1cacf9e2ccb2"
+            },
+            {
+              "path": "artifacts/facts/F-nat-zero-add.json",
+              "sha256": "3fdb7a9949fdf181416c28403449e55f181c9b9938626285f2f7001dfeda86ce"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-add-assoc.json",
+            "sha256": "bd18999eb6c6c6c4de419ae716d27f21ce391b43fb3f518e7294a6bee3ac101e"
+          },
+          {
+            "path": "artifacts/facts/F-nat-add-comm.json",
+            "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+          },
+          {
+            "path": "artifacts/facts/F-nat-div-mod-exists.json",
+            "sha256": "3ff422e395249991b71a63c1aa733ecb7fc7ec971c950b4d3029e401a0e96539"
+          },
+          {
+            "path": "artifacts/facts/F-nat-dvd-add.json",
+            "sha256": "b769d28a2b7b952e4ad0397625e9254e9aff47b32636c83b26adea3f28596425"
+          },
+          {
+            "path": "artifacts/facts/F-nat-dvd-gcd-iff.json",
+            "sha256": "4ff93f5783c75a1c0ca128df329e60554778c230c6cb29bcf87f5b33044bfbc1"
+          },
+          {
+            "path": "artifacts/facts/F-nat-euclid-lemma.json",
+            "sha256": "a2c108ceba74d3171346e5b6d3ce3c21f710d214c320eb65c831a3f4d3a13db0"
+          },
+          {
+            "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+            "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+          },
+          {
+            "path": "artifacts/facts/F-nat-exists-prime-gt.json",
+            "sha256": "6cb7eb93bf72e59f86ac344e6053ecb5f4418de77f8d30cb4ce68f077bd4d03e"
+          },
+          {
+            "path": "artifacts/facts/F-nat-gcd-bezout.json",
+            "sha256": "f74c9064a3014d8cf691f1d0b8ffec233ef40585a1689f026d5ed0afaf8d2d82"
+          },
+          {
+            "path": "artifacts/facts/F-nat-gcd-succ.json",
+            "sha256": "e0fb1cf85f0d8e52770b9bf457242d4f15d76dbac82671a507f17d5884ca93ef"
+          },
+          {
+            "path": "artifacts/facts/F-nat-left-distrib.json",
+            "sha256": "6a25df7aec622c1a773a56290463275ea50e5301f80e64c7f53aee6e161f3b1e"
+          },
+          {
+            "path": "artifacts/facts/F-nat-mul-assoc.json",
+            "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+          },
+          {
+            "path": "artifacts/facts/F-nat-mul-comm.json",
+            "sha256": "1a0fdadda76cc90edec73adb119933a3cb3c130ab11c4f83d55fff53aab3e020"
+          },
+          {
+            "path": "artifacts/facts/F-nat-mul-one.json",
+            "sha256": "3f5cba9ea3a950081dc762e74ab433385503dbb37ead805723d4d18b01944480"
+          },
+          {
+            "path": "artifacts/facts/F-nat-pow-add.json",
+            "sha256": "4da8efbb7943f23c0ab6fc3de1ef54badfdc75525ded899480a4134d5ed12b63"
+          },
+          {
+            "path": "artifacts/facts/F-nat-succ-add.json",
+            "sha256": "982b8c151d6d5432d029fcb86759b37c91f400cef1eaff5bb9ca1cacf9e2ccb2"
+          },
+          {
+            "path": "artifacts/facts/F-nat-zero-add.json",
+            "sha256": "3fdb7a9949fdf181416c28403449e55f181c9b9938626285f2f7001dfeda86ce"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Spread"
+    },
+    {
+      "id": "index",
+      "kind": {
+        "caption": {
+          "text": "Fact index"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "language",
+            "key": "language"
+          },
+          {
+            "header": "fragment",
+            "key": "fragment"
+          },
+          {
+            "header": "proof_route",
+            "key": "route"
+          },
+          {
+            "header": "epistemic",
+            "key": "epistemic"
+          },
+          {
+            "header": "external",
+            "key": "external"
+          },
+          {
+            "header": "badge",
+            "key": "badge"
+          },
+          {
+            "header": "flag",
+            "key": "flag"
+          },
+          {
+            "header": "evidence",
+            "key": "evidence"
+          },
+          {
+            "header": "checked",
+            "key": "checked"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:nat-add-assoc",
+            "Addition on the naturals is associative",
+            "lean4",
+            "Nat",
+            "kernel-lean",
+            "proved",
+            "proved",
+            "proved",
+            "-",
+            2,
+            2,
+            "cards/F-nat-add-assoc.doc.json"
+          ],
+          [
+            "F:nat-add-comm",
+            "Addition on the naturals is commutative",
+            "lean4",
+            "Nat",
+            "kernel-lean",
+            "proved",
+            "proved",
+            "proved",
+            "-",
+            2,
+            2,
+            "cards/F-nat-add-comm.doc.json"
+          ],
+          [
+            "F:nat-div-mod-exists",
+            "Division with remainder always exists for a positive divisor",
+            "lean4",
+            "Nat",
+            "kernel-lean",
+            "proved",
+            "proved",
+            "proved",
+            "-",
+            2,
+            2,
+            "cards/F-nat-div-mod-exists.doc.json"
+          ],
+          [
+            "F:nat-dvd-add",
+            "A common divisor of two numbers divides their sum",
+            "lean4",
+            "Nat",
+            "kernel-lean",
+            "proved",
+            "proved",
+            "proved",
+            "-",
+            2,
+            2,
+            "cards/F-nat-dvd-add.doc.json"
+          ],
+          [
+            "F:nat-dvd-gcd-iff",
+            "The gcd is exactly the common divisors' upper bound",
+            "lean4",
+            "Nat",
+            "kernel-lean",
+            "proved",
+            "proved",
+            "proved",
+            "-",
+            2,
+            2,
+            "cards/F-nat-dvd-gcd-iff.doc.json"
+          ],
+          [
+            "F:nat-euclid-lemma",
+            "Euclid's lemma: a prime dividing a product divides a factor",
+            "lean4",
+            "Nat",
+            "kernel-lean",
+            "proved",
+            "proved",
+            "proved",
+            "-",
+            2,
+            2,
+            "cards/F-nat-euclid-lemma.doc.json"
+          ],
+          [
+            "F:nat-exists-prime-dvd",
+            "Every natural number at least 2 has a prime divisor",
+            "lean4",
+            "Nat",
+            "kernel-lean",
+            "proved",
+            "proved",
+            "proved",
+            "-",
+            2,
+            2,
+            "cards/F-nat-exists-prime-dvd.doc.json"
+          ],
+          [
+            "F:nat-exists-prime-gt",
+            "There is no largest prime",
+            "lean4",
+            "Nat",
+            "kernel-lean",
+            "proved",
+            "proved",
+            "proved",
+            "-",
+            2,
+            2,
+            "cards/F-nat-exists-prime-gt.doc.json"
+          ],
+          [
+            "F:nat-gcd-bezout",
+            "Bezout's identity holds for the natural gcd",
+            "lean4",
+            "Nat",
+            "kernel-lean",
+            "proved",
+            "proved",
+            "proved",
+            "-",
+            2,
+            2,
+            "cards/F-nat-gcd-bezout.doc.json"
+          ],
+          [
+            "F:nat-gcd-succ",
+            "The Euclidean algorithm's descent step is correct",
+            "lean4",
+            "Nat",
+            "kernel-lean",
+            "proved",
+            "proved",
+            "proved",
+            "-",
+            2,
+            2,
+            "cards/F-nat-gcd-succ.doc.json"
+          ],
+          [
+            "F:nat-left-distrib",
+            "Multiplication distributes over addition on the left",
+            "lean4",
+            "Nat",
+            "kernel-lean",
+            "proved",
+            "proved",
+            "proved",
+            "-",
+            2,
+            2,
+            "cards/F-nat-left-distrib.doc.json"
+          ],
+          [
+            "F:nat-mul-assoc",
+            "Multiplication on the naturals is associative",
+            "lean4",
+            "Nat",
+            "kernel-lean",
+            "proved",
+            "proved",
+            "proved",
+            "-",
+            2,
+            2,
+            "cards/F-nat-mul-assoc.doc.json"
+          ],
+          [
+            "F:nat-mul-comm",
+            "Multiplication on the naturals is commutative",
+            "lean4",
+            "Nat",
+            "kernel-lean",
+            "proved",
+            "proved",
+            "proved",
+            "-",
+            2,
+            2,
+            "cards/F-nat-mul-comm.doc.json"
+          ],
+          [
+            "F:nat-mul-one",
+            "One is a right identity for multiplication on the naturals",
+            "lean4",
+            "Nat",
+            "kernel-lean",
+            "proved",
+            "proved",
+            "proved",
+            "-",
+            2,
+            2,
+            "cards/F-nat-mul-one.doc.json"
+          ],
+          [
+            "F:nat-pow-add",
+            "The first index law: powers add over a product",
+            "lean4",
+            "Nat",
+            "kernel-lean",
+            "proved",
+            "proved",
+            "proved",
+            "-",
+            2,
+            2,
+            "cards/F-nat-pow-add.doc.json"
+          ],
+          [
+            "F:nat-succ-add",
+            "Nat succ_add",
+            "lean4",
+            "Nat",
+            "kernel-lean",
+            "proved",
+            "proved",
+            "proved",
+            "-",
+            2,
+            2,
+            "cards/F-nat-succ-add.doc.json"
+          ],
+          [
+            "F:nat-zero-add",
+            "Nat zero_add",
+            "lean4",
+            "Nat",
+            "kernel-lean",
+            "proved",
+            "proved",
+            "proved",
+            "-",
+            2,
+            2,
+            "cards/F-nat-zero-add.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-add-assoc.json",
+              "sha256": "bd18999eb6c6c6c4de419ae716d27f21ce391b43fb3f518e7294a6bee3ac101e"
+            },
+            {
+              "path": "artifacts/facts/F-nat-add-comm.json",
+              "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+            },
+            {
+              "path": "artifacts/facts/F-nat-div-mod-exists.json",
+              "sha256": "3ff422e395249991b71a63c1aa733ecb7fc7ec971c950b4d3029e401a0e96539"
+            },
+            {
+              "path": "artifacts/facts/F-nat-dvd-add.json",
+              "sha256": "b769d28a2b7b952e4ad0397625e9254e9aff47b32636c83b26adea3f28596425"
+            },
+            {
+              "path": "artifacts/facts/F-nat-dvd-gcd-iff.json",
+              "sha256": "4ff93f5783c75a1c0ca128df329e60554778c230c6cb29bcf87f5b33044bfbc1"
+            },
+            {
+              "path": "artifacts/facts/F-nat-euclid-lemma.json",
+              "sha256": "a2c108ceba74d3171346e5b6d3ce3c21f710d214c320eb65c831a3f4d3a13db0"
+            },
+            {
+              "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+              "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+            },
+            {
+              "path": "artifacts/facts/F-nat-exists-prime-gt.json",
+              "sha256": "6cb7eb93bf72e59f86ac344e6053ecb5f4418de77f8d30cb4ce68f077bd4d03e"
+            },
+            {
+              "path": "artifacts/facts/F-nat-gcd-bezout.json",
+              "sha256": "f74c9064a3014d8cf691f1d0b8ffec233ef40585a1689f026d5ed0afaf8d2d82"
+            },
+            {
+              "path": "artifacts/facts/F-nat-gcd-succ.json",
+              "sha256": "e0fb1cf85f0d8e52770b9bf457242d4f15d76dbac82671a507f17d5884ca93ef"
+            },
+            {
+              "path": "artifacts/facts/F-nat-left-distrib.json",
+              "sha256": "6a25df7aec622c1a773a56290463275ea50e5301f80e64c7f53aee6e161f3b1e"
+            },
+            {
+              "path": "artifacts/facts/F-nat-mul-assoc.json",
+              "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+            },
+            {
+              "path": "artifacts/facts/F-nat-mul-comm.json",
+              "sha256": "1a0fdadda76cc90edec73adb119933a3cb3c130ab11c4f83d55fff53aab3e020"
+            },
+            {
+              "path": "artifacts/facts/F-nat-mul-one.json",
+              "sha256": "3f5cba9ea3a950081dc762e74ab433385503dbb37ead805723d4d18b01944480"
+            },
+            {
+              "path": "artifacts/facts/F-nat-pow-add.json",
+              "sha256": "4da8efbb7943f23c0ab6fc3de1ef54badfdc75525ded899480a4134d5ed12b63"
+            },
+            {
+              "path": "artifacts/facts/F-nat-succ-add.json",
+              "sha256": "982b8c151d6d5432d029fcb86759b37c91f400cef1eaff5bb9ca1cacf9e2ccb2"
+            },
+            {
+              "path": "artifacts/facts/F-nat-zero-add.json",
+              "sha256": "3fdb7a9949fdf181416c28403449e55f181c9b9938626285f2f7001dfeda86ce"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-add-assoc.json",
+            "sha256": "bd18999eb6c6c6c4de419ae716d27f21ce391b43fb3f518e7294a6bee3ac101e"
+          },
+          {
+            "path": "artifacts/facts/F-nat-add-comm.json",
+            "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+          },
+          {
+            "path": "artifacts/facts/F-nat-div-mod-exists.json",
+            "sha256": "3ff422e395249991b71a63c1aa733ecb7fc7ec971c950b4d3029e401a0e96539"
+          },
+          {
+            "path": "artifacts/facts/F-nat-dvd-add.json",
+            "sha256": "b769d28a2b7b952e4ad0397625e9254e9aff47b32636c83b26adea3f28596425"
+          },
+          {
+            "path": "artifacts/facts/F-nat-dvd-gcd-iff.json",
+            "sha256": "4ff93f5783c75a1c0ca128df329e60554778c230c6cb29bcf87f5b33044bfbc1"
+          },
+          {
+            "path": "artifacts/facts/F-nat-euclid-lemma.json",
+            "sha256": "a2c108ceba74d3171346e5b6d3ce3c21f710d214c320eb65c831a3f4d3a13db0"
+          },
+          {
+            "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+            "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+          },
+          {
+            "path": "artifacts/facts/F-nat-exists-prime-gt.json",
+            "sha256": "6cb7eb93bf72e59f86ac344e6053ecb5f4418de77f8d30cb4ce68f077bd4d03e"
+          },
+          {
+            "path": "artifacts/facts/F-nat-gcd-bezout.json",
+            "sha256": "f74c9064a3014d8cf691f1d0b8ffec233ef40585a1689f026d5ed0afaf8d2d82"
+          },
+          {
+            "path": "artifacts/facts/F-nat-gcd-succ.json",
+            "sha256": "e0fb1cf85f0d8e52770b9bf457242d4f15d76dbac82671a507f17d5884ca93ef"
+          },
+          {
+            "path": "artifacts/facts/F-nat-left-distrib.json",
+            "sha256": "6a25df7aec622c1a773a56290463275ea50e5301f80e64c7f53aee6e161f3b1e"
+          },
+          {
+            "path": "artifacts/facts/F-nat-mul-assoc.json",
+            "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+          },
+          {
+            "path": "artifacts/facts/F-nat-mul-comm.json",
+            "sha256": "1a0fdadda76cc90edec73adb119933a3cb3c130ab11c4f83d55fff53aab3e020"
+          },
+          {
+            "path": "artifacts/facts/F-nat-mul-one.json",
+            "sha256": "3f5cba9ea3a950081dc762e74ab433385503dbb37ead805723d4d18b01944480"
+          },
+          {
+            "path": "artifacts/facts/F-nat-pow-add.json",
+            "sha256": "4da8efbb7943f23c0ab6fc3de1ef54badfdc75525ded899480a4134d5ed12b63"
+          },
+          {
+            "path": "artifacts/facts/F-nat-succ-add.json",
+            "sha256": "982b8c151d6d5432d029fcb86759b37c91f400cef1eaff5bb9ca1cacf9e2ccb2"
+          },
+          {
+            "path": "artifacts/facts/F-nat-zero-add.json",
+            "sha256": "3fdb7a9949fdf181416c28403449e55f181c9b9938626285f2f7001dfeda86ce"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Index"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-pilot-arith",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "17 facts, 27 depends_on edges",
+    "title": "Pilot, dense alternative: Euclid's lemma and the infinitude of primes"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-nat-add-assoc.json",
+        "sha256": "bd18999eb6c6c6c4de419ae716d27f21ce391b43fb3f518e7294a6bee3ac101e"
+      },
+      {
+        "path": "artifacts/facts/F-nat-add-comm.json",
+        "sha256": "cff4c77b7c322ad8dd5b913e329aa5357ea882ecaceea3dfc1190b92d4db12b9"
+      },
+      {
+        "path": "artifacts/facts/F-nat-div-mod-exists.json",
+        "sha256": "3ff422e395249991b71a63c1aa733ecb7fc7ec971c950b4d3029e401a0e96539"
+      },
+      {
+        "path": "artifacts/facts/F-nat-dvd-add.json",
+        "sha256": "b769d28a2b7b952e4ad0397625e9254e9aff47b32636c83b26adea3f28596425"
+      },
+      {
+        "path": "artifacts/facts/F-nat-dvd-gcd-iff.json",
+        "sha256": "4ff93f5783c75a1c0ca128df329e60554778c230c6cb29bcf87f5b33044bfbc1"
+      },
+      {
+        "path": "artifacts/facts/F-nat-euclid-lemma.json",
+        "sha256": "a2c108ceba74d3171346e5b6d3ce3c21f710d214c320eb65c831a3f4d3a13db0"
+      },
+      {
+        "path": "artifacts/facts/F-nat-exists-prime-dvd.json",
+        "sha256": "29c278958c0a14a8385bf06095bff71644c7d881789b537453a7468a6e1dcac3"
+      },
+      {
+        "path": "artifacts/facts/F-nat-exists-prime-gt.json",
+        "sha256": "6cb7eb93bf72e59f86ac344e6053ecb5f4418de77f8d30cb4ce68f077bd4d03e"
+      },
+      {
+        "path": "artifacts/facts/F-nat-gcd-bezout.json",
+        "sha256": "f74c9064a3014d8cf691f1d0b8ffec233ef40585a1689f026d5ed0afaf8d2d82"
+      },
+      {
+        "path": "artifacts/facts/F-nat-gcd-succ.json",
+        "sha256": "e0fb1cf85f0d8e52770b9bf457242d4f15d76dbac82671a507f17d5884ca93ef"
+      },
+      {
+        "path": "artifacts/facts/F-nat-left-distrib.json",
+        "sha256": "6a25df7aec622c1a773a56290463275ea50e5301f80e64c7f53aee6e161f3b1e"
+      },
+      {
+        "path": "artifacts/facts/F-nat-mul-assoc.json",
+        "sha256": "1a30a6842f7837ae434e75f61463c997c50e4fe92d1cc131799a2a8120b90f9f"
+      },
+      {
+        "path": "artifacts/facts/F-nat-mul-comm.json",
+        "sha256": "1a0fdadda76cc90edec73adb119933a3cb3c130ab11c4f83d55fff53aab3e020"
+      },
+      {
+        "path": "artifacts/facts/F-nat-mul-one.json",
+        "sha256": "3f5cba9ea3a950081dc762e74ab433385503dbb37ead805723d4d18b01944480"
+      },
+      {
+        "path": "artifacts/facts/F-nat-pow-add.json",
+        "sha256": "4da8efbb7943f23c0ab6fc3de1ef54badfdc75525ded899480a4134d5ed12b63"
+      },
+      {
+        "path": "artifacts/facts/F-nat-succ-add.json",
+        "sha256": "982b8c151d6d5432d029fcb86759b37c91f400cef1eaff5bb9ca1cacf9e2ccb2"
+      },
+      {
+        "path": "artifacts/facts/F-nat-zero-add.json",
+        "sha256": "3fdb7a9949fdf181416c28403449e55f181c9b9938626285f2f7001dfeda86ce"
+      }
+    ]
+  },
+  "schema_version": 1
+}

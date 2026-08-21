@@ -1,0 +1,761 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:squared-binomial-row-sum-central",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-squared-binomial-row-sum-central.json",
+            "sha256": "163b2bcc5489ee1363aede6326309475d6d25af9fd7268e8b4350dde51d4281d"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "The sum of squared binomial coefficients is the central binomial coefficient"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "2 of 2 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-squared-binomial-row-sum-central.json",
+              "sha256": "163b2bcc5489ee1363aede6326309475d6d25af9fd7268e8b4350dde51d4281d"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-squared-binomial-row-sum-central.json",
+            "sha256": "163b2bcc5489ee1363aede6326309475d6d25af9fd7268e8b4350dde51d4281d"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "cas-certificate"
+          ],
+          [
+            "axiom_footprint",
+            "cas.exact-rational-polynomial-normal-form; cas.gamma-functional-equation; cas.hyperterm-specification-denotes-the-summand; cas.telescoped-term-natural-boundary"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-squared-binomial-row-sum-central.json",
+              "sha256": "163b2bcc5489ee1363aede6326309475d6d25af9fd7268e8b4350dde51d4281d"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-squared-binomial-row-sum-central.json",
+            "sha256": "163b2bcc5489ee1363aede6326309475d6d25af9fd7268e8b4350dde51d4281d"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 25610,
+            "path": "crates/axeyum-cas/tests/telescoping_identities.rs",
+            "sha256": "65caca76320a2bbe433ef92219778352023e1d393cd4cb51bf2fcaa573a7df9a"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-cas --test telescoping_identities"
+        },
+        "summary": {
+          "text": "the creative-telescoping certificate, replayed by a checker that shares no code with the search that produced it"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-squared-binomial-row-sum-central.json",
+            "sha256": "163b2bcc5489ee1363aede6326309475d6d25af9fd7268e8b4350dde51d4281d"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: wz-squared-binomial-row-sum"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row wz-squared-binomial-row-sum as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "wz-squared-binomial-row-sum"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "telescoping_check::symbolic_identity_holds (own shift-ratio derivation, polynomial cross-multiplication), telescoping_check::confirm_ratios (shift ratios against exact bignum factorials), telescoping_check::confirm_telescoping (pointwise identity and summed recurrence, exact bignum)"
+          ],
+          [
+            "supports",
+            "the creative-telescoping certificate, replayed by a checker that shares no code with the search that produced it"
+          ],
+          [
+            "artifact",
+            "crates/axeyum-cas/tests/telescoping_identities.rs"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "65caca76320a2bbe433ef92219778352023e1d393cd4cb51bf2fcaa573a7df9a"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-squared-binomial-row-sum-central.json",
+              "sha256": "163b2bcc5489ee1363aede6326309475d6d25af9fd7268e8b4350dde51d4281d"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-squared-binomial-row-sum-central.json",
+            "sha256": "163b2bcc5489ee1363aede6326309475d6d25af9fd7268e8b4350dde51d4281d"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Certificate: order 1, recurrence coefficients a_0 = 4n + 2, a_1 = -(n + 1) (i.e. (n+1)*S(n+1) = (4n+2)*S(n)), R(n,k) = k^2*(3n + 3 - 2k) / (n - k + 1)^2. Closed form C(2n,n) verified to satisfy the same recurrence; base case S(0) = 1 = C(0,0) checked by exact summation; leading coefficient -(n+1) has its only integer zero at n = -1, below the base, so the recurrence runs forward from n = 0.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-squared-binomial-row-sum-central.json",
+            "sha256": "163b2bcc5489ee1363aede6326309475d6d25af9fd7268e8b4350dde51d4281d"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence wz-squared-binomial-row-sum"
+        },
+        "max_bytes": 65536,
+        "path": "crates/axeyum-cas/tests/telescoping_identities.rs",
+        "render_hint": "link",
+        "sha256": "65caca76320a2bbe433ef92219778352023e1d393cd4cb51bf2fcaa573a7df9a",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-squared-binomial-row-sum-central.json",
+            "sha256": "163b2bcc5489ee1363aede6326309475d6d25af9fd7268e8b4350dde51d4281d"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 1634,
+            "path": "artifacts/cas-certificates/squared-binomial-row-sum-central.json",
+            "sha256": "962bb63f6b7446176348fc337331233731319a2c872d8fd1e99044c4c516f109"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-cas --test telescoping_certificate_artifacts"
+        },
+        "summary": {
+          "text": "the serialised certificate itself, re-checked from the committed file with no search run"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-squared-binomial-row-sum-central.json",
+            "sha256": "163b2bcc5489ee1363aede6326309475d6d25af9fd7268e8b4350dde51d4281d"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: cas-certificate-artifact-squared-binomial-row-sum-central"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row cas-certificate-artifact-squared-binomial-row-sum-central as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "cas-certificate-artifact-squared-binomial-row-sum-central"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "telescoping_json::from_json (exact [numerator, denominator] rationals; decimals, a foreign format tag and a truncated file are all refused), telescoping_check::check_certificate over the parsed certificate, telescoping_check::check_closed_form / check_closed_form_symbolic over the parsed closed form, where one is claimed"
+          ],
+          [
+            "supports",
+            "the serialised certificate itself, re-checked from the committed file with no search run"
+          ],
+          [
+            "artifact",
+            "artifacts/cas-certificates/squared-binomial-row-sum-central.json"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "962bb63f6b7446176348fc337331233731319a2c872d8fd1e99044c4c516f109"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-squared-binomial-row-sum-central.json",
+              "sha256": "163b2bcc5489ee1363aede6326309475d6d25af9fd7268e8b4350dde51d4281d"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-squared-binomial-row-sum-central.json",
+            "sha256": "163b2bcc5489ee1363aede6326309475d6d25af9fd7268e8b4350dde51d4281d"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "This row exists so the fact rests on an ARTIFACT rather than on re-running the producer. The sweep reads every committed certificate, parses it, and hands it to the independent checker; nothing in that path calls the search. Tamper controls in the same file: a certificate numerator edited by one, a recurrence coefficient edited by one, and a certificate re-pointed at a neighbouring file's summand are each rejected, and a truncated / foreign-format / decimal-bearing file is refused by the reader before the checker sees it.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-squared-binomial-row-sum-central.json",
+            "sha256": "163b2bcc5489ee1363aede6326309475d6d25af9fd7268e8b4350dde51d4281d"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence cas-certificate-artifact-squared-binomial-row-sum-central"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/cas-certificates/squared-binomial-row-sum-central.json",
+        "render_hint": "json",
+        "sha256": "962bb63f6b7446176348fc337331233731319a2c872d8fd1e99044c4c516f109",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-squared-binomial-row-sum-central.json",
+            "sha256": "163b2bcc5489ee1363aede6326309475d6d25af9fd7268e8b4350dde51d4281d"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-14"
+          ],
+          [
+            "established_by",
+            "lane telescoping: axeyum_cas::telescoping::zeilberger (untrusted search) + axeyum_cas::telescoping_check (independent checker)"
+          ],
+          [
+            "source",
+            "classical binomial identity, stated by this lane as a HyperTerm specification"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-squared-binomial-row-sum-central.json",
+              "sha256": "163b2bcc5489ee1363aede6326309475d6d25af9fd7268e8b4350dde51d4281d"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-squared-binomial-row-sum-central.json",
+            "sha256": "163b2bcc5489ee1363aede6326309475d6d25af9fd7268e8b4350dde51d4281d"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "what",
+            "key": "what"
+          },
+          {
+            "header": "where",
+            "key": "where"
+          },
+          {
+            "header": "who",
+            "key": "who"
+          },
+          {
+            "header": "year",
+            "key": "year"
+          }
+        ],
+        "rows": [
+          [
+            "standard textbook attribution; this lane did not consult the primary source",
+            "the squared-binomial row-sum identity",
+            "classical; see Petkovsek-Wilf-Zeilberger, A=B (1996), ch. 4-7",
+            "Attributed to standard combinatorial identity (Vandermonde specialisation)",
+            "1991"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-squared-binomial-row-sum-central.json",
+              "sha256": "163b2bcc5489ee1363aede6326309475d6d25af9fd7268e8b4350dde51d4281d"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-squared-binomial-row-sum-central.json",
+            "sha256": "163b2bcc5489ee1363aede6326309475d6d25af9fd7268e8b4350dde51d4281d"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "Established on the `cas-certificate` route: an untrusted linear-algebra search (axeyum_cas::telescoping::zeilberger) produced the certificate, and axeyum_cas::telescoping_check verified it with its own shift-ratio derivation, its own fraction arithmetic, and a cross-check of both against exact bignum factorial evaluation of the summand. The checker rejects perturbed certificates -- see the tamper controls in the same test file (P+1, 2P, Q+k, a wrong recurrence constant, a degree bump in a_j, a zeroed recurrence, a certificate re-pointed at a different summand, a clipped summation window, and two wrong closed forms are all rejected).",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-squared-binomial-row-sum-central.json",
+            "sha256": "163b2bcc5489ee1363aede6326309475d6d25af9fd7268e8b4350dde51d4281d"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-squared-binomial-row-sum-central",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#index",
+        "label": "Unconnected: see the index",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:squared-binomial-row-sum-central",
+    "title": "The sum of squared binomial coefficients is the central binomial coefficient"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-squared-binomial-row-sum-central.json",
+        "sha256": "163b2bcc5489ee1363aede6326309475d6d25af9fd7268e8b4350dde51d4281d"
+      }
+    ]
+  },
+  "schema_version": 1
+}

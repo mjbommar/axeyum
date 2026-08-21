@@ -1,0 +1,1065 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:real-inverse-is-built-and-well-defined",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+            "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "The constructed reals have a multiplicative inverse whose modulus is an explicit natural, and it is a function on the reals rather than on representatives"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "4 of 4 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+              "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+            "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "kernel-lean"
+          ],
+          [
+            "axiom_footprint",
+            "[] -- axiom-free; only kernel-lean can deliver this"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+              "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+            "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal::creal_tests::the_inverse 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 3 passed; 0 failed')\" = 1"
+        },
+        "summary": {
+          "text": "The five statements are asserted VERBATIM as rendered types (not by footprint); CReal.PosBound CReal.one 0 is admitted THROUGH THE KERNEL so the guarded theorems are not vacuous; the inverse is proved not to be the constant zero; and the two one-token mutations are REFUSED."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+            "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: real-inverse-built-statements-and-non-vacuity"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row real-inverse-built-statements-and-non-vacuity as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "real-inverse-built-statements-and-non-vacuity"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "The five statements are asserted VERBATIM as rendered types (not by footprint); CReal.PosBound CReal.one 0 is admitted THROUGH THE KERNEL so the guarded theorems are not vacuous; the inverse is proved not to be the constant zero; and the two one-token mutations are REFUSED."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+              "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+            "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Anchored on a NONZERO test count (3), because a filter matching nothing prints 'ok. 0 passed' and exits 0 -- and on 0 failed, so a green-looking partial run cannot pass. Verified discriminating by scripts/new-fact.py: the pattern matches the real output and fails under every mutation of it. The three tests are the verbatim-statement test, the non-vacuity/discrimination test (PosBound one 0 admitted, then forall h, not (inv one 0 h ~ zero) from mul_inv_cancel and Equiv.not_zero_one alone), and the negative-control test (x*inv x ~ 0 and inv x ~ x both REFUSED). Vacuity, not weakness, is the failure mode this row exists for: every statement about CReal.inv is guarded by PosBound x k, and an uninhabited guard would let all of them hold footprint-free with their statements verbatim.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+            "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib creal::creal_tests::every_creal_declaration_is_checked_and_axiom_free 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 1 passed; 0 failed')\" = 1"
+        },
+        "summary": {
+          "text": "All 76 CReal declarations -- the five new ones included -- are checked Theorems or Definitions with EMPTY axiom footprints, read out of the kernel's own environment rather than off the diff."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+            "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: real-inverse-built-declaration-inventory"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row real-inverse-built-declaration-inventory as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "real-inverse-built-declaration-inventory"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "All 76 CReal declarations -- the five new ones included -- are checked Theorems or Definitions with EMPTY axiom footprints, read out of the kernel's own environment rather than off the diff."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+              "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+            "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "Anchored on a NONZERO count for the same reason as the row above; verified discriminating by scripts/new-fact.py. The test enumerates all 76 declarations by NameId, asserts the KIND of each (a Definition demoted to an Axiom fails), and asserts kernel.axiom_footprint(name) is empty for each. Deleting declare_inv_index_irrelevant kills exactly two tests -- this one and the verbatim-statement test -- measured 2026-08-18 against a 24-test baseline.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+            "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-002",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(scripts/cargo-serialized.sh run -q --release -p axeyum-lean-kernel --example creal_setoid_witness 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '[0-9]+ declarations admitted, trusted surface = 0 [(]empty[)]')\" = 1 && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^CReal[.](inv|invShift|mul_inv_cancel|inv_congr|inv_index_irrelevant)[[:space:]]+(definition|theorem)[[:space:]]+-$')\" = 5"
+        },
+        "summary": {
+          "text": "The witness example's EXIT STATUS depends on the finding, and its declaration count moved 71 -> 76 with the trusted surface still empty on the same line."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+            "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: real-inverse-built-witness-example"
+    },
+    {
+      "id": "evidence-002-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row real-inverse-built-witness-example as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "real-inverse-built-witness-example"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "The witness example's EXIT STATUS depends on the finding, and its declaration count moved 71 -> 76 with the trusted surface still empty on the same line."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+              "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+            "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-002-notes",
+      "kind": {
+        "text": "The first pattern pins a VALUE (the count 76 and the trusted surface 0) and was verified discriminating by scripts/new-fact.py. The SECOND is population-only and is here deliberately: it pins that all five new declarations appear with an empty footprint column, so a build that quietly dropped one of them fails, but no mutation of a surviving row changes its count. It is the weaker of the two and is not load-bearing on its own. The declaration COUNT is deliberately not pinned. It was `76`, and the lattice work (`4c7af898d`) took the same witness to `94` without touching anything this fact claims -- so a fact about the INVERSE was red because of a lemma about `max`. A total that every lane increments is not an anchor for a fact about one declaration. What is pinned is `trusted surface = 0 (empty)`, which is the invariant, plus the floor below. `--release` is not a preference. In debug this witness runs ~19 minutes -- it computes `axiom_footprint` per declaration over 94 of them -- and `scripts/check-fact-evidence-replay.sh` budgets 120 s per row, so the debug form made this evidence structurally unreplayable and the gate recorded it as a TIMEOUT rather than a result. Release is ~12x on this crate, measured.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+            "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-003",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo run -q --release -p axeyum-lean-kernel --example creal_setoid_witness 2>&1) && n=$(printf '%s\\n' \"$out\" | grep -oE '[0-9]+ declarations admitted' | grep -oE '^[0-9]+') && test -n \"$n\" && test \"$n\" -ge 76"
+        },
+        "summary": {
+          "text": "The witness enumerates a non-trivial development, so the trusted-surface-0 claim above is not read off an empty environment."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+            "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: real-inverse-is-built-and-well-defined-declaration-floor"
+    },
+    {
+      "id": "evidence-003-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row real-inverse-is-built-and-well-defined-declaration-floor as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "real-inverse-is-built-and-well-defined-declaration-floor"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "The witness enumerates a non-trivial development, so the trusted-surface-0 claim above is not read off an empty environment."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+              "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+            "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-003-notes",
+      "kind": {
+        "text": "A FLOOR, not an equality: 76 was the count when the inverse landed and the development only grows. A shrink still fires -- that would mean declarations disappeared -- while another lane adding a lemma does not red a fact about the inverse. An equality here is what made both these facts red. `--release` is not a preference. In debug this witness runs ~19 minutes -- it computes `axiom_footprint` per declaration over 94 of them -- and `scripts/check-fact-evidence-replay.sh` budgets 120 s per row, so the debug form made this evidence structurally unreplayable and the gate recorded it as a TIMEOUT rather than a result. Release is ~12x on this crate, measured.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+            "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "dependency-graph",
+      "kind": {
+        "alt": "Dependency graph around F:real-inverse-is-built-and-well-defined: 1 dependencies, 0 dependents",
+        "caption": {
+          "text": "Immediate dependencies and dependents of this fact"
+        },
+        "spec": {
+          "edges": [
+            {
+              "from": "F:real-inverse-is-built-and-well-defined",
+              "label": "depends_on",
+              "to": "F:real-inverse-is-partial-and-its-modulus-is-data"
+            }
+          ],
+          "figure_type": "dep-graph",
+          "nodes": [
+            {
+              "group": "focus",
+              "href": "F-real-inverse-is-built-and-well-defined.doc.json",
+              "id": "F:real-inverse-is-built-and-well-defined",
+              "label": "real-inverse-is-built-and-well-defined",
+              "status": "proved",
+              "tooltip": "The constructed reals have a multiplicative inverse whose modulus is an explicit natural, and it is a function on the reals rather than on representatives"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "F-real-inverse-is-partial-and-its-modulus-is-data.doc.json",
+              "id": "F:real-inverse-is-partial-and-its-modulus-is-data",
+              "label": "real-inverse-is-partial-and-its-modulus-is-data",
+              "status": "proved",
+              "tooltip": "No function on all of the constructed reals is a multiplicative inverse, and the modulus that would make one possible cannot be extracted from positivity"
+            }
+          ],
+          "rankdir": "TB"
+        },
+        "type": "figure"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+            "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Dependency neighbourhood"
+    },
+    {
+      "id": "depends-on",
+      "kind": {
+        "caption": {
+          "text": "Depends on"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:real-inverse-is-partial-and-its-modulus-is-data",
+            "No function on all of the constructed reals is a multiplicative inverse, and the modulus that would make one possible cannot be extracted from positivity",
+            "proved",
+            "F-real-inverse-is-partial-and-its-modulus-is-data.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+              "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+            "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depends on"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-18"
+          ],
+          [
+            "established_by",
+            "axeyum-lean-kernel creal::inverse (ADR-0516; agent-creal-inv lane)"
+          ],
+          [
+            "source",
+            "Bishop-style constructive analysis: the reciprocal of a real apart from zero, sampled deep enough that every sample clears the separating modulus"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+              "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+            "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "concept-refs",
+      "kind": {
+        "caption": {
+          "text": "Concept references (gloss and provenance only, never substance)"
+        },
+        "columns": [
+          {
+            "header": "graph",
+            "key": "graph"
+          },
+          {
+            "header": "ref",
+            "key": "ref"
+          },
+          {
+            "header": "relation",
+            "key": "relation"
+          },
+          {
+            "header": "resolved",
+            "key": "resolved"
+          }
+        ],
+        "rows": [
+          [
+            "math-education",
+            "C:real-numbers",
+            "about",
+            false
+          ],
+          [
+            "math-education",
+            "C:constructive-analysis",
+            "uses",
+            false
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+              "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+            "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "WHAT THIS DOES NOT SAY. It does not say the reals are a field: there is no inverse for x < 0 (Rat.mul_inv_cancel's hypothesis is 0 < q, and the general x # 0 case cannot be reduced to the positive one by BRANCHING on the disjunction, which is the elimination Or.rec does not permit), and there is no CReal.div. It does not say the modulus can be recovered from positivity -- F:real-inverse-is-partial-and-its-modulus-is-data says the opposite, and that is why k is an argument. It does not say two callers get the same REPRESENTATIVE for different k: they do not (k = 0 samples at 7n+7, k = 1 at 32n+31); it says they get Equiv results, which is what makes x^-1 an element of the reals. It does not assume or use Markov's principle in any disguise: not (x ~ 0) -> x # 0 is neither proved nor assumed. And it does not say a wrong sampling index would be caught quickly -- perturbing one factor makes the kernel refuse CReal.inv after 1,043 s where the accepting build takes 78 s warm.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+            "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-real-inverse-is-built-and-well-defined",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c23",
+        "label": "Component 23 of 38 (3 facts)",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:real-inverse-is-built-and-well-defined",
+    "title": "The constructed reals have a multiplicative inverse whose modulus is an explicit natural, and it is a function on the reals rather than on representatives"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-real-inverse-is-built-and-well-defined.json",
+        "sha256": "35efc6cf99fd41e19fcad8cf3dcd070c8e9e60a1be22a6e1cbca0d680c14a8c9"
+      }
+    ]
+  },
+  "schema_version": 1
+}

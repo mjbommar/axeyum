@@ -1,0 +1,657 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:quantifier-negation-duality",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-quantifier-negation-duality.json",
+            "sha256": "071628f325fb0dbd62389649ded232e08d7c2d5d37fdeb10f132e588e2ba95b4"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Negation exchanges the two quantifiers"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "1 of 1 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-quantifier-negation-duality.json",
+              "sha256": "071628f325fb0dbd62389649ded232e08d7c2d5d37fdeb10f132e588e2ba95b4"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-quantifier-negation-duality.json",
+            "sha256": "071628f325fb0dbd62389649ded232e08d7c2d5d37fdeb10f132e588e2ba95b4"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "smt-term-level"
+          ],
+          [
+            "axiom_footprint",
+            "axeyum-solver.bool-simplification-normalizer; axeyum-rewrite.alpha-and-duality-equivalence; classical-two-valued-bool-semantics; smtlib-first-order-quantifier-semantics"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-quantifier-negation-duality.json",
+              "sha256": "071628f325fb0dbd62389649ded232e08d7c2d5d37fdeb10f132e588e2ba95b4"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-quantifier-negation-duality.json",
+            "sha256": "071628f325fb0dbd62389649ded232e08d7c2d5d37fdeb10f132e588e2ba95b4"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 372,
+            "path": "artifacts/facts/smt2/neg-quantifier-negation-duality.smt2",
+            "sha256": "c676e18d43a7bf5b9b599e2c6cebcc7e07380510ef72adb03821016cd7679c02"
+          }
+        ],
+        "cert_kind": "unsat-drat",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "test \"$(cargo run --release -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/neg-quantifier-negation-duality.smt2 2>/dev/null | tail -1)\" = unsat"
+        },
+        "summary": {
+          "text": "Over any domain and any predicate P: not (for all x, P(x)) is equivalent to (there exists x with not P(x)), and not (there exists x with P(x)) is equivalent to (for all x, not P(x))."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-quantifier-negation-duality.json",
+            "sha256": "071628f325fb0dbd62389649ded232e08d7c2d5d37fdeb10f132e588e2ba95b4"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: quantifier-negation-duality-bool-simplification"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row quantifier-negation-duality-bool-simplification as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "quantifier-negation-duality-bool-simplification"
+          ],
+          [
+            "ledger kind",
+            "unsat-certificate"
+          ],
+          [
+            "cert_kind",
+            "unsat-drat"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-canonicalizer-rewrite-to-false-producing-solve, axeyum-bool-simplification-checker-fresh-parse, z3-4.13.3-independent-agreement"
+          ],
+          [
+            "supports",
+            "Over any domain and any predicate P: not (for all x, P(x)) is equivalent to (there exists x with not P(x)), and not (there exists x with P(x)) is equivalent to (for all x, not P(x))."
+          ],
+          [
+            "artifact",
+            "artifacts/facts/smt2/neg-quantifier-negation-duality.smt2"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "c676e18d43a7bf5b9b599e2c6cebcc7e07380510ef72adb03821016cd7679c02"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-quantifier-negation-duality.json",
+              "sha256": "071628f325fb0dbd62389649ded232e08d7c2d5d37fdeb10f132e588e2ba95b4"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-quantifier-negation-duality.json",
+            "sha256": "071628f325fb0dbd62389649ded232e08d7c2d5d37fdeb10f132e588e2ba95b4"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Ran 2026-08-14: the file asserts the NEGATION of formal.statement and the solver reported `unsat` with `kind=unsat-bool-simplification certified=1 recheck=na arena=ok`. This fact was `open` earlier the same day (`kind=unknown ... ms=18`); the lane `quant-duality` closed it. WHAT THE CERTIFICATE IS, precisely, because the route name could mislead: it is NOT exhaustive evaluation -- the carrier sort U is uninterpreted and cannot be enumerated. It is `Evidence::UnsatBoolSimplification`, a refutation by the small checked propositional normalizer in `axeyum-solver/src/bool_simplify.rs`, which treats every quantified subformula as an OPAQUE ATOM and instantiates, skolemizes and expands nothing. The one thing it now knows about quantifiers is when two of them are the same formula written differently -- `axeyum_rewrite::alpha_equivalent`, which decides equality up to bound-variable renaming (the SMT-LIB front end mints a fresh arena symbol per binder, so the four `x`s in this file are four distinct symbols) and up to the negation duality itself, by carrying a negation parity through the walk. Under those two facts both conjuncts of the asserted `and` normalize to `true`, the outer `not` to `false`, and the assertion is refuted. It trusts neither the bit-blaster, the CNF encoder, nor the SAT solver: nothing was blasted. `arena=ok` means `Evidence::check` re-ran that normalizer against a FRESH PARSE of the file, independent of anything the producing solve held in memory. Independently cross-checked: `z3 -smt2` (4.13.3) on the same file also reports `unsat`.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-quantifier-negation-duality.json",
+            "sha256": "071628f325fb0dbd62389649ded232e08d7c2d5d37fdeb10f132e588e2ba95b4"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence quantifier-negation-duality-bool-simplification"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/facts/smt2/neg-quantifier-negation-duality.smt2",
+        "render_hint": "code",
+        "sha256": "c676e18d43a7bf5b9b599e2c6cebcc7e07380510ef72adb03821016cd7679c02",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-quantifier-negation-duality.json",
+            "sha256": "071628f325fb0dbd62389649ded232e08d7c2d5d37fdeb10f132e588e2ba95b4"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-14"
+          ],
+          [
+            "established_by",
+            "axeyum lane `quant-duality`, 2026-08-14: `quant.negation_duality.v1` and `eq.alpha_equivalent.v1` in the canonicalizer, plus the matching alpha/duality predicate in the `bool_simplify` certificate checker"
+          ],
+          [
+            "source",
+            "authored from the S:logic-and-proof strand of the math-education concept graph; statement written here, not copied"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-quantifier-negation-duality.json",
+              "sha256": "071628f325fb0dbd62389649ded232e08d7c2d5d37fdeb10f132e588e2ba95b4"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-quantifier-negation-duality.json",
+            "sha256": "071628f325fb0dbd62389649ded232e08d7c2d5d37fdeb10f132e588e2ba95b4"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "date",
+            "key": "date"
+          },
+          {
+            "header": "establishes",
+            "key": "establishes"
+          },
+          {
+            "header": "oracle",
+            "key": "oracle"
+          },
+          {
+            "header": "result",
+            "key": "result"
+          }
+        ],
+        "rows": [
+          [
+            "2026-08-14",
+            "the proposition is valid; recorded when only OUR route failed to see it, and kept as the independent cross-check now that it does",
+            "z3 -smt2 artifacts/facts/smt2/neg-quantifier-negation-duality.smt2",
+            "unsat"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-quantifier-negation-duality.json",
+              "sha256": "071628f325fb0dbd62389649ded232e08d7c2d5d37fdeb10f132e588e2ba95b4"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-quantifier-negation-duality.json",
+            "sha256": "071628f325fb0dbd62389649ded232e08d7c2d5d37fdeb10f132e588e2ba95b4"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "concept-refs",
+      "kind": {
+        "caption": {
+          "text": "Concept references (gloss and provenance only, never substance)"
+        },
+        "columns": [
+          {
+            "header": "graph",
+            "key": "graph"
+          },
+          {
+            "header": "ref",
+            "key": "ref"
+          },
+          {
+            "header": "relation",
+            "key": "relation"
+          },
+          {
+            "header": "resolved",
+            "key": "resolved"
+          }
+        ],
+        "rows": [
+          [
+            "math-education",
+            "C:quantified-negation",
+            "states",
+            true
+          ],
+          [
+            "math-education",
+            "C:universal-quantifier",
+            "uses",
+            true
+          ],
+          [
+            "math-education",
+            "C:existential-quantifier",
+            "uses",
+            true
+          ],
+          [
+            "math-education",
+            "C:de-morgans-laws",
+            "generalises",
+            true
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-quantifier-negation-duality.json",
+              "sha256": "071628f325fb0dbd62389649ded232e08d7c2d5d37fdeb10f132e588e2ba95b4"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-quantifier-negation-duality.json",
+            "sha256": "071628f325fb0dbd62389649ded232e08d7c2d5d37fdeb10f132e588e2ba95b4"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "PROVED HERE AS OF 2026-08-14; it was `open` in this ledger the same morning, and `external_status: proved` was always right -- this is a standard first-order validity, so the gap was import, not discovery. WHAT WAS MISSING, and why the one-line diagnosis on the earlier note was half right. The note predicted a single structural rule, `not (forall x . phi) -> exists x . not phi`. That rule was necessary and is now `quant.negation_duality.v1`, but it is NOT sufficient, and the reason is a property of this IR rather than of the mathematics: the SMT-LIB parser gives every binder occurrence a fresh arena symbol, so the four `x`s in the benchmark are four distinct symbols `!q.x.0 .. !q.x.3`. Pushing the negation inward turns the first conjunct into `(= (exists !q.x.0 . not (P !q.x.0)) (exists !q.x.1 . not (P !q.x.1)))` -- alpha-equivalent, hash-consed apart, and invisible to equality reflexivity. Closing the fact needed a second capability, alpha-equivalence of quantified terms (`eq.alpha_equivalent.v1`), which did not exist anywhere in the tree. SOUNDNESS. The duality rewrite performs no substitution -- it flips the operator and wraps the body in one `not`, leaving the body byte-identical -- so capture is structurally absent rather than merely avoided. The alpha predicate is the delicate half and is where the negative tests live: it declines the pointer fast path under a renamed binder (`forall x . P x` vs `forall y . P x`), rejects a right-hand binder capturing a left-hand free symbol, rejects one-sided shadowing (`forall x . forall z . R(x,z)` vs `forall y . forall y . R(y,y)`, which a one-directional correspondence lookup wrongly accepts), and never falls through to structural comparison at odd negation parity, which would claim a formula is its own negation. A symbol occurrence is matched by the binder DEPTH that binds it on each side, never by name and never in one direction only. All six near-misses of the duality were confirmed `sat` by z3 and are pinned as negatives. A 1048-file randomized differential sweep against z3 over quantified UF formulas of this family found 0 disagreements. See docs/mathematics-2026-08/diary-quant-duality.md.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-quantifier-negation-duality.json",
+            "sha256": "071628f325fb0dbd62389649ded232e08d7c2d5d37fdeb10f132e588e2ba95b4"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-quantifier-negation-duality",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#index",
+        "label": "Unconnected: see the index",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:quantifier-negation-duality",
+    "title": "Negation exchanges the two quantifiers"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-quantifier-negation-duality.json",
+        "sha256": "071628f325fb0dbd62389649ded232e08d7c2d5d37fdeb10f132e588e2ba95b4"
+      }
+    ]
+  },
+  "schema_version": 1
+}

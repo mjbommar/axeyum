@@ -1,0 +1,724 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:fp32-doubling-add-equals-mul-two",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp32-doubling-add-equals-mul-two.json",
+            "sha256": "efd0a1bafc27f4cc2be862d95ae63e394905b7ca3c9db580d0ab8d1437f2f244"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "In binary32 under roundNearestTiesToEven, x+x and 2*x are the same value"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "2 of 2 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-fp32-doubling-add-equals-mul-two.json",
+              "sha256": "efd0a1bafc27f4cc2be862d95ae63e394905b7ca3c9db580d0ab8d1437f2f244"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp32-doubling-add-equals-mul-two.json",
+            "sha256": "efd0a1bafc27f4cc2be862d95ae63e394905b7ca3c9db580d0ab8d1437f2f244"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "smt-clausal"
+          ],
+          [
+            "axiom_footprint",
+            "ieee754-2019-binary32-arithmetic-semantics-as-encoded-by-axeyum-fp-fpa2bv-lowering; axeyum-fp.add-and-axeyum-fp.mul-are-differentially-VALIDATED-not-proven-bit-blasters; rounding-mode-roundNearestTiesToEven-only; smtlib2-floatingpoint-sort-equality-one-nan-value-signed-zeros-distinct; tseitin-cnf-encoding-preserves-satisfiability; drat-refutation-semantics-as-implemented-by-axeyum-cnf-check-drat; format-binary32-only-this-fact-is-not-format-generic"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-fp32-doubling-add-equals-mul-two.json",
+              "sha256": "efd0a1bafc27f4cc2be862d95ae63e394905b7ca3c9db580d0ab8d1437f2f244"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp32-doubling-add-equals-mul-two.json",
+            "sha256": "efd0a1bafc27f4cc2be862d95ae63e394905b7ca3c9db580d0ab8d1437f2f244"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 19845,
+            "path": "crates/axeyum-fp/examples/kernel_equivalence.rs",
+            "sha256": "c5e139f8a11fdf0c7ec88871b8297800e714da9afa98b69fcf34a2d403c3c88a"
+          }
+        ],
+        "cert_kind": "report-run",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run --release -q -p axeyum-fp --example kernel_equivalence -- doubling-fp32"
+        },
+        "summary": {
+          "text": "All 4294967296 binary32 encodings evaluated by LLVM's APFloat: zero disagreements between x+x and 2*x under RNE."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp32-doubling-add-equals-mul-two.json",
+            "sha256": "efd0a1bafc27f4cc2be862d95ae63e394905b7ca3c9db580d0ab8d1437f2f244"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: fp32-doubling-exhaustive-apfloat"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row fp32-doubling-exhaustive-apfloat as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "fp32-doubling-exhaustive-apfloat"
+          ],
+          [
+            "ledger kind",
+            "exhaustive-enumeration"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "rustc_apfloat-0.2.3-llvm-apfloat-exhaustive-enumeration"
+          ],
+          [
+            "supports",
+            "All 4294967296 binary32 encodings evaluated by LLVM's APFloat: zero disagreements between x+x and 2*x under RNE."
+          ],
+          [
+            "artifact",
+            "crates/axeyum-fp/examples/kernel_equivalence.rs"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "c5e139f8a11fdf0c7ec88871b8297800e714da9afa98b69fcf34a2d403c3c88a"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-fp32-doubling-add-equals-mul-two.json",
+              "sha256": "efd0a1bafc27f4cc2be862d95ae63e394905b7ca3c9db580d0ab8d1437f2f244"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp32-doubling-add-equals-mul-two.json",
+            "sha256": "efd0a1bafc27f4cc2be862d95ae63e394905b7ca3c9db580d0ab8d1437f2f244"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Ran 2026-08-14: examined=4294967296 failures=0, 51.4s wall at 8 threads on a machine at load 16 (6m01s of CPU). This is the most expensive checker in the fact ledger and it is deliberately opt-in -- `doubling-fp32` is not part of the example's `all` set, because every other claim there is seconds. Sharded across `std::thread::available_parallelism()` threads by default. `rustc_apfloat` 0.2.3 (LLVM APFloat) shares no code with axeyum's bit-blaster, CNF encoder or SAT core; comparison is by SMT-LIB value class, all NaN encodings collapsed to one value and the two zeros kept distinct. The binary exits non-zero on any disagreement.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp32-doubling-add-equals-mul-two.json",
+            "sha256": "efd0a1bafc27f4cc2be862d95ae63e394905b7ca3c9db580d0ab8d1437f2f244"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence fp32-doubling-exhaustive-apfloat"
+        },
+        "max_bytes": 65536,
+        "path": "crates/axeyum-fp/examples/kernel_equivalence.rs",
+        "render_hint": "link",
+        "sha256": "c5e139f8a11fdf0c7ec88871b8297800e714da9afa98b69fcf34a2d403c3c88a",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp32-doubling-add-equals-mul-two.json",
+            "sha256": "efd0a1bafc27f4cc2be862d95ae63e394905b7ca3c9db580d0ab8d1437f2f244"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row fp32-doubling-unsat-drat as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "fp32-doubling-unsat-drat"
+          ],
+          [
+            "ledger kind",
+            "unsat-certificate"
+          ],
+          [
+            "cert_kind",
+            "unsat-drat"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-smtcomp-cli-producing-solve, axeyum-check_drat-independent-proof-check, axeyum-Evidence::check-fresh-parse, z3-4.13.3, bitwuzla-0.9.1"
+          ],
+          [
+            "supports",
+            "The negation of formal.statement is unsatisfiable, decided symbolically -- without enumerating the 2^32 inputs."
+          ],
+          [
+            "artifact",
+            "artifacts/facts/smt2/neg-fp32-doubling-add-equals-mul-two.smt2"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "4bbeecb64c859367f2da2079f0e0feab8c96308da74ee98f7b26644d31900992"
+          ],
+          [
+            "replay command",
+            "(absent from the ledger row)"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-fp32-doubling-add-equals-mul-two.json",
+              "sha256": "efd0a1bafc27f4cc2be862d95ae63e394905b7ca3c9db580d0ab8d1437f2f244"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp32-doubling-add-equals-mul-two.json",
+            "sha256": "efd0a1bafc27f4cc2be862d95ae63e394905b7ca3c9db580d0ab8d1437f2f244"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "Ran 2026-08-14: `; evidence kind=unsat-drat certified=1 recheck=ok arena=ok ms=116653`, verdict `unsat`, 3m22.7s wall in a release build. `recheck=ok` is axeyum's own `check_drat` (RUP+RAT, ADR-0011) re-checking the emitted refutation; `arena=ok` is `Evidence::check` against a fresh parse. Cross-checked independently: `bitwuzla 0.9.1` reports `unsat` in 0.1s and `z3 4.13.3` reports `unsat` in 0.1s on the same file -- a 2000x gap in favour of the specialised FP solvers, recorded because it is a measurement this project should not flatter.\n\nTHIS ROW CARRIES NO `checker_command` ON PURPOSE. At 3m22s it would exceed the default 120s per-checker budget of scripts/check-fact-evidence-replay.sh and turn a passing gate into a timeout. The fact stays covered by the exhaustive row above, which re-runs in ~51s. To re-derive this row by hand:\n  cargo run --release -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/neg-fp32-doubling-add-equals-mul-two.smt2",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp32-doubling-add-equals-mul-two.json",
+            "sha256": "efd0a1bafc27f4cc2be862d95ae63e394905b7ca3c9db580d0ab8d1437f2f244"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence fp32-doubling-unsat-drat"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/facts/smt2/neg-fp32-doubling-add-equals-mul-two.smt2",
+        "render_hint": "code",
+        "sha256": "4bbeecb64c859367f2da2079f0e0feab8c96308da74ee98f7b26644d31900992",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp32-doubling-add-equals-mul-two.json",
+            "sha256": "efd0a1bafc27f4cc2be862d95ae63e394905b7ca3c9db580d0ab8d1437f2f244"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-14"
+          ],
+          [
+            "established_by",
+            "fp-kernels lane; an exhaustive LLVM-APFloat enumeration of all 2^32 binary32 values, corroborated by a symbolic CNF/DRAT refutation from axeyum and by two external FP solvers"
+          ],
+          [
+            "source",
+            "authored here as the binary32 sibling of F:fp16-doubling-add-equals-mul-two, to make the exhaustive-versus-symbolic distinction concrete rather than rhetorical."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-fp32-doubling-add-equals-mul-two.json",
+              "sha256": "efd0a1bafc27f4cc2be862d95ae63e394905b7ca3c9db580d0ab8d1437f2f244"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp32-doubling-add-equals-mul-two.json",
+            "sha256": "efd0a1bafc27f4cc2be862d95ae63e394905b7ca3c9db580d0ab8d1437f2f244"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "what",
+            "key": "what"
+          },
+          {
+            "header": "where",
+            "key": "where"
+          },
+          {
+            "header": "who",
+            "key": "who"
+          },
+          {
+            "header": "year",
+            "key": "year"
+          }
+        ],
+        "rows": [
+          [
+            "standard textbook attribution; this lane did not consult the primary source, and records the citation as the received one. Nothing in the evidence above depends on it.",
+            "Scaling a binary floating-point value by a power of two is exact whenever the result is representable, so the two roundings coincide.",
+            "What Every Computer Scientist Should Know About Floating-Point Arithmetic, ACM Computing Surveys 23(1)",
+            "David Goldberg",
+            "1991"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-fp32-doubling-add-equals-mul-two.json",
+              "sha256": "efd0a1bafc27f4cc2be862d95ae63e394905b7ca3c9db580d0ab8d1437f2f244"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp32-doubling-add-equals-mul-two.json",
+            "sha256": "efd0a1bafc27f4cc2be862d95ae63e394905b7ca3c9db580d0ab8d1437f2f244"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "WHAT THIS FACT EXISTS TO SHOW. Its statement is the binary32 instance of its binary16 sibling, and it is settled TWICE by routes of different character: symbolically, by bit-blasting a miter of the two circuits to CNF and refuting it (which says nothing about any particular input and everything about all of them at once), and by brute force, enumerating every one of the 4294967296 encodings. The second is possible here only because the claim is UNARY. The ternary claims in this batch -- F:fp8-add-not-associative and F:fp8-add-monotone-rne -- are exhaustive at fp8 E5M2 (2^24 triples) and would need 2^48 triples at binary16 and 2^96 at binary32, so for those the honest scope really is \"exhaustive at 8 bits, symbolic above\". Arity, not width, is what decides whether brute force is available.\n\nCOST, MEASURED. Symbolic: axeyum 202s, z3 0.1s, bitwuzla 0.1s. Exhaustive: 51s wall / 361s CPU. The symbolic route is the one that would still work at binary64; the exhaustive one would not.\n\nEVIDENCE ORDER IS DELIBERATE. The exhaustive row is first because it is the row that carries the runnable checker and rests on the least: it does not go through axeyum's fpa2bv lowering, whose `add` and `mul` are documented as validated rather than proven, and which the second row's footprint has to assume.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-fp32-doubling-add-equals-mul-two.json",
+            "sha256": "efd0a1bafc27f4cc2be862d95ae63e394905b7ca3c9db580d0ab8d1437f2f244"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-fp32-doubling-add-equals-mul-two",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#index",
+        "label": "Unconnected: see the index",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:fp32-doubling-add-equals-mul-two",
+    "title": "In binary32 under roundNearestTiesToEven, x+x and 2*x are the same value"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-fp32-doubling-add-equals-mul-two.json",
+        "sha256": "efd0a1bafc27f4cc2be862d95ae63e394905b7ca3c9db580d0ab8d1437f2f244"
+      }
+    ]
+  },
+  "schema_version": 1
+}

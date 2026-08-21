@@ -1,0 +1,57 @@
+{
+  "claims": [
+    {
+      "key": "rado-r4-a5-b3-lower-bound-replay",
+      "statement": "Fact-ledger evidence row `lower-bound-replay` of `F:rado-r4-a5-b3` (kind `witness-replay`) was replayed by running its recorded `checker_command`; the command exited 0.",
+      "status": "evidence",
+      "supports": {
+        "id": "F:rado-r4-a5-b3",
+        "kind": "fact"
+      }
+    }
+  ],
+  "id": "R:rado-r4-a5-b3-lower-bound-replay",
+  "notes": "Produced by replaying fact-ledger evidence rows, not by re-deriving the mathematics. The command is the ledger's `checker_command` verbatim; this record asserts only that it was run, from the repository root, and exited with the status recorded here. Cited by: F:rado-r4-a5-b3/lower-bound-replay. NOT PINNED: `inputs` pins the example source, not the rest of `axeyum-search` that it links; a change inside the crate would not trip the render's input-hash guard.",
+  "outcome": "established",
+  "provenance": {
+    "command": "cargo run --release -q -p axeyum-search --example akb2_frontier -- verify 5 3 4 artifacts/claims/rado/rado-r4-a5-b3/witness.txt",
+    "duration_ms": 74,
+    "epoch": {
+      "commit": "839d1e50a287fa816490dd2ee7ec19d6a202c25d",
+      "source": "commit",
+      "unix": 1787319265
+    },
+    "exit_status": 0,
+    "generator": "crates/axeyum-search/examples/akb2_frontier.rs (via `cargo run --example`), invoked by render/producers-runrec/facts_to_runrec.py",
+    "inputs": [
+      {
+        "path": "artifacts/claims/rado/rado-r4-a5-b3/witness.txt",
+        "role": "artifact",
+        "sha256": "eaf9ab5ca456b91ed8304fe241990c01ae34674c709b322290c8458d3f06990f"
+      },
+      {
+        "path": "crates/axeyum-search/examples/akb2_frontier.rs",
+        "role": "checker",
+        "sha256": "b9c4106cfe12835a9eb0d04017c30cd84b1f438fcdd2aa9670fb19d0c0c524e2"
+      }
+    ]
+  },
+  "replay": {
+    "cwd": ".",
+    "expected_exit_status": 0,
+    "expected_seconds": 1,
+    "line": "cargo run --release -q -p axeyum-search --example akb2_frontier -- verify 5 3 4 artifacts/claims/rado/rado-r4-a5-b3/witness.txt"
+  },
+  "role": "production",
+  "schema_version": 1,
+  "stats": {
+    "exact_type_pinned": false,
+    "rows_covered": 1,
+    "stderr_bytes": 0,
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stdout_bytes": 138,
+    "stdout_sha256": "6ce2fb4fe6fe89cd266c2f7be538b3fc6b6d92ef7391a59876882ee2194ad2f4",
+    "wall_seconds": 0.074
+  },
+  "summary": "GREEN: `cargo run --release -q -p axeyum-search --example akb2_frontier -- verify 5 3 4 artifac...` exited 0 in 0.1s, replaying 1 fact-ledger evidence row(s)."
+}

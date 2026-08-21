@@ -1,0 +1,878 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:int-sub-nat-nat-shift",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-sub-nat-nat-shift.json",
+            "sha256": "9e4d8e2b0ea945bf73ca9d53c18383b2898d8d28faca2a60b111f603038cead9"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "The normalized integer difference is invariant under a common shift"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "2 of 2 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-sub-nat-nat-shift.json",
+              "sha256": "9e4d8e2b0ea945bf73ca9d53c18383b2898d8d28faca2a60b111f603038cead9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-sub-nat-nat-shift.json",
+            "sha256": "9e4d8e2b0ea945bf73ca9d53c18383b2898d8d28faca2a60b111f603038cead9"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "kernel-lean"
+          ],
+          [
+            "axiom_footprint",
+            "[] -- axiom-free; only kernel-lean can deliver this"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-sub-nat-nat-shift.json",
+              "sha256": "9e4d8e2b0ea945bf73ca9d53c18383b2898d8d28faca2a60b111f603038cead9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-sub-nat-nat-shift.json",
+            "sha256": "9e4d8e2b0ea945bf73ca9d53c18383b2898d8d28faca2a60b111f603038cead9"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-lean-kernel --lib int_prelude"
+        },
+        "summary": {
+          "text": "For all naturals m, n and k, the normalized difference of m+k and n+k is the normalized difference of m and n."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-sub-nat-nat-shift.json",
+            "sha256": "9e4d8e2b0ea945bf73ca9d53c18383b2898d8d28faca2a60b111f603038cead9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: kernel-Int.subNatNat_add_add"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row kernel-Int.subNatNat_add_add as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "kernel-Int.subNatNat_add_add"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "Kernel::add_declaration (re-derives the type from the proof term), int_prelude_tests::derived_laws_have_no_axiom_footprint"
+          ],
+          [
+            "supports",
+            "For all naturals m, n and k, the normalized difference of m+k and n+k is the normalized difference of m and n."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-sub-nat-nat-shift.json",
+              "sha256": "9e4d8e2b0ea945bf73ca9d53c18383b2898d8d28faca2a60b111f603038cead9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-sub-nat-nat-shift.json",
+            "sha256": "9e4d8e2b0ea945bf73ca9d53c18383b2898d8d28faca2a60b111f603038cead9"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "`build_int_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so a green run of the command is a machine-checked proof. Measured 2026-08-15: 12 tests pass (a nonzero count -- the filter is not inert). A real Lean 4.30.0 kernel also read the module this prelude exports to: `scripts/check-lean-gate.sh` reports 12 suites, 49 tests, 112 real-Lean checks (floor 105).",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-sub-nat-nat-shift.json",
+            "sha256": "9e4d8e2b0ea945bf73ca9d53c18383b2898d8d28faca2a60b111f603038cead9"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "report-run",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run -q -p axeyum-lean-kernel --example int_theorem_inventory -- subNatNat_add_add 2>/dev/null | grep -qE '^theorem[[:space:]]+Int\\.subNatNat_add_add[[:space:]]+\\(\\('"
+        },
+        "summary": {
+          "text": "axiom_footprint: [] -- this theorem's trusted closure is empty"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-sub-nat-nat-shift.json",
+            "sha256": "9e4d8e2b0ea945bf73ca9d53c18383b2898d8d28faca2a60b111f603038cead9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: footprint-Int.subNatNat_add_add"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row footprint-Int.subNatNat_add_add as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "footprint-Int.subNatNat_add_add"
+          ],
+          [
+            "ledger kind",
+            "exhaustive-enumeration"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "Kernel::axiom_footprint, environment-wide trusted-surface enumeration (nat_axiom_inventory)"
+          ],
+          [
+            "supports",
+            "axiom_footprint: [] -- this theorem's trusted closure is empty"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-sub-nat-nat-shift.json",
+              "sha256": "9e4d8e2b0ea945bf73ca9d53c18383b2898d8d28faca2a60b111f603038cead9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-sub-nat-nat-shift.json",
+            "sha256": "9e4d8e2b0ea945bf73ca9d53c18383b2898d8d28faca2a60b111f603038cead9"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "Two independent bounds, because either alone would be weaker than it looks. (1) `Kernel::axiom_footprint` walks THIS declaration's transitive dependencies; `int_theorem_inventory` prints it as the third tab-separated column, and the regex requires that column to be EMPTY -- the type must begin immediately after the name. The negative control is in the same output: `Int.euclidean_decomposition`, the one law still asserted, prints its own name in that column and fails the same regex (measured 2026-08-15). So the check discriminates rather than merely running. (2) `nat_axiom_inventory` reports `nat: axiom=0 opaque=0 quotient=0` for the development ZZ is constructed over. Counting `Declaration::Axiom` alone would not suffice: `Opaque` has no proof body and `Quotient` admits `Quot.sound` -- exactly the declaration a quotient-of-NxN construction would have added -- and the enumeration covers all three kinds and reports zero for each.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-sub-nat-nat-shift.json",
+            "sha256": "9e4d8e2b0ea945bf73ca9d53c18383b2898d8d28faca2a60b111f603038cead9"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "dependency-graph",
+      "kind": {
+        "alt": "Dependency graph around F:int-sub-nat-nat-shift: 1 dependencies, 1 dependents",
+        "caption": {
+          "text": "Immediate dependencies and dependents of this fact"
+        },
+        "spec": {
+          "edges": [
+            {
+              "from": "F:int-sub-nat-nat-elim",
+              "label": "depends_on",
+              "to": "F:int-sub-nat-nat-shift"
+            },
+            {
+              "from": "F:int-sub-nat-nat-elim",
+              "label": "depends_on",
+              "to": "F:nat-add-zero"
+            },
+            {
+              "from": "F:int-sub-nat-nat-shift",
+              "label": "depends_on",
+              "to": "F:nat-add-zero"
+            }
+          ],
+          "figure_type": "dep-graph",
+          "nodes": [
+            {
+              "group": "kernel-lean",
+              "href": "F-int-sub-nat-nat-elim.doc.json",
+              "id": "F:int-sub-nat-nat-elim",
+              "label": "int-sub-nat-nat-elim",
+              "status": "proved",
+              "tooltip": "The integer borrow has exactly two outcomes, and each is witnessed by a natural"
+            },
+            {
+              "group": "focus",
+              "href": "F-int-sub-nat-nat-shift.doc.json",
+              "id": "F:int-sub-nat-nat-shift",
+              "label": "int-sub-nat-nat-shift",
+              "status": "proved",
+              "tooltip": "The normalized integer difference is invariant under a common shift"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "F-nat-add-zero.doc.json",
+              "id": "F:nat-add-zero",
+              "label": "nat-add-zero",
+              "status": "proved",
+              "tooltip": "Zero is a right identity for addition on the naturals"
+            }
+          ],
+          "rankdir": "TB"
+        },
+        "type": "figure"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-sub-nat-nat-shift.json",
+            "sha256": "9e4d8e2b0ea945bf73ca9d53c18383b2898d8d28faca2a60b111f603038cead9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Dependency neighbourhood"
+    },
+    {
+      "id": "depends-on",
+      "kind": {
+        "caption": {
+          "text": "Depends on"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:nat-add-zero",
+            "Zero is a right identity for addition on the naturals",
+            "proved",
+            "F-nat-add-zero.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-sub-nat-nat-shift.json",
+              "sha256": "9e4d8e2b0ea945bf73ca9d53c18383b2898d8d28faca2a60b111f603038cead9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-sub-nat-nat-shift.json",
+            "sha256": "9e4d8e2b0ea945bf73ca9d53c18383b2898d8d28faca2a60b111f603038cead9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depends on"
+    },
+    {
+      "id": "depended-on-by",
+      "kind": {
+        "caption": {
+          "text": "Depended on by"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:int-sub-nat-nat-elim",
+            "The integer borrow has exactly two outcomes, and each is witnessed by a natural",
+            "proved",
+            "F-int-sub-nat-nat-elim.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-sub-nat-nat-shift.json",
+              "sha256": "9e4d8e2b0ea945bf73ca9d53c18383b2898d8d28faca2a60b111f603038cead9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-sub-nat-nat-shift.json",
+            "sha256": "9e4d8e2b0ea945bf73ca9d53c18383b2898d8d28faca2a60b111f603038cead9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depended on by"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-15"
+          ],
+          [
+            "established_by",
+            "axeyum-lean-kernel build_int_prelude, lane int-remainder"
+          ],
+          [
+            "source",
+            "one of the six propositions build_int_prelude still ASSERTED after lane int-keystone constructed ZZ; this lane proved the `Int.subNatNat` borrow lemmas and derived it"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-sub-nat-nat-shift.json",
+              "sha256": "9e4d8e2b0ea945bf73ca9d53c18383b2898d8d28faca2a60b111f603038cead9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-sub-nat-nat-shift.json",
+            "sha256": "9e4d8e2b0ea945bf73ca9d53c18383b2898d8d28faca2a60b111f603038cead9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "concept-refs",
+      "kind": {
+        "caption": {
+          "text": "Concept references (gloss and provenance only, never substance)"
+        },
+        "columns": [
+          {
+            "header": "graph",
+            "key": "graph"
+          },
+          {
+            "header": "ref",
+            "key": "ref"
+          },
+          {
+            "header": "relation",
+            "key": "relation"
+          },
+          {
+            "header": "resolved",
+            "key": "resolved"
+          }
+        ],
+        "rows": [
+          [
+            "math-education",
+            "C:integers",
+            "about",
+            false
+          ],
+          [
+            "math-education",
+            "C:natural-numbers",
+            "about",
+            false
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-int-sub-nat-nat-shift.json",
+              "sha256": "9e4d8e2b0ea945bf73ca9d53c18383b2898d8d28faca2a60b111f603038cead9"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-sub-nat-nat-shift.json",
+            "sha256": "9e4d8e2b0ea945bf73ca9d53c18383b2898d8d28faca2a60b111f603038cead9"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "The keystone lemma of this lane, and the smallest true statement about `Int.subNatNat` that is provable when its arguments are opaque. `subNatNat m n` is `Nat.rec ... (Nat.sub n m)` with `Nat.sub m n` in the zero minor; on variables neither subtraction reduces, so the term is stuck and the only thing it still respects is a common shift. The proof is induction on `k` -- `Nat.add` recurses on its second argument, so `m+(k+1)` is definitionally `(m+k)+1` and the step is the one-shot `subNatNat (m+1) (n+1) = subNatNat m n`, which is `Nat.succ_sub_succ` applied twice: once to the value and once to the scrutinee, since they sit in different holes and no single one-hole context covers both. Shifting the two anchors `subNatNat m 0 = ofNat m` and `subNatNat 0 k = negOfNat k` by this lemma is what yields the characterisations the whole rest of the development runs on. `formal.statement` is `Kernel::render_lean` of the admitted type, verbatim from `int_theorem_inventory`; `AxNat` is the renderer's emit-direction guard so that exporting our prelude does not shadow Lean's builtin `Nat`.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-int-sub-nat-nat-shift.json",
+            "sha256": "9e4d8e2b0ea945bf73ca9d53c18383b2898d8d28faca2a60b111f603038cead9"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-int-sub-nat-nat-shift",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c16",
+        "label": "Component 16 of 38 (3 facts)",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:int-sub-nat-nat-shift",
+    "title": "The normalized integer difference is invariant under a common shift"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-int-sub-nat-nat-shift.json",
+        "sha256": "9e4d8e2b0ea945bf73ca9d53c18383b2898d8d28faca2a60b111f603038cead9"
+      }
+    ]
+  },
+  "schema_version": 1
+}

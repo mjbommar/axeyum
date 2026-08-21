@@ -1,0 +1,1546 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The p = 2 tame-point weight certificate</title>
+<meta name="description" content="Closed form, admissibility, and exact sharpness for the Kramer-Miller--Upton weight at p = 2, e = 3">
+<style>
+/* Axeyum render strand -- HTML emitter stylesheet.
+ *
+ * Inlined verbatim into every emitted document by render/src/emit_html.rs.
+ * ZERO external references are permitted here: no stylesheet imports, no
+ * resource URIs other than data:, no webfonts. The function
+ * render::emit_html::lint_self_contained enforces that on the emitted
+ * document, and a unit test enforces it on this file -- which is why this
+ * comment spells the forbidden constructs out in words instead of writing
+ * them literally. The lint is textual, and a lint that its own documentation
+ * can trip is a lint that is actually looking.
+ *
+ * Design system (see docs/render-2026-08/11-design-diary.md):
+ *   type   serif for prose, sans for apparatus, mono for machine text
+ *   scale  1.125 minor-third-ish, base 17px, measure 68ch
+ *   space  4px grid, --sp-1 .. --sp-9
+ *   colour one hue family per epistemic status; badges carry a SHAPE too,
+ *          so status survives greyscale printing and colour blindness
+ */
+
+/* ---------- tokens ---------- */
+:root {
+  color-scheme: light dark;
+
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua",
+                Georgia, "Times New Roman", Times, serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+               "DejaVu Sans Mono", "Liberation Mono", monospace;
+  /* A MATH-table font is needed only for stretchy delimiters; the P0 corpus
+     avoids them, and the chain degrades to the prose serif. */
+  --font-math: "STIX Two Math", "Cambria Math", "Latin Modern Math",
+               var(--font-serif);
+
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.8125rem;
+  --fs-ui: 0.875rem;
+  --fs-base: 1rem;
+  --fs-md: 1.125rem;
+  --fs-lg: 1.375rem;
+  --fs-xl: 1.75rem;
+  --fs-2xl: 2.25rem;
+
+  --sp-1: 0.25rem; --sp-2: 0.5rem;  --sp-3: 0.75rem; --sp-4: 1rem;
+  --sp-5: 1.5rem;  --sp-6: 2rem;    --sp-7: 3rem;    --sp-8: 4rem;
+  --sp-9: 6rem;
+
+  /* In rem, not ch: `ch` resolves against the element's OWN font, so a
+     `ch`-based column silently narrows on every small-sans block and the page
+     stops lining up. 36rem is ~68 characters at the body serif. */
+  --measure: 36rem;
+  --radius: 3px;
+  --radius-lg: 6px;
+
+  /* light palette: warm paper, near-black ink */
+  --bg:        #fcfcfa;
+  --bg-sunk:   #f3f2ed;
+  --surface:   #ffffff;
+  --rule:      #e0ded5;
+  --rule-firm: #c9c6ba;
+  --ink:       #1a1a17;
+  --ink-2:     #46453f;
+  --ink-3:     #74726a;
+  --link:      #1c5480;
+  --link-visited: #5b3f7a;
+  --accent:    #1c5480;
+  --shadow:    0 1px 2px rgba(26, 26, 23, 0.06), 0 4px 12px rgba(26, 26, 23, 0.05);
+
+  /* status hues: --s-*-fg on --s-*-bg, both AA on their own ground */
+  --s-proved-fg:      #17603c; --s-proved-bg:      #e4f1e8;
+  --s-checked-fg:     #12566e; --s-checked-bg:     #e0eef3;
+  --s-evidence-fg:    #3f3d8e; --s-evidence-bg:    #e8e7f5;
+  --s-computed-fg:    #6a3583; --s-computed-bg:    #f0e7f5;
+  --s-empirical-fg:   #1f5a5f; --s-empirical-bg:   #e0efef;
+  --s-advisory-fg:    #7a5400; --s-advisory-bg:    #f7eed6;
+  --s-conjectured-fg: #6b4a1f; --s-conjectured-bg: #f3ebdd;
+  --s-refuted-fg:     #9a2222; --s-refuted-bg:     #f7e3e1;
+  --s-open-fg:        #4e5560; --s-open-bg:        #eceef1;
+  --s-axiom-fg:       #7c4a12; --s-axiom-bg:       #f6e9d9;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:        #14151a;
+    --bg-sunk:   #101116;
+    --surface:   #1b1d24;
+    --rule:      #2b2e37;
+    --rule-firm: #3d414c;
+    --ink:       #e8e6e0;
+    --ink-2:     #b9b6ad;
+    --ink-3:     #8d8a82;
+    --link:      #8fbde6;
+    --link-visited: #c0a8dd;
+    --accent:    #8fbde6;
+    --shadow:    0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 18px rgba(0, 0, 0, 0.3);
+
+    --s-proved-fg:      #7fd3a4; --s-proved-bg:      #14291e;
+    --s-checked-fg:     #7ec8e3; --s-checked-bg:     #10262f;
+    --s-evidence-fg:    #a9a7ef; --s-evidence-bg:    #1c1b33;
+    --s-computed-fg:    #d3a6e8; --s-computed-bg:    #291a30;
+    --s-empirical-fg:   #7fcbcf; --s-empirical-bg:   #12282a;
+    --s-advisory-fg:    #e0bb63; --s-advisory-bg:    #2c2410;
+    --s-conjectured-fg: #d5b183; --s-conjectured-bg: #2a2115;
+    --s-refuted-fg:     #f09a92; --s-refuted-bg:     #331716;
+    --s-open-fg:        #a5adba; --s-open-bg:        #1d2027;
+    --s-axiom-fg:       #dfab6e; --s-axiom-bg:       #2c2013;
+  }
+}
+
+/* ---------- reset-ish ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 17px;
+  line-height: 1.62;
+  text-rendering: optimizeLegibility;
+}
+img, svg { max-width: 100%; }
+/* Without `height: auto` an SVG with width/height attributes is shrunk in one
+   axis only and the drawing letterboxes inside a tall empty box. */
+svg.ax-graph, svg.ax-plot { height: auto; }
+a { color: var(--link); text-underline-offset: 2px; text-decoration-thickness: 1px; }
+a:visited { color: var(--link-visited); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+
+.ax-skip {
+  position: absolute; left: -9999px; top: 0;
+  background: var(--surface); color: var(--ink);
+  padding: var(--sp-2) var(--sp-3); z-index: 10;
+}
+.ax-skip:focus { left: var(--sp-3); top: var(--sp-3); }
+
+/* ---------- page frame ---------- */
+.ax-doc { max-width: var(--measure); margin: 0 auto; padding: 0 var(--sp-5); }
+
+/* Figures escape the text measure -- without a transform trick, which depends
+   on the containing block's width and breaks quietly when that changes. The
+   BODY column is wide; every direct child of <main> is re-narrowed to the
+   measure, and `.ax-wide` opts back out. Prose reads at ~68ch; a dependency
+   graph is a different kind of object and should not be squeezed to match. */
+main.ax-doc { max-width: 68rem; }
+main.ax-doc > * { max-width: var(--measure); margin-left: auto; margin-right: auto; }
+main.ax-doc > .ax-wide { max-width: 100%; }
+header.ax-head > .ax-doc, footer.ax-foot > .ax-doc { padding: 0; }
+
+header.ax-head {
+  border-bottom: 1px solid var(--rule);
+  padding: var(--sp-7) 0 var(--sp-5);
+  margin-bottom: var(--sp-6);
+}
+header.ax-head .ax-kicker {
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 0 0 var(--sp-2);
+}
+h1.ax-title {
+  font-size: var(--fs-2xl);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin: 0 0 var(--sp-3);
+  font-weight: 600;
+}
+p.ax-subtitle {
+  font-size: var(--fs-md);
+  color: var(--ink-2);
+  margin: 0 0 var(--sp-4);
+  max-width: 58ch;
+}
+
+/* Cross-document navigation. The corpus is a SITE -- an atlas, two pilots and
+   324 fact cards emitted together -- and these are the only relative links a
+   page carries. Each page is still self-contained: nothing is fetched on load.
+   render/tests/link_integrity.rs fails if one of them does not resolve. */
+.ax-crumbs {
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+  margin: 0 0 var(--sp-4);
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-2);
+}
+.ax-crumbs .ax-crumb-sep { color: var(--rule-firm); }
+a.ax-doclink { font-family: var(--font-sans); }
+a.ax-doclink code { font-family: var(--font-mono); }
+
+/* The single provenance line for a page whose blocks all come from one run.
+   Fifteen identical copies of it, one under each block, was the most repeated
+   element on a fact card; it is said once, here. */
+.ax-source-all { margin: var(--sp-2) 0 0; }
+
+/* metadata chips */
+.ax-meta { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); margin: 0; padding: 0; list-style: none; }
+.ax-meta li {
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+}
+.ax-meta li b { font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.ax-meta code { font-size: var(--fs-xs); }
+
+h2, h3, h4 { font-family: var(--font-sans); font-weight: 600; letter-spacing: -0.01em; line-height: 1.25; }
+h2 { font-size: var(--fs-xl); margin: var(--sp-7) 0 var(--sp-3); }
+h3 { font-size: var(--fs-lg); margin: var(--sp-6) 0 var(--sp-2); }
+h4 { font-size: var(--fs-md); margin: var(--sp-5) 0 var(--sp-2); }
+
+p { margin: 0 0 var(--sp-4); }
+code, kbd, samp, pre { font-family: var(--font-mono); font-size: 0.86em; }
+code { background: var(--bg-sunk); padding: 0.1em 0.32em; border-radius: var(--radius); }
+pre {
+  background: var(--bg-sunk);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: var(--sp-3);
+  overflow-x: auto;
+  line-height: 1.45;
+}
+pre code { background: none; padding: 0; }
+math { font-family: var(--font-math); }
+
+/* ---------- reading level ---------- */
+.ax-levels {
+  display: inline-flex;
+  border: 1px solid var(--rule-firm);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  background: var(--surface);
+}
+.ax-levels button {
+  appearance: none;
+  border: 0;
+  border-left: 1px solid var(--rule);
+  background: transparent;
+  color: var(--ink-2);
+  padding: var(--sp-2) var(--sp-3);
+  cursor: pointer;
+  font: inherit;
+  letter-spacing: 0.04em;
+}
+.ax-levels button:first-child { border-left: 0; }
+.ax-levels button[aria-pressed="true"] { background: var(--accent); color: var(--bg); }
+.ax-levels button:hover:not([aria-pressed="true"]) { background: var(--bg-sunk); }
+
+/* Level gating. The document is authored at "full"; with JS off nothing is
+   hidden, which is the required degradation. */
+body[data-level="summary"] .t-detail,
+body[data-level="summary"] .t-archive { display: none; }
+body[data-level="full"] .t-archive { display: none; }
+.ax-levelnote { font-family: var(--font-sans); font-size: var(--fs-xs); color: var(--ink-3); }
+
+/* ---------- blocks ---------- */
+.blk { margin: 0 0 var(--sp-5); }
+.blk.t-detail { border-left: 2px solid var(--rule); padding-left: var(--sp-4); }
+details.blk.t-detail { padding-left: 0; border-left: 0; }
+
+details.ax-fold {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 0;
+  /* `auto` on the inline axis, not `0`. `main.ax-doc > *` centres every direct
+     child inside the 68rem frame by setting margin-left/right to auto, and a
+     `margin: 0 0 X` shorthand here has the SAME specificity and comes later,
+     so it silently won and every fold on a fact card sat 190px left of the
+     text above it. Found by screenshot; no test could see it. */
+  margin: 0 auto var(--sp-5);
+}
+details.ax-fold > summary {
+  cursor: pointer;
+  padding: var(--sp-3) var(--sp-4);
+  font-family: var(--font-sans);
+  font-size: var(--fs-ui);
+  color: var(--ink-2);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+details.ax-fold > summary::-webkit-details-marker { display: none; }
+details.ax-fold > summary::before {
+  content: "";
+  width: 0; height: 0;
+  border-left: 5px solid currentColor;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform 120ms ease;
+  flex: none;
+}
+details.ax-fold[open] > summary::before { transform: rotate(90deg); }
+details.ax-fold > summary:hover { background: var(--bg-sunk); }
+details.ax-fold > .ax-foldbody { padding: 0 var(--sp-4) var(--sp-4); border-top: 1px solid var(--rule); padding-top: var(--sp-4); }
+
+/* archive tier: a link to what was left out, never silent omission */
+.blk.t-archive {
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+  border-left: 2px dotted var(--rule-firm);
+  padding-left: var(--sp-3);
+}
+
+/* ---------- badges: colour AND shape ---------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.18em 0.55em 0.18em 0.42em;
+  border-radius: var(--radius);
+  border: 1px solid currentColor;
+  white-space: nowrap;
+  vertical-align: 0.08em;
+}
+.badge svg { width: 0.85em; height: 0.85em; flex: none; fill: currentColor; }
+/* The badge with its word removed, for a place that has already said it (an
+   evidence row inside a claim card whose header carries the same status).
+   The SHAPE is what survives, because the shape is what makes a badge legible
+   in greyscale and to a colour-blind reader; the word survives as the
+   accessible name on the element. */
+.badge-compact { padding: 0.18em 0.32em; gap: 0; }
+.badge-compact svg { width: 0.95em; height: 0.95em; }
+.badge-proved      { color: var(--s-proved-fg);      background: var(--s-proved-bg); }
+.badge-checked     { color: var(--s-checked-fg);     background: var(--s-checked-bg); }
+.badge-evidence    { color: var(--s-evidence-fg);    background: var(--s-evidence-bg); }
+.badge-computed    { color: var(--s-computed-fg);    background: var(--s-computed-bg); }
+.badge-empirical   { color: var(--s-empirical-fg);   background: var(--s-empirical-bg); }
+.badge-advisory    { color: var(--s-advisory-fg);    background: var(--s-advisory-bg); }
+.badge-conjectured { color: var(--s-conjectured-fg); background: var(--s-conjectured-bg); }
+.badge-refuted     { color: var(--s-refuted-fg);     background: var(--s-refuted-bg); }
+.badge-open        { color: var(--s-open-fg);        background: var(--s-open-bg); }
+.badge-axiom       { color: var(--s-axiom-fg);       background: var(--s-axiom-bg); }
+.badge-unknown     { color: var(--ink-3);            background: var(--bg-sunk); }
+
+.ax-axes { display: inline-flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.ax-axes .ax-axis-label {
+  font-family: var(--font-sans); font-size: var(--fs-xs);
+  color: var(--ink-3); letter-spacing: 0.04em;
+}
+
+/* the interesting combination: ours ahead of the literature */
+.ax-newresult {
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--s-computed-fg);
+  border: 1px dashed currentColor;
+  border-radius: var(--radius);
+  padding: 0.18em 0.5em;
+}
+
+/* ---------- claim / fact card ---------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--rule-firm);
+  border-radius: var(--radius);
+  padding: var(--sp-4) var(--sp-5);
+  /* See `details.ax-fold`: `auto` keeps a card centred in the reading frame. */
+  margin: 0 auto var(--sp-5);
+  box-shadow: var(--shadow);
+}
+.card.s-proved      { border-left-color: var(--s-proved-fg); }
+.card.s-checked     { border-left-color: var(--s-checked-fg); }
+.card.s-evidence    { border-left-color: var(--s-evidence-fg); }
+.card.s-computed    { border-left-color: var(--s-computed-fg); }
+.card.s-empirical   { border-left-color: var(--s-empirical-fg); }
+.card.s-advisory    { border-left-color: var(--s-advisory-fg); }
+.card.s-conjectured { border-left-color: var(--s-conjectured-fg); }
+.card.s-refuted     { border-left-color: var(--s-refuted-fg); }
+.card.s-open        { border-left-color: var(--s-open-fg); }
+.card.s-axiom       { border-left-color: var(--s-axiom-fg); }
+
+.card > .card-head {
+  display: flex; flex-wrap: wrap; align-items: baseline;
+  gap: var(--sp-2) var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+.card h3, .card h4 { margin: 0; flex: 1 1 20ch; }
+.card .card-id {
+  font-family: var(--font-mono); font-size: var(--fs-xs);
+  color: var(--ink-3);
+}
+.card .card-statement { margin: 0 0 var(--sp-3); }
+.card .card-formal { margin: 0 0 var(--sp-3); }
+.card .card-formal pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
+.ax-tinylabel {
+  font-family: var(--font-sans); font-size: var(--fs-xs);
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink-3); margin: 0 0 var(--sp-1);
+}
+
+/* ---------- evidence rows ---------- */
+.ax-evidence { list-style: none; margin: 0; padding: 0; }
+.ax-evidence > li {
+  border-top: 1px solid var(--rule);
+  padding: var(--sp-3) 0 var(--sp-2);
+  font-size: var(--fs-ui);
+  font-family: var(--font-sans);
+}
+.ax-evidence > li:first-child { border-top: 0; }
+.ax-ev-head { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; }
+.ax-ev-kind {
+  font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--ink-3);
+}
+.ax-ev-supports { color: var(--ink-2); margin: var(--sp-1) 0 var(--sp-2); }
+.ax-noevidence {
+  font-family: var(--font-sans); font-size: var(--fs-ui);
+  color: var(--s-open-fg); background: var(--s-open-bg);
+  border: 1px dashed currentColor; border-radius: var(--radius);
+  padding: var(--sp-2) var(--sp-3);
+}
+
+/* ---------- command + copy ---------- */
+.ax-cmd {
+  display: flex; align-items: stretch; gap: 0;
+  border: 1px solid var(--rule); border-radius: var(--radius);
+  background: var(--bg-sunk);
+  overflow: hidden;
+  margin: 0 0 var(--sp-2);
+}
+.ax-cmd > code {
+  /* `min-width: 0` is load-bearing, not tidying: a flex item's default
+     min-width is `auto`, i.e. its content width, so `overflow-x: auto` never
+     engages and a long replay command is CLIPPED by the row's `overflow:
+     hidden` instead of scrolling. Found in a screenshot of certificate.html,
+     where the command a reader is invited to paste ended mid-path. */
+  flex: 1 1 auto; min-width: 0; background: none; border-radius: 0;
+  padding: var(--sp-2) var(--sp-3);
+  overflow-x: auto; white-space: pre; font-size: var(--fs-xs);
+}
+.ax-cmd > button {
+  flex: none; appearance: none; cursor: pointer;
+  border: 0; border-left: 1px solid var(--rule);
+  background: var(--surface); color: var(--ink-2);
+  font-family: var(--font-sans); font-size: var(--fs-xs); letter-spacing: 0.05em;
+  padding: 0 var(--sp-3);
+}
+.ax-cmd > button:hover { background: var(--bg); color: var(--ink); }
+.ax-cmd > button[data-copied="1"] { color: var(--s-proved-fg); }
+
+/* ---------- tables ---------- */
+/* A table with five or more columns opts out of the 36rem reading measure and
+   uses the full 68rem frame (`.ax-wide`). The atlas index has twelve columns:
+   at the reading measure its last four -- including the link to the fact's own
+   card -- were scrolled out of sight, so the page's navigation was hiding
+   behind a horizontal scrollbar. It still scrolls when it needs to; it just
+   does not need to as often. */
+.ax-tablewrap { overflow-x: auto; margin: 0 0 var(--sp-2); }
+/* A table of four or more columns breaks out of the 36rem reading measure,
+   CENTRED ON IT, so its heading and the prose above stay aligned. (Putting the
+   break-out on the section instead shifted the heading left and made the page
+   look ragged.) Only above a width where 52rem fits; below it the table stays
+   at the measure and the wrapper scrolls, which is the pre-existing
+   behaviour. */
+@media (min-width: 62rem) {
+  .blk.ax-widetable > .ax-tablewrap {
+    width: 52rem; max-width: none;
+    margin-left: calc((var(--measure) - 52rem) / 2);
+  }
+}
+table.ax-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-family: var(--font-sans);
+  font-size: var(--fs-ui);
+  font-variant-numeric: tabular-nums;
+}
+table.ax-table caption {
+  caption-side: top; text-align: left;
+  font-size: var(--fs-ui); color: var(--ink-2);
+  padding-bottom: var(--sp-2);
+}
+table.ax-table th, table.ax-table td {
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  vertical-align: baseline;
+  /* Machine values (`kernel-lean`, `QF_BV`) must not break at their hyphens;
+     the wrapper scrolls instead. The first column is prose and may wrap. */
+  white-space: nowrap;
+}
+table.ax-table td:first-child, table.ax-table th:first-child { white-space: normal; }
+/* ...and so may any cell the emitter marked as prose: a value containing a
+   space is a sentence, not a machine token, and on a fact card the `supports`
+   and `axiom_footprint` cells are sentences. See `table()` in emit_html.rs. */
+table.ax-table td.wrap { white-space: normal; }
+table.ax-table thead th {
+  border-bottom: 1px solid var(--rule-firm);
+  font-weight: 600; color: var(--ink-2);
+  font-size: var(--fs-xs); letter-spacing: 0.05em; text-transform: uppercase;
+}
+table.ax-table td.num, table.ax-table th.num { text-align: right; }
+table.ax-table tbody tr:hover { background: var(--bg-sunk); }
+.ax-source {
+  font-family: var(--font-sans); font-size: var(--fs-xs);
+  color: var(--ink-3); margin: 0 0 var(--sp-5);
+}
+
+/* ---------- steps player ---------- */
+ol.ax-steps { list-style: none; counter-reset: step; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+ol.ax-steps > li {
+  counter-increment: step;
+  display: grid;
+  grid-template-columns: 2.2rem 1fr;
+  gap: 0 var(--sp-3);
+  padding: var(--sp-3) var(--sp-3) var(--sp-3) var(--sp-2);
+  border-bottom: 1px solid var(--rule);
+  scroll-margin-top: var(--sp-6);
+}
+ol.ax-steps > li::before {
+  content: counter(step);
+  font-family: var(--font-mono); font-size: var(--fs-xs);
+  color: var(--ink-3); text-align: right; padding-top: 0.15em;
+}
+ol.ax-steps > li[aria-current="step"] { background: var(--bg-sunk); }
+ol.ax-steps > li[aria-current="step"]::before { color: var(--accent); font-weight: 700; }
+.ax-step-op { font-family: var(--font-sans); font-size: var(--fs-xs); letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-3); }
+.ax-step-io { font-family: var(--font-mono); font-size: var(--fs-sm); overflow-x: auto; }
+.ax-step-note { color: var(--ink-2); font-size: var(--fs-ui); font-family: var(--font-sans); }
+.ax-stepbar {
+  display: flex; gap: var(--sp-3); align-items: center;
+  font-family: var(--font-sans); font-size: var(--fs-xs); color: var(--ink-3);
+  padding: var(--sp-2) 0;
+}
+kbd {
+  border: 1px solid var(--rule-firm); border-bottom-width: 2px;
+  border-radius: var(--radius); padding: 0.05em 0.35em;
+  font-size: 0.9em; background: var(--surface);
+}
+
+/* ---------- certificate ---------- */
+.ax-cert { border-left-width: 3px; }
+.ax-cert .ax-cert-grid {
+  display: grid; grid-template-columns: max-content 1fr;
+  gap: var(--sp-1) var(--sp-3);
+  font-family: var(--font-sans); font-size: var(--fs-ui);
+  margin: 0 0 var(--sp-3);
+}
+.ax-cert .ax-cert-grid dt { color: var(--ink-3); font-size: var(--fs-xs); letter-spacing: 0.05em; text-transform: uppercase; padding-top: 0.25em; }
+.ax-cert .ax-cert-grid dd { margin: 0; word-break: break-word; }
+.ax-exit-ok { color: var(--s-proved-fg); font-weight: 600; }
+.ax-exit-bad { color: var(--s-refuted-fg); font-weight: 700; }
+/* Neither green nor red: a certificate that deliberately does not re-run. */
+.ax-exit-none { color: var(--s-advisory-fg); font-weight: 600; white-space: nowrap; }
+/* The full "why there is no recorded run" sentence, inside the fold. */
+.ax-noexit {
+  font-family: var(--font-sans); font-size: var(--fs-ui);
+  color: var(--s-advisory-fg); background: var(--s-advisory-bg);
+  border: 1px dashed currentColor; border-radius: var(--radius);
+  padding: var(--sp-2) var(--sp-3); margin: 0 0 var(--sp-3);
+}
+.ax-hash { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--ink-2); }
+
+/* ---------- figures ---------- */
+figure.ax-fig { margin: var(--sp-6) 0; }
+figure.ax-fig figcaption {
+  font-family: var(--font-sans); font-size: var(--fs-ui);
+  color: var(--ink-2); margin-top: var(--sp-3);
+  /* A caption is prose and reads at the prose measure even when the figure
+     it belongs to is three times as wide. */
+  max-width: var(--measure); margin-left: auto; margin-right: auto;
+}
+figure.ax-fig figcaption b { color: var(--ink); font-weight: 600; }
+.ax-figframe {
+  border: 1px solid var(--rule); border-radius: var(--radius);
+  background: var(--surface); padding: var(--sp-3);
+  overflow-x: auto;
+}
+
+/* dependency graph */
+svg.ax-graph { display: block; margin: 0 auto; }
+/* Wider than the column: render at natural size and let `.ax-figframe`'s
+   horizontal scroll do the work, rather than scaling the labels away. */
+svg.ax-graph.ax-graph-natural { max-width: none; margin: 0; }
+svg.ax-graph .gedge { fill: none; stroke: var(--rule-firm); stroke-width: 1.15; opacity: 0.85; }
+svg.ax-graph .gnode rect {
+  fill: var(--surface); stroke: var(--rule-firm); stroke-width: 1;
+  rx: 3;
+}
+svg.ax-graph .gnode text {
+  font-family: var(--font-sans); font-size: 11.5px; fill: var(--ink-2);
+  dominant-baseline: middle;
+}
+svg.ax-graph .gnode .gdot { stroke: none; }
+svg.ax-graph .gnode.s-proved      .gdot { fill: var(--s-proved-fg); }
+svg.ax-graph .gnode.s-checked     .gdot { fill: var(--s-checked-fg); }
+svg.ax-graph .gnode.s-evidence    .gdot { fill: var(--s-evidence-fg); }
+svg.ax-graph .gnode.s-computed    .gdot { fill: var(--s-computed-fg); }
+svg.ax-graph .gnode.s-empirical   .gdot { fill: var(--s-empirical-fg); }
+svg.ax-graph .gnode.s-advisory    .gdot { fill: var(--s-advisory-fg); }
+svg.ax-graph .gnode.s-conjectured .gdot { fill: var(--s-conjectured-fg); }
+svg.ax-graph .gnode.s-refuted     .gdot { fill: var(--s-refuted-fg); }
+svg.ax-graph .gnode.s-open        .gdot { fill: var(--s-open-fg); }
+svg.ax-graph .gnode.s-axiom       .gdot { fill: var(--s-axiom-fg); }
+svg.ax-graph .gnode { cursor: pointer; }
+/* A node that links to another document is wrapped in a real SVG anchor, so
+   the browser navigates with scripting off. Underlining every node label would
+   be noise at 300 nodes; the pointer and the focus ring carry the affordance,
+   and the anchor gives the reader the target in the status bar. */
+svg.ax-graph a.gnode-link { cursor: pointer; text-decoration: none; }
+svg.ax-graph a.gnode-link:focus-visible .gnode rect,
+svg.ax-graph a.gnode-link:hover .gnode rect { stroke: var(--accent); stroke-width: 1.8; }
+svg.ax-graph .gnode:hover rect, svg.ax-graph .gnode:focus rect { stroke: var(--accent); stroke-width: 1.8; }
+/* cone highlighting, driven by a class on the <svg> root */
+svg.ax-graph.coning .gnode { opacity: 0.22; }
+svg.ax-graph.coning .gedge { opacity: 0.1; }
+svg.ax-graph.coning .gnode.cone-self rect { stroke: var(--accent); stroke-width: 2; }
+svg.ax-graph.coning .gnode.cone-self,
+svg.ax-graph.coning .gnode.cone-anc,
+svg.ax-graph.coning .gnode.cone-desc { opacity: 1; }
+svg.ax-graph.coning .gedge.cone-edge { opacity: 1; stroke: var(--accent); stroke-width: 1.6; }
+.ax-legend {
+  display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4);
+  font-family: var(--font-sans); font-size: var(--fs-xs); color: var(--ink-3);
+  margin-top: var(--sp-3); padding: 0; list-style: none;
+}
+.ax-legend li { display: inline-flex; align-items: center; gap: 0.4em; }
+.ax-legend .swatch { width: 0.7em; height: 0.7em; border-radius: 50%; display: inline-block; }
+
+/* xy plot */
+svg.ax-plot { display: block; margin: 0 auto; }
+svg.ax-plot .axis { stroke: var(--rule-firm); stroke-width: 1; fill: none; }
+svg.ax-plot .grid { stroke: var(--rule); stroke-width: 1; stroke-dasharray: 2 3; }
+svg.ax-plot .tick { font-family: var(--font-sans); font-size: 10px; fill: var(--ink-3); }
+svg.ax-plot .axlabel { font-family: var(--font-sans); font-size: 11px; fill: var(--ink-2); }
+svg.ax-plot .series { fill: none; stroke: var(--accent); stroke-width: 1.8; stroke-linejoin: round; }
+svg.ax-plot .series-fill { fill: var(--accent); opacity: 0.08; stroke: none; }
+svg.ax-plot .series-bar { fill: var(--accent); opacity: 0.72; stroke: none; }
+svg.ax-plot .series-bar:hover, svg.ax-plot .series-bar:focus { opacity: 1; }
+svg.ax-plot .vertex { fill: var(--surface); stroke: var(--accent); stroke-width: 1.6; }
+svg.ax-plot .vertex:hover { fill: var(--accent); }
+svg.ax-plot .vlabel { font-family: var(--font-mono); font-size: 10px; fill: var(--ink-2); }
+
+/* ---------- footer ---------- */
+footer.ax-foot {
+  margin-top: var(--sp-8);
+  border-top: 1px solid var(--rule);
+  padding: var(--sp-5) 0 var(--sp-8);
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+}
+footer.ax-foot p { margin: 0 0 var(--sp-2); }
+footer.ax-foot code { font-size: var(--fs-xs); }
+
+.ax-unrenderable {
+  border: 2px dashed var(--s-refuted-fg);
+  color: var(--s-refuted-fg);
+  background: var(--s-refuted-bg);
+  padding: var(--sp-3);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+
+/* ---------- narrow screens ---------- */
+@media (max-width: 46rem) {
+  body { font-size: 16px; }
+  .ax-doc { padding: 0 var(--sp-4); }
+  h1.ax-title { font-size: var(--fs-xl); }
+  .card { padding: var(--sp-4); }
+  .ax-cert .ax-cert-grid { grid-template-columns: 1fr; }
+  .ax-cert .ax-cert-grid dt { padding-top: var(--sp-2); }
+
+  /* THE REPLAY COMMAND WRAPS ON A NARROW SCREEN INSTEAD OF SCROLLING.
+     Reader review gripe 4, checked at 420px: the `min-width: 0` fix made the
+     row scroll rather than clip, which is correct and still leaves a phone
+     reader looking at 30 characters of a 300-character command through a
+     letterbox. Wrapping shows the whole thing.
+
+     `pre-wrap` INSERTS NOTHING -- it only permits a break at an existing space
+     -- so the bytes the copy button puts on the clipboard are unchanged, and
+     `overflow-wrap: anywhere` lets a single long path break rather than push
+     the row wide again. The hanging indent is the visual cue that a run of
+     lines is one command: a continuation is inset, the way a wrapped shell
+     line is. */
+  .ax-cmd { align-items: flex-start; }
+  .ax-cmd > code {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    overflow-x: visible;
+    padding-left: calc(var(--sp-3) + 2ch);
+    text-indent: -2ch;
+  }
+  .ax-cmd > button { position: sticky; top: 0; align-self: stretch; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+/* ---------- print ---------- */
+@media print {
+  :root {
+    --bg: #fff; --bg-sunk: #f6f6f6; --surface: #fff;
+    --ink: #000; --ink-2: #222; --ink-3: #555;
+    --rule: #ccc; --rule-firm: #999; --shadow: none;
+  }
+  body { font-size: 10.5pt; background: #fff; color: #000; }
+  .ax-levels, .ax-cmd > button, .ax-stepbar, .ax-skip { display: none !important; }
+  /* Print is the forensic level: nothing is hidden on paper. */
+  .t-detail, .t-archive { display: block !important; }
+  details.ax-fold > .ax-foldbody { display: block !important; }
+  .card, figure.ax-fig, .ax-cert, ol.ax-steps > li { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  .ax-cmd > code { white-space: pre-wrap; word-break: break-all; }
+  a[data-external="1"]::after { content: " (" attr(href) ")"; font-size: 0.85em; color: #555; word-break: break-all; }
+  svg.ax-graph .gnode rect { stroke: #666; }
+}
+
+</style>
+</head>
+<body data-level="full">
+<a class="ax-skip" href="#ax-main">Skip to content</a>
+<header class="ax-head"><div class="ax-doc">
+<h1 class="ax-title">The p = 2 tame-point weight certificate</h1>
+<p class="ax-subtitle">Closed form, admissibility, and exact sharpness for the Kramer-Miller&#x2014;Upton weight at p = 2, e = 3</p>
+<ul class="ax-meta">
+<li><b>document</b> noh-p2-weight-certificate</li>
+<li><b>genre</b> system</li>
+<li><b>source</b> <code>75663ef85c2dad4390a3b6d77361919a914642a9</code></li>
+<li><b>epoch</b> <code>1787307950 (commit)</code></li>
+</ul>
+<p style="margin-top:var(--sp-4)"><span class="ax-levelnote">reading level</span> <span class="ax-levels" role="group" aria-label="reading level"><button type="button" data-level="summary" aria-pressed="false">summary</button><button type="button" data-level="full" aria-pressed="true">full</button><button type="button" data-level="forensic" aria-pressed="false">forensic</button></span></p>
+</div></header>
+<main id="ax-main" class="ax-doc">
+<section class="blk prose t-essential" id="intro-setting">
+<h2 id="the-gap">The gap</h2>
+<p>Kramer-Miller and Upton, <em>Newton Polygons of Sums on Curves I</em> (arXiv:2110.08656v1), build a local-to-global comparison out of a WEIGHT: a function <math display="inline" alttext="a(k)"><semantics><mrow><mi>a</mi><mo>(</mo><mi>k</mi><mo>)</mo></mrow><annotation encoding="application/x-tex">a(k)</annotation></semantics></math> on pole orders that makes a certain truncated space stable under the Frobenius operator <math display="inline" alttext="U_p"><semantics><mrow><msub><mi>U</mi><mi>p</mi></msub></mrow><annotation encoding="application/x-tex">U_p</annotation></semantics></math>. At an auxiliary tame point with <math display="inline" alttext="\eta(P) = 1"><semantics><mrow><mi>&#x3B7;</mi><mo>(</mo><mi>P</mi><mo>)</mo><mo stretchy="false">=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\eta(P) = 1</annotation></semantics></math> their construction needs the weight to satisfy three admissibility conditions, the load-bearing one being <math display="inline" alttext="d(k) \ge 1"><semantics><mrow><mi>d</mi><mo>(</mo><mi>k</mi><mo>)</mo><mo>&#x2265;</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">d(k) \ge 1</annotation></semantics></math> for every <math display="inline" alttext="k"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math> above the truncation, where <math display="inline" alttext="d(k)"><semantics><mrow><mi>d</mi><mo>(</mo><mi>k</mi><mo>)</mo></mrow><annotation encoding="application/x-tex">d(k)</annotation></semantics></math> measures how far the operator moves a term away from the boundary of the truncated space. Their own Remark 6.5 records that at <math display="inline" alttext="p = 2"><semantics><mrow><mi>p</mi><mo stretchy="false">=</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">p = 2</annotation></semantics></math> the estimate they have is "too low for applications to the global setting": the weight they use is not admissible there.</p>
+</section>
+<section class="blk prose t-essential" id="intro-result">
+<p>That gap is closed, elementarily, at <math display="inline" alttext="p = 2"><semantics><mrow><mi>p</mi><mo stretchy="false">=</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">p = 2</annotation></semantics></math> with tame ramification index <math display="inline" alttext="e = 3"><semantics><mrow><mi>e</mi><mo stretchy="false">=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">e = 3</annotation></semantics></math>. The transition coefficients <math display="inline" alttext="c_{k,j}"><semantics><mrow><msub><mi>c</mi><mrow><mi>k</mi><mo stretchy="false">,</mo><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">c_{k,j}</annotation></semantics></math> of <math display="inline" alttext="U_2"><semantics><mrow><msub><mi>U</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">U_2</annotation></semantics></math> turn out to be hypergeometric in closed form (Theorem 1); their <math display="inline" alttext="2"><semantics><mrow><mn>2</mn></mrow><annotation encoding="application/x-tex">2</annotation></semantics></math>-adic valuation is then a digit-sum identity (Theorem 2), which yields a tail bound (Lemma A); the weight <math display="inline" alttext="a(k) = \lfloor (k-1)/3 \rfloor + (k \bmod 2)"><semantics><mrow><mi>a</mi><mo>(</mo><mi>k</mi><mo>)</mo><mo stretchy="false">=</mo><mo stretchy="false">&#x230A;</mo><mo>(</mo><mi>k</mi><mo stretchy="false">&#x2212;</mo><mn>1</mn><mo>)</mo><mo stretchy="false">/</mo><mn>3</mn><mo stretchy="false">&#x230B;</mo><mo stretchy="false">+</mo><mo>(</mo><mi>k</mi><mi>mod</mi><mn>2</mn><mo>)</mo></mrow><annotation encoding="application/x-tex">a(k) = \lfloor (k-1)/3 \rfloor + (k \bmod 2)</annotation></semantics></math> &#x2014; KMU's own weight plus a parity indicator &#x2014; satisfies all three admissibility conditions for every <math display="inline" alttext="k"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math> (Theorem 3); and the achievable growth rate is pinned exactly, not bracketed, by a single coefficient (Theorem 4). The arguments are written out in <code>newton-over-hodge-char2/research-log/04-weight-proof.md</code> and were re-derived line by line by an adversarial audit in <code>newton-over-hodge-char2/research-log/20-verify.md</code>, Part Two.</p>
+</section>
+<section class="blk prose t-essential" id="intro-this-page">
+<p>This page is not a summary of that work: it is the output of a checker. Every number below was read out of one run of a self-checking Rust program that recomputes the coefficients in exact rational arithmetic and asserts each claim over a stated finite range, exiting nonzero if any assertion fails. The run wrote a record; the record carries the SHA-256 of the source that produced it, the command that reproduces it, and its exit status; and the claim badges on this page are computed from that record rather than typed. A separate, deliberately broken copy of the same program is run the same way and its failing record is on this page too, folded away below, so that the machinery which turns evidence into badges can be seen failing as well as passing.</p>
+</section>
+<article class="card blk t-essential s-evidence" id="claim-theorem-3" data-claim="Theorem 3 (the closed-form weight is admissible)" data-status="EVIDENCE">
+<div class="card-head"><h3>Theorem 3 (the closed-form weight is admissible)</h3><span class="ax-axes"><span class="ax-axis-label">here</span><span class="badge badge-evidence"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 1h6v6H1zM9 9h6v6H9zM9 1h6v6H9zM1 9h6v6H1z"/></svg>EVIDENCE</span></span></div>
+<p class="card-statement">For <math display="inline" alttext="a(k) = 0"><semantics><mrow><mi>a</mi><mo>(</mo><mi>k</mi><mo>)</mo><mo stretchy="false">=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">a(k) = 0</annotation></semantics></math> when <math display="inline" alttext="k \le 3"><semantics><mrow><mi>k</mi><mo>&#x2264;</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">k \le 3</annotation></semantics></math> and <math display="inline" alttext="a(k) = \lfloor (k-1)/3 \rfloor + (k \bmod 2)"><semantics><mrow><mi>a</mi><mo>(</mo><mi>k</mi><mo>)</mo><mo stretchy="false">=</mo><mo stretchy="false">&#x230A;</mo><mo>(</mo><mi>k</mi><mo stretchy="false">&#x2212;</mo><mn>1</mn><mo>)</mo><mo stretchy="false">/</mo><mn>3</mn><mo stretchy="false">&#x230B;</mo><mo stretchy="false">+</mo><mo>(</mo><mi>k</mi><mi>mod</mi><mn>2</mn><mo>)</mo></mrow><annotation encoding="application/x-tex">a(k) = \lfloor (k-1)/3 \rfloor + (k \bmod 2)</annotation></semantics></math> when <math display="inline" alttext="k \ge 4"><semantics><mrow><mi>k</mi><mo>&#x2265;</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">k \ge 4</annotation></semantics></math>, KMU's admissibility conditions hold at the tame point with <math display="inline" alttext="p = 2"><semantics><mrow><mi>p</mi><mo stretchy="false">=</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">p = 2</annotation></semantics></math>, <math display="inline" alttext="e = 3"><semantics><mrow><mi>e</mi><mo stretchy="false">=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">e = 3</annotation></semantics></math>, <math display="inline" alttext="\mu(P) = 3"><semantics><mrow><mi>&#x3BC;</mi><mo>(</mo><mi>P</mi><mo>)</mo><mo stretchy="false">=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">\mu(P) = 3</annotation></semantics></math>: (A1) the weight vanishes below the truncation; (A2) it is <math display="inline" alttext="O(k)"><semantics><mrow><mi>O</mi><mo>(</mo><mi>k</mi><mo>)</mo></mrow><annotation encoding="application/x-tex">O(k)</annotation></semantics></math>; and (A3) <math display="inline" alttext="d(k) \ge 1"><semantics><mrow><mi>d</mi><mo>(</mo><mi>k</mi><mo>)</mo><mo>&#x2265;</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">d(k) \ge 1</annotation></semantics></math> with the minimum attained at the leading term. Checked over <math display="inline" alttext="4 \le k \le 400"><semantics><mrow><mn>4</mn><mo>&#x2264;</mo><mi>k</mi><mo>&#x2264;</mo><mn>400</mn></mrow><annotation encoding="application/x-tex">4 \le k \le 400</annotation></semantics></math> with support <math display="inline" alttext="m \le 250"><semantics><mrow><mi>m</mi><mo>&#x2264;</mo><mn>250</mn></mrow><annotation encoding="application/x-tex">m \le 250</annotation></semantics></math>: 397 columns, 0 violations, and 0 columns whose minimum sits anywhere but the leading term.</p>
+<p class="ax-tinylabel">evidence</p>
+<ul class="ax-evidence">
+<li>
+<div class="ax-ev-head"><span class="badge badge-evidence badge-compact" role="img" aria-label="EVIDENCE" title="EVIDENCE"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 1h6v6H1zM9 9h6v6H9zM9 1h6v6H9zM1 9h6v6H1z"/></svg></span><span class="ax-ev-kind">primary</span><span class="ax-ev-kind">R:noh-wt-certificate</span><span class="ax-exit-ok">exit 0</span></div>
+<p class="ax-ev-supports">Theorem 3 (admissibility) for a(k) = 0 (k &lt;= 3), a(k) = floor((k-1)/3) + (k mod 2) (k &gt;= 4): (A1) a(k) = 0 for k &lt;= mu(P) = 3; (A2) 2 a(k) &lt;= k + 6, so a(k) = O(k); (A3) d(k) = min over the computed support of [a(k) - a(j) + v_2(c_{k,j})] is &gt;= 1 for every 4 &lt;= k &lt;= 400, the minimum is attained at the leading term m = 0 for every such k, and d(k) &gt;= 40 once k &gt;= 300.</p>
+<div class="ax-cmd"><code id="claim-theorem-3-ev0-cmd">rustc --edition 2024 -O -o /tmp/noh_wt_cert render/producers/noh_wt_certificate_emitrun.rs &amp;&amp; /tmp/noh_wt_cert --emit-run render/examples-input/cert/run-certificate.json --source render/producers/noh_wt_certificate_emitrun.rs --record-id R:noh-wt-certificate --replay-seconds 1 --role production</code><button type="button" data-copy-target="claim-theorem-3-ev0-cmd">copy</button></div>
+<p class="ax-source">checked by <code>noh_wt_certificate.rs with --emit-run (render strand P0-A); base pin axeyum 75663ef8, built with rustc --edition 2024</code></p>
+<p class="ax-source">artifact <code>run-certificate.json</code></p>
+</li>
+</ul>
+<details class="ax-fold t-detail"><summary>note</summary><div class="ax-foldbody"><p>A finite sweep, not the proof. The proof &#x2014; a three-case parity argument for the tail and a six-case mod-6 identity for the leading term &#x2014; is <code>newton-over-hodge-char2/research-log/04-weight-proof.md</code> sec. 4, confirmed line by line at <code>newton-over-hodge-char2/research-log/20-verify.md</code> P2-3. What the sweep adds is that the argument's conclusion survives contact with the actual numbers over a range no one checked by hand.</p></div></details>
+</article>
+<article class="card blk t-essential s-evidence" id="claim-theorem-4" data-claim="Theorem 4 (sharpness: the bound at $k = 6$ is universal)" data-status="EVIDENCE">
+<div class="card-head"><h3>Theorem 4 (sharpness: the bound at <math display="inline" alttext="k = 6"><semantics><mrow><mi>k</mi><mo stretchy="false">=</mo><mn>6</mn></mrow><annotation encoding="application/x-tex">k = 6</annotation></semantics></math> is universal)</h3><span class="ax-axes"><span class="ax-axis-label">here</span><span class="badge badge-evidence"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 1h6v6H1zM9 9h6v6H9zM9 1h6v6H9zM1 9h6v6H1z"/></svg>EVIDENCE</span></span></div>
+<p class="card-statement"><math display="inline" alttext="j&#39;(6) + e = 6"><semantics><mrow><mi>j</mi><mo>&#x2032;</mo><mo>(</mo><mn>6</mn><mo>)</mo><mo stretchy="false">+</mo><mi>e</mi><mo stretchy="false">=</mo><mn>6</mn></mrow><annotation encoding="application/x-tex">j'(6) + e = 6</annotation></semantics></math>, so <math display="inline" alttext="k = 6"><semantics><mrow><mi>k</mi><mo stretchy="false">=</mo><mn>6</mn></mrow><annotation encoding="application/x-tex">k = 6</annotation></semantics></math> lies in its own support and the (A3) constraint there reads <math display="inline" alttext="a(6) - a(6) + v_2(c_{6,6}) \ge d(6)"><semantics><mrow><mi>a</mi><mo>(</mo><mn>6</mn><mo>)</mo><mo stretchy="false">&#x2212;</mo><mi>a</mi><mo>(</mo><mn>6</mn><mo>)</mo><mo stretchy="false">+</mo><msub><mi>v</mi><mn>2</mn></msub><mo>(</mo><msub><mi>c</mi><mrow><mn>6</mn><mo stretchy="false">,</mo><mn>6</mn></mrow></msub><mo>)</mo><mo>&#x2265;</mo><mi>d</mi><mo>(</mo><mn>6</mn><mo>)</mo></mrow><annotation encoding="application/x-tex">a(6) - a(6) + v_2(c_{6,6}) \ge d(6)</annotation></semantics></math>, in which the weight cancels identically. Since <math display="inline" alttext="c_{6,6} = 2"><semantics><mrow><msub><mi>c</mi><mrow><mn>6</mn><mo stretchy="false">,</mo><mn>6</mn></mrow></msub><mo stretchy="false">=</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">c_{6,6} = 2</annotation></semantics></math> and <math display="inline" alttext="v_2(c_{6,6}) = 1"><semantics><mrow><msub><mi>v</mi><mn>2</mn></msub><mo>(</mo><msub><mi>c</mi><mrow><mn>6</mn><mo stretchy="false">,</mo><mn>6</mn></mrow></msub><mo>)</mo><mo stretchy="false">=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">v_2(c_{6,6}) = 1</annotation></semantics></math>, <math display="inline" alttext="d(6) \le 1"><semantics><mrow><mi>d</mi><mo>(</mo><mn>6</mn><mo>)</mo><mo>&#x2264;</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">d(6) \le 1</annotation></semantics></math> for EVERY admissible weight whatsoever &#x2014; not merely for the weight above.</p>
+<p class="ax-tinylabel">evidence</p>
+<ul class="ax-evidence">
+<li>
+<div class="ax-ev-head"><span class="badge badge-evidence badge-compact" role="img" aria-label="EVIDENCE" title="EVIDENCE"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1 1h6v6H1zM9 9h6v6H9zM9 1h6v6H9zM1 9h6v6H1z"/></svg></span><span class="ax-ev-kind">primary</span><span class="ax-ev-kind">R:noh-wt-certificate</span><span class="ax-exit-ok">exit 0</span></div>
+<p class="ax-ev-supports">Theorem 4 (sharpness): j'(6) + e = 6, so k = 6 lies in its own support, and the (A3) constraint there reads a(6) - a(6) + v_2(c_{6,6}) &gt;= d(6), in which the weight cancels identically. Since c_{6,6} = 2 and v_2(c_{6,6}) = 1, d(6) &lt;= 1 for EVERY admissible weight whatsoever.</p>
+<div class="ax-cmd"><code id="claim-theorem-4-ev0-cmd">rustc --edition 2024 -O -o /tmp/noh_wt_cert render/producers/noh_wt_certificate_emitrun.rs &amp;&amp; /tmp/noh_wt_cert --emit-run render/examples-input/cert/run-certificate.json --source render/producers/noh_wt_certificate_emitrun.rs --record-id R:noh-wt-certificate --replay-seconds 1 --role production</code><button type="button" data-copy-target="claim-theorem-4-ev0-cmd">copy</button></div>
+<p class="ax-source">checked by <code>noh_wt_certificate.rs with --emit-run (render strand P0-A); base pin axeyum 75663ef8, built with rustc --edition 2024</code></p>
+<p class="ax-source">artifact <code>run-certificate.json</code></p>
+</li>
+</ul>
+<details class="ax-fold t-detail"><summary>note</summary><div class="ax-foldbody"><p>Two computed facts are asserted here: that <math display="inline" alttext="k = 6"><semantics><mrow><mi>k</mi><mo stretchy="false">=</mo><mn>6</mn></mrow><annotation encoding="application/x-tex">k = 6</annotation></semantics></math> is a self-loop of the support map, and the value of one coefficient's valuation. That a target <math display="inline" alttext="d(k) \ge \max(1, \gamma k)"><semantics><mrow><mi>d</mi><mo>(</mo><mi>k</mi><mo>)</mo><mo>&#x2265;</mo><mi>max</mi><mo>(</mo><mn>1</mn><mo stretchy="false">,</mo><mi>&#x3B3;</mi><mi>k</mi><mo>)</mo></mrow><annotation encoding="application/x-tex">d(k) \ge \max(1, \gamma k)</annotation></semantics></math> is therefore achievable if and only if <math display="inline" alttext="\gamma \le 1/6"><semantics><mrow><mi>&#x3B3;</mi><mo>&#x2264;</mo><mn>1</mn><mo stretchy="false">/</mo><mn>6</mn></mrow><annotation encoding="application/x-tex">\gamma \le 1/6</annotation></semantics></math> follows in one line (<math display="inline" alttext="6\gamma \le 1"><semantics><mrow><mn>6</mn><mi>&#x3B3;</mi><mo>&#x2264;</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">6\gamma \le 1</annotation></semantics></math>) and is argued at <code>newton-over-hodge-char2/research-log/04-weight-proof.md</code> sec. 5; the certificate prints that consequence but does not separately check it. It replaces an interval &#x2014; earlier work bracketed the threshold, first in <math display="inline" alttext="[1/6, 1/5)"><semantics><mrow><mo>[</mo><mn>1</mn><mo stretchy="false">/</mo><mn>6</mn><mo stretchy="false">,</mo><mn>1</mn><mo stretchy="false">/</mo><mn>5</mn><mo>)</mo></mrow><annotation encoding="application/x-tex">[1/6, 1/5)</annotation></semantics></math> and then in <math display="inline" alttext="[1/6, 2/11)"><semantics><mrow><mo>[</mo><mn>1</mn><mo stretchy="false">/</mo><mn>6</mn><mo stretchy="false">,</mo><mn>2</mn><mo stretchy="false">/</mo><mn>11</mn><mo>)</mo></mrow><annotation encoding="application/x-tex">[1/6, 2/11)</annotation></semantics></math> &#x2014; with a point, and the witness is one coefficient rather than a linear program.</p></div></details>
+</article>
+<section class="blk t-essential" id="steps-k6-self-loop">
+<p>The whole of Theorem 4, in five steps. Every value is read from the run record's statistics; none is transcribed.</p>
+<div class="ax-stepbar"><button type="button" data-step="prev">prev</button><button type="button" data-step="next">next</button><span>or press <kbd>j</kbd> / <kbd>k</kbd> with the list focused</span></div>
+<ol class="ax-steps">
+<li><div>
+<div class="ax-step-op">least pole order in the image: $j'(k) = k/2$ for even $k$</div>
+<div class="ax-step-io">$k = 6$, $p = 2$, $e = 3$</div>
+<div class="ax-step-io">&rarr; $j'(6) = 3$</div>
+</div></li>
+<li><div>
+<div class="ax-step-op">support of $U_2(t^{-6})$ is $j'(6) + e m$, $m \ge 0$</div>
+<div class="ax-step-io">$j'(6) = 3$</div>
+<div class="ax-step-io">&rarr; $j \in \{3, 6, \ldots\}$ -- and $j'(6) + e = 6 = k$, a self-loop</div>
+</div></li>
+<li><div>
+<div class="ax-step-op">$3 \mid 6$ terminates the product after one factor</div>
+<div class="ax-step-io">closed form of Theorem 1 at $k = 6$</div>
+<div class="ax-step-io">&rarr; $U_2(t^{-6}) = 1 \cdot t^{-3} + 2 \cdot t^{-6}$, and $c_{6,9} = 0$</div>
+</div></li>
+<li><div>
+<div class="ax-step-op">$2$-adic valuation</div>
+<div class="ax-step-io">$c_{6,6} = 2$</div>
+<div class="ax-step-io">&rarr; $v_2(c_{6,6}) = 1$</div>
+</div></li>
+<li><div>
+<div class="ax-step-op">the weight cancels; substitute the valuation</div>
+<div class="ax-step-io">the (A3) constraint at $(k, j) = (6, 6)$: $a(6) - a(6) + v_2(c_{6,6}) \ge d(6)$</div>
+<div class="ax-step-io">&rarr; $d(6) \le 1$ for every weight; for the weight of Theorem 3, $a(6) = 1$, $a(3) = 0$ and $d(6) = 1$, so the bound is attained</div>
+<div class="ax-step-note">The two tightnesses are complementary: this is the one place Lemma A is tight, and it is exactly where the parity indicator lowers the increment rather than raising it.</div>
+</div></li>
+</ol>
+</section>
+<section class="blk t-detail ax-widetable" id="table-d-k">
+<div class="ax-tablewrap"><table class="ax-table">
+<caption><math display="inline" alttext="d(k)"><semantics><mrow><mi>d</mi><mo>(</mo><mi>k</mi><mo>)</mo></mrow><annotation encoding="application/x-tex">d(k)</annotation></semantics></math> for the weight of Theorem 3, taken from the <code>d-table</code> of run record <code>R:noh-wt-certificate</code> &#x2014; every row of it: the certificate swept <math display="inline" alttext="4 \le k \le 400"><semantics><mrow><mn>4</mn><mo>&#x2264;</mo><mi>k</mi><mo>&#x2264;</mo><mn>400</mn></mrow><annotation encoding="application/x-tex">4 \le k \le 400</annotation></semantics></math> (397 columns). No row is copied into this document, so a changed measurement changes this table. <code>argmin m</code> is the term of the support at which the minimum is attained &#x2014; it is the leading term <math display="inline" alttext="m = 0"><semantics><mrow><mi>m</mi><mo stretchy="false">=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">m = 0</annotation></semantics></math> in every column.</caption>
+<thead><tr><th class="">k</th><th class="">jprime</th><th class="">a_k</th><th class="">a_jprime</th><th class="">d</th><th class="">argmin_m</th></tr></thead>
+<tbody>
+<tr><td class="">4</td><td class="">2</td><td class="">1</td><td class="">0</td><td class="">1</td><td class="">0</td></tr>
+<tr><td class="">5</td><td class="">4</td><td class="">2</td><td class="">1</td><td class="">1</td><td class="">0</td></tr>
+<tr><td class="">6</td><td class="">3</td><td class="">1</td><td class="">0</td><td class="">1</td><td class="">0</td></tr>
+<tr><td class="">7</td><td class="">5</td><td class="">3</td><td class="">2</td><td class="">1</td><td class="">0</td></tr>
+<tr><td class="">8</td><td class="">4</td><td class="">2</td><td class="">1</td><td class="">1</td><td class="">0</td></tr>
+<tr><td class="">9</td><td class="">6</td><td class="">3</td><td class="">1</td><td class="">2</td><td class="">0</td></tr>
+<tr><td class="">10</td><td class="">5</td><td class="">3</td><td class="">2</td><td class="">1</td><td class="">0</td></tr>
+<tr><td class="">11</td><td class="">7</td><td class="">4</td><td class="">3</td><td class="">1</td><td class="">0</td></tr>
+<tr><td class="">12</td><td class="">6</td><td class="">3</td><td class="">1</td><td class="">2</td><td class="">0</td></tr>
+<tr><td class="">13</td><td class="">8</td><td class="">5</td><td class="">2</td><td class="">3</td><td class="">0</td></tr>
+<tr><td class="">14</td><td class="">7</td><td class="">4</td><td class="">3</td><td class="">1</td><td class="">0</td></tr>
+<tr><td class="">15</td><td class="">9</td><td class="">5</td><td class="">3</td><td class="">2</td><td class="">0</td></tr>
+<tr><td class="">16</td><td class="">8</td><td class="">5</td><td class="">2</td><td class="">3</td><td class="">0</td></tr>
+<tr><td class="">17</td><td class="">10</td><td class="">6</td><td class="">3</td><td class="">3</td><td class="">0</td></tr>
+<tr><td class="">18</td><td class="">9</td><td class="">5</td><td class="">3</td><td class="">2</td><td class="">0</td></tr>
+<tr><td class="">19</td><td class="">11</td><td class="">7</td><td class="">4</td><td class="">3</td><td class="">0</td></tr>
+<tr><td class="">20</td><td class="">10</td><td class="">6</td><td class="">3</td><td class="">3</td><td class="">0</td></tr>
+<tr><td class="">21</td><td class="">12</td><td class="">7</td><td class="">3</td><td class="">4</td><td class="">0</td></tr>
+<tr><td class="">22</td><td class="">11</td><td class="">7</td><td class="">4</td><td class="">3</td><td class="">0</td></tr>
+<tr><td class="">23</td><td class="">13</td><td class="">8</td><td class="">5</td><td class="">3</td><td class="">0</td></tr>
+<tr><td class="">24</td><td class="">12</td><td class="">7</td><td class="">3</td><td class="">4</td><td class="">0</td></tr>
+<tr><td class="">25</td><td class="">14</td><td class="">9</td><td class="">4</td><td class="">5</td><td class="">0</td></tr>
+<tr><td class="">26</td><td class="">13</td><td class="">8</td><td class="">5</td><td class="">3</td><td class="">0</td></tr>
+<tr><td class="">27</td><td class="">15</td><td class="">9</td><td class="">5</td><td class="">4</td><td class="">0</td></tr>
+<tr><td class="">28</td><td class="">14</td><td class="">9</td><td class="">4</td><td class="">5</td><td class="">0</td></tr>
+<tr><td class="">29</td><td class="">16</td><td class="">10</td><td class="">5</td><td class="">5</td><td class="">0</td></tr>
+<tr><td class="">30</td><td class="">15</td><td class="">9</td><td class="">5</td><td class="">4</td><td class="">0</td></tr>
+<tr><td class="">31</td><td class="">17</td><td class="">11</td><td class="">6</td><td class="">5</td><td class="">0</td></tr>
+<tr><td class="">32</td><td class="">16</td><td class="">10</td><td class="">5</td><td class="">5</td><td class="">0</td></tr>
+<tr><td class="">33</td><td class="">18</td><td class="">11</td><td class="">5</td><td class="">6</td><td class="">0</td></tr>
+<tr><td class="">34</td><td class="">17</td><td class="">11</td><td class="">6</td><td class="">5</td><td class="">0</td></tr>
+<tr><td class="">35</td><td class="">19</td><td class="">12</td><td class="">7</td><td class="">5</td><td class="">0</td></tr>
+<tr><td class="">36</td><td class="">18</td><td class="">11</td><td class="">5</td><td class="">6</td><td class="">0</td></tr>
+<tr><td class="">37</td><td class="">20</td><td class="">13</td><td class="">6</td><td class="">7</td><td class="">0</td></tr>
+<tr><td class="">38</td><td class="">19</td><td class="">12</td><td class="">7</td><td class="">5</td><td class="">0</td></tr>
+<tr><td class="">39</td><td class="">21</td><td class="">13</td><td class="">7</td><td class="">6</td><td class="">0</td></tr>
+<tr><td class="">40</td><td class="">20</td><td class="">13</td><td class="">6</td><td class="">7</td><td class="">0</td></tr>
+<tr><td class="">41</td><td class="">22</td><td class="">14</td><td class="">7</td><td class="">7</td><td class="">0</td></tr>
+<tr><td class="">42</td><td class="">21</td><td class="">13</td><td class="">7</td><td class="">6</td><td class="">0</td></tr>
+<tr><td class="">43</td><td class="">23</td><td class="">15</td><td class="">8</td><td class="">7</td><td class="">0</td></tr>
+<tr><td class="">44</td><td class="">22</td><td class="">14</td><td class="">7</td><td class="">7</td><td class="">0</td></tr>
+<tr><td class="">45</td><td class="">24</td><td class="">15</td><td class="">7</td><td class="">8</td><td class="">0</td></tr>
+<tr><td class="">46</td><td class="">23</td><td class="">15</td><td class="">8</td><td class="">7</td><td class="">0</td></tr>
+<tr><td class="">47</td><td class="">25</td><td class="">16</td><td class="">9</td><td class="">7</td><td class="">0</td></tr>
+<tr><td class="">48</td><td class="">24</td><td class="">15</td><td class="">7</td><td class="">8</td><td class="">0</td></tr>
+<tr><td class="">49</td><td class="">26</td><td class="">17</td><td class="">8</td><td class="">9</td><td class="">0</td></tr>
+<tr><td class="">50</td><td class="">25</td><td class="">16</td><td class="">9</td><td class="">7</td><td class="">0</td></tr>
+<tr><td class="">51</td><td class="">27</td><td class="">17</td><td class="">9</td><td class="">8</td><td class="">0</td></tr>
+<tr><td class="">52</td><td class="">26</td><td class="">17</td><td class="">8</td><td class="">9</td><td class="">0</td></tr>
+<tr><td class="">53</td><td class="">28</td><td class="">18</td><td class="">9</td><td class="">9</td><td class="">0</td></tr>
+<tr><td class="">54</td><td class="">27</td><td class="">17</td><td class="">9</td><td class="">8</td><td class="">0</td></tr>
+<tr><td class="">55</td><td class="">29</td><td class="">19</td><td class="">10</td><td class="">9</td><td class="">0</td></tr>
+<tr><td class="">56</td><td class="">28</td><td class="">18</td><td class="">9</td><td class="">9</td><td class="">0</td></tr>
+<tr><td class="">57</td><td class="">30</td><td class="">19</td><td class="">9</td><td class="">10</td><td class="">0</td></tr>
+<tr><td class="">58</td><td class="">29</td><td class="">19</td><td class="">10</td><td class="">9</td><td class="">0</td></tr>
+<tr><td class="">59</td><td class="">31</td><td class="">20</td><td class="">11</td><td class="">9</td><td class="">0</td></tr>
+<tr><td class="">60</td><td class="">30</td><td class="">19</td><td class="">9</td><td class="">10</td><td class="">0</td></tr>
+<tr><td class="">61</td><td class="">32</td><td class="">21</td><td class="">10</td><td class="">11</td><td class="">0</td></tr>
+<tr><td class="">62</td><td class="">31</td><td class="">20</td><td class="">11</td><td class="">9</td><td class="">0</td></tr>
+<tr><td class="">63</td><td class="">33</td><td class="">21</td><td class="">11</td><td class="">10</td><td class="">0</td></tr>
+<tr><td class="">64</td><td class="">32</td><td class="">21</td><td class="">10</td><td class="">11</td><td class="">0</td></tr>
+<tr><td class="">65</td><td class="">34</td><td class="">22</td><td class="">11</td><td class="">11</td><td class="">0</td></tr>
+<tr><td class="">66</td><td class="">33</td><td class="">21</td><td class="">11</td><td class="">10</td><td class="">0</td></tr>
+<tr><td class="">67</td><td class="">35</td><td class="">23</td><td class="">12</td><td class="">11</td><td class="">0</td></tr>
+<tr><td class="">68</td><td class="">34</td><td class="">22</td><td class="">11</td><td class="">11</td><td class="">0</td></tr>
+<tr><td class="">69</td><td class="">36</td><td class="">23</td><td class="">11</td><td class="">12</td><td class="">0</td></tr>
+<tr><td class="">70</td><td class="">35</td><td class="">23</td><td class="">12</td><td class="">11</td><td class="">0</td></tr>
+<tr><td class="">71</td><td class="">37</td><td class="">24</td><td class="">13</td><td class="">11</td><td class="">0</td></tr>
+<tr><td class="">72</td><td class="">36</td><td class="">23</td><td class="">11</td><td class="">12</td><td class="">0</td></tr>
+<tr><td class="">73</td><td class="">38</td><td class="">25</td><td class="">12</td><td class="">13</td><td class="">0</td></tr>
+<tr><td class="">74</td><td class="">37</td><td class="">24</td><td class="">13</td><td class="">11</td><td class="">0</td></tr>
+<tr><td class="">75</td><td class="">39</td><td class="">25</td><td class="">13</td><td class="">12</td><td class="">0</td></tr>
+<tr><td class="">76</td><td class="">38</td><td class="">25</td><td class="">12</td><td class="">13</td><td class="">0</td></tr>
+<tr><td class="">77</td><td class="">40</td><td class="">26</td><td class="">13</td><td class="">13</td><td class="">0</td></tr>
+<tr><td class="">78</td><td class="">39</td><td class="">25</td><td class="">13</td><td class="">12</td><td class="">0</td></tr>
+<tr><td class="">79</td><td class="">41</td><td class="">27</td><td class="">14</td><td class="">13</td><td class="">0</td></tr>
+<tr><td class="">80</td><td class="">40</td><td class="">26</td><td class="">13</td><td class="">13</td><td class="">0</td></tr>
+<tr><td class="">81</td><td class="">42</td><td class="">27</td><td class="">13</td><td class="">14</td><td class="">0</td></tr>
+<tr><td class="">82</td><td class="">41</td><td class="">27</td><td class="">14</td><td class="">13</td><td class="">0</td></tr>
+<tr><td class="">83</td><td class="">43</td><td class="">28</td><td class="">15</td><td class="">13</td><td class="">0</td></tr>
+<tr><td class="">84</td><td class="">42</td><td class="">27</td><td class="">13</td><td class="">14</td><td class="">0</td></tr>
+<tr><td class="">85</td><td class="">44</td><td class="">29</td><td class="">14</td><td class="">15</td><td class="">0</td></tr>
+<tr><td class="">86</td><td class="">43</td><td class="">28</td><td class="">15</td><td class="">13</td><td class="">0</td></tr>
+<tr><td class="">87</td><td class="">45</td><td class="">29</td><td class="">15</td><td class="">14</td><td class="">0</td></tr>
+<tr><td class="">88</td><td class="">44</td><td class="">29</td><td class="">14</td><td class="">15</td><td class="">0</td></tr>
+<tr><td class="">89</td><td class="">46</td><td class="">30</td><td class="">15</td><td class="">15</td><td class="">0</td></tr>
+<tr><td class="">90</td><td class="">45</td><td class="">29</td><td class="">15</td><td class="">14</td><td class="">0</td></tr>
+<tr><td class="">91</td><td class="">47</td><td class="">31</td><td class="">16</td><td class="">15</td><td class="">0</td></tr>
+<tr><td class="">92</td><td class="">46</td><td class="">30</td><td class="">15</td><td class="">15</td><td class="">0</td></tr>
+<tr><td class="">93</td><td class="">48</td><td class="">31</td><td class="">15</td><td class="">16</td><td class="">0</td></tr>
+<tr><td class="">94</td><td class="">47</td><td class="">31</td><td class="">16</td><td class="">15</td><td class="">0</td></tr>
+<tr><td class="">95</td><td class="">49</td><td class="">32</td><td class="">17</td><td class="">15</td><td class="">0</td></tr>
+<tr><td class="">96</td><td class="">48</td><td class="">31</td><td class="">15</td><td class="">16</td><td class="">0</td></tr>
+<tr><td class="">97</td><td class="">50</td><td class="">33</td><td class="">16</td><td class="">17</td><td class="">0</td></tr>
+<tr><td class="">98</td><td class="">49</td><td class="">32</td><td class="">17</td><td class="">15</td><td class="">0</td></tr>
+<tr><td class="">99</td><td class="">51</td><td class="">33</td><td class="">17</td><td class="">16</td><td class="">0</td></tr>
+<tr><td class="">100</td><td class="">50</td><td class="">33</td><td class="">16</td><td class="">17</td><td class="">0</td></tr>
+<tr><td class="">101</td><td class="">52</td><td class="">34</td><td class="">17</td><td class="">17</td><td class="">0</td></tr>
+<tr><td class="">102</td><td class="">51</td><td class="">33</td><td class="">17</td><td class="">16</td><td class="">0</td></tr>
+<tr><td class="">103</td><td class="">53</td><td class="">35</td><td class="">18</td><td class="">17</td><td class="">0</td></tr>
+<tr><td class="">104</td><td class="">52</td><td class="">34</td><td class="">17</td><td class="">17</td><td class="">0</td></tr>
+<tr><td class="">105</td><td class="">54</td><td class="">35</td><td class="">17</td><td class="">18</td><td class="">0</td></tr>
+<tr><td class="">106</td><td class="">53</td><td class="">35</td><td class="">18</td><td class="">17</td><td class="">0</td></tr>
+<tr><td class="">107</td><td class="">55</td><td class="">36</td><td class="">19</td><td class="">17</td><td class="">0</td></tr>
+<tr><td class="">108</td><td class="">54</td><td class="">35</td><td class="">17</td><td class="">18</td><td class="">0</td></tr>
+<tr><td class="">109</td><td class="">56</td><td class="">37</td><td class="">18</td><td class="">19</td><td class="">0</td></tr>
+<tr><td class="">110</td><td class="">55</td><td class="">36</td><td class="">19</td><td class="">17</td><td class="">0</td></tr>
+<tr><td class="">111</td><td class="">57</td><td class="">37</td><td class="">19</td><td class="">18</td><td class="">0</td></tr>
+<tr><td class="">112</td><td class="">56</td><td class="">37</td><td class="">18</td><td class="">19</td><td class="">0</td></tr>
+<tr><td class="">113</td><td class="">58</td><td class="">38</td><td class="">19</td><td class="">19</td><td class="">0</td></tr>
+<tr><td class="">114</td><td class="">57</td><td class="">37</td><td class="">19</td><td class="">18</td><td class="">0</td></tr>
+<tr><td class="">115</td><td class="">59</td><td class="">39</td><td class="">20</td><td class="">19</td><td class="">0</td></tr>
+<tr><td class="">116</td><td class="">58</td><td class="">38</td><td class="">19</td><td class="">19</td><td class="">0</td></tr>
+<tr><td class="">117</td><td class="">60</td><td class="">39</td><td class="">19</td><td class="">20</td><td class="">0</td></tr>
+<tr><td class="">118</td><td class="">59</td><td class="">39</td><td class="">20</td><td class="">19</td><td class="">0</td></tr>
+<tr><td class="">119</td><td class="">61</td><td class="">40</td><td class="">21</td><td class="">19</td><td class="">0</td></tr>
+<tr><td class="">120</td><td class="">60</td><td class="">39</td><td class="">19</td><td class="">20</td><td class="">0</td></tr>
+<tr><td class="">121</td><td class="">62</td><td class="">41</td><td class="">20</td><td class="">21</td><td class="">0</td></tr>
+<tr><td class="">122</td><td class="">61</td><td class="">40</td><td class="">21</td><td class="">19</td><td class="">0</td></tr>
+<tr><td class="">123</td><td class="">63</td><td class="">41</td><td class="">21</td><td class="">20</td><td class="">0</td></tr>
+<tr><td class="">124</td><td class="">62</td><td class="">41</td><td class="">20</td><td class="">21</td><td class="">0</td></tr>
+<tr><td class="">125</td><td class="">64</td><td class="">42</td><td class="">21</td><td class="">21</td><td class="">0</td></tr>
+<tr><td class="">126</td><td class="">63</td><td class="">41</td><td class="">21</td><td class="">20</td><td class="">0</td></tr>
+<tr><td class="">127</td><td class="">65</td><td class="">43</td><td class="">22</td><td class="">21</td><td class="">0</td></tr>
+<tr><td class="">128</td><td class="">64</td><td class="">42</td><td class="">21</td><td class="">21</td><td class="">0</td></tr>
+<tr><td class="">129</td><td class="">66</td><td class="">43</td><td class="">21</td><td class="">22</td><td class="">0</td></tr>
+<tr><td class="">130</td><td class="">65</td><td class="">43</td><td class="">22</td><td class="">21</td><td class="">0</td></tr>
+<tr><td class="">131</td><td class="">67</td><td class="">44</td><td class="">23</td><td class="">21</td><td class="">0</td></tr>
+<tr><td class="">132</td><td class="">66</td><td class="">43</td><td class="">21</td><td class="">22</td><td class="">0</td></tr>
+<tr><td class="">133</td><td class="">68</td><td class="">45</td><td class="">22</td><td class="">23</td><td class="">0</td></tr>
+<tr><td class="">134</td><td class="">67</td><td class="">44</td><td class="">23</td><td class="">21</td><td class="">0</td></tr>
+<tr><td class="">135</td><td class="">69</td><td class="">45</td><td class="">23</td><td class="">22</td><td class="">0</td></tr>
+<tr><td class="">136</td><td class="">68</td><td class="">45</td><td class="">22</td><td class="">23</td><td class="">0</td></tr>
+<tr><td class="">137</td><td class="">70</td><td class="">46</td><td class="">23</td><td class="">23</td><td class="">0</td></tr>
+<tr><td class="">138</td><td class="">69</td><td class="">45</td><td class="">23</td><td class="">22</td><td class="">0</td></tr>
+<tr><td class="">139</td><td class="">71</td><td class="">47</td><td class="">24</td><td class="">23</td><td class="">0</td></tr>
+<tr><td class="">140</td><td class="">70</td><td class="">46</td><td class="">23</td><td class="">23</td><td class="">0</td></tr>
+<tr><td class="">141</td><td class="">72</td><td class="">47</td><td class="">23</td><td class="">24</td><td class="">0</td></tr>
+<tr><td class="">142</td><td class="">71</td><td class="">47</td><td class="">24</td><td class="">23</td><td class="">0</td></tr>
+<tr><td class="">143</td><td class="">73</td><td class="">48</td><td class="">25</td><td class="">23</td><td class="">0</td></tr>
+<tr><td class="">144</td><td class="">72</td><td class="">47</td><td class="">23</td><td class="">24</td><td class="">0</td></tr>
+<tr><td class="">145</td><td class="">74</td><td class="">49</td><td class="">24</td><td class="">25</td><td class="">0</td></tr>
+<tr><td class="">146</td><td class="">73</td><td class="">48</td><td class="">25</td><td class="">23</td><td class="">0</td></tr>
+<tr><td class="">147</td><td class="">75</td><td class="">49</td><td class="">25</td><td class="">24</td><td class="">0</td></tr>
+<tr><td class="">148</td><td class="">74</td><td class="">49</td><td class="">24</td><td class="">25</td><td class="">0</td></tr>
+<tr><td class="">149</td><td class="">76</td><td class="">50</td><td class="">25</td><td class="">25</td><td class="">0</td></tr>
+<tr><td class="">150</td><td class="">75</td><td class="">49</td><td class="">25</td><td class="">24</td><td class="">0</td></tr>
+<tr><td class="">151</td><td class="">77</td><td class="">51</td><td class="">26</td><td class="">25</td><td class="">0</td></tr>
+<tr><td class="">152</td><td class="">76</td><td class="">50</td><td class="">25</td><td class="">25</td><td class="">0</td></tr>
+<tr><td class="">153</td><td class="">78</td><td class="">51</td><td class="">25</td><td class="">26</td><td class="">0</td></tr>
+<tr><td class="">154</td><td class="">77</td><td class="">51</td><td class="">26</td><td class="">25</td><td class="">0</td></tr>
+<tr><td class="">155</td><td class="">79</td><td class="">52</td><td class="">27</td><td class="">25</td><td class="">0</td></tr>
+<tr><td class="">156</td><td class="">78</td><td class="">51</td><td class="">25</td><td class="">26</td><td class="">0</td></tr>
+<tr><td class="">157</td><td class="">80</td><td class="">53</td><td class="">26</td><td class="">27</td><td class="">0</td></tr>
+<tr><td class="">158</td><td class="">79</td><td class="">52</td><td class="">27</td><td class="">25</td><td class="">0</td></tr>
+<tr><td class="">159</td><td class="">81</td><td class="">53</td><td class="">27</td><td class="">26</td><td class="">0</td></tr>
+<tr><td class="">160</td><td class="">80</td><td class="">53</td><td class="">26</td><td class="">27</td><td class="">0</td></tr>
+<tr><td class="">161</td><td class="">82</td><td class="">54</td><td class="">27</td><td class="">27</td><td class="">0</td></tr>
+<tr><td class="">162</td><td class="">81</td><td class="">53</td><td class="">27</td><td class="">26</td><td class="">0</td></tr>
+<tr><td class="">163</td><td class="">83</td><td class="">55</td><td class="">28</td><td class="">27</td><td class="">0</td></tr>
+<tr><td class="">164</td><td class="">82</td><td class="">54</td><td class="">27</td><td class="">27</td><td class="">0</td></tr>
+<tr><td class="">165</td><td class="">84</td><td class="">55</td><td class="">27</td><td class="">28</td><td class="">0</td></tr>
+<tr><td class="">166</td><td class="">83</td><td class="">55</td><td class="">28</td><td class="">27</td><td class="">0</td></tr>
+<tr><td class="">167</td><td class="">85</td><td class="">56</td><td class="">29</td><td class="">27</td><td class="">0</td></tr>
+<tr><td class="">168</td><td class="">84</td><td class="">55</td><td class="">27</td><td class="">28</td><td class="">0</td></tr>
+<tr><td class="">169</td><td class="">86</td><td class="">57</td><td class="">28</td><td class="">29</td><td class="">0</td></tr>
+<tr><td class="">170</td><td class="">85</td><td class="">56</td><td class="">29</td><td class="">27</td><td class="">0</td></tr>
+<tr><td class="">171</td><td class="">87</td><td class="">57</td><td class="">29</td><td class="">28</td><td class="">0</td></tr>
+<tr><td class="">172</td><td class="">86</td><td class="">57</td><td class="">28</td><td class="">29</td><td class="">0</td></tr>
+<tr><td class="">173</td><td class="">88</td><td class="">58</td><td class="">29</td><td class="">29</td><td class="">0</td></tr>
+<tr><td class="">174</td><td class="">87</td><td class="">57</td><td class="">29</td><td class="">28</td><td class="">0</td></tr>
+<tr><td class="">175</td><td class="">89</td><td class="">59</td><td class="">30</td><td class="">29</td><td class="">0</td></tr>
+<tr><td class="">176</td><td class="">88</td><td class="">58</td><td class="">29</td><td class="">29</td><td class="">0</td></tr>
+<tr><td class="">177</td><td class="">90</td><td class="">59</td><td class="">29</td><td class="">30</td><td class="">0</td></tr>
+<tr><td class="">178</td><td class="">89</td><td class="">59</td><td class="">30</td><td class="">29</td><td class="">0</td></tr>
+<tr><td class="">179</td><td class="">91</td><td class="">60</td><td class="">31</td><td class="">29</td><td class="">0</td></tr>
+<tr><td class="">180</td><td class="">90</td><td class="">59</td><td class="">29</td><td class="">30</td><td class="">0</td></tr>
+<tr><td class="">181</td><td class="">92</td><td class="">61</td><td class="">30</td><td class="">31</td><td class="">0</td></tr>
+<tr><td class="">182</td><td class="">91</td><td class="">60</td><td class="">31</td><td class="">29</td><td class="">0</td></tr>
+<tr><td class="">183</td><td class="">93</td><td class="">61</td><td class="">31</td><td class="">30</td><td class="">0</td></tr>
+<tr><td class="">184</td><td class="">92</td><td class="">61</td><td class="">30</td><td class="">31</td><td class="">0</td></tr>
+<tr><td class="">185</td><td class="">94</td><td class="">62</td><td class="">31</td><td class="">31</td><td class="">0</td></tr>
+<tr><td class="">186</td><td class="">93</td><td class="">61</td><td class="">31</td><td class="">30</td><td class="">0</td></tr>
+<tr><td class="">187</td><td class="">95</td><td class="">63</td><td class="">32</td><td class="">31</td><td class="">0</td></tr>
+<tr><td class="">188</td><td class="">94</td><td class="">62</td><td class="">31</td><td class="">31</td><td class="">0</td></tr>
+<tr><td class="">189</td><td class="">96</td><td class="">63</td><td class="">31</td><td class="">32</td><td class="">0</td></tr>
+<tr><td class="">190</td><td class="">95</td><td class="">63</td><td class="">32</td><td class="">31</td><td class="">0</td></tr>
+<tr><td class="">191</td><td class="">97</td><td class="">64</td><td class="">33</td><td class="">31</td><td class="">0</td></tr>
+<tr><td class="">192</td><td class="">96</td><td class="">63</td><td class="">31</td><td class="">32</td><td class="">0</td></tr>
+<tr><td class="">193</td><td class="">98</td><td class="">65</td><td class="">32</td><td class="">33</td><td class="">0</td></tr>
+<tr><td class="">194</td><td class="">97</td><td class="">64</td><td class="">33</td><td class="">31</td><td class="">0</td></tr>
+<tr><td class="">195</td><td class="">99</td><td class="">65</td><td class="">33</td><td class="">32</td><td class="">0</td></tr>
+<tr><td class="">196</td><td class="">98</td><td class="">65</td><td class="">32</td><td class="">33</td><td class="">0</td></tr>
+<tr><td class="">197</td><td class="">100</td><td class="">66</td><td class="">33</td><td class="">33</td><td class="">0</td></tr>
+<tr><td class="">198</td><td class="">99</td><td class="">65</td><td class="">33</td><td class="">32</td><td class="">0</td></tr>
+<tr><td class="">199</td><td class="">101</td><td class="">67</td><td class="">34</td><td class="">33</td><td class="">0</td></tr>
+<tr><td class="">200</td><td class="">100</td><td class="">66</td><td class="">33</td><td class="">33</td><td class="">0</td></tr>
+<tr><td class="">201</td><td class="">102</td><td class="">67</td><td class="">33</td><td class="">34</td><td class="">0</td></tr>
+<tr><td class="">202</td><td class="">101</td><td class="">67</td><td class="">34</td><td class="">33</td><td class="">0</td></tr>
+<tr><td class="">203</td><td class="">103</td><td class="">68</td><td class="">35</td><td class="">33</td><td class="">0</td></tr>
+<tr><td class="">204</td><td class="">102</td><td class="">67</td><td class="">33</td><td class="">34</td><td class="">0</td></tr>
+<tr><td class="">205</td><td class="">104</td><td class="">69</td><td class="">34</td><td class="">35</td><td class="">0</td></tr>
+<tr><td class="">206</td><td class="">103</td><td class="">68</td><td class="">35</td><td class="">33</td><td class="">0</td></tr>
+<tr><td class="">207</td><td class="">105</td><td class="">69</td><td class="">35</td><td class="">34</td><td class="">0</td></tr>
+<tr><td class="">208</td><td class="">104</td><td class="">69</td><td class="">34</td><td class="">35</td><td class="">0</td></tr>
+<tr><td class="">209</td><td class="">106</td><td class="">70</td><td class="">35</td><td class="">35</td><td class="">0</td></tr>
+<tr><td class="">210</td><td class="">105</td><td class="">69</td><td class="">35</td><td class="">34</td><td class="">0</td></tr>
+<tr><td class="">211</td><td class="">107</td><td class="">71</td><td class="">36</td><td class="">35</td><td class="">0</td></tr>
+<tr><td class="">212</td><td class="">106</td><td class="">70</td><td class="">35</td><td class="">35</td><td class="">0</td></tr>
+<tr><td class="">213</td><td class="">108</td><td class="">71</td><td class="">35</td><td class="">36</td><td class="">0</td></tr>
+<tr><td class="">214</td><td class="">107</td><td class="">71</td><td class="">36</td><td class="">35</td><td class="">0</td></tr>
+<tr><td class="">215</td><td class="">109</td><td class="">72</td><td class="">37</td><td class="">35</td><td class="">0</td></tr>
+<tr><td class="">216</td><td class="">108</td><td class="">71</td><td class="">35</td><td class="">36</td><td class="">0</td></tr>
+<tr><td class="">217</td><td class="">110</td><td class="">73</td><td class="">36</td><td class="">37</td><td class="">0</td></tr>
+<tr><td class="">218</td><td class="">109</td><td class="">72</td><td class="">37</td><td class="">35</td><td class="">0</td></tr>
+<tr><td class="">219</td><td class="">111</td><td class="">73</td><td class="">37</td><td class="">36</td><td class="">0</td></tr>
+<tr><td class="">220</td><td class="">110</td><td class="">73</td><td class="">36</td><td class="">37</td><td class="">0</td></tr>
+<tr><td class="">221</td><td class="">112</td><td class="">74</td><td class="">37</td><td class="">37</td><td class="">0</td></tr>
+<tr><td class="">222</td><td class="">111</td><td class="">73</td><td class="">37</td><td class="">36</td><td class="">0</td></tr>
+<tr><td class="">223</td><td class="">113</td><td class="">75</td><td class="">38</td><td class="">37</td><td class="">0</td></tr>
+<tr><td class="">224</td><td class="">112</td><td class="">74</td><td class="">37</td><td class="">37</td><td class="">0</td></tr>
+<tr><td class="">225</td><td class="">114</td><td class="">75</td><td class="">37</td><td class="">38</td><td class="">0</td></tr>
+<tr><td class="">226</td><td class="">113</td><td class="">75</td><td class="">38</td><td class="">37</td><td class="">0</td></tr>
+<tr><td class="">227</td><td class="">115</td><td class="">76</td><td class="">39</td><td class="">37</td><td class="">0</td></tr>
+<tr><td class="">228</td><td class="">114</td><td class="">75</td><td class="">37</td><td class="">38</td><td class="">0</td></tr>
+<tr><td class="">229</td><td class="">116</td><td class="">77</td><td class="">38</td><td class="">39</td><td class="">0</td></tr>
+<tr><td class="">230</td><td class="">115</td><td class="">76</td><td class="">39</td><td class="">37</td><td class="">0</td></tr>
+<tr><td class="">231</td><td class="">117</td><td class="">77</td><td class="">39</td><td class="">38</td><td class="">0</td></tr>
+<tr><td class="">232</td><td class="">116</td><td class="">77</td><td class="">38</td><td class="">39</td><td class="">0</td></tr>
+<tr><td class="">233</td><td class="">118</td><td class="">78</td><td class="">39</td><td class="">39</td><td class="">0</td></tr>
+<tr><td class="">234</td><td class="">117</td><td class="">77</td><td class="">39</td><td class="">38</td><td class="">0</td></tr>
+<tr><td class="">235</td><td class="">119</td><td class="">79</td><td class="">40</td><td class="">39</td><td class="">0</td></tr>
+<tr><td class="">236</td><td class="">118</td><td class="">78</td><td class="">39</td><td class="">39</td><td class="">0</td></tr>
+<tr><td class="">237</td><td class="">120</td><td class="">79</td><td class="">39</td><td class="">40</td><td class="">0</td></tr>
+<tr><td class="">238</td><td class="">119</td><td class="">79</td><td class="">40</td><td class="">39</td><td class="">0</td></tr>
+<tr><td class="">239</td><td class="">121</td><td class="">80</td><td class="">41</td><td class="">39</td><td class="">0</td></tr>
+<tr><td class="">240</td><td class="">120</td><td class="">79</td><td class="">39</td><td class="">40</td><td class="">0</td></tr>
+<tr><td class="">241</td><td class="">122</td><td class="">81</td><td class="">40</td><td class="">41</td><td class="">0</td></tr>
+<tr><td class="">242</td><td class="">121</td><td class="">80</td><td class="">41</td><td class="">39</td><td class="">0</td></tr>
+<tr><td class="">243</td><td class="">123</td><td class="">81</td><td class="">41</td><td class="">40</td><td class="">0</td></tr>
+<tr><td class="">244</td><td class="">122</td><td class="">81</td><td class="">40</td><td class="">41</td><td class="">0</td></tr>
+<tr><td class="">245</td><td class="">124</td><td class="">82</td><td class="">41</td><td class="">41</td><td class="">0</td></tr>
+<tr><td class="">246</td><td class="">123</td><td class="">81</td><td class="">41</td><td class="">40</td><td class="">0</td></tr>
+<tr><td class="">247</td><td class="">125</td><td class="">83</td><td class="">42</td><td class="">41</td><td class="">0</td></tr>
+<tr><td class="">248</td><td class="">124</td><td class="">82</td><td class="">41</td><td class="">41</td><td class="">0</td></tr>
+<tr><td class="">249</td><td class="">126</td><td class="">83</td><td class="">41</td><td class="">42</td><td class="">0</td></tr>
+<tr><td class="">250</td><td class="">125</td><td class="">83</td><td class="">42</td><td class="">41</td><td class="">0</td></tr>
+<tr><td class="">251</td><td class="">127</td><td class="">84</td><td class="">43</td><td class="">41</td><td class="">0</td></tr>
+<tr><td class="">252</td><td class="">126</td><td class="">83</td><td class="">41</td><td class="">42</td><td class="">0</td></tr>
+<tr><td class="">253</td><td class="">128</td><td class="">85</td><td class="">42</td><td class="">43</td><td class="">0</td></tr>
+<tr><td class="">254</td><td class="">127</td><td class="">84</td><td class="">43</td><td class="">41</td><td class="">0</td></tr>
+<tr><td class="">255</td><td class="">129</td><td class="">85</td><td class="">43</td><td class="">42</td><td class="">0</td></tr>
+<tr><td class="">256</td><td class="">128</td><td class="">85</td><td class="">42</td><td class="">43</td><td class="">0</td></tr>
+<tr><td class="">257</td><td class="">130</td><td class="">86</td><td class="">43</td><td class="">43</td><td class="">0</td></tr>
+<tr><td class="">258</td><td class="">129</td><td class="">85</td><td class="">43</td><td class="">42</td><td class="">0</td></tr>
+<tr><td class="">259</td><td class="">131</td><td class="">87</td><td class="">44</td><td class="">43</td><td class="">0</td></tr>
+<tr><td class="">260</td><td class="">130</td><td class="">86</td><td class="">43</td><td class="">43</td><td class="">0</td></tr>
+<tr><td class="">261</td><td class="">132</td><td class="">87</td><td class="">43</td><td class="">44</td><td class="">0</td></tr>
+<tr><td class="">262</td><td class="">131</td><td class="">87</td><td class="">44</td><td class="">43</td><td class="">0</td></tr>
+<tr><td class="">263</td><td class="">133</td><td class="">88</td><td class="">45</td><td class="">43</td><td class="">0</td></tr>
+<tr><td class="">264</td><td class="">132</td><td class="">87</td><td class="">43</td><td class="">44</td><td class="">0</td></tr>
+<tr><td class="">265</td><td class="">134</td><td class="">89</td><td class="">44</td><td class="">45</td><td class="">0</td></tr>
+<tr><td class="">266</td><td class="">133</td><td class="">88</td><td class="">45</td><td class="">43</td><td class="">0</td></tr>
+<tr><td class="">267</td><td class="">135</td><td class="">89</td><td class="">45</td><td class="">44</td><td class="">0</td></tr>
+<tr><td class="">268</td><td class="">134</td><td class="">89</td><td class="">44</td><td class="">45</td><td class="">0</td></tr>
+<tr><td class="">269</td><td class="">136</td><td class="">90</td><td class="">45</td><td class="">45</td><td class="">0</td></tr>
+<tr><td class="">270</td><td class="">135</td><td class="">89</td><td class="">45</td><td class="">44</td><td class="">0</td></tr>
+<tr><td class="">271</td><td class="">137</td><td class="">91</td><td class="">46</td><td class="">45</td><td class="">0</td></tr>
+<tr><td class="">272</td><td class="">136</td><td class="">90</td><td class="">45</td><td class="">45</td><td class="">0</td></tr>
+<tr><td class="">273</td><td class="">138</td><td class="">91</td><td class="">45</td><td class="">46</td><td class="">0</td></tr>
+<tr><td class="">274</td><td class="">137</td><td class="">91</td><td class="">46</td><td class="">45</td><td class="">0</td></tr>
+<tr><td class="">275</td><td class="">139</td><td class="">92</td><td class="">47</td><td class="">45</td><td class="">0</td></tr>
+<tr><td class="">276</td><td class="">138</td><td class="">91</td><td class="">45</td><td class="">46</td><td class="">0</td></tr>
+<tr><td class="">277</td><td class="">140</td><td class="">93</td><td class="">46</td><td class="">47</td><td class="">0</td></tr>
+<tr><td class="">278</td><td class="">139</td><td class="">92</td><td class="">47</td><td class="">45</td><td class="">0</td></tr>
+<tr><td class="">279</td><td class="">141</td><td class="">93</td><td class="">47</td><td class="">46</td><td class="">0</td></tr>
+<tr><td class="">280</td><td class="">140</td><td class="">93</td><td class="">46</td><td class="">47</td><td class="">0</td></tr>
+<tr><td class="">281</td><td class="">142</td><td class="">94</td><td class="">47</td><td class="">47</td><td class="">0</td></tr>
+<tr><td class="">282</td><td class="">141</td><td class="">93</td><td class="">47</td><td class="">46</td><td class="">0</td></tr>
+<tr><td class="">283</td><td class="">143</td><td class="">95</td><td class="">48</td><td class="">47</td><td class="">0</td></tr>
+<tr><td class="">284</td><td class="">142</td><td class="">94</td><td class="">47</td><td class="">47</td><td class="">0</td></tr>
+<tr><td class="">285</td><td class="">144</td><td class="">95</td><td class="">47</td><td class="">48</td><td class="">0</td></tr>
+<tr><td class="">286</td><td class="">143</td><td class="">95</td><td class="">48</td><td class="">47</td><td class="">0</td></tr>
+<tr><td class="">287</td><td class="">145</td><td class="">96</td><td class="">49</td><td class="">47</td><td class="">0</td></tr>
+<tr><td class="">288</td><td class="">144</td><td class="">95</td><td class="">47</td><td class="">48</td><td class="">0</td></tr>
+<tr><td class="">289</td><td class="">146</td><td class="">97</td><td class="">48</td><td class="">49</td><td class="">0</td></tr>
+<tr><td class="">290</td><td class="">145</td><td class="">96</td><td class="">49</td><td class="">47</td><td class="">0</td></tr>
+<tr><td class="">291</td><td class="">147</td><td class="">97</td><td class="">49</td><td class="">48</td><td class="">0</td></tr>
+<tr><td class="">292</td><td class="">146</td><td class="">97</td><td class="">48</td><td class="">49</td><td class="">0</td></tr>
+<tr><td class="">293</td><td class="">148</td><td class="">98</td><td class="">49</td><td class="">49</td><td class="">0</td></tr>
+<tr><td class="">294</td><td class="">147</td><td class="">97</td><td class="">49</td><td class="">48</td><td class="">0</td></tr>
+<tr><td class="">295</td><td class="">149</td><td class="">99</td><td class="">50</td><td class="">49</td><td class="">0</td></tr>
+<tr><td class="">296</td><td class="">148</td><td class="">98</td><td class="">49</td><td class="">49</td><td class="">0</td></tr>
+<tr><td class="">297</td><td class="">150</td><td class="">99</td><td class="">49</td><td class="">50</td><td class="">0</td></tr>
+<tr><td class="">298</td><td class="">149</td><td class="">99</td><td class="">50</td><td class="">49</td><td class="">0</td></tr>
+<tr><td class="">299</td><td class="">151</td><td class="">100</td><td class="">51</td><td class="">49</td><td class="">0</td></tr>
+<tr><td class="">300</td><td class="">150</td><td class="">99</td><td class="">49</td><td class="">50</td><td class="">0</td></tr>
+<tr><td class="">301</td><td class="">152</td><td class="">101</td><td class="">50</td><td class="">51</td><td class="">0</td></tr>
+<tr><td class="">302</td><td class="">151</td><td class="">100</td><td class="">51</td><td class="">49</td><td class="">0</td></tr>
+<tr><td class="">303</td><td class="">153</td><td class="">101</td><td class="">51</td><td class="">50</td><td class="">0</td></tr>
+<tr><td class="">304</td><td class="">152</td><td class="">101</td><td class="">50</td><td class="">51</td><td class="">0</td></tr>
+<tr><td class="">305</td><td class="">154</td><td class="">102</td><td class="">51</td><td class="">51</td><td class="">0</td></tr>
+<tr><td class="">306</td><td class="">153</td><td class="">101</td><td class="">51</td><td class="">50</td><td class="">0</td></tr>
+<tr><td class="">307</td><td class="">155</td><td class="">103</td><td class="">52</td><td class="">51</td><td class="">0</td></tr>
+<tr><td class="">308</td><td class="">154</td><td class="">102</td><td class="">51</td><td class="">51</td><td class="">0</td></tr>
+<tr><td class="">309</td><td class="">156</td><td class="">103</td><td class="">51</td><td class="">52</td><td class="">0</td></tr>
+<tr><td class="">310</td><td class="">155</td><td class="">103</td><td class="">52</td><td class="">51</td><td class="">0</td></tr>
+<tr><td class="">311</td><td class="">157</td><td class="">104</td><td class="">53</td><td class="">51</td><td class="">0</td></tr>
+<tr><td class="">312</td><td class="">156</td><td class="">103</td><td class="">51</td><td class="">52</td><td class="">0</td></tr>
+<tr><td class="">313</td><td class="">158</td><td class="">105</td><td class="">52</td><td class="">53</td><td class="">0</td></tr>
+<tr><td class="">314</td><td class="">157</td><td class="">104</td><td class="">53</td><td class="">51</td><td class="">0</td></tr>
+<tr><td class="">315</td><td class="">159</td><td class="">105</td><td class="">53</td><td class="">52</td><td class="">0</td></tr>
+<tr><td class="">316</td><td class="">158</td><td class="">105</td><td class="">52</td><td class="">53</td><td class="">0</td></tr>
+<tr><td class="">317</td><td class="">160</td><td class="">106</td><td class="">53</td><td class="">53</td><td class="">0</td></tr>
+<tr><td class="">318</td><td class="">159</td><td class="">105</td><td class="">53</td><td class="">52</td><td class="">0</td></tr>
+<tr><td class="">319</td><td class="">161</td><td class="">107</td><td class="">54</td><td class="">53</td><td class="">0</td></tr>
+<tr><td class="">320</td><td class="">160</td><td class="">106</td><td class="">53</td><td class="">53</td><td class="">0</td></tr>
+<tr><td class="">321</td><td class="">162</td><td class="">107</td><td class="">53</td><td class="">54</td><td class="">0</td></tr>
+<tr><td class="">322</td><td class="">161</td><td class="">107</td><td class="">54</td><td class="">53</td><td class="">0</td></tr>
+<tr><td class="">323</td><td class="">163</td><td class="">108</td><td class="">55</td><td class="">53</td><td class="">0</td></tr>
+<tr><td class="">324</td><td class="">162</td><td class="">107</td><td class="">53</td><td class="">54</td><td class="">0</td></tr>
+<tr><td class="">325</td><td class="">164</td><td class="">109</td><td class="">54</td><td class="">55</td><td class="">0</td></tr>
+<tr><td class="">326</td><td class="">163</td><td class="">108</td><td class="">55</td><td class="">53</td><td class="">0</td></tr>
+<tr><td class="">327</td><td class="">165</td><td class="">109</td><td class="">55</td><td class="">54</td><td class="">0</td></tr>
+<tr><td class="">328</td><td class="">164</td><td class="">109</td><td class="">54</td><td class="">55</td><td class="">0</td></tr>
+<tr><td class="">329</td><td class="">166</td><td class="">110</td><td class="">55</td><td class="">55</td><td class="">0</td></tr>
+<tr><td class="">330</td><td class="">165</td><td class="">109</td><td class="">55</td><td class="">54</td><td class="">0</td></tr>
+<tr><td class="">331</td><td class="">167</td><td class="">111</td><td class="">56</td><td class="">55</td><td class="">0</td></tr>
+<tr><td class="">332</td><td class="">166</td><td class="">110</td><td class="">55</td><td class="">55</td><td class="">0</td></tr>
+<tr><td class="">333</td><td class="">168</td><td class="">111</td><td class="">55</td><td class="">56</td><td class="">0</td></tr>
+<tr><td class="">334</td><td class="">167</td><td class="">111</td><td class="">56</td><td class="">55</td><td class="">0</td></tr>
+<tr><td class="">335</td><td class="">169</td><td class="">112</td><td class="">57</td><td class="">55</td><td class="">0</td></tr>
+<tr><td class="">336</td><td class="">168</td><td class="">111</td><td class="">55</td><td class="">56</td><td class="">0</td></tr>
+<tr><td class="">337</td><td class="">170</td><td class="">113</td><td class="">56</td><td class="">57</td><td class="">0</td></tr>
+<tr><td class="">338</td><td class="">169</td><td class="">112</td><td class="">57</td><td class="">55</td><td class="">0</td></tr>
+<tr><td class="">339</td><td class="">171</td><td class="">113</td><td class="">57</td><td class="">56</td><td class="">0</td></tr>
+<tr><td class="">340</td><td class="">170</td><td class="">113</td><td class="">56</td><td class="">57</td><td class="">0</td></tr>
+<tr><td class="">341</td><td class="">172</td><td class="">114</td><td class="">57</td><td class="">57</td><td class="">0</td></tr>
+<tr><td class="">342</td><td class="">171</td><td class="">113</td><td class="">57</td><td class="">56</td><td class="">0</td></tr>
+<tr><td class="">343</td><td class="">173</td><td class="">115</td><td class="">58</td><td class="">57</td><td class="">0</td></tr>
+<tr><td class="">344</td><td class="">172</td><td class="">114</td><td class="">57</td><td class="">57</td><td class="">0</td></tr>
+<tr><td class="">345</td><td class="">174</td><td class="">115</td><td class="">57</td><td class="">58</td><td class="">0</td></tr>
+<tr><td class="">346</td><td class="">173</td><td class="">115</td><td class="">58</td><td class="">57</td><td class="">0</td></tr>
+<tr><td class="">347</td><td class="">175</td><td class="">116</td><td class="">59</td><td class="">57</td><td class="">0</td></tr>
+<tr><td class="">348</td><td class="">174</td><td class="">115</td><td class="">57</td><td class="">58</td><td class="">0</td></tr>
+<tr><td class="">349</td><td class="">176</td><td class="">117</td><td class="">58</td><td class="">59</td><td class="">0</td></tr>
+<tr><td class="">350</td><td class="">175</td><td class="">116</td><td class="">59</td><td class="">57</td><td class="">0</td></tr>
+<tr><td class="">351</td><td class="">177</td><td class="">117</td><td class="">59</td><td class="">58</td><td class="">0</td></tr>
+<tr><td class="">352</td><td class="">176</td><td class="">117</td><td class="">58</td><td class="">59</td><td class="">0</td></tr>
+<tr><td class="">353</td><td class="">178</td><td class="">118</td><td class="">59</td><td class="">59</td><td class="">0</td></tr>
+<tr><td class="">354</td><td class="">177</td><td class="">117</td><td class="">59</td><td class="">58</td><td class="">0</td></tr>
+<tr><td class="">355</td><td class="">179</td><td class="">119</td><td class="">60</td><td class="">59</td><td class="">0</td></tr>
+<tr><td class="">356</td><td class="">178</td><td class="">118</td><td class="">59</td><td class="">59</td><td class="">0</td></tr>
+<tr><td class="">357</td><td class="">180</td><td class="">119</td><td class="">59</td><td class="">60</td><td class="">0</td></tr>
+<tr><td class="">358</td><td class="">179</td><td class="">119</td><td class="">60</td><td class="">59</td><td class="">0</td></tr>
+<tr><td class="">359</td><td class="">181</td><td class="">120</td><td class="">61</td><td class="">59</td><td class="">0</td></tr>
+<tr><td class="">360</td><td class="">180</td><td class="">119</td><td class="">59</td><td class="">60</td><td class="">0</td></tr>
+<tr><td class="">361</td><td class="">182</td><td class="">121</td><td class="">60</td><td class="">61</td><td class="">0</td></tr>
+<tr><td class="">362</td><td class="">181</td><td class="">120</td><td class="">61</td><td class="">59</td><td class="">0</td></tr>
+<tr><td class="">363</td><td class="">183</td><td class="">121</td><td class="">61</td><td class="">60</td><td class="">0</td></tr>
+<tr><td class="">364</td><td class="">182</td><td class="">121</td><td class="">60</td><td class="">61</td><td class="">0</td></tr>
+<tr><td class="">365</td><td class="">184</td><td class="">122</td><td class="">61</td><td class="">61</td><td class="">0</td></tr>
+<tr><td class="">366</td><td class="">183</td><td class="">121</td><td class="">61</td><td class="">60</td><td class="">0</td></tr>
+<tr><td class="">367</td><td class="">185</td><td class="">123</td><td class="">62</td><td class="">61</td><td class="">0</td></tr>
+<tr><td class="">368</td><td class="">184</td><td class="">122</td><td class="">61</td><td class="">61</td><td class="">0</td></tr>
+<tr><td class="">369</td><td class="">186</td><td class="">123</td><td class="">61</td><td class="">62</td><td class="">0</td></tr>
+<tr><td class="">370</td><td class="">185</td><td class="">123</td><td class="">62</td><td class="">61</td><td class="">0</td></tr>
+<tr><td class="">371</td><td class="">187</td><td class="">124</td><td class="">63</td><td class="">61</td><td class="">0</td></tr>
+<tr><td class="">372</td><td class="">186</td><td class="">123</td><td class="">61</td><td class="">62</td><td class="">0</td></tr>
+<tr><td class="">373</td><td class="">188</td><td class="">125</td><td class="">62</td><td class="">63</td><td class="">0</td></tr>
+<tr><td class="">374</td><td class="">187</td><td class="">124</td><td class="">63</td><td class="">61</td><td class="">0</td></tr>
+<tr><td class="">375</td><td class="">189</td><td class="">125</td><td class="">63</td><td class="">62</td><td class="">0</td></tr>
+<tr><td class="">376</td><td class="">188</td><td class="">125</td><td class="">62</td><td class="">63</td><td class="">0</td></tr>
+<tr><td class="">377</td><td class="">190</td><td class="">126</td><td class="">63</td><td class="">63</td><td class="">0</td></tr>
+<tr><td class="">378</td><td class="">189</td><td class="">125</td><td class="">63</td><td class="">62</td><td class="">0</td></tr>
+<tr><td class="">379</td><td class="">191</td><td class="">127</td><td class="">64</td><td class="">63</td><td class="">0</td></tr>
+<tr><td class="">380</td><td class="">190</td><td class="">126</td><td class="">63</td><td class="">63</td><td class="">0</td></tr>
+<tr><td class="">381</td><td class="">192</td><td class="">127</td><td class="">63</td><td class="">64</td><td class="">0</td></tr>
+<tr><td class="">382</td><td class="">191</td><td class="">127</td><td class="">64</td><td class="">63</td><td class="">0</td></tr>
+<tr><td class="">383</td><td class="">193</td><td class="">128</td><td class="">65</td><td class="">63</td><td class="">0</td></tr>
+<tr><td class="">384</td><td class="">192</td><td class="">127</td><td class="">63</td><td class="">64</td><td class="">0</td></tr>
+<tr><td class="">385</td><td class="">194</td><td class="">129</td><td class="">64</td><td class="">65</td><td class="">0</td></tr>
+<tr><td class="">386</td><td class="">193</td><td class="">128</td><td class="">65</td><td class="">63</td><td class="">0</td></tr>
+<tr><td class="">387</td><td class="">195</td><td class="">129</td><td class="">65</td><td class="">64</td><td class="">0</td></tr>
+<tr><td class="">388</td><td class="">194</td><td class="">129</td><td class="">64</td><td class="">65</td><td class="">0</td></tr>
+<tr><td class="">389</td><td class="">196</td><td class="">130</td><td class="">65</td><td class="">65</td><td class="">0</td></tr>
+<tr><td class="">390</td><td class="">195</td><td class="">129</td><td class="">65</td><td class="">64</td><td class="">0</td></tr>
+<tr><td class="">391</td><td class="">197</td><td class="">131</td><td class="">66</td><td class="">65</td><td class="">0</td></tr>
+<tr><td class="">392</td><td class="">196</td><td class="">130</td><td class="">65</td><td class="">65</td><td class="">0</td></tr>
+<tr><td class="">393</td><td class="">198</td><td class="">131</td><td class="">65</td><td class="">66</td><td class="">0</td></tr>
+<tr><td class="">394</td><td class="">197</td><td class="">131</td><td class="">66</td><td class="">65</td><td class="">0</td></tr>
+<tr><td class="">395</td><td class="">199</td><td class="">132</td><td class="">67</td><td class="">65</td><td class="">0</td></tr>
+<tr><td class="">396</td><td class="">198</td><td class="">131</td><td class="">65</td><td class="">66</td><td class="">0</td></tr>
+<tr><td class="">397</td><td class="">200</td><td class="">133</td><td class="">66</td><td class="">67</td><td class="">0</td></tr>
+<tr><td class="">398</td><td class="">199</td><td class="">132</td><td class="">67</td><td class="">65</td><td class="">0</td></tr>
+<tr><td class="">399</td><td class="">201</td><td class="">133</td><td class="">67</td><td class="">66</td><td class="">0</td></tr>
+<tr><td class="">400</td><td class="">200</td><td class="">133</td><td class="">66</td><td class="">67</td><td class="">0</td></tr>
+</tbody>
+</table></div>
+<p class="ax-source">generated by <code>noh_wt_certificate.rs with --emit-run (render strand P0-A); base pin axeyum 75663ef8, built with rustc --edition 2024</code> &middot; <code>noh_wt_certificate --emit-run render/examples-input/cert/run-certificate.json --source render/producers/noh_wt_certificate_emitrun.rs --record-id R:noh-wt-certificate --replay-seconds 1 --role production</code> &middot; exit <span class="ax-exit-ok">0</span></p>
+</section>
+<figure class="ax-fig blk t-essential ax-wide" id="figure-weight-and-slack">
+<div class="ax-figframe">
+<svg class="ax-plot" viewBox="0 0 620 320" width="620" height="320" role="group" aria-label="The weight $a(k)$ and the slack $d(k)$ it buys, over the first 48 pole orders. $a(k)$ is a staircase of slope $1/3$ with a parity indicator riding on it; $d(k)$ is the distance from the boundary of the truncated space, and the flat line at $d = 1$ that it keeps returning to is why the growth rate cannot exceed $k/6$.">
+<line class="grid" x1="56.0" y1="257.9" x2="602.0" y2="257.9"/>
+<text class="tick" x="49.0" y="261.4" text-anchor="end">0</text>
+<line class="grid" x1="56.0" y1="187.3" x2="602.0" y2="187.3"/>
+<text class="tick" x="49.0" y="190.8" text-anchor="end">5</text>
+<line class="grid" x1="56.0" y1="116.8" x2="602.0" y2="116.8"/>
+<text class="tick" x="49.0" y="120.3" text-anchor="end">10</text>
+<line class="grid" x1="56.0" y1="46.2" x2="602.0" y2="46.2"/>
+<text class="tick" x="49.0" y="49.7" text-anchor="end">15</text>
+<text class="tick" x="160.6" y="294.0" text-anchor="middle">10</text>
+<text class="tick" x="276.7" y="294.0" text-anchor="middle">20</text>
+<text class="tick" x="392.9" y="294.0" text-anchor="middle">30</text>
+<text class="tick" x="509.1" y="294.0" text-anchor="middle">40</text>
+<path class="axis" d="M 56.0 14.0 L 56.0 276.0 L 602.0 276.0"/>
+<text class="axlabel" x="329.0" y="314.0" text-anchor="middle">pole order k</text>
+<text class="axlabel" x="13.0" y="145.0" text-anchor="middle" transform="rotate(-90 13.0 145.0)">value</text>
+<path class="series" d="M 56.0 257.9 L 67.6 257.9 L 79.2 257.9 L 90.9 243.8 L 102.5 229.7 L 114.1 243.8 L 125.7 215.6 L 137.3 229.7 L 148.9 215.6 L 160.6 215.6 L 172.2 201.5 L 183.8 215.6 L 195.4 187.3 L 207.0 201.5 L 218.6 187.3 L 230.3 187.3 L 241.9 173.2 L 253.5 187.3 L 265.1 159.1 L 276.7 173.2 L 288.3 159.1 L 300.0 159.1 L 311.6 145.0 L 323.2 159.1 L 334.8 130.9 L 346.4 145.0 L 358.0 130.9 L 369.7 130.9 L 381.3 116.8 L 392.9 130.9 L 404.5 102.7 L 416.1 116.8 L 427.7 102.7 L 439.4 102.7 L 451.0 88.5 L 462.6 102.7 L 474.2 74.4 L 485.8 88.5 L 497.4 74.4 L 509.1 74.4 L 520.7 60.3 L 532.3 74.4 L 543.9 46.2 L 555.5 60.3 L 567.1 46.2 L 578.8 46.2 L 590.4 32.1 L 602.0 46.2"/>
+<circle class="vertex" cx="56.0" cy="257.9" r="3.6" tabindex="0" data-x="1" data-y="0"><title>(1, 0)</title></circle>
+<circle class="vertex" cx="67.6" cy="257.9" r="3.6" tabindex="0" data-x="2" data-y="0"><title>(2, 0)</title></circle>
+<circle class="vertex" cx="79.2" cy="257.9" r="3.6" tabindex="0" data-x="3" data-y="0"><title>(3, 0)</title></circle>
+<circle class="vertex" cx="90.9" cy="243.8" r="3.6" tabindex="0" data-x="4" data-y="1"><title>(4, 1)</title></circle>
+<circle class="vertex" cx="102.5" cy="229.7" r="3.6" tabindex="0" data-x="5" data-y="2"><title>(5, 2)</title></circle>
+<circle class="vertex" cx="114.1" cy="243.8" r="3.6" tabindex="0" data-x="6" data-y="1"><title>(6, 1)</title></circle>
+<circle class="vertex" cx="125.7" cy="215.6" r="3.6" tabindex="0" data-x="7" data-y="3"><title>(7, 3)</title></circle>
+<circle class="vertex" cx="137.3" cy="229.7" r="3.6" tabindex="0" data-x="8" data-y="2"><title>(8, 2)</title></circle>
+<circle class="vertex" cx="148.9" cy="215.6" r="3.6" tabindex="0" data-x="9" data-y="3"><title>(9, 3)</title></circle>
+<circle class="vertex" cx="160.6" cy="215.6" r="3.6" tabindex="0" data-x="10" data-y="3"><title>(10, 3)</title></circle>
+<circle class="vertex" cx="172.2" cy="201.5" r="3.6" tabindex="0" data-x="11" data-y="4"><title>(11, 4)</title></circle>
+<circle class="vertex" cx="183.8" cy="215.6" r="3.6" tabindex="0" data-x="12" data-y="3"><title>(12, 3)</title></circle>
+<circle class="vertex" cx="195.4" cy="187.3" r="3.6" tabindex="0" data-x="13" data-y="5"><title>(13, 5)</title></circle>
+<circle class="vertex" cx="207.0" cy="201.5" r="3.6" tabindex="0" data-x="14" data-y="4"><title>(14, 4)</title></circle>
+<circle class="vertex" cx="218.6" cy="187.3" r="3.6" tabindex="0" data-x="15" data-y="5"><title>(15, 5)</title></circle>
+<circle class="vertex" cx="230.3" cy="187.3" r="3.6" tabindex="0" data-x="16" data-y="5"><title>(16, 5)</title></circle>
+<circle class="vertex" cx="241.9" cy="173.2" r="3.6" tabindex="0" data-x="17" data-y="6"><title>(17, 6)</title></circle>
+<circle class="vertex" cx="253.5" cy="187.3" r="3.6" tabindex="0" data-x="18" data-y="5"><title>(18, 5)</title></circle>
+<circle class="vertex" cx="265.1" cy="159.1" r="3.6" tabindex="0" data-x="19" data-y="7"><title>(19, 7)</title></circle>
+<circle class="vertex" cx="276.7" cy="173.2" r="3.6" tabindex="0" data-x="20" data-y="6"><title>(20, 6)</title></circle>
+<circle class="vertex" cx="288.3" cy="159.1" r="3.6" tabindex="0" data-x="21" data-y="7"><title>(21, 7)</title></circle>
+<circle class="vertex" cx="300.0" cy="159.1" r="3.6" tabindex="0" data-x="22" data-y="7"><title>(22, 7)</title></circle>
+<circle class="vertex" cx="311.6" cy="145.0" r="3.6" tabindex="0" data-x="23" data-y="8"><title>(23, 8)</title></circle>
+<circle class="vertex" cx="323.2" cy="159.1" r="3.6" tabindex="0" data-x="24" data-y="7"><title>(24, 7)</title></circle>
+<circle class="vertex" cx="334.8" cy="130.9" r="3.6" tabindex="0" data-x="25" data-y="9"><title>(25, 9)</title></circle>
+<circle class="vertex" cx="346.4" cy="145.0" r="3.6" tabindex="0" data-x="26" data-y="8"><title>(26, 8)</title></circle>
+<circle class="vertex" cx="358.0" cy="130.9" r="3.6" tabindex="0" data-x="27" data-y="9"><title>(27, 9)</title></circle>
+<circle class="vertex" cx="369.7" cy="130.9" r="3.6" tabindex="0" data-x="28" data-y="9"><title>(28, 9)</title></circle>
+<circle class="vertex" cx="381.3" cy="116.8" r="3.6" tabindex="0" data-x="29" data-y="10"><title>(29, 10)</title></circle>
+<circle class="vertex" cx="392.9" cy="130.9" r="3.6" tabindex="0" data-x="30" data-y="9"><title>(30, 9)</title></circle>
+<circle class="vertex" cx="404.5" cy="102.7" r="3.6" tabindex="0" data-x="31" data-y="11"><title>(31, 11)</title></circle>
+<circle class="vertex" cx="416.1" cy="116.8" r="3.6" tabindex="0" data-x="32" data-y="10"><title>(32, 10)</title></circle>
+<circle class="vertex" cx="427.7" cy="102.7" r="3.6" tabindex="0" data-x="33" data-y="11"><title>(33, 11)</title></circle>
+<circle class="vertex" cx="439.4" cy="102.7" r="3.6" tabindex="0" data-x="34" data-y="11"><title>(34, 11)</title></circle>
+<circle class="vertex" cx="451.0" cy="88.5" r="3.6" tabindex="0" data-x="35" data-y="12"><title>(35, 12)</title></circle>
+<circle class="vertex" cx="462.6" cy="102.7" r="3.6" tabindex="0" data-x="36" data-y="11"><title>(36, 11)</title></circle>
+<circle class="vertex" cx="474.2" cy="74.4" r="3.6" tabindex="0" data-x="37" data-y="13"><title>(37, 13)</title></circle>
+<circle class="vertex" cx="485.8" cy="88.5" r="3.6" tabindex="0" data-x="38" data-y="12"><title>(38, 12)</title></circle>
+<circle class="vertex" cx="497.4" cy="74.4" r="3.6" tabindex="0" data-x="39" data-y="13"><title>(39, 13)</title></circle>
+<circle class="vertex" cx="509.1" cy="74.4" r="3.6" tabindex="0" data-x="40" data-y="13"><title>(40, 13)</title></circle>
+<circle class="vertex" cx="520.7" cy="60.3" r="3.6" tabindex="0" data-x="41" data-y="14"><title>(41, 14)</title></circle>
+<circle class="vertex" cx="532.3" cy="74.4" r="3.6" tabindex="0" data-x="42" data-y="13"><title>(42, 13)</title></circle>
+<circle class="vertex" cx="543.9" cy="46.2" r="3.6" tabindex="0" data-x="43" data-y="15"><title>(43, 15)</title></circle>
+<circle class="vertex" cx="555.5" cy="60.3" r="3.6" tabindex="0" data-x="44" data-y="14"><title>(44, 14)</title></circle>
+<circle class="vertex" cx="567.1" cy="46.2" r="3.6" tabindex="0" data-x="45" data-y="15"><title>(45, 15)</title></circle>
+<circle class="vertex" cx="578.8" cy="46.2" r="3.6" tabindex="0" data-x="46" data-y="15"><title>(46, 15)</title></circle>
+<circle class="vertex" cx="590.4" cy="32.1" r="3.6" tabindex="0" data-x="47" data-y="16"><title>(47, 16)</title></circle>
+<circle class="vertex" cx="602.0" cy="46.2" r="3.6" tabindex="0" data-x="48" data-y="15"><title>(48, 15)</title></circle>
+<path class="series" d="M 90.9 243.8 L 102.5 243.8 L 114.1 243.8 L 125.7 243.8 L 137.3 243.8 L 148.9 229.7 L 160.6 243.8 L 172.2 243.8 L 183.8 229.7 L 195.4 215.6 L 207.0 243.8 L 218.6 229.7 L 230.3 215.6 L 241.9 215.6 L 253.5 229.7 L 265.1 215.6 L 276.7 215.6 L 288.3 201.5 L 300.0 215.6 L 311.6 215.6 L 323.2 201.5 L 334.8 187.3 L 346.4 215.6 L 358.0 201.5 L 369.7 187.3 L 381.3 187.3 L 392.9 201.5 L 404.5 187.3 L 416.1 187.3 L 427.7 173.2 L 439.4 187.3 L 451.0 187.3 L 462.6 173.2 L 474.2 159.1 L 485.8 187.3 L 497.4 173.2 L 509.1 159.1 L 520.7 159.1 L 532.3 173.2 L 543.9 159.1 L 555.5 159.1 L 567.1 145.0 L 578.8 159.1 L 590.4 159.1 L 602.0 145.0"/>
+<circle class="vertex" cx="90.9" cy="243.8" r="3.6" tabindex="0" data-x="4" data-y="1"><title>(4, 1)</title></circle>
+<circle class="vertex" cx="102.5" cy="243.8" r="3.6" tabindex="0" data-x="5" data-y="1"><title>(5, 1)</title></circle>
+<circle class="vertex" cx="114.1" cy="243.8" r="3.6" tabindex="0" data-x="6" data-y="1"><title>(6, 1)</title></circle>
+<circle class="vertex" cx="125.7" cy="243.8" r="3.6" tabindex="0" data-x="7" data-y="1"><title>(7, 1)</title></circle>
+<circle class="vertex" cx="137.3" cy="243.8" r="3.6" tabindex="0" data-x="8" data-y="1"><title>(8, 1)</title></circle>
+<circle class="vertex" cx="148.9" cy="229.7" r="3.6" tabindex="0" data-x="9" data-y="2"><title>(9, 2)</title></circle>
+<circle class="vertex" cx="160.6" cy="243.8" r="3.6" tabindex="0" data-x="10" data-y="1"><title>(10, 1)</title></circle>
+<circle class="vertex" cx="172.2" cy="243.8" r="3.6" tabindex="0" data-x="11" data-y="1"><title>(11, 1)</title></circle>
+<circle class="vertex" cx="183.8" cy="229.7" r="3.6" tabindex="0" data-x="12" data-y="2"><title>(12, 2)</title></circle>
+<circle class="vertex" cx="195.4" cy="215.6" r="3.6" tabindex="0" data-x="13" data-y="3"><title>(13, 3)</title></circle>
+<circle class="vertex" cx="207.0" cy="243.8" r="3.6" tabindex="0" data-x="14" data-y="1"><title>(14, 1)</title></circle>
+<circle class="vertex" cx="218.6" cy="229.7" r="3.6" tabindex="0" data-x="15" data-y="2"><title>(15, 2)</title></circle>
+<circle class="vertex" cx="230.3" cy="215.6" r="3.6" tabindex="0" data-x="16" data-y="3"><title>(16, 3)</title></circle>
+<circle class="vertex" cx="241.9" cy="215.6" r="3.6" tabindex="0" data-x="17" data-y="3"><title>(17, 3)</title></circle>
+<circle class="vertex" cx="253.5" cy="229.7" r="3.6" tabindex="0" data-x="18" data-y="2"><title>(18, 2)</title></circle>
+<circle class="vertex" cx="265.1" cy="215.6" r="3.6" tabindex="0" data-x="19" data-y="3"><title>(19, 3)</title></circle>
+<circle class="vertex" cx="276.7" cy="215.6" r="3.6" tabindex="0" data-x="20" data-y="3"><title>(20, 3)</title></circle>
+<circle class="vertex" cx="288.3" cy="201.5" r="3.6" tabindex="0" data-x="21" data-y="4"><title>(21, 4)</title></circle>
+<circle class="vertex" cx="300.0" cy="215.6" r="3.6" tabindex="0" data-x="22" data-y="3"><title>(22, 3)</title></circle>
+<circle class="vertex" cx="311.6" cy="215.6" r="3.6" tabindex="0" data-x="23" data-y="3"><title>(23, 3)</title></circle>
+<circle class="vertex" cx="323.2" cy="201.5" r="3.6" tabindex="0" data-x="24" data-y="4"><title>(24, 4)</title></circle>
+<circle class="vertex" cx="334.8" cy="187.3" r="3.6" tabindex="0" data-x="25" data-y="5"><title>(25, 5)</title></circle>
+<circle class="vertex" cx="346.4" cy="215.6" r="3.6" tabindex="0" data-x="26" data-y="3"><title>(26, 3)</title></circle>
+<circle class="vertex" cx="358.0" cy="201.5" r="3.6" tabindex="0" data-x="27" data-y="4"><title>(27, 4)</title></circle>
+<circle class="vertex" cx="369.7" cy="187.3" r="3.6" tabindex="0" data-x="28" data-y="5"><title>(28, 5)</title></circle>
+<circle class="vertex" cx="381.3" cy="187.3" r="3.6" tabindex="0" data-x="29" data-y="5"><title>(29, 5)</title></circle>
+<circle class="vertex" cx="392.9" cy="201.5" r="3.6" tabindex="0" data-x="30" data-y="4"><title>(30, 4)</title></circle>
+<circle class="vertex" cx="404.5" cy="187.3" r="3.6" tabindex="0" data-x="31" data-y="5"><title>(31, 5)</title></circle>
+<circle class="vertex" cx="416.1" cy="187.3" r="3.6" tabindex="0" data-x="32" data-y="5"><title>(32, 5)</title></circle>
+<circle class="vertex" cx="427.7" cy="173.2" r="3.6" tabindex="0" data-x="33" data-y="6"><title>(33, 6)</title></circle>
+<circle class="vertex" cx="439.4" cy="187.3" r="3.6" tabindex="0" data-x="34" data-y="5"><title>(34, 5)</title></circle>
+<circle class="vertex" cx="451.0" cy="187.3" r="3.6" tabindex="0" data-x="35" data-y="5"><title>(35, 5)</title></circle>
+<circle class="vertex" cx="462.6" cy="173.2" r="3.6" tabindex="0" data-x="36" data-y="6"><title>(36, 6)</title></circle>
+<circle class="vertex" cx="474.2" cy="159.1" r="3.6" tabindex="0" data-x="37" data-y="7"><title>(37, 7)</title></circle>
+<circle class="vertex" cx="485.8" cy="187.3" r="3.6" tabindex="0" data-x="38" data-y="5"><title>(38, 5)</title></circle>
+<circle class="vertex" cx="497.4" cy="173.2" r="3.6" tabindex="0" data-x="39" data-y="6"><title>(39, 6)</title></circle>
+<circle class="vertex" cx="509.1" cy="159.1" r="3.6" tabindex="0" data-x="40" data-y="7"><title>(40, 7)</title></circle>
+<circle class="vertex" cx="520.7" cy="159.1" r="3.6" tabindex="0" data-x="41" data-y="7"><title>(41, 7)</title></circle>
+<circle class="vertex" cx="532.3" cy="173.2" r="3.6" tabindex="0" data-x="42" data-y="6"><title>(42, 6)</title></circle>
+<circle class="vertex" cx="543.9" cy="159.1" r="3.6" tabindex="0" data-x="43" data-y="7"><title>(43, 7)</title></circle>
+<circle class="vertex" cx="555.5" cy="159.1" r="3.6" tabindex="0" data-x="44" data-y="7"><title>(44, 7)</title></circle>
+<circle class="vertex" cx="567.1" cy="145.0" r="3.6" tabindex="0" data-x="45" data-y="8"><title>(45, 8)</title></circle>
+<circle class="vertex" cx="578.8" cy="159.1" r="3.6" tabindex="0" data-x="46" data-y="7"><title>(46, 7)</title></circle>
+<circle class="vertex" cx="590.4" cy="159.1" r="3.6" tabindex="0" data-x="47" data-y="7"><title>(47, 7)</title></circle>
+<circle class="vertex" cx="602.0" cy="145.0" r="3.6" tabindex="0" data-x="48" data-y="8"><title>(48, 8)</title></circle>
+</svg>
+</div>
+<figcaption>The weight <math display="inline" alttext="a(k)"><semantics><mrow><mi>a</mi><mo>(</mo><mi>k</mi><mo>)</mo></mrow><annotation encoding="application/x-tex">a(k)</annotation></semantics></math> and the slack <math display="inline" alttext="d(k)"><semantics><mrow><mi>d</mi><mo>(</mo><mi>k</mi><mo>)</mo></mrow><annotation encoding="application/x-tex">d(k)</annotation></semantics></math> it buys, over the first 48 pole orders. <math display="inline" alttext="a(k)"><semantics><mrow><mi>a</mi><mo>(</mo><mi>k</mi><mo>)</mo></mrow><annotation encoding="application/x-tex">a(k)</annotation></semantics></math> is a staircase of slope <math display="inline" alttext="1/3"><semantics><mrow><mn>1</mn><mo stretchy="false">/</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">1/3</annotation></semantics></math> with a parity indicator riding on it; <math display="inline" alttext="d(k)"><semantics><mrow><mi>d</mi><mo>(</mo><mi>k</mi><mo>)</mo></mrow><annotation encoding="application/x-tex">d(k)</annotation></semantics></math> is the distance from the boundary of the truncated space, and the flat line at <math display="inline" alttext="d = 1"><semantics><mrow><mi>d</mi><mo stretchy="false">=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">d = 1</annotation></semantics></math> that it keeps returning to is why the growth rate cannot exceed <math display="inline" alttext="k/6"><semantics><mrow><mi>k</mi><mo stretchy="false">/</mo><mn>6</mn></mrow><annotation encoding="application/x-tex">k/6</annotation></semantics></math>.</figcaption>
+</figure>
+<details class="ax-fold card ax-cert blk t-essential s-open" id="certificate-run">
+<summary><span class="badge badge-open"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2.4A4.6 4.6 0 118 12.6 4.6 4.6 0 018 3.4z"/></svg>OPEN</span><span>7 of 7 checks of the p = 2 tame-point weight certificate passed; 0 assertion failures. The program is dependency-free and builds with a bare <code>rustc --edition 2024</code>, so the replay below needs no cargo, no workspace and no network. It is mutation-tested: all seven mutants in the paper repository's suite exit nonzero against this source, each with the catcher its <code>.expect</code> file records.</span><span class="ax-exit-ok">exit 0</span></summary>
+<div class="ax-foldbody">
+<dl class="ax-cert-grid">
+<dt>kind</dt><dd><code>report-run</code></dd>
+<dt>generator</dt><dd><code>noh_wt_certificate.rs with --emit-run (render strand P0-A); base pin axeyum 75663ef8, built with rustc --edition 2024</code></dd>
+</dl>
+<p class="ax-tinylabel">inputs, by content hash</p>
+<div class="ax-tablewrap"><table class="ax-table"><thead><tr><th>path</th><th>sha256</th></tr></thead><tbody>
+<tr><td><code>render/examples-input/cert/run-certificate.json</code></td><td class="ax-hash">40987dbfe49e77738b8b7072d0dddcca3975b71df8dde4c4ead62c38c965977f</td></tr>
+<tr><td><code>render/producers/noh_wt_certificate_emitrun.rs</code></td><td class="ax-hash">3910f5f7519599f4a1beaff2f3d562757c0185bca72d308f943eb8ca6590a4bc</td></tr>
+</tbody></table></div>
+<p class="ax-tinylabel">replay this yourself</p>
+<div class="ax-cmd"><code id="certificate-run-replay">rustc --edition 2024 -O -o /tmp/noh_wt_cert render/producers/noh_wt_certificate_emitrun.rs &amp;&amp; /tmp/noh_wt_cert --emit-run render/examples-input/cert/run-certificate.json --source render/producers/noh_wt_certificate_emitrun.rs --record-id R:noh-wt-certificate --replay-seconds 1 --role production</code><button type="button" data-copy-target="certificate-run-replay">copy</button></div>
+</div>
+</details>
+<section class="blk prose t-detail" id="detail-what-is-checked">
+<h2 id="what-the-certificate-binds-and-what-it-does-not">What the certificate binds, and what it does not</h2>
+<p><strong>What the certificate does and does not bind.</strong> Its check [1] compares the closed-form product against a coefficient obtained by iterating the recurrence forced by the hypergeometric ODE, and the file originally called that an INDEPENDENT route. It is not one: the audit (<code>newton-over-hodge-char2/research-log/20-verify.md</code>, P2-8) established that the second route iterates the same product in a different association order, so check [1] verifies exact rational arithmetic and not the operator. The certificate's only binding to <math display="inline" alttext="U_2"><semantics><mrow><msub><mi>U</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">U_2</annotation></semantics></math> itself is the block of hard-coded coefficient rows recomputed independently by workstream 01 &#x2014; claim <code>c2</code> in the run record. Everything downstream (the valuation identity, Lemma A, the admissibility sweep, the sharpness witness) is arithmetic over the closed form that block pins. Widening that binding, by adding the series solve to the artifact, is the audit's open recommendation and is not done here.</p>
+</section>
+<p class="blk t-archive" id="archive-run-record">Left out of this document: <code>render/examples-input/cert/run-certificate.json</code></p>
+<p class="blk t-archive" id="archive-producer-source">Left out of this document: <code>render/producers/noh_wt_certificate_emitrun.rs</code></p>
+</main>
+<footer class="ax-foot"><div class="ax-doc">
+<p>This file is self-contained: it embeds its own stylesheet, script and figures and makes no network request when opened. Every status badge above is data carried by the document, not a judgement made while rendering it.</p>
+<p>Build epoch <code>1787307950 (commit)</code>. No wall clock was read.</p>
+</div></footer>
+<script>
+/* Axeyum render strand -- inlined page script.
+ *
+ * Rules this file lives by:
+ *   - Every feature is optional. The document is fully readable with this
+ *     script removed: detail blocks are <details>, the graph is static SVG,
+ *     plot tooltips are native <title>, and the reading level defaults to
+ *     "full" via a body attribute the emitter writes.
+ *   - Nothing here may reach the network. No fetch, no XHR, no dynamic
+ *     import, no new Image(). lint_self_contained() rejects those tokens.
+ *   - Each feature is installed inside its own try/catch so one failure
+ *     cannot take the others down.
+ */
+(function () {
+  "use strict";
+
+  function guard(name, fn) {
+    try { fn(); } catch (e) {
+      if (window.console && console.warn) { console.warn("axeyum: " + name + " disabled: " + e); }
+    }
+  }
+
+  var $ = function (sel, root) { return (root || document).querySelector(sel); };
+  var $$ = function (sel, root) {
+    return Array.prototype.slice.call((root || document).querySelectorAll(sel));
+  };
+
+  /* -------- 1. reading level: summary / full / forensic -------- */
+  guard("reading-level", function () {
+    var group = $(".ax-levels");
+    if (!group) { return; }
+    var buttons = $$("button[data-level]", group);
+    function apply(level) {
+      document.body.setAttribute("data-level", level);
+      buttons.forEach(function (b) {
+        b.setAttribute("aria-pressed", b.getAttribute("data-level") === level ? "true" : "false");
+      });
+      // Forensic means "show me everything", so folds open; leaving the other
+      // levels alone preserves whatever the reader opened by hand.
+      if (level === "forensic") {
+        $$("details.ax-fold").forEach(function (d) { d.open = true; });
+      }
+    }
+    buttons.forEach(function (b) {
+      b.addEventListener("click", function () { apply(b.getAttribute("data-level")); });
+    });
+    apply(document.body.getAttribute("data-level") || "full");
+  });
+
+  /* -------- 2. copy-to-clipboard for replay commands -------- */
+  guard("copy", function () {
+    $$("button[data-copy-target]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var src = document.getElementById(btn.getAttribute("data-copy-target"));
+        if (!src) { return; }
+        var text = src.textContent;
+        var done = function (ok) {
+          btn.setAttribute("data-copied", ok ? "1" : "0");
+          var was = btn.getAttribute("data-label") || btn.textContent;
+          btn.setAttribute("data-label", was);
+          btn.textContent = ok ? "copied" : "select it";
+          window.setTimeout(function () {
+            btn.textContent = was;
+            btn.removeAttribute("data-copied");
+          }, 1400);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(false); });
+        } else {
+          // Older engines: select the text so the reader can copy it manually.
+          var r = document.createRange();
+          r.selectNodeContents(src);
+          var sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(r);
+          done(false);
+        }
+      });
+    });
+  });
+
+  /* -------- 3. dependency graph: ancestor/descendant cone -------- */
+  guard("graph-cone", function () {
+    $$("svg.ax-graph").forEach(function (svg) {
+      var nodes = $$("g.gnode", svg);
+      var edges = $$("path.gedge", svg);
+      function clear() {
+        svg.classList.remove("coning");
+        nodes.forEach(function (n) { n.classList.remove("cone-self", "cone-anc", "cone-desc"); });
+        edges.forEach(function (e) { e.classList.remove("cone-edge"); });
+      }
+      function ids(el, attr) {
+        var v = el.getAttribute(attr);
+        return v ? v.split(" ") : [];
+      }
+      function light(node) {
+        clear();
+        var self = node.getAttribute("data-n");
+        var anc = ids(node, "data-anc");
+        var desc = ids(node, "data-desc");
+        var inCone = {};
+        inCone[self] = "self";
+        anc.forEach(function (i) { inCone[i] = "anc"; });
+        desc.forEach(function (i) { inCone[i] = "desc"; });
+        nodes.forEach(function (n) {
+          var k = inCone[n.getAttribute("data-n")];
+          if (k) { n.classList.add("cone-" + k); }
+        });
+        edges.forEach(function (e) {
+          var a = e.getAttribute("data-from"), b = e.getAttribute("data-to");
+          if (inCone[a] && inCone[b]) { e.classList.add("cone-edge"); }
+        });
+        svg.classList.add("coning");
+      }
+      nodes.forEach(function (n) {
+        n.addEventListener("mouseenter", function () { light(n); });
+        n.addEventListener("focus", function () { light(n); });
+        n.addEventListener("blur", clear);
+        n.addEventListener("click", function () {
+          var href = n.getAttribute("data-href");
+          if (!href) { return; }
+          var target = document.getElementById(href);
+          if (target) {
+            target.scrollIntoView({ block: "start", behavior: "smooth" });
+            target.setAttribute("tabindex", "-1");
+            target.focus({ preventScroll: true });
+          }
+        });
+        n.addEventListener("keydown", function (ev) {
+          if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); n.dispatchEvent(new Event("click")); }
+        });
+      });
+      svg.addEventListener("mouseleave", clear);
+    });
+  });
+
+  /* -------- 4. steps player: j / k walk the derivation -------- */
+  guard("steps", function () {
+    $$("ol.ax-steps").forEach(function (list) {
+      var items = $$("li", list);
+      if (!items.length) { return; }
+      var cur = -1;
+      function show(i, scroll) {
+        if (i < 0) { i = 0; }
+        if (i >= items.length) { i = items.length - 1; }
+        if (i === cur) { return; }
+        if (cur >= 0) { items[cur].removeAttribute("aria-current"); }
+        cur = i;
+        items[cur].setAttribute("aria-current", "step");
+        items[cur].setAttribute("tabindex", "0");
+        if (scroll) { items[cur].scrollIntoView({ block: "nearest" }); }
+      }
+      items.forEach(function (li, i) {
+        li.addEventListener("click", function () { show(i, false); });
+      });
+      list.setAttribute("tabindex", "0");
+      list.addEventListener("keydown", function (ev) {
+        var k = ev.key;
+        if (k === "j" || k === "ArrowDown") { show(cur + 1, true); ev.preventDefault(); }
+        else if (k === "k" || k === "ArrowUp") { show(cur < 0 ? 0 : cur - 1, true); ev.preventDefault(); }
+        else if (k === "Home") { show(0, true); ev.preventDefault(); }
+        else if (k === "End") { show(items.length - 1, true); ev.preventDefault(); }
+      });
+      var bar = list.previousElementSibling;
+      if (bar && bar.classList.contains("ax-stepbar")) {
+        var prev = $("button[data-step='prev']", bar);
+        var next = $("button[data-step='next']", bar);
+        if (prev) { prev.addEventListener("click", function () { show(cur < 0 ? 0 : cur - 1, true); }); }
+        if (next) { next.addEventListener("click", function () { show(cur + 1, true); }); }
+      }
+    });
+  });
+})();
+
+</script>
+</body>
+</html>

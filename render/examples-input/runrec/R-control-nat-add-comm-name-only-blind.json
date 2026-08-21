@@ -1,0 +1,44 @@
+{
+  "claims": [
+    {
+      "key": "name-only-row-is-blind-to-the-type",
+      "note": "Evidence about the CHECKER, never about the mathematics. Nat.add_comm is genuinely admitted by the kernel; what this control measures is that the ledger row would not notice if it were not.",
+      "statement": "`F:nat-add-comm`'s `kernel-add-comm` checker command matches only the theorem NAME in the kernel inventory: with the printed type replaced by `AxNat.le x0 x1` -- a different proposition -- the same grep exits 0.",
+      "status": "evidence"
+    }
+  ],
+  "id": "R:control-nat-add-comm-name-only-blind",
+  "notes": "NOT A DEFECT REPORT AND NOT SUPPORT FOR ANY FACT. Assembly refuses to cite a `negative-control` record under any role but `negative-control`, so this file cannot be quoted as evidence for F:nat-add-comm. It exists because '13 of 17 kernel-term rows check the name and not the type' is a claim that should be measured rather than asserted in a diary.",
+  "outcome": "refuted",
+  "provenance": {
+    "command": "cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- add_comm 2>/dev/null | sed 's/Eq[.]{1} AxNat (AxNat[.]add x0 x1) (AxNat[.]add x1 x0)/AxNat.le x0 x1/' | grep -qE '^Nat[.]add_comm[[:space:]]'",
+    "duration_ms": 329,
+    "epoch": {
+      "commit": "839d1e50a287fa816490dd2ee7ec19d6a202c25d",
+      "source": "commit",
+      "unix": 1787319265
+    },
+    "exit_status": 0,
+    "generator": "render/producers-runrec/facts_to_runrec.py --negative-control",
+    "inputs": [
+      {
+        "path": "crates/axeyum-lean-kernel/examples/nat_theorem_inventory.rs",
+        "role": "checker",
+        "sha256": "5253659a178bf67a42d236c4ba674e3ae1d91189bcb7309b2791e1ea64eea5a5"
+      }
+    ]
+  },
+  "replay": {
+    "cwd": ".",
+    "expected_exit_status": 0,
+    "expected_seconds": 1,
+    "line": "cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- add_comm 2>/dev/null | sed 's/Eq[.]{1} AxNat (AxNat[.]add x0 x1) (AxNat[.]add x1 x0)/AxNat.le x0 x1/' | grep -qE '^Nat[.]add_comm[[:space:]]'"
+  },
+  "role": "negative-control",
+  "schema_version": 1,
+  "stats": {
+    "checker_caught_the_mutation": false,
+    "wall_seconds": 0.329
+  },
+  "summary": "MUTATED INPUT, DELIBERATE: the theorem's printed type is rewritten to a different proposition before the row's grep sees it, and the grep of `F:nat-add-comm`'s `kernel-add-comm` row STILL PASSED (exit 0)."
+}

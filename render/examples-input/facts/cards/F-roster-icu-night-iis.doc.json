@@ -1,0 +1,687 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:roster-icu-night-iis",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-roster-icu-night-iis.json",
+            "sha256": "6ddd3cf2db0344ad48b6f3db831fc0baaaec3cd04be1a14d024870da5e3248b7"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Five rows of a 102-row ICU night roster are an irreducible infeasible subsystem"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "2 of 2 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "unclassified",
+            "unclassified",
+            "field absent: nobody has looked (distinct from `unknown`, which means we checked)"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-roster-icu-night-iis.json",
+              "sha256": "6ddd3cf2db0344ad48b6f3db831fc0baaaec3cd04be1a14d024870da5e3248b7"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-roster-icu-night-iis.json",
+            "sha256": "6ddd3cf2db0344ad48b6f3db831fc0baaaec3cd04be1a14d024870da5e3248b7"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "search-certificate"
+          ],
+          [
+            "axiom_footprint",
+            "smtlib2-linear-arithmetic-semantics; axeyum-smtlib.parser-faithfulness-of-the-committed-instance; axeyum-ir.ground-evaluator-model-replay-semantics; axeyum-solver.alethe-lia-generic-refutation-checker"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-roster-icu-night-iis.json",
+              "sha256": "6ddd3cf2db0344ad48b6f3db831fc0baaaec3cd04be1a14d024870da5e3248b7"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-roster-icu-night-iis.json",
+            "sha256": "6ddd3cf2db0344ad48b6f3db831fc0baaaec3cd04be1a14d024870da5e3248b7"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 9419,
+            "path": "artifacts/instances/infeasibility/roster-icu-night.smt2",
+            "sha256": "9f80351e890eca62418d547e453249b83e9bb43e60d7dc67dfb813b15ffe19f4"
+          }
+        ],
+        "cert_kind": "unsat-drat",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run --release -q -p axeyum-solver --features full --example infeasibility_iis -- artifacts/instances/infeasibility/roster-icu-night.smt2 --expect-rows 102 --expect-core 5"
+        },
+        "summary": {
+          "text": "The five named rows are jointly unsatisfiable."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-roster-icu-night-iis.json",
+            "sha256": "6ddd3cf2db0344ad48b6f3db831fc0baaaec3cd04be1a14d024870da5e3248b7"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: roster-core-refutation"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row roster-core-refutation as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "roster-core-refutation"
+          ],
+          [
+            "ledger kind",
+            "unsat-certificate"
+          ],
+          [
+            "cert_kind",
+            "unsat-drat"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-deletion-minimizer-producing-solve, axeyum-alethe-lia-generic-checker-fresh-re-derivation, z3-4.13.3-independent-core-extraction"
+          ],
+          [
+            "supports",
+            "The five named rows are jointly unsatisfiable."
+          ],
+          [
+            "artifact",
+            "artifacts/instances/infeasibility/roster-icu-night.smt2"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "9f80351e890eca62418d547e453249b83e9bb43e60d7dc67dfb813b15ffe19f4"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-roster-icu-night-iis.json",
+              "sha256": "6ddd3cf2db0344ad48b6f3db831fc0baaaec3cd04be1a14d024870da5e3248b7"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-roster-icu-night-iis.json",
+            "sha256": "6ddd3cf2db0344ad48b6f3db831fc0baaaec3cd04be1a14d024870da5e3248b7"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Ran 2026-08-14 in 0.21s. The front door's `(get-unsat-core)` returned exactly these five names; `axeyum_solver::produce_evidence` on the five reports `Evidence::UnsatArithAletheProof` with `check_outcome` = `verified` and trust step `farkas` marked CERTIFIED THIS RUN, i.e. the Alethe `lia_generic` refutation was re-derived by `check_alethe_lra`, not trusted from the emitter. z3 4.13.3's own `(get-unsat-core)` on the same file returns the same five names (scripts/check-infeasibility-iis-z3.py). The example ALSO pins the numbers: passing `--expect-core 4` exits 1, so this command is a ratchet and not a printout.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-roster-icu-night-iis.json",
+            "sha256": "6ddd3cf2db0344ad48b6f3db831fc0baaaec3cd04be1a14d024870da5e3248b7"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence roster-core-refutation"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/instances/infeasibility/roster-icu-night.smt2",
+        "render_hint": "code",
+        "sha256": "9f80351e890eca62418d547e453249b83e9bb43e60d7dc67dfb813b15ffe19f4",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-roster-icu-night-iis.json",
+            "sha256": "6ddd3cf2db0344ad48b6f3db831fc0baaaec3cd04be1a14d024870da5e3248b7"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 9419,
+            "path": "artifacts/instances/infeasibility/roster-icu-night.smt2",
+            "sha256": "9f80351e890eca62418d547e453249b83e9bb43e60d7dc67dfb813b15ffe19f4"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run --release -q -p axeyum-solver --features full --example infeasibility_iis -- artifacts/instances/infeasibility/roster-icu-night.smt2 --expect-rows 102 --expect-core 5"
+        },
+        "summary": {
+          "text": "Dropping any single one of the five leaves a satisfiable set -- the core is irreducible."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-roster-icu-night-iis.json",
+            "sha256": "6ddd3cf2db0344ad48b6f3db831fc0baaaec3cd04be1a14d024870da5e3248b7"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: roster-leave-one-out-witnesses"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row roster-leave-one-out-witnesses as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "roster-leave-one-out-witnesses"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-ir-ground-evaluator-model-replay-per-subset, z3-4.13.3-independent-leave-one-out-sweep"
+          ],
+          [
+            "supports",
+            "Dropping any single one of the five leaves a satisfiable set -- the core is irreducible."
+          ],
+          [
+            "artifact",
+            "artifacts/instances/infeasibility/roster-icu-night.smt2"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "9f80351e890eca62418d547e453249b83e9bb43e60d7dc67dfb813b15ffe19f4"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-roster-icu-night-iis.json",
+              "sha256": "6ddd3cf2db0344ad48b6f3db831fc0baaaec3cd04be1a14d024870da5e3248b7"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-roster-icu-night-iis.json",
+            "sha256": "6ddd3cf2db0344ad48b6f3db831fc0baaaec3cd04be1a14d024870da5e3248b7"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "This is the half that turns a subset into an EXPLANATION, and it is measured, never asserted. `axeyum_solver::unsat_core` is deletion-based, which yields an irreducible core ONLY IF every trial decided definitively -- it conservatively KEEPS a row whose removal leaves the remainder `unknown`, so minimality is a hope until re-solved. All five leave-one-out subsets were re-solved and every one came back `sat`; each returned model was then replayed against the very terms it claims to satisfy by `axeyum_solver::check_model` (the IR ground evaluator), which shares no code with the decision procedure. An `unknown` here is treated as a FAILURE by the example, not a pass. The instance minus the core is also `sat` with a replayed model, so the contradiction is confined to the five rows and the 4.9% ratio is a real compression rather than an artifact of a small model.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-roster-icu-night-iis.json",
+            "sha256": "6ddd3cf2db0344ad48b6f3db831fc0baaaec3cd04be1a14d024870da5e3248b7"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence roster-leave-one-out-witnesses"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/instances/infeasibility/roster-icu-night.smt2",
+        "render_hint": "code",
+        "sha256": "9f80351e890eca62418d547e453249b83e9bb43e60d7dc67dfb813b15ffe19f4",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-roster-icu-night-iis.json",
+            "sha256": "6ddd3cf2db0344ad48b6f3db831fc0baaaec3cd04be1a14d024870da5e3248b7"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-14"
+          ],
+          [
+            "established_by",
+            "axeyum lane `infeasibility`, 2026-08-14: crates/axeyum-solver/examples/infeasibility_iis.rs over the committed instance"
+          ],
+          [
+            "source",
+            "instance authored by this lane (scripts/gen-infeasibility-instances.py); not extracted from any corpus"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-roster-icu-night-iis.json",
+              "sha256": "6ddd3cf2db0344ad48b6f3db831fc0baaaec3cd04be1a14d024870da5e3248b7"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-roster-icu-night-iis.json",
+            "sha256": "6ddd3cf2db0344ad48b6f3db831fc0baaaec3cd04be1a14d024870da5e3248b7"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "WHY THE RATIO IS THE RESULT. 5 of 102 rows, 4.9%. A core that is the whole constraint set is the input restated; the product a commercial MILP solver's IIS sells is the compression, and it is only worth anything if irreducibility is real. Both numbers here are measured -- see the two evidence rows. WHAT THIS IS NOT: it is not a claim that this is the SMALLEST core, or the only one. Deletion-based minimization returns ONE irreducible core; a different deletion order can return a different one, and 'irreducible' means no proper subset of THIS core is infeasible, not that no smaller core exists elsewhere in the model. z3, minimizing independently, happened to return the same five rows. WHY `search-certificate` AND NOT `smt-clausal`. The proposition is a conjunction of two halves with different trust bases: the core's `unsat` carries a re-checked Alethe `lia_generic` certificate (clausal-grade), while irreducibility rests on five models replayed by the IR evaluator (witness-grade). `search-certificate` is the enum's name for a search whose result carries a replayable witness or cover, which is exactly this composite; labelling it `smt-clausal` would advertise a certificate for the half that has witnesses instead. See docs/mathematics-2026-08/diary-infeasibility.md.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-roster-icu-night-iis.json",
+            "sha256": "6ddd3cf2db0344ad48b6f3db831fc0baaaec3cd04be1a14d024870da5e3248b7"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-roster-icu-night-iis",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#index",
+        "label": "Unconnected: see the index",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:roster-icu-night-iis",
+    "title": "Five rows of a 102-row ICU night roster are an irreducible infeasible subsystem"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-roster-icu-night-iis.json",
+        "sha256": "6ddd3cf2db0344ad48b6f3db831fc0baaaec3cd04be1a14d024870da5e3248b7"
+      }
+    ]
+  },
+  "schema_version": 1
+}

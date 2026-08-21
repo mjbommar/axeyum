@@ -1,0 +1,1065 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:nat-peano-categoricity",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-peano-categoricity.json",
+            "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "The constructed Nat is THE natural numbers, up to unique isomorphism"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "4 of 4 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-peano-categoricity.json",
+              "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-peano-categoricity.json",
+            "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "kernel-lean"
+          ],
+          [
+            "axiom_footprint",
+            "[] -- axiom-free; only kernel-lean can deliver this"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-peano-categoricity.json",
+              "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-peano-categoricity.json",
+            "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^nat-categoricity[[:space:]]+Nat[.]Peano[.]categorical[[:space:]]+\\[\\][[:space:]]'"
+        },
+        "summary": {
+          "text": "Every Peano structure is in structure-preserving bijection with the constructed Nat, and the axiom footprint of the witness is empty."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-peano-categoricity.json",
+            "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: kernel-Nat.Peano.categorical"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row kernel-Nat.Peano.categorical as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "kernel-Nat.Peano.categorical"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "Every Peano structure is in structure-preserving bijection with the constructed Nat, and the axiom footprint of the witness is empty."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-peano-categoricity.json",
+              "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-peano-categoricity.json",
+            "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "The grep is anchored on the declaration name AND on an EMPTY footprint column, so neither a renamed theorem nor one that grew a dependency on a trusted declaration can satisfy it. The `&&` is load-bearing: `characterization_status` is itself a checker that exits non-zero when any entry is not a `Declaration::Theorem`, when any footprint is non-empty, when the population changes, or when any injected `Weakening` is ACCEPTED by the kernel -- so this command fails both on a missing row and on a package whose hypotheses stopped being load-bearing. Verified 2026-08-17: the command exits 0, and the same command with a non-existent declaration name exits 1.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-peano-categoricity.json",
+            "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^peano-axiom[[:space:]]+Nat[.]Peano[.]zero_ne_succ[[:space:]]+\\[\\][[:space:]]'"
+        },
+        "summary": {
+          "text": "Peano 1: zero is not a successor. Proved by a Prop-valued Nat.rec discriminator, not assumed."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-peano-categoricity.json",
+            "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: kernel-Nat.Peano.zero_ne_succ"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row kernel-Nat.Peano.zero_ne_succ as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "kernel-Nat.Peano.zero_ne_succ"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "Peano 1: zero is not a successor. Proved by a Prop-valued Nat.rec discriminator, not assumed."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-peano-categoricity.json",
+              "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-peano-categoricity.json",
+            "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "This was the one Peano axiom the Nat prelude did not carry -- its module docs said `n != succ n`-style discrimination was absent -- so it is the row that actually moved. `Nat.Peano.succ_injective` and `Nat.Peano.induction` restate the other two in this module and are discharged by `Nat.succ_injective` and the kernel-generated `Nat.rec`, so a prelude statement that drifts becomes a kernel rejection here rather than a silently different axiom.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-peano-categoricity.json",
+            "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-002",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && printf '%s\\n' \"$out\" | grep -qE '^nat-universal-property[[:space:]]+Nat[.]Peano[.]iter_unique[[:space:]]+\\[\\][[:space:]]'"
+        },
+        "summary": {
+          "text": "The comparison map is the UNIQUE structure-preserving map out of Nat, which is what makes the isomorphism canonical rather than merely existent."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-peano-categoricity.json",
+            "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: kernel-Nat.Peano.iter_unique"
+    },
+    {
+      "id": "evidence-002-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row kernel-Nat.Peano.iter_unique as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "kernel-Nat.Peano.iter_unique"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "The comparison map is the UNIQUE structure-preserving map out of Nat, which is what makes the isomorphism canonical rather than merely existent."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-peano-categoricity.json",
+              "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-peano-categoricity.json",
+            "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-002-notes",
+      "kind": {
+        "text": "Existence is `Nat.Peano.iter` (a definition by `Nat.rec`) with `iter_zero`/`iter_succ` holding definitionally; uniqueness is this theorem. Together they are the universal property of Nat as the initial iteration algebra.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-peano-categoricity.json",
+            "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-003",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "report-run",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat --require-axiom-free logic"
+        },
+        "summary": {
+          "text": "axiom_footprint: [] -- the Nat prelude's whole trusted surface is empty, which bounds every individual footprint by []."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-peano-categoricity.json",
+            "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: nat-trusted-surface-empty"
+    },
+    {
+      "id": "evidence-003-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row nat-trusted-surface-empty as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "nat-trusted-surface-empty"
+          ],
+          [
+            "ledger kind",
+            "exhaustive-enumeration"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "(none named)"
+          ],
+          [
+            "supports",
+            "axiom_footprint: [] -- the Nat prelude's whole trusted surface is empty, which bounds every individual footprint by []."
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-peano-categoricity.json",
+              "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-peano-categoricity.json",
+            "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-003-notes",
+      "kind": {
+        "text": "Enumerates the built Nat environment over the FULL trusted surface (Axiom/Opaque/Quotient), not `Declaration::Axiom` alone, and exits non-zero on any member. Measured 2026-08-17: logic=0, nat=0.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-peano-categoricity.json",
+            "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "dependency-graph",
+      "kind": {
+        "alt": "Dependency graph around F:nat-peano-categoricity: 0 dependencies, 1 dependents",
+        "caption": {
+          "text": "Immediate dependencies and dependents of this fact"
+        },
+        "spec": {
+          "edges": [
+            {
+              "from": "F:int-categoricity",
+              "label": "depends_on",
+              "to": "F:nat-peano-categoricity"
+            }
+          ],
+          "figure_type": "dep-graph",
+          "nodes": [
+            {
+              "group": "kernel-lean",
+              "href": "F-int-categoricity.doc.json",
+              "id": "F:int-categoricity",
+              "label": "int-categoricity",
+              "status": "proved",
+              "tooltip": "The constructed Int is THE integers: every generated aperiodic Z-structure is in structure-preserving bijection with it"
+            },
+            {
+              "group": "focus",
+              "href": "F-nat-peano-categoricity.doc.json",
+              "id": "F:nat-peano-categoricity",
+              "label": "nat-peano-categoricity",
+              "status": "proved",
+              "tooltip": "The constructed Nat is THE natural numbers, up to unique isomorphism"
+            }
+          ],
+          "rankdir": "TB"
+        },
+        "type": "figure"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-peano-categoricity.json",
+            "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Dependency neighbourhood"
+    },
+    {
+      "id": "depended-on-by",
+      "kind": {
+        "caption": {
+          "text": "Depended on by"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:int-categoricity",
+            "The constructed Int is THE integers: every generated aperiodic Z-structure is in structure-preserving bijection with it",
+            "proved",
+            "F-int-categoricity.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-peano-categoricity.json",
+              "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-peano-categoricity.json",
+            "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depended on by"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-17"
+          ],
+          [
+            "established_by",
+            "axeyum-lean-kernel characterization module (agent-characterization lane)"
+          ],
+          [
+            "source",
+            "hand-built foundational library; the statement is the standard second-order categoricity of Peano arithmetic, authored here rather than imported"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-peano-categoricity.json",
+              "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-peano-categoricity.json",
+            "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "concept-refs",
+      "kind": {
+        "caption": {
+          "text": "Concept references (gloss and provenance only, never substance)"
+        },
+        "columns": [
+          {
+            "header": "graph",
+            "key": "graph"
+          },
+          {
+            "header": "ref",
+            "key": "ref"
+          },
+          {
+            "header": "relation",
+            "key": "relation"
+          },
+          {
+            "header": "resolved",
+            "key": "resolved"
+          }
+        ],
+        "rows": [
+          [
+            "math-education",
+            "C:peano-axioms",
+            "instance-of",
+            false
+          ],
+          [
+            "math-education",
+            "C:natural-numbers",
+            "about",
+            false
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-nat-peano-categoricity.json",
+              "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-peano-categoricity.json",
+            "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "WHY THIS FACT EXISTS. `nat_axiom_inventory` reporting `nat: axiom=0` says nothing about whether the object is the natural numbers: an inductive type named `Nat` with a subtly wrong order would report the same zero and typecheck the same modules. Rendered Lean modules make the gap concrete -- they run in `prelude` mode and RE-DECLARE their own `Nat`, `Eq` and `False`, so official Lean accepting one certifies `this proof typechecks against THESE definitions`, not that they are the standard ones. This fact closes that by proof rather than by inspection, and it is stronger than a bridge lemma to one other definition of the naturals because it quantifies over every structure satisfying the axioms. NOT VACUOUS: `characterization_tests::categoricity_is_not_vacuous_it_instantiates_at_nat_itself` instantiates the theorem at (Nat, zero, succ) with the three Peano theorems as its hypotheses and pushes the result back through the trusted gate -- a categoricity theorem whose premises nothing satisfies would be axiom-free and worthless. LOAD-BEARING: six injected `Weakening` variants replace one hypothesis of these theorems with `True` and the kernel must refuse each ONE AT THE DECLARATION IT WAS AIMED AT; a guard-mutation check (disabling one injection) killed exactly one test.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-nat-peano-categoricity.json",
+            "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-nat-peano-categoricity",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c01",
+        "label": "Component 1 of 38 (43 facts)",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:nat-peano-categoricity",
+    "title": "The constructed Nat is THE natural numbers, up to unique isomorphism"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-nat-peano-categoricity.json",
+        "sha256": "056788ad2ed8b8c92bf74aac6b71d24536dfe445fe22ce27685c7f0901b2a49b"
+      }
+    ]
+  },
+  "schema_version": 1
+}

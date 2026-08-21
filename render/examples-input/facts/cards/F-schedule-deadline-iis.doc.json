@@ -1,0 +1,813 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:schedule-deadline-iis",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-schedule-deadline-iis.json",
+            "sha256": "c87cfb7e0d238d886bb57c7a729dd734da7ab8bdcd50a151d073de165388214e"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Five rows of a 60-row project schedule are an irreducible infeasible subsystem"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "2 of 2 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "unclassified",
+            "unclassified",
+            "field absent: nobody has looked (distinct from `unknown`, which means we checked)"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-schedule-deadline-iis.json",
+              "sha256": "c87cfb7e0d238d886bb57c7a729dd734da7ab8bdcd50a151d073de165388214e"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-schedule-deadline-iis.json",
+            "sha256": "c87cfb7e0d238d886bb57c7a729dd734da7ab8bdcd50a151d073de165388214e"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "search-certificate"
+          ],
+          [
+            "axiom_footprint",
+            "smtlib2-linear-arithmetic-semantics; axeyum-smtlib.parser-faithfulness-of-the-committed-instance; axeyum-ir.ground-evaluator-model-replay-semantics; axeyum-solver.farkas-certificate-checker"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-schedule-deadline-iis.json",
+              "sha256": "c87cfb7e0d238d886bb57c7a729dd734da7ab8bdcd50a151d073de165388214e"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-schedule-deadline-iis.json",
+            "sha256": "c87cfb7e0d238d886bb57c7a729dd734da7ab8bdcd50a151d073de165388214e"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 4571,
+            "path": "artifacts/instances/infeasibility/schedule-deadline.smt2",
+            "sha256": "92ac390e02fcef4358e2d9fe9693b104cbdbc0e7ff52d2c482783c376e2edf14"
+          }
+        ],
+        "cert_kind": "unsat-drat",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run --release -q -p axeyum-solver --features full --example infeasibility_iis -- artifacts/instances/infeasibility/schedule-deadline.smt2 --expect-rows 60 --expect-core 5"
+        },
+        "summary": {
+          "text": "The five named rows are jointly unsatisfiable."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-schedule-deadline-iis.json",
+            "sha256": "c87cfb7e0d238d886bb57c7a729dd734da7ab8bdcd50a151d073de165388214e"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: schedule-core-refutation"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row schedule-core-refutation as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "schedule-core-refutation"
+          ],
+          [
+            "ledger kind",
+            "unsat-certificate"
+          ],
+          [
+            "cert_kind",
+            "unsat-drat"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-deletion-minimizer-producing-solve, axeyum-farkas-certificate-verify-from-scratch, z3-4.13.3-independent-core-extraction"
+          ],
+          [
+            "supports",
+            "The five named rows are jointly unsatisfiable."
+          ],
+          [
+            "artifact",
+            "artifacts/instances/infeasibility/schedule-deadline.smt2"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "92ac390e02fcef4358e2d9fe9693b104cbdbc0e7ff52d2c482783c376e2edf14"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-schedule-deadline-iis.json",
+              "sha256": "c87cfb7e0d238d886bb57c7a729dd734da7ab8bdcd50a151d073de165388214e"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-schedule-deadline-iis.json",
+            "sha256": "c87cfb7e0d238d886bb57c7a729dd734da7ab8bdcd50a151d073de165388214e"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Ran 2026-08-14 in 0.11s. `produce_evidence` on the five reports `Evidence::UnsatFarkas` with `check_outcome` = `verified` and trust step `farkas` CERTIFIED THIS RUN. z3 4.13.3 returns the same five names. This half is strictly stronger than the two integer facts' and is recorded separately as F:schedule-critical-chain-infeasible, which carries the kernel-checked Lean proof term on proof_route `kernel-lean`.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-schedule-deadline-iis.json",
+            "sha256": "c87cfb7e0d238d886bb57c7a729dd734da7ab8bdcd50a151d073de165388214e"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence schedule-core-refutation"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/instances/infeasibility/schedule-deadline.smt2",
+        "render_hint": "code",
+        "sha256": "92ac390e02fcef4358e2d9fe9693b104cbdbc0e7ff52d2c482783c376e2edf14",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-schedule-deadline-iis.json",
+            "sha256": "c87cfb7e0d238d886bb57c7a729dd734da7ab8bdcd50a151d073de165388214e"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 4571,
+            "path": "artifacts/instances/infeasibility/schedule-deadline.smt2",
+            "sha256": "92ac390e02fcef4358e2d9fe9693b104cbdbc0e7ff52d2c482783c376e2edf14"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo run --release -q -p axeyum-solver --features full --example infeasibility_iis -- artifacts/instances/infeasibility/schedule-deadline.smt2 --expect-rows 60 --expect-core 5"
+        },
+        "summary": {
+          "text": "Dropping any single one of the five leaves a satisfiable set -- the core is irreducible."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-schedule-deadline-iis.json",
+            "sha256": "c87cfb7e0d238d886bb57c7a729dd734da7ab8bdcd50a151d073de165388214e"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: schedule-leave-one-out-witnesses"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row schedule-leave-one-out-witnesses as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "schedule-leave-one-out-witnesses"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-ir-ground-evaluator-model-replay-per-subset, z3-4.13.3-independent-leave-one-out-sweep"
+          ],
+          [
+            "supports",
+            "Dropping any single one of the five leaves a satisfiable set -- the core is irreducible."
+          ],
+          [
+            "artifact",
+            "artifacts/instances/infeasibility/schedule-deadline.smt2"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "92ac390e02fcef4358e2d9fe9693b104cbdbc0e7ff52d2c482783c376e2edf14"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-schedule-deadline-iis.json",
+              "sha256": "c87cfb7e0d238d886bb57c7a729dd734da7ab8bdcd50a151d073de165388214e"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-schedule-deadline-iis.json",
+            "sha256": "c87cfb7e0d238d886bb57c7a729dd734da7ab8bdcd50a151d073de165388214e"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "All five leave-one-out subsets re-solved to `sat` with each model replayed against its own subset by the IR ground evaluator; the instance minus the core is `sat` with a replayed model. z3 agrees on all five. Note that the core does NOT include start_t01 or prec_t01_t03: the chain from the project start would also overrun (0+4+5+6+3+4 = 22 > 20), so a six-row core exists, but the material release at day 6 dominates the day-4 earliest start and the minimizer correctly returns the shorter, more informative explanation. Two different irreducible cores, and the one you get is the one you can act on.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-schedule-deadline-iis.json",
+            "sha256": "c87cfb7e0d238d886bb57c7a729dd734da7ab8bdcd50a151d073de165388214e"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence schedule-leave-one-out-witnesses"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/instances/infeasibility/schedule-deadline.smt2",
+        "render_hint": "code",
+        "sha256": "92ac390e02fcef4358e2d9fe9693b104cbdbc0e7ff52d2c482783c376e2edf14",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-schedule-deadline-iis.json",
+            "sha256": "c87cfb7e0d238d886bb57c7a729dd734da7ab8bdcd50a151d073de165388214e"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "dependency-graph",
+      "kind": {
+        "alt": "Dependency graph around F:schedule-deadline-iis: 1 dependencies, 0 dependents",
+        "caption": {
+          "text": "Immediate dependencies and dependents of this fact"
+        },
+        "spec": {
+          "edges": [
+            {
+              "from": "F:schedule-deadline-iis",
+              "label": "depends_on",
+              "to": "F:schedule-critical-chain-infeasible"
+            }
+          ],
+          "figure_type": "dep-graph",
+          "nodes": [
+            {
+              "group": "kernel-lean",
+              "href": "F-schedule-critical-chain-infeasible.doc.json",
+              "id": "F:schedule-critical-chain-infeasible",
+              "label": "schedule-critical-chain-infeasible",
+              "status": "proved",
+              "tooltip": "A five-constraint critical chain against a delivery deadline, refuted in the Lean kernel"
+            },
+            {
+              "group": "focus",
+              "href": "F-schedule-deadline-iis.doc.json",
+              "id": "F:schedule-deadline-iis",
+              "label": "schedule-deadline-iis",
+              "status": "proved",
+              "tooltip": "Five rows of a 60-row project schedule are an irreducible infeasible subsystem"
+            }
+          ],
+          "rankdir": "TB"
+        },
+        "type": "figure"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-schedule-deadline-iis.json",
+            "sha256": "c87cfb7e0d238d886bb57c7a729dd734da7ab8bdcd50a151d073de165388214e"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Dependency neighbourhood"
+    },
+    {
+      "id": "depends-on",
+      "kind": {
+        "caption": {
+          "text": "Depends on"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:schedule-critical-chain-infeasible",
+            "A five-constraint critical chain against a delivery deadline, refuted in the Lean kernel",
+            "proved",
+            "F-schedule-critical-chain-infeasible.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-schedule-deadline-iis.json",
+              "sha256": "c87cfb7e0d238d886bb57c7a729dd734da7ab8bdcd50a151d073de165388214e"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-schedule-deadline-iis.json",
+            "sha256": "c87cfb7e0d238d886bb57c7a729dd734da7ab8bdcd50a151d073de165388214e"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depends on"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-14"
+          ],
+          [
+            "established_by",
+            "axeyum lane `infeasibility`, 2026-08-14: crates/axeyum-solver/examples/infeasibility_iis.rs over the committed instance"
+          ],
+          [
+            "source",
+            "instance authored by this lane (scripts/gen-infeasibility-instances.py); not extracted from any corpus"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-schedule-deadline-iis.json",
+              "sha256": "c87cfb7e0d238d886bb57c7a729dd734da7ab8bdcd50a151d073de165388214e"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-schedule-deadline-iis.json",
+            "sha256": "c87cfb7e0d238d886bb57c7a729dd734da7ab8bdcd50a151d073de165388214e"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "5 of 60 rows, 8.3%. This is the instance where the whole chain closes: minimized core, measured irreducibility, a Farkas certificate with all multipliers 1, and a Lean kernel term (F:schedule-critical-chain-infeasible). The route here is still `search-certificate` and NOT `kernel-lean`, because the fact asserts IRREDUCIBILITY as well as infeasibility, and the irreducibility half rests on five evaluator-replayed models with no kernel proof anywhere near it. Promoting the whole fact to `kernel-lean` on the strength of its unsat half would be exactly the route conflation the proof_route field exists to prevent.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-schedule-deadline-iis.json",
+            "sha256": "c87cfb7e0d238d886bb57c7a729dd734da7ab8bdcd50a151d073de165388214e"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-schedule-deadline-iis",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c38",
+        "label": "Component 38 of 38 (2 facts)",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:schedule-deadline-iis",
+    "title": "Five rows of a 60-row project schedule are an irreducible infeasible subsystem"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-schedule-deadline-iis.json",
+        "sha256": "c87cfb7e0d238d886bb57c7a729dd734da7ab8bdcd50a151d073de165388214e"
+      }
+    ]
+  },
+  "schema_version": 1
+}

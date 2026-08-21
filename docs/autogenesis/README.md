@@ -219,6 +219,8 @@ compounding, not automation theatre.
 | [Exact `Int.fib_neg` root audit plan](191-int-fib-neg-root-audit-plan.md) | What are the exact dependencies and kernel footprint of the remaining premise of `Int.gcd_fib`, measured without exposing its proof? |
 | [Exact `Int.fib_neg` root audit result](192-int-fib-neg-root-audit-result.md) | Is the official theorem directly admissible, and which exact dependency frontier must replace it when it is not? |
 | [Exact `Int.fib_neg` dependency audit plan](193-int-fib-neg-dependency-audit-plan.md) | Which of the official proof's exact 26 direct dependencies are clean mathematical supports, and which carry the measured assumptions? |
+| [Exact `Int.fib_neg` dependency audit result](194-int-fib-neg-dependency-audit-result.md) | Does the clean outer case split suffice, or is the negative-natural Fibonacci core itself the next assumption-bearing frontier? |
+| [`Int.fib_neg_natCast` dependency audit plan](195-int-fib-neg-natcast-dependency-audit-plan.md) | Which exact supports beneath the negative-natural core can seed a clean target-owned parity/sign reconstruction? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

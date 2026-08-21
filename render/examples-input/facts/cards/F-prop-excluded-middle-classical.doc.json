@@ -1,0 +1,787 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:prop-excluded-middle-classical",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-prop-excluded-middle-classical.json",
+            "sha256": "0321754b17ad7dde5f5da67e0fef4c947b2e91dc7ca72867db02f48a491991db"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Excluded middle for propositions, as Lean proves it"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "2 of 2 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-prop-excluded-middle-classical.json",
+              "sha256": "0321754b17ad7dde5f5da67e0fef4c947b2e91dc7ca72867db02f48a491991db"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-prop-excluded-middle-classical.json",
+            "sha256": "0321754b17ad7dde5f5da67e0fef4c947b2e91dc7ca72867db02f48a491991db"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "imported-kernel-lean"
+          ],
+          [
+            "axiom_footprint",
+            "lean4export-3.1.0-stream-faithfulness; axeyum-lean-import-wire-translation; lean4export-3.1.0-delivered-bytes-are-the-intended-export; Classical.choice; Quot; Quot.lift; Quot.mk; Quot.sound; propext"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-prop-excluded-middle-classical.json",
+              "sha256": "0321754b17ad7dde5f5da67e0fef4c947b2e91dc7ca72867db02f48a491991db"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-prop-excluded-middle-classical.json",
+            "sha256": "0321754b17ad7dde5f5da67e0fef4c947b2e91dc7ca72867db02f48a491991db"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 146532,
+            "path": "artifacts/lean-imports/classical-em.ndjson",
+            "sha256": "e3ad1320c85bb756a8d8f673de29542db7250cac4a3a5a485a82664ef2939e19"
+          }
+        ],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-lean-import --test imported_fact_evidence -- --nocapture 2>/dev/null | grep -q 'AXEYUM-IMPORT-FACT|F:prop-excluded-middle-classical|'"
+        },
+        "summary": {
+          "text": "`Classical.em`'s Lean proof term type-checks against this statement in the independent Axeyum kernel."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-prop-excluded-middle-classical.json",
+            "sha256": "0321754b17ad7dde5f5da67e0fef4c947b2e91dc7ca72867db02f48a491991db"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: import-Classical.em"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row import-Classical.em as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "import-Classical.em"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-lean-import fail-closed translation, Kernel::add_declaration (independent re-derivation of the type from the proof term), SHA-256 pin of the exported stream bytes"
+          ],
+          [
+            "supports",
+            "`Classical.em`'s Lean proof term type-checks against this statement in the independent Axeyum kernel."
+          ],
+          [
+            "artifact",
+            "artifacts/lean-imports/classical-em.ndjson"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "e3ad1320c85bb756a8d8f673de29542db7250cac4a3a5a485a82664ef2939e19"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-prop-excluded-middle-classical.json",
+              "sha256": "0321754b17ad7dde5f5da67e0fef4c947b2e91dc7ca72867db02f48a491991db"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-prop-excluded-middle-classical.json",
+            "sha256": "0321754b17ad7dde5f5da67e0fef4c947b2e91dc7ca72867db02f48a491991db"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "The command greps for this fact's own marker line rather than trusting the exit status, so a suite that compiles to zero tests -- this repository's signature defect -- fails instead of exiting 0. Measured 2026-08-15: the stream hashes to the pin in `artifacts/lean-imports/MANIFEST.json`, the fail-closed importer admits 106 declarations (it publishes nothing unless the WHOLE stream translates and every declaration passes the trusted gate), and `Kernel::render_lean` of the admitted type is `((p : Prop) -> Or p (Not p))`. `formal.statement` is that string verbatim.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-prop-excluded-middle-classical.json",
+            "sha256": "0321754b17ad7dde5f5da67e0fef4c947b2e91dc7ca72867db02f48a491991db"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence import-Classical.em"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/lean-imports/classical-em.ndjson",
+        "render_hint": "link",
+        "sha256": "e3ad1320c85bb756a8d8f673de29542db7250cac4a3a5a485a82664ef2939e19",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-prop-excluded-middle-classical.json",
+            "sha256": "0321754b17ad7dde5f5da67e0fef4c947b2e91dc7ca72867db02f48a491991db"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "report-run",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "scripts/check-imported-fact-lean-axioms.sh Classical.em"
+        },
+        "summary": {
+          "text": "axiom_footprint: the imported proof term reaches six trusted declarations in our kernel's classification, three in Lean's"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-prop-excluded-middle-classical.json",
+            "sha256": "0321754b17ad7dde5f5da67e0fef4c947b2e91dc7ca72867db02f48a491991db"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: footprint-Classical.em"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row footprint-Classical.em as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "footprint-Classical.em"
+          ],
+          [
+            "ledger kind",
+            "exhaustive-enumeration"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "Kernel::axiom_footprint (our kernel, over the imported environment), lean 4.30.0 `#print axioms` (the source system, independently)"
+          ],
+          [
+            "supports",
+            "axiom_footprint: the imported proof term reaches six trusted declarations in our kernel's classification, three in Lean's"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-prop-excluded-middle-classical.json",
+              "sha256": "0321754b17ad7dde5f5da67e0fef4c947b2e91dc7ca72867db02f48a491991db"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-prop-excluded-middle-classical.json",
+            "sha256": "0321754b17ad7dde5f5da67e0fef4c947b2e91dc7ca72867db02f48a491991db"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "Two kernels, independently. `Kernel::axiom_footprint` walks this declaration's transitive dependencies in the IMPORTED environment and reports `Classical.choice, Quot, Quot.lift, Quot.mk, Quot.sound, propext` -- six names, because our kernel counts the whole quotient package as trusted `Quotient` declarations; a real Lean 4.30.0 binary's `#print axioms Classical.em` reports `[propext, Classical.choice, Quot.sound]` -- three names. The first three entries are the assumptions the IMPORT adds and the constructed `kernel-lean` route does not make: that the exporter faithfully rendered Lean's environment, that our NDJSON-to-kernel-term translation preserves meaning, and that the delivered bytes are the producer's intended export -- format 3.1 has no footer, so completion is relative to the bytes handed over, which `axeyum-lean-import`'s own documentation states. They are why `axiom_footprint: []` is unavailable on this route and the validator rejects it (ADR-0454).",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-prop-excluded-middle-classical.json",
+            "sha256": "0321754b17ad7dde5f5da67e0fef4c947b2e91dc7ca72867db02f48a491991db"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-15"
+          ],
+          [
+            "established_by",
+            "axeyum-lean-import, lane formalized-collect -- our independent kernel ADMITTED Lean's proof term. This project did NOT construct the proof; see proof_route."
+          ],
+          [
+            "source",
+            "official lean4export NDJSON 3.1.0 stream artifacts/lean-imports/classical-em.ndjson, declaration `Classical.em` from Lean 4.30.0 `Init`"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-prop-excluded-middle-classical.json",
+              "sha256": "0321754b17ad7dde5f5da67e0fef4c947b2e91dc7ca72867db02f48a491991db"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-prop-excluded-middle-classical.json",
+            "sha256": "0321754b17ad7dde5f5da67e0fef4c947b2e91dc7ca72867db02f48a491991db"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "what",
+            "key": "what"
+          },
+          {
+            "header": "where",
+            "key": "where"
+          },
+          {
+            "header": "who",
+            "key": "who"
+          },
+          {
+            "header": "year",
+            "key": "year"
+          }
+        ],
+        "rows": [
+          [
+            "read directly from the pinned `lean4export` stream that this fact cites, and cross-checked against a real Lean 4.30.0 binary; this lane did not consult a paper or a secondary source.",
+            "`Classical.em` in the Lean 4 core library (`Init`), with its proof term",
+            "leanprover/lean4 v4.30.0, githash d024af099ca4bf2c86f649261ebf59565dc8c622",
+            "the Lean 4 developers (leanprover/lean4)",
+            "2026"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-prop-excluded-middle-classical.json",
+              "sha256": "0321754b17ad7dde5f5da67e0fef4c947b2e91dc7ca72867db02f48a491991db"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-prop-excluded-middle-classical.json",
+            "sha256": "0321754b17ad7dde5f5da67e0fef4c947b2e91dc7ca72867db02f48a491991db"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "concept-refs",
+      "kind": {
+        "caption": {
+          "text": "Concept references (gloss and provenance only, never substance)"
+        },
+        "columns": [
+          {
+            "header": "graph",
+            "key": "graph"
+          },
+          {
+            "header": "ref",
+            "key": "ref"
+          },
+          {
+            "header": "relation",
+            "key": "relation"
+          },
+          {
+            "header": "resolved",
+            "key": "resolved"
+          }
+        ],
+        "rows": [
+          [
+            "math-education",
+            "C:excluded-middle",
+            "states",
+            false
+          ],
+          [
+            "math-education",
+            "C:intuitionism",
+            "contrasts-with",
+            false
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-prop-excluded-middle-classical.json",
+              "sha256": "0321754b17ad7dde5f5da67e0fef4c947b2e91dc7ca72867db02f48a491991db"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-prop-excluded-middle-classical.json",
+            "sha256": "0321754b17ad7dde5f5da67e0fef4c947b2e91dc7ca72867db02f48a491991db"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "The reason to import this one is the footprint, not the theorem. Three things become visible that no other fact in this ledger shows.\n\n(1) THE TWO KERNELS DISAGREE ON HOW TO SPELL A FOOTPRINT. Lean's `#print axioms` reports three names; `Kernel::axiom_footprint` reports six, adding `Quot`, `Quot.mk` and `Quot.lift` because our kernel classifies the entire quotient package as `Declaration::Quotient`. Both are correct in their own vocabulary, ours is the more conservative reading, and the disagreement is recorded rather than reconciled -- the same theorem checked by two kernels has two correct footprints of different length. Reconciling them silently would be the precise error `proof_route` exists to prevent.\n\n(2) IT IS NOT `F:excluded-middle`. That fact is `(assert (or p (not p)))` over a BOOLEAN `p`, settled on `smt-term-level` by exhaustive evaluation of 2 assignments. This one quantifies over all of `Prop`, which no exhaustive evaluation can reach, and it is not intuitionistically provable -- hence the three Lean axioms. Neither fact supersedes the other and neither footprint is comparable to the other.\n\n(3) IT IS NOT REACHABLE ON OUR `kernel-lean` ROUTE AT ALL. This project's logic prelude is intuitionistic and measured axiom-free, so excluded middle over `Prop` is unobtainable there without adding an axiom (ADR-0453). Importing it does not change that: what we now hold is a checked record of Lean's proof and its cost in axioms, not a constructed proof of our own.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-prop-excluded-middle-classical.json",
+            "sha256": "0321754b17ad7dde5f5da67e0fef4c947b2e91dc7ca72867db02f48a491991db"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-prop-excluded-middle-classical",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#index",
+        "label": "Unconnected: see the index",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:prop-excluded-middle-classical",
+    "title": "Excluded middle for propositions, as Lean proves it"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-prop-excluded-middle-classical.json",
+        "sha256": "0321754b17ad7dde5f5da67e0fef4c947b2e91dc7ca72867db02f48a491991db"
+      }
+    ]
+  },
+  "schema_version": 1
+}

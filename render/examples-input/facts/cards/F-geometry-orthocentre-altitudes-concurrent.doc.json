@@ -1,0 +1,756 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:geometry-orthocentre-altitudes-concurrent",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-orthocentre-altitudes-concurrent.json",
+            "sha256": "951c1ee0bfb1c60080d02c9ec700e06f51ed8989e56f038d1a4eda31ae0ce0b2"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "the altitudes of a triangle are concurrent"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "2 of 2 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-orthocentre-altitudes-concurrent.json",
+              "sha256": "951c1ee0bfb1c60080d02c9ec700e06f51ed8989e56f038d1a4eda31ae0ce0b2"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-orthocentre-altitudes-concurrent.json",
+            "sha256": "951c1ee0bfb1c60080d02c9ec700e06f51ed8989e56f038d1a4eda31ae0ce0b2"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "cas-certificate"
+          ],
+          [
+            "axiom_footprint",
+            "cas.exact-rational-polynomial-normal-form; geometry.cartesian-coordinatisation-of-the-euclidean-plane; geometry.characteristic-zero-specialisation"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-orthocentre-altitudes-concurrent.json",
+              "sha256": "951c1ee0bfb1c60080d02c9ec700e06f51ed8989e56f038d1a4eda31ae0ce0b2"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-orthocentre-altitudes-concurrent.json",
+            "sha256": "951c1ee0bfb1c60080d02c9ec700e06f51ed8989e56f038d1a4eda31ae0ce0b2"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 4097,
+            "path": "artifacts/geometry-certificates/orthocentre-altitudes-concurrent.json",
+            "sha256": "74acea9df529ef10c871339a6a36068954d56155e8e88b13389ec5c6a71ccc81"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-cas --test geometry_certificate_artifacts"
+        },
+        "summary": {
+          "text": "the cofactor certificate, re-checked from the committed artifact by a checker that shares no code with the search that produced it"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-orthocentre-altitudes-concurrent.json",
+            "sha256": "951c1ee0bfb1c60080d02c9ec700e06f51ed8989e56f038d1a4eda31ae0ce0b2"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: geometry-certificate-orthocentre-altitudes-concurrent"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row geometry-certificate-orthocentre-altitudes-concurrent as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "geometry-certificate-orthocentre-altitudes-concurrent"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "geometry_check::check_certificate shape pass (the generator list must be exactly the stated hypotheses, with no undeclared saturation), geometry_check::check_certificate symbolic pass (the identity target = sum of cofactor times generator expanded with MvPoly add/mul alone -- no Groebner machinery, no monomial order, no S-polynomials), geometry_check::check_certificate numeric pass (the same identity re-evaluated at 24 deterministic integer points through MvPoly::evaluate, a different code path from the symbolic expansion), geometry_check::check_certificate configuration pass (A = (0,0), B = (4,0), C = (1,3) with orthocentre P = (1,1) replayed at exact rational coordinates)"
+          ],
+          [
+            "supports",
+            "the cofactor certificate, re-checked from the committed artifact by a checker that shares no code with the search that produced it"
+          ],
+          [
+            "artifact",
+            "artifacts/geometry-certificates/orthocentre-altitudes-concurrent.json"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "74acea9df529ef10c871339a6a36068954d56155e8e88b13389ec5c6a71ccc81"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-orthocentre-altitudes-concurrent.json",
+              "sha256": "951c1ee0bfb1c60080d02c9ec700e06f51ed8989e56f038d1a4eda31ae0ce0b2"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-orthocentre-altitudes-concurrent.json",
+            "sha256": "951c1ee0bfb1c60080d02c9ec700e06f51ed8989e56f038d1a4eda31ae0ce0b2"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Both cofactors are the constant -1. That is the sharpest single result in this corpus: the concurrency of the altitudes -- the theorem whose textbook statement always carries `for a triangle` -- is, in the universally quantified incidence form, an unconditional linear identity between the three perpendicularity polynomials.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-orthocentre-altitudes-concurrent.json",
+            "sha256": "951c1ee0bfb1c60080d02c9ec700e06f51ed8989e56f038d1a4eda31ae0ce0b2"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence geometry-certificate-orthocentre-altitudes-concurrent"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/geometry-certificates/orthocentre-altitudes-concurrent.json",
+        "render_hint": "json",
+        "sha256": "74acea9df529ef10c871339a6a36068954d56155e8e88b13389ec5c6a71ccc81",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-orthocentre-altitudes-concurrent.json",
+            "sha256": "951c1ee0bfb1c60080d02c9ec700e06f51ed8989e56f038d1a4eda31ae0ce0b2"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 10079,
+            "path": "crates/axeyum-cas/tests/geometry_encoding_agreement.rs",
+            "sha256": "b51268f90e5f54fbb332d5f7d115212da016c4869c027c7bb10ee16d80ee393b"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-cas --test geometry_encoding_agreement"
+        },
+        "summary": {
+          "text": "that the polynomials in the certificate mean the geometric predicates they are named after"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-orthocentre-altitudes-concurrent.json",
+            "sha256": "951c1ee0bfb1c60080d02c9ec700e06f51ed8989e56f038d1a4eda31ae0ce0b2"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: geometry-coordinatisation-control-orthocentre"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row geometry-coordinatisation-control-orthocentre as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "geometry-coordinatisation-control-orthocentre"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum_cas::geometry::Line::is_perpendicular (an older module deciding perpendicularity from `ax + by + c = 0` normals rather than from an inner product) agreed with the perpendicularity polynomial on every integer configuration of the sweep where it can build both lines, and the polynomial vanishes on every degenerate segment where it cannot"
+          ],
+          [
+            "supports",
+            "that the polynomials in the certificate mean the geometric predicates they are named after"
+          ],
+          [
+            "artifact",
+            "crates/axeyum-cas/tests/geometry_encoding_agreement.rs"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "b51268f90e5f54fbb332d5f7d115212da016c4869c027c7bb10ee16d80ee393b"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-orthocentre-altitudes-concurrent.json",
+              "sha256": "951c1ee0bfb1c60080d02c9ec700e06f51ed8989e56f038d1a4eda31ae0ce0b2"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-orthocentre-altitudes-concurrent.json",
+            "sha256": "951c1ee0bfb1c60080d02c9ec700e06f51ed8989e56f038d1a4eda31ae0ce0b2"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "The sweep asserts a POSITIVE count of perpendicular configurations, so the agreement is not vacuous on the side that matters.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-orthocentre-altitudes-concurrent.json",
+            "sha256": "951c1ee0bfb1c60080d02c9ec700e06f51ed8989e56f038d1a4eda31ae0ce0b2"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence geometry-coordinatisation-control-orthocentre"
+        },
+        "max_bytes": 65536,
+        "path": "crates/axeyum-cas/tests/geometry_encoding_agreement.rs",
+        "render_hint": "link",
+        "sha256": "b51268f90e5f54fbb332d5f7d115212da016c4869c027c7bb10ee16d80ee393b",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-orthocentre-altitudes-concurrent.json",
+            "sha256": "951c1ee0bfb1c60080d02c9ec700e06f51ed8989e56f038d1a4eda31ae0ce0b2"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-14"
+          ],
+          [
+            "established_by",
+            "lane geometry: axeyum_cas::geometry_certify (untrusted cofactor-tracked Buchberger search) + axeyum_cas::geometry_check (independent re-derivation)"
+          ],
+          [
+            "source",
+            "classical; coordinatised by this lane"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-orthocentre-altitudes-concurrent.json",
+              "sha256": "951c1ee0bfb1c60080d02c9ec700e06f51ed8989e56f038d1a4eda31ae0ce0b2"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-orthocentre-altitudes-concurrent.json",
+            "sha256": "951c1ee0bfb1c60080d02c9ec700e06f51ed8989e56f038d1a4eda31ae0ce0b2"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "what",
+            "key": "what"
+          },
+          {
+            "header": "where",
+            "key": "where"
+          },
+          {
+            "header": "who",
+            "key": "who"
+          }
+        ],
+        "rows": [
+          [
+            "standard textbook attribution; this lane did not consult the primary source",
+            "the three altitudes of a triangle meet in a point (the orthocentre)",
+            "standard; see e.g. Coxeter and Greitzer, Geometry Revisited (1967), section 1.4",
+            "classical; the vector proof is usually credited to the 19th-century synthetic tradition and the concurrency itself was known to Archimedes' commentators"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-orthocentre-altitudes-concurrent.json",
+              "sha256": "951c1ee0bfb1c60080d02c9ec700e06f51ed8989e56f038d1a4eda31ae0ce0b2"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-orthocentre-altitudes-concurrent.json",
+            "sha256": "951c1ee0bfb1c60080d02c9ec700e06f51ed8989e56f038d1a4eda31ae0ce0b2"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "Established on the `cas-certificate` route, in the geometry family. Read this fact together with the one it is easiest to confuse it with: `the altitudes are concurrent` in the incidence form proved here is UNCONDITIONAL, whereas `the point where they meet is such-and-such' would not be. The same split is exhibited concretely by F:geometry-medians-concurrent (unconditional) versus F:geometry-centroid-divides-medians (needs a non-degeneracy condition, with a committed counterexample).",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-orthocentre-altitudes-concurrent.json",
+            "sha256": "951c1ee0bfb1c60080d02c9ec700e06f51ed8989e56f038d1a4eda31ae0ce0b2"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-geometry-orthocentre-altitudes-concurrent",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#index",
+        "label": "Unconnected: see the index",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:geometry-orthocentre-altitudes-concurrent",
+    "title": "the altitudes of a triangle are concurrent"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-geometry-orthocentre-altitudes-concurrent.json",
+        "sha256": "951c1ee0bfb1c60080d02c9ec700e06f51ed8989e56f038d1a4eda31ae0ce0b2"
+      }
+    ]
+  },
+  "schema_version": 1
+}

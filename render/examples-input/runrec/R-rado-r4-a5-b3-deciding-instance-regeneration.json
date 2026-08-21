@@ -1,0 +1,57 @@
+{
+  "claims": [
+    {
+      "key": "rado-r4-a5-b3-deciding-instance-regeneration",
+      "statement": "Fact-ledger evidence row `deciding-instance-regeneration` of `F:rado-r4-a5-b3` (kind `instance-pin`) was replayed by running its recorded `checker_command`; the command exited 0.",
+      "status": "checked",
+      "supports": {
+        "id": "F:rado-r4-a5-b3",
+        "kind": "fact"
+      }
+    }
+  ],
+  "id": "R:rado-r4-a5-b3-deciding-instance-regeneration",
+  "notes": "Produced by replaying fact-ledger evidence rows, not by re-deriving the mathematics. The command is the ledger's `checker_command` verbatim; this record asserts only that it was run, from the repository root, and exited with the status recorded here. Cited by: F:rado-r4-a5-b3/deciding-instance-regeneration. NOT PINNED: `inputs` pins the example source, not the rest of `axeyum-search` that it links; a change inside the crate would not trip the render's input-hash guard.",
+  "outcome": "established",
+  "provenance": {
+    "command": "test \"$(cargo run --release -q -p axeyum-search --example rado_dump_cnf -- a=5 b=3 k=4 n=625 out=/tmp/rb3.cnf >/dev/null 2>&1; sha256sum /tmp/rb3.cnf | cut -d' ' -f1)\" = \"$(sha256sum artifacts/claims/rado/rado-r4-a5-b3/F_625.cnf | cut -d' ' -f1)\"",
+    "duration_ms": 111,
+    "epoch": {
+      "commit": "839d1e50a287fa816490dd2ee7ec19d6a202c25d",
+      "source": "commit",
+      "unix": 1787319265
+    },
+    "exit_status": 0,
+    "generator": "crates/axeyum-search/examples/rado_dump_cnf.rs (via `cargo run --example`), invoked by render/producers-runrec/facts_to_runrec.py",
+    "inputs": [
+      {
+        "path": "artifacts/claims/rado/rado-r4-a5-b3/F_625.cnf",
+        "role": "artifact",
+        "sha256": "a59d88ed13b8256d1bcfdf247139beede7f93945129c8d607ac3410c391cb623"
+      },
+      {
+        "path": "crates/axeyum-search/examples/rado_dump_cnf.rs",
+        "role": "checker",
+        "sha256": "d825413adf302e0eff9b3e93d4b241f5496c466e9bcc9d247120b14d4b71145f"
+      }
+    ]
+  },
+  "replay": {
+    "cwd": ".",
+    "expected_exit_status": 0,
+    "expected_seconds": 1,
+    "line": "test \"$(cargo run --release -q -p axeyum-search --example rado_dump_cnf -- a=5 b=3 k=4 n=625 out=/tmp/rb3.cnf >/dev/null 2>&1; sha256sum /tmp/rb3.cnf | cut -d' ' -f1)\" = \"$(sha256sum artifacts/claims/rado/rado-r4-a5-b3/F_625.cnf | cut -d' ' -f1)\""
+  },
+  "role": "production",
+  "schema_version": 1,
+  "stats": {
+    "exact_type_pinned": false,
+    "rows_covered": 1,
+    "stderr_bytes": 0,
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stdout_bytes": 0,
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "wall_seconds": 0.111
+  },
+  "summary": "GREEN: `test \"$(cargo run --release -q -p axeyum-search --example rado_dump_cnf -- a=5 b=3 k=4 ...` exited 0 in 0.1s, replaying 1 fact-ledger evidence row(s)."
+}

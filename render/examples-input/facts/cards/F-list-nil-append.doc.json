@@ -1,0 +1,781 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:list-nil-append",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-list-nil-append.json",
+            "sha256": "f731179effbd03acde0ef38195e659ae423bf4bba0a0e5977cb91abe231ffbe5"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "The empty list is a left identity for append"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "2 of 2 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-list-nil-append.json",
+              "sha256": "f731179effbd03acde0ef38195e659ae423bf4bba0a0e5977cb91abe231ffbe5"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-list-nil-append.json",
+            "sha256": "f731179effbd03acde0ef38195e659ae423bf4bba0a0e5977cb91abe231ffbe5"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "imported-kernel-lean"
+          ],
+          [
+            "axiom_footprint",
+            "lean4export-3.1.0-stream-faithfulness; axeyum-lean-import-wire-translation; lean4export-3.1.0-delivered-bytes-are-the-intended-export"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-list-nil-append.json",
+              "sha256": "f731179effbd03acde0ef38195e659ae423bf4bba0a0e5977cb91abe231ffbe5"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-list-nil-append.json",
+            "sha256": "f731179effbd03acde0ef38195e659ae423bf4bba0a0e5977cb91abe231ffbe5"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 38786,
+            "path": "artifacts/lean-imports/list-nil-append.ndjson",
+            "sha256": "02d24e45d1745e9f3d973a1198314b8a3c5e60ce2e9dc3f4eead44c930e4bf14"
+          }
+        ],
+        "cert_kind": "kernel-admission",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-lean-import --test imported_fact_evidence -- --nocapture 2>/dev/null | grep -q 'AXEYUM-IMPORT-FACT|F:list-nil-append|'"
+        },
+        "summary": {
+          "text": "`List.nil_append`'s Lean proof term type-checks against this statement in the independent Axeyum kernel."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-list-nil-append.json",
+            "sha256": "f731179effbd03acde0ef38195e659ae423bf4bba0a0e5977cb91abe231ffbe5"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: import-List.nil_append"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row import-List.nil_append as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "import-List.nil_append"
+          ],
+          [
+            "ledger kind",
+            "kernel-term"
+          ],
+          [
+            "cert_kind",
+            "kernel-admission"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-lean-import fail-closed translation, Kernel::add_declaration (independent re-derivation of the type from the proof term), SHA-256 pin of the exported stream bytes"
+          ],
+          [
+            "supports",
+            "`List.nil_append`'s Lean proof term type-checks against this statement in the independent Axeyum kernel."
+          ],
+          [
+            "artifact",
+            "artifacts/lean-imports/list-nil-append.ndjson"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "02d24e45d1745e9f3d973a1198314b8a3c5e60ce2e9dc3f4eead44c930e4bf14"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-list-nil-append.json",
+              "sha256": "f731179effbd03acde0ef38195e659ae423bf4bba0a0e5977cb91abe231ffbe5"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-list-nil-append.json",
+            "sha256": "f731179effbd03acde0ef38195e659ae423bf4bba0a0e5977cb91abe231ffbe5"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "The command greps for this fact's own marker line rather than trusting the exit status, so a suite that compiles to zero tests -- this repository's signature defect -- fails instead of exiting 0. Measured 2026-08-15: the stream hashes to the pin in `artifacts/lean-imports/MANIFEST.json`, the fail-closed importer admits 33 declarations (it publishes nothing unless the WHOLE stream translates and every declaration passes the trusted gate), and `Kernel::render_lean` of the admitted type is `((\u03b1 : Sort (u+1)) -> ((as : List.{u} \u03b1) -> Eq.{u+1} (List.{u} \u03b1) (HAppend.hAppend.{u, u, u} (List.{u} \u03b1) (List.{u} \u03b1) (List.{u} \u03b1) (instHAppendOfAppend.{u} (List.{u} \u03b1) (List.instAppend.{u} \u03b1)) (List.nil.{u} \u03b1) as) as))`. `formal.statement` is that string verbatim.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-list-nil-append.json",
+            "sha256": "f731179effbd03acde0ef38195e659ae423bf4bba0a0e5977cb91abe231ffbe5"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence import-List.nil_append"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/lean-imports/list-nil-append.ndjson",
+        "render_hint": "link",
+        "sha256": "02d24e45d1745e9f3d973a1198314b8a3c5e60ce2e9dc3f4eead44c930e4bf14",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-list-nil-append.json",
+            "sha256": "f731179effbd03acde0ef38195e659ae423bf4bba0a0e5977cb91abe231ffbe5"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [],
+        "cert_kind": "report-run",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "scripts/check-imported-fact-lean-axioms.sh List.nil_append"
+        },
+        "summary": {
+          "text": "axiom_footprint: the imported proof term reaches no Lean axiom, opaque or quotient declaration"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-list-nil-append.json",
+            "sha256": "f731179effbd03acde0ef38195e659ae423bf4bba0a0e5977cb91abe231ffbe5"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: footprint-List.nil_append"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row footprint-List.nil_append as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "footprint-List.nil_append"
+          ],
+          [
+            "ledger kind",
+            "exhaustive-enumeration"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "Kernel::axiom_footprint (our kernel, over the imported environment), lean 4.30.0 `#print axioms` (the source system, independently)"
+          ],
+          [
+            "supports",
+            "axiom_footprint: the imported proof term reaches no Lean axiom, opaque or quotient declaration"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-list-nil-append.json",
+              "sha256": "f731179effbd03acde0ef38195e659ae423bf4bba0a0e5977cb91abe231ffbe5"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-list-nil-append.json",
+            "sha256": "f731179effbd03acde0ef38195e659ae423bf4bba0a0e5977cb91abe231ffbe5"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "Two kernels, independently. `Kernel::axiom_footprint` walks this declaration's transitive dependencies in the IMPORTED environment and reports an empty footprint; a real Lean 4.30.0 binary's `#print axioms List.nil_append` reports no axioms. The first three entries are the assumptions the IMPORT adds and the constructed `kernel-lean` route does not make: that the exporter faithfully rendered Lean's environment, that our NDJSON-to-kernel-term translation preserves meaning, and that the delivered bytes are the producer's intended export -- format 3.1 has no footer, so completion is relative to the bytes handed over, which `axeyum-lean-import`'s own documentation states. They are why `axiom_footprint: []` is unavailable on this route and the validator rejects it (ADR-0454).",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-list-nil-append.json",
+            "sha256": "f731179effbd03acde0ef38195e659ae423bf4bba0a0e5977cb91abe231ffbe5"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-15"
+          ],
+          [
+            "established_by",
+            "axeyum-lean-import, lane formalized-collect -- our independent kernel ADMITTED Lean's proof term. This project did NOT construct the proof; see proof_route."
+          ],
+          [
+            "source",
+            "official lean4export NDJSON 3.1.0 stream artifacts/lean-imports/list-nil-append.ndjson, declaration `List.nil_append` from Lean 4.30.0 `Init`"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-list-nil-append.json",
+              "sha256": "f731179effbd03acde0ef38195e659ae423bf4bba0a0e5977cb91abe231ffbe5"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-list-nil-append.json",
+            "sha256": "f731179effbd03acde0ef38195e659ae423bf4bba0a0e5977cb91abe231ffbe5"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "what",
+            "key": "what"
+          },
+          {
+            "header": "where",
+            "key": "where"
+          },
+          {
+            "header": "who",
+            "key": "who"
+          },
+          {
+            "header": "year",
+            "key": "year"
+          }
+        ],
+        "rows": [
+          [
+            "read directly from the pinned `lean4export` stream that this fact cites, and cross-checked against a real Lean 4.30.0 binary; this lane did not consult a paper or a secondary source.",
+            "`List.nil_append` in the Lean 4 core library (`Init`), with its proof term",
+            "leanprover/lean4 v4.30.0, githash d024af099ca4bf2c86f649261ebf59565dc8c622",
+            "the Lean 4 developers (leanprover/lean4)",
+            "2026"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-list-nil-append.json",
+              "sha256": "f731179effbd03acde0ef38195e659ae423bf4bba0a0e5977cb91abe231ffbe5"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-list-nil-append.json",
+            "sha256": "f731179effbd03acde0ef38195e659ae423bf4bba0a0e5977cb91abe231ffbe5"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "concept-refs",
+      "kind": {
+        "caption": {
+          "text": "Concept references (gloss and provenance only, never substance)"
+        },
+        "columns": [
+          {
+            "header": "graph",
+            "key": "graph"
+          },
+          {
+            "header": "ref",
+            "key": "ref"
+          },
+          {
+            "header": "relation",
+            "key": "relation"
+          },
+          {
+            "header": "resolved",
+            "key": "resolved"
+          }
+        ],
+        "rows": [
+          [
+            "math-education",
+            "C:identity-element",
+            "instance-of",
+            false
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-list-nil-append.json",
+              "sha256": "f731179effbd03acde0ef38195e659ae423bf4bba0a0e5977cb91abe231ffbe5"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-list-nil-append.json",
+            "sha256": "f731179effbd03acde0ef38195e659ae423bf4bba0a0e5977cb91abe231ffbe5"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "The first fact in this ledger about a polymorphic data structure, and the first universe-polymorphic one: the statement quantifies over `Sort (u+1)` and the type-class resolution Lean's elaborator performed (`instHAppendOfAppend`, `List.instAppend`) is present in the admitted term. Nothing in this project constructs lists; the whole 33-declaration closure came in through the importer.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-list-nil-append.json",
+            "sha256": "f731179effbd03acde0ef38195e659ae423bf4bba0a0e5977cb91abe231ffbe5"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-list-nil-append",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#index",
+        "label": "Unconnected: see the index",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:list-nil-append",
+    "title": "The empty list is a left identity for append"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-list-nil-append.json",
+        "sha256": "f731179effbd03acde0ef38195e659ae423bf4bba0a0e5977cb91abe231ffbe5"
+      }
+    ]
+  },
+  "schema_version": 1
+}

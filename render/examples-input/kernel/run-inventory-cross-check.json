@@ -1,0 +1,68 @@
+{
+  "claims": [
+    {
+      "key": "nat-names-agree",
+      "note": "Set equality both ways. The producer writes nothing when it fails, so this record's exit status depends on the finding even though one of the two tools' own does not.",
+      "statement": "The 139 names nat_theorem_inventory prints are exactly the 139 nat rows theorem_axiom_footprint prints -- neither tool has a row the other lacks.",
+      "status": "evidence"
+    },
+    {
+      "key": "nat-footprints-empty",
+      "note": "Checked against the per-row footprint column, and the declared size of each row is checked against the number of axioms actually listed on it.",
+      "statement": "Every Nat declaration's axiom footprint is empty, checked row by row rather than read off a summary line.",
+      "status": "evidence"
+    },
+    {
+      "key": "int-footprints-agree",
+      "note": "Two separately built Int kernels, compared name by name.",
+      "statement": "All 57 Int.* footprints agree between int_theorem_inventory and theorem_axiom_footprint, as sets.",
+      "status": "evidence"
+    }
+  ],
+  "id": "R:kernel-inventory-cross-check",
+  "notes": "The cross-check is the reason this producer can attach a finding-dependent exit status to the axiom-free claim without relying on theorem_axiom_footprint, whose own exit status is completion-only.",
+  "outcome": "established",
+  "provenance": {
+    "command": "python3 render/producers-kernel/kernel_to_docir.py",
+    "epoch": {
+      "commit": "7805ef8b3187468be75109ed94d97fb9e9df2abd",
+      "source": "commit",
+      "unix": 1787288415
+    },
+    "exit_status": 0,
+    "generator": "render/producers-kernel/kernel_to_docir.py",
+    "inputs": [
+      {
+        "path": "crates/axeyum-lean-kernel/examples/nat_theorem_inventory.rs",
+        "sha256": "5253659a178bf67a42d236c4ba674e3ae1d91189bcb7309b2791e1ea64eea5a5"
+      },
+      {
+        "path": "crates/axeyum-lean-kernel/examples/int_theorem_inventory.rs",
+        "sha256": "8d8e1fad90b6e8475611044664e9dfe2bd11016981a09a5dab9cf94804ecfe1b"
+      },
+      {
+        "path": "crates/axeyum-lean-kernel/examples/theorem_axiom_footprint.rs",
+        "sha256": "fe79689583d45964a55d296f56a22fd006543e7fd953ab11eb1713611a0bf22a"
+      },
+      {
+        "path": "crates/axeyum-lean-kernel/examples/nat_axiom_inventory.rs",
+        "sha256": "e03de885f92ffde076a2a09a7e7d7a894679e73d93161b59e938a9135b9ba6b6"
+      }
+    ]
+  },
+  "replay": {
+    "cwd": ".",
+    "expected_exit_status": 0,
+    "expected_seconds": 20,
+    "line": "python3 render/producers-kernel/kernel_to_docir.py"
+  },
+  "schema_version": 1,
+  "stats": {
+    "int_declarations": 57,
+    "inventory_declarations": 196,
+    "nat_footprint_rows": 139,
+    "nat_theorems": 139,
+    "trusted_declarations": 30
+  },
+  "summary": "Two independently built kernels agree: the Nat theorem names and every Int.* footprint match across two tools, and no Nat declaration carries a non-empty footprint."
+}

@@ -1,0 +1,791 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:modus-tollens-valid",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-modus-tollens-valid.json",
+            "sha256": "62a9284df9425b16d984f2136dcbaca269698dea56461214d420d4f9d44a08dd"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Modus tollens is a valid inference"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "1 of 1 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-modus-tollens-valid.json",
+              "sha256": "62a9284df9425b16d984f2136dcbaca269698dea56461214d420d4f9d44a08dd"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-modus-tollens-valid.json",
+            "sha256": "62a9284df9425b16d984f2136dcbaca269698dea56461214d420d4f9d44a08dd"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "smt-term-level"
+          ],
+          [
+            "axiom_footprint",
+            "axeyum-ir.bool-evaluator; classical-two-valued-bool-semantics"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-modus-tollens-valid.json",
+              "sha256": "62a9284df9425b16d984f2136dcbaca269698dea56461214d420d4f9d44a08dd"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-modus-tollens-valid.json",
+            "sha256": "62a9284df9425b16d984f2136dcbaca269698dea56461214d420d4f9d44a08dd"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 314,
+            "path": "artifacts/facts/smt2/neg-modus-tollens-valid.smt2",
+            "sha256": "9a8392cbab9c1489c942e4cbbaf939dc97033c0a87c69bedb3f1fe5840455a0b"
+          }
+        ],
+        "cert_kind": "report-run",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "test \"$(cargo run -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/neg-modus-tollens-valid.smt2 2>/dev/null | tail -1)\" = unsat"
+        },
+        "summary": {
+          "text": "For all propositions p and q: if (p implies q) holds and q fails, then p fails."
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-modus-tollens-valid.json",
+            "sha256": "62a9284df9425b16d984f2136dcbaca269698dea56461214d420d4f9d44a08dd"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: modus-tollens-valid-term-level"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row modus-tollens-valid-term-level as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "modus-tollens-valid-term-level"
+          ],
+          [
+            "ledger kind",
+            "exhaustive-enumeration"
+          ],
+          [
+            "cert_kind",
+            "report-run"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum-smtcomp-cli-producing-solve, axeyum-Evidence::check-fresh-parse, z3-independent-agreement"
+          ],
+          [
+            "supports",
+            "For all propositions p and q: if (p implies q) holds and q fails, then p fails."
+          ],
+          [
+            "artifact",
+            "artifacts/facts/smt2/neg-modus-tollens-valid.smt2"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "9a8392cbab9c1489c942e4cbbaf939dc97033c0a87c69bedb3f1fe5840455a0b"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-modus-tollens-valid.json",
+              "sha256": "62a9284df9425b16d984f2136dcbaca269698dea56461214d420d4f9d44a08dd"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-modus-tollens-valid.json",
+            "sha256": "62a9284df9425b16d984f2136dcbaca269698dea56461214d420d4f9d44a08dd"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "Ran 2026-08-14: the file asserts the NEGATION of formal.statement and the solver reported `unsat` with `kind=unsat-term-level certified=1 arena=ok`. `unsat-term-level` is exhaustive evaluation of the 4 Boolean assignments by the axeyum-ir evaluator alone -- it trusts neither the bit-blaster, the CNF encoder, nor the SAT solver. `arena=ok` means Evidence::check re-ran that enumeration against a FRESH PARSE of the file, independent of anything the producing solve held in memory. Independently cross-checked: `z3 -smt2` on the same file also reports `unsat`.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-modus-tollens-valid.json",
+            "sha256": "62a9284df9425b16d984f2136dcbaca269698dea56461214d420d4f9d44a08dd"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence modus-tollens-valid-term-level"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/facts/smt2/neg-modus-tollens-valid.smt2",
+        "render_hint": "code",
+        "sha256": "9a8392cbab9c1489c942e4cbbaf939dc97033c0a87c69bedb3f1fe5840455a0b",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-modus-tollens-valid.json",
+            "sha256": "62a9284df9425b16d984f2136dcbaca269698dea56461214d420d4f9d44a08dd"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "dependency-graph",
+      "kind": {
+        "alt": "Dependency graph around F:modus-tollens-valid: 2 dependencies, 0 dependents",
+        "caption": {
+          "text": "Immediate dependencies and dependents of this fact"
+        },
+        "spec": {
+          "edges": [
+            {
+              "from": "F:modus-tollens-valid",
+              "label": "depends_on",
+              "to": "F:contraposition"
+            },
+            {
+              "from": "F:modus-tollens-valid",
+              "label": "depends_on",
+              "to": "F:modus-ponens-valid"
+            }
+          ],
+          "figure_type": "dep-graph",
+          "nodes": [
+            {
+              "group": "smt-term-level",
+              "href": "F-contraposition.doc.json",
+              "id": "F:contraposition",
+              "label": "contraposition",
+              "status": "proved",
+              "tooltip": "A conditional is equivalent to its contrapositive"
+            },
+            {
+              "group": "smt-term-level",
+              "href": "F-modus-ponens-valid.doc.json",
+              "id": "F:modus-ponens-valid",
+              "label": "modus-ponens-valid",
+              "status": "proved",
+              "tooltip": "Modus ponens is a valid inference"
+            },
+            {
+              "group": "focus",
+              "href": "F-modus-tollens-valid.doc.json",
+              "id": "F:modus-tollens-valid",
+              "label": "modus-tollens-valid",
+              "status": "proved",
+              "tooltip": "Modus tollens is a valid inference"
+            }
+          ],
+          "rankdir": "TB"
+        },
+        "type": "figure"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-modus-tollens-valid.json",
+            "sha256": "62a9284df9425b16d984f2136dcbaca269698dea56461214d420d4f9d44a08dd"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Dependency neighbourhood"
+    },
+    {
+      "id": "depends-on",
+      "kind": {
+        "caption": {
+          "text": "Depends on"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "epistemic status",
+            "key": "epistemic"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:contraposition",
+            "A conditional is equivalent to its contrapositive",
+            "proved",
+            "F-contraposition.doc.json"
+          ],
+          [
+            "F:modus-ponens-valid",
+            "Modus ponens is a valid inference",
+            "proved",
+            "F-modus-ponens-valid.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-modus-tollens-valid.json",
+              "sha256": "62a9284df9425b16d984f2136dcbaca269698dea56461214d420d4f9d44a08dd"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-modus-tollens-valid.json",
+            "sha256": "62a9284df9425b16d984f2136dcbaca269698dea56461214d420d4f9d44a08dd"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Depends on"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-14"
+          ],
+          [
+            "established_by",
+            "facts-logic lane, axeyum SAT/SMT front door"
+          ],
+          [
+            "source",
+            "authored from the S:logic-and-proof strand of the math-education concept graph; statement written here, not copied"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-modus-tollens-valid.json",
+              "sha256": "62a9284df9425b16d984f2136dcbaca269698dea56461214d420d4f9d44a08dd"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-modus-tollens-valid.json",
+            "sha256": "62a9284df9425b16d984f2136dcbaca269698dea56461214d420d4f9d44a08dd"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "citation",
+            "key": "citation"
+          },
+          {
+            "header": "establishes",
+            "key": "establishes"
+          }
+        ],
+        "rows": [
+          [
+            "standard textbook attribution; this lane did not consult the primary source, and records the citation as the received one",
+            "Stoic propositional logic, attributed to Chrysippus (3rd c. BCE), the second of the indemonstrables",
+            "the rule"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-modus-tollens-valid.json",
+              "sha256": "62a9284df9425b16d984f2136dcbaca269698dea56461214d420d4f9d44a08dd"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-modus-tollens-valid.json",
+            "sha256": "62a9284df9425b16d984f2136dcbaca269698dea56461214d420d4f9d44a08dd"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "concept-refs",
+      "kind": {
+        "caption": {
+          "text": "Concept references (gloss and provenance only, never substance)"
+        },
+        "columns": [
+          {
+            "header": "graph",
+            "key": "graph"
+          },
+          {
+            "header": "ref",
+            "key": "ref"
+          },
+          {
+            "header": "relation",
+            "key": "relation"
+          },
+          {
+            "header": "resolved",
+            "key": "resolved"
+          }
+        ],
+        "rows": [
+          [
+            "math-education",
+            "C:modus-tollens",
+            "states",
+            true
+          ],
+          [
+            "math-education",
+            "C:inference-rule",
+            "instance-of",
+            true
+          ],
+          [
+            "math-education",
+            "C:contrapositive",
+            "related-to",
+            true
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-modus-tollens-valid.json",
+              "sha256": "62a9284df9425b16d984f2136dcbaca269698dea56461214d420d4f9d44a08dd"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-modus-tollens-valid.json",
+            "sha256": "62a9284df9425b16d984f2136dcbaca269698dea56461214d420d4f9d44a08dd"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "Derivable from F:modus-ponens-valid and F:contraposition, and recorded as its own fact because the `depends_on` DAG is over statements: this is the first entry in this batch whose dependencies are genuine derivability edges rather than provenance. The solver did not use that derivation -- it enumerated -- so the edges document mathematical structure the evidence does not exercise.\n\nOn the axiom footprint: it names the trust base of the SMT ROUTE that established this fact -- the axeyum-ir Boolean evaluator, and the two-valued semantics of the SMT-LIB Bool sort that makes exhaustive truth-table enumeration a proof. It is deliberately NOT empty and deliberately NOT a Lean axiom list. Nothing here went through axeyum's Lean kernel. Measured 2026-08-14 with `cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory`: the `logic` prelude reports axiom=0 opaque=0 quotient=0, and its declarations are exactly True, False, And, Or, Iff, Not (as `a -> False`), Eq and Exists -- an intuitionistic core with no `Classical.em`, no `propext` and no `Quot.sound`. Zero trusted declarations there means the kernel assumes nothing, not that it can prove everything.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-modus-tollens-valid.json",
+            "sha256": "62a9284df9425b16d984f2136dcbaca269698dea56461214d420d4f9d44a08dd"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-modus-tollens-valid",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#dep-graph-c14",
+        "label": "Component 14 of 38 (3 facts)",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:modus-tollens-valid",
+    "title": "Modus tollens is a valid inference"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-modus-tollens-valid.json",
+        "sha256": "62a9284df9425b16d984f2136dcbaca269698dea56461214d420d4f9d44a08dd"
+      }
+    ]
+  },
+  "schema_version": 1
+}

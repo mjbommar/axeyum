@@ -1,0 +1,904 @@
+{
+  "blocks": [
+    {
+      "id": "intro",
+      "kind": {
+        "text": "A connected subgraph of the ledger (9 facts, 8 `depends_on` edges) chosen for status mixture: measured over the whole ledger it is the only connected component in the 8-20 band that does not carry a single epistemic status throughout. One fact is proved here on the `kernel-lean` route with an empty axiom footprint; the rest are open here and proved in the literature, so this page shows the self-extension frontier rather than finished work.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-int-fib-add-one-33f1b748.json",
+            "sha256": "c0cbfccdb62f822c1136f504bf2b245529372029764fb728b8135b5afa46ea02"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-int-fib-add-two-739358dd.json",
+            "sha256": "ac1a670e6bfe9e6dc49baeef6d6996b1af237bdd06b0e23a08fccb2f6537ec07"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d.json",
+            "sha256": "aeb5bcc29621ce36f402eb1fc316771d29af39dceef0910535b979480801c9f8"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-int-fib-natcast-d5886be4.json",
+            "sha256": "45bec051f4f54a14956697f68f193f4f9f0c6e14d6536886a60bfc01aab59d42"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
+            "sha256": "87f1fca2822e62e7940e189ff997746f0b4ac245bd98ee2265226d9c49479577"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-coprime-fib-succ-162fc738.json",
+            "sha256": "146a11e44dc14c0c15e57717a585759ac37dae4f88eab62f2a6b26bccef2364d"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-le-fib-succ-d1ef4a3d.json",
+            "sha256": "11705861f7f40bde4c599c7706dc0d1bad9738cdd68c6965c5472f69a3933175"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-mono-cc6afe09.json",
+            "sha256": "7064a481cecf9754b6dd8c111569348f078be40161200d51aa3a735d083bb650"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-nat-gcd-fib-add-self-5a92d5e3.json",
+            "sha256": "8062f8b42cd8a2f7c131b438b4c20d9d48f226fd65b403930b22c4e6d8bf3f47"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Pilot: the Fibonacci frontier"
+    },
+    {
+      "id": "dep-graph",
+      "kind": {
+        "alt": "Dependency graph of 9 facts with 8 edges",
+        "caption": {
+          "text": "`depends_on` over 9 facts, 8 edges. An edge runs from the dependent fact to the fact it rests on. Node status is the conservative mapping of the ledger's epistemic_status."
+        },
+        "spec": {
+          "edges": [
+            {
+              "from": "F:ml430-int-fib-add-one-33f1b748",
+              "label": "depends_on",
+              "to": "F:ml430-int-fib-add-two-739358dd"
+            },
+            {
+              "from": "F:ml430-int-fib-add-two-739358dd",
+              "label": "depends_on",
+              "to": "F:ml430-int-fib-natcast-d5886be4"
+            },
+            {
+              "from": "F:ml430-int-fib-add-two-739358dd",
+              "label": "depends_on",
+              "to": "F:ml430-nat-fib-add-two-b86e0c82"
+            },
+            {
+              "from": "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
+              "label": "depends_on",
+              "to": "F:ml430-int-fib-add-two-739358dd"
+            },
+            {
+              "from": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
+              "label": "depends_on",
+              "to": "F:ml430-nat-fib-add-two-b86e0c82"
+            },
+            {
+              "from": "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
+              "label": "depends_on",
+              "to": "F:ml430-nat-fib-add-two-b86e0c82"
+            },
+            {
+              "from": "F:ml430-nat-fib-mono-cc6afe09",
+              "label": "depends_on",
+              "to": "F:ml430-nat-fib-le-fib-succ-d1ef4a3d"
+            },
+            {
+              "from": "F:ml430-nat-gcd-fib-add-self-5a92d5e3",
+              "label": "depends_on",
+              "to": "F:ml430-nat-fib-coprime-fib-succ-162fc738"
+            }
+          ],
+          "figure_type": "dep-graph",
+          "nodes": [
+            {
+              "group": "unproved",
+              "href": "cards/F-ml430-int-fib-add-one-33f1b748.doc.json",
+              "id": "F:ml430-int-fib-add-one-33f1b748",
+              "label": "ml430-int-fib-add-one",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Int.fib_add_one"
+            },
+            {
+              "group": "unproved",
+              "href": "cards/F-ml430-int-fib-add-two-739358dd.doc.json",
+              "id": "F:ml430-int-fib-add-two-739358dd",
+              "label": "ml430-int-fib-add-two",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Int.fib_add_two"
+            },
+            {
+              "group": "unproved",
+              "href": "cards/F-ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d.doc.json",
+              "id": "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
+              "label": "ml430-int-fib-eq-fib-add-two-sub-fib-add-one",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Int.fib_eq_fib_add_two_sub_fib_add_one"
+            },
+            {
+              "group": "unproved",
+              "href": "cards/F-ml430-int-fib-natcast-d5886be4.doc.json",
+              "id": "F:ml430-int-fib-natcast-d5886be4",
+              "label": "ml430-int-fib-natcast",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Int.fib_natCast"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-ml430-nat-fib-add-two-b86e0c82.doc.json",
+              "id": "F:ml430-nat-fib-add-two-b86e0c82",
+              "label": "ml430-nat-fib-add-two",
+              "status": "proved",
+              "tooltip": "Mathlib v4.30 source proposition Nat.fib_add_two"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-ml430-nat-fib-coprime-fib-succ-162fc738.doc.json",
+              "id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
+              "label": "ml430-nat-fib-coprime-fib-succ",
+              "status": "proved",
+              "tooltip": "Mathlib v4.30 source proposition Nat.fib_coprime_fib_succ"
+            },
+            {
+              "group": "unproved",
+              "href": "cards/F-ml430-nat-fib-le-fib-succ-d1ef4a3d.doc.json",
+              "id": "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
+              "label": "ml430-nat-fib-le-fib-succ",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.fib_le_fib_succ"
+            },
+            {
+              "group": "unproved",
+              "href": "cards/F-ml430-nat-fib-mono-cc6afe09.doc.json",
+              "id": "F:ml430-nat-fib-mono-cc6afe09",
+              "label": "ml430-nat-fib-mono",
+              "status": "open",
+              "tooltip": "Mathlib v4.30 source proposition Nat.fib_mono"
+            },
+            {
+              "group": "kernel-lean",
+              "href": "cards/F-ml430-nat-gcd-fib-add-self-5a92d5e3.doc.json",
+              "id": "F:ml430-nat-gcd-fib-add-self-5a92d5e3",
+              "label": "ml430-nat-gcd-fib-add-self",
+              "status": "proved",
+              "tooltip": "Mathlib v4.30 source proposition Nat.gcd_fib_add_self"
+            }
+          ],
+          "rankdir": "TB"
+        },
+        "type": "figure"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-int-fib-add-one-33f1b748.json",
+            "sha256": "c0cbfccdb62f822c1136f504bf2b245529372029764fb728b8135b5afa46ea02"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-int-fib-add-two-739358dd.json",
+            "sha256": "ac1a670e6bfe9e6dc49baeef6d6996b1af237bdd06b0e23a08fccb2f6537ec07"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d.json",
+            "sha256": "aeb5bcc29621ce36f402eb1fc316771d29af39dceef0910535b979480801c9f8"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-int-fib-natcast-d5886be4.json",
+            "sha256": "45bec051f4f54a14956697f68f193f4f9f0c6e14d6536886a60bfc01aab59d42"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
+            "sha256": "87f1fca2822e62e7940e189ff997746f0b4ac245bd98ee2265226d9c49479577"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-coprime-fib-succ-162fc738.json",
+            "sha256": "146a11e44dc14c0c15e57717a585759ac37dae4f88eab62f2a6b26bccef2364d"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-le-fib-succ-d1ef4a3d.json",
+            "sha256": "11705861f7f40bde4c599c7706dc0d1bad9738cdd68c6965c5472f69a3933175"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-mono-cc6afe09.json",
+            "sha256": "7064a481cecf9754b6dd8c111569348f078be40161200d51aa3a735d083bb650"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-nat-gcd-fib-add-self-5a92d5e3.json",
+            "sha256": "8062f8b42cd8a2f7c131b438b4c20d9d48f226fd65b403930b22c4e6d8bf3f47"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Dependency graph"
+    },
+    {
+      "id": "spread",
+      "kind": {
+        "caption": {
+          "text": "Ledger spread over the documented facts"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          },
+          {
+            "header": "facts",
+            "key": "facts"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic_status",
+            "open",
+            6
+          ],
+          [
+            "epistemic_status",
+            "proved",
+            3
+          ],
+          [
+            "external_status",
+            "proved",
+            9
+          ],
+          [
+            "proof_route",
+            "(none)",
+            6
+          ],
+          [
+            "proof_route",
+            "kernel-lean",
+            3
+          ],
+          [
+            "formal.language",
+            "lean4-surface",
+            9
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ml430-int-fib-add-one-33f1b748.json",
+              "sha256": "c0cbfccdb62f822c1136f504bf2b245529372029764fb728b8135b5afa46ea02"
+            },
+            {
+              "path": "artifacts/facts/F-ml430-int-fib-add-two-739358dd.json",
+              "sha256": "ac1a670e6bfe9e6dc49baeef6d6996b1af237bdd06b0e23a08fccb2f6537ec07"
+            },
+            {
+              "path": "artifacts/facts/F-ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d.json",
+              "sha256": "aeb5bcc29621ce36f402eb1fc316771d29af39dceef0910535b979480801c9f8"
+            },
+            {
+              "path": "artifacts/facts/F-ml430-int-fib-natcast-d5886be4.json",
+              "sha256": "45bec051f4f54a14956697f68f193f4f9f0c6e14d6536886a60bfc01aab59d42"
+            },
+            {
+              "path": "artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
+              "sha256": "87f1fca2822e62e7940e189ff997746f0b4ac245bd98ee2265226d9c49479577"
+            },
+            {
+              "path": "artifacts/facts/F-ml430-nat-fib-coprime-fib-succ-162fc738.json",
+              "sha256": "146a11e44dc14c0c15e57717a585759ac37dae4f88eab62f2a6b26bccef2364d"
+            },
+            {
+              "path": "artifacts/facts/F-ml430-nat-fib-le-fib-succ-d1ef4a3d.json",
+              "sha256": "11705861f7f40bde4c599c7706dc0d1bad9738cdd68c6965c5472f69a3933175"
+            },
+            {
+              "path": "artifacts/facts/F-ml430-nat-fib-mono-cc6afe09.json",
+              "sha256": "7064a481cecf9754b6dd8c111569348f078be40161200d51aa3a735d083bb650"
+            },
+            {
+              "path": "artifacts/facts/F-ml430-nat-gcd-fib-add-self-5a92d5e3.json",
+              "sha256": "8062f8b42cd8a2f7c131b438b4c20d9d48f226fd65b403930b22c4e6d8bf3f47"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-int-fib-add-one-33f1b748.json",
+            "sha256": "c0cbfccdb62f822c1136f504bf2b245529372029764fb728b8135b5afa46ea02"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-int-fib-add-two-739358dd.json",
+            "sha256": "ac1a670e6bfe9e6dc49baeef6d6996b1af237bdd06b0e23a08fccb2f6537ec07"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d.json",
+            "sha256": "aeb5bcc29621ce36f402eb1fc316771d29af39dceef0910535b979480801c9f8"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-int-fib-natcast-d5886be4.json",
+            "sha256": "45bec051f4f54a14956697f68f193f4f9f0c6e14d6536886a60bfc01aab59d42"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
+            "sha256": "87f1fca2822e62e7940e189ff997746f0b4ac245bd98ee2265226d9c49479577"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-coprime-fib-succ-162fc738.json",
+            "sha256": "146a11e44dc14c0c15e57717a585759ac37dae4f88eab62f2a6b26bccef2364d"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-le-fib-succ-d1ef4a3d.json",
+            "sha256": "11705861f7f40bde4c599c7706dc0d1bad9738cdd68c6965c5472f69a3933175"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-mono-cc6afe09.json",
+            "sha256": "7064a481cecf9754b6dd8c111569348f078be40161200d51aa3a735d083bb650"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-nat-gcd-fib-add-self-5a92d5e3.json",
+            "sha256": "8062f8b42cd8a2f7c131b438b4c20d9d48f226fd65b403930b22c4e6d8bf3f47"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Spread"
+    },
+    {
+      "id": "index",
+      "kind": {
+        "caption": {
+          "text": "Fact index"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "language",
+            "key": "language"
+          },
+          {
+            "header": "fragment",
+            "key": "fragment"
+          },
+          {
+            "header": "proof_route",
+            "key": "route"
+          },
+          {
+            "header": "epistemic",
+            "key": "epistemic"
+          },
+          {
+            "header": "external",
+            "key": "external"
+          },
+          {
+            "header": "badge",
+            "key": "badge"
+          },
+          {
+            "header": "flag",
+            "key": "flag"
+          },
+          {
+            "header": "evidence",
+            "key": "evidence"
+          },
+          {
+            "header": "checked",
+            "key": "checked"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:ml430-int-fib-add-one-33f1b748",
+            "Mathlib v4.30 source proposition Int.fib_add_one",
+            "lean4-surface",
+            "Int",
+            "-",
+            "open",
+            "proved",
+            "open",
+            "import-backlog",
+            0,
+            0,
+            "cards/F-ml430-int-fib-add-one-33f1b748.doc.json"
+          ],
+          [
+            "F:ml430-int-fib-add-two-739358dd",
+            "Mathlib v4.30 source proposition Int.fib_add_two",
+            "lean4-surface",
+            "Int",
+            "-",
+            "open",
+            "proved",
+            "open",
+            "import-backlog",
+            0,
+            0,
+            "cards/F-ml430-int-fib-add-two-739358dd.doc.json"
+          ],
+          [
+            "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
+            "Mathlib v4.30 source proposition Int.fib_eq_fib_add_two_sub_fib_add_one",
+            "lean4-surface",
+            "Int",
+            "-",
+            "open",
+            "proved",
+            "open",
+            "import-backlog",
+            0,
+            0,
+            "cards/F-ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d.doc.json"
+          ],
+          [
+            "F:ml430-int-fib-natcast-d5886be4",
+            "Mathlib v4.30 source proposition Int.fib_natCast",
+            "lean4-surface",
+            "Int",
+            "-",
+            "open",
+            "proved",
+            "open",
+            "import-backlog",
+            0,
+            0,
+            "cards/F-ml430-int-fib-natcast-d5886be4.doc.json"
+          ],
+          [
+            "F:ml430-nat-fib-add-two-b86e0c82",
+            "Mathlib v4.30 source proposition Nat.fib_add_two",
+            "lean4-surface",
+            "Nat",
+            "kernel-lean",
+            "proved",
+            "proved",
+            "proved",
+            "-",
+            1,
+            1,
+            "cards/F-ml430-nat-fib-add-two-b86e0c82.doc.json"
+          ],
+          [
+            "F:ml430-nat-fib-coprime-fib-succ-162fc738",
+            "Mathlib v4.30 source proposition Nat.fib_coprime_fib_succ",
+            "lean4-surface",
+            "Nat",
+            "kernel-lean",
+            "proved",
+            "proved",
+            "proved",
+            "-",
+            1,
+            1,
+            "cards/F-ml430-nat-fib-coprime-fib-succ-162fc738.doc.json"
+          ],
+          [
+            "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
+            "Mathlib v4.30 source proposition Nat.fib_le_fib_succ",
+            "lean4-surface",
+            "Nat",
+            "-",
+            "open",
+            "proved",
+            "open",
+            "import-backlog",
+            0,
+            0,
+            "cards/F-ml430-nat-fib-le-fib-succ-d1ef4a3d.doc.json"
+          ],
+          [
+            "F:ml430-nat-fib-mono-cc6afe09",
+            "Mathlib v4.30 source proposition Nat.fib_mono",
+            "lean4-surface",
+            "Nat",
+            "-",
+            "open",
+            "proved",
+            "open",
+            "import-backlog",
+            0,
+            0,
+            "cards/F-ml430-nat-fib-mono-cc6afe09.doc.json"
+          ],
+          [
+            "F:ml430-nat-gcd-fib-add-self-5a92d5e3",
+            "Mathlib v4.30 source proposition Nat.gcd_fib_add_self",
+            "lean4-surface",
+            "Nat",
+            "kernel-lean",
+            "proved",
+            "proved",
+            "proved",
+            "-",
+            1,
+            1,
+            "cards/F-ml430-nat-gcd-fib-add-self-5a92d5e3.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ml430-int-fib-add-one-33f1b748.json",
+              "sha256": "c0cbfccdb62f822c1136f504bf2b245529372029764fb728b8135b5afa46ea02"
+            },
+            {
+              "path": "artifacts/facts/F-ml430-int-fib-add-two-739358dd.json",
+              "sha256": "ac1a670e6bfe9e6dc49baeef6d6996b1af237bdd06b0e23a08fccb2f6537ec07"
+            },
+            {
+              "path": "artifacts/facts/F-ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d.json",
+              "sha256": "aeb5bcc29621ce36f402eb1fc316771d29af39dceef0910535b979480801c9f8"
+            },
+            {
+              "path": "artifacts/facts/F-ml430-int-fib-natcast-d5886be4.json",
+              "sha256": "45bec051f4f54a14956697f68f193f4f9f0c6e14d6536886a60bfc01aab59d42"
+            },
+            {
+              "path": "artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
+              "sha256": "87f1fca2822e62e7940e189ff997746f0b4ac245bd98ee2265226d9c49479577"
+            },
+            {
+              "path": "artifacts/facts/F-ml430-nat-fib-coprime-fib-succ-162fc738.json",
+              "sha256": "146a11e44dc14c0c15e57717a585759ac37dae4f88eab62f2a6b26bccef2364d"
+            },
+            {
+              "path": "artifacts/facts/F-ml430-nat-fib-le-fib-succ-d1ef4a3d.json",
+              "sha256": "11705861f7f40bde4c599c7706dc0d1bad9738cdd68c6965c5472f69a3933175"
+            },
+            {
+              "path": "artifacts/facts/F-ml430-nat-fib-mono-cc6afe09.json",
+              "sha256": "7064a481cecf9754b6dd8c111569348f078be40161200d51aa3a735d083bb650"
+            },
+            {
+              "path": "artifacts/facts/F-ml430-nat-gcd-fib-add-self-5a92d5e3.json",
+              "sha256": "8062f8b42cd8a2f7c131b438b4c20d9d48f226fd65b403930b22c4e6d8bf3f47"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-int-fib-add-one-33f1b748.json",
+            "sha256": "c0cbfccdb62f822c1136f504bf2b245529372029764fb728b8135b5afa46ea02"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-int-fib-add-two-739358dd.json",
+            "sha256": "ac1a670e6bfe9e6dc49baeef6d6996b1af237bdd06b0e23a08fccb2f6537ec07"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d.json",
+            "sha256": "aeb5bcc29621ce36f402eb1fc316771d29af39dceef0910535b979480801c9f8"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-int-fib-natcast-d5886be4.json",
+            "sha256": "45bec051f4f54a14956697f68f193f4f9f0c6e14d6536886a60bfc01aab59d42"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
+            "sha256": "87f1fca2822e62e7940e189ff997746f0b4ac245bd98ee2265226d9c49479577"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-coprime-fib-succ-162fc738.json",
+            "sha256": "146a11e44dc14c0c15e57717a585759ac37dae4f88eab62f2a6b26bccef2364d"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-le-fib-succ-d1ef4a3d.json",
+            "sha256": "11705861f7f40bde4c599c7706dc0d1bad9738cdd68c6965c5472f69a3933175"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-mono-cc6afe09.json",
+            "sha256": "7064a481cecf9754b6dd8c111569348f078be40161200d51aa3a735d083bb650"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-nat-gcd-fib-add-self-5a92d5e3.json",
+            "sha256": "8062f8b42cd8a2f7c131b438b4c20d9d48f226fd65b403930b22c4e6d8bf3f47"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Index"
+    },
+    {
+      "id": "import-backlog",
+      "kind": {
+        "caption": {
+          "text": "Settled in the literature, open here (import backlog)"
+        },
+        "columns": [
+          {
+            "header": "fact",
+            "key": "fact"
+          },
+          {
+            "header": "title",
+            "key": "title"
+          },
+          {
+            "header": "card",
+            "key": "card"
+          }
+        ],
+        "rows": [
+          [
+            "F:ml430-int-fib-add-one-33f1b748",
+            "Mathlib v4.30 source proposition Int.fib_add_one",
+            "cards/F-ml430-int-fib-add-one-33f1b748.doc.json"
+          ],
+          [
+            "F:ml430-int-fib-add-two-739358dd",
+            "Mathlib v4.30 source proposition Int.fib_add_two",
+            "cards/F-ml430-int-fib-add-two-739358dd.doc.json"
+          ],
+          [
+            "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
+            "Mathlib v4.30 source proposition Int.fib_eq_fib_add_two_sub_fib_add_one",
+            "cards/F-ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d.doc.json"
+          ],
+          [
+            "F:ml430-int-fib-natcast-d5886be4",
+            "Mathlib v4.30 source proposition Int.fib_natCast",
+            "cards/F-ml430-int-fib-natcast-d5886be4.doc.json"
+          ],
+          [
+            "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
+            "Mathlib v4.30 source proposition Nat.fib_le_fib_succ",
+            "cards/F-ml430-nat-fib-le-fib-succ-d1ef4a3d.doc.json"
+          ],
+          [
+            "F:ml430-nat-fib-mono-cc6afe09",
+            "Mathlib v4.30 source proposition Nat.fib_mono",
+            "cards/F-ml430-nat-fib-mono-cc6afe09.doc.json"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-ml430-int-fib-add-one-33f1b748.json",
+              "sha256": "c0cbfccdb62f822c1136f504bf2b245529372029764fb728b8135b5afa46ea02"
+            },
+            {
+              "path": "artifacts/facts/F-ml430-int-fib-add-two-739358dd.json",
+              "sha256": "ac1a670e6bfe9e6dc49baeef6d6996b1af237bdd06b0e23a08fccb2f6537ec07"
+            },
+            {
+              "path": "artifacts/facts/F-ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d.json",
+              "sha256": "aeb5bcc29621ce36f402eb1fc316771d29af39dceef0910535b979480801c9f8"
+            },
+            {
+              "path": "artifacts/facts/F-ml430-int-fib-natcast-d5886be4.json",
+              "sha256": "45bec051f4f54a14956697f68f193f4f9f0c6e14d6536886a60bfc01aab59d42"
+            },
+            {
+              "path": "artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
+              "sha256": "87f1fca2822e62e7940e189ff997746f0b4ac245bd98ee2265226d9c49479577"
+            },
+            {
+              "path": "artifacts/facts/F-ml430-nat-fib-coprime-fib-succ-162fc738.json",
+              "sha256": "146a11e44dc14c0c15e57717a585759ac37dae4f88eab62f2a6b26bccef2364d"
+            },
+            {
+              "path": "artifacts/facts/F-ml430-nat-fib-le-fib-succ-d1ef4a3d.json",
+              "sha256": "11705861f7f40bde4c599c7706dc0d1bad9738cdd68c6965c5472f69a3933175"
+            },
+            {
+              "path": "artifacts/facts/F-ml430-nat-fib-mono-cc6afe09.json",
+              "sha256": "7064a481cecf9754b6dd8c111569348f078be40161200d51aa3a735d083bb650"
+            },
+            {
+              "path": "artifacts/facts/F-ml430-nat-gcd-fib-add-self-5a92d5e3.json",
+              "sha256": "8062f8b42cd8a2f7c131b438b4c20d9d48f226fd65b403930b22c4e6d8bf3f47"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-ml430-int-fib-add-one-33f1b748.json",
+            "sha256": "c0cbfccdb62f822c1136f504bf2b245529372029764fb728b8135b5afa46ea02"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-int-fib-add-two-739358dd.json",
+            "sha256": "ac1a670e6bfe9e6dc49baeef6d6996b1af237bdd06b0e23a08fccb2f6537ec07"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d.json",
+            "sha256": "aeb5bcc29621ce36f402eb1fc316771d29af39dceef0910535b979480801c9f8"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-int-fib-natcast-d5886be4.json",
+            "sha256": "45bec051f4f54a14956697f68f193f4f9f0c6e14d6536886a60bfc01aab59d42"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
+            "sha256": "87f1fca2822e62e7940e189ff997746f0b4ac245bd98ee2265226d9c49479577"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-coprime-fib-succ-162fc738.json",
+            "sha256": "146a11e44dc14c0c15e57717a585759ac37dae4f88eab62f2a6b26bccef2364d"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-le-fib-succ-d1ef4a3d.json",
+            "sha256": "11705861f7f40bde4c599c7706dc0d1bad9738cdd68c6965c5472f69a3933175"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-nat-fib-mono-cc6afe09.json",
+            "sha256": "7064a481cecf9754b6dd8c111569348f078be40161200d51aa3a735d083bb650"
+          },
+          {
+            "path": "artifacts/facts/F-ml430-nat-gcd-fib-add-self-5a92d5e3.json",
+            "sha256": "8062f8b42cd8a2f7c131b438b4c20d9d48f226fd65b403930b22c4e6d8bf3f47"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Import backlog"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-pilot",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "9 facts, 8 depends_on edges",
+    "title": "Pilot: the Fibonacci frontier"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-ml430-int-fib-add-one-33f1b748.json",
+        "sha256": "c0cbfccdb62f822c1136f504bf2b245529372029764fb728b8135b5afa46ea02"
+      },
+      {
+        "path": "artifacts/facts/F-ml430-int-fib-add-two-739358dd.json",
+        "sha256": "ac1a670e6bfe9e6dc49baeef6d6996b1af237bdd06b0e23a08fccb2f6537ec07"
+      },
+      {
+        "path": "artifacts/facts/F-ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d.json",
+        "sha256": "aeb5bcc29621ce36f402eb1fc316771d29af39dceef0910535b979480801c9f8"
+      },
+      {
+        "path": "artifacts/facts/F-ml430-int-fib-natcast-d5886be4.json",
+        "sha256": "45bec051f4f54a14956697f68f193f4f9f0c6e14d6536886a60bfc01aab59d42"
+      },
+      {
+        "path": "artifacts/facts/F-ml430-nat-fib-add-two-b86e0c82.json",
+        "sha256": "87f1fca2822e62e7940e189ff997746f0b4ac245bd98ee2265226d9c49479577"
+      },
+      {
+        "path": "artifacts/facts/F-ml430-nat-fib-coprime-fib-succ-162fc738.json",
+        "sha256": "146a11e44dc14c0c15e57717a585759ac37dae4f88eab62f2a6b26bccef2364d"
+      },
+      {
+        "path": "artifacts/facts/F-ml430-nat-fib-le-fib-succ-d1ef4a3d.json",
+        "sha256": "11705861f7f40bde4c599c7706dc0d1bad9738cdd68c6965c5472f69a3933175"
+      },
+      {
+        "path": "artifacts/facts/F-ml430-nat-fib-mono-cc6afe09.json",
+        "sha256": "7064a481cecf9754b6dd8c111569348f078be40161200d51aa3a735d083bb650"
+      },
+      {
+        "path": "artifacts/facts/F-ml430-nat-gcd-fib-add-self-5a92d5e3.json",
+        "sha256": "8062f8b42cd8a2f7c131b438b4c20d9d48f226fd65b403930b22c4e6d8bf3f47"
+      }
+    ]
+  },
+  "schema_version": 1
+}

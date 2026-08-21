@@ -1,0 +1,756 @@
+{
+  "blocks": [
+    {
+      "id": "statement",
+      "kind": {
+        "ref": {
+          "id": "F:geometry-thales-right-angle-in-semicircle",
+          "kind": "fact"
+        },
+        "show": [
+          "title",
+          "prose",
+          "formal",
+          "status",
+          "proof_route",
+          "axiom_footprint",
+          "depends_on",
+          "evidence_count"
+        ],
+        "type": "statement"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-thales-right-angle-in-semicircle.json",
+            "sha256": "54854bd9829f2dbeb9d4b79546bc3b7a29259ad5eeb9ec7c020933e69e4ed4df"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Thales' theorem: an angle inscribed in a semicircle is right"
+    },
+    {
+      "id": "status-axes",
+      "kind": {
+        "caption": {
+          "text": "Status, both axes"
+        },
+        "columns": [
+          {
+            "header": "axis",
+            "key": "axis"
+          },
+          {
+            "header": "ledger value",
+            "key": "ledger_value"
+          },
+          {
+            "header": "rendered badge",
+            "key": "badge"
+          },
+          {
+            "header": "basis",
+            "key": "basis"
+          }
+        ],
+        "rows": [
+          [
+            "epistemic (what this ledger established)",
+            "proved",
+            "proved",
+            "2 of 2 evidence row(s) checked"
+          ],
+          [
+            "external (what mathematics knows)",
+            "proved",
+            "proved",
+            "copied from the ledger's external_status"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-thales-right-angle-in-semicircle.json",
+              "sha256": "54854bd9829f2dbeb9d4b79546bc3b7a29259ad5eeb9ec7c020933e69e4ed4df"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-thales-right-angle-in-semicircle.json",
+            "sha256": "54854bd9829f2dbeb9d4b79546bc3b7a29259ad5eeb9ec7c020933e69e4ed4df"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Status"
+    },
+    {
+      "id": "trust-base",
+      "kind": {
+        "caption": {
+          "text": "Trust base"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "proof_route",
+            "cas-certificate"
+          ],
+          [
+            "axiom_footprint",
+            "cas.exact-rational-polynomial-normal-form; geometry.cartesian-coordinatisation-of-the-euclidean-plane; geometry.characteristic-zero-specialisation"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-thales-right-angle-in-semicircle.json",
+              "sha256": "54854bd9829f2dbeb9d4b79546bc3b7a29259ad5eeb9ec7c020933e69e4ed4df"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-thales-right-angle-in-semicircle.json",
+            "sha256": "54854bd9829f2dbeb9d4b79546bc3b7a29259ad5eeb9ec7c020933e69e4ed4df"
+          }
+        ]
+      },
+      "tag": "essential",
+      "title": "Trust base"
+    },
+    {
+      "id": "evidence-000",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 2785,
+            "path": "artifacts/geometry-certificates/thales-right-angle-in-semicircle.json",
+            "sha256": "ee2d29cf503d694c219f191ed9261e1b8f2ec3696e08ad8fbd63689c876e5cb5"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-cas --test geometry_certificate_artifacts"
+        },
+        "summary": {
+          "text": "the cofactor certificate, re-checked from the committed artifact by a checker that shares no code with the search that produced it"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-thales-right-angle-in-semicircle.json",
+            "sha256": "54854bd9829f2dbeb9d4b79546bc3b7a29259ad5eeb9ec7c020933e69e4ed4df"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: geometry-certificate-thales-right-angle-in-semicircle"
+    },
+    {
+      "id": "evidence-000-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row geometry-certificate-thales-right-angle-in-semicircle as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "geometry-certificate-thales-right-angle-in-semicircle"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "geometry_check::check_certificate shape pass (the generator list must be exactly the stated hypotheses, with no undeclared saturation), geometry_check::check_certificate symbolic pass (the identity target = sum of cofactor times generator expanded with MvPoly add/mul alone -- no Groebner machinery, no monomial order, no S-polynomials), geometry_check::check_certificate numeric pass (the same identity re-evaluated at 24 deterministic integer points through MvPoly::evaluate, a different code path from the symbolic expansion), geometry_check::check_certificate configuration pass (the semicircle A = (-1,0), B = (1,0), C = (0,1) replayed at exact rational coordinates)"
+          ],
+          [
+            "supports",
+            "the cofactor certificate, re-checked from the committed artifact by a checker that shares no code with the search that produced it"
+          ],
+          [
+            "artifact",
+            "artifacts/geometry-certificates/thales-right-angle-in-semicircle.json"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "ee2d29cf503d694c219f191ed9261e1b8f2ec3696e08ad8fbd63689c876e5cb5"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-thales-right-angle-in-semicircle.json",
+              "sha256": "54854bd9829f2dbeb9d4b79546bc3b7a29259ad5eeb9ec7c020933e69e4ed4df"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-thales-right-angle-in-semicircle.json",
+            "sha256": "54854bd9829f2dbeb9d4b79546bc3b7a29259ad5eeb9ec7c020933e69e4ed4df"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-000-notes",
+      "kind": {
+        "text": "The certificate has a SINGLE cofactor, the constant +1: Thales' theorem in coordinates is the bare identity (A-C).(B-C) = |C-O|^2 - |A-O|^2 with O the midpoint of AB. That is the whole proof, and the constancy of the cofactor is why no side condition can arise -- nothing in the identity is divided by anything.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-thales-right-angle-in-semicircle.json",
+            "sha256": "54854bd9829f2dbeb9d4b79546bc3b7a29259ad5eeb9ec7c020933e69e4ed4df"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-000-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence geometry-certificate-thales-right-angle-in-semicircle"
+        },
+        "max_bytes": 65536,
+        "path": "artifacts/geometry-certificates/thales-right-angle-in-semicircle.json",
+        "render_hint": "json",
+        "sha256": "ee2d29cf503d694c219f191ed9261e1b8f2ec3696e08ad8fbd63689c876e5cb5",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-thales-right-angle-in-semicircle.json",
+            "sha256": "54854bd9829f2dbeb9d4b79546bc3b7a29259ad5eeb9ec7c020933e69e4ed4df"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001",
+      "kind": {
+        "artifact_refs": [
+          {
+            "bytes": 10079,
+            "path": "crates/axeyum-cas/tests/geometry_encoding_agreement.rs",
+            "sha256": "b51268f90e5f54fbb332d5f7d115212da016c4869c027c7bb10ee16d80ee393b"
+          }
+        ],
+        "cert_kind": "witness-replay",
+        "no_exit_reason": "the ledger records check_status `checked` for this row but no run record, so nothing here recorded an execution; the command above is an invitation to the reader, not a replay of a run this page witnessed",
+        "replay": {
+          "cwd": ".",
+          "expected_exit_status": 0,
+          "line": "cargo test -p axeyum-cas --test geometry_encoding_agreement"
+        },
+        "summary": {
+          "text": "that the polynomials in the certificate mean the geometric predicates they are named after"
+        },
+        "type": "certificate"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-thales-right-angle-in-semicircle.json",
+            "sha256": "54854bd9829f2dbeb9d4b79546bc3b7a29259ad5eeb9ec7c020933e69e4ed4df"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Evidence: geometry-coordinatisation-control-thales"
+    },
+    {
+      "id": "evidence-001-record",
+      "kind": {
+        "caption": {
+          "text": "Evidence row geometry-coordinatisation-control-thales as recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "evidence id",
+            "geometry-coordinatisation-control-thales"
+          ],
+          [
+            "ledger kind",
+            "witness-replay"
+          ],
+          [
+            "cert_kind",
+            "witness-replay"
+          ],
+          [
+            "check_status",
+            "checked"
+          ],
+          [
+            "independent checkers",
+            "axeyum_cas::geometry::Line::is_perpendicular (an older module deciding perpendicularity from `ax + by + c = 0` normals rather than from an inner product) agreed with the perpendicularity polynomial on every integer configuration of the sweep where it can build both lines, and the polynomial vanishes on every degenerate segment where it cannot, axeyum_cas::geometry::Point::distance (exact surds through simplify_radicals over CasExpr, a completely different route from the squared-distance polynomial) agreed with the equidistance polynomial on 244 configurations, axeyum_cas::geometry::Point::midpoint agreed with the constructed midpoint on the same sweep"
+          ],
+          [
+            "supports",
+            "that the polynomials in the certificate mean the geometric predicates they are named after"
+          ],
+          [
+            "artifact",
+            "crates/axeyum-cas/tests/geometry_encoding_agreement.rs"
+          ],
+          [
+            "artifact state",
+            "present"
+          ],
+          [
+            "artifact sha256",
+            "b51268f90e5f54fbb332d5f7d115212da016c4869c027c7bb10ee16d80ee393b"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-thales-right-angle-in-semicircle.json",
+              "sha256": "54854bd9829f2dbeb9d4b79546bc3b7a29259ad5eeb9ec7c020933e69e4ed4df"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-thales-right-angle-in-semicircle.json",
+            "sha256": "54854bd9829f2dbeb9d4b79546bc3b7a29259ad5eeb9ec7c020933e69e4ed4df"
+          }
+        ]
+      },
+      "tag": "detail"
+    },
+    {
+      "id": "evidence-001-notes",
+      "kind": {
+        "text": "The equidistance row is the strongest of the three: the concrete module computes an exact radical and compares CasExpr values, so agreement is not a restatement of the same squared-distance arithmetic.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-thales-right-angle-in-semicircle.json",
+            "sha256": "54854bd9829f2dbeb9d4b79546bc3b7a29259ad5eeb9ec7c020933e69e4ed4df"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "evidence-001-artifact",
+      "kind": {
+        "caption": {
+          "text": "Artifact for evidence geometry-coordinatisation-control-thales"
+        },
+        "max_bytes": 65536,
+        "path": "crates/axeyum-cas/tests/geometry_encoding_agreement.rs",
+        "render_hint": "link",
+        "sha256": "b51268f90e5f54fbb332d5f7d115212da016c4869c027c7bb10ee16d80ee393b",
+        "type": "include"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-thales-right-angle-in-semicircle.json",
+            "sha256": "54854bd9829f2dbeb9d4b79546bc3b7a29259ad5eeb9ec7c020933e69e4ed4df"
+          }
+        ]
+      },
+      "tag": "archive"
+    },
+    {
+      "id": "fact-provenance",
+      "kind": {
+        "caption": {
+          "text": "Provenance recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "field",
+            "key": "field"
+          },
+          {
+            "header": "value",
+            "key": "value"
+          }
+        ],
+        "rows": [
+          [
+            "date",
+            "2026-08-14"
+          ],
+          [
+            "established_by",
+            "lane geometry: axeyum_cas::geometry_certify (untrusted cofactor-tracked Buchberger search) + axeyum_cas::geometry_check (independent re-derivation)"
+          ],
+          [
+            "source",
+            "classical; coordinatised by this lane"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-thales-right-angle-in-semicircle.json",
+              "sha256": "54854bd9829f2dbeb9d4b79546bc3b7a29259ad5eeb9ec7c020933e69e4ed4df"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-thales-right-angle-in-semicircle.json",
+            "sha256": "54854bd9829f2dbeb9d4b79546bc3b7a29259ad5eeb9ec7c020933e69e4ed4df"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Provenance"
+    },
+    {
+      "id": "prior-art",
+      "kind": {
+        "caption": {
+          "text": "Prior art recorded in the ledger"
+        },
+        "columns": [
+          {
+            "header": "attribution",
+            "key": "attribution"
+          },
+          {
+            "header": "what",
+            "key": "what"
+          },
+          {
+            "header": "where",
+            "key": "where"
+          },
+          {
+            "header": "who",
+            "key": "who"
+          }
+        ],
+        "rows": [
+          [
+            "standard textbook attribution; this lane did not consult the primary source",
+            "an angle inscribed in a semicircle is right",
+            "attributed by Diogenes Laertius; Euclid, Elements III.31",
+            "Thales of Miletus"
+          ]
+        ],
+        "source": {
+          "command": "python3 render/producers-py/facts_to_docir.py",
+          "epoch": {
+            "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+            "source": "commit",
+            "unix": 1787338967
+          },
+          "exit_status": 0,
+          "generator": "render/producers-py/facts_to_docir.py",
+          "inputs": [
+            {
+              "path": "artifacts/facts/F-geometry-thales-right-angle-in-semicircle.json",
+              "sha256": "54854bd9829f2dbeb9d4b79546bc3b7a29259ad5eeb9ec7c020933e69e4ed4df"
+            }
+          ]
+        },
+        "type": "table"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-thales-right-angle-in-semicircle.json",
+            "sha256": "54854bd9829f2dbeb9d4b79546bc3b7a29259ad5eeb9ec7c020933e69e4ed4df"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Prior art"
+    },
+    {
+      "id": "ledger-notes",
+      "kind": {
+        "text": "Established on the `cas-certificate` route, in the geometry family. Filed as one of the corpus's NO-CONDITION theorems: the certifier tries the empty non-degeneracy set first and reports which conditions it consumed, so `axiom_footprint` carrying no `geometry.nondegeneracy.*` entry is a measurement, not an omission. Compare F:geometry-centroid-divides-medians, whose certificate does consume one and whose degenerate counterexample is committed alongside it.",
+        "type": "prose"
+      },
+      "provenance": {
+        "command": "python3 render/producers-py/facts_to_docir.py",
+        "epoch": {
+          "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+          "source": "commit",
+          "unix": 1787338967
+        },
+        "exit_status": 0,
+        "generator": "render/producers-py/facts_to_docir.py",
+        "inputs": [
+          {
+            "path": "artifacts/facts/F-geometry-thales-right-angle-in-semicircle.json",
+            "sha256": "54854bd9829f2dbeb9d4b79546bc3b7a29259ad5eeb9ec7c020933e69e4ed4df"
+          }
+        ]
+      },
+      "tag": "detail",
+      "title": "Notes from the ledger"
+    }
+  ],
+  "meta": {
+    "doc_id": "fact-geometry-thales-right-angle-in-semicircle",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "genre": "result",
+    "nav": [
+      {
+        "href": "../facts-atlas.doc.json",
+        "label": "Fact atlas",
+        "rel": "up"
+      },
+      {
+        "href": "../facts-atlas.doc.json#index",
+        "label": "Unconnected: see the index",
+        "rel": "component"
+      }
+    ],
+    "options": {
+      "markdown": {
+        "badge_style": "text"
+      }
+    },
+    "subtitle": "Fact card for F:geometry-thales-right-angle-in-semicircle",
+    "title": "Thales' theorem: an angle inscribed in a semicircle is right"
+  },
+  "provenance": {
+    "command": "python3 render/producers-py/facts_to_docir.py",
+    "epoch": {
+      "commit": "733126c0f351f0931f7eaf0b4f5f9f569f3aef44",
+      "source": "commit",
+      "unix": 1787338967
+    },
+    "exit_status": 0,
+    "generator": "render/producers-py/facts_to_docir.py",
+    "inputs": [
+      {
+        "path": "artifacts/facts/F-geometry-thales-right-angle-in-semicircle.json",
+        "sha256": "54854bd9829f2dbeb9d4b79546bc3b7a29259ad5eeb9ec7c020933e69e4ed4df"
+      }
+    ]
+  },
+  "schema_version": 1
+}

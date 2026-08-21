@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-natcast-dependency-audit-plan",
+  "state": "preregistered-before-single-nonrendering-reread-no-reconstruction-authority",
+  "policy_version": "int-fib-neg-natcast-dependency-audit-v1",
+  "inputs": {
+    "parent_result": {
+      "path": "artifacts/autogenesis/mathlib-int-fib-neg-dependency-audit-result-v1.json",
+      "sha256": "51207e379248e6af00095be478fe0963f157113bf2df757aa2a26c4804aeac9a"
+    },
+    "parent_audit": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-dependency-audit-v1/audit.json",
+      "sha256": "1b39ac55f6993a7a740c7dc88ae50a4d70cd798cfeff9944a077f06837173832"
+    },
+    "proof_bearing_stream": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-root-audit-v1/int-fib-neg.ndjson",
+      "bytes": 14596588,
+      "sha256": "7df7f5dce9c7159f9c468b6f47f13be3e589fb2c1559af554ce73cc48b18730e",
+      "mode": "0444",
+      "textual_read_allowed": false
+    }
+  },
+  "parent_root": "Int.fib_neg_natCast",
+  "ordered_roots": [
+    "Eq.trans",
+    "Even.neg_pow",
+    "Int.even_coe_nat._simp_1",
+    "Int.fib_of_odd",
+    "Int.natAbs_neg",
+    "Int.natCast_eq_zero._simp_1",
+    "Int.natCast_le_zero._simp_1",
+    "Int.odd_coe_nat._simp_1",
+    "Int.toNat_neg_natCast",
+    "Int.zero_le_neg_iff._simp_1",
+    "Nat.cast_zero",
+    "Nat.even_or_odd",
+    "Nat.fib_eq_zero._simp_1",
+    "Odd.add_one._simp_1",
+    "congr",
+    "congrArg",
+    "congrFun'",
+    "eq_self",
+    "eq_true",
+    "even_neg._simp_1",
+    "imp_self._simp_1",
+    "implies_congr",
+    "ite_cond_eq_true",
+    "ite_congr",
+    "ite_eq_right_iff._simp_1",
+    "mul_neg",
+    "mul_one",
+    "neg_mul",
+    "neg_neg",
+    "odd_neg._simp_1",
+    "of_eq_true",
+    "one_mul",
+    "one_pow",
+    "pow_add",
+    "pow_one",
+    "zero_eq_neg._simp_1"
+  ],
+  "fixed_measurement": {
+    "tool_path": "crates/axeyum-lean-import/examples/theorem_footprint_batch_audit.rs",
+    "tool_sha256": "38e40236fec86f1080af52bafb9394f9f1505ad161dae96e9c48979d00b1094a",
+    "tool_interface": "theorem_footprint_batch_audit <sealed-stream> <ordered-roots...>",
+    "proof_terms_types_or_values_may_be_rendered": false,
+    "every_root_must_resolve_as_theorem": true
+  },
+  "decision_rule": {
+    "next": "select the smallest parity-sign recurrence proof over empty-footprint roots and preregister explicit replacements for only indispensable contaminated roots",
+    "authorize_successor_in_this_increment": false
+  },
+  "budget": {
+    "max_exporter_invocations": 0,
+    "max_batch_importer_runs": 1,
+    "max_proof_bearing_stream_reads": 1,
+    "max_retries": 0,
+    "max_reconstruction_source_compilations": 0,
+    "max_new_theorem_submissions": 0,
+    "max_exact_target_submissions": 0,
+    "max_executor_invocations": 0
+  },
+  "authority": {
+    "proof_bodies_readable_by_model": false,
+    "theorem_types_readable_by_model": false,
+    "theorem_values_readable_by_model": false,
+    "reconstruction_allowed": false,
+    "support_theorem_credit": 0,
+    "fact_status_changes": 0,
+    "evaluation_credit": 0,
+    "ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-neg-natcast-dependency-audit-result-v1.json",
+  "verification": "python3 scripts/check-autogenesis-int-fib-neg-natcast-dependency-audit-plan.py"
+}

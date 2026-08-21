@@ -1,0 +1,75 @@
+{
+  "id": "R:kernel-theorem-axiom-footprint",
+  "notes": "THIS RECORD CARRIES NO CLAIMS, DELIBERATELY. theorem_axiom_footprint has no expectation flag: its main returns () and its exit status is 0 on completion whatever the numbers are, so nothing in the command makes the status depend on what the run found. Its output is used here as DATA (the spread table, and the per-theorem footprints in the inventory snapshot) and never as the evidence for a claim; the finding-dependent evidence is R:kernel-nat-axiom-inventory and R:kernel-inventory-cross-check. `outcome: inconclusive` records that this run establishes nothing on its own. Upstream wish: an --expect-axiom-free <prelude> flag.",
+  "outcome": "inconclusive",
+  "provenance": {
+    "command": "cargo run --release -q -p axeyum-lean-kernel --example theorem_axiom_footprint",
+    "epoch": {
+      "commit": "7805ef8b3187468be75109ed94d97fb9e9df2abd",
+      "source": "commit",
+      "unix": 1787288415
+    },
+    "exit_status": 0,
+    "generator": "crates/axeyum-lean-kernel/examples/theorem_axiom_footprint.rs",
+    "inputs": [
+      {
+        "path": "crates/axeyum-lean-kernel/examples/theorem_axiom_footprint.rs",
+        "role": "source",
+        "sha256": "fe79689583d45964a55d296f56a22fd006543e7fd953ab11eb1713611a0bf22a"
+      }
+    ]
+  },
+  "replay": {
+    "cwd": ".",
+    "expected_exit_status": 0,
+    "expected_seconds": 1,
+    "line": "cargo run --release -q -p axeyum-lean-kernel --example theorem_axiom_footprint"
+  },
+  "schema_version": 1,
+  "stats": {
+    "rows": 369
+  },
+  "summary": "Per-declaration axiom footprints for the nat, integer and real preludes, with the per-prelude spread the tool reports.",
+  "tables": {
+    "footprint-summary": {
+      "columns": [
+        "prelude",
+        "declarations",
+        "axiom-free",
+        "min",
+        "mean",
+        "max",
+        "trusted declarations in environment"
+      ],
+      "rows": [
+        [
+          "nat",
+          "139",
+          "139",
+          "0",
+          "0.0",
+          "0",
+          "0"
+        ],
+        [
+          "integer",
+          "198",
+          "198",
+          "0",
+          "0.0",
+          "0",
+          "0"
+        ],
+        [
+          "axreal",
+          "32",
+          "2",
+          "0",
+          "3.2",
+          "5",
+          "30"
+        ]
+      ]
+    }
+  }
+}
