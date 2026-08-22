@@ -801,6 +801,27 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   entry that keeps the syntax check and drops only the recompile. Use the
   harness. If you must loop by hand, `find . -name __pycache__ -exec rm -rf {} +`
   between iterations, and never trust two mutants that report the same dead test.
+- **A SUBAGENT THAT LAUNCHES A BACKGROUND JOB AND WAITS FOR IT STALLS, AND THE
+  HARNESS WILL NOT WAKE IT.** Measured 2026-08-22: three separate Sonnet lanes
+  finished their real work, launched a `cargo test` in the background as a final
+  check, and returned "waiting for the background test run" as their entire
+  report. Each had results in hand and reported none of them. Each needed an
+  explicit `SendMessage` to resume, costing minutes per incident and one full
+  round-trip of context.
+
+  This is the multi-agent form of the standing "run long gates in the FOREGROUND"
+  rule, and it bites harder for a subagent because a stalled subagent looks
+  *completed* to the coordinator — the task notification arrives with a
+  no-content result and nothing indicates the work is done but unreported.
+
+  So, when briefing a subagent: tell it to run checks in the foreground with an
+  explicit bounded timeout, and to report partial results rather than hold them
+  for completeness. And note that prebuilt binaries under
+  `target/release/examples/` run directly, take no cargo lock at all, and are the
+  right tool for measurement when several lanes are contending — a sweep that
+  queues behind three other lanes is what tempts an agent to background it in the
+  first place.
+
 - **A BACKGROUND TASK REPORTED AS EXITED MAY STILL BE RUNNING, AND IT WILL TAX
   EVERY MEASUREMENT YOU TAKE AFTERWARDS.** Found 2026-08-21: a `python3 -` from
   a session task started **2026-08-18 03:43**, whose output file recorded
