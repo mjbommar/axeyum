@@ -136,6 +136,7 @@ mod division;
 mod gcd;
 mod helpers;
 mod modular;
+mod no_confusion;
 mod ops;
 mod order;
 mod order_extra;
@@ -157,6 +158,7 @@ use divisibility::declare_divisibility;
 use division::declare_euclidean_division;
 use gcd::{declare_executable_gcd, declare_gcd_semantics};
 use modular::declare_modular_congruence;
+use no_confusion::declare_no_confusion;
 use order::declare_order;
 use order_extra::declare_order_extra;
 use primes::{declare_euclid, declare_primes};
@@ -226,6 +228,18 @@ pub struct NatPrelude {
     /// `Nat.sub : Nat → Nat → Nat`, truncated at zero and recursive in the
     /// second argument.
     pub sub: NameId,
+
+    /// `Nat.noConfusionType : Sort u -> Nat -> Nat -> Sort u` — generated
+    /// constructor disjointness/injectivity machinery (mirrors what Lean's
+    /// elaborator synthesizes for every inductive).
+    pub no_confusion_type: NameId,
+    /// `Nat.noConfusion : Π (P:Sort u) (n1 n2:Nat), n1 = n2 -> noConfusionType P n1 n2`.
+    pub no_confusion: NameId,
+    /// `Nat.succ_ne_zero : ∀ n, Not (Eq Nat (succ n) zero)`, proved via `noConfusion`.
+    pub succ_ne_zero: NameId,
+    /// `Nat.not_lt_zero : ∀ n, Not (Lt n zero)`, proved via `noConfusion` (not a
+    /// bespoke discriminator, unlike `not_succ_le_zero` above).
+    pub not_lt_zero: NameId,
 
     // --- executable division equations -------------------------------------
     /// `div_zero : ∀ n, div n zero = zero`.
@@ -717,6 +731,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             factorial: kernel.name_str(nat, "factorial"),
             pred: kernel.name_str(nat, "pred"),
             sub: kernel.name_str(nat, "sub"),
+            no_confusion_type: kernel.name_str(nat, "noConfusionType"),
+            no_confusion: kernel.name_str(nat, "noConfusion"),
+            succ_ne_zero: kernel.name_str(nat, "succ_ne_zero"),
+            not_lt_zero: kernel.name_str(nat, "not_lt_zero"),
             div_zero: kernel.name_str(nat, "div_zero"),
             mod_zero: kernel.name_str(nat, "mod_zero"),
             zero_div: kernel.name_str(nat, "zero_div"),
@@ -899,6 +917,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_multiplicative_theorems(&mut d, &p)?;
         declare_finite_sum_theorems(&mut d, &p)?;
         declare_order(&mut d, &p)?;
+        declare_no_confusion(&mut d, &p)?;
         declare_order_extra(&mut d, &p)?;
         declare_boolean_le(&mut d, &p)?;
         declare_euclidean_division(&mut d, &p)?;
