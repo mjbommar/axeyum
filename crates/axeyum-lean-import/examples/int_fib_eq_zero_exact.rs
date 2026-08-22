@@ -55,12 +55,9 @@ fn run() -> Result<(), String> {
     if optional_name(&kernel, TARGET)?.is_some() {
         return Err("exact target exists before construction".to_owned());
     }
-    let composed_residual = compose_checked_theorem_slice(
-        residual.kernel(),
-        &kernel,
-        &[NAT_ABS_ZERO, RESIDUAL],
-    )
-    .map_err(|error| format!("residual composition declined: {error:?}"))?;
+    let composed_residual =
+        compose_checked_theorem_slice(residual.kernel(), &kernel, &[NAT_ABS_ZERO, RESIDUAL])
+            .map_err(|error| format!("residual composition declined: {error:?}"))?;
     verify_checked_theorem_composition(
         residual.kernel(),
         &kernel,
@@ -124,10 +121,26 @@ fn run() -> Result<(), String> {
             return Err(format!("fresh target import {pass} changed evidence"));
         }
     }
-    let output_parent = paths[3].parent().ok_or(USAGE)?;
-    fs::create_dir(output_parent).map_err(|error| format!("output directory failed: {error}"))?;
-    fs::write(&paths[3], &bytes).map_err(|error| format!("target write failed: {error}"))?;
+    write_result(
+        &paths[3],
+        &bytes,
+        &[residual_receipt, nat_zero_receipt],
+        &specialization_receipt,
+        target_evidence,
+    )?;
+    Ok(())
+}
 
+fn write_result(
+    output: &Path,
+    bytes: &str,
+    composition_receipts: &[String],
+    specialization_receipt: &str,
+    target_evidence: Value,
+) -> Result<(), String> {
+    let output_parent = output.parent().ok_or(USAGE)?;
+    fs::create_dir(output_parent).map_err(|error| format!("output directory failed: {error}"))?;
+    fs::write(output, bytes).map_err(|error| format!("target write failed: {error}"))?;
     println!(
         "{}",
         serde_json::to_string_pretty(&json!({
@@ -135,10 +148,10 @@ fn run() -> Result<(), String> {
             "kind": "axeyum-int-fib-eq-zero-exact",
             "state": "exact-target-specialized-exported-and-twice-reimported-empty-footprint",
             "input_sha256": HASHES,
-            "composition_receipt_sha256": [residual_receipt, nat_zero_receipt],
+            "composition_receipt_sha256": composition_receipts,
             "specialization_receipt_sha256": specialization_receipt,
             "target": target_evidence,
-            "capsule": {"path": paths[3], "bytes": bytes.len(), "sha256": hex_sha256(bytes.as_bytes()), "fresh_imports": 2},
+            "capsule": {"path": output, "bytes": bytes.len(), "sha256": hex_sha256(bytes.as_bytes()), "fresh_imports": 2},
             "execution": {"complete_invocations": 1, "input_stream_reads": 3, "composition_operations": 2, "composition_replays": 2, "specializations": 1, "specialization_replays": 1, "target_exports": 1, "fresh_imports": 2, "retries": 0, "fact_status_changes": 0, "ledger_writes": 0},
             "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0}
         }))
@@ -148,21 +161,33 @@ fn run() -> Result<(), String> {
 }
 
 fn path(arguments: &mut impl Iterator<Item = std::ffi::OsString>) -> Result<PathBuf, String> {
-    arguments.next().map(PathBuf::from).ok_or_else(|| USAGE.to_owned())
+    arguments
+        .next()
+        .map(PathBuf::from)
+        .ok_or_else(|| USAGE.to_owned())
 }
 
-fn import_bound(path: &Path, expected: &str, label: &str) -> Result<axeyum_lean_import::CompletedImport, String> {
+fn import_bound(
+    path: &Path,
+    expected: &str,
+    label: &str,
+) -> Result<axeyum_lean_import::CompletedImport, String> {
     let bytes = fs::read(path).map_err(|error| format!("{label} read failed: {error}"))?;
     let actual = hex_sha256(&bytes);
     if actual != expected {
-        return Err(format!("{label} identity changed: expected {expected}, got {actual}"));
+        return Err(format!(
+            "{label} identity changed: expected {expected}, got {actual}"
+        ));
     }
     import_ndjson(Cursor::new(bytes), ImportLimits::default())
         .map_err(|error| format!("{label} import failed: {error:?}"))
 }
 
 fn evidence(kernel: &Kernel, theorem: NameId) -> Result<Value, String> {
-    if !matches!(kernel.environment().get(theorem), Some(Declaration::Theorem { .. })) {
+    if !matches!(
+        kernel.environment().get(theorem),
+        Some(Declaration::Theorem { .. })
+    ) {
         return Err(format!("{} is not a theorem", kernel.display_name(theorem)));
     }
     Ok(json!({
@@ -174,9 +199,13 @@ fn evidence(kernel: &Kernel, theorem: NameId) -> Result<Value, String> {
 }
 
 fn find_name(kernel: &Kernel, expected: &str) -> Result<NameId, String> {
-    let found = kernel.environment().iter().filter_map(|(&name, _)| {
-        (kernel.display_name(name).to_string() == expected).then_some(name)
-    }).collect::<Vec<_>>();
+    let found = kernel
+        .environment()
+        .iter()
+        .filter_map(|(&name, _)| {
+            (kernel.display_name(name).to_string() == expected).then_some(name)
+        })
+        .collect::<Vec<_>>();
     match found.as_slice() {
         [name] => Ok(*name),
         [] => Err(format!("declaration is absent: {expected}")),
@@ -193,21 +222,33 @@ fn optional_name(kernel: &Kernel, expected: &str) -> Result<Option<NameId>, Stri
 }
 
 fn nested_name(kernel: &mut Kernel, parts: &[&str]) -> NameId {
-    parts.iter().fold(kernel.anon(), |prefix, part| kernel.name_str(prefix, *part))
+    parts
+        .iter()
+        .fold(kernel.anon(), |prefix, part| kernel.name_str(prefix, *part))
 }
 
 fn names(kernel: &Kernel, values: &[NameId]) -> Vec<String> {
-    let mut rendered = values.iter().map(|&name| kernel.display_name(name).to_string()).collect::<Vec<_>>();
-    rendered.sort(); rendered
+    let mut rendered = values
+        .iter()
+        .map(|&name| kernel.display_name(name).to_string())
+        .collect::<Vec<_>>();
+    rendered.sort();
+    rendered
 }
 
 fn sorted(values: &[&str]) -> Vec<String> {
-    let mut rendered = values.iter().map(|value| (*value).to_owned()).collect::<Vec<_>>();
-    rendered.sort(); rendered
+    let mut rendered = values
+        .iter()
+        .map(|value| (*value).to_owned())
+        .collect::<Vec<_>>();
+    rendered.sort();
+    rendered
 }
 
 fn hex_sha256(bytes: &[u8]) -> String {
     let mut output = String::with_capacity(64);
-    for byte in Sha256::digest(bytes) { write!(&mut output, "{byte:02x}").expect("String writes cannot fail"); }
+    for byte in Sha256::digest(bytes) {
+        write!(&mut output, "{byte:02x}").expect("String writes cannot fail");
+    }
     output
 }
