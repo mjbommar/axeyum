@@ -16,9 +16,13 @@
       "mutation_kind": "polarity-reversal",
       "claim": "false",
       "check_kind": "factorial_polarity_reversed",
-      "witness": {"n": 0},
+      "witness": {
+        "n": 0
+      },
       "counterexample_explanation": "0! = 1 by the standard empty-product convention, so n.factorial = 0 fails at n = 0. (n.factorial != 0 for every n, so any n witnesses this; n = 0 is the smallest.)",
-      "verified_value": {"nat_factorial(0)": 1}
+      "verified_value": {
+        "nat_factorial(0)": 1
+      }
     },
     {
       "fact_id": "F:ml430-mutation-1432b2277cf2cc26c1d11cd6",
@@ -29,9 +33,13 @@
       "mutation_kind": "boundary-widening-biconditional",
       "claim": "false",
       "check_kind": "fib_widened",
-      "witness": {"n": 1},
+      "witness": {
+        "n": 1
+      },
       "counterexample_explanation": "Nat.fib 1 = 1, so the left side (fib n = 0) is false at n = 1, but the widened right side (n = 0 ∨ n = 1) is true at n = 1. A biconditional with one side true and the other false is false.",
-      "verified_value": {"nat_fib(1)": 1}
+      "verified_value": {
+        "nat_fib(1)": 1
+      }
     },
     {
       "fact_id": "F:ml430-mutation-48fe130e2b8eadb6f626b66f",
@@ -42,9 +50,14 @@
       "mutation_kind": "conclusion-strengthening",
       "claim": "false",
       "check_kind": "gcd_conclusion_strengthened",
-      "witness": {"x": 0, "y": 5},
+      "witness": {
+        "x": 0,
+        "y": 5
+      },
       "counterexample_explanation": "gcd(0, 5) = 5 ≠ 0, so the hypothesis holds, but x = 0 makes the strengthened conjunctive conclusion (x ≠ 0 ∧ y ≠ 0) false. (The original, un-mutated statement uses ∨ here, which this witness leaves true.)",
-      "verified_value": {"nat_gcd(0,5)": 5}
+      "verified_value": {
+        "nat_gcd(0,5)": 5
+      }
     },
     {
       "fact_id": "F:ml430-mutation-aabb80b1f89f0c5847364692",
@@ -55,9 +68,13 @@
       "mutation_kind": "boundary-widening-biconditional",
       "claim": "false",
       "check_kind": "fib_widened",
-      "witness": {"n": 1},
+      "witness": {
+        "n": 1
+      },
       "counterexample_explanation": "For nonnegative n, Int.fib n = Nat.fib n (the standard extension only changes the sign convention for negative n), so at n = 1 this is the same failure as the Nat.fib mutation: fib(1) = 1 ≠ 0 while n = 1 makes the widened right side true.",
-      "verified_value": {"nat_fib(1)": 1}
+      "verified_value": {
+        "nat_fib(1)": 1
+      }
     },
     {
       "fact_id": "F:ml430-mutation-aca37b68d3cdf06f0127def9",
@@ -68,9 +85,16 @@
       "mutation_kind": "premise-removal",
       "claim": "false",
       "check_kind": "modeq_premise_removed",
-      "witness": {"n": 2, "a": 0, "b": 1},
+      "witness": {
+        "n": 2,
+        "a": 0,
+        "b": 1
+      },
       "counterexample_explanation": "The premise 'a ≡ b [ZMOD n]' was removed, leaving an unconditional claim that ALL a, b are congruent mod every n. At n = 2, a = 0, b = 1: a % n = 0 and b % n = 1, which differ, so b ≡ a [ZMOD 2] is false.",
-      "verified_value": {"0 % 2": 0, "1 % 2": 1}
+      "verified_value": {
+        "0 % 2": 0,
+        "1 % 2": 1
+      }
     },
     {
       "fact_id": "F:ml430-mutation-5179f333b8333ecff8adc223",
@@ -81,9 +105,14 @@
       "mutation_kind": "bound-strengthening",
       "claim": "false",
       "check_kind": "prime_pred_bound_strengthened",
-      "witness": {"p": 2},
+      "witness": {
+        "p": 2
+      },
       "counterexample_explanation": "p = 2 is prime, so the hypothesis holds. p.pred = 1, and the strengthened conclusion needs 1 < p.pred, i.e. 1 < 1, which is false. (The original statement only needed 0 < p.pred, which 1 satisfies.)",
-      "verified_value": {"is_prime(2)": true, "nat_pred(2)": 1}
+      "verified_value": {
+        "is_prime(2)": true,
+        "nat_pred(2)": 1
+      }
     },
     {
       "fact_id": "F:ml430-mutation-a6dd1759bce60d820292e107",
@@ -94,9 +123,15 @@
       "mutation_kind": "operator-substitution",
       "claim": "false",
       "check_kind": "bitwise_operator_substituted",
-      "witness": {"n": 1, "m": 0},
+      "witness": {
+        "n": 1,
+        "m": 0
+      },
       "counterexample_explanation": "1 ||| 0 (bitwise OR) = 1, and 1 &&& 0 (bitwise AND) = 0. 1 ≠ 0, so the substituted-operator equality fails. (The original statement compares n ||| m to m ||| n, i.e. commutativity of OR, which this witness does not bear on.)",
-      "verified_value": {"1|0": 1, "1&0": 0}
+      "verified_value": {
+        "1|0": 1,
+        "1&0": 0
+      }
     },
     {
       "fact_id": "F:ml430-mutation-c20db9b4c60b816ce738bdf2",
@@ -107,9 +142,14 @@
       "mutation_kind": "polarity-reversal",
       "claim": "false",
       "check_kind": "coprime_polarity_reversed",
-      "witness": {"a": 0, "b": 0},
+      "witness": {
+        "a": 0,
+        "b": 0
+      },
       "counterexample_explanation": "Nat.Coprime a b is defined as gcd a b = 1. gcd(0, 0) = 0 by the standard convention (gcd 0 n = n), and 0 ≠ 1, so Nat.Coprime 0 0 is false. (The un-mutated original states the negation, ¬Nat.Coprime 0 0, which this same fact confirms.)",
-      "verified_value": {"nat_gcd(0,0)": 0}
+      "verified_value": {
+        "nat_gcd(0,0)": 0
+      }
     },
     {
       "fact_id": "F:ml430-mutation-c86940b52af8159ca9b381d6",
@@ -120,9 +160,25 @@
       "mutation_kind": "premise-removal",
       "claim": "false",
       "check_kind": "modeq_premise_removed",
-      "witness": {"n": 2, "a": 0, "b": 1},
+      "witness": {
+        "n": 2,
+        "a": 0,
+        "b": 1
+      },
       "counterexample_explanation": "Same shape as the Int.ModEq.symm mutation, over ℕ instead of ℤ: the premise was removed, and at n = 2, a = 0, b = 1, a % n = 0 while b % n = 1, so b ≡ a [MOD 2] is false.",
-      "verified_value": {"0 % 2": 0, "1 % 2": 1}
+      "verified_value": {
+        "0 % 2": 0,
+        "1 % 2": 1
+      }
     }
-  ]
+  ],
+  "independent_audit": {
+    "date": "2026-08-22",
+    "method": "each witness recomputed from scratch in plain Python using the language's own math.factorial / math.gcd / % / | / &, independently of the derivation that produced this file",
+    "positive_control": "12 known-answer cases (factorial 0 and 5, descFactorial 5 1, ascFactorial 1 3, fib 10, gcd 0 0, gcd 0 5, pred 2, 1|0, 1&0, 0%2, 1%2) all matched their expected values",
+    "negative_control": "the TRUE statement forall n, descFactorial n 0 = 1 yields zero counterexamples over n < 20 -- a method that refutes everything would prove nothing",
+    "hypothesis_check": "two entries are implications whose witness must SATISFY the hypothesis before the conclusion can refute anything -- gcd(0,5) != 0 holds, and Prime 2 holds -- and both were confirmed rather than assumed",
+    "entries_refuted": 9,
+    "disagreements": 0
+  }
 }
