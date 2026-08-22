@@ -627,6 +627,27 @@ pub struct CRealPrelude {
     /// already stronger than the one index `CReal.le`'s definition asks for,
     /// and no case split on `x`'s sign, and no search over `n`, is needed.
     pub archimedean: NameId,
+
+    // --- density of ℚ in ℝ (ADR-0512 phase R6) --------------------------------
+    /// `CReal.rat_approx_upper : ∀ x n, CReal.le x (CReal.ofRat (Rat.add
+    /// (CReal.seq x n) (Rat.natDivSucc 1 n)))`.
+    ///
+    /// `seq x n` plus one modulus is an upper rational bound on `x`, proved
+    /// directly from regularity at `(k, n)` with **no** `CReal.add`,
+    /// `CReal.neg` or `CReal.abs` — see [`density`](self::density) for why
+    /// that shortcut is available here and not for `CReal.add`'s own laws.
+    pub rat_approx_upper: NameId,
+    /// `CReal.rat_approx_lower : ∀ x n, CReal.le (CReal.ofRat (Rat.sub
+    /// (CReal.seq x n) (Rat.natDivSucc 1 n))) x` — the mirror of
+    /// [`Self::rat_approx_upper`], read off regularity at `(n, k)`.
+    pub rat_approx_lower: NameId,
+    /// `CReal.density : ∀ x n, ∃ q : Rat, CReal.le x (CReal.ofRat (Rat.add q
+    /// (Rat.natDivSucc 1 n))) ∧ CReal.le (CReal.ofRat (Rat.sub q
+    /// (Rat.natDivSucc 1 n))) x`.
+    ///
+    /// **Density of ℚ in ℝ**, packaged: [`Self::rat_approx_upper`] and
+    /// [`Self::rat_approx_lower`] at the witness `q := seq x n`.
+    pub density: NameId,
 }
 
 impl CRealPrelude {
@@ -777,6 +798,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         not_equiv_abs_neg_one: kernel.name_str(creal, "not_equiv_abs_neg_one"),
         of_nat: kernel.name_str(creal, "ofNat"),
         archimedean: kernel.name_str(creal, "archimedean"),
+        rat_approx_upper: kernel.name_str(creal, "rat_approx_upper"),
+        rat_approx_lower: kernel.name_str(creal, "rat_approx_lower"),
+        density: kernel.name_str(creal, "density"),
     }
 }
 
@@ -844,7 +868,8 @@ pub(crate) fn build_creal_prelude_uncached(
         field::declare_field(&mut d, prelude)?;
         inverse::declare_inverse(&mut d, prelude)?;
         lattice::declare_lattice(&mut d, prelude)?;
-        archimedean::declare_archimedean(&mut d, prelude)
+        archimedean::declare_archimedean(&mut d, prelude)?;
+        density::declare_density(&mut d, prelude)
     })();
     match built {
         Ok(()) => {
@@ -1758,6 +1783,7 @@ fn declare_discrimination(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
 }
 
 mod archimedean;
+mod density;
 mod field;
 mod inverse;
 mod lattice;
