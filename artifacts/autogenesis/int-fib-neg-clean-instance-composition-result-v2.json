@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-clean-instance-composition-result",
+  "state": "superseded-before-driver-code-on-absent-output-parent",
+  "plan": "artifacts/autogenesis/int-fib-neg-clean-instance-composition-plan-v2.json",
+  "preflight": {
+    "output": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-clean-v1/root.ndjson",
+    "output_present": false,
+    "output_parent_present": false
+  },
+  "execution": {
+    "driver_constructions": 0,
+    "focused_builds": 0,
+    "ndjson_imports": 0,
+    "support_compositions": 0,
+    "target_leaf_compositions": 0,
+    "target_submissions": 0,
+    "capsule_writes": 0,
+    "ledger_writes": 0,
+    "retries": 0
+  },
+  "authority": {
+    "support_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0
+  },
+  "next": "Freeze exact output-parent creation in V3 before constructing the driver or importing proof-bearing streams."
+}

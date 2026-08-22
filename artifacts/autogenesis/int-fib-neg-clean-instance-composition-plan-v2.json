@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-clean-instance-composition-plan",
+  "state": "preregistered-hash-correction-before-driver-code",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-fib-neg-clean-instance-composition-result-v1.json",
+    "required_state": "declined-before-driver-code-on-preregistered-input-hash-mismatch"
+  },
+  "correction": {
+    "field": "inputs.clean_natcast.sha256",
+    "from": "6c803eff520a62d6925db5ed30f78714d9923281becfd78239cc59907deb087",
+    "to": "6c803eff520a62d6925db5ed30f78714d9923281becfd78239cc28278bc9159f",
+    "proof_method_changed": false
+  },
+  "inputs": {
+    "official_target": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-root-audit-v1/int-fib-neg.ndjson",
+      "sha256": "7df7f5dce9c7159f9c468b6f47f13be3e589fb2c1559af554ce73cc48b18730e",
+      "root": "Int.fib_neg"
+    },
+    "clean_natcast": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-natcast-decision-free-exact-v1/exact.ndjson",
+      "sha256": "6c803eff520a62d6925db5ed30f78714d9923281becfd78239cc28278bc9159f",
+      "root": "Int.fib_neg_natCast"
+    },
+    "clean_decision": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-decision-clean-v1/root.ndjson",
+      "sha256": "29053dba3b90cecf5a70ba347ea7dba81a19990f715e69d5fc0a1c60cb9a6c07",
+      "exact_instance": "Int.instDecidablePredEven",
+      "clean_iff": "Int.even_iff"
+    }
+  },
+  "method": "Compose and replay clean Int.fib_neg_natCast into the clean decision kernel. Then compose official Int.fib_neg with explicit target theorem leaves Int.fib_neg_natCast and Int.even_iff, replay the target-leaf receipt, require exact same-name decision-instance identity, exact clean leaf identities, empty final target footprint, root-export, and freshly import twice before fail-if-present write.",
+  "driver": "crates/axeyum-lean-import/examples/int_fib_neg_clean_instance_composition.rs",
+  "output": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-clean-v1/root.ndjson",
+  "budget": {
+    "driver_constructions": 1,
+    "focused_builds": 1,
+    "complete_invocations": 1,
+    "input_stream_reads": 3,
+    "support_compositions": 1,
+    "support_replays": 1,
+    "target_leaf_compositions": 1,
+    "target_leaf_replays": 1,
+    "target_submissions": 1,
+    "fresh_target_imports": 2,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "target": "Int.fib_neg",
+    "target_footprint": [],
+    "target_leaves_exact": [
+      "Int.even_iff",
+      "Int.fib_neg_natCast"
+    ],
+    "decision_instance_declaration_sha256": "c01ed8edfc717e6cc0119a5c824cf94ad6fd1fb0b322487a28036b41b0713c61",
+    "clean_natcast_declaration_sha256": "db090b11cf74c91607d5d0aabe43d364f9260c41f7de6bcd460cc59907deb087",
+    "clean_even_iff_declaration_sha256": "6ec4a6f5577bc3602d13ff02907469045f0987323f6f9f84f8c4b7b23c243c13",
+    "fresh_import_evidence_unchanged": true
+  },
+  "stop_rule": "Any input mismatch, support/target-leaf decline, missing receipt, identity drift, nonempty target footprint, replay change, or preexisting output stops without retry or ledger authority.",
+  "output_result": "artifacts/autogenesis/int-fib-neg-clean-instance-composition-result-v2.json",
+  "limitations": "Exact theorem construction only; canonical goal audit, operation registration, crash-safe admission, immutable archive, isolated replay, and unlock measurement remain separate."
+}
