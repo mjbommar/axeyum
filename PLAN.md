@@ -280,6 +280,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | V3 reaches `NoAdditions` because clean decision already contains `intNegNatDoubleV2`; exact two-stream reuse qualification is frozen before replacing that edge |
 | 2026-08-21 | (pending) | Two-stream audit proves `intNegNatDoubleV2` exact-declaration identical and empty-footprint in the target; V4 freezes exact reuse in place of composition |
 | 2026-08-21 | (pending) | V4 exact-reuse driver passes focused Clippy with all streams unread; one fail-if-present invocation remains |
+| 2026-08-21 | (pending) | V4 specializes, replays, exports, and twice reimports four concrete parity supports empty-footprint; both concrete Fibonacci constructor branches are frozen next |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
