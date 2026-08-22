@@ -140,3 +140,41 @@ irrelevant (anything that bounds moduli) and where a proof must look
   quantum computations implies collapse of the polynomial hierarchy," Proc.
   R. Soc. A 467 (2011).
 - N. M. Katz, "Witt vectors and a question of Keating and Rudnick," IMRN 2013.
+
+## 5. Barrier lemma: moduli-only inputs cannot prove (REL)
+
+Fix `ell`, `n`, `a = ell - ceil(log2 ell) - 1`, `K = ker(E_ell -> E_{a-1})`,
+and let `m(g)` be the cylinder-mean population (the inverse transform of the
+true Fourier coefficients of conductor `< a`, i.e. `N_{a-1}(class of g)/|K|`,
+nonnegative). Put `c = m(1)/(1 - 2^{a-1-ell})` and
+
+```text
+F(g) = m(g) + c ( 2^{a-1-ell} 1_K(g) - delta_{g,1} ).
+```
+
+Then `F >= 0` (`F(1) = 0`, `F(g) = m(g) + c 2^{a-1-ell} > 0` on `K\{1}`,
+`F = m` off `K`), `sum F = 2^n`, `F^hat(chi) = N^hat(chi)` for every `chi` of
+conductor `< a`, `F^hat(chi) = -c` for every `chi` of conductor `>= a`, so
+`|F^hat(chi)| ~ 2^{n-ell} <= (a-1) 2^{ceil(n/2)} < (cond(chi)-1)
+2^{ceil(n/2)}` for all high conductors (inside Weil by a factor about `a`),
+and the second moment of `F` is below that of `N` (measured ratio `0.22,
+0.15, 0.12` at `(ell,n) = (12,25), (16,33), (20,41)`, construction verified
+numerically with `F(1) = 0` and `min F = 0`). `F` is a legitimate function
+on `E_ell` satisfying every hypothesis of the form: total mass,
+nonnegativity, exact low-conductor populations, per-character Weil bounds on
+the Fourier moduli, bounds on low moments. Since `F(1) = 0`, no argument that
+uses only hypotheses of that form can prove `N_ell(1) > 0`, let alone
+`(REL)`. Any proof must use that `N` is a Lambda-weighted prime count beyond
+its Fourier moduli -- i.e. phase information across the family. This is the
+rigorous content of the uncertainty reading above and the population-level
+form of the `Q^k` obstruction in note 02 (shape B). It is a barrier for a
+class of methods, not an independence result: the conjecture is almost
+certainly true, and a phase-aware input is not blocked.
+
+Read with the row/column/diagonal picture: "rows" (conductor fixed, degree
+growing) are provable by RH and Deligne's horizontal equidistribution;
+"columns" (degree fixed, `q` growing) by Katz's vertical equidistribution;
+at fixed `q` everything with `j <= n/2 - log2 n` is provable by Weil and
+orthogonality, and the strip `j ~ n/2` -- where the Donoho--Stark product is
+saturated and the RH degree factor `j-1` enters -- contains Lemire
+(`j = n/2 - 1`) and no theorem.
