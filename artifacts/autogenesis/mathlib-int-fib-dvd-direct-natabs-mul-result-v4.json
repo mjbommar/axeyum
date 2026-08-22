@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-direct-natabs-mul-result-v4",
+  "state": "direct-four-branch-source-compiles-without-rejected-helpers",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-direct-natabs-mul-plan-v4.json",
+    "sha256": "bf0191442e2ebee35d06bf2050eaf3ac4d836cdb1976eba0c30ac034254dea57"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-natabs-mul-direct-v1.lean",
+    "sha256": "e489d0f55bf66208536c1185d506a3cf43f7350aaf730c0eb7a69cb2d64ebd4e",
+    "private_support": "intNatAbsNegOfNatDirectV1",
+    "target": "Axeyum.Autogenesis.intNatAbsMulDirectV1",
+    "forbidden_dependency_mentions": 0
+  },
+  "execution": {
+    "source_rewrites": 1,
+    "compile_invocations": 1,
+    "compiler_exit_status": 0,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "retries": 0,
+    "target_fib_dvd_submissions": 0,
+    "ledger_writes": 0
+  },
+  "decision": {
+    "source_compile_credit": 1,
+    "theorem_credit": 0,
+    "next_boundary": "export twice and require byte identity, empty root footprint, and absence of every rejected helper"
+  }
+}
