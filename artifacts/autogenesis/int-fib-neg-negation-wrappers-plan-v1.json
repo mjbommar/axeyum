@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-negation-wrappers-plan",
+  "state": "preregistered-before-source-construction",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-fib-neg-parity-adapters-result-v1.json",
+    "required_state": "three-parameterized-parity-adapters-reproduced-empty-footprint"
+  },
+  "roots": {
+    "neg_add": "forall a b : Int, -(a+b) = -a + -b, wrapped directly from SubtractionMonoid.neg_add_rev",
+    "neg_neg": "forall x : Int, -(-x) = x, wrapped directly from neg_neg"
+  },
+  "source": "artifacts/autogenesis/sources/int-fib-neg-negation-wrappers-v1.lean",
+  "evidence_pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-negation-wrappers-v1",
+  "budget": {
+    "directory_creations": 1,
+    "source_constructions": 1,
+    "source_stagings": 1,
+    "module_builds": 1,
+    "exports": 2,
+    "root_audits": 1,
+    "retries": 0,
+    "composition_operations": 0,
+    "exact_target_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "roots": [
+      "Axeyum.Autogenesis.intNegAddV1",
+      "Axeyum.Autogenesis.intNegNegV1"
+    ],
+    "exports_byte_identical": true,
+    "axiom_footprints": [],
+    "proof_terms_types_or_values_rendered": 0
+  },
+  "stop_rule": "Any construction, staging, elaboration, export, determinism, nonempty footprint, or audit failure stops without retry or theorem/ledger authority.",
+  "output_result": "artifacts/autogenesis/int-fib-neg-negation-wrappers-result-v1.json",
+  "next_on_accept": "Compose wrappers, exact Int.even_iff, and parity residuals; specialize the three concrete parity adapters and export them cleanly.",
+  "limitations": "Negation wrappers alone grant no parity branch, Fibonacci target, fact, or ledger credit."
+}

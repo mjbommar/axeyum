@@ -266,6 +266,8 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | V2 target-leaf driver stops before stream access on Clippy's 103-line function threshold; V3 freezes only one scoped line-count allowance |
 | 2026-08-21 | (pending) | V3 adds only the scoped allowance and passes focused Clippy with all proof streams unread; one clean-`even_iff` target-leaf invocation remains |
 | 2026-08-21 | (pending) | Clean-`even_iff` target-leaf composition yields a 756,528-byte empty-footprint generic outer residual with replay and two fresh imports; both constructor branch residuals are frozen next |
+| 2026-08-21 | (pending) | Both parameterized constructor branches compile and export twice byte-identically on the first proof attempt; positive-cast and negation parity adapters are frozen next |
+| 2026-08-21 | (pending) | All three parity adapters compile, reproduce, and audit empty-footprint in a 382,856-byte capsule; exact integer negation wrappers are frozen before specialization |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
