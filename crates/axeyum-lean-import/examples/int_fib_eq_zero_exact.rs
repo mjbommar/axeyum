@@ -126,7 +126,7 @@ fn run() -> Result<(), String> {
         &bytes,
         &[residual_receipt, nat_zero_receipt],
         &specialization_receipt,
-        target_evidence,
+        &target_evidence,
     )?;
     Ok(())
 }
@@ -136,7 +136,7 @@ fn write_result(
     bytes: &str,
     composition_receipts: &[String],
     specialization_receipt: &str,
-    target_evidence: Value,
+    target_evidence: &Value,
 ) -> Result<(), String> {
     let output_parent = output.parent().ok_or(USAGE)?;
     fs::create_dir(output_parent).map_err(|error| format!("output directory failed: {error}"))?;

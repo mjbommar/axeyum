@@ -20,6 +20,7 @@
 | 2026-08-22 | (pending) | Exact `Int.fib_eq_zero` specialization is frozen over three sealed inputs, two checked compositions, five arguments, and a four-theorem dependency contract before driver code or stream access |
 | 2026-08-22 | (pending) | Exact driver typechecks but Clippy stops at 105 lines before stream access; V2 freezes only output serialization extraction with the proof route and counters unchanged |
 | 2026-08-22 | (pending) | Helper extraction clears the line limit; V3 freezes one shared-reference correction for the serialization-only evidence argument before another focused compile |
+| 2026-08-22 | (pending) | Shared-reference correction passes focused Clippy; one no-retry execution is frozen over three reads, two checked compositions, one specialization, and zero ledger writes |
 
 | 2026-08-21 | (pending) | The newly ready `Int.gcd_fib` route is frozen through one target-owned Fibonacci/natAbs bridge and the two exact admitted premise capsules before source construction or proof-stream access |
 | 2026-08-21 | (pending) | Closure analysis corrects the bridge boundary before execution: export a dependency-free two-parameter residual, then specialize it with exact clean `Int.fib_neg` and `Int.natAbs_neg` roots |
