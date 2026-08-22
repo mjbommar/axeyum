@@ -832,6 +832,22 @@ struct Search {
     /// entirely different candidate reached after a failed nested
     /// induction). Consulted only by [`Search::try_absurd_elimination`].
     local_hyps: Vec<(u64, ExprId)>,
+    /// Induction hypotheses that [`instantiate_hypothesis`] could not carry
+    /// forward past a plain-generalization step because the newly
+    /// introduced binder's domain was NOT the same type as the hypothesis's
+    /// own leading `Pi` domain (a genuine shape mismatch, e.g. the
+    /// hypothesis's domain still names the induction's own predecessor
+    /// while the goal's fresh binder names the successor) — retained
+    /// UNAPPLIED, still carrying its own leading `Pi`, rather than dropped.
+    /// Consulted only by [`Search::try_case_split_elimination`]: once a
+    /// case split recovers a value at exactly the predecessor the
+    /// hypothesis's domain names, the hypothesis becomes applicable again.
+    /// Pushed by the plain-generalization branch of [`Search::attempt`]
+    /// right before recursing and truncated back immediately after —
+    /// regardless of outcome — with the exact same per-branch scoping
+    /// discipline as [`Search::local_hyps`], so a stuck hypothesis from one
+    /// branch never leaks into a sibling.
+    stuck_hyps: Vec<Hypothesis>,
 }
 
 impl Search {
@@ -893,6 +909,7 @@ impl Search {
             );
             return self
                 .try_absurd_elimination(kernel, target)
+                .or_else(|| self.try_case_split_elimination(kernel, goal))
                 .ok_or(DeclineReason::TerminalNotDefEqNoRewrite);
         };
         // Try deriving the rewrite "wrap" `f` by abstracting every occurrence
@@ -955,6 +972,7 @@ impl Search {
             goal.rhs,
         );
         self.try_absurd_elimination(kernel, target)
+            .or_else(|| self.try_case_split_elimination(kernel, goal))
             .ok_or(DeclineReason::TerminalNotDefEqNoRewrite)
     }
 
@@ -1272,6 +1290,468 @@ impl Search {
         }
         if debug {
             eprintln!("  [absurd] SUCCESS");
+        }
+        Some(applied)
+    }
+
+    /// `Eq.rec`-based transport: given `p_at_base : P(base)` — where
+    /// `p_body` is the de-Bruijn-abstracted body of `P`, i.e. exactly what
+    /// [`Kernel::abstract_fvars`] produces — and `h : Eq carrier base
+    /// target_point`, build a proof of `P(target_point)`. The generic form
+    /// of [`Search::build_eq_trans`]/[`Search::build_eq_symm`]/
+    /// [`Search::build_congr_arg`]: those all specialize `P` to another
+    /// `Eq`; this one takes an arbitrary abstracted predicate, which
+    /// [`Search::try_case_split_elimination`] needs to move a proof between
+    /// the two predecessor-shaped positions a case split produces.
+    #[allow(clippy::too_many_arguments)]
+    fn build_transport(
+        &mut self,
+        kernel: &mut Kernel,
+        level: LevelId,
+        carrier: ExprId,
+        base: ExprId,
+        target_point: ExprId,
+        p_body: ExprId,
+        p_at_base: ExprId,
+        h: ExprId,
+    ) -> ExprId {
+        let anon = kernel.anon();
+        let x_fv = self.fresh_fvar();
+        let x = kernel.fvar(x_fv);
+        let p_at_x = kernel.instantiate(p_body, &[x]);
+        let hyp_ty = build_eq(kernel, self.eqp_eq, level, carrier, base, x);
+        let inner = kernel.lam(anon, hyp_ty, p_at_x, BinderInfo::Default);
+        let motive = lam_fv(kernel, anon, x_fv, carrier, inner, BinderInfo::Default);
+        let z = kernel.level_zero();
+        let rec = kernel.const_(self.eqp_rec, vec![z, level]);
+        let with_carrier = kernel.app(rec, carrier);
+        let with_base = kernel.app(with_carrier, base);
+        let with_motive = kernel.app(with_base, motive);
+        let with_minor = kernel.app(with_motive, p_at_base);
+        let with_target = kernel.app(with_minor, target_point);
+        kernel.app(with_target, h)
+    }
+
+    /// Maximum number of retained local hypotheses ([`Search::local_hyps`])
+    /// [`Search::try_case_split_elimination`] will try, most-recently-
+    /// introduced first, for one stuck terminal goal. Same bound and
+    /// rationale as [`Search::MAX_ABSURD_HYPOTHESES`].
+    const MAX_CASE_SPLIT_HYPOTHESES: usize = MAX_BINDERS;
+
+    /// Try to close `goal` via a genuine case split on a local hypothesis
+    /// whose type unfolds to a [`LeShape`]-shaped indexed family at a
+    /// SUCC-shaped index — as opposed to [`Search::try_absurd_elimination`]'s
+    /// zero-shaped index, where the family is provably uninhabited. Here the
+    /// family CAN be inhabited either way, so both of its own constructors
+    /// are consumed rather than one being ruled out: `family param (succ
+    /// k)` came either from the family's own "at-param" constructor
+    /// (forcing `param`'s own predecessor to equal `k`) or its "step"
+    /// constructor (handing back `family param k` directly, one index
+    /// smaller). Purely shape-driven — nothing here names `Nat.lt`,
+    /// `Nat.le`, or any target declaration; the only target-shaped
+    /// ingredient consulted is [`Search::stuck_hyps`], itself populated
+    /// structurally by [`Search::attempt`] whenever a live induction
+    /// hypothesis could not be carried forward past a plain generalization
+    /// step because its domain still names a different index.
+    fn try_case_split_elimination(&mut self, kernel: &mut Kernel, goal: EqGoal) -> Option<ExprId> {
+        if std::env::var("BIS_DEBUG").is_ok() {
+            eprintln!(
+                "  [case-split] try_case_split_elimination: {} local hyps, {} stuck hyps",
+                self.local_hyps.len(),
+                self.stuck_hyps.len()
+            );
+        }
+        let mut budget = Self::MAX_CASE_SPLIT_HYPOTHESES;
+        for i in (0..self.local_hyps.len()).rev() {
+            if budget == 0 {
+                break;
+            }
+            budget -= 1;
+            let (fv, ty) = self.local_hyps[i];
+            if let Some(proof) = self.try_case_split_from_hypothesis(kernel, fv, ty, goal) {
+                return Some(proof);
+            }
+        }
+        None
+    }
+
+    /// One candidate hypothesis for [`Search::try_case_split_elimination`];
+    /// see that method's doc for the shape being matched. Builds the
+    /// candidate and then independently confirms its INFERRED type is
+    /// exactly `goal` before returning it — same discipline as
+    /// [`Search::try_absurd_from_hypothesis`].
+    #[allow(clippy::too_many_lines, clippy::similar_names)]
+    fn try_case_split_from_hypothesis(
+        &mut self,
+        kernel: &mut Kernel,
+        hyp_fv: u64,
+        hyp_ty: ExprId,
+        goal: EqGoal,
+    ) -> Option<ExprId> {
+        let debug = std::env::var("BIS_DEBUG").is_ok();
+        let hyp_whnf = kernel.whnf(hyp_ty);
+        let (head, args) = app_spine(kernel, hyp_whnf);
+        let ExprNode::Const(family, levels) = kernel.expr_node(head).clone() else {
+            return None;
+        };
+        if args.len() != 2 {
+            return None;
+        }
+        let le_shape = detect_le_shape(self, kernel, family)?;
+        let (param, idx_val) = (args[0], args[1]);
+
+        // The hypothesis's own index must be STRUCTURALLY succ-shaped —
+        // exactly the case left open once try_absurd_elimination's
+        // zero-index case has already been tried (by the caller) and
+        // failed.
+        let idx_whnf = kernel.whnf(idx_val);
+        let (idx_head, idx_args) = app_spine(kernel, idx_whnf);
+        let ExprNode::Const(idx_succ, _) = kernel.expr_node(idx_head).clone() else {
+            return None;
+        };
+        if idx_succ != le_shape.idx_shape.succ_ctor || idx_args.len() != 1 {
+            return None;
+        }
+        let k_pred = idx_args[0];
+
+        // The parameter must ALSO be structurally succ-shaped — the same
+        // requirement try_absurd_elimination makes of it, and for the same
+        // reason: it is what makes the family's own "at-param" constructor
+        // type reduce to something usable via idx_shape's recursor rather
+        // than getting stuck on an opaque parameter.
+        let param_whnf = kernel.whnf(param);
+        let (param_head, param_args) = app_spine(kernel, param_whnf);
+        let ExprNode::Const(param_succ, _) = kernel.expr_node(param_head).clone() else {
+            return None;
+        };
+        if param_succ != le_shape.idx_shape.succ_ctor || param_args.len() != 1 {
+            return None;
+        }
+        let n_pred = param_args[0];
+
+        // Find a retained stuck hypothesis ([`Search::stuck_hyps`]) whose
+        // own leading `Pi` domain is exactly `family param k_pred` — the
+        // predecessor this case split actually recovers.
+        let target_domain = {
+            let fam_c = kernel.const_(family, levels.clone());
+            let with_param = kernel.app(fam_c, param);
+            kernel.app(with_param, k_pred)
+        };
+        let mut matched_ih = None;
+        for stuck in self.stuck_hyps.iter().rev() {
+            let ExprNode::Pi(_, domain_ty, body, _) = kernel.expr_node(stuck.stmt).clone() else {
+                continue;
+            };
+            if kernel.def_eq(domain_ty, target_domain) {
+                matched_ih = Some((stuck.proof, body));
+                break;
+            }
+        }
+        let Some((ih_proof, ih_body)) = matched_ih else {
+            if debug {
+                eprintln!("  [case-split] no matching stuck hypothesis for predecessor");
+            }
+            return None;
+        };
+
+        // The carrier level for equalities between two index-typed values —
+        // read off the index type's own inferred sort, never assumed.
+        let Ok(idx_sort) = kernel.infer(le_shape.idx_ty) else {
+            if debug {
+                eprintln!("  [case-split] infer(idx_ty) failed");
+            }
+            return None;
+        };
+        let idx_sort_whnf = kernel.whnf(idx_sort);
+        let ExprNode::Sort(idx_level) = kernel.expr_node(idx_sort_whnf).clone() else {
+            if debug {
+                eprintln!(
+                    "  [case-split] idx_ty sort not Sort: {}",
+                    kernel.render_lean(idx_sort_whnf)
+                );
+            }
+            return None;
+        };
+
+        let anon = kernel.anon();
+        let level_zero = kernel.level_zero();
+        let level_one = kernel.level_succ(level_zero);
+        let eqp_eq = self.eqp_eq;
+        let eqp_refl = self.eqp_refl;
+
+        let target = build_eq(kernel, eqp_eq, goal.level, goal.carrier, goal.lhs, goal.rhs);
+
+        // Narrow `target` to its point of dependence on `n_pred`: abstract
+        // every occurrence of `n_pred` inside `target` into a placeholder,
+        // giving a reusable de-Bruijn body `p_body` such that
+        // `p_body[x := n_pred]` is `target` again and `p_body[x := k_pred]`
+        // is the same statement at the predecessor the case split recovers.
+        let placeholder_fv = self.fresh_fvar();
+        let placeholder = kernel.fvar(placeholder_fv);
+        let mut kb = MAX_KABSTRACT_NODES;
+        let (replaced, found) = kabstract_occurrences(kernel, target, n_pred, placeholder, &mut kb);
+        if !found {
+            if debug {
+                eprintln!("  [case-split] n_pred does not occur in target");
+            }
+            return None;
+        }
+        let p_body = kernel.abstract_fvars(replaced, &[placeholder_fv]);
+        let p_at_k_pred = kernel.instantiate(p_body, &[k_pred]);
+        let Ok(p_at_k_pred_goal) = parse_eq_goal(kernel, self.eqp_eq, p_at_k_pred) else {
+            if debug {
+                eprintln!("  [case-split] predecessor statement is not an Eq application");
+            }
+            return None;
+        };
+
+        // Prove the predecessor-shaped statement as its own self-contained
+        // side quest via [`Search::prove_universal_identity`] — critically,
+        // that re-GENERALIZES `k_pred` (and anything else free in it) back
+        // into a fresh `Pi`, which is what lets the nested search induct on
+        // it; calling `attempt` directly on the already-fixed `k_pred`
+        // could never induct (there would be no leading `Pi` left to
+        // peel). Shares, never adds to, the outer derivation's
+        // binder/induction budget. The currently-being-processed hypothesis
+        // is temporarily removed from `local_hyps` so this nested search
+        // cannot re-select it and recurse into case-splitting on itself.
+        let removed_at = self.local_hyps.iter().position(|&(fv, _)| fv == hyp_fv);
+        if let Some(pos) = removed_at {
+            self.local_hyps.remove(pos);
+        }
+        let result = self.prove_universal_identity(
+            kernel,
+            p_at_k_pred_goal.level,
+            p_at_k_pred_goal.carrier,
+            p_at_k_pred_goal.lhs,
+            p_at_k_pred_goal.rhs,
+            debug,
+        );
+        if let Some(pos) = removed_at {
+            self.local_hyps.insert(pos, (hyp_fv, hyp_ty));
+        }
+        let Some(aux_proof) = result else {
+            if debug {
+                eprintln!("  [case-split] predecessor statement FAILED");
+            }
+            return None;
+        };
+
+        // refl branch: `fun (heq : Eq idx_ty n_pred k_pred) => <target, by
+        // transporting aux_proof along heq.symm>`.
+        let heq_fv = self.fresh_fvar();
+        let heq = kernel.fvar(heq_fv);
+        let heq_ty = build_eq(kernel, eqp_eq, idx_level, le_shape.idx_ty, n_pred, k_pred);
+        let heq_symm = self.build_eq_symm(kernel, idx_level, le_shape.idx_ty, n_pred, k_pred, heq);
+        let refl_value = self.build_transport(
+            kernel,
+            idx_level,
+            le_shape.idx_ty,
+            k_pred,
+            n_pred,
+            p_body,
+            aux_proof,
+            heq_symm,
+        );
+        let refl_case_full = lam_fv(
+            kernel,
+            anon,
+            heq_fv,
+            heq_ty,
+            refl_value,
+            BinderInfo::Default,
+        );
+
+        // step branch: `fun (m)(a : family param m)(heq2 : Eq idx_ty m
+        // k_pred) => <target, by transporting `a` to `family param k_pred`,
+        // applying the matched stuck induction hypothesis, and bridging via
+        // `close_terminal` exactly as if the domains had matched directly>`.
+        let m_fv = self.fresh_fvar();
+        let m = kernel.fvar(m_fv);
+        let a_fv = self.fresh_fvar();
+        let fam_c2 = kernel.const_(family, levels.clone());
+        let fam_p = kernel.app(fam_c2, param);
+        let fam_p_m = kernel.app(fam_p, m);
+        let a_val = kernel.fvar(a_fv);
+        let heq2_fv = self.fresh_fvar();
+        let heq2 = kernel.fvar(heq2_fv);
+        let heq2_ty = build_eq(kernel, eqp_eq, idx_level, le_shape.idx_ty, m, k_pred);
+
+        let fam_body = {
+            let x_fv = self.fresh_fvar();
+            let x = kernel.fvar(x_fv);
+            let fam_c3 = kernel.const_(family, levels.clone());
+            let fam_p3 = kernel.app(fam_c3, param);
+            let fam_p3_x = kernel.app(fam_p3, x);
+            kernel.abstract_fvars(fam_p3_x, &[x_fv])
+        };
+        let a2 = self.build_transport(
+            kernel,
+            idx_level,
+            le_shape.idx_ty,
+            m,
+            k_pred,
+            fam_body,
+            a_val,
+            heq2,
+        );
+        let ih_applied = kernel.app(ih_proof, a2);
+        let ih_applied_stmt = kernel.instantiate(ih_body, &[a2]);
+        let removed_at2 = self.local_hyps.iter().position(|&(fv, _)| fv == hyp_fv);
+        if let Some(pos) = removed_at2 {
+            self.local_hyps.remove(pos);
+        }
+        let step_result = self.close_terminal(
+            kernel,
+            goal,
+            Some(Hypothesis {
+                proof: ih_applied,
+                stmt: ih_applied_stmt,
+            }),
+        );
+        if let Some(pos) = removed_at2 {
+            self.local_hyps.insert(pos, (hyp_fv, hyp_ty));
+        }
+        let step_value = match step_result {
+            Ok(proof) => proof,
+            Err(reason) => {
+                if debug {
+                    eprintln!("  [case-split] step branch FAILED: {reason}");
+                }
+                return None;
+            }
+        };
+        let step_body = lam_fv(
+            kernel,
+            anon,
+            heq2_fv,
+            heq2_ty,
+            step_value,
+            BinderInfo::Default,
+        );
+        let step_body = lam_fv(kernel, anon, a_fv, fam_p_m, step_body, BinderInfo::Default);
+        let step_case_full = lam_fv(
+            kernel,
+            anon,
+            m_fv,
+            le_shape.idx_ty,
+            step_body,
+            BinderInfo::Default,
+        );
+
+        // Index-level case split selecting which of the two branches above
+        // applies, purely as a function of the OUTER application's actual
+        // index (mirroring [`Search::try_absurd_from_hypothesis`] exactly,
+        // except the succ-branch here carries a genuine, non-vacuous
+        // payload rather than a trivially-provable filler).
+        let sq_fv = self.fresh_fvar();
+        let sq = kernel.fvar(sq_fv);
+        let heq_at_sq_ty = build_eq(kernel, eqp_eq, idx_level, le_shape.idx_ty, sq, k_pred);
+        let succ_case_body = kernel.pi(anon, heq_at_sq_ty, target, BinderInfo::Default);
+        let succ_ih_fv = self.fresh_fvar();
+        let succ_ih_ty = kernel.sort(level_zero);
+        let succ_case = lam_fv(
+            kernel,
+            anon,
+            succ_ih_fv,
+            succ_ih_ty,
+            succ_case_body,
+            BinderInfo::Default,
+        );
+        let succ_case = lam_fv(
+            kernel,
+            anon,
+            sq_fv,
+            le_shape.idx_ty,
+            succ_case,
+            BinderInfo::Default,
+        );
+
+        // The zero branch of `idx_shape`'s own recursor is never invoked
+        // (`param` is succ-shaped), so any well-typed filler works — the
+        // same choice [`Search::try_absurd_from_hypothesis`] makes for its
+        // own off-target branch.
+        let zero_dummy = build_eq(kernel, eqp_eq, idx_level, le_shape.idx_ty, k_pred, k_pred);
+
+        let idx_fv = self.fresh_fvar();
+        let idx_e = kernel.fvar(idx_fv);
+        let sort0 = kernel.sort(level_zero);
+        let motive2 = kernel.lam(anon, le_shape.idx_ty, sort0, BinderInfo::Default);
+        let idx_rec = kernel.const_(le_shape.idx_shape.rec_name, vec![level_one]);
+        let case_generic = kernel.app(idx_rec, motive2);
+        let case_generic = kernel.app(case_generic, zero_dummy);
+        let case_generic = kernel.app(case_generic, succ_case);
+        let case_generic = kernel.app(case_generic, idx_e);
+
+        let fam_c4 = kernel.const_(family, levels.clone());
+        let fam_applied_p = kernel.app(fam_c4, param);
+        let fam_applied_idx = kernel.app(fam_applied_p, idx_e);
+        let h2_fv = self.fresh_fvar();
+        let motive_inner = lam_fv(
+            kernel,
+            anon,
+            h2_fv,
+            fam_applied_idx,
+            case_generic,
+            BinderInfo::Default,
+        );
+        let motive_over_idx = lam_fv(
+            kernel,
+            anon,
+            idx_fv,
+            le_shape.idx_ty,
+            motive_inner,
+            BinderInfo::Default,
+        );
+
+        let le_rec = kernel.const_(le_shape.rec_name, vec![]);
+        let applied = kernel.app(le_rec, param);
+        let applied = kernel.app(applied, motive_over_idx);
+        let applied = kernel.app(applied, refl_case_full);
+        let applied = kernel.app(applied, step_case_full);
+        let applied = kernel.app(applied, idx_val);
+        let hyp_e = kernel.fvar(hyp_fv);
+        let applied = kernel.app(applied, hyp_e);
+
+        // `applied : motive_over_idx idx_val hyp_e`, which reduces (`idx_val`
+        // is literally `succ k_pred`) to `Pi(_: Eq idx_ty k_pred k_pred),
+        // target)`; apply it to `Eq.refl` to get `target` itself.
+        let refl_k_pred = build_eq_refl(kernel, eqp_refl, idx_level, le_shape.idx_ty, k_pred);
+        let applied = kernel.app(applied, refl_k_pred);
+
+        // Independently confirm the INFERRED type before returning — same
+        // discipline as `try_absurd_from_hypothesis`: a malformed candidate
+        // declines here, never reaches the caller's `add_declaration`.
+        let mut local_ctx = LocalContext::new();
+        for (&fv, &ty) in &self.fvar_types {
+            local_ctx.push(LocalDecl {
+                fvar: fv,
+                name: anon,
+                ty,
+                info: BinderInfo::Default,
+            });
+        }
+        let inferred = match kernel.infer_in(applied, &mut local_ctx) {
+            Ok(t) => t,
+            Err(e) => {
+                if debug {
+                    eprintln!("  [case-split] infer(applied) failed: {e:?}");
+                }
+                return None;
+            }
+        };
+        if !kernel.def_eq(inferred, target) {
+            if debug {
+                eprintln!(
+                    "  [case-split] inferred {} not defeq target {}",
+                    kernel.render_lean(inferred),
+                    kernel.render_lean(target)
+                );
+            }
+            return None;
+        }
+        if debug {
+            eprintln!("  [case-split] SUCCESS");
         }
         Some(applied)
     }
@@ -1871,8 +2351,25 @@ impl Search {
                 hypothesis.and_then(|hyp| instantiate_hypothesis(kernel, hyp, x, ty));
             let local_hyps_mark = self.local_hyps.len();
             self.local_hyps.push((fv, ty));
+            // If a hypothesis was live but could not be carried forward, and
+            // that is specifically because its OWN leading `Pi` domain is
+            // not the same type as this binder's (rather than it not being
+            // `Pi`-headed at all), retain it unapplied in `stuck_hyps` — see
+            // that field's doc for why (`Search::try_case_split_elimination`
+            // is the only consumer).
+            let stuck_hyps_mark = self.stuck_hyps.len();
+            if sub_hypothesis.is_none()
+                && let Some(hyp) = hypothesis
+                && let ExprNode::Pi(_, domain_ty, _, _) = kernel.expr_node(hyp.stmt)
+            {
+                let domain_ty = *domain_ty;
+                if !kernel.def_eq(domain_ty, ty) {
+                    self.stuck_hyps.push(hyp);
+                }
+            }
             let sub_proof = self.attempt(kernel, sub_goal, eqp, sub_hypothesis);
             self.local_hyps.truncate(local_hyps_mark);
+            self.stuck_hyps.truncate(stuck_hyps_mark);
             let sub_proof = sub_proof?;
             return Ok(lam_fv(kernel, name, fv, ty, sub_proof, info));
         }
@@ -1903,6 +2400,7 @@ pub fn propose_bounded_induction(
         fvar_types: std::collections::BTreeMap::new(),
         residual_budget: MAX_RESIDUAL_LEMMAS,
         local_hyps: Vec::new(),
+        stuck_hyps: Vec::new(),
     };
     let proof = search.attempt(kernel, goal, &eqp, None)?;
     Ok(Candidate {
