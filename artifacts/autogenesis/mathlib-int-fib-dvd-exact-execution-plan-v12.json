@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-exact-execution-plan-v12",
+  "state": "preregistered-one-complete-execution-before-capsule-read",
+  "predecessor": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-exact-construction-result-v11.json",
+    "sha256": "3726a5475175ace7b29e8208b617efb1ebaff6a31098fac4028ec92d9a13ff83"
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/int_fib_dvd_exact.rs",
+    "sha256": "8c17371a667f57bf6ee60efac1342b1d2b83a04cf9c8bcb16f79591925c12ae8"
+  },
+  "inputs": [
+    "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-natabs-exact-v1/root.ndjson",
+    "/nas3/data/axeyum/autogenesis/reference-packs/c2266de88-nat-fib-dvd-v1/target-1.ndjson",
+    "/nas3/data/axeyum/autogenesis/reference-packs/int-natabs-mul-direct-v1/root.ndjson",
+    "/nas3/data/axeyum/autogenesis/reference-packs/int-dvd-natabs-witness-transport-v1/root.ndjson"
+  ],
+  "output": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-dvd-exact-v1/root.ndjson",
+  "execution": {
+    "max_driver_builds": 0,
+    "max_complete_invocations": 1,
+    "max_input_stream_reads": 4,
+    "max_composition_operations": 3,
+    "max_composition_replays": 3,
+    "max_target_theorem_submissions": 1,
+    "max_target_exports": 1,
+    "max_fresh_target_imports": 2,
+    "max_retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "target_name": "Int.fib_dvd",
+    "target_axiom_footprint": [],
+    "direct_theorem_dependencies": [
+      "Axeyum.Autogenesis.intDvdOfNatAbsDvdDirectV1",
+      "Axeyum.Autogenesis.intFibNatAbsV1",
+      "Axeyum.Autogenesis.intNatAbsDvdForwardResidualV1",
+      "Axeyum.Autogenesis.intNatAbsMulDirectV1",
+      "Eq.symm",
+      "Nat.fib_dvd"
+    ],
+    "fresh_imports_reproduce_evidence": true
+  },
+  "next_on_accept": "seal the exact capsule, bind its canonical type, and enter crash-safe admission"
+}
