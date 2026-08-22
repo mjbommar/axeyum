@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-of-nonneg-support-audit-plan-v1",
+  "state": "preregistered-before-support-inspection-or-target-construction",
+  "target": {
+    "fact_id": "F:ml430-int-fib-of-nonneg-438018c5",
+    "fact_sha256": "312711e8dc1d54a17b9efdad9c61ab46ca9ef77747acc80a0c24d5f6821d6d6e",
+    "name": "Int.fib_of_nonneg",
+    "formal_statement_sha256": "98d93e536206aa25bf2260c876c5fd7ad9b3fcb7c767b7ebf9bd59efda336d45"
+  },
+  "input": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-clean-definition-v1/int-fib-clean.ndjson",
+    "bytes": 374550,
+    "sha256": "f0e34ecb1dff747938b7f1079c307af5f4e79e7a67e3bc514feee03e4f30656d",
+    "construction_result": "artifacts/autogenesis/mathlib-int-fib-clean-definition-construction-result-v1.json",
+    "construction_result_sha256": "b7f30b94203c1027c8addd2699bddf394c69b8e9c36b3cc311cb1bf1860d8804"
+  },
+  "candidate_support": {
+    "name": "if_pos",
+    "required_role": "rewrite the transparent Int.fib nonnegative branch using the supplied proof of 0 <= n",
+    "acceptance": "present in the target-owned clean-definition capsule with empty axiom footprint"
+  },
+  "audit": {
+    "importer_runs": 1,
+    "stream_reads": 1,
+    "render_proof_terms": 0,
+    "render_theorem_types": 0,
+    "render_theorem_values": 0,
+    "record_canonical_declaration_sha256": true,
+    "record_direct_theorem_dependencies": true,
+    "record_axiom_footprint": true,
+    "target_theorem_submissions": 0,
+    "ledger_writes": 0,
+    "output": "artifacts/autogenesis/mathlib-int-fib-of-nonneg-support-audit-result-v1.json"
+  },
+  "construction_boundary_on_accept": {
+    "method": "construct the exact target from the transparent target-owned Int.fib definition and the qualified conditional rewrite, then fresh-import the result twice",
+    "forbidden_roots": ["Int.fib_of_nonneg"],
+    "max_target_submissions": 1,
+    "max_fresh_imports": 2,
+    "max_search_invocations": 0
+  },
+  "provenance_note": "The one-line upstream source proof was incidentally visible while locating the pinned definition file. It is quarantined: no upstream proof term, elaborated theorem root, or tactic trace may be imported, replayed, or used as evidence for this target.",
+  "limitations": "This plan authorizes only a non-rendering support census. It grants no theorem credit, fact transition, operation registration, or ledger write.",
+  "next_on_accept": "preregister one exact direct kernel construction of Int.fib_of_nonneg over the qualified support"
+}

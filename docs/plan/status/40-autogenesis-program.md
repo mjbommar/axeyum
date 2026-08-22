@@ -4,7 +4,7 @@
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_gcd`, and now `Int.fib_dvd` are durably proved with empty kernel footprints. The exact `Int.fib_dvd` operation survived an exit-75 intent fault without changing the fact, recovery performed exactly one authoritative ledger write, the measured frontier produced the preregistered empty unlock delta, and isolated replay `e836fa51…667f` reproduced all ten semantic checks from a clean reconstructed prestate.
 
-**Next:** regenerate the machine frontier from the settled ledger, select the next collision-free bottom-up Mathlib fact, and preregister its exact acquisition boundary before reading proof-bearing resources or constructing code.
+**Next:** run the frozen one-read, non-rendering `if_pos` support census for collision-free `Int.fib_of_nonneg`; if its closure is empty-footprint, preregister one direct construction over the target-owned transparent `Int.fib` definition without importing the upstream target proof.
 
 <!-- plan-section: landed-changes -->
 
@@ -98,6 +98,7 @@
 | 2026-08-22 | (pending) | Exact `Int.fib_dvd` sealed-capsule execution is registered through typed frontier, execution, transaction, and replay machinery with six fixed dependencies; exact live gate coupling leaves it uniquely admissible with zero ledger writes so far |
 | 2026-08-22 | (pending) | Exit-75 intent fault leaves `Int.fib_dvd` byte-identical; recovery performs exactly one authoritative ledger write, its settled capsule checker passes, and the measured readiness delta is empty as preregistered |
 | 2026-08-22 | (pending) | Isolated clean replay `e836fa51…667f` independently repeats selection, certified execution, exit-75 recovery, one write, and the exact empty readiness delta across all ten semantic checks |
+| 2026-08-22 | (pending) | The next collision-free foundation is `Int.fib_of_nonneg`; one non-rendering read of the existing target-owned clean-definition capsule is frozen to qualify `if_pos` before any target construction or ledger authority |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
