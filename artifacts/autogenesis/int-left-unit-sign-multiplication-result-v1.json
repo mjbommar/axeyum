@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-left-unit-sign-multiplication-result",
+  "state": "ring-law-names-absent-from-int-basic-import",
+  "plan": {
+    "path": "artifacts/autogenesis/int-left-unit-sign-multiplication-plan-v1.json",
+    "sha256": "5748c0052e9088072a0e7715b5164f4bed6ec42b263190cb31d75e1a0ddedae4",
+    "commit": "14c16aa321770ecf96721a307c4784aea6e7daf9"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-left-unit-sign-multiplication-v1.lean",
+    "sha256": "bfb2f6701fd4a6a889804481dfb52f85b213cafcbf8c731279ae7fa636694d9c"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-left-unit-sign-multiplication-v1",
+    "compiler_exit_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "compiler_stdout_sha256": "fa3b7ba445b3f7a8a5ebfa67d4f6431f6f9834f88bb974473f7d5612d378989c"
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit_status": 1,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "diagnosis": "The previously audited one_mul and neg_mul roots are introduced by Mathlib's algebra hierarchy, not Mathlib.Data.Int.Basic alone. The proof text was not reached as a mathematical failure.",
+  "authority": {
+    "support_credit": 0,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Change only the import to Mathlib.Algebra.Ring.Int.Defs, the narrow module that installs the Int commutative-ring instance and generic laws.",
+  "limitations": "The source does not compile and grants no support authority."
+}
