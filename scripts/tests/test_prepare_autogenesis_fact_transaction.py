@@ -22,6 +22,7 @@ INT_FIB_COROLLARY_FACT = (
     "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d"
 )
 INT_FIB_ADD_ONE_FACT = "F:ml430-int-fib-add-one-33f1b748"
+INT_FIB_GCD_FACT = "F:ml430-int-fib-gcd-3a8bfdec"
 
 
 def settle_reflexivity_fact(facts):
@@ -34,6 +35,7 @@ def settle_reflexivity_fact(facts):
         INT_FIB_ADD_TWO_FACT,
         INT_FIB_COROLLARY_FACT,
         INT_FIB_ADD_ONE_FACT,
+        INT_FIB_GCD_FACT,
     ):
         target = copy.deepcopy(facts[fact_id])
         target["epistemic_status"] = "proved"
@@ -705,6 +707,55 @@ class AuthoritativeFactTransactionTests(unittest.TestCase):
                 operation=operation,
                 registry=registry,
             )
+
+    def test_four_dependency_integer_fibonacci_gcd_is_admissible(self):
+        executor = MODULE.load_module(
+            "executor_for_int_fib_gcd_transaction_test",
+            MODULE.EXECUTOR_SCRIPT,
+        )
+        frontier_module = executor.load_module(
+            "frontier_for_int_fib_gcd_transaction_test",
+            executor.FRONTIER_SCRIPT,
+        )
+        facts = frontier_module.load()
+        settle_reflexivity_fact(facts)
+        target = copy.deepcopy(facts[INT_FIB_GCD_FACT])
+        target["epistemic_status"] = "open"
+        target["evidence"] = []
+        target.pop("proof_route", None)
+        target.pop("axiom_footprint", None)
+        facts[INT_FIB_GCD_FACT] = target
+        frontier = frontier_module.build_machine_frontier(facts)
+        before, operation, registry = executor.selected_inputs(frontier, facts)
+        self.assertEqual(before["id"], INT_FIB_GCD_FACT)
+        observation = executor.expected_sealed_kernel_capsule_observation(
+            operation, before
+        )
+        self.assertEqual(
+            observation["retained_answer_dependencies"],
+            ["Eq.symm", "Eq.trans", "Int.fib_natCast", "Int.gcd_fib"],
+        )
+        execution_receipt = executor.build_receipt(
+            frontier={"frontier_sha256": "a" * 64},
+            fact=before,
+            operation=operation,
+            registry=registry,
+            git_commit="b" * 40,
+            observation=observation,
+        )
+        transaction = MODULE.build_authoritative_transaction(
+            before_fact=before,
+            execution=execution_receipt,
+            operation=operation,
+            registry=registry,
+        )
+        binding = transaction["authoritative_write"]["after_fact"]["evidence"][0][
+            "checker_operation"
+        ]
+        self.assertEqual(
+            binding["direct_theorem_dependencies"],
+            observation["retained_answer_dependencies"],
+        )
 
 
 if __name__ == "__main__":

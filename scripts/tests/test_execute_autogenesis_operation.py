@@ -27,6 +27,7 @@ INT_FIB_COROLLARY_FACT = (
     "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d"
 )
 INT_FIB_ADD_ONE_FACT = "F:ml430-int-fib-add-one-33f1b748"
+INT_FIB_GCD_FACT = "F:ml430-int-fib-gcd-3a8bfdec"
 
 
 def settle_reflexivity_fact(facts):
@@ -37,6 +38,7 @@ def settle_reflexivity_fact(facts):
         GCD_GREATEST_FACT,
         INT_FIB_COROLLARY_FACT,
         INT_FIB_ADD_ONE_FACT,
+        INT_FIB_GCD_FACT,
     ):
         target = copy.deepcopy(facts[fact_id])
         target["epistemic_status"] = "proved"

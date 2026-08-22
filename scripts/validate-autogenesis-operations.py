@@ -91,6 +91,13 @@ SEALED_CAPSULE_CONTRACTS = {
         "target_theorem": "Int.gcd_fib",
         "receipt_sha256": "d02db0eee57fb9b6be43c283054b28141a249003acca3eb0fb90f6eecaae3ac1",
     },
+    "F:ml430-int-fib-gcd-3a8bfdec": {
+        "result_manifest": "artifacts/autogenesis/mathlib-int-fib-gcd-goal-identity-result-v1.json",
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-gcd-exact-v1/root.ndjson",
+        "capsule_sha256": "040f269431f58c8efe69e995c65b25f64952aa9b3d8f552ab0e7faf2711967f1",
+        "target_theorem": "Int.fib_gcd",
+        "receipt_sha256": "6c5a72c0853beb1136f4934b92ce189427b05e58e2f4af020509b718e8b602cc",
+    },
     "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d": {
         "result_manifest": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-goal-identity-result-v1.json",
         "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-recurrence-corollary-composition-v3/int-fib-recurrence-corollary-1.ndjson",
@@ -366,6 +373,7 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             "F:ml430-int-fib-add-one-33f1b748",
             "F:ml430-int-fib-neg-b4021d37",
             "F:ml430-int-gcd-fib-73bdafc2",
+            "F:ml430-int-fib-gcd-3a8bfdec",
         }:
             theorem = manifest.get("theorem") or {}
             execution = manifest.get("execution") or {}
@@ -381,6 +389,7 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             )
             is_neg = value["input_fact_id"] == "F:ml430-int-fib-neg-b4021d37"
             is_gcd_fib = value["input_fact_id"] == "F:ml430-int-gcd-fib-73bdafc2"
+            is_fib_gcd = value["input_fact_id"] == "F:ml430-int-fib-gcd-3a8bfdec"
             expected_dependencies = (
                 [
                     "Axeyum.Autogenesis.fibAddTwo",
@@ -420,6 +429,8 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
                     "Nat.fib_gcd",
                 ]
                 if is_gcd_fib
+                else ["Eq.symm", "Eq.trans", "Int.fib_natCast", "Int.gcd_fib"]
+                if is_fib_gcd
                 else []
             )
             if (
@@ -427,7 +438,7 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
                 or manifest.get("state")
                 != (
                     "exact-goal-identity-bound-without-rendering"
-                    if is_add_two or is_corollary or is_add_one or is_neg or is_gcd_fib
+                    if is_add_two or is_corollary or is_add_one or is_neg or is_gcd_fib or is_fib_gcd
                     else "single-read-hash-only-identity-qualified"
                 )
                 or value["capsule_path"] != contract["capsule_path"]
@@ -443,13 +454,13 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
                 or execution.get("importer_runs") != 1
                 or execution.get(
                     "stream_reads"
-                    if is_add_two or is_corollary or is_add_one or is_neg or is_gcd_fib
+                    if is_add_two or is_corollary or is_add_one or is_neg or is_gcd_fib or is_fib_gcd
                     else "proof_bearing_stream_reads"
                 )
                 != 1
                 or (
                     execution.get("theorem_submissions") != 0
-                    if not is_add_two and not is_corollary and not is_add_one and not is_neg and not is_gcd_fib
+                    if not is_add_two and not is_corollary and not is_add_one and not is_neg and not is_gcd_fib and not is_fib_gcd
                     else execution.get("ledger_writes") != 0
                 )
                 or execution.get("retries") != 0
@@ -469,6 +480,7 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
                 "F:ml430-int-fib-add-one-33f1b748",
                 "F:ml430-int-fib-neg-b4021d37",
                 "F:ml430-int-gcd-fib-73bdafc2",
+                "F:ml430-int-fib-gcd-3a8bfdec",
             }
             and (
                 manifest_path != expected_manifest

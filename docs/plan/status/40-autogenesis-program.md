@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, and `Int.gcd_fib` are durably proved with empty kernel footprints. The newly unlocked `Int.fib_gcd` now also reconstructs exactly, survives two fresh imports with an empty footprint and four dependencies, and remains separate from ledger admission.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, and `Int.gcd_fib` are durably proved with empty kernel footprints. The newly unlocked `Int.fib_gcd` reconstructs exactly, survives two fresh imports with an empty footprint and four dependencies, and is now uniquely selected by the machine frontier for crash-safe admission.
 
-**Next:** bind the sealed `Int.fib_gcd` theorem to the statement-only ledger goal's canonical kernel type, then preregister and execute its crash-safe admission and independent replay.
+**Next:** execute the preregistered crash-safe `Int.fib_gcd` operation from an exact clean commit, publish the one-write settlement, and independently replay the admission before selecting the next fact.
 
 <!-- plan-section: landed-changes -->
 
@@ -45,6 +45,7 @@
 | 2026-08-22 | (pending) | One hash-only, non-rendering read of the sealed `Int.fib_gcd` root is frozen to bind its canonical kernel type before any operation registration or ledger authority |
 | 2026-08-22 | (pending) | Hash-only audit binds canonical `Int.fib_gcd` type `c073add7…64d` with unchanged empty footprint and four dependencies; the sealed-capsule checker is ready before operation registration |
 | 2026-08-22 | (pending) | Exact crash-safe `Int.fib_gcd` admission is frozen against receipt `6c5a72c0…02cc`, one ledger write, one recovery, one isolated replay, and an expected empty unlock delta before registry code |
+| 2026-08-22 | (pending) | Exact `Int.fib_gcd` sealed-capsule execution is registered through typed frontier, execution, transaction, and replay machinery with four fixed dependencies and zero ledger writes so far |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
