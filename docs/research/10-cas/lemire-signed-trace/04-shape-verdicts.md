@@ -120,6 +120,51 @@ new exact identity, one factor short, now quantified.*
   zeros is a studied object. Also Bagshaw CJM 2026 (arXiv:2401.10399) and
   Cheng arXiv:2605.25877 (odd `q`).
 
-## Shapes 2, 3, 5
+## Shape 5 -- a Clifford-hierarchy cancellation theorem
+
+*Verdict (landed 2026-08-22): no; stabilizer-type exactness stops at an
+exactly located boundary, and every even moment of a post-Clifford layer is
+Gaussian.*
+
+- **Setup verified.** `S_n(chi)` computed as the exact mixed-radix DFT of the
+  dumps (`ell = 12..24`); layer sums reproduce the four-population `T_{j,s}`
+  to the last digit and `#X_{j,s}` matches `h_{j,s}` on every row.
+- **Clifford boundary is exact and sharp.** The pure `Z/4` Teichmueller
+  layer `(j,s) = (2,2)` (Kerdock form) has `S = +-2^{(n-1)/2}(1 +- i)`
+  exactly, `|S| = 2^{n/2}`, `arg = +-pi/4`, attaining the KHC/Weil bound
+  (ratio `1.0000`), with `T_{2,2} = +-2^{ceil(n/2)}` (odd part `1`) for odd
+  `n` and `0` for even `n`. The first post-Clifford layer `(4,3)` has
+  non-half-integer `log2|S|` and generic odd parts (`2^8 193`,
+  `-2^10 289`, ...). Exact algebra in `Z[zeta_{2^s}]^+`: `|S|^2` leaves `Z`
+  for 46,512 of 46,592 order-`>=8` characters at `(12,25),(14,29),(16,33)`;
+  the 80 exceptions all lie in `(15,3)` at `(16,33)` and contribute exactly
+  `0`. The stabilizer sub-family's share of the order-`<=4` layer sums falls
+  to `0.06` by `j = 15`.
+- **No collapse of the aggregate: moments are Gaussian.** At `(22,45)`,
+  `M_2/(#X (j-1) 2^n) = 0.995..1.004`, `M_4/(2 #X ((j-1)2^n)^2) =
+  0.96..0.98`, `M_6/(6 #X (.)^3) = 0.91..0.94` -- the complex-Gaussian /
+  Diaconis--Shahshahani values `m!(j-1)^m`. `max|S|/((j-1)2^{ceil(n/2)})
+  = 0.47..0.55` for `s >= 3`. Consequence: Hoelder from the `2m`-th moment
+  gives `|T| <= (m!)^{1/2m} #X sqrt(j-1) 2^{n/2}`, strictly worse than
+  Cauchy--Schwarz for `m >= 2`; Cauchy--Schwarz is short of `(HWO)` by
+  `4 ell/sqrt(2(j-1))` = `13.9x` at `(22,21)` and `40.2x` at `(200,199)`;
+  the truth is at the random-phase scale `|T|/sqrt(M_2) in [0.13, 2.0]`.
+  The needed saving is invisible to every `|.|^{2m}`.
+- **MacWilliams/Pless route is circular.** For the `Z/2^s` trace code the
+  weight-one dual words with `lambda = 1` are exactly the identity-class
+  elements, so the dual distance is `1` and its multiplicity is the
+  conjecture's unknown; no power moment is forced from outside.
+- **Literature.** Cui--Gottesman--Krishna PRA 2017 gives exactly the level
+  dictionary (`zeta_{2^s}` phase of Boolean degree `d` at level `s+d-1`),
+  nothing on sums. Exact aggregates exist only at degree 2: Sloane--Berlekamp
+  1970 (rank counts of quadratic forms), Can--Rengaswamy--Calderbank--Pfister
+  2020 (Kerdock weights / unitary 2-design), Hangleiter et al. 2024 (second
+  moment of the degree-2 layer; Nechita--Singh: degree-`n` circuits have the
+  same second moment). For `s >= 3` only bounds (KHC 1995, Ling--Oezbudak
+  2004, Lahtonen--Ling--Sole--Zinoviev 2004). Dalzell--Harrow--Koh--La Placa,
+  Quantum 2020, Thm 8: the aggregate of a complete degree-3 layer is provably
+  Gaussian -- a no-collapse theorem whose numbers match our `M_4, M_6`.
+
+## Shapes 2, 3 and the computational leg of shape 1
 
 Pending.
