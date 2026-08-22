@@ -140,6 +140,7 @@ mod no_confusion;
 mod ops;
 mod order;
 mod order_extra;
+mod order_more;
 mod primes;
 
 pub use ops::{NatDev, NatOps, NatState};
@@ -161,6 +162,7 @@ use modular::declare_modular_congruence;
 use no_confusion::declare_no_confusion;
 use order::declare_order;
 use order_extra::declare_order_extra;
+use order_more::declare_order_more;
 use primes::{declare_euclid, declare_primes};
 
 /// The interned names produced by [`build_nat_prelude`]: the inductive `Nat`
@@ -462,6 +464,28 @@ pub struct NatPrelude {
     /// `Nat.succ_sub_succ_eq_sub : ∀ (n m : Nat), sub (succ n) (succ m) = sub n m`
     /// — the Lean-core name matching [`succ_sub_succ`](Self::succ_sub_succ).
     pub succ_sub_succ_eq_sub: NameId,
+
+    // --- five more order/beq bridge lemmas (order_more.rs) ------------------
+    /// `Nat.lt_of_not_le : ∀ (a b : Nat), Not (Le a b) → Lt b a` — the
+    /// constructive trichotomy route (via the internal `le_or_gt` double
+    /// induction, not excluded middle): `Nat.le` is decidable, so refuting
+    /// `Le a b` picks out the other side of `Or (Le a b) (Lt b a)`.
+    pub lt_of_not_le: NameId,
+    /// `Nat.lt_or_ge : ∀ (a b : Nat), Or (Lt a b) (Le b a)` — `a ≥ b` unfolds
+    /// to `Le b a` (this kernel has no separate `Nat.ge`).
+    pub lt_or_ge: NameId,
+    /// `Nat.le_of_lt_add_one : ∀ (a b : Nat), Lt a (add b (succ zero)) → Le a b`
+    /// — `add b (succ zero)` is definitionally `succ b`, so this is
+    /// [`le_of_lt_succ`](Self::le_of_lt_succ) restated at the `+1` spelling.
+    pub le_of_lt_add_one: NameId,
+    /// `Nat.zero_lt_of_ne_zero : ∀ (n : Nat), Not (Eq Nat n zero) → Lt zero n`.
+    pub zero_lt_of_ne_zero: NameId,
+    /// `Nat.ne_of_beq_eq_false : ∀ (a b : Nat), beq a b = Bool.false → Not (Eq Nat a b)`
+    /// — bridges the boolean and propositional worlds via
+    /// [`beq_eq_true_of_eq`](Self::beq_eq_true_of_eq) and the existing
+    /// `Bool.false ≠ Bool.true` discriminator (`NatOps::false_true_elim`), so
+    /// no new `Bool.noConfusion` machinery was needed for this one.
+    pub ne_of_beq_eq_false: NameId,
 
     // --- boolean `≤`, bridging `Nat.ble` to `Nat.le` -------------------------
     /// `Nat.ble : Nat → Nat → Bool` — the executable analogue of [`beq`](Self::beq):
@@ -828,6 +852,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             sub_le: kernel.name_str(nat, "sub_le"),
             sub_lt: kernel.name_str(nat, "sub_lt"),
             succ_sub_succ_eq_sub: kernel.name_str(nat, "succ_sub_succ_eq_sub"),
+            lt_of_not_le: kernel.name_str(nat, "lt_of_not_le"),
+            lt_or_ge: kernel.name_str(nat, "lt_or_ge"),
+            le_of_lt_add_one: kernel.name_str(nat, "le_of_lt_add_one"),
+            zero_lt_of_ne_zero: kernel.name_str(nat, "zero_lt_of_ne_zero"),
+            ne_of_beq_eq_false: kernel.name_str(nat, "ne_of_beq_eq_false"),
             ble: kernel.name_str(nat, "ble"),
             ble_self_eq_true: kernel.name_str(nat, "ble_self_eq_true"),
             ble_succ_eq_true: kernel.name_str(nat, "ble_succ_eq_true"),
@@ -919,6 +948,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_order(&mut d, &p)?;
         declare_no_confusion(&mut d, &p)?;
         declare_order_extra(&mut d, &p)?;
+        declare_order_more(&mut d, &p)?;
         declare_boolean_le(&mut d, &p)?;
         declare_euclidean_division(&mut d, &p)?;
         declare_divisibility(&mut d, &p)?;

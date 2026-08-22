@@ -6,16 +6,16 @@
 | Prelude | Theorems (cumulative) | Originated here | Axiom-free | Axiom-bearing |
 |---|---:|---:|---:|---:|
 | `axreal` | 13 | 0 | 13 | 0 |
-| `complex` | 453 | 24 | 453 | 0 |
-| `creal` | 429 | 76 | 429 | 0 |
-| `integer` | 234 | 62 | 234 | 0 |
+| `complex` | 458 | 24 | 458 | 0 |
+| `creal` | 434 | 76 | 434 | 0 |
+| `integer` | 239 | 62 | 239 | 0 |
 | `logic` | 13 | 13 | 13 | 0 |
-| `nat` | 172 | 159 | 172 | 0 |
-| `rat` | 353 | 119 | 353 | 0 |
+| `nat` | 177 | 164 | 177 | 0 |
+| `rat` | 358 | 119 | 358 | 0 |
 | `string` | 17 | 4 | 17 | 0 |
-| **distinct** | **457** | **457** | **457** | **0** |
+| **distinct** | **462** | **462** | **462** | **0** |
 
-- **457 distinct theorems**, of which **457 rest on no assumption at all** (0 are axiom-bearing).
+- **462 distinct theorems**, of which **462 rest on no assumption at all** (0 are axiom-bearing).
 
 **Do not sum the second column.** Preludes nest, so `rat` contains every
 Nat and Int theorem beneath it. The *Originated here* column is the one
