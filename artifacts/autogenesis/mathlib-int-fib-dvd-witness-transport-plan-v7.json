@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-witness-transport-plan-v7",
+  "state": "preregistered-two-direction-existential-transport-before-source",
+  "predecessor": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-direct-natabs-mul-qualification-result-v6.json",
+    "sha256": "fc2408c85a80298c4e1cc08efc9d78e6c10e6a6a004fa95a8f6f9412dea3f9a3"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-dvd-natabs-witness-transport-v1.lean",
+    "forward": {
+      "name": "Axeyum.Autogenesis.intNatAbsDvdForwardResidualV1",
+      "statement": "for every supplied natAbs-multiplication proof and a b : Int, a divides b implies a.natAbs divides b.natAbs",
+      "method": "eliminate the Int divisibility witness, reuse its natAbs as the Nat witness, and close with the supplied multiplication equality"
+    },
+    "reverse": {
+      "name": "Axeyum.Autogenesis.intDvdOfNatAbsDvdDirectV1",
+      "statement": "forall a b : Int, a.natAbs divides b.natAbs implies a divides b",
+      "method": "eliminate the Nat witness, split only on the two Int constructors, and choose ofNat witness for equal signs or negOfNat witness for opposite signs"
+    }
+  },
+  "forbidden_dependencies": [
+    "Int.natAbs_dvd_natAbs",
+    "Int.dvd_natAbs_self",
+    "Int.dvd_trans",
+    "Int.ofNat_dvd_left",
+    "Int.natAbs_mul",
+    "propext"
+  ],
+  "execution": {
+    "max_source_writes": 1,
+    "max_compile_invocations": 1,
+    "max_exporter_invocations": 0,
+    "max_importer_runs": 0,
+    "max_retries": 0,
+    "target_fib_dvd_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "both_theorems_compile": true,
+    "forbidden_dependencies_absent_from_source": true
+  },
+  "next_on_accept": "export and qualify both witness transports, then specialize the forward residual with intNatAbsMulDirectV1"
+}
