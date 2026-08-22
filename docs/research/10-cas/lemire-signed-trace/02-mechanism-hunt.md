@@ -351,6 +351,15 @@ Euclid argument yields primes of degree `~2^ell deg F`, and Hensel lifting at
 `x` fails because irreducibility is not a local condition in the residue).
 Verdict: no inequality, no construction covering prime `n`.
 
+**D. Hidden exact relations across Witt orders (rank test).** For every
+`(ell, n, j)` with `ell >= 14` and `j` in the window, the normalized
+deviations `P_{j,s}/2^{n-j+floor(j/2^s)} - 1`, `s = 1..5` (60 data points),
+span a matrix of exact rational rank `5` of `5` (`6` of `6` with a constant
+column), and the signed imbalances `Delta_{j,s}`, `s = 1..5`, likewise have
+rank `5`. So no universal linear relation among consecutive Witt orders exists
+beyond the four-population identity and the resonance identities; the nested
+populations are linearly free. Verdict: no identity to exploit.
+
 **Net.** The exact machinery is now complete on all three fronts (Witt carry
 calculus, integral coset products with exact power sums and Newton polygons,
 the pullback/coding descriptions), and each front ends at the same wall: a
