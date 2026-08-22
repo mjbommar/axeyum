@@ -233,6 +233,8 @@ fn add_int_gcd_fib(kernel: &mut Kernel) -> Result<(), String> {
     let rhs = app_const(kernel, nat_fib, &[], &[gcd_mn]);
 
     let p0 = app_const(kernel, gcd_def, &[], &[fib_m, fib_n]);
+    let p0_type = equality(kernel, nat_ty, lhs, gcd_abs_fib)?;
+    require_type(kernel, p0, p0_type, "p0 Int.gcd_def")?;
     let bridge_m = app_const(kernel, bridge, &[], &[m]);
     let first_argument = kernel.bvar(0);
     let first_fn_body = app_const(kernel, nat_gcd, &[], &[first_argument, abs_fib_n]);
@@ -244,6 +246,8 @@ fn add_int_gcd_fib(kernel: &mut Kernel) -> Result<(), String> {
         &[nat_level, nat_level],
         &[nat_ty, nat_ty, first_fn, abs_fib_m, nat_fib_abs_m, bridge_m],
     );
+    let p1_type = equality(kernel, nat_ty, gcd_abs_fib, gcd_first)?;
+    require_type(kernel, p1, p1_type, "p1 first natAbs transport")?;
     let bridge_n = app_const(kernel, bridge, &[], &[n]);
     let second_argument = kernel.bvar(0);
     let second_fn_body = app_const(kernel, nat_gcd, &[], &[nat_fib_abs_m, second_argument]);
@@ -262,6 +266,8 @@ fn add_int_gcd_fib(kernel: &mut Kernel) -> Result<(), String> {
             bridge_n,
         ],
     );
+    let p2_type = equality(kernel, nat_ty, gcd_first, gcd_both)?;
+    require_type(kernel, p2, p2_type, "p2 second natAbs transport")?;
     let fib_gcd_forward = app_const(kernel, fib_gcd, &[], &[abs_m, abs_n]);
     let p3 = app_const(
         kernel,
@@ -269,6 +275,8 @@ fn add_int_gcd_fib(kernel: &mut Kernel) -> Result<(), String> {
         &[nat_level],
         &[nat_ty, fib_gcd_abs, gcd_both, fib_gcd_forward],
     );
+    let p3_type = equality(kernel, nat_ty, gcd_both, fib_gcd_abs)?;
+    require_type(kernel, p3, p3_type, "p3 symmetric Nat.fib_gcd")?;
     let gcd_def_mn = app_const(kernel, gcd_def, &[], &[m, n]);
     let gcd_def_reverse = app_const(
         kernel,
@@ -290,6 +298,8 @@ fn add_int_gcd_fib(kernel: &mut Kernel) -> Result<(), String> {
             gcd_def_reverse,
         ],
     );
+    let p4_type = equality(kernel, nat_ty, fib_gcd_abs, rhs)?;
+    require_type(kernel, p4, p4_type, "p4 final Int.gcd_def transport")?;
     let proof = eq_trans_chain(
         kernel,
         nat_ty,
@@ -304,6 +314,7 @@ fn add_int_gcd_fib(kernel: &mut Kernel) -> Result<(), String> {
         nat_level,
     );
     let proposition = equality(kernel, nat_ty, lhs, rhs)?;
+    require_type(kernel, proof, proposition, "completed equality chain")?;
     let ty = close_pi2(kernel, m_id, n_id, "m", "n", int_ty, int_ty, proposition);
     let value = close_lam2(kernel, m_id, n_id, "m", "n", int_ty, int_ty, proof);
     kernel
@@ -314,6 +325,22 @@ fn add_int_gcd_fib(kernel: &mut Kernel) -> Result<(), String> {
             value,
         })
         .map_err(|error| format!("Int.gcd_fib rejected: {error:?}"))
+}
+
+fn require_type(
+    kernel: &mut Kernel,
+    proof: ExprId,
+    expected: ExprId,
+    label: &str,
+) -> Result<(), String> {
+    let inferred = kernel
+        .infer(proof)
+        .map_err(|error| format!("{label} inference failed: {error:?}"))?;
+    if kernel.def_eq(inferred, expected) {
+        Ok(())
+    } else {
+        Err(format!("{label} inferred a non-convertible type"))
+    }
 }
 
 fn eq_trans_chain(
