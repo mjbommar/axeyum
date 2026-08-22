@@ -4,7 +4,7 @@
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_gcd`, and now `Int.fib_dvd` are durably proved with empty kernel footprints. The exact `Int.fib_dvd` operation survived an exit-75 intent fault without changing the fact, recovery performed exactly one authoritative ledger write, the measured frontier produced the preregistered empty unlock delta, and isolated replay `e836fa51…667f` reproduced all ten semantic checks from a clean reconstructed prestate.
 
-**Next:** execute the frozen single-root `Init.Prelude.if_pos` export on pinned s5, import it twice without rendering, and accept it only if both observations agree on an empty footprint; target construction remains unauthorized.
+**Next:** preregister a corrected `if_pos` export from the pinned `Mathlib.Data.Int.Fib.Basic` environment where the elaborator confirms the constant exists; retain root selection, two independent imports, and zero target authority.
 
 <!-- plan-section: landed-changes -->
 
@@ -101,6 +101,7 @@
 | 2026-08-22 | (pending) | The next collision-free foundation is `Int.fib_of_nonneg`; one non-rendering read of the existing target-owned clean-definition capsule is frozen to qualify `if_pos` before any target construction or ledger authority |
 | 2026-08-22 | (pending) | The frozen clean-definition read declines because `if_pos` is absent from the sliced capsule; zero target submissions and writes localize the next step to one pinned core-support export |
 | 2026-08-22 | (pending) | One pinned s5 export of core `if_pos` is frozen with two non-rendering imports, exact empty-footprint acceptance, and zero target or ledger authority |
+| 2026-08-22 | (pending) | The `Init.Prelude` export exits zero after a missing-constant panic and writes only 173 metadata bytes; two imports confirm no root, so the stream is rejected with zero support credit or writes |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |

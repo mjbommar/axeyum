@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-of-nonneg-if-pos-export-result-v1",
+  "state": "rejected-exporter-zero-exit-panic-root-absent",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-of-nonneg-if-pos-export-plan-v1.json",
+    "sha256": "3c714bf4a5a5b383305e0c2e1235ce5c1a08bb3824bfa3927a44401b30fd7249"
+  },
+  "environment": {
+    "host": "server5",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean_version": "4.30.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622"
+  },
+  "attempt": {
+    "module": "Init.Prelude",
+    "root": "if_pos",
+    "exporter_exit_status": 0,
+    "stderr_diagnostic": "PANIC at dumpConstant Export:235:6: Constant if_pos not found in environment."
+  },
+  "output": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/if-pos-core-v1/root.ndjson",
+    "bytes": 173,
+    "sha256": "881bb92307ab5ab4e78b101c2530c48871b3b237b5d5cbdeed25eccf49131257",
+    "records": "metadata-only",
+    "root_present": false
+  },
+  "verification": {
+    "importer_runs": 2,
+    "identical_diagnostic": "requested theorem is absent: if_pos",
+    "accepted_roots": 0,
+    "axiom_footprint": null
+  },
+  "execution": {
+    "exporter_invocations": 1,
+    "root_stream_writes": 1,
+    "importer_runs": 2,
+    "retries": 0,
+    "target_theorem_submissions": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "support_credit": 0,
+    "theorem_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next": "preregister a corrected root export from a module whose environment actually contains if_pos; never treat exporter exit zero as success"
+}
