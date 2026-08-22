@@ -1,0 +1,23 @@
+//! Dump exact Mangoldt class populations (mixed-radix order) for one (ell, degree).
+//! Usage: axeyum-gf2-dump-populations <ell> <degree> [max_table_cells]
+use axeyum_cas::gf2_hayes::{HayesLimits, class_population_distribution, principal_unit_structure};
+use std::io::Write;
+
+fn main() {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let ell: usize = args[0].parse().expect("ell");
+    let degree: usize = args[1].parse().expect("degree");
+    let mut limits = HayesLimits::default();
+    limits.max_ell = 24;
+    limits.max_degree = 50;
+    limits.max_group_order = 1 << 24;
+    if let Some(c) = args.get(2) { limits.max_table_cells = c.parse().expect("cells"); }
+    let t0 = std::time::Instant::now();
+    let dist = class_population_distribution(ell, degree, limits).expect("distribution");
+    let structure = principal_unit_structure(ell, limits).expect("structure");
+    let out = std::io::stdout();
+    let mut w = std::io::BufWriter::new(out.lock());
+    writeln!(w, "GF2_DUMP|ell={ell}|degree={degree}|classes={}|elapsed_seconds={:.3}", dist.counts.len(), t0.elapsed().as_secs_f64()).unwrap();
+    writeln!(w, "STRUCTURE|{:?}", structure).unwrap();
+    for c in &dist.counts { writeln!(w, "{c}").unwrap(); }
+}
