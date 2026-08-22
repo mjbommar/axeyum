@@ -39,6 +39,8 @@ const MOD_CASES: &str = "Axeyum.IntFib.modCases";
 const EVEN_POS: &str = "Axeyum.Autogenesis.intEvenOfNatModTwoV1";
 const EVEN_NEG_NAT: &str = "Axeyum.Autogenesis.intEvenNegOfNatModTwoV1";
 const NEG_NEG: &str = "Axeyum.Autogenesis.intNegNegV2";
+const NEG_NEG_DECL_SHA256: &str =
+    "2374f330709695733d084b219646e308d34b3a362d3d304b30ec866f3d385297";
 const EVEN_IFF: &str = "Int.even_iff";
 const POS_RESIDUAL: &str = "Axeyum.Autogenesis.intFibNegPositiveBranchResidualV1";
 const NEG_RESIDUAL: &str = "Axeyum.Autogenesis.intFibNegNegativeBranchResidualV1";
@@ -72,10 +74,18 @@ fn run() -> Result<(), String> {
         .zip(LABELS)
         .map(|((path, hash), label)| import_bound(path, hash, label))
         .collect::<Result<Vec<_>, _>>()?;
-    for (completed, label) in imports.iter().zip(LABELS) {
-        if !completed.report().axioms.is_empty() {
-            return Err(format!("{label} stream reaches assumptions"));
+    for index in [0, 1, 2, 4] {
+        if !imports[index].report().axioms.is_empty() {
+            return Err(format!("{} stream reaches assumptions", LABELS[index]));
         }
+    }
+    let neg_neg = find_name(imports[3].kernel(), NEG_NEG)?;
+    require_empty(imports[3].kernel(), neg_neg, NEG_NEG)?;
+    let neg_neg_sha256 = canonical_declaration_sha256(imports[3].kernel(), neg_neg)?;
+    if neg_neg_sha256 != NEG_NEG_DECL_SHA256 {
+        return Err(format!(
+            "clean double negation identity changed: expected {NEG_NEG_DECL_SHA256}, got {neg_neg_sha256}"
+        ));
     }
 
     let mut kernel = imports[0].kernel().clone();

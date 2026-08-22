@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-concrete-branches-composition-plan",
+  "state": "preregistered-route-specific-neg-neg-assurance-before-code-change",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-fib-neg-concrete-branches-composition-result-v2.json",
+    "required_state": "declined-before-composition-on-overbroad-stream-cleanliness-check"
+  },
+  "correction": {
+    "exclude_from_whole_stream_axiom_check": "int-fib-neg-negation-wrappers-v2",
+    "require_selected_root": "Axeyum.Autogenesis.intNegNegV2",
+    "require_selected_root_axiom_footprint": [],
+    "selected_root_declaration_sha256": "2374f330709695733d084b219646e308d34b3a362d3d304b30ec866f3d385297",
+    "other_code_or_proof_changes_authorized": false
+  },
+  "driver": "crates/axeyum-lean-import/examples/int_fib_neg_concrete_branches_composition.rs",
+  "budgets_acceptance_and_stop_rule": "unchanged from artifacts/autogenesis/int-fib-neg-concrete-branches-composition-plan-v1.json",
+  "output_result": "artifacts/autogenesis/int-fib-neg-concrete-branches-composition-result-v3.json",
+  "limitations": "Concrete branches alone grant no exact target, fact, or ledger credit."
+}
