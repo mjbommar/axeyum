@@ -204,6 +204,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Hash-only identity audit of the sealed negative-natural theorem is frozen before its one reread; it will feed exact selected-fact `Int.fib_neg`, not create an ad hoc fact |
 | 2026-08-21 | (pending) | Canonical support type `8696d229…447dad` is bound empty-footprint; one nonpublishing official-root composition audit is frozen with it as the sole target leaf |
 | 2026-08-21 | (pending) | The target-leaf audit driver compiles Clippy-clean and preserves both caller kernels whether exact official-root composition accepts or declines |
+| 2026-08-21 | (pending) | Monolithic target-leaf composition exits without a durable report and gets zero credit; bounded target-owned `Int.eq_nat_or_neg` outer residual is frozen instead |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |

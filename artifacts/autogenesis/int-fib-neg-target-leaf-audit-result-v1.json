@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-target-leaf-audit-result",
+  "state": "monolithic-composition-finished-without-captured-report-no-credit",
+  "plan": "artifacts/autogenesis/int-fib-neg-target-leaf-audit-plan-v1.json",
+  "execution": {"driver_builds": 1, "complete_invocations": 1, "source_stream_reads": 1, "target_stream_reads": 1, "composition_attempts": 1, "captured_composition_receipts": 0, "exports": 0, "exact_target_submissions": 0, "fact_status_changes": 0, "ledger_writes": 0, "retries": 0},
+  "observation": {"process_remained_active_after_initial tool yield": true, "process_later_exited": true, "stdout_report_captured": false, "stderr_report_captured": false, "caller_worktree_changed": false},
+  "decision": "No retry and no inferred composition result. Move to bounded target-owned outer reconstruction because the monolithic official closure again fails to provide durable evidence.",
+  "authority": {"composition_credit": 0, "theorem_credit": 0, "fact_status_changes": 0, "ledger_writes": 0},
+  "limitations": "Process completion without a captured receipt is not evidence of acceptance or decline."
+}
