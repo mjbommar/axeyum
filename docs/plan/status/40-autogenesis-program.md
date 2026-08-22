@@ -4,7 +4,7 @@
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_gcd`, `Int.fib_dvd`, and now `Int.fib_of_nonneg` are durably proved with empty kernel footprints. The new operation survived an exit-75 intent fault without changing the fact, recovery performed exactly one authoritative ledger write, and an isolated exact-commit replay reproduced every primary byte identity and the preregistered empty unlock delta.
 
-**Next:** execute one bounded `Init.Prelude` export of clean `Nat.zero_lt_succ` and `Nat.add_pos_right`, then import twice and seal before writing the exact specialization driver.
+**Next:** preregister one exact `Nat.fib_pos` driver over the reusable recurrence, qualified core positivity roots, and function-abstracted residual; construct all four concrete contracts before specialization.
 
 <!-- plan-section: landed-changes -->
 
@@ -140,6 +140,7 @@
 | 2026-08-22 | (pending) | V2 compiles and exports the repaired residual twice byte-identically; both imports are empty-footprint, but credit is withheld because rewriting retains clean direct dependencies `[Eq.symm, congrArg]` rather than the predicted empty set |
 | 2026-08-22 | (pending) | V3 qualifies the exact `[Eq.symm, congrArg]` closure from the two prior empty-footprint imports without rerunning exporter, importer, theorem submission, or ledger machinery |
 | 2026-08-22 | (pending) | V4 freezes only two core positivity roots—successor positivity and right-summand positivity—to close all four concrete residual contracts over the reusable exact recurrence without touching official Fibonacci targets |
+| 2026-08-22 | (pending) | One bounded `Init.Prelude` export qualifies `Nat.zero_lt_succ` and `Nat.add_pos_right` empty-footprint through two fresh imports and seals the 124,573-byte support capsule with zero target submissions or ledger writes |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
