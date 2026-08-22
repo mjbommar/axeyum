@@ -81,6 +81,10 @@ prime-power modulus (best: Banks--Shparlinski exponent `2.1115`; DPR averages
 over moduli). The 2025 Sawin--Shusterman short-trace theorem was checked at
 source level too: it requires large fixed `q` and squarefree modulus, so it
 excludes both `q=2` and `x^j` rather than supplying the wild Witt estimate.
+The original conjecture citation was corrected too: it is Lemire's 2011
+MathOverflow question, not the unrelated Kaser--Lemire hashing preprint
+`arXiv:1202.4961`; the proposed degree-`<=2` construction in an MO answer is
+over the integers and fails over `F_2` already at `x^5+x+1`.
 The minimal sufficient statement is now the open fact
 `F:gf2-lemire-cylinder-twist-sup-bound` (empty evidence, by design). The
 theorem state is unchanged: Lemire's conjecture is not proved.
