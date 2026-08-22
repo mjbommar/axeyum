@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-direct-natabs-mul-plan-v3",
+  "state": "preregistered-direct-constructor-proof-before-source-or-compile",
+  "predecessor": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-directional-support-result-v2.json",
+    "sha256": "c223dfd3de4ef1ad5d78531662227935bcf3831deeeba0b9caf254d639118cb7",
+    "rejected_roots": 4,
+    "rejected_axiom_footprint": ["propext"]
+  },
+  "target": {
+    "name": "Axeyum.Autogenesis.intNatAbsMulDirectV1",
+    "statement": "forall a b : Int, (a * b).natAbs = a.natAbs * b.natAbs",
+    "source": "artifacts/autogenesis/sources/int-natabs-mul-direct-v1.lean",
+    "method": "case split only on the two Int constructors and ask definitional reduction to close all four branches",
+    "forbidden_dependencies": [
+      "Int.natAbs_mul",
+      "Int.natAbs_dvd_natAbs",
+      "Int.dvd_natAbs_self",
+      "Int.dvd_trans",
+      "Int.ofNat_dvd_left",
+      "propext"
+    ]
+  },
+  "fixed_environment": {
+    "ssh_alias": "s5",
+    "mathlib_checkout": "/home/mjbommar/lean-import-scale/mathlib4",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean_version": "4.30.0"
+  },
+  "execution": {
+    "max_source_writes": 1,
+    "max_compile_invocations": 1,
+    "max_exporter_invocations": 0,
+    "max_importer_runs": 0,
+    "max_retries": 0,
+    "target_fib_dvd_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "source_compiles": true,
+    "source_mentions_no_forbidden_dependency": true
+  },
+  "next_on_accept": "freeze two byte-identical exports and empty-footprint audits before composing any divisibility theorem"
+}
