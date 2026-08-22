@@ -6,8 +6,9 @@ use std::io::Cursor;
 use std::path::{Path, PathBuf};
 
 use axeyum_lean_import::{
-    ImportLimits, canonical_declaration_sha256, compose_checked_theorem_slice, import_ndjson,
-    verify_checked_theorem_composition,
+    ImportLimits, canonical_declaration_sha256, compose_checked_theorem_slice,
+    compose_checked_theorem_slice_with_target_leaves, import_ndjson,
+    verify_checked_theorem_composition, verify_checked_theorem_composition_with_target_leaves,
 };
 use axeyum_lean_kernel::{Declaration, Kernel, Lean4ExportMetadata, NameId};
 use serde_json::{Value, json};
@@ -18,6 +19,7 @@ const NATCAST_SHA256: &str = "6c803eff520a62d6925db5ed30f78714d9923281becfd78239
 const DECISION_SHA256: &str = "29053dba3b90cecf5a70ba347ea7dba81a19990f715e69d5fc0a1c60cb9a6c07";
 const RESIDUAL: &str = "Axeyum.Autogenesis.intFibNegFunctionResidualV1";
 const NATCAST: &str = "Int.fib_neg_natCast";
+const EVEN_IFF: &str = "Int.even_iff";
 const USAGE: &str = "usage: int_fib_neg_function_residual_clean_composition \
     <residual.ndjson> <natcast.ndjson> <decision.ndjson> <output.ndjson>";
 
@@ -58,15 +60,23 @@ fn run() -> Result<(), String> {
     .map_err(|error| format!("natCast support replay failed: {error:?}"))?;
     let support_receipt_sha256 = support.receipt().receipt_sha256.clone();
 
-    let completed = compose_checked_theorem_slice(residual.kernel(), support.kernel(), &[RESIDUAL])
-        .map_err(|error| format!("function residual composition declined: {error:?}"))?;
-    verify_checked_theorem_composition(
+    let completed = compose_checked_theorem_slice_with_target_leaves(
+        residual.kernel(),
+        support.kernel(),
+        &[RESIDUAL],
+        &[EVEN_IFF],
+    )
+    .map_err(|error| format!("function residual target-leaf composition declined: {error:?}"))?;
+    verify_checked_theorem_composition_with_target_leaves(
         residual.kernel(),
         support.kernel(),
         completed.kernel(),
         completed.receipt(),
     )
-    .map_err(|error| format!("function residual replay failed: {error:?}"))?;
+    .map_err(|error| format!("function residual target-leaf replay failed: {error:?}"))?;
+    if completed.receipt().target_theorem_leaves != [EVEN_IFF] {
+        return Err("function residual target-leaf receipt changed".to_owned());
+    }
     let residual_receipt_sha256 = completed.receipt().receipt_sha256.clone();
     let root = find_name(completed.kernel(), RESIDUAL)?;
     require_empty(completed.kernel(), root, RESIDUAL)?;
@@ -109,8 +119,10 @@ fn run() -> Result<(), String> {
             "execution": {
                 "complete_invocations": 1,
                 "input_stream_reads": 3,
-                "composition_operations": 2,
-                "composition_replays": 2,
+                "ordinary_compositions": 1,
+                "ordinary_replays": 1,
+                "target_leaf_compositions": 1,
+                "target_leaf_replays": 1,
                 "support_submissions": 1,
                 "capsule_exports": 1,
                 "fresh_imports": 2,
