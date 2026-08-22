@@ -33,6 +33,11 @@ Kaser--Lemire half-degree-irreducibles chain (sibling repository
   no degree-preserving symmetry has an orbit of the identity class larger than
   2, so a group action cannot prove Lemire (corrects the earlier claim that
   translation fixes the identity class).
+- [07-covariance-phase-face.md](07-covariance-phase-face.md) -- the phase-aware
+  face: the exact cylinder covariance C/D (bulk-negative, random in aggregate,
+  unbounded-above tail), the pseudorandom pair correlation, and an exact proof
+  that the Witt carry formula collapses to Weil above the Kerdock level
+  (boundary s-1=1). Verdict: the one unblocked target, not reachable now.
 
 Executable companions live in
 [`scripts/lemire-signed-trace/`](../../../../scripts/lemire-signed-trace/README.md).

@@ -153,4 +153,25 @@ public companion PDF `lemire-almost-all.pdf` carries Theorems A/B and the
 barrier; the roadmap PDF carries the AP/Witt restatement, `(CYL)`, and the
 generic-invariant obstruction. Theorem state unchanged: Lemire is not proved.
 
+**Three post-barrier approaches worked (2026-08-22, Opus agents).** After the
+moduli barrier, the almost-all trichotomy left three admissible input types;
+all three are now investigated. (1) The **almost-all theorem** is proved and
+machine-checked (note 05): all but `< 4 ell^2 2^{-ell}` of the `2^ell` patterns
+are realized; public companion PDF `lemire-almost-all.pdf`. (2) The **symmetry
+route is a second barrier** (note 06): no degree-preserving symmetry has an
+orbit of the identity class `> 2` (Borel of `PGL_2(F_2)` + Adams; Hecke
+transitive but degree-shifting), machine-checked `3 <= ell <= 8`. This
+corrected a real error -- translation `x -> x+1` does NOT fix the identity
+class in general (it sends `1 -> <(1+x)^n>_ell`, verified `N`-preserving) --
+fixed in notes 05/06 and the public PDF. (3) The **phase-aware covariance**
+(note 07) is measured exactly: aggregate `C/D ~ 0` (random), median `~ -0.55`
+(bulk-negative), unbounded-above tail (so `|C| <= (1-eps)D` uniformly is
+false); pair correlation pseudorandom; and a new exact fact -- the Witt carry
+formula collapses to Weil above the Kerdock level, boundary `s-1 = 1`. The
+cylinder form carries doubly-exponential margin (weaker than `(HWO)`'s
+`4 ell`), but is unreachable now: fixed-`q` pair correlation is unproved
+(integer analogue conditional, function-field analogues all `q -> infinity`).
+Theorem state unchanged: Lemire is not proved; the two barriers plus the
+almost-all theorem narrow it to exactly one unblocked analytic target.
+
 <!-- plan-section: landed-changes -->
