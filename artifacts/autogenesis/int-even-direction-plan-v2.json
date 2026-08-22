@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-direction-plan",
+  "state": "preregistered-explicit-arithmetic-leaf-factorization",
+  "predecessor": {"path": "artifacts/autogenesis/int-even-direction-result-v1.json", "required_state": "official-forward-candidate-rejected-before-source-construction"},
+  "contracts": {
+    "double_mod_zero": "forall m : Int, (m + m) % 2 = 0",
+    "half_witness": "forall n : Int, n % 2 = 0 -> exists m : Int, n = m + m",
+    "forward": "forall n : Int, Even n -> n % 2 = 0",
+    "backward": "forall n : Int, n % 2 = 0 -> Even n"
+  },
+  "proof_route": "forward destructures the Even witness and applies double_mod_zero; backward is the half_witness contract at the definition of Even. No official modulo theorem or simp dependency is used.",
+  "source": "artifacts/autogenesis/sources/int-even-direction-residual-v2.lean",
+  "budget": {"source_constructions": 1, "compilations": 1, "exports": 2, "footprint_audits": 1, "exact_target_submissions": 0, "retries": 0, "ledger_writes": 0},
+  "acceptance": {"both_direction_footprints": [], "direct_theorem_dependencies": [], "proof_terms_types_or_values_may_be_rendered": false},
+  "next_on_accept": "Construct double_mod_zero from clean modulo recursion and half_witness from the already native Euclidean decomposition at divisor two.",
+  "output": "artifacts/autogenesis/int-even-direction-result-v2.json",
+  "limitations": "The arithmetic leaf contracts remain obligations after residual qualification."
+}
