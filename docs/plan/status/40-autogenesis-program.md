@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, and `Int.gcd_fib` are durably proved with empty kernel footprints. The newly unlocked `Int.fib_gcd` reconstructs exactly, survives two fresh imports with an empty footprint and four dependencies, and is now uniquely selected by the machine frontier for crash-safe admission.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, and now `Int.fib_gcd` are durably proved with empty kernel footprints. The exact `Int.fib_gcd` operation survived an exit-75 intent fault, recovery performed one authoritative ledger write, and the measured frontier correctly produced an empty unlock delta; isolated replay remains separate.
 
-**Next:** execute the preregistered crash-safe `Int.fib_gcd` operation from an exact clean commit, publish the one-write settlement, and independently replay the admission before selecting the next fact.
+**Next:** publish the one-write `Int.fib_gcd` settlement, independently replay it from the exact clean source commit, then regenerate the frontier and select the next bottom-up fact.
 
 <!-- plan-section: landed-changes -->
 
@@ -46,6 +46,7 @@
 | 2026-08-22 | (pending) | Hash-only audit binds canonical `Int.fib_gcd` type `c073add7…64d` with unchanged empty footprint and four dependencies; the sealed-capsule checker is ready before operation registration |
 | 2026-08-22 | (pending) | Exact crash-safe `Int.fib_gcd` admission is frozen against receipt `6c5a72c0…02cc`, one ledger write, one recovery, one isolated replay, and an expected empty unlock delta before registry code |
 | 2026-08-22 | (pending) | Exact `Int.fib_gcd` sealed-capsule execution is registered through typed frontier, execution, transaction, and replay machinery with four fixed dependencies and zero ledger writes so far |
+| 2026-08-22 | (pending) | Exit-75 intent fault leaves `Int.fib_gcd` unchanged; recovery performs exactly one ledger write, its settled checker passes, and the measured readiness delta is empty as preregistered |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
