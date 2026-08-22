@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-lemire-cylinder-twist-sup-bound",
+  "title": "Twisted prime mass of the Lemire identity cylinder is below 2^(ell-1) for every sign character of the middle coefficients",
+  "statement": "Let ell >= 200 and n in {2 ell + 1, 2 ell + 2}. Put c = ceil(log2 ell), a = ell - c - 1, E_j = (1 + x F_2[x])/(x^(j+1)), and for monic F of degree n let <F>_j = x^n F(1/x) mod x^(j+1). Let K be the kernel of E_ell -> E_(a-1) (an elementary abelian 2-group of order 2^(ell-a+1)) and let psi be any nontrivial character of K. Then | sum over monic F of degree n with <F>_(a-1) = 1 of Lambda(F) psi(<F>_ell) | < 2^(ell-1). Equivalently: the von Mangoldt mass of the short interval {x^n + g : deg g <= n - a} is equidistributed, with absolute error below 2^(ell-1), against every F_2-linear sign pattern of the coefficients of x^(n-a), ..., x^(n-ell).",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "; NOT EXPRESSIBLE as a finite SMT-LIB instance: the statement quantifies over all ell >= 200 and over prime-power counts of degree n ~ 2 ell polynomials over F_2; each single (ell, n, psi) instance is a finite enumeration of 2^(n-a+1) Mangoldt values, which is what the evidence scripts compute for ell <= 22, but the fact is the uniform statement.",
+    "fragment": "none",
+    "free_symbols": []
+  },
+  "epistemic_status": "open",
+  "external_status": "open",
+  "depends_on": [],
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-21",
+    "established_by": "not established in this ledger",
+    "source": "authored by lane lemire-signed-trace as the minimal sufficient statement isolated in docs/research/10-cas/lemire-signed-trace/02-mechanism-hunt.md section 1.1; it is the sup-norm form of the one-sided (ICV) premise of branch agent/gf2/lemire-proof",
+    "prior_art": []
+  },
+  "concept_refs": [],
+  "notes": "Why this fact exists: it is the smallest statement currently known to close the Kaser--Lemire chain (sibling repo lemire-half-degree-irreducibles, roadmap of 21 Aug 2026). Chain, all steps proved there and on the branch: for each nontrivial psi write A_psi for the twisted sum; Fourier inversion on K gives |N_ell(1) - mean_K| <= ((|K|-1)/|K|) max_psi |A_psi| < 2^(ell-1); the Haar telescope gives C_(ell,n) = 2^ell (N_ell(1) - mean_K); and B_(ell,n) = 2^(2 ell) - 2^(ell+1)((a-3)2^(a-1)+2) >= 2^(2 ell - 1) because (a-3) < ell <= 2^c, so C > -B is (REL), which implies N_ell(1) > 2^(n-ell) - 2^ell and hence a prime of degree n with deg(f - x^n) <= floor(n/2). Scale: Weil gives |A_psi| <= (ell-1) 2^ceil(n/2), a factor 4(ell-1) above the bound; the random-phase model gives 2^((n-a+1)/2) sqrt(ell), a factor 2^(ell/2)/ell below it. Measured exactly (scripts/lemire-signed-trace/lemire_cylinders.py and the twisted-sum table in note 02) at (ell,n) = (20,41),(20,42),(22,45): the identity-cylinder maximum of |A_psi| is 0.46, 0.61, 0.20 of 2^(ell-1), and the maximum over ALL 2^(a-1) cylinders is 0.63, 0.94, 0.36 of it, with rms equal to the random-phase prediction to three digits. The fact is stated only for the identity cylinder because that is what the chain needs; the data say the uniform-in-cylinder version holds too. This is a fixed-F_2, growing-conductor statement at the edge of the Hughes--Rudnick support; the literature check of 2026-08-21 (note 02 section 4) found no method, for integers or function fields, that beats the Weil/GRH bound for a single prime-power modulus by even a logarithm. Evidence is empty because the ledger has established nothing; the finite tables are not evidence for the uniform statement and must not be attached as such."
+}

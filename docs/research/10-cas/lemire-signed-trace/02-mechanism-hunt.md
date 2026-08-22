@@ -7,9 +7,9 @@ shortcuts that the data or a two-line argument kill. It is written so that no
 idea here has to be re-derived or re-refuted.
 
 Companion: [01-target-and-toolkit.md](01-target-and-toolkit.md) (target,
-formulations, literature, tooling). Data: `scripts/lemire-signed-trace/data/`.
+formulations, literature, tooling). Data: `scripts/lemire-signed-trace/data/` (layer tables to `ell = 23`, cylinder table to `ell = 23`).
 
-## 1. What the exact layer data say (`ell <= 22`, both endpoints)
+## 1. What the exact layer data say (`ell <= 23`, both endpoints)
 
 Source: class-population dumps of the branch CAS
 (`axeyum-gf2-dump-populations`, source in `scripts/lemire-signed-trace/`),
@@ -30,6 +30,7 @@ ell  n    orders >= 2^3      orders >= 2^4
 20   42   0.46 x             0.16 x
 22   45   0.23 x             0.23 x
 22   46   0.22 x             0.22 x
+23   47   0.21 x             0.10 x   (orders >= 2^5: 0.04 x)
 ```
 
 Orders `2` and `4` sit at `1--3 x` threshold throughout; for `ell >= 200`
@@ -68,7 +69,7 @@ the would-be recursion is wrong.
 (`|K| = 2^{ell-a+1}`, elementary abelian since `a > ell/2`), put
 `SSD_h = sum_{g in hK} (N(g) - mean_{hK})^2` for each of the `2^{a-1}`
 cylinders `h`. `(REL)` follows from `SSD_1 < 2^{2 ell - 2}` (identity
-cylinder). Measured (`data/cylinder-variances-ell12-22.txt`):
+cylinder). Measured (`data/cylinder-variances-ell12-23.txt`):
 
 ```text
 ell n   a  |K| cylinders  SSD_id/avg  rank of id   max/avg  SSD_id/2^{2ell-2}  avg/SatoTate
@@ -80,6 +81,7 @@ ell n   a  |K| cylinders  SSD_id/avg  rank of id   max/avg  SSD_id/2^{2ell-2}  a
 20 42  14 128     8192     1.18       664/8192     1.77     0.042             0.90
 22 45  16 128    32768     1.03     12773/32768    1.59     0.0050            0.90
 22 46  16 128    32768     1.05     10742/32768    1.69     0.010             0.90
+23 47  17 128    65536     0.96     39139/65536    1.63     0.0025            0.91
 ```
 
 Three facts. (i) The identity cylinder is typical: within 25% of the average
@@ -217,6 +219,26 @@ weight distribution is unknown in this range.
   come from genericity that monodromy cannot certify.
 
 ## 4. Where this leaves the proof
+
+Literature check of 2026-08-21 on the two integer-side templates (primary
+sources; details in the lane transcript). (i) Least prime in a progression to
+a prime-power modulus `q = p^k`, `p` fixed: Barban--Linnik--Chudakov 1964
+exponent `8/3`, Gallagher 1972 `5/2`, Huxley 1975 `12/5` (Chang 2014 restates
+it for any `q` with small prime factors), Banks--Shparlinski 2019 `2.1115` via
+Postnikov's formula, Korobov double Weyl sums and Ford's explicit Vinogradov
+mean value theorem; for fixed `p` there is no Siegel zero, which is exactly
+why the constants depend on `p`. Nothing reaches `2 + o(1)`; that needs GRH
+(Lamzouri--Li--Soundararajan `(phi(q) log q)^2`) or GLH (`q^{2+eps}`), and an
+*asymptotic* at `x = q^2` is known only under GRH plus a pair-correlation or
+Montgomery-type hypothesis (Kandhil--Languasco--Moree 2026). (ii)
+Drappeau--Pratt--Radziwill's one-level density beyond support 2 averages over
+moduli `q ~ Q` with smooth weights and says so explicitly ("no progress on
+the de-averaging hypothesis"); Fiorilli--Miller's extensions are all
+hypotheses about primes `= 1 mod q` beyond `x = q^2`. (iii) Function fields,
+`q` fixed: Rosen's Weil bound `deg P <= 2 deg M + 2 log_q deg M + O(1)` is the
+record; nothing published improves it by a logarithm for `M = x^k` over
+`F_2`. The open fact `F:gf2-lemire-cylinder-twist-sup-bound` records the
+minimal sufficient statement in the ledger with empty evidence.
 
 The statement is a one-level-density assertion for the family of characters
 mod `x^{j+1}` at exactly the edge of the Hughes--Rudnick support (`|P| ~ |Q|^2`,
