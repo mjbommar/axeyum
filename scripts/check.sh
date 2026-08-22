@@ -232,7 +232,14 @@ step shell-antipatterns ./scripts/check-shell-antipatterns.sh
 # `bench-results/DOMINANCE.md` is generated and had NO `--check` and no gate,
 # so it sat SIX AUDITS behind its own inputs -- its QF_S row claimed 87
 # decided against an artifact recording 93 -- while reading as current.
+step dominance-scoreboard-tests python3 -m unittest scripts.tests.test_gen_dominance_scoreboard
 step dominance-scoreboard python3 scripts/gen-dominance-scoreboard.py --check
+# The dominance audit's OWN unit tests. `cargo test -p axeyum-bench --example
+# audit_dominance` appeared in no script, so the harness that produces every
+# committed dominance number carried a test that had been FAILING since
+# ADR-0384 made `Evidence::check` three-valued -- invisibly, for as long as
+# nobody typed the command. Expect a NONZERO count (10).
+step dominance-audit-harness-tests cargo test -p axeyum-bench --example audit_dominance
 # The Lean-reconstruction unit tests, moved OUT of `hooks/pre-push` on
 # 2026-08-20. Measured idle: 268 tests, 294s, because each builds Lean
 # preludes -- 90% of the hook's unit sweep and ~45% of every Rust push. They

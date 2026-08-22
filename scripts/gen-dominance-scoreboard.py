@@ -256,10 +256,19 @@ def exact_dominance_action(row: dict, audit: dict | None, route: ProofRoute) -> 
     if not audit_is_complete(row, audit):
         return dominance_action(row, route)
     summary = audit.get("summary", {})
-    if summary.get("audit_errors", 0):
+    excluded = summary.get("excluded_from_audited") or {}
+    if summary.get("audit_errors", 0) or excluded.get("audit_undecided_errors", 0):
         return "fix audit errors"
-    if summary.get("timeouts", 0):
+    if summary.get("timeouts", 0) or excluded.get("audit_undecided_timeouts", 0):
         return "fix audit timeouts"
+    # `audited_decided` counts only what BOTH sides could attribute, so a
+    # directory-backed row excludes every instance it fails to decide (see
+    # `mark_excluded` in examples/audit_dominance.rs). Before schema v4 those
+    # instances left no record at all, and the two synthetic rows could time out
+    # on every excluded instance while publishing `timeouts: 0` -- true, and
+    # worthless. `timeouts` alone is therefore not a sufficient test.
+    if excluded.get("audit_undecided", 0):
+        return "audit undecided instances excluded from the row"
     audited_unsat = summary.get("audited_unsat", 0)
     lean_unsat = summary.get("lean_checked_unsat", 0)
     if audited_unsat > lean_unsat:
