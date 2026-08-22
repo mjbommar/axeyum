@@ -188,12 +188,42 @@ fn add_int_fib_dvd(kernel: &mut Kernel) -> Result<(), String> {
     let hypothesis_ty = dvd(kernel, int_ty, "Int.instDvd", m, n)?;
     let hypothesis = kernel.fvar(h_id);
     let abs_indices_dvd = kernel.app(forward_mn, hypothesis);
+    let abs_indices_dvd_ty = dvd(kernel, nat_ty, "Nat.instDvd", abs_m, abs_n)?;
+    require_closed_link(
+        kernel,
+        abs_indices_dvd,
+        abs_indices_dvd_ty,
+        m_id,
+        n_id,
+        h_id,
+        int_ty,
+        hypothesis_ty,
+        "forward witness proof",
+    )?;
     let nat_fibonacci_divisibility = app_const(
         kernel,
         nat_fib_dvd_theorem,
         &[],
         &[abs_m, abs_n, abs_indices_dvd],
     );
+    let nat_fibonacci_divisibility_ty = dvd(
+        kernel,
+        nat_ty,
+        "Nat.instDvd",
+        nat_fib_abs_m,
+        nat_fib_abs_n,
+    )?;
+    require_closed_link(
+        kernel,
+        nat_fibonacci_divisibility,
+        nat_fibonacci_divisibility_ty,
+        m_id,
+        n_id,
+        h_id,
+        int_ty,
+        hypothesis_ty,
+        "natural Fibonacci divisibility",
+    )?;
 
     let zero = kernel.level_zero();
     let nat_level = kernel.level_succ(zero);
@@ -225,6 +255,18 @@ fn add_int_fib_dvd(kernel: &mut Kernel) -> Result<(), String> {
         nat_fibonacci_divisibility,
         second_bridge_reverse,
     )?;
+    let first_transport_ty = dvd(kernel, nat_ty, "Nat.instDvd", nat_fib_abs_m, abs_fib_n)?;
+    require_closed_link(
+        kernel,
+        first_transport,
+        first_transport_ty,
+        m_id,
+        n_id,
+        h_id,
+        int_ty,
+        hypothesis_ty,
+        "second equality transport",
+    )?;
 
     let first_id = u64::MAX - 140_201;
     let first = kernel.fvar(first_id);
@@ -239,9 +281,32 @@ fn add_int_fib_dvd(kernel: &mut Kernel) -> Result<(), String> {
         first_transport,
         first_bridge_reverse,
     )?;
+    let both_transport_ty = dvd(kernel, nat_ty, "Nat.instDvd", abs_fib_m, abs_fib_n)?;
+    require_closed_link(
+        kernel,
+        both_transport,
+        both_transport_ty,
+        m_id,
+        n_id,
+        h_id,
+        int_ty,
+        hypothesis_ty,
+        "first equality transport",
+    )?;
 
     let proof = app_const(kernel, reverse, &[], &[fib_m, fib_n, both_transport]);
     let proposition = dvd(kernel, int_ty, "Int.instDvd", fib_m, fib_n)?;
+    require_closed_link(
+        kernel,
+        proof,
+        proposition,
+        m_id,
+        n_id,
+        h_id,
+        int_ty,
+        hypothesis_ty,
+        "final reverse transport",
+    )?;
     let hypothesis_binder = nested_name(kernel, &["h"]);
     let proposition_with_h = kernel.pi(
         hypothesis_binder,
@@ -278,6 +343,49 @@ fn add_int_fib_dvd(kernel: &mut Kernel) -> Result<(), String> {
             value,
         })
         .map_err(|error| format!("Int.fib_dvd rejected: {error:?}"))
+}
+
+#[allow(clippy::too_many_arguments)]
+fn require_closed_link(
+    kernel: &mut Kernel,
+    proof: ExprId,
+    expected: ExprId,
+    m_id: u64,
+    n_id: u64,
+    h_id: u64,
+    int_ty: ExprId,
+    hypothesis_ty: ExprId,
+    label: &str,
+) -> Result<(), String> {
+    let closed_proof = close_lam(kernel, h_id, "h", hypothesis_ty, proof);
+    let closed_proof = close_lam2(
+        kernel, m_id, n_id, "m", "n", int_ty, int_ty, closed_proof,
+    );
+    let h_binder = nested_name(kernel, &["h"]);
+    let closed_expected = kernel.pi(
+        h_binder,
+        hypothesis_ty,
+        expected,
+        BinderInfo::Default,
+    );
+    let closed_expected = close_pi2(
+        kernel,
+        m_id,
+        n_id,
+        "m",
+        "n",
+        int_ty,
+        int_ty,
+        closed_expected,
+    );
+    let inferred = kernel
+        .infer(closed_proof)
+        .map_err(|error| format!("{label} inference failed: {error:?}"))?;
+    if kernel.def_eq(inferred, closed_expected) {
+        Ok(())
+    } else {
+        Err(format!("{label} inferred a non-convertible type"))
+    }
 }
 
 fn dvd(

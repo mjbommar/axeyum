@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-link-diagnostics-result-v18",
+  "state": "five-closed-link-diagnostics-build-clippy-clean",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-link-diagnostics-plan-v18.json",
+    "sha256": "83e0ecb6f2d614844b1364be2e1af78d47934ec6d55ac0874d92c75083d0e85e"
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/int_fib_dvd_exact.rs",
+    "sha256": "7f95b1aa4df253be85305d71d75b78a4de68e485607244f8f730d87b3c9f1095",
+    "closed_link_checks": 5,
+    "proof_change": "none"
+  },
+  "execution": {
+    "driver_builds": 1,
+    "focused_clippy_exit_status": 0,
+    "complete_invocations": 0,
+    "input_stream_reads": 0,
+    "target_theorem_submissions": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "run once and stop at the first non-convertible closed proof link"
+}
