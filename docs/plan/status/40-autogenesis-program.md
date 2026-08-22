@@ -4,7 +4,7 @@
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_dvd`, `Int.fib_of_nonneg`, `Nat.fib_pos`, `Nat.fib_eq_zero`, and now `Int.fib_eq_zero` are durably proved with empty kernel footprints. An isolated clean replay independently reproduced `Int.fib_eq_zero` selection, certified execution, exit-75 recovery, exactly one ledger write, its proved fact, and the preregistered empty readiness delta.
 
-**Next:** export and nonrenderingly audit the single pinned `Int.fib_add` root, then freeze the smallest axiom-free construction boundary before source code or theorem submission.
+**Next:** audit the five direct theorem dependencies beneath assumption-bearing official `Int.fib_add` once, then freeze the smallest target-owned sign-case residual before source code or theorem submission.
 
 <!-- plan-section: landed-changes -->
 
@@ -30,6 +30,7 @@
 | 2026-08-22 | (pending) | Exit-75 intent fault leaves `Int.fib_eq_zero` unchanged; one recovery performs one ledger write, the registered checker passes, and readiness remains empty as preregistered |
 | 2026-08-22 | (pending) | Isolated clean replay `e3ac1936…cf7a` independently repeats `Int.fib_eq_zero` selection, certified execution, exit-75 recovery, one write, and the exact empty readiness delta |
 | 2026-08-22 | (pending) | Current frontier exposes three dependency-ready integer Fibonacci facts; `Int.fib_add` is frozen as the collision-free foundation because it alone unlocks the two-multiple chain |
+| 2026-08-22 | (pending) | One pinned root export and nonrendering import reject official `Int.fib_add` as assumption-bearing while localizing its replacement boundary to five direct theorem dependencies |
 
 | 2026-08-21 | (pending) | The newly ready `Int.gcd_fib` route is frozen through one target-owned Fibonacci/natAbs bridge and the two exact admitted premise capsules before source construction or proof-stream access |
 | 2026-08-21 | (pending) | Closure analysis corrects the bridge boundary before execution: export a dependency-free two-parameter residual, then specialize it with exact clean `Int.fib_neg` and `Int.natAbs_neg` roots |
