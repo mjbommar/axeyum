@@ -7,7 +7,7 @@ theorem natFibPosResidualV1
     (zeroPresentation : fibFn 0 = 0)
     (onePositive : 0 < fibFn 1)
     (stepPositive : ∀ n, 0 < fibFn (n + 1) → 0 < fibFn (n + 2))
-    (successorPositive : ∀ n, 0 < n.succ) :
+    (successorPositive : ∀ n : Nat, 0 < Nat.succ n) :
     ∀ {n}, 0 < fibFn n ↔ 0 < n := by
   intro n
   cases n with
@@ -25,6 +25,6 @@ theorem natFibPosResidualV1
       · intro _
         induction k with
         | zero => exact onePositive
-        | succ k ih => exact stepPositive k ih
+        | succ k ih => exact stepPositive k (ih (successorPositive k))
 
 end Axeyum.Autogenesis
