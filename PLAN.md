@@ -158,6 +158,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Hash-only audit binds canonical `Int.fib_add_one` type `b9c99a22…41c6` with unchanged empty footprint and zero ledger authority |
 | 2026-08-21 | (pending) | Exact crash-safe `Int.fib_add_one` admission is frozen against its sealed four-dependency capsule before operation code or ledger mutation |
 | 2026-08-21 | (pending) | Exact capsule checker, operation registry, transaction assurance, and mutation controls make `Int.fib_add_one` uniquely executable with zero ledger writes |
+| 2026-08-21 | (pending) | Exit-75 intent fault leaves the fact unchanged; one recovery write admits exact `Int.fib_add_one`, and the complete immutable primary archive binds an empty readiness delta |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
@@ -1394,9 +1395,9 @@ linear integer problem to the LIA route, measured against the 74 `VeryMax/ITS`
 misses. It is the one hypothesis these measurements have not refuted; it is
 unpriced, and it is a route, not a constant.
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, and `Int.fib_eq_fib_add_two_sub_fib_add_one` are durably proved with empty kernel footprints. The first recurrence corollary has a complete immutable primary archive and an isolated clean replay; its admission produced no further readiness delta.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, and both recurrence corollaries `Int.fib_add_one` and `Int.fib_eq_fib_add_two_sub_fib_add_one` are durably proved with empty kernel footprints. The first corollary has a clean replay; the add-one primary archive is complete and its replay is pending.
 
-**Next:** close the remaining ready recurrence orientation `Int.fib_add_one` from admitted recurrence plus native right cancellation, then use both checked orientations to continue the target-owned sign/parity induction toward `Int.fib_neg_natCast` without importing official proof terms.
+**Next:** complete the isolated clean replay for `Int.fib_add_one`, then use both checked recurrence orientations to continue the target-owned sign/parity induction toward `Int.fib_neg_natCast` without importing official proof terms.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
