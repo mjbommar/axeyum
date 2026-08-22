@@ -256,6 +256,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Residual composition fails closed at broad-source `Lean.RArray`; a function-parameterized constructor residual is frozen to remove `Int.fib` and its implementation closure entirely |
 | 2026-08-21 | (pending) | Generic residual V1 stops before elaboration because Lean requires a project-root source; V2 freezes staging of the unchanged sealed source into the pinned Mathlib checkout |
 | 2026-08-21 | (pending) | Function-parameterized residual exports twice byte-identically with `Int.fib` and `Lean.RArray` absent from its selected closure; clean-kernel composition is frozen next |
+| 2026-08-21 | (pending) | Function-residual clean-composition driver passes focused Clippy with all three streams unread; one fail-if-present invocation remains |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
