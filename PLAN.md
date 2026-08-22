@@ -127,6 +127,7 @@ now. Nothing was deleted.
 | 2026-08-22 | (pending) | Corrected residual compiles, but exporter cannot find the root-level olean; V3 freezes removal of the zero-byte partial plus exact temporary build-library staging before two fresh exports |
 | 2026-08-22 | (pending) | Temporary module staging yields two byte-identical 118,084-byte streams; four imports qualify target-owned natAbs-zero and the five-parameter Fibonacci residual with empty footprints |
 | 2026-08-22 | (pending) | Exact `Int.fib_eq_zero` specialization is frozen over three sealed inputs, two checked compositions, five arguments, and a four-theorem dependency contract before driver code or stream access |
+| 2026-08-22 | (pending) | Exact driver typechecks but Clippy stops at 105 lines before stream access; V2 freezes only output serialization extraction with the proof route and counters unchanged |
 | 2026-08-22 | (pending) | Durable V5 paths identify official `Int.fib` through its Even decider as the common carrier of all eight assumptions; V6 freezes a fully function-abstracted, decision-free eight-parameter residual before source construction |
 | 2026-08-22 | (pending) | V6 stops before export because each universal natAbs rewrite leaves its second occurrence; V7 freezes only three explicit repeated rewrite sequences with the abstraction boundary unchanged |
 | 2026-08-22 | (pending) | V7 exports twice as the same 351,201-byte residual, imports twice with zero axioms, and retains only clean Eq.symm/congrArg; exact eight-parameter specialization remains separately unauthorized |
