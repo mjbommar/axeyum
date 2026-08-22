@@ -295,3 +295,65 @@ conditional biases carry any relation beyond the four-population identity;
 layer; (c) the exact energies `#{(alpha,beta) : same Witt profile}` inside
 the identity cylinder, to price the one-sided `(ICV)` route without Fourier
 loss.
+
+## 5. Mechanism verdicts from three parallel attempts (2026-08-21, late)
+
+Three independent forks of this lane each took one surviving structure and
+were required to return an exact identity or inequality, or the precise
+obstruction. Scratch only; nothing below is proof credit.
+
+**A. Witt-digit tower.** Exact calculus found and checked: in characteristic
+two the Witt sum of two Teichmueller lifts is `[a] + [b] = sum_k V^k [c_k]`
+with `c_0 = a + b` and `c_k = a b (a+b)^{2^k - 2}` for `k >= 1`; hence the
+Galois-ring traces `T_s(a) = Tr_{GR(2^s,n)}([a])` obey the carry formula
+
+```text
+T_s(a+b) = T_s(a) + T_s(b) - 2 T_{s-1}(ab) - 4 T_{s-2}(ab(a+b)^2)
+           - 8 T_{s-3}(ab(a+b)^6) - ...            (mod 2^s),
+```
+
+the `Z/4` case being the Kerdock identity; verified mod 16 on 3000 random
+pairs in `F_{2^13}` (`data/witt-carry-formula-check.txt`). Every sparse
+imbalance has an exact Galois-ring form (`Delta_{6,2}(13) = -64`,
+`Delta_{5,3}(13) = -38` both ways). Squaring an imbalance and applying the
+carry formula gives an exact pair expansion over `A x A`, but it is
+tautological: its right side is a constrained sum-product character sum whose
+only trivial bound is `|A|^2`, and dropping the constraint collapses it to a
+Kerdock-type `|G_s|^2`. `A` is not additively closed and the carries are
+nonlinear, so no shift-averaging identity with a bounded side exists;
+Parseval over cosets returns Weil. Verdict: exact calculus, no inequality.
+
+**B. Coset-product Weil polynomial.** For `P_psi(T) = prod_{chi_0}
+L(chi_psi chi_0, T)` (degree `2^{a-1}(j-1)`; integral iff the coset is
+Galois-stable, i.e. `cond(chi_psi^2) <= a-1`, else take the Galois orbit),
+exact computation at `(7,15), (7,16)` confirms Newton power sums equal the
+twisted cylinder sums `-2^{a-1} A_psi^{(m)}` for every `m` and exhibits the
+2-adic Newton polygons (slopes `1/2` at `j = 3,5`; `1/4,1/2,3/4` at `4,6`;
+`1/3,2/3` at `7`). Obstruction: `Q(T) = 1 - 2^{(n+1)/2}T^n + 2^n T^{2n}` is an
+integral Weil polynomial with `p_m(Q) = 0` for all `m < n` and `p_n(Q) = n
+2^{(n+1)/2}`, so multiplying any admissible polynomial by `Q^k` preserves
+degree type, integrality, RH, the functional equation and *all* low power
+sums while pushing `|p_n|` to about `0.7` of the trivial bound `D 2^{n/2}`
+(target `D 2^{n/2}/(4 ell)`); and RH forces the minimal slope `<= 1/2`, so
+2-adic information stops at `2^{ceil(n/2)} | p_n`. Verdict: no generic
+invariant of `P_psi` can give the saving; only the specific arithmetic of the
+Hayes characters can.
+
+**C. Additive/multiplicative structure and constructions.** The summand and
+the cylinder are both additive objects; the only multiplicative structure
+(the class map on polynomials) is destroyed by primality, so no sum-product,
+energy, or uncertainty argument applies, and the required saving, though
+only a power `log2(ell)/ell`, is not produced by any of them (Weil is a
+constant factor below trivial). Power-map pullbacks give only the trivial
+inclusions `|A_ell| <= |A_{floor(ell/k)}|`. Every constructive or lifting
+route is closed (branch ledger plus two new closures: the Carlitz-cyclotomic
+Euclid argument yields primes of degree `~2^ell deg F`, and Hensel lifting at
+`x` fails because irreducibility is not a local condition in the residue).
+Verdict: no inequality, no construction covering prime `n`.
+
+**Net.** The exact machinery is now complete on all three fronts (Witt carry
+calculus, integral coset products with exact power sums and Newton polygons,
+the pullback/coding descriptions), and each front ends at the same wall: a
+constrained character sum over a sparse set of size `~2^{n/2}` whose only
+provable bound is trivial or Weil. The chain remains open at
+`F:gf2-lemire-cylinder-twist-sup-bound`.

@@ -1,0 +1,5 @@
+forkA (candidate A, Witt-digit tower), 2026-08-21
+Witt sum of two Teichmuellers in char 2: [a]+[b] = sum_k V^k [c_k], c_0=a+b, c_k = a b (a+b)^(2^k-2) (k>=1), checked symbolically k<=3.
+Trace carry: T_s(a+b) = T_s(a)+T_s(b) - 2T_{s-1}(ab) - 4T_{s-2}(ab(a+b)^2) - 8T_{s-3}(ab(a+b)^6) - ... mod 2^s; verified mod 16 on 3000 random pairs in F_{2^13}: 0 mismatches.
+GR-side sparse imbalances match polynomial side: Delta_{6,2}(n=13) = -64 both ways; Delta_{5,3}(n=13) = -38 both ways.
+Pair expansion |Delta|^2 = sum_{alpha,beta in A} zeta^{T(alpha^k+beta^k)} zeta'^{T(alpha^k beta^k)} ... is exact but tautological; RHS is a constrained character sum over pairs, trivial bound |A|^2, no cancellation mechanism. No averaging identity with trivially bounded RHS exists because A is not additively closed and the carries are nonlinear. Verdict: no provable power saving from the Witt-digit tower alone.
