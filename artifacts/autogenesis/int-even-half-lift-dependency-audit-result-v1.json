@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-half-lift-dependency-audit-result",
+  "state": "propext-localized-to-int-neg-add",
+  "plan": "artifacts/autogenesis/int-even-half-lift-dependency-audit-plan-v1.json",
+  "evidence": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-constructor-lift-v1/half-dependencies-audit.json",
+    "sha256": "8edeb00d7aaaeaf521d765fe11f29b90701b8eda04ecbbd786b8133b60c9cda3",
+    "stream_reads": 1,
+    "importer_runs": 1
+  },
+  "empty_footprint": [
+    "Int.natCast_add",
+    "Int.ofNat.inj",
+    "congrArg",
+    "noConfusion_of_Nat"
+  ],
+  "assumption_bearing": {
+    "Int.neg_add": {
+      "declaration_sha256": "69330b7ee6bc2dbd75d7c55192f8f5b3a607482c419374d814d28d784738631a",
+      "axiom_footprint": ["propext"],
+      "direct_theorem_dependencies": [
+        "Eq.symm",
+        "Int.add_assoc",
+        "Int.add_comm",
+        "Int.add_left_cancel",
+        "Int.add_right_neg",
+        "Int.add_zero",
+        "congrArg"
+      ]
+    }
+  },
+  "conclusion": "The half-witness proof is otherwise clean; replace only generic Int.neg_add with a target-owned same-natural-double negation theorem.",
+  "ledger_writes": 0
+}

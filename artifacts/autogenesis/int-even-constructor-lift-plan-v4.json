@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-constructor-lift-plan",
+  "state": "preregistered-after-neg-add-localization",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-even-half-lift-dependency-audit-result-v1.json",
+    "required_state": "propext-localized-to-int-neg-add"
+  },
+  "source_changes": [
+    "add target-owned intNegNatDoubleV2 by Nat zero/successor cases",
+    "zero branch is reflexive",
+    "successor branch compares raw Int.negSucc indices using clean Nat.succ_add",
+    "replace only the final Int.neg_add use with intNegNatDoubleV2"
+  ],
+  "unchanged": {
+    "import": "Mathlib.Data.Int.Basic",
+    "two_public_target_statements": true,
+    "all_constructor_modulo_and_parity_steps": true,
+    "input_contracts": true,
+    "automation_ban": true
+  },
+  "budget": {
+    "source_constructions": 1,
+    "compilations": 1,
+    "exports": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": "The revised source compiles with Int.neg_add absent from the half-witness proof.",
+  "stop_rule": "Any failure stops before export and records the exact raw-constructor mismatch.",
+  "output": "artifacts/autogenesis/int-even-constructor-lift-result-v4.json"
+}
