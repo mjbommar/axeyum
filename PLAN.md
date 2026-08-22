@@ -138,6 +138,7 @@ now. Nothing was deleted.
 | 2026-08-22 | (pending) | Machine-selected `Int.fib_eq_zero` transaction `88397909…c3f` is frozen from clean registration commit `a2cd44951` before one intent fault and one recovery |
 | 2026-08-22 | (pending) | Exit-75 intent fault leaves `Int.fib_eq_zero` unchanged; one recovery performs one ledger write, the registered checker passes, and readiness remains empty as preregistered |
 | 2026-08-22 | (pending) | Isolated clean replay `e3ac1936…cf7a` independently repeats `Int.fib_eq_zero` selection, certified execution, exit-75 recovery, one write, and the exact empty readiness delta |
+| 2026-08-22 | (pending) | Current frontier exposes three dependency-ready integer Fibonacci facts; `Int.fib_add` is frozen as the collision-free foundation because it alone unlocks the two-multiple chain |
 | 2026-08-22 | (pending) | Durable V5 paths identify official `Int.fib` through its Even decider as the common carrier of all eight assumptions; V6 freezes a fully function-abstracted, decision-free eight-parameter residual before source construction |
 | 2026-08-22 | (pending) | V6 stops before export because each universal natAbs rewrite leaves its second occurrence; V7 freezes only three explicit repeated rewrite sequences with the abstraction boundary unchanged |
 | 2026-08-22 | (pending) | V7 exports twice as the same 351,201-byte residual, imports twice with zero axioms, and retains only clean Eq.symm/congrArg; exact eight-parameter specialization remains separately unauthorized |
@@ -1933,7 +1934,7 @@ per-instance identical to the committed artifact.
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_dvd`, `Int.fib_of_nonneg`, `Nat.fib_pos`, `Nat.fib_eq_zero`, and now `Int.fib_eq_zero` are durably proved with empty kernel footprints. An isolated clean replay independently reproduced `Int.fib_eq_zero` selection, certified execution, exit-75 recovery, exactly one ledger write, its proved fact, and the preregistered empty readiness delta.
 
-**Next:** measure the current dependency-ready frontier and freeze the next collision-free bottom-up Mathlib foundation before proof-stream or source access.
+**Next:** export and nonrenderingly audit the single pinned `Int.fib_add` root, then freeze the smallest axiom-free construction boundary before source code or theorem submission.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
