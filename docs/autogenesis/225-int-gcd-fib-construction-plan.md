@@ -106,3 +106,13 @@ V8 binds the remaining support identities: both negative presentations and
 composition, one conversion-only `intNatAbsOfNatV1` submission, and one
 specialization to `intFibNatAbsV1`. The expected result has exactly seven named
 theorem dependencies and still carries no `Int.gcd_fib` submission authority.
+
+V9 succeeds on its first and only invocation. Four checked compositions replay,
+the conversion-only support has no theorem dependencies, and
+`intFibNatAbsV1` has the exact seven preregistered dependencies with an empty
+axiom footprint. Its 544,756-byte root capsule survives two fresh imports and
+is sealed read-only at
+`/nas3/data/axeyum/autogenesis/reference-packs/int-fib-natabs-exact-v1`.
+No fact or ledger row changed. The next bounded increment is the direct
+`Int.gcd_fib` composition over this bridge, exact `Int.gcd_def`, and admitted
+`Nat.fib_gcd`.

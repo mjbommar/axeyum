@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-fib-construction-result-v9",
+  "state": "exact-int-fib-natabs-specialized-exported-and-twice-reimported-empty-footprint",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-gcd-fib-construction-plan-v9.json",
+    "sha256": "9c49e3299072451b7df32ec817830b05ae3f94447e2fc5258b2774b258154fac"
+  },
+  "producer": {
+    "commit": "52c636653f1ef4e15ede2057f577ee3103591c8f",
+    "path": "crates/axeyum-lean-import/examples/int_fib_natabs_exact.rs",
+    "sha256": "056da378a4f502cbfb5adae3f0baa7836be5b7217196b0ca51b580fa90a86173"
+  },
+  "composition_receipt_sha256": [
+    "7e6428accfb0b50a40c89b8a03f9d8f1ac8772228a5f039da517dd8d52a89555",
+    "6d6cc380c4e83aeb0d640687d34e5d18cd84fbaa6d43808d5cf8f299553eef3f",
+    "51223ce4c1b9c1129c766582a868b64968177a9846c8771459db302d4b034a2d",
+    "5ca887cba92c79e5a88381ba2c4042c0f02132f724ec111601f91eed9d39d860"
+  ],
+  "support": {
+    "name": "Axeyum.Autogenesis.intNatAbsOfNatV1",
+    "declaration_sha256": "0daf8912fc0b9705e03fdd3ba66455ce3ed99200f4e9454cfca27649c9839801",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": []
+  },
+  "target": {
+    "name": "Axeyum.Autogenesis.intFibNatAbsV1",
+    "declaration_sha256": "deee672b0430d982d1df383c933b520de37ffcaba4dcb23d5231c29926493e83",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [
+      "Axeyum.Autogenesis.intFibNatAbsResidualV2",
+      "Axeyum.Autogenesis.intFibNegativeEvenV1",
+      "Axeyum.Autogenesis.intFibNegativeOddV1",
+      "Axeyum.Autogenesis.intNatAbsOfNatV1",
+      "Axeyum.IntFib.modCases",
+      "Int.fib_natCast",
+      "Int.natAbs_neg"
+    ],
+    "specialization_receipt_sha256": "9127345b80927cc450d9bc5a1768d1ff78020517c93e9c84de1c3bca29cfdb25"
+  },
+  "capsule": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-natabs-exact-v1/root.ndjson",
+    "bytes": 544756,
+    "sha256": "1ec10d475fb3c77fea3353036e2a09f70abf88f03402a2912407c71b26e3b7e4",
+    "mode": "0444",
+    "manifest_sha256": "af6138041034371cca78e884ae33a094236b4a41f0e0376f6e70fc6f2adf7ad8",
+    "directory_mode": "0555"
+  },
+  "execution": {
+    "complete_invocations": 1,
+    "input_stream_reads": 5,
+    "composition_operations": 4,
+    "composition_replays": 4,
+    "support_theorem_submissions": 1,
+    "target_specializations": 1,
+    "target_specialization_replays": 1,
+    "target_exports": 1,
+    "fresh_target_imports": 2,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "rendered_proof_terms": 0,
+    "rendered_theorem_types": 0,
+    "rendered_theorem_values": 0,
+    "theorem_credit": 1,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next": "preregister exact Int.gcd_fib composition over this bridge, Int.gcd_def, and admitted Nat.fib_gcd"
+}

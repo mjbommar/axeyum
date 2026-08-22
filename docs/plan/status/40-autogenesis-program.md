@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, and `Int.fib_neg` are durably proved with empty kernel footprints. The crash-safe `Int.fib_neg` admission and isolated replay agree on every receipt identity, and the authoritative readiness delta selects `Int.gcd_fib`.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, and `Int.fib_neg` are durably proved with empty kernel footprints. The target-owned bridge `(Int.fib m).natAbs = Nat.fib m.natAbs` now composes from five sealed streams, replays, and survives two fresh imports with an empty footprint and exactly seven dependencies.
 
-**Next:** construct and independently qualify the target-owned bridge `(Int.fib m).natAbs = Nat.fib m.natAbs`, then compose exact `Int.gcd_def`, admitted `Nat.fib_gcd`, and admitted `Int.fib_neg` into the selected `Int.gcd_fib` theorem.
+**Next:** preregister and execute the exact `Int.gcd_fib` composition over the sealed natAbs bridge, exact `Int.gcd_def`, and admitted `Nat.fib_gcd`; then bind its canonical goal identity before any crash-safe ledger admission.
 
 <!-- plan-section: landed-changes -->
 
@@ -22,6 +22,7 @@
 | 2026-08-22 | (pending) | Exact positive and modulo-case supports are already bound; V8 freezes two non-rendering reads for negative-even, negative-odd, and natAbs-neg identities before any specialization code |
 | 2026-08-22 | (pending) | V8 qualifies all remaining support identities empty-footprint; V9 freezes a five-stream exact natAbs composition, one reflexive support, seven dependencies, and one specialization before driver code |
 | 2026-08-22 | (pending) | The exact natAbs driver compiles and passes focused Clippy without reading proof streams; route-specific root assurance excludes unrelated assumptions in the official natAbs source before one fail-if-present execution |
+| 2026-08-22 | (pending) | Exact `intFibNatAbsV1` composes once, replays four receipts, survives two fresh imports, and seals as a 544,756-byte empty-footprint capsule with exactly seven dependencies and zero ledger writes |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
