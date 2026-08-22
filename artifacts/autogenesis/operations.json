@@ -978,12 +978,6 @@
       "id": "authoritative-mathlib-nat-fib-pos-kernel-capsule-v1",
       "scope": "authoritative",
       "reviewed_gate_mentions": [
-        "check-autogenesis-nat-fib-pos-admission-plan.py",
-        "check-autogenesis-nat-fib-pos-capsule.py",
-        "check-autogenesis-nat-fib-pos-exact-execution-plan.py",
-        "check-autogenesis-nat-fib-pos-exact-plan.py",
-        "check-autogenesis-nat-fib-pos-exact-rerun-plan.py",
-        "check-autogenesis-nat-fib-pos-goal-identity-result.py",
         "validate-autogenesis-operations.py"
       ],
       "applicability": {
