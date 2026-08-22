@@ -82,6 +82,7 @@
 | 2026-08-21 | (pending) | V4 seals the negative pair in an empty-axiom root pack; exact seven-stream decision-free `Int.fib_neg_natCast` composition is frozen before driver code |
 | 2026-08-21 | (pending) | Exact decision-free driver compiles Clippy-clean with six replayed compositions, five replayed specializations, and two fresh imports required before write |
 | 2026-08-21 | (pending) | Exact `Int.fib_neg_natCast` specializes once, replays all eleven receipts, survives two fresh imports, and closes with an empty footprint and eight dependencies |
+| 2026-08-21 | (pending) | Hash-only identity audit of the sealed negative-natural theorem is frozen before its one reread; it will feed exact selected-fact `Int.fib_neg`, not create an ad hoc fact |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
