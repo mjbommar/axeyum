@@ -22,8 +22,9 @@ Sources of record:
   route that ledger closed without a new input.
 - A fresh primary-source sweep (2026-08-21) of Katz's Witt-vector papers,
   the Galois-ring exponential-sum literature, the Artin--Schreier--Witt Newton
-  slope literature, Sawin--Shusterman, and the prescribed-coefficient
-  literature; verdicts are in section 4.
+  slope literature, Sawin--Shusterman (including their 2025 short-trace
+  theorem), and the prescribed-coefficient literature; verdicts are in
+  section 4.
 
 ## 1. The open estimate, exactly
 
@@ -232,6 +233,7 @@ collective.
 | Hayes 1965; Keating--Rudnick 2014; Gao 2021; Gao--Kuttner--Wang 2022 | Orthogonality, explicit formula, exact total `L`-degree of a layer (`d_h = 2^h`, `D = (ell-2)2^ell + 2` over `F_2`) | Main term and error of the same exponential order at the endpoint; exact degree does not remove the factor `ell-2`. |
 | Gorodetsky 2020 | Fixed `q`, large `n`, intervals down to square-root scale | Error `2^{n/2-h-1} e^{O(n loglog n / log n)}` is not `o(1)` at `h = n/2`. |
 | Sawin--Shusterman, Annals 2022; Sawin, Duke 2021; Inventiones 2022 | Twin primes / Chowla / square-root cancellation in short intervals for `q > 685090 p^2` (odd `p`), `q > p^2 e^2`; Duke error `3C (n+2)^{2n-h} q^{(h + ...)/2}` | Explicit Betti constants exponential in `n` swamp `2^{n/4}`; mechanism is `q^{1/2}` per variable, not available at `q = 2`. |
+| Sawin--Shusterman, [*Short sums of trace functions over function fields* (arXiv:2512.24080, 2025)](https://arxiv.org/abs/2512.24080), source checked | Near-square-root short sums of trace functions for sufficiently large fixed `q`, **squarefree** moduli, slopes `<= 1`, and no Artin--Schreier factors | Excluded twice: `q=2` is not in its large-`q` regime and `x^j` is maximally non-squarefree. Its squarefree-modulus geometry cannot be specialized to the wild Witt tower. |
 | Pollack 2013; Ha 2016; Tuxanidy--Wang; Granger; Ahmadi--Gologlu--Granger--McGuire--Yilmaz | `(1-eps) sqrt n` positions; `(1/4 - eps) n` positions (large `q`); exact supersingular formulas for `O(1)` leading coefficients | None reaches the half-degree endpoint; Hayes/Weil gives `ell <= n/2 - log2 n - O(1)`. |
 | Gorodetsky--Kovaleva 2024; Ma--Xing 2021; Sawin wild Kloosterman 2022 | Special order-two high-conductor character; AS code distance; warning on wild cross-order cancellation | Already closed on the branch: the remaining layers have order `> Q >= 2`. |
 | Kaser--Lemire 2014 (arXiv 1202.4961), MO 81717 | The conjecture, Arndt's table to 400 | No 2020--2026 progress on the endpoint found. |
