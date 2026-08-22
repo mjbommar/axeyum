@@ -40,6 +40,17 @@
 //! that is never itself applied — it is the wrong tool for a motive, and an
 //! earlier version of this module that used it there admitted nothing (every
 //! `Eq.rec` application failed to typecheck against its own motive).
+//!
+//! `Eq.symm` was added the same way (bare `Eq.rec`, no wire type or value
+//! ever read) once `docs/autogenesis/236-…` measured that the four-name
+//! count above was only the *first-reported* blocker, not the whole closure.
+//! The twenty `Nat` order/pred/sub/ble lemmas that closure also names are a
+//! different shape of fact — arithmetic about a *specific* stream-supplied
+//! `Nat.le`/`Nat.pred`/`Nat.sub`/`Nat.ble`, not a universally valid logical
+//! primitive — so they are handled by the sibling
+//! [`crate::nat_order_substitution`] module, which admits under the stream's
+//! own declared type rather than one this module invents; see that module's
+//! own doc comment for why.
 
 use axeyum_lean_kernel::{
     BinderInfo, Declaration, ExprId, Kernel, LevelId, NameId, ReducibilityHint,
@@ -48,7 +59,7 @@ use axeyum_lean_kernel::{
 /// The complete, reviewed set of trusted theorem names this module will
 /// substitute a self-derived proof for. `propext` is a genuine axiom and must
 /// never be added here.
-pub(crate) const SUBSTITUTABLE_THEOREMS: &[&str] = &["congrArg", "congr", "mt"];
+pub(crate) const SUBSTITUTABLE_THEOREMS: &[&str] = &["congrArg", "congr", "mt", "Eq.symm"];
 
 /// First free-variable id this module mints. Chosen far above any id an
 /// import stream or another producer's search would use — exported
@@ -98,7 +109,10 @@ fn fresh(counter: &mut u64) -> u64 {
     *counter
 }
 
-fn exact_name(kernel: &Kernel, rendered: &'static str) -> Result<NameId, SubstitutionError> {
+pub(crate) fn exact_name(
+    kernel: &Kernel,
+    rendered: &'static str,
+) -> Result<NameId, SubstitutionError> {
     let mut matches = kernel
         .environment()
         .iter()
@@ -518,34 +532,103 @@ fn mt_pair(kernel: &mut Kernel) -> Result<(ExprId, ExprId, Vec<NameId>), Substit
     Ok((value, ty, vec![]))
 }
 
+/// `Eq.symm.{u} : {alpha : Sort u} -> {a b : alpha} -> Eq alpha a b -> Eq
+/// alpha b a`, built directly from `Eq.rec` with motive `fun x _ => Eq alpha
+/// x a` — never a hand-written `Eq.symm`.
+#[allow(clippy::many_single_char_names)]
+fn eq_symm_pair(kernel: &mut Kernel) -> Result<(ExprId, ExprId, Vec<NameId>), SubstitutionError> {
+    let eqp = discover_eq(kernel)?;
+    let mut next_fvar = FVAR_BASE;
+    let anon = kernel.anon();
+    let u_name = kernel.name_str(anon, "u");
+    let u = kernel.level_param(u_name);
+    let sort_u = kernel.sort(u);
+
+    let alpha_fv = fresh(&mut next_fvar);
+    let a_fv = fresh(&mut next_fvar);
+    let b_fv = fresh(&mut next_fvar);
+    let h_fv = fresh(&mut next_fvar);
+    let alpha = kernel.fvar(alpha_fv);
+    let a = kernel.fvar(a_fv);
+    let b = kernel.fvar(b_fv);
+    let h = kernel.fvar(h_fv);
+
+    let ty_h = build_eq(kernel, eqp.eq, u, alpha, a, b);
+
+    // motive := fun (x : alpha) (_ : Eq alpha a x) => Eq alpha x a
+    let motive = {
+        let x_fv = fresh(&mut next_fvar);
+        let x = kernel.fvar(x_fv);
+        let concl = build_eq(kernel, eqp.eq, u, alpha, x, a);
+        let hyp_ty = build_eq(kernel, eqp.eq, u, alpha, a, x);
+        let anon_hyp = kernel.anon();
+        let inner = kernel.lam(anon_hyp, hyp_ty, concl, BinderInfo::Default);
+        lam_fv(kernel, anon, x_fv, alpha, inner, BinderInfo::Default)
+    };
+    let refl_case = build_eq_refl(kernel, eqp.eq_refl, u, alpha, a);
+    let zero = kernel.level_zero();
+    let rec = kernel.const_(eqp.eq_rec, vec![zero, u]);
+    let with_alpha = kernel.app(rec, alpha);
+    let with_a = kernel.app(with_alpha, a);
+    let with_motive = kernel.app(with_a, motive);
+    let with_minor = kernel.app(with_motive, refl_case);
+    let with_b = kernel.app(with_minor, b);
+    let value_body = kernel.app(with_b, h);
+    let type_body = build_eq(kernel, eqp.eq, u, alpha, b, a);
+
+    let binders = [
+        (alpha_fv, sort_u, BinderInfo::Default),
+        (a_fv, alpha, BinderInfo::Default),
+        (b_fv, alpha, BinderInfo::Default),
+        (h_fv, ty_h, BinderInfo::Default),
+    ];
+    let (value, ty) = close_telescope(kernel, &binders, value_body, type_body);
+    Ok((value, ty, vec![u_name]))
+}
+
 /// Attempt to reconstruct `rendered` as a kernel-checked declaration built
 /// entirely from this module's own primitives, never from the untrusted
-/// stream. Returns `Ok(None)` when `rendered` is not one of
-/// [`SUBSTITUTABLE_THEOREMS`] — nothing to do, not a failure. Returns
-/// `Err(_)` when it is one of those names but this kernel lacks the shape the
-/// reconstruction depends on; the caller must treat that exactly like "not
+/// stream, **or** (for the twenty names in
+/// [`nat_order_substitution::SUBSTITUTABLE_NAT_ORDER_THEOREMS`](crate::nat_order_substitution::SUBSTITUTABLE_NAT_ORDER_THEOREMS))
+/// admitted under the stream's own declared type `wire_ty` with a proof this
+/// module's sibling constructs — see that module's doc comment for why the
+/// two shapes differ. Returns `Ok(None)` when `rendered` is not one of either
+/// list — nothing to do, not a failure. Returns `Err(_)` when it is one of
+/// these names but this kernel lacks the shape the reconstruction depends on,
+/// or (for the `wire_ty`-checked path) the candidate failed to independently
+/// type-check against it; the caller must treat both exactly like "not
 /// substitutable" (fall back to the ordinary trusted-declaration refusal),
 /// never as license to admit the untrusted value instead.
 pub(crate) fn reconstruct(
     kernel: &mut Kernel,
     name: NameId,
     rendered: &str,
+    wire_ty: ExprId,
 ) -> Result<Option<Declaration>, SubstitutionError> {
-    if !SUBSTITUTABLE_THEOREMS.contains(&rendered) {
-        return Ok(None);
+    if SUBSTITUTABLE_THEOREMS.contains(&rendered) {
+        let (value, ty, uparams) = match rendered {
+            "congrArg" => congr_arg_pair(kernel)?,
+            "congr" => congr_pair(kernel)?,
+            "mt" => mt_pair(kernel)?,
+            "Eq.symm" => eq_symm_pair(kernel)?,
+            _ => unreachable!("checked against SUBSTITUTABLE_THEOREMS above"),
+        };
+        return Ok(Some(Declaration::Theorem {
+            name,
+            uparams,
+            ty,
+            value,
+        }));
     }
-    let (value, ty, uparams) = match rendered {
-        "congrArg" => congr_arg_pair(kernel)?,
-        "congr" => congr_pair(kernel)?,
-        "mt" => mt_pair(kernel)?,
-        _ => unreachable!("checked against SUBSTITUTABLE_THEOREMS above"),
-    };
-    Ok(Some(Declaration::Theorem {
-        name,
-        uparams,
-        ty,
-        value,
-    }))
+    if let Some(value) = crate::nat_order_substitution::reconstruct(kernel, rendered, wire_ty)? {
+        return Ok(Some(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: wire_ty,
+            value,
+        }));
+    }
+    Ok(None)
 }
 
 #[cfg(test)]
@@ -609,14 +692,80 @@ mod tests {
     }
 
     #[test]
+    fn eq_symm_reconstructs_and_kernel_checks() {
+        let mut kernel = fixture_kernel();
+        let (value, ty, uparams) = eq_symm_pair(&mut kernel).expect("Eq.symm reconstructs");
+        assert_eq!(uparams.len(), 1);
+        let name = {
+            let root = kernel.anon();
+            kernel.name_str(root, "TestEqSymm")
+        };
+        kernel
+            .add_declaration(Declaration::Theorem {
+                name,
+                uparams,
+                ty,
+                value,
+            })
+            .expect("reconstructed Eq.symm must kernel-check");
+        assert_eq!(kernel.axiom_footprint(name).len(), 0);
+        assert_eq!(kernel.theorem_dependencies(name).len(), 0);
+    }
+
+    #[test]
+    fn eq_symm_declines_when_eq_rec_is_missing() {
+        let mut kernel = Kernel::new();
+        assert!(matches!(
+            eq_symm_pair(&mut kernel),
+            Err(SubstitutionError::RequiredDeclarationUnavailable("Eq"))
+        ));
+    }
+
+    /// The `reconstruct` entry point actually dispatches to
+    /// `nat_order_substitution` for one of its twenty names — an
+    /// integration test distinct from that module's own unit tests, which
+    /// call its `reconstruct` directly rather than through this one.
+    #[test]
+    fn reconstruct_dispatches_to_nat_order_substitution() {
+        use axeyum_lean_kernel::build_nat_prelude;
+        let mut kernel = Kernel::new();
+        // `Nat.pred_le_pred` (not `Nat.le_refl`) so this integration test
+        // actually exercises the `Nat.le_trans` dependency chain, not just
+        // the dispatch itself.
+        let prelude = build_nat_prelude(&mut kernel).expect("nat prelude must build");
+        let wire_ty = kernel
+            .environment()
+            .get(prelude.pred_le_pred)
+            .expect("declared")
+            .ty();
+        let name = {
+            let root = kernel.anon();
+            kernel.name_str(root, "TestDispatchPredLePred")
+        };
+        let declaration = reconstruct(&mut kernel, name, "Nat.pred_le_pred", wire_ty)
+            .expect("Nat.pred_le_pred reconstructs")
+            .expect("Nat.pred_le_pred is substitutable");
+        kernel
+            .add_declaration(declaration)
+            .expect("dispatched reconstruction must kernel-check");
+        assert_eq!(kernel.axiom_footprint(name).len(), 0);
+        assert_eq!(
+            kernel.theorem_dependencies(name).len(),
+            0,
+            "must not cite the reference kernel's own Nat.le_trans"
+        );
+    }
+
+    #[test]
     fn reconstruct_rejects_names_outside_the_fixed_set() {
         let mut kernel = fixture_kernel();
         let name = {
             let root = kernel.anon();
             kernel.name_str(root, "propext")
         };
+        let wire_ty = kernel.sort_zero();
         assert!(matches!(
-            reconstruct(&mut kernel, name, "propext"),
+            reconstruct(&mut kernel, name, "propext", wire_ty),
             Ok(None)
         ));
     }

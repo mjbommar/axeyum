@@ -43,6 +43,7 @@ use serde_json::{Map, Value};
 mod checked_theorem_receipt;
 mod contract_residualization;
 mod identity;
+mod nat_order_substitution;
 mod semantic_contract_receipt;
 mod source_delta_trace;
 mod theorem_composition;
@@ -1052,7 +1053,7 @@ impl<'kernel> ImportState<'kernel> {
         let wire_value = self.expression(required(value, "value", line)?, line, "thm.value")?;
         let declaration = if self.trusted_substitution {
             let rendered = self.kernel.display_name(name).to_string();
-            match trusted_substitution::reconstruct(self.kernel, name, &rendered) {
+            match trusted_substitution::reconstruct(self.kernel, name, &rendered, wire_ty) {
                 Ok(Some(substituted)) => {
                     self.substituted_theorems.push(rendered);
                     substituted
