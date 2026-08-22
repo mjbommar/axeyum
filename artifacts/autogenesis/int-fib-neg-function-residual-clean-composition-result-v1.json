@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-function-residual-clean-composition-result",
+  "state": "declined-on-semantic-rarray-closure-before-support-publication",
+  "plan": "artifacts/autogenesis/int-fib-neg-function-residual-clean-composition-plan-v1.json",
+  "decline": {
+    "stage": "function-residual-composition-after-clean-natcast-support",
+    "class": "UnsupportedMissingDeclaration",
+    "name": "Lean.RArray",
+    "kind": "recursive-inductive",
+    "partial_kernel_published": false
+  },
+  "execution": {
+    "directory_creations": 1,
+    "driver_constructions": 1,
+    "focused_builds": 1,
+    "complete_invocations": 1,
+    "input_stream_reads": 3,
+    "composition_operations": 2,
+    "composition_replays": 1,
+    "support_submissions": 0,
+    "capsule_exports": 0,
+    "fresh_imports": 0,
+    "exact_target_submissions": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "output": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-function-residual-clean-v1/root.ndjson",
+    "present": false
+  },
+  "evidence_correction": {
+    "superseded_claim": "artifacts/autogenesis/int-fib-neg-function-residual-result-v2.json closure.Lean.RArray_present=false",
+    "problem": "The V2 closure check used raw NDJSON string matching after a theorem-root audit that did not enumerate declaration closure members.",
+    "authoritative_observation": "The checked composition semantically selected Lean.RArray from the root dependency closure.",
+    "corrected_value": true
+  },
+  "authority": {
+    "support_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0
+  },
+  "next": "Use the kernel declaration-dependency path audit to identify every carrier from the generic root to Lean.RArray and its clean-target compatibility."
+}

@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-function-residual-rarray-path-plan",
+  "state": "preregistered-semantic-path-audit-before-stream-reread",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-fib-neg-function-residual-clean-composition-result-v1.json",
+    "required_state": "declined-on-semantic-rarray-closure-before-support-publication"
+  },
+  "inputs": {
+    "source": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-function-residual-v1/root-1.ndjson",
+      "sha256": "0136201181ae82b0b1dae091190a4a961f53574cd24d686a2c075b5e6599337c",
+      "root": "Axeyum.Autogenesis.intFibNegFunctionResidualV1"
+    },
+    "target": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-decision-clean-v1/root.ndjson",
+      "sha256": "29053dba3b90cecf5a70ba347ea7dba81a19990f715e69d5fc0a1c60cb9a6c07"
+    },
+    "blocked_dependency": "Lean.RArray"
+  },
+  "tool": "crates/axeyum-lean-import/examples/declaration_dependency_path_audit.rs",
+  "method": "Use Kernel::declaration_dependency_closure, not text search, to enumerate every source carrier whose own closure reaches Lean.RArray, sorted nearest-first, with kind, canonical identity, theorem footprint, target presence, and checked compatibility. Render no types, values, or proof expressions.",
+  "budget": {
+    "complete_audits": 1,
+    "source_stream_reads": 1,
+    "target_stream_reads": 1,
+    "kernel_submissions": 0,
+    "exports": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "root_closure_semantically_contains": "Lean.RArray",
+    "nearest_replaceable_carrier_identified": true,
+    "proof_terms_types_or_values_rendered": 0
+  },
+  "output_result": "artifacts/autogenesis/int-fib-neg-function-residual-rarray-path-result-v1.json",
+  "next_on_accept": "Abstract or target-leaf-replace the nearest carrier that introduces Lean.RArray, then rerun composition only under a newly frozen operation.",
+  "limitations": "This is a read-only localization audit with no support, target, fact, or ledger authority."
+}
