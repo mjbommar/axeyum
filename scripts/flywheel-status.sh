@@ -81,6 +81,23 @@ else
   echo "  (docs/plan/generated/lean-axiom-ledger.md absent — run scripts/gen-lean-axiom-ledger.py)"
 fi
 
+section "PRODUCTION — how much library exists, and how much of it assumes nothing"
+# The other half of the headline metric. CLAUDE.md asks for "assumptions
+# remaining per prelude, and results the system established" -- this view showed
+# assumptions and, until 2026-08-22, had no cross-prelude theorem count to show
+# beside them because none existed. Pinned output; authority is the generator.
+if [ -f docs/plan/generated/theorem-production-ledger.md ]; then
+  awk '/^\| Prelude \| Theorems/{p=1} p{print} p&&/^$/{exit}' \
+    docs/plan/generated/theorem-production-ledger.md | sed 's/^/  /'
+  grep -E '^- \*\*[0-9]+ distinct theorems' \
+    docs/plan/generated/theorem-production-ledger.md | sed 's/^/  /'
+  echo "  DO NOT SUM the cumulative column; 'Originated here' is the partition."
+  echo "  authority: python3 scripts/gen-theorem-production-ledger.py --check"
+  echo "  counts theorems, NOT autonomous ones -- that split is P1 of docs/autogenesis/226."
+else
+  echo "  (docs/plan/generated/theorem-production-ledger.md absent — run scripts/gen-theorem-production-ledger.py)"
+fi
+
 section "NEXT — what to work on (just next, or --unlocks for the full queue)"
 python3 scripts/fact-frontier.py 2>/dev/null | sed 's/^/  /'
 

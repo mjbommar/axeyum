@@ -112,6 +112,60 @@ went.** The `N × 149/day` table above stands as what it always was — an upper
 at `f = 1` — and until a cross-prelude counter exists, no number in this section
 should be used to size a roadmap item.
 
+### Resolved 2026-08-22: the instrument now exists, and the answer is 418
+
+The paragraph above named a missing instrument, and it stayed missing for three
+more days. It exists now:
+
+```sh
+python3 scripts/gen-theorem-production-ledger.py --check
+cargo run --release -p axeyum-lean-kernel --example prelude_theorem_inventory \
+  -- --include-constructed
+```
+
+Measured 2026-08-22 over all eight preludes:
+
+```text
+prelude   cumulative  originated  axiom-free
+logic              2           2           2
+nat              139         137         139
+axreal             2           0           2
+integer          201          62         201
+rat              320         119         320
+string             6           4           6
+creal            390          70         390
+complex          414          24         414
+distinct         418         418         418      axiom-bearing 0
+```
+
+**418 distinct theorems, every one with an empty axiom footprint.** The flat 139
+was exactly what this document said it was — one prelude's counter, blind to
+where the work went. ℚ contributed 119, the constructed ℝ 70, ℤ 62, ℂ 24.
+
+Two cautions the ledger enforces rather than states. The cumulative column
+**does not sum** — preludes nest, so `rat`'s 320 already contains Nat and Int,
+and adding the column gives 1,474 for a 418-theorem library. And the generator
+fails if the `originated` column does not sum to the distinct total, because if
+that attribution is wrong then every per-prelude production number under it is
+wrong with it.
+
+Cross-checked against the two instruments that already existed, on the preludes
+they share: `nat_theorem_inventory` reports 139, matching exactly.
+`int_theorem_inventory` reports 60 against this ledger's 62 — the difference is
+`Rat.den_pos` and `Rat.reduced`, two ℚ invariants that `build_int_prelude`
+declares and that a count filtered to `Int.*` cannot see. Both are right for
+their own question.
+
+**What this still does not measure is the rate, and deliberately so.** A count
+is not a rate, and this ledger has one datapoint. More importantly it counts
+theorems, not *autonomous* theorems — the `N × 149/day` table above remains an
+upper bound at `f = 1`, and the metric this programme actually claims is
+"results the system established with nobody writing the proof." Splitting 418 by
+provenance is the next increment of P1 in
+[`docs/autogenesis/226-production-measurement-and-general-producer-plan.md`](../autogenesis/226-production-measurement-and-general-producer-plan.md).
+Until that lands, **418 is a library size, not a production rate**, and should
+not be used to size a roadmap item either.
+
 Nothing measured on 2026-08-18/19 moves the figures in **C4** below (the 26 ms /
 6.6 µs rebuild, the 5.4x / 5.6x / 55x / 86x single-session results); those were not
 re-derived here and are cited as they stood.

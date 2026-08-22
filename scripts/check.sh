@@ -376,6 +376,8 @@ step lean-construct-matrix-product-freeze python3 scripts/freeze-lean-official-c
 # remaining divergence between the two aggregate gates.
 step lean-axiom-ledger-tests python3 -m unittest scripts.tests.test_lean_axiom_ledger
 step lean-axiom-ledger python3 scripts/gen-lean-axiom-ledger.py --check
+step theorem-production-ledger-tests python3 -m unittest scripts.tests.test_gen_theorem_production_ledger
+step theorem-production-ledger python3 scripts/gen-theorem-production-ledger.py --check
 step foundational-resources ./scripts/check-foundational-resources.sh
 # The claim ledger's structural gates ran ONLY from `just claims` (and the
 # certificate pass, which needs the gitignored drat-trim clone, deliberately
