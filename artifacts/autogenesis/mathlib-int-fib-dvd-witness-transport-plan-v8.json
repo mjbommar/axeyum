@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-witness-transport-plan-v8",
+  "state": "preregistered-two-opposite-sign-witness-repair-before-source-change",
+  "predecessor": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-witness-transport-result-v7.json",
+    "sha256": "72e0637059b6987e7749577ff8b1b984a9a7aa158837b9c1ade3f27cdf4fbd88"
+  },
+  "correction": {
+    "source": "artifacts/autogenesis/sources/int-dvd-natabs-witness-transport-v1.lean",
+    "preserve": [
+      "the complete forward theorem",
+      "the ofNat.ofNat reverse branch",
+      "the negSucc.negSucc reverse branch"
+    ],
+    "ofNat_negSucc": "split k; eliminate k=0 by the impossible successor-equals-zero witness equation; for k+1 choose Int.negSucc k",
+    "negSucc_ofNat": "split k; for k=0 choose Int.ofNat 0; for k+1 choose Int.negSucc k",
+    "new_theorem_dependencies": []
+  },
+  "execution": {
+    "max_source_rewrites": 1,
+    "max_compile_invocations": 1,
+    "max_exporter_invocations": 0,
+    "max_importer_runs": 0,
+    "max_retries": 0,
+    "target_fib_dvd_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "both_theorems_compile": true,
+    "no_new_theorem_dependency_named": true
+  },
+  "next_on_accept": "freeze deterministic export and empty-footprint qualification of both transport roots"
+}
