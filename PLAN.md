@@ -242,6 +242,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Exact-Iff driver V1 stops before stream access on Clippy's primitive stable sort; V2 freezes only `sort_unstable` |
 | 2026-08-21 | (pending) | Exact-Iff driver V2 passes focused Clippy with both streams unread; one exact-name invocation remains |
 | 2026-08-21 | (pending) | Exact-name `Int.even_iff` reconstructs from clean directions, replays, and survives two fresh imports with an empty footprint |
+| 2026-08-21 | (pending) | A reflexive theorem carrier is frozen to expose the exact decision-instance definition closure for later clean `Int.even_iff` target-leaf composition |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
