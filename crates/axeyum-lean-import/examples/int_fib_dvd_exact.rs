@@ -10,7 +10,7 @@ use axeyum_lean_import::{
     verify_checked_theorem_composition,
 };
 use axeyum_lean_kernel::{
-    BinderInfo, Declaration, ExprId, ExprNode, Kernel, Lean4ExportMetadata, NameId,
+    BinderInfo, Declaration, ExprId, Kernel, Lean4ExportMetadata, NameId,
 };
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -185,7 +185,7 @@ fn add_int_fib_dvd(kernel: &mut Kernel) -> Result<(), String> {
     let nat_fib_abs_n = app_const(kernel, nat_fib, &[], &[abs_n]);
 
     let forward_mn = app_const(kernel, forward, &[], &[nat_abs_mul, m, n]);
-    let hypothesis_ty = function_domain(kernel, forward_mn, "forward hypothesis")?;
+    let hypothesis_ty = dvd(kernel, int_ty, "Int.instDvd", m, n)?;
     let hypothesis = kernel.fvar(h_id);
     let abs_indices_dvd = kernel.app(forward_mn, hypothesis);
     let nat_fibonacci_divisibility = app_const(
@@ -214,7 +214,7 @@ fn add_int_fib_dvd(kernel: &mut Kernel) -> Result<(), String> {
 
     let second_id = u64::MAX - 140_101;
     let second = kernel.fvar(second_id);
-    let second_prop = nat_dvd(kernel, nat_ty, nat_fib_abs_m, second)?;
+    let second_prop = dvd(kernel, nat_ty, "Nat.instDvd", nat_fib_abs_m, second)?;
     let second_motive = close_lam(kernel, second_id, "b", nat_ty, second_prop);
     let first_transport = eq_rec_transport(
         kernel,
@@ -228,7 +228,7 @@ fn add_int_fib_dvd(kernel: &mut Kernel) -> Result<(), String> {
 
     let first_id = u64::MAX - 140_201;
     let first = kernel.fvar(first_id);
-    let first_prop = nat_dvd(kernel, nat_ty, first, abs_fib_n)?;
+    let first_prop = dvd(kernel, nat_ty, "Nat.instDvd", first, abs_fib_n)?;
     let first_motive = close_lam(kernel, first_id, "a", nat_ty, first_prop);
     let both_transport = eq_rec_transport(
         kernel,
@@ -282,33 +282,23 @@ fn add_int_fib_dvd(kernel: &mut Kernel) -> Result<(), String> {
         .map_err(|error| format!("Int.fib_dvd rejected: {error:?}"))
 }
 
-fn nat_dvd(
+fn dvd(
     kernel: &mut Kernel,
-    nat_ty: ExprId,
+    carrier: ExprId,
+    instance: &str,
     left: ExprId,
     right: ExprId,
 ) -> Result<ExprId, String> {
     let dvd = find_name(kernel, "Dvd.dvd")?;
-    let instance = find_name(kernel, "Nat.instDvd")?;
+    let instance = find_name(kernel, instance)?;
     let instance = kernel.const_(instance, vec![]);
     let zero = kernel.level_zero();
     Ok(app_const(
         kernel,
         dvd,
         &[zero],
-        &[nat_ty, instance, left, right],
+        &[carrier, instance, left, right],
     ))
-}
-
-fn function_domain(kernel: &mut Kernel, function: ExprId, label: &str) -> Result<ExprId, String> {
-    let inferred = kernel
-        .infer(function)
-        .map_err(|error| format!("{label} inference failed: {error:?}"))?;
-    let reduced = kernel.whnf(inferred);
-    match kernel.expr_node(reduced) {
-        ExprNode::Pi(_, domain, _, _) => Ok(*domain),
-        _ => Err(format!("{label} is not a function")),
-    }
 }
 
 fn eq_rec_transport(
