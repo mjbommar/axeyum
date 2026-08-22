@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-constructor-branches-plan",
+  "state": "preregistered-before-source-construction",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-fib-neg-function-residual-clean-composition-result-v3.json",
+    "required_state": "function-residual-composed-exported-and-reimported-empty-footprint"
+  },
+  "target_contracts": {
+    "positive": "forall n : Nat, fib (-(Int.ofNat n)) = if Even (Int.ofNat n) then -fib (Int.ofNat n) else fib (Int.ofNat n)",
+    "negative": "forall k : Nat, fib (-(Int.negSucc k)) = if Even (Int.negSucc k) then -fib (Int.negSucc k) else fib (Int.negSucc k)"
+  },
+  "residual_parameters": [
+    "fibFn : Int -> Int",
+    "natFib : Nat -> Nat",
+    "positivePresentation : forall n, fibFn (Int.ofNat n) = Int.ofNat (natFib n)",
+    "negativeEven : forall n, n % 2 = 0 -> fibFn (-(Int.ofNat n)) = -Int.ofNat (natFib n)",
+    "negativeOdd : forall n, n % 2 = 1 -> fibFn (-(Int.ofNat n)) = Int.ofNat (natFib n)",
+    "modCases : forall n, n % 2 = 0 or n % 2 = 1",
+    "evenPositive : forall n, Even (Int.ofNat n) iff n % 2 = 0",
+    "evenNegative : forall n, Even (-(Int.ofNat n)) iff n % 2 = 0",
+    "negNeg : forall x : Int, -(-x) = x"
+  ],
+  "proof_method": "Case on modCases. Rewrite each exact Even conditional with the matching directional parity contract; use positivePresentation plus negativeEven/negativeOdd. In the negative constructor branch, reduce Int.negSucc k to -(Int.ofNat (k+1)) and use negNeg only in the even case.",
+  "source": "artifacts/autogenesis/sources/int-fib-neg-constructor-branches-v1.lean",
+  "evidence_pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-constructor-branches-v1",
+  "budget": {
+    "directory_creations": 1,
+    "source_constructions": 1,
+    "source_stagings": 1,
+    "module_builds": 1,
+    "exports": 2,
+    "root_audits": 1,
+    "retries": 0,
+    "composition_operations": 0,
+    "exact_target_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "roots": [
+      "Axeyum.Autogenesis.intFibNegPositiveBranchResidualV1",
+      "Axeyum.Autogenesis.intFibNegNegativeBranchResidualV1"
+    ],
+    "exports_byte_identical": true,
+    "proof_terms_types_or_values_rendered": 0
+  },
+  "stop_rule": "Any construction, project-root staging, elaboration, export, determinism, or audit failure stops without retry or theorem/ledger authority.",
+  "output_result": "artifacts/autogenesis/int-fib-neg-constructor-branches-result-v1.json",
+  "next_on_accept": "Qualify each concrete support contract in existing clean capsules, compose the branch residuals, specialize exact branches, then specialize the clean outer residual to Int.fib.",
+  "limitations": "Parameterized branch residuals alone establish neither concrete branch nor exact Int.fib_neg."
+}
