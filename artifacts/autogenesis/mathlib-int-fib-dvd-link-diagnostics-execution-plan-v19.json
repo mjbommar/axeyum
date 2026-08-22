@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-link-diagnostics-execution-plan-v19",
+  "state": "preregistered-one-five-link-diagnostic-run",
+  "predecessor": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-link-diagnostics-result-v18.json",
+    "sha256": "d18db1d91b94f66ccfca8e6b0c636bdd2da77276805d240d070e6d56931a6c21"
+  },
+  "implementation_sha256": "7f95b1aa4df253be85305d71d75b78a4de68e485607244f8f730d87b3c9f1095",
+  "output": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-dvd-exact-v1/root.ndjson",
+  "execution": {
+    "max_driver_builds": 1,
+    "max_complete_invocations": 1,
+    "max_input_stream_reads": 4,
+    "max_composition_operations": 3,
+    "max_link_checks": 5,
+    "max_target_theorem_submissions": 1,
+    "max_retries": 0,
+    "ledger_writes": 0
+  },
+  "next_on_success": "seal exact target",
+  "next_on_decline": "freeze only the first failing closed link before changing its proof"
+}
