@@ -919,6 +919,60 @@
         "axiom_footprint_policy": "must-be-empty",
         "axiom_footprint": []
       }
+    },
+    {
+      "id": "authoritative-mathlib-int-fib-of-nonneg-kernel-capsule-v1",
+      "scope": "authoritative",
+      "reviewed_gate_mentions": [
+        "check-autogenesis-int-fib-of-nonneg-admission-plan.py",
+        "check-autogenesis-int-fib-of-nonneg-construction-plan.py",
+        "check-autogenesis-int-fib-of-nonneg-directional-order-plan.py",
+        "check-autogenesis-int-fib-of-nonneg-if-pos-export-plan-v2.py",
+        "check-autogenesis-int-fib-of-nonneg-if-pos-export-plan.py",
+        "check-autogenesis-int-fib-of-nonneg-negsucc-support-plan.py",
+        "check-autogenesis-int-fib-of-nonneg-residual-plan-v2.py",
+        "check-autogenesis-int-fib-of-nonneg-residual-plan.py",
+        "check-autogenesis-int-fib-of-nonneg-support-audit-plan.py",
+        "validate-autogenesis-operations.py"
+      ],
+      "applicability": {
+        "fact_ids": ["F:ml430-int-fib-of-nonneg-438018c5"],
+        "formal_languages": ["lean4-surface"],
+        "fragments": ["Int"]
+      },
+      "producer": {
+        "operation": "specialized-nonnegative-integer-fibonacci-v1",
+        "implementation": "crates/axeyum-lean-import/examples/int_fib_of_nonneg_exact.rs",
+        "input_kind": "axeyum-sealed-kernel-theorem-capsule",
+        "output_kind": "axeyum-sealed-kernel-theorem-capsule"
+      },
+      "checker": {
+        "operation": "axeyum-lean-import/sealed-int-fib-of-nonneg-capsule-receipt-v1",
+        "implementation": "scripts/check-autogenesis-int-fib-of-nonneg-capsule.py",
+        "input_kind": "axeyum-sealed-kernel-theorem-capsule",
+        "output_kind": "axeyum-checked-sealed-kernel-capsule-receipt-v1"
+      },
+      "executor": {
+        "driver": "axeyum-lean-import/sealed-kernel-capsule-v1",
+        "implementation": "scripts/execute-autogenesis-operation.py",
+        "input_fact_id": "F:ml430-int-fib-of-nonneg-438018c5",
+        "result_manifest": "artifacts/autogenesis/mathlib-int-fib-of-nonneg-goal-identity-result-v1.json",
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-of-nonneg-exact-v1/root.ndjson",
+        "capsule_sha256": "efb1875d675810bdf737215b5ebbc2e1afeb1f085c6b1cfccc56d9b779540bd9",
+        "target_theorem": "Int.fib_of_nonneg",
+        "goal_sha256": "a413a3afa1649837fd125688c9a49be0755f288964fa425bad8ae7875fba9f0a",
+        "declaration_sha256": "67ad588faa0778a3fa0f76890475ced5d41c575cfad76238f614dec52798aa80",
+        "receipt_sha256": "21be310e9e3e0175d7f79ba8409ea1ebec37a71532c4d0e4a8720e94cb2ed0e2",
+        "timeout_seconds": 120,
+        "expected_evidence_label": "kernel-term-mathlib-int-fib-of-nonneg-capsule-axiom-free"
+      },
+      "admission": {
+        "epistemic_status": "proved",
+        "proof_route": "kernel-lean",
+        "evidence_kind": "kernel-term",
+        "axiom_footprint_policy": "must-be-empty",
+        "axiom_footprint": []
+      }
     }
   ]
 }

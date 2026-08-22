@@ -473,6 +473,10 @@ def build_authoritative_transaction(
             operation["id"]
             == "authoritative-mathlib-int-fib-dvd-kernel-capsule-v1"
         )
+        is_int_fib_of_nonneg = (
+            operation["id"]
+            == "authoritative-mathlib-int-fib-of-nonneg-kernel-capsule-v1"
+        )
         expected_dependencies = (
             []
             if is_int_fib_natcast
@@ -525,6 +529,11 @@ def build_authoritative_transaction(
                 "Nat.fib_dvd",
             ]
             if is_int_fib_dvd
+            else [
+                "Axeyum.Autogenesis.intFibOfNonnegResidualV1",
+                "Int.fib_natCast",
+            ]
+            if is_int_fib_of_nonneg
             else None
         )
         is_single_construction = (
@@ -535,6 +544,7 @@ def build_authoritative_transaction(
             or is_int_gcd_fib
             or is_int_fib_gcd
             or is_int_fib_dvd
+            or is_int_fib_of_nonneg
         )
         expected_fresh_imports = 2 if is_single_construction else 4
         expected_reconstructions = 1 if is_single_construction else 2
@@ -562,6 +572,7 @@ def build_authoritative_transaction(
                 or is_int_gcd_fib
                 or is_int_fib_gcd
                 or is_int_fib_dvd
+                or is_int_fib_of_nonneg
                 else not dependencies
             )
             or len(dependencies) != len(set(dependencies))
@@ -659,6 +670,15 @@ def build_authoritative_transaction(
                 "immutable capsule and committed identity manifest and requires its "
                 "exact theorem identity, two fresh imports, empty axiom footprint, "
                 "and six named direct theorem dependencies"
+            )
+        elif is_int_fib_of_nonneg:
+            result_description = (
+                "two-root-specialized axiom-free sealed nonnegative integer Fibonacci capsule"
+            )
+            replay_description = (
+                "immutable capsule and committed identity manifest and requires its "
+                "exact theorem identity, two fresh imports, empty axiom footprint, "
+                "and two named direct theorem dependencies"
             )
         else:
             result_description = (
