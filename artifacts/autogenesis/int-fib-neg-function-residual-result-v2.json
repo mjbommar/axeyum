@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-function-residual-result",
+  "state": "function-parameterized-residual-reproduced-with-fibonacci-closure-absent",
+  "plan": "artifacts/autogenesis/int-fib-neg-function-residual-plan-v2.json",
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-function-residual-v1",
+    "source_sha256": "379e24e9e5045d22ea4ac7bf184f738c160c14b7739ce5a73f864dc5cf5ed116",
+    "olean_sha256": "d242f88283d2bfa9342247e6ccac3afede49282e1c926249387c23b9ae0b9db7",
+    "stream_bytes": 9832964,
+    "stream_sha256": "0136201181ae82b0b1dae091190a4a961f53574cd24d686a2c075b5e6599337c",
+    "exports": 2,
+    "exports_byte_identical": true
+  },
+  "root": {
+    "name": "Axeyum.Autogenesis.intFibNegFunctionResidualV1",
+    "declaration_sha256": "370a37c020c431310a8dcc40b6117f49e332cba77d9a6efc3387a90176c5b0a4",
+    "axiom_footprint": [
+      "Classical.choice",
+      "Lean.opaqueId",
+      "Quot",
+      "Quot.lift",
+      "Quot.mk",
+      "Quot.sound",
+      "String.Internal.append",
+      "propext"
+    ],
+    "direct_theorem_dependencies": [
+      "Eq.symm"
+    ]
+  },
+  "closure": {
+    "Int.fib_present": false,
+    "Lean.RArray_present": false
+  },
+  "execution": {
+    "source_stagings": 1,
+    "module_builds": 1,
+    "exports": 2,
+    "closure_audits": 1,
+    "retries": 0,
+    "composition_operations": 0,
+    "exact_target_submissions": 0,
+    "ledger_writes": 0
+  },
+  "credit": "generic residual identity and closure factorization only",
+  "next": "Compose the generic root into the clean decision/natCast kernel and require its resulting footprint empty before branch construction.",
+  "limitations": "The source-environment residual remains assumption-bearing and proves no Fibonacci branch."
+}
