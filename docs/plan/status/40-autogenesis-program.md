@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_dvd`, `Int.fib_of_nonneg`, `Nat.fib_pos`, and now `Nat.fib_eq_zero` are durably proved with empty kernel footprints. `Nat.fib_eq_zero` survived an exit-75 intent fault unchanged, recovered with exactly one ledger write, passed its registered checker, and produced the preregistered empty readiness delta.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_dvd`, `Int.fib_of_nonneg`, `Nat.fib_pos`, `Nat.fib_eq_zero`, and now `Int.fib_eq_zero` are durably proved with empty kernel footprints. `Int.fib_eq_zero` survived an exit-75 intent fault unchanged, recovered with exactly one ledger write, passed its registered checker, and produced the preregistered empty readiness delta.
 
-**Next:** construct a decision-free `Int.natAbs = 0` support and a function-abstracted integer Fibonacci zero residual, then specialize both with the admitted natural characterization and existing integer Fibonacci/natAbs bridge.
+**Next:** replay `Int.fib_eq_zero` once from its exact transition source, then measure the next dependency-ready bottom-up Mathlib foundation from the current frontier.
 
 <!-- plan-section: landed-changes -->
 
@@ -27,6 +27,7 @@
 | 2026-08-22 | (pending) | Exact crash-safe `Int.fib_eq_zero` admission is frozen against receipt `e005b598…b00c`, one ledger write, one recovery, one isolated replay, and an expected empty unlock delta before registry code |
 | 2026-08-22 | (pending) | Exact `Int.fib_eq_zero` sealed-capsule execution is registered through typed frontier, execution, transaction, and replay machinery with four fixed dependencies and zero ledger writes so far |
 | 2026-08-22 | (pending) | Machine-selected `Int.fib_eq_zero` transaction `88397909…c3f` is frozen from clean registration commit `a2cd44951` before one intent fault and one recovery |
+| 2026-08-22 | (pending) | Exit-75 intent fault leaves `Int.fib_eq_zero` unchanged; one recovery performs one ledger write, the registered checker passes, and readiness remains empty as preregistered |
 
 | 2026-08-21 | (pending) | The newly ready `Int.gcd_fib` route is frozen through one target-owned Fibonacci/natAbs bridge and the two exact admitted premise capsules before source construction or proof-stream access |
 | 2026-08-21 | (pending) | Closure analysis corrects the bridge boundary before execution: export a dependency-free two-parameter residual, then specialize it with exact clean `Int.fib_neg` and `Int.natAbs_neg` roots |
