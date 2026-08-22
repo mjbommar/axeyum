@@ -21,7 +21,16 @@ Kaser and Lemire, *Strongly universal string hashing is fast*, Comput. J.
 there is an irreducible polynomial of degree `L` over `GF(2)` all of whose
 non-leading terms have degree at most `floor(L/2)`. They verified it for
 `L in {1..400}` from Arndt's table and conjectured it in general; the motivation
-is Barrett reduction in a string-hashing kernel.
+is Barrett reduction in a string-hashing kernel. The conjecture was first
+posed publicly by Lemire on MathOverflow ("Can we always find such an
+irreducible polynomial of degree `n` where `degree(p(x)-x^n) <= n/2`?",
+23 Nov 2011). In that thread Elkies and Zaimi state the expected truth
+(subdegree `O(log n)`), Ellenberg gives the Legendre / Cramer-under-RH
+framing (`n/2 + log n` is what RH buys), Voloch notes Cohen's
+prescribed-coefficient bound stops at `m < n/2 + O(log n)`, and **Emil
+Jerabek already gives the `n = 2*3^k` family `x^{2*3^k}+x^{3^k}+1`** (an
+exercise in Lidl--Niederreiter, per Lahtonen). So the `m = 2` case below has
+2011 priority on MathOverflow; nothing in this note is new mathematics.
 
 ## Theorem A
 

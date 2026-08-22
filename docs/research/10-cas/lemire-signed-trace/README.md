@@ -41,10 +41,14 @@ Kaser--Lemire half-degree-irreducibles chain (sibling repository
   unbounded-above tail), the pseudorandom pair correlation, and an exact proof
   that the Witt carry formula collapses to Weil above the Kerdock level
   (boundary s-1=1). Verdict: the one unblocked target, not reachable now.
-- [08-infinite-family.md](08-infinite-family.md) -- a proven infinite
-  family: Lemire holds for n = 2*3^k with witness Phi_{3^{k+1}} =
-  x^n + x^{n/2} + 1 (2 a primitive root mod 3^{k+1}); the first proven
-  infinite family for the conjecture, machine-checked. Density zero, even n.
+- [08-infinite-family.md](08-infinite-family.md) -- the monomial-composition
+  window family (Theorem A): for every in-window irreducible seed of degree
+  `m` and order `e`, `f(x^t)` is in-window irreducible of degree `mt` whenever
+  `rad(t) | e` and `gcd(t,(2^m-1)/e) = 1` (LN Thm 3.35; the window is free).
+  `n = 2*3^k` is the `m = 2` case (pointed out by E. Jerabek on MathOverflow,
+  Nov 2011); `m = 3` gives odd `n = 3*7^k`. Exact coverage to `10^5`; density
+  zero; never a prime `n`. Rewritten 2026-08-22; the first version's
+  "first/unique family, even n only" claims were wrong.
 - [09-construction-barrier.md](09-construction-barrier.md) -- the third
   barrier: provable irreducibility-preserving constructions multiply the
   degree, so window families are lacunary (density zero) and cannot cover a

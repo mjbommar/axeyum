@@ -107,6 +107,23 @@ names the script that checks it.
   any L)". Motivation: Barrett reduction. Arndt's `lowbit-irredpoly.txt`:
   minimal subdegree is `<= 10` for all `n <= 400` (tracks `~log_2 n`), so the
   truth is far stronger than the conjecture asks.
+- **MathOverflow, 23 Nov 2011 (owner supplied the thread; the peer sweep had
+  wrongly reported "no MO thread found"):** "Can we always find such an
+  irreducible polynomial of degree n where degree(p(x)-x^n) <= n/2?", asked by
+  `lemire` -- the conjecture's actual origin, three years before the 2014
+  paper. Elkies / Zaimi: expected subdegree `O(log n)`. Rivin's answer cites
+  Cohen 2004 (`q^{n/2-m} > m W(q^n-1)`) as possibly proving it "for many
+  degrees"; Voloch and quid object that it gives only `m < n/2 + O(log n)`.
+  **Verified (coordinator, sympy):** the largest `m` Cohen's criterion allows
+  at `q=2` falls short of `ceil(n/2)-1` by `~log_2 n + omega(2^n-1)`
+  (3 at n=9, 8 at n=32, 17 at n=100) -- the same log gap as Hayes/Weil;
+  it reaches the window for NO `n >= 6`. **Emil Jerabek's comment gives
+  `x^{2*3^k}+x^{3^k}+1`** (Lahtonen: an exercise in Lidl--Niederreiter), so the
+  lane's "first proven infinite family" was wrong on priority as well as on
+  uniqueness; cite Jerabek for the `m=2` case. **Ellenberg's answer** states
+  the Legendre / Cramer-under-RH framing (`n/2 + log n`): angle 2 was posed in
+  2011. Voloch links MO question 39100 (not fetched; MO is unreachable from
+  this host).
 - arXiv:2105.06013 (Brent--Zimmermann) is about almost-irreducible trinomials
   at Mersenne exponents, NOT the in-window trinomial question; note 08's
   citation of it for "infinitely many irreducible trinomials is open" is
