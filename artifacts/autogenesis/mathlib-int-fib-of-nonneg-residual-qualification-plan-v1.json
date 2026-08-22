@@ -1,0 +1,9 @@
+{
+  "schema_version":1,"kind":"axeyum-autogenesis-mathlib-int-fib-of-nonneg-residual-qualification-plan-v1","state":"preregistered-hash-only-exact-dependency-qualification",
+  "predecessor":{"path":"artifacts/autogenesis/mathlib-int-fib-of-nonneg-residual-result-v3.json","sha256":"78d14e627e1e22ee87361575974dd5213ef020bbbe02d9c7974a66f0a1a31e2f","required_state":"provisional-empty-footprint-dependency-prediction-mismatch"},
+  "capsule":{"path":"/nas3/data/axeyum/autogenesis/reference-packs/int-fib-of-nonneg-residual-v3/root.ndjson","bytes":120009,"sha256":"f47b2e9cfe00a1b98a365197c03bd96e346ca40f97677920e1caafc5f605d3db","manifest_sha256":"7d44d81ed84c1c38df4a0e751ffb0dc37b4b358a90387a87c447638485089983"},
+  "qualification":{"root":"Axeyum.Autogenesis.intFibOfNonnegResidualV1","canonical_declaration_sha256":"2373556137e8144c5927501b5fe2eaa4fa3ac7357cdd5d58d89b21e43e13e605","axiom_footprint":[],"exact_direct_theorem_dependencies":["Eq.symm"],"reason":"the two completed independent imports already computed the full root footprint as empty; qualification corrects only the preregistered direct-dependency prediction"},
+  "execution":{"max_committed_result_reads":1,"max_capsule_hash_reads":1,"max_exporter_invocations":0,"max_importer_runs":0,"max_theorem_submissions":0,"max_ledger_writes":0},
+  "acceptance":{"residual_credit":1,"target_theorem_credit":0,"fact_status_changes":0,"ledger_writes":0},
+  "next_on_accept":"freeze exact specialization over target-owned Int.fib, Nat.fib, and Int.fib_natCast with Eq.symm retained"
+}
