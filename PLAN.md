@@ -289,6 +289,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Exact-join driver V1 stops before stream access on Clippy's 100-line threshold; V2 freezes only a scoped line-count allowance |
 | 2026-08-21 | (pending) | Exact-join V2 applies only the scoped allowance and passes fmt plus focused Clippy with both streams unread; one invocation remains |
 | 2026-08-21 | (pending) | Exact `Int.fib_neg` specializes axiom-free, exports an 826,942-byte capsule, and freshly imports twice unchanged; one canonical goal-identity audit is frozen before ledger authority |
+| 2026-08-21 | (pending) | Hash-only audit binds exact `Int.fib_neg` to canonical type `08d500fc...`, unchanged declaration identity, empty footprint, and three constructed dependencies; admission registration is next |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
