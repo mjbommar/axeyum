@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-constructor-lift-plan",
+  "state": "preregistered-after-final-name-resolution",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-even-constructor-lift-result-v1.json",
+    "required_state": "source-reaches-final-unavailable-name"
+  },
+  "only_source_change": "replace unavailable generic neg_add_rev q q with narrow-import Int.neg_add at the final equality",
+  "basis": "Init.Data.Int.Lemmas defines protected theorem Int.neg_add : -(a+b) = -a + -b",
+  "unchanged": {
+    "import": "Mathlib.Data.Int.Basic",
+    "target_statements": true,
+    "constructor_and_parity_proof": true,
+    "explicit_contracts": true,
+    "automation_ban": true,
+    "export_authority": 0,
+    "ledger_authority": 0
+  },
+  "budget": {
+    "compilations": 1,
+    "retries": 0,
+    "exports": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": "Both parameterized roots compile under Mathlib.Data.Int.Basic; this gives construction credit only.",
+  "stop_rule": "Any further error stops before export and requires a separately recorded boundary.",
+  "output": "artifacts/autogenesis/int-even-constructor-lift-result-v2.json"
+}
