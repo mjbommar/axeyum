@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-decision-root-audit-plan",
+  "state": "preregistered-before-pinned-root-export",
+  "fixed_environment": {"host": "s5", "mathlib_checkout": "/home/mjbommar/lean-import-scale/mathlib4", "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f", "lean_version": "4.30.0", "lean4export_binary_sha256": "8e763913b03762488571a93ced6ec1a4e04f7d8eebbe40bd1215ba41a6bd4449"},
+  "root": {"module": "Mathlib.Algebra.Group.Int.Even", "name": "Int.instDecidablePredEven", "expected_kind": "definition", "source_surface": "DecidablePred (Even : Int -> Prop)"},
+  "operation": "root-export once, import once without rendering declaration type or value, bind canonical declaration and kernel-type-shape hashes, record axioms and nearest blocker carriers",
+  "budget": {"exporter_invocations": 1, "importer_runs": 1, "stream_reads": 1, "proof_terms_rendered": 0, "declaration_types_rendered": 0, "declaration_values_rendered": 0, "reconstruction_compilations": 0, "exact_target_submissions": 0, "ledger_writes": 0, "retries": 0},
+  "decision_rule": "If the root is assumption-bearing through decidable_of_iff/even_iff, preregister a target-owned same-type structural replacement. If the root is clean, audit the next type carrier rather than duplicating it.",
+  "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-decision-root-audit-v1",
+  "output": "artifacts/autogenesis/int-even-decision-root-audit-result-v1.json",
+  "limitations": "This audit grants no replacement, theorem, fact, or ledger authority."
+}

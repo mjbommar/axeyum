@@ -207,6 +207,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Monolithic target-leaf composition exits without a durable report and gets zero credit; bounded target-owned `Int.eq_nat_or_neg` outer residual is frozen instead |
 | 2026-08-21 | (pending) | Outer V1 is deterministic but its broad-environment case-split helper is contaminated; V2 freezes direct `Int` constructor cases with no helper theorem |
 | 2026-08-21 | (pending) | Direct constructor V2 retains assumptions through exact `Even`/conditional type closure; one nonrendering nearest-carrier audit is frozen before parity infrastructure work |
+| 2026-08-21 | (pending) | Full residual carrier audit again yields no durable report; bounded root export of `Int.instDecidablePredEven` is frozen as the exact parity-decision boundary |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
