@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-exact-composition-driver-result",
+  "state": "focused-clippy-declined-before-stream-access-on-line-count",
+  "plan": "artifacts/autogenesis/int-fib-neg-exact-composition-plan-v1.json",
+  "driver": "crates/axeyum-lean-import/examples/int_fib_neg_exact_composition.rs",
+  "focused_build": {
+    "command": "cargo clippy -p axeyum-lean-import --example int_fib_neg_exact_composition -- -D warnings",
+    "exit": 101,
+    "diagnostic": "run has too many lines (110/100)"
+  },
+  "execution": {"input_stream_reads": 0, "composition_operations": 0, "specialization_operations": 0, "capsule_writes": 0, "ledger_writes": 0},
+  "credit": "driver diagnostic only",
+  "next": "Freeze and apply only a scoped clippy::too_many_lines allowance, then rerun focused formatting and Clippy."
+}

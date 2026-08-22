@@ -167,6 +167,7 @@
 | 2026-08-21 | (pending) | V4 binds both contaminated source identities and the exact clean destination leaf, then passes fmt and focused Clippy with streams unread; one invocation remains |
 | 2026-08-21 | (pending) | V4 replaces the contaminated decision leaf, specializes both concrete constructor branches empty-footprint, exports 821,459 bytes, and freshly reimports twice unchanged |
 | 2026-08-21 | (pending) | The final exact `Int.fib_neg` join is frozen: compose the clean function residual into both concrete branches and specialize once under the official name before any ledger authority |
+| 2026-08-21 | (pending) | Exact-join driver V1 stops before stream access on Clippy's 100-line threshold; V2 freezes only a scoped line-count allowance |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
