@@ -246,6 +246,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Decision carrier source compiles; V2 freezes a separate explicit-root module build and reproducible closure export |
 | 2026-08-21 | (pending) | Carrier closure confirms exact instance→helper→`Int.even_iff`; checked target-leaf replacement with the clean theorem is frozen before driver code |
 | 2026-08-21 | (pending) | Clean decision target-leaf driver passes focused Clippy with both streams unread; one fail-if-present composition remains |
+| 2026-08-21 | (pending) | Exact official integer-even decision instance reconstructs over clean `Int.even_iff`, replays, and survives two fresh imports with empty helper/carrier footprints |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |

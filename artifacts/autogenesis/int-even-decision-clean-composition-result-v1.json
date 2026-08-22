@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-decision-clean-composition-result",
+  "state": "exact-instance-reconstructed-with-clean-target-leaf-and-reimported",
+  "plan": "artifacts/autogenesis/int-even-decision-clean-composition-plan-v1.json",
+  "input_sha256": {
+    "carrier": "cbf4e87694ecfc5422cbdcf2ee219db37905168d414a8a479236604fb02315f7",
+    "clean_even_iff": "faa3a54842b1e4883e85fc153b8be8059257ff07ce137bc3c618352b13641d51"
+  },
+  "target_leaf_composition_receipt_sha256": "e0292ad2c4a7b4f76e7f03a67be5d5ba3c6afab6dbb1500573af695b7df9a634",
+  "evidence": {
+    "instance": {
+      "name": "Int.instDecidablePredEven",
+      "kind": "definition",
+      "declaration_sha256": "c01ed8edfc717e6cc0119a5c824cf94ad6fd1fb0b322487a28036b41b0713c61"
+    },
+    "helper": {
+      "name": "Int.instDecidablePredEven._proof_1",
+      "declaration_sha256": "d655d0b2e356cf9b7584db3950ac315084ab174136024a63f2b8c6e42a19856b",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": ["Iff.symm", "Int.even_iff"]
+    },
+    "carrier": {
+      "name": "Axeyum.Autogenesis.intEvenDecisionCarrierV1",
+      "declaration_sha256": "d2d4a41964a86ea36be237eccbb13f795686b4d022af6d03278132cc5b83f223",
+      "axiom_footprint": []
+    },
+    "clean_even_iff": {
+      "name": "Int.even_iff",
+      "declaration_sha256": "6ec4a6f5577bc3602d13ff02907469045f0987323f6f9f84f8c4b7b23c243c13",
+      "axiom_footprint": []
+    }
+  },
+  "capsule": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-decision-clean-v1/root.ndjson",
+    "bytes": 751678,
+    "sha256": "29053dba3b90cecf5a70ba347ea7dba81a19990f715e69d5fc0a1c60cb9a6c07",
+    "fresh_imports": 2,
+    "result_sha256": "d34c6875ef2485e7792e2f3540eefb30f5bd154d075e23a7049bca0aead8eefb"
+  },
+  "comparison": {
+    "contaminated_carrier_bytes": 9838616,
+    "clean_capsule_bytes": 751678,
+    "official_instance_identity_preserved": true,
+    "official_even_iff_identity_replaced": true,
+    "helper_footprint_after": []
+  },
+  "execution": {
+    "complete_invocations": 1,
+    "input_stream_reads": 2,
+    "target_leaf_compositions": 1,
+    "target_leaf_replays": 1,
+    "fresh_imports": 2,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Compose or reconstruct exact Int.fib_neg against this same-name clean decision instance, then audit the exact target before any ledger authority.",
+  "limitations": "Int.fib_neg, ledger admission, crash recovery, immutable archive, and unlock measurement remain pending."
+}
