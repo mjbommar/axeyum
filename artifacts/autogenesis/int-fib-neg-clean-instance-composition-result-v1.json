@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-clean-instance-composition-result",
+  "state": "declined-before-driver-code-on-preregistered-input-hash-mismatch",
+  "plan": "artifacts/autogenesis/int-fib-neg-clean-instance-composition-plan-v1.json",
+  "mismatch": {
+    "input": "clean_natcast",
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-natcast-decision-free-exact-v1/exact.ndjson",
+    "preregistered_sha256": "6c803eff520a62d6925db5ed30f78714d9923281becfd78239cc59907deb087",
+    "observed_sha256": "6c803eff520a62d6925db5ed30f78714d9923281becfd78239cc28278bc9159f",
+    "classification": "preregistration-transcription-error"
+  },
+  "execution": {
+    "driver_constructions": 0,
+    "focused_builds": 0,
+    "ndjson_imports": 0,
+    "support_compositions": 0,
+    "target_leaf_compositions": 0,
+    "target_submissions": 0,
+    "capsule_writes": 0,
+    "ledger_writes": 0,
+    "retries": 0
+  },
+  "authority": {
+    "support_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0
+  },
+  "next": "Freeze a corrected V2 plan before constructing the driver or importing any proof-bearing stream."
+}
