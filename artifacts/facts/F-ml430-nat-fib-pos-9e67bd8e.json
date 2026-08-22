@@ -1,30 +1,70 @@
 {
-  "schema_version": 1,
-  "id": "F:ml430-nat-fib-pos-9e67bd8e",
-  "title": "Mathlib v4.30 source proposition Nat.fib_pos",
-  "statement": "The proposition declared as `Nat.fib_pos` in the pinned Mathlib v4.30 source.",
-  "formal": {
-    "language": "lean4-surface",
-    "statement": "∀ {n : ℕ}, 0 < Nat.fib n ↔ 0 < n",
-    "fragment": "Nat"
-  },
-  "epistemic_status": "open",
-  "external_status": "proved",
+  "axiom_footprint": [],
   "depends_on": [],
-  "evidence": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "artifact": "sha256:d81afedfa5f7bb88f4742833bb6af8cf60090980158d0877466ee3608de8b37b",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-autogenesis-fact-operation.py --fact artifacts/facts/F-ml430-nat-fib-pos-9e67bd8e.json",
+      "checker_operation": {
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/nat-fib-pos-exact-v1/root.ndjson",
+        "capsule_sha256": "ec85c45183bec3c1fe4cbd0d015c76a5ded6dbbfa4be9b279d59870da12566a0",
+        "declaration_sha256": "f441b137a185604cee38d4f5c311cd48cd83ffb4279ceab467c7852dad326e65",
+        "direct_theorem_dependencies": [
+          "Axeyum.Autogenesis.natFibOnePositiveV1",
+          "Axeyum.Autogenesis.natFibPosResidualV1",
+          "Axeyum.Autogenesis.natFibStepPositiveV1",
+          "Axeyum.Autogenesis.natFibZeroV1",
+          "Nat.zero_lt_succ"
+        ],
+        "execution_sha256": "d81afedfa5f7bb88f4742833bb6af8cf60090980158d0877466ee3608de8b37b",
+        "formal_statement_sha256": "46eb380c2432e5817ddd3caa6f17e56cf646c44599e4ee1691fa0491fc3ca81a",
+        "frontier_sha256": "9484744a67ce576ff4f007808385d9919b8a1dbf0d89988719fd1a020a3a93bb",
+        "goal_sha256": "24233cf6ebabcb044ad6fa8be564c7cfbff822a421afb1c94ff906c65d029f56",
+        "id": "authoritative-mathlib-nat-fib-pos-kernel-capsule-v1",
+        "operation_sha256": "967c44f0da2fdf9c2d87fa3724667880166183fba7aa226741dde2aff64e5ea4",
+        "receipt_sha256": "60954cc8fbe7d947c08ffca5dbc55e600864151ca5a824c3d950614478c46aff",
+        "registry_sha256_at_execution": "fa132dcf24822bfa4928d3e6fd86c63c6c93a33b7cee025937ad40df8cad6243",
+        "result_manifest": "artifacts/autogenesis/mathlib-nat-fib-pos-goal-identity-result-v1.json",
+        "result_manifest_sha256": "e66b149c85370a818d98654867efd59321c9aa9aca2e4797b644ebbf8617a6da",
+        "target_theorem": "Nat.fib_pos"
+      },
+      "checkers": [
+        "specialized-natural-fibonacci-positivity-v1",
+        "axeyum-lean-import/sealed-nat-fib-pos-capsule-receipt-v1",
+        "axeyum-lean-import/sealed-kernel-capsule-v1"
+      ],
+      "id": "autogenesis-operation-d81afedfa5f7bb88",
+      "kind": "kernel-term",
+      "notes": "Derived from a clean-commit typed execution receipt. The registered fact-operation checker replays the immutable capsule and committed identity manifest and requires its exact theorem identity, two fresh imports, empty axiom footprint, and five named direct theorem dependencies; no caller-authored route, footprint, checker, or shell command is accepted.",
+      "supports": "The proposition declared as `Nat.fib_pos` in the pinned Mathlib v4.30 source."
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "language": "lean4-surface",
+    "statement": "\u2200 {n : \u2115}, 0 < Nat.fib n \u2194 0 < n"
+  },
+  "id": "F:ml430-nat-fib-pos-9e67bd8e",
+  "notes": "CLOSED BY AXEYUM AUTOGENESIS. The machine frontier selected this exact fact for registered operation `authoritative-mathlib-nat-fib-pos-kernel-capsule-v1`; execution receipt `d81afedfa5f7bb88f4742833bb6af8cf60090980158d0877466ee3608de8b37b` produced a five-link-specialized axiom-free sealed natural Fibonacci positivity capsule, and the typed transaction derived this status, route, footprint, evidence row, checker, and provenance without caller-authored admission metadata.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
   "provenance": {
     "date": "2026-08-18",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Nat.fib_pos` from Mathlib v4.30.0; no proof value was exposed",
+    "established_by": "axeyum-autogenesis execution 70b8abf66ebc47188f8f73903a61df6577cd0fcfbb987f128a6f73943e19ebd3",
     "prior_art": [
       {
-        "who": "the Mathlib contributors",
+        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted",
         "what": "the theorem declaration `Nat.fib_pos`",
         "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
-        "year": 2026,
-        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted"
+        "who": "the Mathlib contributors",
+        "year": 2026
       }
-    ]
+    ],
+    "source": "statement-only extraction of `Nat.fib_pos` from Mathlib v4.30.0; no proof value was exposed"
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "schema_version": 1,
+  "statement": "The proposition declared as `Nat.fib_pos` in the pinned Mathlib v4.30 source.",
+  "title": "Mathlib v4.30 source proposition Nat.fib_pos"
 }
