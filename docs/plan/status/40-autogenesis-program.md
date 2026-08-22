@@ -4,7 +4,7 @@
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_gcd`, `Int.fib_dvd`, and now `Int.fib_of_nonneg` are durably proved with empty kernel footprints. The new operation survived an exit-75 intent fault without changing the fact, recovery performed exactly one authoritative ledger write, and an isolated exact-commit replay reproduced every primary byte identity and the preregistered empty unlock delta.
 
-**Next:** freeze one current-source binary build and one fail-if-present execution for the compiled exact `Nat.fib_pos` driver; do not read its four proof streams before that execution plan is committed.
+**Next:** execute the committed V9 exact `Nat.fib_pos` plan once: build the current-source binary, compose four sealed inputs, specialize the step and final theorem, export, reimport twice, and seal the result without ledger mutation.
 
 <!-- plan-section: landed-changes -->
 
@@ -146,6 +146,7 @@
 | 2026-08-22 | (pending) | V6 qualifies the exact congrArg-only step residual from the two already completed imports with zero proof-stream, importer, theorem-submission, or ledger reruns |
 | 2026-08-22 | (pending) | V7 freezes exact `Nat.fib_pos` over four sealed inputs, two target-owned definitional base theorems, one step specialization, and one final specialization before driver code or proof-stream access |
 | 2026-08-22 | (pending) | The first exact-driver compile stops only at six nested mutable Rust borrows with all proof streams unread; V8 freezes local-variable refactoring, and the corrected driver passes focused Clippy without leaving a runnable binary |
+| 2026-08-22 | (pending) | V9 freezes one current-source binary build and one fail-if-present exact `Nat.fib_pos` execution from commit `820b8aa9c`, retaining the four-read, two-specialization, zero-ledger budget |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
