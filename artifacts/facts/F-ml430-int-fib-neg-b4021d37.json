@@ -1,30 +1,68 @@
 {
-  "schema_version": 1,
-  "id": "F:ml430-int-fib-neg-b4021d37",
-  "title": "Mathlib v4.30 source proposition Int.fib_neg",
-  "statement": "The proposition declared as `Int.fib_neg` in the pinned Mathlib v4.30 source.",
-  "formal": {
-    "language": "lean4-surface",
-    "statement": "∀ (n : ℤ), Int.fib (-n) = if Even n then -Int.fib n else Int.fib n",
-    "fragment": "Int"
-  },
-  "epistemic_status": "open",
-  "external_status": "proved",
+  "axiom_footprint": [],
   "depends_on": [],
-  "evidence": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "artifact": "sha256:fe40f469a15b64194bc394fb6133a2a7dbaf71511f875264ee112dd48a7957ad",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-autogenesis-fact-operation.py --fact artifacts/facts/F-ml430-int-fib-neg-b4021d37.json",
+      "checker_operation": {
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-exact-v1/root.ndjson",
+        "capsule_sha256": "d787dc502dff901cab0cab22bf8fd11578bf6e1632892651b1bf67b3d786d257",
+        "declaration_sha256": "55e3a3efbd6e435e5b02ce4382af74763b7be21c1a351cfc5798249f5798feb0",
+        "direct_theorem_dependencies": [
+          "Axeyum.Autogenesis.intFibNegFunctionResidualV1",
+          "Axeyum.Autogenesis.intFibNegNegativeBranchV1",
+          "Axeyum.Autogenesis.intFibNegPositiveBranchV1"
+        ],
+        "execution_sha256": "fe40f469a15b64194bc394fb6133a2a7dbaf71511f875264ee112dd48a7957ad",
+        "formal_statement_sha256": "1e0f153de1e088174866d5b10db340668e624911c188fa865a49bc2e3ac3bbc6",
+        "frontier_sha256": "333aced19a4f05af449875412e1af4ad68e9cf82593329102dc0f60d8b3ea9e2",
+        "goal_sha256": "08d500fc21c56161f8f8368ff771541c95f7e851b61d23e04361b6a66d7defb0",
+        "id": "authoritative-mathlib-int-fib-neg-kernel-capsule-v1",
+        "operation_sha256": "43516602989a962e0f4c9e962c1fb4e15baeb30e6c5b8c9b956d58532a2942bf",
+        "receipt_sha256": "6e57d30c732edf80a6a5c5f82c91cb27e6c8d715beca00ff0d5d5d9f2494fbef",
+        "registry_sha256_at_execution": "3fe485365e49575d6185060c912b2cf1145e6a275094dbb173e93f10262ba160",
+        "result_manifest": "artifacts/autogenesis/int-fib-neg-goal-identity-result-v1.json",
+        "result_manifest_sha256": "f3624680c2c811bc85bcfd890462c3b1dbdb2339768cdb284529c676d4f6e31e",
+        "target_theorem": "Int.fib_neg"
+      },
+      "checkers": [
+        "three-root-integer-fibonacci-negation-composition-v1",
+        "axeyum-lean-import/sealed-int-fib-neg-capsule-receipt-v1",
+        "axeyum-lean-import/sealed-kernel-capsule-v1"
+      ],
+      "id": "autogenesis-operation-fe40f469a15b6419",
+      "kind": "kernel-term",
+      "notes": "Derived from a clean-commit typed execution receipt. The registered fact-operation checker replays the immutable capsule and committed identity manifest and requires its exact theorem identity, two fresh imports, empty axiom footprint, and three named direct theorem dependencies; no caller-authored route, footprint, checker, or shell command is accepted.",
+      "supports": "The proposition declared as `Int.fib_neg` in the pinned Mathlib v4.30 source."
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Int",
+    "language": "lean4-surface",
+    "statement": "\u2200 (n : \u2124), Int.fib (-n) = if Even n then -Int.fib n else Int.fib n"
+  },
+  "id": "F:ml430-int-fib-neg-b4021d37",
+  "notes": "CLOSED BY AXEYUM AUTOGENESIS. The machine frontier selected this exact fact for registered operation `authoritative-mathlib-int-fib-neg-kernel-capsule-v1`; execution receipt `fe40f469a15b64194bc394fb6133a2a7dbaf71511f875264ee112dd48a7957ad` produced a three-root-composed axiom-free sealed integer Fibonacci negation capsule, and the typed transaction derived this status, route, footprint, evidence row, checker, and provenance without caller-authored admission metadata.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
   "provenance": {
     "date": "2026-08-18",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Int.fib_neg` from Mathlib v4.30.0; no proof value was exposed",
+    "established_by": "axeyum-autogenesis execution 37122ec96ada9eb705eacb3c9f9db9f98c0882ecc79ba61b4eefbe2c25775c85",
     "prior_art": [
       {
-        "who": "the Mathlib contributors",
+        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted",
         "what": "the theorem declaration `Int.fib_neg`",
         "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
-        "year": 2026,
-        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted"
+        "who": "the Mathlib contributors",
+        "year": 2026
       }
-    ]
+    ],
+    "source": "statement-only extraction of `Int.fib_neg` from Mathlib v4.30.0; no proof value was exposed"
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "schema_version": 1,
+  "statement": "The proposition declared as `Int.fib_neg` in the pinned Mathlib v4.30 source.",
+  "title": "Mathlib v4.30 source proposition Int.fib_neg"
 }

@@ -298,6 +298,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Initial operation validation rejects the unregistered fact scope and exposes missing standard audit-state counters; the schema correction remains pre-authority and pre-ledger |
 | 2026-08-21 | (pending) | Sealed `Int.fib_neg` checker, exact operation contract, transaction semantics, and mutation controls pass with the fact still open; crash-safe execution is next |
 | 2026-08-21 | (pending) | First clean frontier refuses `Int.fib_neg` on two historical live gate mentions; exact review adds the root-audit and downstream theorem-control gates before regenerating authority |
+| 2026-08-21 | (pending) | Crash-safe recovery admits exact `Int.fib_neg` with one authoritative write; the measured delta newly readies `Int.gcd_fib`, correcting the preregistered zero-unlock expectation |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
