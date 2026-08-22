@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-witness-transport-result-v7",
+  "state": "declined-at-two-opposite-sign-zero-quotient-representations",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-witness-transport-plan-v7.json",
+    "sha256": "e16826ccc6838b4d2effd67a8a2d0c2d87fbcd6714c764c9f2b8ebb9d61346bf"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-dvd-natabs-witness-transport-v1.lean",
+    "sha256": "2f4b1bca453463b007a9215166f5a084d818872aadee19cf160f3cdf6a8e8742",
+    "forbidden_dependency_mentions": 0
+  },
+  "diagnostic": {
+    "forward_residual": "accepted",
+    "reverse_accepted_branches": ["ofNat.ofNat", "negSucc.negSucc"],
+    "reverse_rejected_branches": ["ofNat.negSucc", "negSucc.ofNat"],
+    "class": "Int.negOfNat-zero-representation-mismatch",
+    "correction": "split only the Nat witness in the two opposite-sign branches; eliminate the impossible positive-to-negative zero case and choose Int zero in the valid negative-to-zero case"
+  },
+  "execution": {
+    "source_writes": 1,
+    "compile_invocations": 1,
+    "compiler_exit_status": 1,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "retries": 0,
+    "target_fib_dvd_submissions": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "transport_credit": 0,
+    "target_fib_dvd_credit": 0,
+    "ledger_writes": 0
+  }
+}
