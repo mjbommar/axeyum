@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-exact-execution-result-v15",
+  "state": "declined-after-proof-construction-at-open-result-inference",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-exact-execution-plan-v15.json",
+    "sha256": "2da08e24c07a5d4a3b08a5fca73a9395b5f6fc4c06a2fbe0fdc748f04d364d33"
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/int_fib_dvd_exact.rs",
+    "sha256": "d4044a81b8a45fda6077a88e43b2b63913dd3bf05526f7b6cb299130c9c99846"
+  },
+  "diagnostic": {
+    "stage": "completed-proof-result-inference-before-target-submission",
+    "class": "UnboundFVar",
+    "correction": "construct Dvd.dvd Int Int.instDvd (Int.fib m) (Int.fib n) directly",
+    "proof_term_constructed": true,
+    "output_remains_absent": true
+  },
+  "execution": {
+    "driver_builds": 1,
+    "complete_invocations": 1,
+    "input_stream_reads": 4,
+    "composition_operations": 3,
+    "composition_replays": 3,
+    "target_theorem_submissions": 0,
+    "target_exports": 0,
+    "fresh_target_imports": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {"target_credit": 0, "ledger_writes": 0}
+}
