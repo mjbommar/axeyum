@@ -98,9 +98,11 @@ small-level phenomenon: at the eventual first row `ell=j=200`, order `q=16`
 is high, `8 | 200`, and `16` does not divide `200`. They require a direct
 sparse-discrepancy estimate `(RSD)`. The remaining work is therefore a
 uniform square-root-scale theorem over the polynomially many (`< 8 ell^3`)
-sparse classes, with these two targets. The top layer at conductor `j`, with
-`m = floor(log2 j)` and `u = 1 + x^{2^m} = (1+x)^{2^m}`, is nonresonant and
-`(NSD)` reads `4 ell |H_j(1) - H_j(u)| <= (j-1) 2^{ceil(n/2)}`.
+sparse classes, with these two targets. For the top order at conductor `j`,
+write `m = floor(log2 j)` and `u = 1 + x^{2^m} = (1+x)^{2^m}`. If `j` is not
+a power of two, that layer is nonresonant and `(NSD)` reads
+`4 ell |H_j(1) - H_j(u)| <= (j-1) 2^{ceil(n/2)}`. If `j=2^m`, it is resonant:
+the direct target is instead `4 ell |H_j(1)| <= (j-1)2^{ceil(n/2)}`.
 
 Scale check (what makes this the critical line). At `j` near `ell`, each
 population in `Delta` is about `2^{n-j} ~ 2^{n/2+1}`, the Weil error per

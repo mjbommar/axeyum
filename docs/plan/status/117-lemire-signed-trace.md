@@ -35,8 +35,8 @@ the conductor/order resonance instead gives the direct sparse-discrepancy
 target `4 ell |Delta_{j,s}| <= (j-1)2^{ceil(n/2)}`. The independent anchor
 now asserts both reductions against the four-population identity through its
 existing endpoints. These resonant rows occur in the intended range (for
-example `ell=j=200`, `q=16`), so they cannot be folded into a Witt-digit
-martingale argument.
+example `ell=j=200`, `q=16`) and include the top order whenever `j` is a power
+of two, so they cannot be folded into a Witt-digit martingale argument.
 
 **Next:** candidate A must tabulate the two targets separately: nonresonant
 conditional-zero-versus-unconditional means and resonant direct sparse
