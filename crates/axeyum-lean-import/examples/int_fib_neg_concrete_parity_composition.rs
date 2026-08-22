@@ -213,7 +213,7 @@ fn compose(
     verify_checked_theorem_composition(source, target, completed.kernel(), completed.receipt())
         .map_err(|error| format!("{label} composition replay failed: {error:?}"))?;
     let receipt = completed.receipt().receipt_sha256.clone();
-    *target = completed.into_kernel();
+    *target = completed.kernel().clone();
     Ok(receipt)
 }
 
@@ -243,7 +243,7 @@ fn specialize(
     )
     .map_err(|error| format!("{label} specialization replay failed: {error:?}"))?;
     let receipt = completed.receipt().receipt_sha256.clone();
-    *kernel = completed.into_kernel();
+    *kernel = completed.kernel().clone();
     Ok(receipt)
 }
 
