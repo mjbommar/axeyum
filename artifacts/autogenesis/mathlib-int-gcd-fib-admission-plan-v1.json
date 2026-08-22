@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-fib-admission-plan-v1",
+  "state": "preregistered-sealed-capsule-admission-before-operation-code-or-ledger-write",
+  "target": {"fact_id": "F:ml430-int-gcd-fib-73bdafc2", "fact_sha256": "0363e2fa200d99356050891f3c697b5447ca9744965ea0c554b0070f7f8607c5", "name": "Int.gcd_fib"},
+  "evidence": {
+    "construction_result": "artifacts/autogenesis/mathlib-int-gcd-fib-construction-result-v13.json",
+    "construction_result_sha256": "06399e4b003f7be2c897be4eeb0144a9e5590b229e4bccf7e287aea128b5a059",
+    "identity_result": "artifacts/autogenesis/mathlib-int-gcd-fib-goal-identity-result-v1.json",
+    "identity_result_sha256": "7476a74f95a62950ba174d1d8150070c8f4e70a9d46d5e1d6c2e78280735564a",
+    "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-gcd-fib-exact-v1/root.ndjson",
+    "capsule_sha256": "b1ce136473ead161243e7cdc053f3a8e0dab81a8e253c364171e839f22fd86f6",
+    "capsule_bytes": 1152698,
+    "goal_sha256": "050ddb31135f25341d15c5a8a0802512b11a3965983c5a1a21aaabf9a7bb901b",
+    "declaration_sha256": "44660dc7f15cda1b469f99e349f4b874afca9dbca24bcfc5c847ca226ccc357f",
+    "receipt_sha256": "d02db0eee57fb9b6be43c283054b28141a249003acca3eb0fb90f6eecaae3ac1",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": ["Axeyum.Autogenesis.intFibNatAbsV1", "Eq.symm", "Eq.trans", "Int.gcd_def", "Nat.fib_gcd"]
+  },
+  "operation": {"id": "authoritative-mathlib-int-gcd-fib-kernel-capsule-v1", "registry_writes": 1, "required_checker": "scripts/check-autogenesis-int-gcd-fib-capsule.py"},
+  "protocol": {"register_exact_operation": true, "derive_transaction_from_clean_commit": true, "fault_injection_after_intent_exit": 75, "require_fact_unchanged_before_recovery": true, "authoritative_ledger_writes": 1, "fixture_writes": 0, "archive_primary_run": true, "isolated_clean_replay": true},
+  "budget": {"max_operation_registrations": 1, "max_fault_injection_executions": 1, "max_authoritative_ledger_writes": 1, "max_recovery_executions": 1, "max_clean_replays": 1, "max_search_invocations": 0, "max_evaluations": 0},
+  "expected_newly_ready": ["F:ml430-int-fib-gcd-3a8bfdec"],
+  "next_on_accept": "measure the newly ready Int.fib_gcd fact and continue the bottom-up chain",
+  "limitations": "This authorizes only one exact fact transition from the named immutable capsule and grants no authority to close any other proposition."
+}
