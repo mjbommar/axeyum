@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-parity-adapters-result",
+  "state": "neg-double-parity-adapters-reproduced-empty-footprint",
+  "plan": "artifacts/autogenesis/int-fib-neg-parity-adapters-plan-v2.json",
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-parity-adapters-v2",
+    "source_sha256": "6fb55f6d8c1742c03a5aa7fb1c94d4903335f21146b794dfbc77dc706b33683a",
+    "olean_sha256": "887de37b46ba5cb03ee791bd68477013e363a2addbbbc4430853683599e1dc7c",
+    "stream_bytes": 382742,
+    "stream_sha256": "e26dbda36de1c09154da8e761dfedfec08c21b61c8be4669830fc6729e9d0715",
+    "exports": 2,
+    "exports_byte_identical": true,
+    "stream_axioms": []
+  },
+  "roots": [
+    {
+      "name": "Axeyum.Autogenesis.intEvenNegResidualV2",
+      "declaration_sha256": "b22e0cbca73c9551b6c8759b2f4db413823fed43cc8948b3cbc045451509ba83",
+      "axiom_footprint": []
+    },
+    {
+      "name": "Axeyum.Autogenesis.intEvenOfNatModTwoResidualV2",
+      "declaration_sha256": "5487ad1dae4fd577eeb628a3005470888e1c3322221c93169053971ca6488910",
+      "axiom_footprint": []
+    },
+    {
+      "name": "Axeyum.Autogenesis.intEvenNegOfNatModTwoResidualV2",
+      "declaration_sha256": "63cacc795705d2687167de609e2b328ff9acbf002388162d4c5ca266f979d847",
+      "axiom_footprint": []
+    }
+  ],
+  "execution": {
+    "directory_creations": 1,
+    "source_constructions": 1,
+    "source_stagings": 1,
+    "module_builds": 1,
+    "exports": 2,
+    "root_audits": 1,
+    "retries": 0,
+    "composition_operations": 0,
+    "exact_target_submissions": 0,
+    "ledger_writes": 0
+  },
+  "credit": "parameterized parity adapters only",
+  "next": "Compose and specialize exact clean negDouble, even-neg, positive-cast parity, and negative-cast parity supports."
+}
