@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_gcd`, and now `Int.fib_dvd` are durably proved with empty kernel footprints. The exact `Int.fib_dvd` operation survived an exit-75 intent fault without changing the fact, recovery performed exactly one authoritative ledger write, the measured frontier produced the preregistered empty unlock delta, and isolated replay `e836fa51…667f` reproduced all ten semantic checks from a clean reconstructed prestate.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_gcd`, `Int.fib_dvd`, and now `Int.fib_of_nonneg` are durably proved with empty kernel footprints. The new operation survived an exit-75 intent fault without changing the fact, recovery performed exactly one authoritative ledger write, and an isolated exact-commit replay reproduced every primary byte identity and the preregistered empty unlock delta.
 
-**Next:** execute one isolated clean replay from registration commit `7216f243c`; require identical selection, execution, transaction, exit-75 recovery, after-fact hash, empty unlock delta, and exactly one write.
+**Next:** regenerate the measured frontier from current `main`, verify the completed `Int.fib_of_nonneg` transition, and select the next collision-free bottom-up Mathlib foundation.
 
 <!-- plan-section: landed-changes -->
 
@@ -130,6 +130,7 @@
 | 2026-08-22 | (pending) | First apply preflight rejects the archived `--before-fact` before intent or write; corrected V2 freezes the canonical repository fact path with unchanged transaction identities and an empty journal |
 | 2026-08-22 | (pending) | Corrected apply exits 75 after durable intent with `Int.fib_of_nonneg` still open; recovery performs exactly one write, its registered checker passes, and the measured readiness delta is empty as preregistered |
 | 2026-08-22 | (pending) | One isolated clean replay is frozen from exact registration commit `7216f243c` against all primary selection, transaction, recovery, fact, and post-frontier identities |
+| 2026-08-22 | (pending) | Isolated replay independently reproduces the same selected operation, execution, transaction, intent, admission event, exact proved fact, one write, and empty post-admission readiness delta byte-for-byte |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
