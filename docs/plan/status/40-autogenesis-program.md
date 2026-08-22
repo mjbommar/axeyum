@@ -63,6 +63,7 @@
 | 2026-08-21 | (pending) | Raw V4 reconstructs zero-add, multiply-one, one-power, and exact negative-one power parity with empty footprints; the successor-parity bridge is frozen before source construction |
 | 2026-08-21 | (pending) | Bridge V1 reconstructs empty-footprint but its anonymous function binder cannot enter named-declaration specialization; V2 freezes only the concrete `(-1)^k` substitution |
 | 2026-08-21 | (pending) | Bridge V2 reconstructs the concrete expression with four proof contracts and an empty footprint; exact raw/parity specialization is frozen before driver code |
+| 2026-08-21 | (pending) | Exact power parity specializes, replays, and survives two fresh imports with the registered five dependencies; the final two left-multiplication leaves are frozen before source construction |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
