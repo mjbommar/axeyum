@@ -454,11 +454,31 @@ axis where the grammar has a rule.
   per check. **The gap that remains** is allocation between two probes, which
   is the 125 GB shape exactly.
 
-**Open, not fixed here:**
+**The fifth, fixed 2026-08-21 after this audit was written:**
 
-- `explain_corpus` diverges from the front door in both directions, and prints
-  `unsat-UNCONFIRMED`. Do not use its verdicts for anything quantified or
-  string-shaped.
+- ~~`explain_corpus` diverges from the front door in both directions, and prints
+  `unsat-UNCONFIRMED`~~ — measured, then made structurally unmistakable rather
+  than reconciled. Over 397 committed benchmarks (`quantified/{BV,LIA,UF}`,
+  `QF_S`, `QF_SLIA`, `QF_LIA`, `QF_UF`, `QF_NRA`, 5 s cap) it disagrees with
+  `solve_smtlib` on **134**: 71 where it ERRORS and the front door decides (41
+  sat, 30 unsat), 46 that printed `unsat-UNCONFIRMED` (front door: 30 unsat, 13
+  unknown, **3 sat**), and 17 where it says unknown and the front door decides.
+  In the other direction it flattened a two-`check-sat` script the front door
+  refuses and answered `unsat` — the answer to neither query in the file.
+
+  Reconciling it would have cost the route trace, which is the only thing it is
+  for. So instead: no verdict it emits is a bare SMT-LIB token
+  (`flat-unsat`, `front-door-sat`, `not-attempted`), the two structurally
+  divergent shapes are refused with a reason rather than answered, every JSONL
+  record carries `"oracle":false`, and `--confirm` re-solves through the real
+  front door and stamps `front_door_verdict` / `agrees`. The classes are pinned
+  by 21 unit tests that no gate ran until now.
+
+  **The measurement instrument needed the same care as the subject.** Diffing
+  against the `smtcomp_cli` binary counts **193**, not 134, because SMT-COMP
+  §7.1.2 requires the CLI to render an error as `unknown` — so 59 files where
+  BOTH sides decline read as disagreements. `--confirm` compares in-process,
+  which is why the flag exists.
 
 ---
 

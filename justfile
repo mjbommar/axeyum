@@ -388,6 +388,10 @@ gate-controls:
     # test broken by ADR-0384's three-valued `Evidence::check` sat red and
     # unseen. Expect a NONZERO count (10).
     cargo test -p axeyum-bench --example audit_dominance
+    # explain_corpus's own tests: they pin the measured divergence from the
+    # front door (134 of 397) as token discipline plus two refusals. Expect a
+    # NONZERO count (21).
+    cargo test -p axeyum-bench --example explain_corpus
     # Lean-reconstruction unit tests, moved out of hooks/pre-push (268 tests,
     # 294s, each building Lean preludes). They belong in a daily gate, not on
     # every push -- and before this neither aggregate gate ran them.

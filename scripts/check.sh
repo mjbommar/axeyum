@@ -240,6 +240,12 @@ step dominance-scoreboard python3 scripts/gen-dominance-scoreboard.py --check
 # ADR-0384 made `Evidence::check` three-valued -- invisibly, for as long as
 # nobody typed the command. Expect a NONZERO count (10).
 step dominance-audit-harness-tests cargo test -p axeyum-bench --example audit_dominance
+# `explain_corpus`'s own unit tests, likewise in no script until now. They pin
+# the 2026-08-21 divergence census: the tool disagrees with `solve_smtlib` on
+# 134 of 397 committed benchmarks, so no verdict it prints may be a bare
+# SMT-LIB token and the two structurally divergent shapes are refused. Expect a
+# NONZERO count (21).
+step explain-corpus-diagnostic-tests cargo test -p axeyum-bench --example explain_corpus
 # The Lean-reconstruction unit tests, moved OUT of `hooks/pre-push` on
 # 2026-08-20. Measured idle: 268 tests, 294s, because each builds Lean
 # preludes -- 90% of the hook's unit sweep and ~45% of every Rust push. They
