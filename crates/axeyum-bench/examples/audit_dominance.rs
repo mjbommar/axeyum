@@ -34,6 +34,8 @@ use axeyum_solver::{
     Evidence, LeanModuleContent, LraReconstructCtx, SolverConfig, produce_evidence,
     produce_evidence_smtlib, prove_unsat_to_lean_module, scan_proof_fragment,
 };
+#[cfg(test)]
+use axeyum_solver::{EvidenceCheck, NoCheckReason};
 use serde_json::{Value as JsonValue, json};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -752,6 +754,107 @@ fn status_of_text(text: &str) -> Verdict {
     Verdict::Unknown
 }
 
+/// Mark a record the directory-backed sweep KEPT but did not count in
+/// `audited_decided`, and say why.
+///
+/// THE ROW THAT SHRANK ITS NUMERATOR AND DENOMINATOR TOGETHER. The
+/// directory-backed path used to `continue` at each of the sites that call
+/// this, so an instance the audit could not decide left **no trace at all**:
+/// not in `audited_decided`, not in `timeouts`, not in `instances`. The
+/// artifact then reported `timeouts: 0`, which was true and meant nothing — a
+/// row that timed out on ten instances and a row that timed out on none emitted
+/// byte-identical summaries, and only the two synthetic rows take this path, so
+/// `newly_decided` covered 33 of 35 rows by construction while a `0` on the
+/// other two was not evidence of anything.
+///
+/// Keeping them OUT of `audited_decided` is still right, and is a different
+/// thing from dropping them. A directory-backed baseline records counts
+/// (`considered`, `axeyum_decided`) and not files, so the sweep cannot tell
+/// which instances its baseline decided; an instance neither side decided must
+/// therefore not enter a percentage whose denominator is meant to be the
+/// baseline's population. Excluded is reportable. Vanished is not.
+fn mark_excluded(record: &mut JsonValue, reason: &str) {
+    if let Some(map) = record.as_object_mut() {
+        map.insert("excluded_from_audited".to_owned(), json!(true));
+        map.insert("excluded_reason".to_owned(), json!(reason));
+    }
+}
+
+/// A record for a file the sweep never got as far as running.
+fn unaudited_record(file: &Path, reason: &str) -> JsonValue {
+    let mut record = json!({
+        "file": file.display().to_string(),
+        "baseline_outcome": Verdict::Unknown.label(),
+        "audit_outcome": Verdict::Unknown.label(),
+        "baseline_matches_audit": JsonValue::Null,
+        "evidence_kind": JsonValue::Null,
+        "evidence_certified": false,
+        "evidence_checked": false,
+        "lean_fragment": JsonValue::Null,
+        "lean_checked": false,
+        "trust_steps": [],
+        "trust_holes": [reason],
+        "dominant_candidate": false,
+    });
+    mark_excluded(&mut record, reason);
+    record
+}
+
+/// What a DIRECTORY-backed row can honestly say about the instances its
+/// baseline left undecided.
+///
+/// The JSON-backed path re-probes per instance, because its baseline names its
+/// files. A directory-backed baseline records only counts, so nothing here can
+/// name the undecided ones. What it CAN do is bound them. This sweep runs every
+/// `.smt2` under the directory, so when the directory is the population the
+/// baseline considered:
+///
+/// * all `considered - axeyum_decided` instances the baseline left undecided
+///   were re-run, and
+/// * at least `audited_decided - axeyum_decided` of this audit's decisions land
+///   on files the baseline did not decide (pigeonhole: both sides decided out
+///   of the same `considered` files).
+///
+/// Both are counts, not attributions, which is why the artifact stamps
+/// `newly_decided_attribution` — a lower bound derived from two totals must not
+/// be read as the per-instance measurement the JSON path produces.
+///
+/// Returns `None` when the populations cannot be reconciled — the directory has
+/// grown or shrunk since the baseline ran, `limit` cut the sweep short, or the
+/// baseline claims more decisions than it considered — because then the bound
+/// is not derivable and the artifact must say so rather than print a number it
+/// cannot defend.
+/// Does a directory-backed instance belong in `audited_decided`?
+///
+/// `true` keeps it in the denominator. `false` means EXCLUDED, which is not the
+/// same as dropped — see `mark_excluded`.
+///
+/// When the baseline decided everything it considered, its population is the
+/// whole directory and every instance is comparable, including ones this audit
+/// fails to decide (that is a regression, and it must be visible in the
+/// percentage). When the baseline decided only some of what it considered, the
+/// audit cannot tell which, so an instance neither side decided is not
+/// attributable to either population.
+fn counts_toward_audited(baseline_decided_all_considered: bool, audit_outcome: Verdict) -> bool {
+    baseline_decided_all_considered || audit_outcome.decided()
+}
+
+fn dir_undecided_bound(
+    files_len: usize,
+    instances_len: usize,
+    baseline_decided: usize,
+    audited_decided: usize,
+    swept_every_file: bool,
+) -> Option<(usize, usize)> {
+    if !swept_every_file || files_len != instances_len || baseline_decided > instances_len {
+        return None;
+    }
+    Some((
+        instances_len - baseline_decided,
+        audited_decided.saturating_sub(baseline_decided),
+    ))
+}
+
 fn baseline_logic(baseline_json: &JsonValue, instances: Option<&[JsonValue]>) -> String {
     if let Some(logic) = baseline_json
         .pointer("/config/logic")
@@ -859,6 +962,23 @@ fn main() {
     // those the solver decides today. See the long comment at the skip site.
     let mut newly_audited = 0usize;
     let mut newly_decided = 0usize;
+    // How `newly_audited` / `newly_decided` were obtained. The JSON path names
+    // its baseline's files and re-probes each one; the directory path can only
+    // bound the same quantity from two totals (`dir_undecided_bound`). Reading
+    // a bound as a measurement is exactly the mistake this artifact exists to
+    // stop, so the artifact says which it is.
+    let mut newly_decided_attribution = "per-instance";
+    // Instances the DIRECTORY-backed sweep keeps out of `audited_decided`.
+    // Every one of these used to be dropped without a record; see
+    // `mark_excluded` for what that cost.
+    let mut excluded_audit_undecided = 0usize;
+    let mut excluded_audit_undecided_timeouts = 0usize;
+    let mut excluded_audit_undecided_errors = 0usize;
+    let mut excluded_status_unknown = 0usize;
+    let mut status_unknown_reprobed = 0usize;
+    let mut status_unknown_decided = 0usize;
+    let mut excluded_unparsed = 0usize;
+    let mut excluded_unreadable = 0usize;
     // Of the Lean-reconstructed unsat, how many carry REASONING rather than a
     // structural attestation. See the producer for why the distinction matters.
     let mut lean_theory_unsat = 0usize;
@@ -977,19 +1097,53 @@ fn main() {
             files.len(),
         );
         let baseline_decided_all_considered = baseline_decided == instances_len;
+        let files_len = files.len();
+        let mut swept_every_file = true;
 
         for file in files {
             if audited_decided >= limit {
+                swept_every_file = false;
                 break;
             }
             let Ok(text) = std::fs::read_to_string(&file) else {
+                excluded_unreadable += 1;
+                records.push(unaudited_record(&file, "unreadable"));
                 continue;
             };
             if parse_script(&text).is_err() {
+                excluded_unparsed += 1;
+                records.push(unaudited_record(&file, "unparsed"));
                 continue;
             }
             let baseline_outcome = status_of_text(&text);
             if !baseline_outcome.decided() {
+                // No declared `:status`, so there is no baseline verdict to be
+                // dominant over and the instance cannot enter the denominator.
+                // It can still be RUN, and running it is the only way a
+                // capability on this shape becomes visible at all — the JSON
+                // path learned that the expensive way (quantified LIA read 0/12
+                // for three months while the solver decided 12/12).
+                excluded_status_unknown += 1;
+                if status_unknown_reprobed < undecided_cap {
+                    status_unknown_reprobed += 1;
+                    let probe = audit_instance_capped(file, baseline_outcome, cap);
+                    let probe_outcome = probe
+                        .record
+                        .get("audit_outcome")
+                        .and_then(JsonValue::as_str)
+                        .map_or(Verdict::Unknown, Verdict::from_label);
+                    if probe_outcome.decided() {
+                        status_unknown_decided += 1;
+                    }
+                    let mut record = probe.record;
+                    mark_excluded(&mut record, "benchmark-status-unknown");
+                    records.push(record);
+                } else {
+                    records.push(unaudited_record(
+                        &file,
+                        "benchmark-status-unknown-over-reprobe-cap",
+                    ));
+                }
                 continue;
             }
             let result = audit_instance_capped(file, baseline_outcome, cap);
@@ -998,7 +1152,17 @@ fn main() {
                 .get("audit_outcome")
                 .and_then(JsonValue::as_str)
                 .map_or(Verdict::Unknown, Verdict::from_label);
-            if !baseline_decided_all_considered && !audit_outcome.decided() {
+            if !counts_toward_audited(baseline_decided_all_considered, audit_outcome) {
+                excluded_audit_undecided += 1;
+                if result.timed_out {
+                    excluded_audit_undecided_timeouts += 1;
+                }
+                if result.audit_error {
+                    excluded_audit_undecided_errors += 1;
+                }
+                let mut record = result.record;
+                mark_excluded(&mut record, "audit-undecided-baseline-population-unknown");
+                records.push(record);
                 continue;
             }
             if record_has_decided_mismatch(&result.record) {
@@ -1036,6 +1200,21 @@ fn main() {
             audited_decided += 1;
             records.push(result.record);
         }
+
+        match dir_undecided_bound(
+            files_len,
+            instances_len,
+            baseline_decided,
+            audited_decided,
+            swept_every_file,
+        ) {
+            Some((undecided, gained)) => {
+                newly_audited = undecided;
+                newly_decided = gained;
+                newly_decided_attribution = "count-inferred";
+            }
+            None => newly_decided_attribution = "unavailable",
+        }
     }
 
     // `>=`, not `==`. **Beating the baseline used to delete the logic from the
@@ -1057,6 +1236,10 @@ fn main() {
     // percentages are over a different denominator and must not be published as
     // comparable.
     let complete = audited_decided >= baseline_decided;
+    let excluded_total = excluded_audit_undecided
+        + excluded_status_unknown
+        + excluded_unparsed
+        + excluded_unreadable;
     let dominant_pct_audited = if audited_decided == 0 {
         0.0
     } else {
@@ -1069,7 +1252,7 @@ fn main() {
     };
 
     let artifact = json!({
-        "version": 3,
+        "version": 4,
         "source_revision": source_revision(),
         "baseline": repo_rel(&baseline),
         "logic": logic,
@@ -1085,6 +1268,7 @@ fn main() {
             "audited_decided": audited_decided,
             "baseline_undecided_reprobed": newly_audited,
             "newly_decided": newly_decided,
+            "newly_decided_attribution": newly_decided_attribution,
             "audited_unsat": audited_unsat,
             "evidence_certified": evidence_certified,
             "evidence_checked": evidence_checked,
@@ -1096,6 +1280,21 @@ fn main() {
             "baseline_mismatches": baseline_mismatches,
             "audit_errors": audit_errors,
             "timeouts": timed_out,
+            // Instances this audit ran (or could not run) that are NOT in
+            // `audited_decided`. `timeouts` above counts only the audited
+            // population, so before these existed a directory-backed row could
+            // time out repeatedly and still publish `timeouts: 0`.
+            "excluded_from_audited": {
+                "total": excluded_total,
+                "audit_undecided": excluded_audit_undecided,
+                "audit_undecided_timeouts": excluded_audit_undecided_timeouts,
+                "audit_undecided_errors": excluded_audit_undecided_errors,
+                "benchmark_status_unknown": excluded_status_unknown,
+                "benchmark_status_unknown_reprobed": status_unknown_reprobed,
+                "benchmark_status_unknown_decided": status_unknown_decided,
+                "unparsed": excluded_unparsed,
+                "unreadable": excluded_unreadable,
+            },
         },
         "instances": records,
     });
@@ -1119,13 +1318,24 @@ fn main() {
     let attesting = lean_checked_unsat.saturating_sub(lean_theory_unsat);
     let newly = if newly_decided > 0 {
         format!(
-            ", NEWLY DECIDED {newly_decided}/{newly_audited} the baseline recorded as undecided (the baseline is stale)"
+            ", NEWLY DECIDED {newly_decided}/{newly_audited} the baseline recorded as undecided ({newly_decided_attribution}; the baseline is stale)"
+        )
+    } else {
+        String::new()
+    };
+    // `timeouts {timed_out}` is over the AUDITED population only. A
+    // directory-backed row excludes what it cannot decide, so without this
+    // clause a row that timed out on every excluded instance still printed
+    // `timeouts 0` — true, and worthless.
+    let excluded = if excluded_total > 0 {
+        format!(
+            ", EXCLUDED {excluded_total} not in the audited population (audit-undecided {excluded_audit_undecided} of which timeouts {excluded_audit_undecided_timeouts} errors {excluded_audit_undecided_errors}, status-unknown {excluded_status_unknown} of which decided {status_unknown_decided}, unparsed {excluded_unparsed}, unreadable {excluded_unreadable})"
         )
     } else {
         String::new()
     };
     eprintln!(
-        "dominance audit {logic}: {dominant_candidates}/{audited_decided} audited decided ({dominant_pct_audited:.1}%), Lean unsat {lean_checked_unsat}/{audited_unsat} ({lean_unsat_pct:.1}%, of which {lean_theory_unsat} reason and {attesting} attest), mismatches {baseline_mismatches}, audit errors {audit_errors}, timeouts {timed_out}{newly}"
+        "dominance audit {logic}: {dominant_candidates}/{audited_decided} audited decided ({dominant_pct_audited:.1}%), Lean unsat {lean_checked_unsat}/{audited_unsat} ({lean_unsat_pct:.1}%, of which {lean_theory_unsat} reason and {attesting} attest), mismatches {baseline_mismatches}, audit errors {audit_errors}, timeouts {timed_out}{newly}{excluded}"
     );
 }
 
@@ -1133,11 +1343,101 @@ fn main() {
 mod tests {
     use super::*;
 
+    // --- the directory-backed sweep's exclusion accounting ---------------
+    //
+    // Each guard below was deleted in turn and the suite re-run; the mutation
+    // results are recorded in the commit that introduced these tests. A guard
+    // whose deletion kills nothing is worse than no guard.
+
+    #[test]
+    fn a_baseline_that_decided_everything_keeps_its_undecided_instances() {
+        // The audit failing where the baseline succeeded is a REGRESSION and
+        // must stay in the denominator. Positive control for the exclusion
+        // tests below: same undecided verdict, opposite disposition.
+        assert!(counts_toward_audited(true, Verdict::Unknown));
+        assert!(counts_toward_audited(true, Verdict::Sat));
+    }
+
+    #[test]
+    fn an_unattributable_undecided_instance_is_excluded_not_counted() {
+        assert!(!counts_toward_audited(false, Verdict::Unknown));
+        // ...but a DECIDED one is still counted even then.
+        assert!(counts_toward_audited(false, Verdict::Unsat));
+    }
+
+    #[test]
+    fn dir_bound_is_the_pigeonhole_gain_over_the_baseline() {
+        // `qf-nra-synthetic-graduated`: 33 considered, baseline decided 30,
+        // this audit decides 33. Three of those decisions cannot be on files
+        // the baseline decided.
+        assert_eq!(dir_undecided_bound(33, 33, 30, 33, true), Some((3, 3)));
+        // A row whose baseline decided everything has nothing to re-probe.
+        assert_eq!(dir_undecided_bound(32, 32, 32, 32, true), Some((0, 0)));
+    }
+
+    #[test]
+    fn dir_bound_never_reports_a_negative_gain() {
+        // Deciding FEWER than the baseline is a regression, not a gain of
+        // `-1`. `complete_audit` is what carries that; this must clamp.
+        assert_eq!(dir_undecided_bound(33, 33, 30, 29, true), Some((3, 0)));
+    }
+
+    #[test]
+    fn dir_bound_declines_when_limit_cut_the_sweep_short() {
+        // `audited_decided` is then over a prefix of the directory, so the
+        // pigeonhole argument does not hold.
+        assert_eq!(dir_undecided_bound(33, 33, 30, 33, false), None);
+    }
+
+    #[test]
+    fn dir_bound_declines_when_the_directory_is_not_the_baseline_population() {
+        // A file added or removed since the baseline ran breaks the shared
+        // denominator the argument needs.
+        assert_eq!(dir_undecided_bound(34, 33, 30, 33, true), None);
+        assert_eq!(dir_undecided_bound(32, 33, 30, 32, true), None);
+    }
+
+    #[test]
+    fn dir_bound_declines_on_an_incoherent_baseline() {
+        // `axeyum_decided > considered` cannot be true; subtracting would
+        // underflow, and `saturating_sub` would hide it as a confident zero.
+        assert_eq!(dir_undecided_bound(33, 33, 40, 33, true), None);
+    }
+
+    #[test]
+    fn mark_excluded_flags_the_record() {
+        let mut record = json!({"file": "x.smt2"});
+        mark_excluded(&mut record, "unparsed");
+        assert_eq!(record.get("excluded_from_audited"), Some(&json!(true)));
+    }
+
+    #[test]
+    fn an_unaudited_file_still_produces_a_record_that_says_why() {
+        // The whole defect in one assertion: this used to be `continue`.
+        let record = unaudited_record(Path::new("corpus/x.smt2"), "unreadable");
+        assert_eq!(record.get("file"), Some(&json!("corpus/x.smt2")));
+        assert_eq!(record.get("excluded_reason"), Some(&json!("unreadable")));
+        assert_eq!(record.get("trust_holes"), Some(&json!(["unreadable"])));
+    }
+
     #[test]
     fn bare_unsat_structural_ok_is_not_an_independent_check() {
+        // THIS TEST HAD BEEN FAILING SINCE ADR-0384 AND NOTHING RAN IT.
+        // `Evidence::check` used to return `true` for a bare `unsat`, meaning
+        // "no objection"; ADR-0384 made it three-valued, so `Unsat(None)` is
+        // `NothingToCheck(UncertifiedUnsat)` and `check` -- which is
+        // `is_verified()` -- is now `false`. The assertion above was the old
+        // `true`. No gate compiled this suite (`cargo test -p axeyum-bench
+        // --example audit_dominance` appeared in no script), so the audit
+        // harness for this project's dominance numbers shipped a red test
+        // invisibly. `scripts/check.sh` now runs it.
         let arena = TermArena::new();
         let evidence = Evidence::Unsat(None);
-        assert!(evidence.check(&arena, &[]).unwrap());
+        assert_eq!(
+            evidence.check_outcome(&arena, &[]).unwrap(),
+            EvidenceCheck::NothingToCheck(NoCheckReason::UncertifiedUnsat),
+        );
+        assert!(!evidence.check(&arena, &[]).unwrap());
         assert!(!evidence.is_certified());
         assert!(!independently_check_evidence(&evidence, &arena, &[], false));
     }

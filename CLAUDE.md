@@ -691,14 +691,29 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
 
 ## Gotchas
 
-- **`explain_corpus` can print a WRONG VERDICT. Never use it as an oracle.**
-  It calls `check_auto_explained` on the *flat* view, which bypasses
-  `StringGate::confirm`, so on `regex-032-…-fuzz` it prints `unsat` for a file
-  that is genuinely `sat` (cvc5 agrees, and the shipped front door returns
-  `sat`). The solver is correct; only the diagnostic lies. This matters because
-  agents are routinely pointed at it for string triage — a whole lever can get
-  built on a fabricated `unsat`. Cross-check any verdict it reports against the
-  reference binary and the file's declared `:status` before believing it.
+- **`explain_corpus` IS NOT AN ORACLE, and it now says so in every line it
+  prints.** It calls `check_auto_explained` on the *flat* view; the shipped
+  front door is `solve_smtlib`, which adds the ADR-0052 `StringGate`, the word
+  / online / membership routes, and the multi-`check-sat` lifecycle. Measured
+  2026-08-21 over 397 committed benchmarks, the two disagree on **134** — 71
+  where this tool ERRORS and the front door decides, 46 bounded-string
+  refusals (the front door decides three of those `sat`), 17 where it says
+  unknown and the front door decides.
+
+  This entry used to say "it prints `unsat` for `regex-032-…-fuzz`, which is
+  genuinely `sat`", and a doc line did not stop a whole lever being built on a
+  fabricated verdict. So the output changed instead: every verdict is prefixed
+  (`flat-unsat`, `front-door-sat`, `not-attempted`) and **nothing it emits can
+  be `grep -x`'d as an SMT-LIB answer**; the two structurally divergent shapes
+  — a multi-`check-sat` script, and a bounded-string `unsat` — are refused with
+  a reason instead of answered; and every JSONL record carries
+  `"oracle":false`. Pass `--confirm` to have it re-solve each file through the
+  real front door and stamp `front_door_verdict` / `agrees`.
+
+  Do NOT measure that divergence by diffing against `smtcomp_cli`: SMT-COMP
+  §7.1.2 makes the CLI print `unknown` for an error, so 59 both-sides-decline
+  files read as disagreements and the count comes out 193 instead of 134.
+  `--confirm` compares in-process, which is the difference.
 - **A CERTIFICATE MUST CARRY EVERY DISTINCTION ITS PRODUCER MAKES, or the checker
   cannot re-derive the refutation — and mutation testing will not find the gap.**
   Measured 2026-08-20 in `nra_monomial_bound_cert.rs`. The producer distinguished

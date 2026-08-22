@@ -454,11 +454,31 @@ axis where the grammar has a rule.
   per check. **The gap that remains** is allocation between two probes, which
   is the 125 GB shape exactly.
 
-**Open, not fixed here:**
+**The fifth, fixed 2026-08-21 after this audit was written:**
 
-- `explain_corpus` diverges from the front door in both directions, and prints
-  `unsat-UNCONFIRMED`. Do not use its verdicts for anything quantified or
-  string-shaped.
+- ~~`explain_corpus` diverges from the front door in both directions, and prints
+  `unsat-UNCONFIRMED`~~ — measured, then made structurally unmistakable rather
+  than reconciled. Over 397 committed benchmarks (`quantified/{BV,LIA,UF}`,
+  `QF_S`, `QF_SLIA`, `QF_LIA`, `QF_UF`, `QF_NRA`, 5 s cap) it disagrees with
+  `solve_smtlib` on **134**: 71 where it ERRORS and the front door decides (41
+  sat, 30 unsat), 46 that printed `unsat-UNCONFIRMED` (front door: 30 unsat, 13
+  unknown, **3 sat**), and 17 where it says unknown and the front door decides.
+  In the other direction it flattened a two-`check-sat` script the front door
+  refuses and answered `unsat` — the answer to neither query in the file.
+
+  Reconciling it would have cost the route trace, which is the only thing it is
+  for. So instead: no verdict it emits is a bare SMT-LIB token
+  (`flat-unsat`, `front-door-sat`, `not-attempted`), the two structurally
+  divergent shapes are refused with a reason rather than answered, every JSONL
+  record carries `"oracle":false`, and `--confirm` re-solves through the real
+  front door and stamps `front_door_verdict` / `agrees`. The classes are pinned
+  by 21 unit tests that no gate ran until now.
+
+  **The measurement instrument needed the same care as the subject.** Diffing
+  against the `smtcomp_cli` binary counts **193**, not 134, because SMT-COMP
+  §7.1.2 requires the CLI to render an error as `unknown` — so 59 files where
+  BOTH sides decline read as disagreements. `--confirm` compares in-process,
+  which is why the flag exists.
 
 ---
 
@@ -538,6 +558,36 @@ we lack, cvc5 labels experimental (§4.1). The breadth backlog stays counted, no
 built.
 
 ---
+
+## 9.0.1 Row 1's remainder: measured, and there is no cheap win
+
+QF_UFLIA was closed (+22, ADR-0538). LRA, IDL and RDL were diagnosed and **not**
+fixed, and this section records why that is a conclusion rather than an omission.
+
+The diagnosis names two causes for those three divisions: `dl-online` running out
+of clock (QF_IDL 64/65 misses, QF_RDL 51/55) and the LRA route's atom cap plus
+slow search (QF_LRA 31 refusals + 32 timeouts). Three candidate fixes have now
+been measured, and all three are refuted:
+
+| candidate | measured | verdict |
+|---|---|---|
+| drop the LRA atom cap's terminality | **0 new decides**, 54 of 71 become memory aborts past 12 GiB | refuted — the cap is load-bearing protection |
+| more wall clock | QF_IDL **1 of 10** converted at **5x** budget (2026-08-21); QF_NIA 3 of 35 at 4x, 0 of 20 timeout files | the timeouts are not one constant factor from finishing |
+| reallocate the `dl_probe_budget` reserve | the reserve is `min(t/4, 6 s)`, so the achievable gain is 18 s → 24 s = **1.33x**, against a 5x experiment that converted 10% | not worth building |
+
+The reallocation idea is the tempting one, because on those misses the reserved
+6 s goes to `lia-dpll`, which then **declines instantly on a size constant it
+could have evaluated at t = 0** — six seconds held for a route that was never
+going to run. But the reserve is load-bearing for its own measured reason
+(`QF_IDL/sal/lpsat/lpsat-goal-18` is decided in 4.2 s by `lia-dpll`, and an
+unreserved probe turned it into `unknown`), so the fix would have to be
+conditional on downstream admissibility — real work, for a 1.33x budget change
+whose 5x version converts one file in ten.
+
+**So LRA/IDL/RDL are algorithmic work, not tuning**, and they join rows 4, 9 and
+10 as measured-and-deferred rather than unfinished. The cheap axis is closed;
+what remains is a faster difference-logic search and an LRA route that does not
+have to choose between a size refusal and a timeout.
 
 ## 9.1 What the queue has already changed about this document
 
