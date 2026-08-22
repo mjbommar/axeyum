@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-descfactorial-one-reflexivity-decline-v1",
+  "state": "declined-not-defeq-kernel-confirmed",
+  "target": {
+    "fact_id": "F:ml430-nat-descfactorial-one-d4856d4a",
+    "family": "natural-factorial",
+    "partition": "train",
+    "formal_statement": "∀ (n : ℕ), n.descFactorial 1 = n",
+    "epistemic_status_before": "open",
+    "epistemic_status_after": "open",
+    "external_status": "proved"
+  },
+  "attempt": {
+    "operation_attempted": "bounded-pi-equality-reflexivity-v1",
+    "operation_definition": "artifacts/autogenesis/operations.json#authoritative-mathlib-statement-reflexivity-v1 (producer implementation), applied here to a NEW fact rather than widened onto it -- see decision below",
+    "producer_source": "crates/axeyum-lean-import/examples/statement_reflexivity_support/mod.rs (propose_reflexivity)",
+    "checker_source": "crates/axeyum-lean-import/examples/statement_reflexivity_operation.rs",
+    "input": {
+      "external_root": "/nas3/data/axeyum/autogenesis/coverage/26fcc2c2f-mathlib-v4.30.0-reflexivity-train-development-v1",
+      "stream_file": "streams/r068.ndjson",
+      "target_definition": "Axeyum.Autogenesis.Coverage.r068",
+      "mapping_row_statement_sha256": "90324b256e9e14905a4386da129c20ebec1d1a4c86a7c9e8638c2752829f1519"
+    },
+    "stage_reached": "kernel typecheck of the constructed candidate declaration",
+    "error": "KernelError::DeclarationValueMismatch { declared, inferred } (Rust axeyum-lean-kernel; the two ExprId values are internal arena indices and are not stable across builds, so they are not quoted as identity evidence -- goal_sha256/proof_sha256 below are)",
+    "outcome_class": "kernel-rejection:candidate-typecheck-failed",
+    "goal_sha256": "29d67ba637045e918b70290a218dfe43db046a97bfc0cadb981d706ed37b56e4",
+    "proof_sha256": "d8a5aa91f28c91a5a8205342f6c92403744c28ff9ac85cb6497ac9c7ad94c8d7",
+    "ledger_writes": 0,
+    "axioms": 0
+  },
+  "root_cause": {
+    "summary": "The reflexivity producer only ever constructs `fun binders => Eq.refl a` for a goal `... -> a = b` -- it never inspects a or b, so it succeeds exactly when a and b are DEFINITIONALLY equal (kernel-checkable by unfolding alone) and is correctly rejected by the kernel otherwise. Nat.descFactorial n 1 = n is externally TRUE but not definitionally so.",
+    "unfolding_trace": "descFactorial n 1 --iota--> (n - 0) * descFactorial n 0 --iota--> (n - 0) * 1 --iota (sub base case)--> n * 1 --iota (mul recurses on 2nd arg)--> 0 + n. Nat.add recurses on its SECOND argument; with n a free variable (not a literal successor chain), `0 + n` cannot iota-reduce further, so it is stuck and not defeq to `n`. Closing the gap requires Nat.zero_add, which mathlib proves by induction on n, not by rfl.",
+    "classification": "expected non-triviality, not a producer or adapter defect. The candidate proof the producer built is exactly the term the kernel correctly refused: the kernel's rejection is the trusted-checking layer doing its job against a strictly-untrusted proposer, per this repository's stated identity (\"untrusted fast search, trusted small checking\")."
+  },
+  "generalization": {
+    "claim": "This is a family-shaped finding, not a single-fact one. All 7 rows classified kernel-rejection:candidate-typecheck-failed in artifacts/autogenesis/mathlib-reflexivity-coverage-v1.json share the same shape: a Nat.descFactorial/Nat.ascFactorial (or Nat.fib) recursive identity whose base-case unfolding lands on a stuck `0 + n` / `n + 0`-shaped term rather than closing by iota alone.",
+    "sibling_fact_ids": [
+      "F:ml430-nat-descfactorial-of-lt-fbcf5d26",
+      "F:ml430-nat-descfactorial-self-899fc0e0",
+      "F:ml430-nat-one-ascfactorial-8bacb017",
+      "F:ml430-nat-zero-ascfactorial-af4fcdca",
+      "F:ml430-nat-fib-add-two-b86e0c82",
+      "F:ml430-mutation-7afa5ec620720a1501bf349d"
+    ],
+    "sibling_note": "F:ml430-nat-fib-add-two-b86e0c82 is already established via a different (non-reflexivity) capsule operation in artifacts/autogenesis/operations.json, which is independent confirmation that this outcome class is closable by a real proof, just not by bare reflexivity.",
+    "what_would_close_the_cluster": "a producer that can discharge one step of Nat.zero_add / Nat.add_zero / Nat.mul_one beyond bare Eq.refl -- e.g. a bounded rewrite-then-reflexivity proposer using the ALREADY-PROVED F:nat-zero-add and F:nat-mul-one facts from this ledger's own Nat prelude -- would plausibly close all 6 non-mutation siblings at once. That is a genuinely widenable capability (applicability.fact_ids of length > 1), unlike a bespoke per-target capsule."
+  },
+  "explicitly_not_claimed": {
+    "not_an_adapter_bug": "the statement-adapter step (import_statement_ndjson) succeeded for this fact; only the reflexivity producer's proposal failed, at the kernel-typecheck stage, so this is not evidence against the adapter or its trusted-declaration policy.",
+    "not_ledger_credit": "epistemic_status is left at open; no evidence array entry was added to the fact.",
+    "not_full_census_reproduction": "python3 scripts/check-autogenesis-reflexivity-coverage.py currently exits 1 on this HEAD (\"proof-free coverage input no longer regenerates\") because artifacts/autogenesis/nursery-v1.json's train+development population grew from 138 to 157 under the ADR-0542 held-out repair, and the frozen census input was computed against the 138-row population. That failure is a population-identity mismatch in the AGGREGATE checker's regeneration, not evidence against this fact's specific row: the row-level classifier (crates/axeyum-lean-import --example statement_reflexivity_coverage) was re-run directly in this session against the still-intact, hash-pinned external_root and reproduced the identical outcome_class, goal_sha256, and proof_sha256 recorded when the census was first frozen."
+  },
+  "reproduction": {
+    "build": "scripts/cargo-serialized.sh build -p axeyum-lean-import --example statement_reflexivity_coverage",
+    "run": "cargo run -q -p axeyum-lean-import --example statement_reflexivity_coverage -- /nas3/data/axeyum/autogenesis/coverage/26fcc2c2f-mathlib-v4.30.0-reflexivity-train-development-v1/streams /nas3/data/axeyum/autogenesis/coverage/26fcc2c2f-mathlib-v4.30.0-reflexivity-train-development-v1/mapping.json",
+    "extract": "the row with fact_id == \"F:ml430-nat-descfactorial-one-d4856d4a\" in the emitted JSON's \"rows\" array",
+    "reproduced_on": "2026-08-22, HEAD 29e6c4398 (this worktree), input_sha256 08c41f91ab02bb282df3323e54be72f91f623d25f22eb9559152c3f0860e7e72 matching artifacts/autogenesis/mathlib-reflexivity-coverage-v1.json"
+  }
+}
