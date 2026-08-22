@@ -24,6 +24,23 @@ cd "$(dirname "$0")/.." || exit 2
 # caller even though it is not the aggregate gate.
 CALLERS=(scripts/check.sh justfile hooks/pre-push .github/workflows)
 
+# The Python half. Measured 2026-08-22: this gate scanned 13 `.sh` controls and
+# was blind to 322 `scripts/tests/test_*.py` suites, of which **199 are named by
+# no caller at all**. That is precisely the defect this file exists to prevent --
+# "a control nobody invokes is indistinguishable from a control that does not
+# exist" -- at fifteen times the scale, in the file type it never looked at.
+#
+# Confirmed not to be a query artifact before being written down: there is no
+# `unittest discover` anywhere in a caller, registered suites are named twice
+# each (check.sh + justfile), and sampled orphans are referenced nowhere.
+#
+# A RATCHET, not a cliff. Turning 199 suites red today would break the gate for
+# every lane and it would be switched off within the hour, which is worse than
+# the blind spot. So the count is pinned: a RISE fails, and a FALL is a result
+# that must lower the pin. New Python controls therefore have to be registered,
+# which is the property that was missing.
+PY_ORPHAN_BASELINE=${AXEYUM_PY_ORPHAN_BASELINE:-199}
+
 orphans=()
 total=0
 for f in scripts/tests/*.sh; do
@@ -67,7 +84,41 @@ if [ "$total" -lt 5 ]; then
   exit 1
 fi
 
-echo "CONTROL_REGISTRATION|controls=$total|orphans=${#orphans[@]}"
+# --- Python suites: ratcheted, see PY_ORPHAN_BASELINE above -------------------
+py_total=0
+py_orphans=0
+py_names=()
+callers_text=$(for c in "${CALLERS[@]}"; do
+    [ -e "$c" ] || continue
+    if [ -d "$c" ]; then cat "$c"/* 2>/dev/null; else sed 's/^[[:space:]]*#.*$//' "$c"; fi
+  done)
+for f in scripts/tests/test_*.py; do
+  [ -e "$f" ] || continue
+  b=$(basename "$f" .py)
+  py_total=$((py_total + 1))
+  # `grep -c`, never `grep -q`: under `set -o pipefail` a `-q` consumer SIGPIPEs
+  # the producer and the pipeline reports 141, which reads as "not found".
+  # BOTH invocation forms count. A suite run as `python3 scripts/tests/x.py` is
+  # just as run as one named `python3 -m unittest scripts.tests.x`, and counting
+  # only the module form reported 217 orphans against a true 199 -- an 18-suite
+  # overcount that would have been written down as a finding.
+  named=$(printf '%s' "$callers_text" | grep -cF "scripts.tests.$b")
+  named=$((named + $(printf '%s' "$callers_text" | grep -cF "scripts/tests/$b.py")))
+  if [ "$named" -eq 0 ]; then
+    py_orphans=$((py_orphans + 1))
+    py_names+=("$b")
+  fi
+done
+if [ "$py_total" -lt 50 ]; then
+  echo "CONTROL_REGISTRATION_ERROR|found only $py_total python suite(s); the glob" \
+       "is looking at the wrong place and an empty corpus would ratchet vacuously" >&2
+  exit 1
+fi
+py_status=ok
+[ "$py_orphans" -gt "$PY_ORPHAN_BASELINE" ] && py_status=ROSE
+[ "$py_orphans" -lt "$PY_ORPHAN_BASELINE" ] && py_status=FELL
+
+echo "CONTROL_REGISTRATION|controls=$total|orphans=${#orphans[@]}|py_controls=$py_total|py_orphans=$py_orphans|py_baseline=$PY_ORPHAN_BASELINE|py=$py_status"
 if [ "${#orphans[@]}" -gt 0 ]; then
   for o in "${orphans[@]}"; do
     echo "CONTROL_REGISTRATION_ERROR|$o is run by nothing. Register it as a" \
@@ -78,3 +129,17 @@ if [ "${#orphans[@]}" -gt 0 ]; then
   exit 1
 fi
 echo "  all $total control script(s) are invoked by a gate"
+
+if [ "$py_status" = ROSE ]; then
+  echo "CONTROL_REGISTRATION_ERROR|python control orphans ROSE" \
+       "$PY_ORPHAN_BASELINE -> $py_orphans. A new scripts/tests/test_*.py is run" \
+       "by nothing: name it in scripts/check.sh or the justfile. Candidates:" \
+       "${py_names[*]:0:6}" >&2
+  exit 1
+fi
+if [ "$py_status" = FELL ]; then
+  echo "CONTROL_REGISTRATION_ERROR|python control orphans FELL" \
+       "$PY_ORPHAN_BASELINE -> $py_orphans. That is a result: lower" \
+       "PY_ORPHAN_BASELINE to $py_orphans" >&2
+  exit 1
+fi
