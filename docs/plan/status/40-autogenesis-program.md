@@ -94,6 +94,7 @@
 | 2026-08-21 | (pending) | Two-direction `Int.even_iff` residual exports twice empty-footprint with zero theorem dependencies; forward modulo and backward quotient witnesses are frozen next |
 | 2026-08-21 | (pending) | Official `Int.mul_emod_right` reaches `propext` and is rejected; V2 freezes direction residuals over explicit double-mod-zero and half-witness leaves |
 | 2026-08-21 | (pending) | Both direction residuals export twice empty-footprint; two bounded core division/modulo candidates are frozen for one direct audit before arithmetic construction |
+| 2026-08-21 | (pending) | Both general Int division/modulo candidates reach `propext`; target-owned Nat double-mod-zero and half-witness parity arithmetic are frozen before Int lifting |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
