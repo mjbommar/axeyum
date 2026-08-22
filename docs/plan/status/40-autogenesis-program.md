@@ -40,6 +40,7 @@
 | 2026-08-22 | (pending) | Exit-75 intent fault leaves `Int.gcd_fib` unchanged; recovery performs exactly one ledger write, the settled capsule checker passes, and the measured frontier unlocks exactly `Int.fib_gcd` |
 | 2026-08-22 | (pending) | Isolated clean replay `b33b25c…bcea` independently repeats selection, certified execution, exit-75 recovery, one write, and the exact `Int.fib_gcd` readiness delta |
 | 2026-08-22 | (pending) | Newly ready `Int.fib_gcd` is frozen as a one-capsule, four-theorem equality composition over admitted `Int.gcd_fib` and `Int.fib_natCast` before source construction or proof-stream access |
+| 2026-08-22 | (pending) | The exact `Int.fib_gcd` driver specializes natCast, transports symmetric gcd equality through `Int.ofNat` with checked `Eq.rec`, and preserves the four-dependency contract before execution |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |

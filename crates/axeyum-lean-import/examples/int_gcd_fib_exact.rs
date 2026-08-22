@@ -33,6 +33,79 @@ fn main() {
     }
 }
 
+/// Construct the inverse presentation theorem `Int.fib_gcd` from this
+/// driver's sealed `Int.gcd_fib` capsule. Kept here so both directions share
+/// the exact kernel-level equality constructors instead of duplicating them.
+pub(crate) fn run_int_fib_gcd_exact() -> Result<(), String> {
+    const INPUT_SHA256: &str = "b1ce136473ead161243e7cdc053f3a8e0dab81a8e253c364171e839f22fd86f6";
+    const INPUT_ROOT_SHA256: &str =
+        "44660dc7f15cda1b469f99e349f4b874afca9dbca24bcfc5c847ca226ccc357f";
+    const NATCAST_SHA256: &str = "73b8742709bbb1b91780f41ff4a475b5b3f0b1c2981999c868b53fc38334bea3";
+    const USAGE_FIB_GCD: &str = "usage: int_fib_gcd_exact <int-gcd-fib> <output>";
+
+    let mut arguments = std::env::args_os().skip(1);
+    let input = arguments
+        .next()
+        .map(PathBuf::from)
+        .ok_or_else(|| USAGE_FIB_GCD.to_owned())?;
+    let output = arguments
+        .next()
+        .map(PathBuf::from)
+        .ok_or_else(|| USAGE_FIB_GCD.to_owned())?;
+    if arguments.next().is_some() || output.exists() {
+        return Err(USAGE_FIB_GCD.to_owned());
+    }
+
+    let imported = import_bound(&input, INPUT_SHA256, "integer gcd Fibonacci capsule")?;
+    if !imported.report().axioms.is_empty() {
+        return Err("the input stream reaches assumptions".to_owned());
+    }
+    require_bound_root(imported.kernel(), "Int.gcd_fib", INPUT_ROOT_SHA256)?;
+    require_bound_root(imported.kernel(), "Int.fib_natCast", NATCAST_SHA256)?;
+
+    let mut kernel = imported.kernel().clone();
+    add_int_fib_gcd(&mut kernel)?;
+    let target = find_name(&kernel, "Int.fib_gcd")?;
+    require_empty(&kernel, target, "Int.fib_gcd")?;
+    let target_evidence = evidence(&kernel, target)?;
+    let expected_dependencies = ["Eq.symm", "Eq.trans", "Int.fib_natCast", "Int.gcd_fib"];
+    if names(&kernel, &kernel.theorem_dependencies(target)) != sorted(&expected_dependencies) {
+        return Err(format!(
+            "exact target dependency set changed: {:?}",
+            names(&kernel, &kernel.theorem_dependencies(target))
+        ));
+    }
+
+    let bytes = kernel
+        .render_lean4export_ndjson_roots(&Lean4ExportMetadata::axeyum("4.30.0"), &[target])
+        .map_err(|error| format!("target export failed: {error}"))?;
+    for pass in 1..=2 {
+        let fresh = import_ndjson(Cursor::new(bytes.as_bytes()), ImportLimits::default())
+            .map_err(|error| format!("fresh target import {pass} failed: {error:?}"))?;
+        let fresh_target = find_name(fresh.kernel(), "Int.fib_gcd")?;
+        if evidence(fresh.kernel(), fresh_target)? != target_evidence {
+            return Err(format!("fresh target import {pass} changed evidence"));
+        }
+    }
+    fs::write(&output, &bytes).map_err(|error| format!("target write failed: {error}"))?;
+
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "schema_version": 1,
+            "kind": "axeyum-int-fib-gcd-exact",
+            "state": "exact-target-constructed-exported-and-twice-reimported-empty-footprint",
+            "input_sha256": INPUT_SHA256,
+            "target": target_evidence,
+            "capsule": {"path": output, "bytes": bytes.len(), "sha256": hex_sha256(bytes.as_bytes()), "fresh_imports": 2},
+            "execution": {"complete_invocations": 1, "input_stream_reads": 1, "target_theorem_submissions": 1, "target_exports": 1, "fresh_target_imports": 2, "retries": 0, "ledger_writes": 0},
+            "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0}
+        }))
+        .map_err(|error| error.to_string())?
+    );
+    Ok(())
+}
+
 #[allow(clippy::too_many_lines)]
 fn run() -> Result<(), String> {
     let mut arguments = std::env::args_os().skip(1);
@@ -148,6 +221,107 @@ fn add_int_gcd(kernel: &mut Kernel) -> Result<(), String> {
             hint: ReducibilityHint::Regular(1),
         })
         .map_err(|error| format!("Int.gcd definition rejected: {error:?}"))
+}
+
+fn add_int_fib_gcd(kernel: &mut Kernel) -> Result<(), String> {
+    let name = nested_name(kernel, &["Int", "fib_gcd"]);
+    if kernel.environment().get(name).is_some() {
+        return Err("Int.fib_gcd exists before target submission".to_owned());
+    }
+    let int_ty = const0(kernel, "Int")?;
+    let nat_ty = const0(kernel, "Nat")?;
+    let zero = kernel.level_zero();
+    let carrier_level = kernel.level_succ(zero);
+    let int_fib = find_name(kernel, "Int.fib")?;
+    let int_gcd = find_name(kernel, "Int.gcd")?;
+    let nat_fib = find_name(kernel, "Nat.fib")?;
+    let int_of_nat = find_name(kernel, "Int.ofNat")?;
+    let fib_natcast = find_name(kernel, "Int.fib_natCast")?;
+    let gcd_fib = find_name(kernel, "Int.gcd_fib")?;
+    let eq_symm = find_name(kernel, "Eq.symm")?;
+    let eq_trans = find_name(kernel, "Eq.trans")?;
+
+    let m_id = u64::MAX - 122_001;
+    let n_id = u64::MAX - 122_002;
+    let m = kernel.fvar(m_id);
+    let n = kernel.fvar(n_id);
+    let fib_m = app_const(kernel, int_fib, &[], &[m]);
+    let fib_n = app_const(kernel, int_fib, &[], &[n]);
+    let gcd_mn = app_const(kernel, int_gcd, &[], &[m, n]);
+    let gcd_fibs = app_const(kernel, int_gcd, &[], &[fib_m, fib_n]);
+    let nat_fib_gcd = app_const(kernel, nat_fib, &[], &[gcd_mn]);
+    let cast_gcd = app_const(kernel, int_of_nat, &[], &[gcd_mn]);
+    let cast_nat_fib_gcd = app_const(kernel, int_of_nat, &[], &[nat_fib_gcd]);
+    let cast_gcd_fibs = app_const(kernel, int_of_nat, &[], &[gcd_fibs]);
+    let lhs = app_const(kernel, int_fib, &[], &[cast_gcd]);
+
+    let p0 = app_const(kernel, fib_natcast, &[], &[gcd_mn]);
+    let p0_type = equality(kernel, int_ty, lhs, cast_nat_fib_gcd)?;
+    require_closed_type(
+        kernel,
+        p0,
+        p0_type,
+        m_id,
+        n_id,
+        int_ty,
+        "p0 Int.fib_natCast",
+    )?;
+
+    let gcd_fib_forward = app_const(kernel, gcd_fib, &[], &[m, n]);
+    let gcd_fib_reverse = app_const(
+        kernel,
+        eq_symm,
+        &[carrier_level],
+        &[nat_ty, gcd_fibs, nat_fib_gcd, gcd_fib_forward],
+    );
+    let cast_function = kernel.const_(int_of_nat, vec![]);
+    let p1 = eq_rec_congr(
+        kernel,
+        nat_ty,
+        int_ty,
+        cast_function,
+        nat_fib_gcd,
+        gcd_fibs,
+        gcd_fib_reverse,
+        122_101,
+    )?;
+    let p1_type = equality(kernel, int_ty, cast_nat_fib_gcd, cast_gcd_fibs)?;
+    require_closed_type(
+        kernel,
+        p1,
+        p1_type,
+        m_id,
+        n_id,
+        int_ty,
+        "p1 casted symmetric Int.gcd_fib",
+    )?;
+
+    let proof = app_const(
+        kernel,
+        eq_trans,
+        &[carrier_level],
+        &[int_ty, lhs, cast_nat_fib_gcd, cast_gcd_fibs, p0, p1],
+    );
+    let proposition = equality(kernel, int_ty, lhs, cast_gcd_fibs)?;
+    require_closed_type(
+        kernel,
+        proof,
+        proposition,
+        m_id,
+        n_id,
+        int_ty,
+        "completed Int.fib_gcd equality",
+    )?;
+    let ty = close_pi2(kernel, m_id, n_id, "m", "n", int_ty, int_ty, proposition);
+    let value = close_lam2(kernel, m_id, n_id, "m", "n", int_ty, int_ty, proof);
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .map_err(|error| format!("Int.fib_gcd rejected: {error:?}"))
 }
 
 fn add_int_gcd_def(kernel: &mut Kernel) -> Result<(), String> {
