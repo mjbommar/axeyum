@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-exact-execution-result-v22",
+  "state": "exact-target-constructed-exported-twice-reimported-and-sealed",
+  "plan": {"path": "artifacts/autogenesis/mathlib-int-fib-dvd-exact-execution-plan-v22.json", "sha256": "503de5055454d692d69ca7b0528b063478cde5f2fd476c2c4a35402a773b5262"},
+  "implementation": {"path": "crates/axeyum-lean-import/examples/int_fib_dvd_exact.rs", "sha256": "2ed145c9ebb6a18a8c29a8ace9d88b7ebeeb131befb10bd186d12b3026a15bc3"},
+  "evidence": {"pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-dvd-exact-v1", "manifest_sha256": "91ab6feee5b7c5d9ca5e81493915ce541251def6848abbe369903336568d6b86", "capsule_bytes": 1197314, "capsule_sha256": "f684a4de870734f60f33abe1da468637697c0d27ce988a47d08dfed601ec6af0", "directory_mode": "0555", "file_mode": "0444"},
+  "target": {"name": "Int.fib_dvd", "declaration_sha256": "2d4463d2a000519460bc3c7e644d2880af49c95ff9d51edcb16379ed974b22aa", "axiom_footprint": [], "direct_theorem_dependencies": ["Axeyum.Autogenesis.intDvdOfNatAbsDvdDirectV1", "Axeyum.Autogenesis.intFibNatAbsV1", "Axeyum.Autogenesis.intNatAbsDvdForwardResidualV1", "Axeyum.Autogenesis.intNatAbsMulDirectV1", "Eq.symm", "Nat.fib_dvd"]},
+  "composition_receipt_sha256": ["040d96ec49ed1c9ec774178412b91472a6319de146485c3a78cb85e46eaed136", "d53d51d3443bdd7eac120fa48f0209d594f93df5894bf7abbb11a4cb931625f5", "04131fff845d32c1beaeb45168e6bbbe4c1dccf302a9bda5d1d2abb72624621d"],
+  "execution": {"complete_invocations": 1, "input_stream_reads": 4, "composition_operations": 3, "composition_replays": 3, "link_checks_passed": 5, "target_theorem_submissions": 1, "target_exports": 1, "fresh_target_imports": 2, "retries": 0, "ledger_writes": 0},
+  "authority": {"target_credit": 1, "fact_status_changes": 0, "ledger_writes": 0},
+  "next_boundary": "bind canonical target type before operation registration or ledger authority"
+}
