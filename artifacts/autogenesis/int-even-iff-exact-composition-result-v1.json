@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-iff-exact-composition-result",
+  "state": "exact-target-specialized-exported-and-reimported-empty-footprint",
+  "plan": "artifacts/autogenesis/int-even-iff-exact-composition-plan-v2.json",
+  "input_sha256": {
+    "residual": "71238c494f33b99420351baaed7ed5c3f06e918e6b36cd70db980826a5a04770",
+    "directions": "11e4f56e745c1708855d64ddf7fc256cd20e97391f222e0cb1e993b8e8cb74da"
+  },
+  "composition_receipt_sha256": "22ad2d66ed748547eee0ab921f43c31b656997cb61cd998fd770549c13c257a0",
+  "specialization_receipt_sha256": "dd81ada4cab07c48485a1a51e60d3e398b555c6e717ba50fd3703e22043305e6",
+  "target": {
+    "name": "Int.even_iff",
+    "declaration_sha256": "6ec4a6f5577bc3602d13ff02907469045f0987323f6f9f84f8c4b7b23c243c13",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [
+      "Axeyum.Autogenesis.intEvenIffResidualV1",
+      "Axeyum.Autogenesis.intEvenToModTwoZeroClosedV1",
+      "Axeyum.Autogenesis.intModTwoZeroToEvenClosedV1"
+    ]
+  },
+  "capsule": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-iff-clean-v1/root.ndjson",
+    "bytes": 694033,
+    "sha256": "faa3a54842b1e4883e85fc153b8be8059257ff07ce137bc3c618352b13641d51",
+    "fresh_imports": 2,
+    "result_sha256": "beb32fcc6f2e5f4460e0097a1257aa270892f9f246ca930579d27fd8f906f4c6"
+  },
+  "execution": {
+    "complete_invocations": 1,
+    "input_stream_reads": 2,
+    "composition_operations": 1,
+    "composition_replays": 1,
+    "specialization_operations": 1,
+    "specialization_replays": 1,
+    "target_submissions": 1,
+    "fresh_target_imports": 2,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "comparison_to_official": {
+    "official_declaration_sha256": "ab4300192b1073d20d0e4110a3b77a79f6a57729e337db1f92889713ac9f9fba",
+    "official_axiom_footprint": [
+      "Classical.choice",
+      "Lean.opaqueId",
+      "Quot",
+      "Quot.lift",
+      "Quot.mk",
+      "Quot.sound",
+      "String.Internal.append",
+      "propext"
+    ],
+    "clean_axiom_footprint": []
+  },
+  "next_boundary": "Reconstruct the DecidablePred Even instance from clean Int.even_iff plus target-owned modulo-two decision evidence before retrying Int.fib_neg.",
+  "limitations": "The decision instance, Int.fib_neg, ledger admission, and downstream unlock measurement remain pending."
+}
