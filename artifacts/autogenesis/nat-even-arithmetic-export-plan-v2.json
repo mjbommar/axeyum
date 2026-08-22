@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-even-arithmetic-export-plan",
+  "state": "preregistered-before-importable-module-build",
+  "predecessor": {
+    "path": "artifacts/autogenesis/nat-even-arithmetic-construction-result-v1.json",
+    "required_state": "source-compiled-export-pending"
+  },
+  "fixed_environment": {
+    "ssh_alias": "s5",
+    "hostname": "server5",
+    "mathlib_checkout": "/home/mjbommar/lean-import-scale/mathlib4",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean_version": "4.30.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "lake_binary": "/home/mjbommar/.elan/toolchains/leanprover--lean4---v4.30.0/bin/lake",
+    "lean4export_binary": "/home/mjbommar/lean-import-scale/lean4export/.lake/build/bin/lean4export"
+  },
+  "sealed_source": {
+    "repository_path": "artifacts/autogenesis/sources/nat-even-arithmetic-v1.lean",
+    "shared_path": "/nas3/data/axeyum/autogenesis/reference-packs/nat-even-arithmetic-v1/AxeyumNatEvenArithmeticV1.lean",
+    "sha256": "f9e4b52ad28f861790b91c60ca91890e71620d7b9df0969f56d78c6386bbdc76"
+  },
+  "operation": {
+    "module": "AxeyumNatEvenArithmeticV1",
+    "olean": "/nas3/data/axeyum/autogenesis/reference-packs/nat-even-arithmetic-v1/AxeyumNatEvenArithmeticV1.olean",
+    "roots": [
+      "Axeyum.Autogenesis.natDoubleModTwoZeroV1",
+      "Axeyum.Autogenesis.natHalfWitnessOfModTwoZeroV1"
+    ],
+    "build": "lake env lean -o <olean> <shared-source>",
+    "export": "LEAN_PATH=<pack>:$LEAN_PATH lake env <lean4export> AxeyumNatEvenArithmeticV1 -- <both-roots>",
+    "outputs": ["roots-1.ndjson", "roots-2.ndjson"],
+    "all_outputs_must_be_absent_before_execution": true
+  },
+  "budget": {
+    "importable_module_builds": 1,
+    "exports": 2,
+    "retries": 0,
+    "root_footprint_audits": 2,
+    "proof_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "build_exit": 0,
+    "both_export_exits": 0,
+    "exports_byte_identical": true,
+    "both_root_footprints": [],
+    "root_types_or_values_may_be_rendered": false
+  },
+  "stop_rule": "Any build/export failure, byte mismatch, nonempty root footprint, unexpected source identity, or preexisting output stops the operation without retry or downstream composition.",
+  "output": "artifacts/autogenesis/nat-even-arithmetic-export-result-v2.json",
+  "limitations": "Qualification of parameterized Nat support only; clean composition with modStepTwo, Int lifting, Int.even_iff, decision reconstruction, Fibonacci, and ledger mutation remain unauthorized."
+}
