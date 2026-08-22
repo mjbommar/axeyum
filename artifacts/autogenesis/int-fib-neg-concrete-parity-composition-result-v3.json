@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-concrete-parity-composition-result",
+  "state": "declined-before-publication-on-existing-natural-double-negation",
+  "plan": "artifacts/autogenesis/int-fib-neg-concrete-parity-composition-plan-v3.json",
+  "decline": {
+    "stage": "natural-double-negation-composition",
+    "class": "NoAdditions",
+    "name": "Axeyum.Autogenesis.intNegNatDoubleV2",
+    "interpretation": "The clean decision target already contains the requested root; composition cannot serve as an exact-reuse receipt."
+  },
+  "execution": {
+    "complete_invocations": 1,
+    "input_stream_reads": 5,
+    "composition_operations": 1,
+    "composition_replays": 0,
+    "specialization_operations": 0,
+    "capsule_writes": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "output_present": false,
+  "authority": {
+    "support_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0
+  },
+  "next": "Perform one checked exact-reuse audit for intNegNatDoubleV2 before replacing its composition edge."
+}

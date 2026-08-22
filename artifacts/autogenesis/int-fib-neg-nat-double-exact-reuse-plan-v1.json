@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-nat-double-exact-reuse-plan",
+  "state": "preregistered-before-two-stream-reuse-audit",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-fib-neg-concrete-parity-composition-result-v3.json",
+    "required_state": "declined-before-publication-on-existing-natural-double-negation"
+  },
+  "source": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-constructor-lift-v2/roots-1.ndjson",
+    "sha256": "a00d0b93b55500c04928939ea2ff00c4d0d35b4caa0e0fa96fefeebf1be3f3c6"
+  },
+  "target": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-decision-clean-v1/root.ndjson",
+    "sha256": "29053dba3b90cecf5a70ba347ea7dba81a19990f715e69d5fc0a1c60cb9a6c07"
+  },
+  "declaration": "Axeyum.Autogenesis.intNegNatDoubleV2",
+  "tool": "crates/axeyum-lean-import/examples/declaration_identity_compare.rs",
+  "budget": {
+    "complete_audits": 1,
+    "source_stream_reads": 1,
+    "target_stream_reads": 1,
+    "kernel_submissions": 0,
+    "exports": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "source_and_target_declaration_sha256_equal": true,
+    "checked_compatibility": "exact-declaration",
+    "target_axiom_footprint": []
+  },
+  "output_result": "artifacts/autogenesis/int-fib-neg-nat-double-exact-reuse-result-v1.json",
+  "next_on_accept": "Freeze V4 of the concrete parity driver with exact reuse replacing only the NoAdditions composition edge.",
+  "limitations": "Reuse qualification grants no new theorem, parity capsule, Fibonacci target, fact, or ledger credit."
+}
