@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-gcd-admission-plan-v1",
+  "state": "preregistered-sealed-capsule-admission-before-operation-code-or-ledger-write",
+  "target": {
+    "fact_id": "F:ml430-int-fib-gcd-3a8bfdec",
+    "fact_sha256": "a608cd1893289740a18c2df3d5ba711b44e9c7d9a7022839870010cc09e90e40",
+    "name": "Int.fib_gcd"
+  },
+  "evidence": {
+    "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-gcd-exact-v1/root.ndjson",
+    "capsule_bytes": 1154781,
+    "capsule_sha256": "040f269431f58c8efe69e995c65b25f64952aa9b3d8f552ab0e7faf2711967f1",
+    "construction_result": "artifacts/autogenesis/mathlib-int-fib-gcd-construction-result-v1.json",
+    "construction_result_sha256": "0ed08c70b13ecf7addbbc64fd4da0e9fe40bb6fa97cdbfab8ad892b996bf11db",
+    "identity_result": "artifacts/autogenesis/mathlib-int-fib-gcd-goal-identity-result-v1.json",
+    "identity_result_sha256": "2ad0108f4d8c50686f83e550d5eb6c0b7abb9871b5231358c6f1b7e79aba63f3",
+    "receipt_sha256": "6c5a72c0853beb1136f4934b92ce189427b05e58e2f4af020509b718e8b602cc",
+    "goal_sha256": "c073add7c75a14558f57793924f2bfaac48ff452c9382bfd77727386ba7a464d",
+    "declaration_sha256": "d269d9ef0763dd923c7825c77c0a3a3dd05ebbe4fbad4d84f3ce93482386a0bf",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [
+      "Eq.symm",
+      "Eq.trans",
+      "Int.fib_natCast",
+      "Int.gcd_fib"
+    ]
+  },
+  "operation": {
+    "id": "authoritative-mathlib-int-fib-gcd-kernel-capsule-v1",
+    "required_checker": "scripts/check-autogenesis-int-fib-gcd-capsule.py",
+    "registry_writes": 1
+  },
+  "protocol": {
+    "register_exact_operation": true,
+    "derive_transaction_from_clean_commit": true,
+    "fault_injection_after_intent_exit": 75,
+    "require_fact_unchanged_before_recovery": true,
+    "authoritative_ledger_writes": 1,
+    "fixture_writes": 0,
+    "archive_primary_run": true,
+    "isolated_clean_replay": true
+  },
+  "budget": {
+    "max_operation_registrations": 1,
+    "max_fault_injection_executions": 1,
+    "max_recovery_executions": 1,
+    "max_authoritative_ledger_writes": 1,
+    "max_clean_replays": 1,
+    "max_search_invocations": 0,
+    "max_evaluations": 0
+  },
+  "expected_newly_ready": [],
+  "limitations": "This authorizes only one exact fact transition from the named immutable capsule and grants no authority to close any other proposition.",
+  "next_on_accept": "regenerate the machine frontier and select the next dependency-ready bottom-up fact"
+}
