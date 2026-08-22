@@ -21,6 +21,9 @@ Kaser--Lemire half-degree-irreducibles chain (sibling repository
   the Clifford hierarchy of diagonal gates with Kerdock at the stabilizer
   boundary (exact), and the interference / delocalization reading of the
   missing inequality (analogy), with what each would have to become.
+- [04-shape-verdicts.md](04-shape-verdicts.md) -- running diary of the five
+  'of course' solution shapes (Opus agents): literature, exact tests with our
+  tools, and verdicts, appended as they land.
 
 Executable companions live in
 [`scripts/lemire-signed-trace/`](../../../../scripts/lemire-signed-trace/README.md).
