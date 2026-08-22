@@ -9,7 +9,7 @@ idea here has to be re-derived or re-refuted.
 Companion: [01-target-and-toolkit.md](01-target-and-toolkit.md) (target,
 formulations, literature, tooling). Data: `scripts/lemire-signed-trace/data/` (layer tables to `ell = 23`, cylinder table to `ell = 23`).
 
-## 1. What the exact layer data say (`ell <= 23`, both endpoints)
+## 1. What the exact layer data say (`ell <= 24`)
 
 Source: class-population dumps of the branch CAS
 (`axeyum-gf2-dump-populations`, source in `scripts/lemire-signed-trace/`),
@@ -32,6 +32,7 @@ ell  n    orders >= 2^3      orders >= 2^4
 22   46   0.22 x             0.22 x
 23   47   0.21 x             0.10 x   (orders >= 2^5: 0.04 x)
 23   48   0.81 x             0.81 x   (orders >= 2^5: exact zero at (17,5))
+24   49   0.19 x             0.19 x   (orders >= 2^5: 0.03 x; all orders 0.60 x)
 ```
 
 Orders `2` and `4` sit at `1--3 x` threshold throughout; for `ell >= 200`
@@ -84,6 +85,7 @@ ell n   a  |K| cylinders  SSD_id/avg  rank of id   max/avg  SSD_id/2^{2ell-2}  a
 22 46  16 128    32768     1.05     10742/32768    1.69     0.010             0.90
 23 47  17 128    65536     0.96     39139/65536    1.63     0.0025            0.91
 23 48  17 128    65536     1.12     10904/65536    1.74     0.0057            0.91
+24 49  18 128   131072     0.92     94045/131072   1.59     0.0012            0.91
 ```
 
 Three facts. (i) The identity cylinder is typical: within 25% of the average
@@ -129,6 +131,7 @@ ell n   rms/random-phase   identity cylinder   sup over all cylinders
 22 46   0.954              0.30                0.50
 23 47   0.957              0.15                0.27
 23 48   0.957              0.23                0.41
+24 49   0.959              0.09                0.21
 ```
 
 The identity-cylinder statement of the open fact
