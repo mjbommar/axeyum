@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-parity-adapters-result",
+  "state": "three-parameterized-parity-adapters-reproduced-empty-footprint",
+  "plan": "artifacts/autogenesis/int-fib-neg-parity-adapters-plan-v1.json",
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-parity-adapters-v1",
+    "source_sha256": "154549fcde7506c228421a45d4f1b0cf4dd8309bc0efc01a7fb728aa08d66da2",
+    "olean_sha256": "543b4a5336f4510504801734c890e4c2b6a03262245bb65d9c0cfa351f36e65e",
+    "stream_bytes": 382856,
+    "stream_sha256": "3d236df43c3ba9cb9ee89ca196df019dc4aebf6b41bdec2cdb6957c44284f07e",
+    "exports": 2,
+    "exports_byte_identical": true,
+    "stream_axioms": []
+  },
+  "roots": [
+    {
+      "name": "Axeyum.Autogenesis.intEvenNegResidualV1",
+      "declaration_sha256": "74edf8b6ae354de7d3aaf3ede1494f68821131a74bbd19067914c1cf5f9710f0",
+      "axiom_footprint": []
+    },
+    {
+      "name": "Axeyum.Autogenesis.intEvenOfNatModTwoResidualV1",
+      "declaration_sha256": "bcf813a1bd2314d2b187dc646342c57c702e93b465119c5238415668bfbda29c",
+      "axiom_footprint": []
+    },
+    {
+      "name": "Axeyum.Autogenesis.intEvenNegOfNatModTwoResidualV1",
+      "declaration_sha256": "377d1367fd6b507ece4065b4141978d670018142d0667a9b09e1e86a91a649e9",
+      "axiom_footprint": []
+    }
+  ],
+  "execution": {
+    "directory_creations": 1,
+    "source_constructions": 1,
+    "source_stagings": 1,
+    "module_builds": 1,
+    "exports": 2,
+    "root_audits": 1,
+    "retries": 0,
+    "composition_operations": 0,
+    "exact_target_submissions": 0,
+    "ledger_writes": 0
+  },
+  "credit": "parameterized parity adapters only",
+  "next": "Build exact Int negation-distribution and double-negation wrappers over already empty-footprint core theorems before specializing the adapters."
+}
