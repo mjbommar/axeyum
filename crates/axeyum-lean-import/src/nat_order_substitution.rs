@@ -80,28 +80,32 @@ use crate::trusted_substitution::{SubstitutionError, exact_name};
 /// reviewed source edit exactly like
 /// [`SUBSTITUTABLE_THEOREMS`](super::trusted_substitution::SUBSTITUTABLE_THEOREMS).
 ///
-/// **Known limitation, confirmed against the real archive (not this crate's
-/// own prelude), not yet fixed**: [`discover`] requires `Nat.pred`/`Nat.sub`/
-/// `Nat.ble` to already be declared *unconditionally*, even for a name (e.g.
-/// `Nat.zero_le`, `Nat.succ_le_succ`) whose own construction never uses them.
-/// A real stream that declares one of these names *before* `Nat.pred` (Lean's
-/// own declaration order, not something this module controls) makes
-/// [`reconstruct`] decline with `RequiredDeclarationUnavailable("Nat.pred")`
-/// for that row even though the requested lemma has nothing to do with
-/// `pred`. Measured 2026-08-22 on `streams/r000.ndjson`: `Nat.zero_le`,
-/// `Nat.succ_le_succ`, `Nat.ble_self_eq_true`, `Nat.ble_succ_eq_true`,
-/// `Nat.ble_eq_true_of_le`, `Nat.le_of_ble_eq_true`, and
-/// `Nat.not_le_of_not_ble_eq_true` all decline this way in that one file,
-/// pre-existing and unrelated to any name added since. The fix is to split
-/// [`Prims`] into an always-required core plus `pred`/`sub`/`ble` discovered
-/// lazily per name in [`build`] — not attempted here because every builder
-/// closure in this module (`induct`'s and `induct_le`'s `&dyn Fn(...) ->
-/// ExprId` callback shapes) would need to become fallible, a large,
-/// higher-risk refactor of an already-shipped module rather than a
-/// blocker-specific fix. Adding a name here is still strictly non-regressive
-/// even when it hits this gap: on decline, the caller falls back to the
-/// ordinary untrusted-theorem admission exactly as if the name were absent
-/// from this list.
+/// **Fixed 2026-08-22, was a known limitation.** [`discover`] used to require
+/// `Nat.pred`/`Nat.sub`/`Nat.ble` to already be declared *unconditionally*,
+/// even for a name (e.g. `Nat.zero_le`, `Nat.succ_le_succ`) whose own
+/// construction never uses them. A real stream that declares one of these
+/// names *before* `Nat.pred` (Lean's own declaration order, not something
+/// this module controls) made [`reconstruct`] decline with
+/// `RequiredDeclarationUnavailable("Nat.pred")` for that row even though the
+/// requested lemma has nothing to do with `pred`. Measured 2026-08-22 on
+/// `streams/r000.ndjson`: `Nat.zero_le`, `Nat.succ_le_succ`,
+/// `Nat.ble_self_eq_true`, `Nat.ble_succ_eq_true`, `Nat.ble_eq_true_of_le`,
+/// `Nat.le_of_ble_eq_true`, and `Nat.not_le_of_not_ble_eq_true` all declined
+/// this way in that one file.
+///
+/// The fix: [`Prims`] now discovers `pred`/`sub`/`ble` *optionally*
+/// (`discover` never fails when one of them is absent — it simply records
+/// `None`), and [`reconstruct`] checks [`required_optional_prims`] for the
+/// *specific requested name* before calling [`build`], declining with the
+/// precise `RequiredDeclarationUnavailable` only when the name's own
+/// construction actually needs a primitive that turned out to be `None`.
+/// This avoids the larger refactor the previous version of this note
+/// predicted: [`build`]'s internal helpers (`induct`'s and `induct_le`'s
+/// `&dyn Fn(...) -> ExprId` callbacks) never had to become fallible, because
+/// by the time any of them run, [`reconstruct`] has already established that
+/// every optional primitive the requested name's construction touches is
+/// present — the `pred`/`sub`/`ble` accessors on [`B`] unwrap their
+/// `Option<NameId>` only under that already-checked precondition.
 pub(crate) const SUBSTITUTABLE_NAT_ORDER_THEOREMS: &[&str] = &[
     "Nat.le_refl",
     "Nat.le_succ",
@@ -129,6 +133,13 @@ pub(crate) const SUBSTITUTABLE_NAT_ORDER_THEOREMS: &[&str] = &[
 /// The primitive and directly-reusable-theorem names this module's
 /// constructions are built from, discovered structurally in the foreign
 /// kernel rather than assumed to exist with a particular shape.
+///
+/// `Clone`/`Copy` (every field is a bare [`NameId`] or `Option<NameId>`, both
+/// `Copy`) so tests can take a real, `discover`-produced value and override
+/// just the optional fields to exercise [`check_required_optional_prims`]
+/// without having to construct a kernel that is genuinely missing a
+/// primitive.
+#[derive(Clone, Copy)]
 struct Prims {
     nat: NameId,
     zero: NameId,
@@ -138,9 +149,16 @@ struct Prims {
     le_refl: NameId,
     le_step: NameId,
     le_rec: NameId,
-    pred: NameId,
-    sub: NameId,
-    ble: NameId,
+    /// `Nat.pred`, discovered *optionally* — `None` when it is absent from
+    /// the environment at discovery time (whether because the stream never
+    /// declares it or because it appears later in stream order). Only the
+    /// names [`required_optional_prims`] marks as needing `pred` may call
+    /// [`B::pred`]; every other name must reconstruct without it.
+    pred: Option<NameId>,
+    /// `Nat.sub`, discovered optionally — see [`Self::pred`].
+    sub: Option<NameId>,
+    /// `Nat.ble`, discovered optionally — see [`Self::pred`].
+    ble: Option<NameId>,
     bool_: NameId,
     bool_true: NameId,
     bool_false: NameId,
@@ -188,15 +206,63 @@ fn require_recursor(
     }
 }
 
-fn require_definition(
-    kernel: &Kernel,
-    name: NameId,
-    label: &'static str,
-) -> Result<(), SubstitutionError> {
+/// Look up `rendered` and return it only when it exists under that exact
+/// display name (unambiguously) **and** is a `Definition` — otherwise `None`,
+/// never an error. This is the discovery primitive for `Nat.pred`/`Nat.sub`/
+/// `Nat.ble`: those three are needed by only some of
+/// [`SUBSTITUTABLE_NAT_ORDER_THEOREMS`]' constructions, so their absence must
+/// not fail [`discover`] itself — [`reconstruct`] decides, per requested
+/// name, whether a `None` here is actually fatal (see
+/// [`required_optional_prims`]).
+fn discover_optional_definition(kernel: &Kernel, rendered: &'static str) -> Option<NameId> {
+    let name = exact_name(kernel, rendered).ok()?;
     match kernel.environment().get(name) {
-        Some(Declaration::Definition { .. }) => Ok(()),
-        _ => Err(SubstitutionError::UnexpectedShape(label)),
+        Some(Declaration::Definition { .. }) => Some(name),
+        _ => None,
     }
+}
+
+/// Which of the optional [`Prims::pred`]/[`Prims::sub`]/[`Prims::ble`]
+/// primitives a given [`SUBSTITUTABLE_NAT_ORDER_THEOREMS`] name's own
+/// construction actually reads, cross-checked against [`build`] by hand for
+/// every name in that list. Names not listed here need none of the three.
+/// This is the lazy-discovery fix itself: [`reconstruct`] calls this
+/// *before* [`build`], so a real stream that has not yet declared `Nat.pred`
+/// at the point it declares (say) `Nat.zero_le` no longer blocks
+/// `Nat.zero_le`'s reconstruction on a primitive it never touches.
+fn required_optional_prims(rendered: &str) -> (bool, bool, bool) {
+    // (needs_pred, needs_sub, needs_ble)
+    match rendered {
+        "Nat.pred_le" | "Nat.pred_le_pred" => (true, false, false),
+        "Nat.sub_le" | "Nat.sub_lt" | "Nat.succ_sub_succ_eq_sub" => (true, true, false),
+        "Nat.ble_self_eq_true"
+        | "Nat.ble_succ_eq_true"
+        | "Nat.ble_eq_true_of_le"
+        | "Nat.le_of_ble_eq_true"
+        | "Nat.not_le_of_not_ble_eq_true" => (false, false, true),
+        _ => (false, false, false),
+    }
+}
+
+/// The gate itself, factored out of [`reconstruct`] so it can be unit-tested
+/// directly against a [`Prims`] value whose optional fields were overridden
+/// to `None` — without needing a kernel that is genuinely missing a
+/// primitive. Mutation target: deleting any one of the three `if` arms below
+/// must make exactly the test that exercises that primitive's absence fail.
+fn check_required_optional_prims(prims: &Prims, rendered: &str) -> Result<(), SubstitutionError> {
+    let (needs_pred, needs_sub, needs_ble) = required_optional_prims(rendered);
+    if needs_pred && prims.pred.is_none() {
+        return Err(SubstitutionError::RequiredDeclarationUnavailable(
+            "Nat.pred",
+        ));
+    }
+    if needs_sub && prims.sub.is_none() {
+        return Err(SubstitutionError::RequiredDeclarationUnavailable("Nat.sub"));
+    }
+    if needs_ble && prims.ble.is_none() {
+        return Err(SubstitutionError::RequiredDeclarationUnavailable("Nat.ble"));
+    }
+    Ok(())
 }
 
 fn discover(kernel: &Kernel) -> Result<Prims, SubstitutionError> {
@@ -218,12 +284,9 @@ fn discover(kernel: &Kernel) -> Result<Prims, SubstitutionError> {
     let le_rec = exact_name(kernel, "Nat.le.rec")?;
     require_recursor(kernel, le_rec, 0, "Nat.le.rec is not a 0-uparam Recursor")?;
 
-    let pred = exact_name(kernel, "Nat.pred")?;
-    require_definition(kernel, pred, "Nat.pred is not a Definition")?;
-    let sub = exact_name(kernel, "Nat.sub")?;
-    require_definition(kernel, sub, "Nat.sub is not a Definition")?;
-    let ble = exact_name(kernel, "Nat.ble")?;
-    require_definition(kernel, ble, "Nat.ble is not a Definition")?;
+    let pred = discover_optional_definition(kernel, "Nat.pred");
+    let sub = discover_optional_definition(kernel, "Nat.sub");
+    let ble = discover_optional_definition(kernel, "Nat.ble");
 
     let bool_ = exact_name(kernel, "Bool")?;
     require_inductive(kernel, bool_, "Bool is not an Inductive")?;
@@ -369,18 +432,32 @@ impl<'a> B<'a> {
         self.kernel.const_(self.p.bool_false, vec![])
     }
 
+    /// Panics if `Nat.pred` was not discovered. Safe to call only for a
+    /// `rendered` name [`required_optional_prims`] marks as needing `pred` —
+    /// [`reconstruct`] checks that before ever calling [`build`].
     fn pred(&mut self, x: ExprId) -> ExprId {
-        let name = self.p.pred;
+        let name = self
+            .p
+            .pred
+            .expect("required_optional_prims must gate any call reaching B::pred");
         self.const_app(name, &[x])
     }
 
+    /// Panics if `Nat.sub` was not discovered — see [`Self::pred`].
     fn sub(&mut self, x: ExprId, y: ExprId) -> ExprId {
-        let name = self.p.sub;
+        let name = self
+            .p
+            .sub
+            .expect("required_optional_prims must gate any call reaching B::sub");
         self.const_app(name, &[x, y])
     }
 
+    /// Panics if `Nat.ble` was not discovered — see [`Self::pred`].
     fn ble(&mut self, x: ExprId, y: ExprId) -> ExprId {
-        let name = self.p.ble;
+        let name = self
+            .p
+            .ble
+            .expect("required_optional_prims must gate any call reaching B::ble");
         self.const_app(name, &[x, y])
     }
 
@@ -1007,6 +1084,7 @@ pub(crate) fn reconstruct(
         return Ok(None);
     }
     let prims = discover(kernel)?;
+    check_required_optional_prims(&prims, rendered)?;
     let mut b = B::new(kernel, &prims);
     let value = build(&mut b, rendered)?;
 
@@ -1639,6 +1717,174 @@ mod tests {
             reconstruct(&mut kernel, "Nat.le_refl", wire_ty),
             Err(SubstitutionError::RequiredDeclarationUnavailable(_))
         ));
+    }
+
+    /// Exhaustive classification test for [`required_optional_prims`] — the
+    /// exact per-name mapping the lazy-discovery fix depends on. Cross-checked
+    /// by hand against every match arm in [`build`]/[`build_sub_lt`]/
+    /// [`build_le_of_ble_eq_true`] for which of `Nat.pred`/`Nat.sub`/`Nat.ble`
+    /// they call. `Nat.zero_le` mapping to `(false, false, false)` is the
+    /// specific claim the regression is about: it is on
+    /// [`SUBSTITUTABLE_NAT_ORDER_THEOREMS`] and its own construction
+    /// ([`B::zero_le_value`]) never touches `pred`/`sub`/`ble`, so its
+    /// reconstruction must not depend on any of the three being discoverable.
+    #[test]
+    fn required_optional_prims_matches_each_names_own_construction() {
+        let needs_nothing = [
+            "Nat.le_refl",
+            "Nat.le_succ",
+            "Nat.succ_le_succ",
+            "Nat.le_of_lt_succ",
+            "Nat.lt_succ_self",
+            "Nat.lt_succ_of_le",
+            "Nat.lt_add_one",
+            "Nat.not_succ_le_self",
+            "Nat.le_succ_of_le",
+            "Nat.zero_lt_succ",
+            "Nat.zero_le",
+        ];
+        for name in needs_nothing {
+            assert_eq!(
+                required_optional_prims(name),
+                (false, false, false),
+                "{name}: expected to need none of pred/sub/ble"
+            );
+        }
+
+        for name in ["Nat.pred_le", "Nat.pred_le_pred"] {
+            assert_eq!(
+                required_optional_prims(name),
+                (true, false, false),
+                "{name}: expected pred only"
+            );
+        }
+
+        for name in ["Nat.sub_le", "Nat.sub_lt", "Nat.succ_sub_succ_eq_sub"] {
+            assert_eq!(
+                required_optional_prims(name),
+                (true, true, false),
+                "{name}: expected pred and sub"
+            );
+        }
+
+        for name in [
+            "Nat.ble_self_eq_true",
+            "Nat.ble_succ_eq_true",
+            "Nat.ble_eq_true_of_le",
+            "Nat.le_of_ble_eq_true",
+            "Nat.not_le_of_not_ble_eq_true",
+        ] {
+            assert_eq!(
+                required_optional_prims(name),
+                (false, false, true),
+                "{name}: expected ble only"
+            );
+        }
+
+        // Every name in the substitution list is covered by exactly one of
+        // the four groups above — this closes the loop against the list
+        // drifting out of sync with the classification.
+        for &name in SUBSTITUTABLE_NAT_ORDER_THEOREMS {
+            let (pred, sub, ble) = required_optional_prims(name);
+            assert!(
+                !sub || pred,
+                "{name}: every name needing sub also needs pred in this module's constructions"
+            );
+            let _ = ble;
+        }
+    }
+
+    /// The lazy-discovery fix itself, exercised end-to-end through the real
+    /// production code path ([`build`]) rather than a re-implementation:
+    /// take a genuine [`Prims`] from a fully-populated kernel (so `pred`,
+    /// `sub`, and `ble` really do exist), then force them all to `None` —
+    /// simulating a stream where none of the three has been declared yet —
+    /// and confirm every name [`required_optional_prims`] says needs none of
+    /// them still reconstructs and kernel-checks. Before the fix, `discover`
+    /// itself would have failed outright the moment `Nat.pred` was missing,
+    /// for every one of these names, regardless of whether they use it.
+    #[test]
+    fn names_needing_no_optional_prim_reconstruct_even_when_all_three_are_absent() {
+        let (mut kernel, prelude) = prelude_kernel();
+        let full_prims = discover(&kernel).expect("full prelude carries every primitive");
+        let starved_prims = Prims {
+            pred: None,
+            sub: None,
+            ble: None,
+            ..full_prims
+        };
+
+        for &rendered in SUBSTITUTABLE_NAT_ORDER_THEOREMS {
+            let (needs_pred, needs_sub, needs_ble) = required_optional_prims(rendered);
+            if needs_pred || needs_sub || needs_ble {
+                continue;
+            }
+            let mut b = B::new(&mut kernel, &starved_prims);
+            let value = build(&mut b, rendered).unwrap_or_else(|e| {
+                panic!("{rendered}: expected to reconstruct without pred/sub/ble, got {e}")
+            });
+            let existing = field_name(&prelude, rendered);
+            let wire_ty = kernel.environment().get(existing).expect("declared").ty();
+            let inferred = kernel
+                .infer(value)
+                .unwrap_or_else(|e| panic!("{rendered}: candidate failed to infer: {e:?}"));
+            assert!(
+                kernel.def_eq(inferred, wire_ty),
+                "{rendered}: candidate's type is not def-eq to wire_ty"
+            );
+        }
+    }
+
+    /// The other half of the fix: a name that DOES need one of the optional
+    /// primitives must still be refused — via the graceful
+    /// `RequiredDeclarationUnavailable`, never a panic — when that primitive
+    /// is genuinely absent. This is [`check_required_optional_prims`] tested
+    /// directly, which is also the mutation target: comment out any one of
+    /// its three `if` arms and the corresponding case below fails (its
+    /// `Ok(())` is no longer refused).
+    #[test]
+    fn names_needing_an_absent_optional_prim_are_refused_gracefully() {
+        let (kernel, _prelude) = prelude_kernel();
+        let full_prims = discover(&kernel).expect("full prelude carries every primitive");
+
+        let pred_missing = Prims {
+            pred: None,
+            ..full_prims
+        };
+        assert!(matches!(
+            check_required_optional_prims(&pred_missing, "Nat.pred_le"),
+            Err(SubstitutionError::RequiredDeclarationUnavailable(
+                "Nat.pred"
+            ))
+        ));
+        // sub_le needs BOTH pred and sub; with only sub missing it must still
+        // be refused, naming the primitive that is actually absent.
+        let sub_missing = Prims {
+            sub: None,
+            ..full_prims
+        };
+        assert!(matches!(
+            check_required_optional_prims(&sub_missing, "Nat.sub_le"),
+            Err(SubstitutionError::RequiredDeclarationUnavailable("Nat.sub"))
+        ));
+        let ble_missing = Prims {
+            ble: None,
+            ..full_prims
+        };
+        assert!(matches!(
+            check_required_optional_prims(&ble_missing, "Nat.ble_self_eq_true"),
+            Err(SubstitutionError::RequiredDeclarationUnavailable("Nat.ble"))
+        ));
+
+        // The unaffected case: a name that needs nothing must never be
+        // refused, no matter which optional primitives are missing.
+        let all_missing = Prims {
+            pred: None,
+            sub: None,
+            ble: None,
+            ..full_prims
+        };
+        assert!(check_required_optional_prims(&all_missing, "Nat.zero_le").is_ok());
     }
 }
 
