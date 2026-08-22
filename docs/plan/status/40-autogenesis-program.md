@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, and now `Int.gcd_fib` are durably proved with empty kernel footprints. The exact `Int.gcd_fib` operation survived an exit-75 intent fault, recovery performed one authoritative ledger write, and the measured frontier unlocked exactly `Int.fib_gcd`; isolated replay remains separate.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, and now `Int.gcd_fib` are durably proved with empty kernel footprints. The exact `Int.gcd_fib` operation survived an exit-75 intent fault, recovery performed one authoritative ledger write, the measured frontier unlocked exactly `Int.fib_gcd`, and an isolated clean replay reproduced every semantic check.
 
-**Next:** publish the one-write `Int.gcd_fib` settlement, then independently replay the admission from its exact clean source commit and begin the newly unlocked `Int.fib_gcd` construction.
+**Next:** measure the newly unlocked `Int.fib_gcd` proof boundary, freeze the smallest clean composition, and continue the bottom-up construction without consulting its proof value.
 
 <!-- plan-section: landed-changes -->
 
@@ -38,6 +38,7 @@
 | 2026-08-22 | (pending) | The exact sealed-capsule operation is registered through existing typed execution and transaction machinery; the older `Int.gcd_def` calibration gate now validates either the frozen open target or its proved empty-footprint poststate |
 | 2026-08-22 | (pending) | Machine-derived gate coupling is reviewed against all seven current mentions; no stale or unreviewed gates remain and the frontier uniquely selects `Int.gcd_fib` for crash-safe admission |
 | 2026-08-22 | (pending) | Exit-75 intent fault leaves `Int.gcd_fib` unchanged; recovery performs exactly one ledger write, the settled capsule checker passes, and the measured frontier unlocks exactly `Int.fib_gcd` |
+| 2026-08-22 | (pending) | Isolated clean replay `b33b25c…bcea` independently repeats selection, certified execution, exit-75 recovery, one write, and the exact `Int.fib_gcd` readiness delta |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
