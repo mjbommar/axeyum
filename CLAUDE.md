@@ -828,6 +828,28 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   which is how this one was identified as a session task rather than a user's
   job.
 
+- **`command -v lean` RETURNS NOTHING ON A HOST THAT HAS LEAN, and an agent has
+  already reported a whole capability as impossible because of it.** `elan`
+  installs toolchains under `~/.elan/toolchains/*/bin/lean` and does **not** put
+  them on `PATH`. `scripts/check-lean-gate.sh` exists to document exactly this and
+  resolves the pinned toolchain properly — `scripts/check-lean-gate.sh
+  --print-toolchain`, or `AXEYUM_LEAN_BIN` to override.
+
+  Measured 2026-08-22: `command -v lean` empty on s4, while
+  `~/.elan/toolchains/leanprover--lean4---v4.30.0/bin/lean --version` reports
+  4.30.0 at the pinned commit `d024af09`. A Sonnet lane holding a working
+  three-fact producer concluded from the empty `command -v` that authoritative
+  admission "requires a toolchain this environment doesn't have" and declined to
+  register. Nothing was wrong except the probe.
+
+  **The Mathlib and lean4export checkouts are a separate question, and they live
+  on s5 only** — `/home/mjbommar/lean-import-scale/{mathlib4,lean4export}`,
+  reachable by `ssh s5` with BatchMode. Measured the same day, both are at exactly
+  the commits the adapter manifests pin (`c5ea0035…`, `a3e35a58…`), and s2/s6/s7
+  have neither. So "can I compile against Mathlib here" and "is Lean installed
+  here" have different answers on the same host, and neither is answered by
+  `command -v`.
+
 - **A BLIND EVALUATION POPULATION IS A SHARED RESOURCE WITH NO OWNER, AND
   TOUCHING ONE MEMBER SPENDS THE WHOLE FAMILY.** `artifacts/autogenesis/nursery-v1.json`
   preregisters 214 Mathlib propositions into train / development / **held-out**,

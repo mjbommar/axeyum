@@ -65,11 +65,19 @@ that cannot fail is worth nothing and a tool that ignores its argument
 
 ## What is NOT claimed
 
-**No fact was flipped to `proved` and no operation was registered.** Formal
+**No fact was flipped to `proved` and no operation was registered here.** Formal
 admission needs an authoritative statement-adapter manifest re-exported through a
-pinned Lean 4.30 / Mathlib toolchain; no `lean` or `lake` binary exists on this
-host, and the streams used here are marked `diagnostic-no-ledger-credit` in their
-own manifest. Registering without that would be fabricating provenance.
+pinned Lean 4.30 / Mathlib toolchain, and the streams used above are marked
+`diagnostic-no-ledger-credit` in their own manifest. Registering without that
+would be fabricating provenance.
+
+**Correction, same day.** This section originally said no `lean` or `lake` binary
+existed on this host. That was wrong, and wrong in the way this repository warns
+about: `command -v lean` is empty because `elan` keeps toolchains off `PATH`.
+Lean 4.30.0 at the pinned commit `d024af09` is installed here, and s5 carries the
+Mathlib and `lean4export` checkouts at exactly the commits the adapter manifests
+pin. The admission chain is reachable; it simply had not been walked. See the
+`command -v lean` entry in `CLAUDE.md`.
 
 So the ledger still reads `via_multi_target=0`. **The producer is real and the
 credit is not yet earned**, and those are different sentences.
