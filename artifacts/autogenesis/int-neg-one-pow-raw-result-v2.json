@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-native-neg-one-raw-power-result",
+  "state": "overloaded-successor-power-not-unfolded",
+  "plan": {
+    "path": "artifacts/autogenesis/int-neg-one-pow-raw-plan-v2.json",
+    "sha256": "940c959ffc85db5ecbdcdb959de726815f6fd6988586143dd53efc52c5192d59",
+    "commit": "f052598522cdedacd9dc05849d64553342675c1a"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-neg-one-pow-raw-v2.lean",
+    "sha256": "d33e177a36b5ab1595d127affff2218db0f7a137aa768a07565f0dd62fdc2082"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-neg-one-pow-raw-v2",
+    "compiler_exit_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "compiler_stdout_sha256": "4b66d5b9f13cec24b473a3fb9086171a0fb32927167fff135a6f3da2ad8d8f9a"
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit_status": 1,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "diagnosis": "The induction hypothesis is correct, but the elaborator does not automatically expose overloaded Nat exponentiation at the k + 1 equation as multiplication by one.",
+  "authority": {
+    "support_credit": 0,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "In the successor branch only, change the goal to 1^k * 1 = 1 before applying the unchanged induction hypothesis.",
+  "limitations": "The source does not compile and grants no support authority."
+}

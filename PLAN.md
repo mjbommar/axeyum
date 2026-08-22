@@ -177,6 +177,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Native-leaf V2 yields three clean roots but `Int.pow_succ` reaches `propext`; V3 freezes the identical statement with a direct `rfl` proof |
 | 2026-08-21 | (pending) | V3 confirms negative Int power successor is not definitional because power itself branches on parity; the exact raw parity presentation is frozen as an `rfl` theorem instead |
 | 2026-08-21 | (pending) | Raw V1 exposes the remaining `1^k` normalization; V2 freezes a structural `Nat` one-power proof and explicit transport through the two definitional Int branches |
+| 2026-08-21 | (pending) | Raw V2 reaches only overloaded successor-power elaboration; V3 freezes an explicit `1^k * 1 = 1` goal before reusing the same induction hypothesis |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
