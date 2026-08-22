@@ -122,6 +122,7 @@ now. Nothing was deleted.
 | 2026-08-22 | (pending) | Replay preflight declines before mutation because current checker-text gate scanning differs from the retained frontier; exact registration commit reproduces the retained frontier byte-for-byte and is frozen as the V2 replay source |
 | 2026-08-22 | (pending) | Historical-source preflight correctly rejects its still-open fact; V3 freezes the exact detached transition child, which preserves the registration gate surface and recovered post-state required by replay verification |
 | 2026-08-22 | (pending) | Isolated replay `b63854f8…bfaa0` independently repeats `Nat.fib_eq_zero` selection, certified execution, exit-75 recovery, one write, and the exact empty readiness delta |
+| 2026-08-22 | (pending) | Exact `Int.fib_eq_zero` is frozen bottom-up through a target-owned natAbs-zero support, a five-parameter residual, admitted `Nat.fib_eq_zero`, and the sealed integer Fibonacci/natAbs bridge before source construction |
 | 2026-08-22 | (pending) | Durable V5 paths identify official `Int.fib` through its Even decider as the common carrier of all eight assumptions; V6 freezes a fully function-abstracted, decision-free eight-parameter residual before source construction |
 | 2026-08-22 | (pending) | V6 stops before export because each universal natAbs rewrite leaves its second occurrence; V7 freezes only three explicit repeated rewrite sequences with the abstraction boundary unchanged |
 | 2026-08-22 | (pending) | V7 exports twice as the same 351,201-byte residual, imports twice with zero axioms, and retains only clean Eq.symm/congrArg; exact eight-parameter specialization remains separately unauthorized |
@@ -1917,7 +1918,7 @@ per-instance identical to the committed artifact.
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_dvd`, `Int.fib_of_nonneg`, `Nat.fib_pos`, and now `Nat.fib_eq_zero` are durably proved with empty kernel footprints. `Nat.fib_eq_zero` survived an exit-75 intent fault unchanged, recovered with exactly one ledger write, passed its registered checker, and produced the preregistered empty readiness delta.
 
-**Next:** replay `Nat.fib_eq_zero` once from the historical open state in an isolated worktree, then construct exact `Int.fib_eq_zero` from the admitted natural characterization and existing integer Fibonacci bridge.
+**Next:** construct a decision-free `Int.natAbs = 0` support and a function-abstracted integer Fibonacci zero residual, then specialize both with the admitted natural characterization and existing integer Fibonacci/natAbs bridge.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
