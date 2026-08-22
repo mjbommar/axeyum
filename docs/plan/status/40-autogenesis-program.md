@@ -23,6 +23,7 @@
 | 2026-08-22 | (pending) | Shared-reference correction passes focused Clippy; one no-retry execution is frozen over three reads, two checked compositions, one specialization, and zero ledger writes |
 | 2026-08-22 | (pending) | One authorized run constructs exact `Int.fib_eq_zero`, replays both compositions and specialization, survives two fresh imports, and seals a 624,146-byte empty-footprint capsule with four dependencies |
 | 2026-08-22 | (pending) | One nonrendering read of the sealed `Int.fib_eq_zero` root is frozen to bind its canonical kernel type before manifest creation or admission authority |
+| 2026-08-22 | (pending) | Hash-only audit binds canonical `Int.fib_eq_zero` type `1822290d…70bc`; immutable manifest retains its empty footprint and exact four-dependency closure before operation registration |
 
 | 2026-08-21 | (pending) | The newly ready `Int.gcd_fib` route is frozen through one target-owned Fibonacci/natAbs bridge and the two exact admitted premise capsules before source construction or proof-stream access |
 | 2026-08-21 | (pending) | Closure analysis corrects the bridge boundary before execution: export a dependency-free two-parameter residual, then specialize it with exact clean `Int.fib_neg` and `Int.natAbs_neg` roots |
