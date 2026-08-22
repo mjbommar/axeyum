@@ -80,14 +80,7 @@ fn run() -> Result<(), String> {
     let target = find_name(&kernel, TARGET)?;
     require_empty(&kernel, target, TARGET)?;
     let target_evidence = evidence(&kernel, target)?;
-    let expected_dependencies = [
-        BRIDGE,
-        "Eq.symm",
-        "Eq.trans",
-        INT_GCD_DEF,
-        FIB_GCD,
-        "congrArg",
-    ];
+    let expected_dependencies = [BRIDGE, "Eq.symm", "Eq.trans", INT_GCD_DEF, FIB_GCD];
     if names(&kernel, &kernel.theorem_dependencies(target)) != sorted(&expected_dependencies) {
         return Err(format!(
             "exact target dependency set changed: {:?}",
@@ -207,7 +200,6 @@ fn add_int_gcd_fib(kernel: &mut Kernel) -> Result<(), String> {
     let gcd_def = find_name(kernel, INT_GCD_DEF)?;
     let bridge = find_name(kernel, BRIDGE)?;
     let fib_gcd = find_name(kernel, FIB_GCD)?;
-    let congr_arg = find_name(kernel, "congrArg")?;
     let eq_symm = find_name(kernel, "Eq.symm")?;
     let eq_trans = find_name(kernel, "Eq.trans")?;
 
@@ -240,12 +232,16 @@ fn add_int_gcd_fib(kernel: &mut Kernel) -> Result<(), String> {
     let first_fn_body = app_const(kernel, nat_gcd, &[], &[first_argument, abs_fib_n]);
     let first_binder = kernel.anon();
     let first_fn = kernel.lam(first_binder, nat_ty, first_fn_body, BinderInfo::Default);
-    let p1 = app_const(
+    let p1 = eq_rec_congr(
         kernel,
-        congr_arg,
-        &[nat_level, nat_level],
-        &[nat_ty, nat_ty, first_fn, abs_fib_m, nat_fib_abs_m, bridge_m],
-    );
+        nat_ty,
+        nat_ty,
+        first_fn,
+        abs_fib_m,
+        nat_fib_abs_m,
+        bridge_m,
+        121_001,
+    )?;
     let p1_type = equality(kernel, nat_ty, gcd_abs_fib, gcd_first)?;
     require_closed_type(
         kernel,
@@ -261,19 +257,16 @@ fn add_int_gcd_fib(kernel: &mut Kernel) -> Result<(), String> {
     let second_fn_body = app_const(kernel, nat_gcd, &[], &[nat_fib_abs_m, second_argument]);
     let second_binder = kernel.anon();
     let second_fn = kernel.lam(second_binder, nat_ty, second_fn_body, BinderInfo::Default);
-    let p2 = app_const(
+    let p2 = eq_rec_congr(
         kernel,
-        congr_arg,
-        &[nat_level, nat_level],
-        &[
-            nat_ty,
-            nat_ty,
-            second_fn,
-            abs_fib_n,
-            nat_fib_abs_n,
-            bridge_n,
-        ],
-    );
+        nat_ty,
+        nat_ty,
+        second_fn,
+        abs_fib_n,
+        nat_fib_abs_n,
+        bridge_n,
+        121_101,
+    )?;
     let p2_type = equality(kernel, nat_ty, gcd_first, gcd_both)?;
     require_closed_type(
         kernel,
@@ -309,19 +302,16 @@ fn add_int_gcd_fib(kernel: &mut Kernel) -> Result<(), String> {
         &[nat_ty, gcd_mn, gcd_abs, gcd_def_mn],
     );
     let nat_fib_const = kernel.const_(nat_fib, vec![]);
-    let p4 = app_const(
+    let p4 = eq_rec_congr(
         kernel,
-        congr_arg,
-        &[nat_level, nat_level],
-        &[
-            nat_ty,
-            nat_ty,
-            nat_fib_const,
-            gcd_abs,
-            gcd_mn,
-            gcd_def_reverse,
-        ],
-    );
+        nat_ty,
+        nat_ty,
+        nat_fib_const,
+        gcd_abs,
+        gcd_mn,
+        gcd_def_reverse,
+        121_201,
+    )?;
     let p4_type = equality(kernel, nat_ty, fib_gcd_abs, rhs)?;
     require_closed_type(
         kernel,
@@ -391,6 +381,39 @@ fn require_closed_type(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
+fn eq_rec_congr(
+    kernel: &mut Kernel,
+    domain: ExprId,
+    codomain: ExprId,
+    function: ExprId,
+    left: ExprId,
+    right: ExprId,
+    proof: ExprId,
+    id_suffix: u64,
+) -> Result<ExprId, String> {
+    let right_id = u64::MAX - id_suffix;
+    let equality_id = u64::MAX - id_suffix - 1;
+    let variable = kernel.fvar(right_id);
+    let function_left = kernel.app(function, left);
+    let function_variable = kernel.app(function, variable);
+    let result = equality(kernel, codomain, function_left, function_variable)?;
+    let premise = equality(kernel, domain, left, variable)?;
+    let motive = close_lam(kernel, equality_id, "h", premise, result);
+    let motive = close_lam(kernel, right_id, "b", domain, motive);
+    let reflexivity = eq_refl(kernel, codomain, function_left)?;
+    let zero = kernel.level_zero();
+    let carrier_level = kernel.level_succ(zero);
+    let motive_level = kernel.level_zero();
+    let rec = find_name(kernel, "Eq.rec")?;
+    Ok(app_const(
+        kernel,
+        rec,
+        &[motive_level, carrier_level],
+        &[domain, left, motive, reflexivity, right, proof],
+    ))
+}
+
 fn eq_trans_chain(
     kernel: &mut Kernel,
     ty: ExprId,
@@ -431,6 +454,12 @@ fn eq_refl(kernel: &mut Kernel, ty: ExprId, value: ExprId) -> Result<ExprId, Str
     let zero = kernel.level_zero();
     let level = kernel.level_succ(zero);
     Ok(app_const(kernel, refl, &[level], &[ty, value]))
+}
+
+fn close_lam(kernel: &mut Kernel, id: u64, name: &str, domain: ExprId, body: ExprId) -> ExprId {
+    let body = kernel.abstract_fvars(body, &[id]);
+    let binder = nested_name(kernel, &[name]);
+    kernel.lam(binder, domain, body, BinderInfo::Default)
 }
 
 #[allow(clippy::too_many_arguments)]
