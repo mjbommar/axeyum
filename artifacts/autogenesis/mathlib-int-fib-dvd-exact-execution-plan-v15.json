@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-exact-execution-plan-v15",
+  "state": "preregistered-one-post-hypothesis-repair-cargo-run",
+  "predecessor": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-exact-construction-result-v14.json",
+    "sha256": "ae2b0f4366ddb58839592f3b6aaca595c569ae7dfb60ef400127481a194f177a"
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/int_fib_dvd_exact.rs",
+    "sha256": "d4044a81b8a45fda6077a88e43b2b63913dd3bf05526f7b6cb299130c9c99846"
+  },
+  "output": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-dvd-exact-v1/root.ndjson",
+  "execution": {
+    "max_driver_builds": 1,
+    "max_complete_invocations": 1,
+    "max_input_stream_reads": 4,
+    "max_composition_operations": 3,
+    "max_composition_replays": 3,
+    "max_target_theorem_submissions": 1,
+    "max_target_exports": 1,
+    "max_fresh_target_imports": 2,
+    "max_retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "target_name": "Int.fib_dvd",
+    "target_axiom_footprint": [],
+    "exact_direct_dependencies": [
+      "Axeyum.Autogenesis.intDvdOfNatAbsDvdDirectV1",
+      "Axeyum.Autogenesis.intFibNatAbsV1",
+      "Axeyum.Autogenesis.intNatAbsDvdForwardResidualV1",
+      "Axeyum.Autogenesis.intNatAbsMulDirectV1",
+      "Eq.symm",
+      "Nat.fib_dvd"
+    ],
+    "fresh_imports_reproduce_evidence": true
+  },
+  "next_on_accept": "seal exact capsule and bind canonical target type"
+}
