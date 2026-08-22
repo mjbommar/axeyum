@@ -4,7 +4,7 @@
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_gcd`, and now `Int.fib_dvd` are durably proved with empty kernel footprints. The exact `Int.fib_dvd` operation survived an exit-75 intent fault without changing the fact, recovery performed exactly one authoritative ledger write, the measured frontier produced the preregistered empty unlock delta, and isolated replay `e836fa51…667f` reproduced all ten semantic checks from a clean reconstructed prestate.
 
-**Next:** execute the frozen root-selected `Int.negSucc_not_nonneg` export and two non-rendering imports; accept only an empty-footprint closure with the forbidden Fibonacci target absent.
+**Next:** preregister the narrower directional pair `Int.negSucc_lt_zero` plus `Int.not_le_of_gt`, explicitly excluding the rejected `Int.negSucc_not_nonneg` biconditional, before another export.
 
 <!-- plan-section: landed-changes -->
 
@@ -107,6 +107,7 @@
 | 2026-08-22 | (pending) | Exact `Int.fib_of_nonneg` construction is frozen as one direct application of `if_pos` to the transparent nonnegative branch, with one expected dependency and the upstream target root forbidden |
 | 2026-08-22 | (pending) | Construction preflight declines before code because the target-owned `Int.fib` matches constructors rather than `0 ≤ n`; the positive branch is reflexive and the missing leaf is exactly `Int.negSucc_not_nonneg` |
 | 2026-08-22 | (pending) | One pinned root-selected export of `Int.negSucc_not_nonneg` is frozen with two imports, empty-footprint acceptance, forbidden-target absence, and zero theorem or ledger authority |
+| 2026-08-22 | (pending) | Both imports reproduce `Int.negSucc_not_nonneg` through `propext` and `iff_false`; the biconditional is sealed as rejected and the route narrows to its two directional order leaves |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |

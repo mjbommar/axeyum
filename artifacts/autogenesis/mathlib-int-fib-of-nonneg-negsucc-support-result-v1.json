@@ -1,0 +1,9 @@
+{
+  "schema_version":1,"kind":"axeyum-autogenesis-mathlib-int-fib-of-nonneg-negsucc-support-result-v1","state":"rejected-assumption-bearing-biconditional",
+  "plan":{"path":"artifacts/autogenesis/mathlib-int-fib-of-nonneg-negsucc-support-plan-v1.json","sha256":"720c96df4d796811bc7654d35aada3d3d691612cbaa1a0802516cbe8bdf3e888"},
+  "capsule":{"path":"/nas3/data/axeyum/autogenesis/reference-packs/int-negsucc-not-nonneg-v1/root.ndjson","bytes":893268,"sha256":"4e4817fffc6b7c99d25eaadb7f407041723d401004316c8364991d5293f8a9e3","manifest_sha256":"fcf9f117d4888072a0ed491b49275ae408d7b4cf977ae109651c10f3719d91c6"},
+  "theorem":{"name":"Int.negSucc_not_nonneg","canonical_type_sha256":"88cbf26c8645342f4a12285ecfe0f8d5a8ca7027ad3747b9e27c733faf27b439","canonical_declaration_sha256":"7946ffc6de320751eb0d23308ab0f444cacbfab67db0086014a47ae0b5488a2c","axiom_footprint":["propext"],"direct_theorem_dependencies":["Eq.trans","Int.negSucc_lt_zero","Int.not_le._simp_1","iff_false"]},
+  "execution":{"exporter_invocations":1,"exporter_stderr_bytes":0,"importer_runs":2,"observations_identical":true,"forbidden_target_present":false,"target_theorem_submissions":0,"ledger_writes":0},
+  "authority":{"support_credit":0,"theorem_credit":0,"fact_status_changes":0,"ledger_writes":0},
+  "next":"preregister the directional pair Int.negSucc_lt_zero and Int.not_le_of_gt, excluding the rejected biconditional"
+}
