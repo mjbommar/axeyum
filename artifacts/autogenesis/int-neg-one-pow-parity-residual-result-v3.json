@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-parameterized-neg-one-power-parity-result",
+  "state": "clean-deterministic-residual-rejected-on-overstated-dependency-contract",
+  "plan": {
+    "path": "artifacts/autogenesis/int-neg-one-pow-parity-residual-plan-v3.json",
+    "sha256": "5479a716319eaa2b3b2ee49a46b0ef732cf7cfcb72ba1735b6af797f165bcdd5",
+    "commit": "d449b0b1946f0e0fcc826a3002102747a148c4df"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-neg-one-pow-parity-residual-v1.lean",
+    "sha256": "2bc12b049f38701d3442258d64385ad84c38bc621624a72e7be8b94cea2a807c"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-neg-one-pow-parity-residual-v3",
+    "stream_1_sha256": "89f66b43029b6fcc961806d09a75a15048f759ace8faf80025ded0de7a9e08bd",
+    "stream_2_sha256": "89f66b43029b6fcc961806d09a75a15048f759ace8faf80025ded0de7a9e08bd",
+    "stream_bytes": 417700,
+    "audit_1_sha256": "46fff1de1bc71332f34acc65b50caa4df53b26ef616799588da9b446847d75af",
+    "audit_2_sha256": "af63558ece3d433f86fa701bb74e62217ad6f6bebb700ef4dfd4a71c9b63c8ad",
+    "semantic_audits_match": true
+  },
+  "theorem": {
+    "name": "Axeyum.Autogenesis.intNegOnePowParityResidualV1",
+    "canonical_declaration_sha256": "300a164bbd291de1ab0283ecf72129433413ed4f0ab10ece3e7a78e455de1b6e",
+    "canonical_type_sha256": "ef86743ad0d8be68c350ad044cfbd56de6184ca7bfc302f81b6205ea29e114fd",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [],
+    "planned_direct_theorem_dependencies": [
+      "Eq.trans",
+      "congrArg",
+      "if_neg",
+      "if_pos"
+    ]
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit_status": 0,
+    "exporter_invocations": 2,
+    "exporter_exit_statuses": [0, 0],
+    "importer_runs": 2,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "diagnosis": "The proof and two exports are deterministic and assumption-free, but the plan required an exact four-theorem dependency set while the kernel reports no direct theorem dependencies. The stronger isolation cannot be credited under a mismatched exact contract.",
+  "authority": {
+    "support_credit": 0,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Preregister one fresh non-rendering audit of the sealed stream with the observed empty direct-dependency set as the exact acceptance condition.",
+  "limitations": "The retained evidence is clean, but V3 grants no authority because its registered dependency identity did not match."
+}

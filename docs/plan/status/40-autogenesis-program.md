@@ -52,6 +52,7 @@
 | 2026-08-21 | (pending) | Minus-one power parity is frozen as a function-parameterized induction over four explicit algebra contracts and the already sealed modulo-parity supports, before source construction |
 | 2026-08-21 | (pending) | V1 fails closed before Lean execution because one exporter invocation cannot prove two-export determinism; V2 freezes the unchanged source with a consistent two-export budget |
 | 2026-08-21 | (pending) | V2 compiles the residual unchanged, but the first exporter finds no installed module; V3 freezes an explicit Lake module output before recompilation |
+| 2026-08-21 | (pending) | V3 exports twice byte-identically with an empty footprint and zero direct theorem dependencies, but rejects its overstated four-dependency contract; V4 freezes one fresh exact empty-dependency audit |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
