@@ -1,5 +1,33 @@
 # 83% of the population is blocked by three theorems, and we already prove one of them
 
+> ## ⚠ THIS DOCUMENT'S CENTRAL CLAIM IS WRONG. Corrected 2026-08-22, same day.
+>
+> The counts below are accurate. **What they mean is not what this document says.**
+>
+> `StatementImportError::TrustedDeclaration { name, kind }` carries a SINGLE name:
+> it is raised on the FIRST trusted declaration the adapter encounters, not on the
+> closure. So `detail` reports which blocker came first, not the blocker set. This
+> document read a first-hit distribution as a complete one.
+>
+> All three theorems have since been made self-derivable and are no longer trusted
+> ([`235`](235-congrarg-congr-mt-substitution-result.md)). Re-running the census
+> with that active: `congrArg`/`congr`/`mt` block **zero** of 114 rows, and the
+> outcome distribution is **unchanged at 114 / 15 / 7 / 2**. Five new first-blockers
+> simply took their place:
+>
+> ```
+> eq_of_heq 41 · eq_self 20 · Quot 19 · if_neg 18 · ite_self 15 · propext 1
+> ```
+>
+> So the corrected finding is the opposite of the headline: **the blocker closure is
+> deep, not shallow.** Each row carries roughly thirty trusted Lean-core `Nat`
+> theorems, and removing a layer exposes the next. "113 of 114 unblocked by three
+> theorems" and the "5.7× change in what is attempted" were both wrong.
+>
+> Kept rather than deleted, because the reasoning error is the useful part: the
+> numbers were verified and their MEANING was not. Asking what a field contains is
+> a different question from asking what it counts.
+
 Date: 2026-08-22
 
 Source: the frozen 2026-08-19 census, re-read from `observation.json`.

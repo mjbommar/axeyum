@@ -244,6 +244,7 @@ compounding, not automation theatre.
 | [First general producer result](232-first-general-producer-result.md) | One target-agnostic producer proves three theorems and declines a false one; why the credit is not yet claimable, and the metric hole it closed. |
 | [The adapter blocker is three theorems](233-adapter-blocker-is-three-theorems.md) | 114 of 138 rows never reach a producer, and between them they name four declarations — three derivable theorems and one real axiom. |
 | [Bounded-model screen coverage](234-bounded-model-screen-coverage.md) | A screen for undiscovered false statements reached 7% of the population; the `CANNOT_EVALUATE` count, not the counterexample count, is the finding. |
+| [`congrArg`/`congr`/`mt` substitution result](235-congrarg-congr-mt-substitution-result.md) | All three are now self-derived from `Eq.rec` and never trusted — and the census is unchanged, because doc 233 measured the FIRST blocker per row, not the closure. |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

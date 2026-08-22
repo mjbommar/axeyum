@@ -233,10 +233,20 @@ producer has landed and been credited:
 - The must-decline negative controls the plan asked for exist, are gated, and are
   independently recomputed (`must-decline-mutations-v1.json`).
 
-**The dominant cluster is named and is not what the plan assumed.** It is not a
-producer capability at all: 113 of the 114 unreachable rows are blocked by three
-*theorems* — `congrArg`, `congr`, `mt` — all derivable in our own kernel. That is
-P4's target.
+**The dominant cluster is named, and the first attempt on it failed
+instructively.** 114 of 138 rows never reach a producer. `congrArg`, `congr` and
+`mt` are now self-derived from `Eq.rec` and never trusted
+([`235`](235-congrarg-congr-mt-substitution-result.md)) — and the census is
+**unchanged at 114 / 15 / 7 / 2**, because
+[`233`](233-adapter-blocker-is-three-theorems.md) read a FIRST-blocker
+distribution as a complete one. Each row carries roughly thirty trusted Lean-core
+`Nat` theorems; removing three exposed five more (`eq_of_heq`, `eq_self`, `Quot`,
+`if_neg`, `ite_self`).
+
+P4's target is therefore not a short substitution list. It is either the
+substantive `Nat` development those blockers name — work on the scale of this
+project's own `nat_prelude` — or a different adapter strategy entirely. `Quot`
+and `propext` are architecturally unreachable by substitution in either case.
 
 
 Run one genuinely general producer over the dependency-ready train and

@@ -49,6 +49,7 @@ mod theorem_composition;
 mod theorem_specialization;
 mod trace_contract_receipt;
 mod trace_contract_theorem_receipt;
+mod trusted_substitution;
 mod type_slice;
 mod type_slice_receipt;
 
@@ -174,6 +175,16 @@ pub struct ImportReport {
     /// Canonically ordered structural content and direct-dependency identities
     /// for every declaration admitted into the completed kernel.
     pub declaration_identities: Vec<DeclarationIdentity>,
+    /// Exact rendered names of theorems this crate reconstructed and
+    /// independently kernel-checked itself, in place of the untrusted
+    /// wire-supplied `type`/`value` for that exact record — never populated
+    /// unless [`import_statement_ndjson`]'s fixed, reviewed substitution
+    /// (`trusted_substitution::SUBSTITUTABLE_THEOREMS`) fired for that name.
+    /// Every name here still reports [`DeclarationKind::Theorem`] in
+    /// `declaration_identities`, structurally true, so this is the field a
+    /// caller must consult to tell "our own derivation" apart from "an
+    /// admitted trusted declaration".
+    pub substituted_theorems: Vec<String>,
 }
 
 /// One completely translated and independently admitted import.
@@ -203,6 +214,7 @@ pub struct ImportReport {
 ///     identity_version: axeyum_lean_import::IDENTITY_VERSION,
 ///     axiom_identities: vec![],
 ///     declaration_identities: vec![],
+///     substituted_theorems: vec![],
 /// };
 /// let forged = CompletedImport { kernel: Kernel::new(), report };
 /// ```
@@ -472,6 +484,13 @@ struct ImportState<'kernel> {
     axioms: Vec<String>,
     pending_quotient: Vec<Declaration>,
     quotient_complete: bool,
+    /// When set, [`ImportState::import_theorem`] attempts the fixed, reviewed
+    /// substitution in [`trusted_substitution`] for an exact-name match before
+    /// admitting the wire-supplied theorem. Only [`import_statement_ndjson`]
+    /// enables this; ordinary [`import_ndjson`] never does, so this change
+    /// cannot affect a general (non-proof-isolated) import.
+    trusted_substitution: bool,
+    substituted_theorems: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -494,7 +513,7 @@ struct ExportedConstructor {
 }
 
 impl<'kernel> ImportState<'kernel> {
-    fn new(kernel: &'kernel mut Kernel) -> Self {
+    fn new(kernel: &'kernel mut Kernel, trusted_substitution: bool) -> Self {
         let anonymous = kernel.anon();
         let zero = kernel.level_zero();
         Self {
@@ -506,6 +525,8 @@ impl<'kernel> ImportState<'kernel> {
             axioms: Vec::new(),
             pending_quotient: Vec::new(),
             quotient_complete: false,
+            trusted_substitution,
+            substituted_theorems: Vec::new(),
         }
     }
 
@@ -1016,15 +1037,50 @@ impl<'kernel> ImportState<'kernel> {
             "thm",
         )?;
         self.validate_all_names(required(value, "all", line)?, line, "thm.all")?;
-        let declaration = Declaration::Theorem {
-            name: self.name(required(value, "name", line)?, line, "thm.name")?,
-            uparams: self.name_array(
-                required(value, "levelParams", line)?,
-                line,
-                "thm.levelParams",
-            )?,
-            ty: self.expression(required(value, "type", line)?, line, "thm.type")?,
-            value: self.expression(required(value, "value", line)?, line, "thm.value")?,
+        let name = self.name(required(value, "name", line)?, line, "thm.name")?;
+        let uparams = self.name_array(
+            required(value, "levelParams", line)?,
+            line,
+            "thm.levelParams",
+        )?;
+        // Read the wire's own type/value unconditionally, so a malformed
+        // record is still rejected as malformed regardless of the name — but
+        // for the fixed, reviewed substitution set, in statement-isolation
+        // mode only, they are parsed and then discarded rather than admitted:
+        // see `trusted_substitution` for what is admitted instead and why.
+        let wire_ty = self.expression(required(value, "type", line)?, line, "thm.type")?;
+        let wire_value = self.expression(required(value, "value", line)?, line, "thm.value")?;
+        let declaration = if self.trusted_substitution {
+            let rendered = self.kernel.display_name(name).to_string();
+            match trusted_substitution::reconstruct(self.kernel, name, &rendered) {
+                Ok(Some(substituted)) => {
+                    self.substituted_theorems.push(rendered);
+                    substituted
+                }
+                // `Ok(None)`: the name is not in the fixed substitution set,
+                // nothing to do. `Err(_)`: it IS in that set but reconstruction
+                // failed for this kernel — fall back to admitting the wire's
+                // own theorem exactly as an ordinary import would. Neither
+                // case weakens the statement-isolation contract: a name that
+                // fails to reconstruct is still a Theorem-kind declaration in
+                // the environment, and `import_statement_ndjson`'s
+                // trusted-declaration check (which only ever exempts names
+                // actually recorded in `substituted_theorems`) still refuses
+                // it exactly as before.
+                Ok(None) | Err(_) => Declaration::Theorem {
+                    name,
+                    uparams,
+                    ty: wire_ty,
+                    value: wire_value,
+                },
+            }
+        } else {
+            Declaration::Theorem {
+                name,
+                uparams,
+                ty: wire_ty,
+                value: wire_value,
+            }
         };
         self.admit(declaration, line)
     }
@@ -1831,15 +1887,103 @@ pub fn import_ndjson<R: BufRead>(
     Ok(CompletedImport { kernel, report })
 }
 
+/// Whether `import_statement_ndjson`'s trusted-declaration gate must let
+/// `name` (of kind `kind`) through despite being an otherwise-trusted kind.
+///
+/// The **only** way through is: the declaration is structurally a `Theorem`
+/// (never an `Axiom`, `Opaque`, or `Quotient` — those can never be exempted,
+/// no matter what `substituted_theorems` claims) *and* its exact name is one
+/// this import actually recorded reconstructing itself, in
+/// `report.substituted_theorems` — never a name the untrusted stream merely
+/// happens to share with the fixed substitution list
+/// (`trusted_substitution::SUBSTITUTABLE_THEOREMS`), since that list is
+/// consulted only inside the reconstruction attempt, never here.
+fn is_exempted_trusted_declaration(
+    kind: DeclarationKind,
+    name: &str,
+    substituted_theorems: &[String],
+) -> bool {
+    kind == DeclarationKind::Theorem && substituted_theorems.iter().any(|n| n == name)
+}
+
+#[cfg(test)]
+mod statement_isolation_tests {
+    use super::{DeclarationKind, is_exempted_trusted_declaration};
+
+    #[test]
+    fn a_reconstructed_theorem_is_exempted() {
+        let substituted = vec!["congrArg".to_owned(), "mt".to_owned()];
+        assert!(is_exempted_trusted_declaration(
+            DeclarationKind::Theorem,
+            "congrArg",
+            &substituted
+        ));
+    }
+
+    #[test]
+    fn a_theorem_absent_from_the_substituted_list_is_never_exempted() {
+        let substituted = vec!["congrArg".to_owned()];
+        assert!(!is_exempted_trusted_declaration(
+            DeclarationKind::Theorem,
+            "congr",
+            &substituted
+        ));
+    }
+
+    #[test]
+    fn an_empty_substituted_list_exempts_nothing() {
+        assert!(!is_exempted_trusted_declaration(
+            DeclarationKind::Theorem,
+            "congrArg",
+            &[]
+        ));
+    }
+
+    /// `propext` is a genuine axiom. Even if it somehow ended up listed in
+    /// `substituted_theorems` (a bug this test exists to catch, not a case
+    /// the real reconstruction path can produce — see
+    /// `trusted_substitution::reconstruct`, which never returns `Ok(Some(_))`
+    /// for a name outside `SUBSTITUTABLE_THEOREMS`), the *kind* check alone
+    /// must still refuse it: `propext`'s `DeclarationKind` is `Axiom`, never
+    /// `Theorem`.
+    #[test]
+    fn an_axiom_is_never_exempted_regardless_of_the_substituted_list() {
+        let substituted = vec!["propext".to_owned()];
+        assert!(!is_exempted_trusted_declaration(
+            DeclarationKind::Axiom,
+            "propext",
+            &substituted
+        ));
+    }
+
+    #[test]
+    fn opaque_and_quotient_are_never_exempted() {
+        let substituted = vec!["congrArg".to_owned()];
+        assert!(!is_exempted_trusted_declaration(
+            DeclarationKind::Opaque,
+            "congrArg",
+            &substituted
+        ));
+        assert!(!is_exempted_trusted_declaration(
+            DeclarationKind::Quotient,
+            "congrArg",
+            &substituted
+        ));
+    }
+}
+
 /// Import one proof-free statement stream and publish its checked target
 /// proposition as a goal.
 ///
 /// The target must be the sole declaration with `target`'s rendered name, must
 /// be a non-universe-polymorphic transparent definition, and its definition
 /// value must independently infer to `Prop`. The entire stream is rejected if
-/// it contains an axiom, theorem, opaque declaration, or quotient primitive;
-/// this prevents a statement adapter from smuggling either the target answer
-/// or an unrelated trusted assumption into the producer environment.
+/// it contains an axiom, theorem, opaque declaration, or quotient primitive —
+/// unless that declaration is one of a small, fixed, reviewed set this crate
+/// reconstructs and independently kernel-checks itself (see
+/// `trusted_substitution`); this prevents a statement adapter from smuggling
+/// either the target answer or an unrelated trusted assumption into the
+/// producer environment.
 ///
 /// # Errors
 ///
@@ -1850,10 +1994,17 @@ pub fn import_statement_ndjson<R: BufRead>(
     limits: ImportLimits,
     target: &str,
 ) -> Result<CompletedStatementImport, StatementImportError> {
-    let completed = import_ndjson(reader, limits)?;
-    let (mut kernel, report) = completed.into_parts();
+    let mut kernel = Kernel::new();
+    let report = import_into_staging_kernel_with_trusted_substitution(reader, &mut kernel, limits)?;
 
     for identity in &report.declaration_identities {
+        if is_exempted_trusted_declaration(
+            identity.kind,
+            &identity.name,
+            &report.substituted_theorems,
+        ) {
+            continue;
+        }
         if matches!(
             identity.kind,
             DeclarationKind::Axiom
@@ -2027,7 +2178,7 @@ where
                     inspected: inspect(kernel, error),
                 });
             };
-        drive_stream(reader, &mut kernel, limits, None, Some(&mut hook))
+        drive_stream(reader, &mut kernel, limits, None, Some(&mut hook), false)
     };
     match outcome {
         Ok(_) => Ok(captured),
@@ -2078,7 +2229,7 @@ fn census_into_staging_kernel<R: BufRead>(
     limits: ImportLimits,
 ) -> Result<CensusReport, ImportError> {
     let mut declines = Vec::new();
-    let report = drive_stream(reader, kernel, limits, Some(&mut declines), None)?;
+    let report = drive_stream(reader, kernel, limits, Some(&mut declines), None, false)?;
     Ok(CensusReport {
         format_version: report.format_version,
         lean_version: report.lean_version,
@@ -2108,7 +2259,19 @@ fn import_into_staging_kernel<R: BufRead>(
     kernel: &mut Kernel,
     limits: ImportLimits,
 ) -> Result<ImportReport, ImportError> {
-    drive_stream(reader, kernel, limits, None, None)
+    drive_stream(reader, kernel, limits, None, None, false)
+}
+
+/// As [`import_into_staging_kernel`], but with the fixed, reviewed
+/// `congrArg`/`congr`/`mt` substitution enabled. Used only by
+/// [`import_statement_ndjson`]'s stronger proof-isolation contract; never by
+/// ordinary [`import_ndjson`].
+fn import_into_staging_kernel_with_trusted_substitution<R: BufRead>(
+    reader: R,
+    kernel: &mut Kernel,
+    limits: ImportLimits,
+) -> Result<ImportReport, ImportError> {
+    drive_stream(reader, kernel, limits, None, None, true)
 }
 
 /// Apply one record's outcome. Without a census sink every error is fatal — the
@@ -2179,6 +2342,7 @@ fn drive_stream<R: BufRead>(
     limits: ImportLimits,
     mut census: Option<&mut Vec<CensusDecline>>,
     mut inspect: Option<&mut DeclineInspector<'_>>,
+    trusted_substitution: bool,
 ) -> Result<ImportReport, ImportError> {
     if limits.max_line_bytes == 0 || limits.max_records == 0 {
         return Err(malformed(0, "import limits must be nonzero"));
@@ -2186,7 +2350,7 @@ fn drive_stream<R: BufRead>(
     let mut record_count = 0usize;
     let mut line_bytes = Vec::new();
     let mut metadata: Option<Metadata> = None;
-    let mut state = ImportState::new(kernel);
+    let mut state = ImportState::new(kernel, trusted_substitution);
     loop {
         line_bytes.clear();
         let read = {
@@ -2270,6 +2434,7 @@ fn drive_stream<R: BufRead>(
         identity_version: IDENTITY_VERSION,
         axiom_identities,
         declaration_identities,
+        substituted_theorems: state.substituted_theorems,
     })
 }
 
