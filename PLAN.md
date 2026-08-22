@@ -250,6 +250,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Exact `Int.fib_neg` is frozen for official-root composition over clean natCast plus clean exact decision/`even_iff` leaves before driver code |
 | 2026-08-21 | (pending) | V1 fails closed before driver construction because the preregistered clean-natCast SHA was transcribed incorrectly; V2 freezes only the exact sealed-file hash correction |
 | 2026-08-21 | (pending) | V2 preflight finds the evidence-pack parent absent with the output still absent; V3 freezes exactly one directory creation before unchanged driver construction |
+| 2026-08-21 | (pending) | V3 exact-target driver passes focused Clippy with all three proof streams unread; one fail-if-present composition remains |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
