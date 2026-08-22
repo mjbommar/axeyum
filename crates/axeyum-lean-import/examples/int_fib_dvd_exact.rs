@@ -409,6 +409,7 @@ fn dvd(
     ))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn eq_rec_transport(
     kernel: &mut Kernel,
     domain: ExprId,
