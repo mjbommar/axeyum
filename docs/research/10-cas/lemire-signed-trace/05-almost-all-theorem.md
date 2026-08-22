@@ -136,9 +136,13 @@ proving the Sato--Tate second moment -- cannot help.
 Three kinds of input can address a named class:
 
 1. **Symmetry / transitive action**: a group acting on `E_ell`, commuting with `N_ell`,
-   whose orbit of `1` meets the non-exceptional set. Only `f(x) -> f(x+1)` and the
-   Galois/Adams action `(Z/2^s)^x` exist; both fix the identity class, both closed on the
-   branch.
+   whose orbit of `1` meets the non-exceptional set. This is now closed as a second
+   barrier ([06-symmetry-barrier.md](06-symmetry-barrier.md)): every degree-preserving
+   symmetry lies in the Borel `{id, f(x) -> f(x+1)}` of `PGL_2(F_2)` together with the
+   Galois/Adams action, and the induced permutation has orbit of the identity of size at
+   most `2 < 4 ell^2` -- translation sends class `1` to `<(1+x)^n>_ell` (equal to `1` only
+   when `(1+x)^n = 1 mod x^{ell+1}`), Adams fixes `1`. The Hecke action is transitive on
+   `E_ell` but shifts the degree. No symmetry helps.
 2. **Structure specific to the class**: the identity class is the short interval
    `{x^n + g : deg g <= floor(n/2)}`, the locus where all odd-power Galois-ring traces
    vanish to prescribed dyadic precisions. A lower bound reading that description

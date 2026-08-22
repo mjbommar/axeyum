@@ -29,6 +29,10 @@ Kaser--Lemire half-degree-irreducibles chain (sibling repository
   halves are the top half of an irreducible of degree `n` (sharp constant
   `eps(ell) = ell^2-4ell+6`); Lemire is exactly the claim that the one named
   all-zero pattern is not exceptional. Script `lemire_almostall.py`.
+- [06-symmetry-barrier.md](06-symmetry-barrier.md) -- the second barrier:
+  no degree-preserving symmetry has an orbit of the identity class larger than
+  2, so a group action cannot prove Lemire (corrects the earlier claim that
+  translation fixes the identity class).
 
 Executable companions live in
 [`scripts/lemire-signed-trace/`](../../../../scripts/lemire-signed-trace/README.md).
