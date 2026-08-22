@@ -2,11 +2,13 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, and both recurrence corollaries `Int.fib_add_one` and `Int.fib_eq_fib_add_two_sub_fib_add_one` are durably proved with empty kernel footprints. The negative-natural Fibonacci route now has an exact empty-footprint power-parity capsule, and its final two left-multiplication contracts are implemented as native axiom-free integer laws.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, and `Int.fib_neg` are durably proved with empty kernel footprints. The crash-safe `Int.fib_neg` admission and isolated replay agree on every receipt identity, and the authoritative readiness delta selects `Int.gcd_fib`.
 
-**Next:** seal and independently replay the native `Int.one_mul` / `Int.neg_one_mul` capsule, then compose those laws with the checked negative-value and power-parity presentations to reconstruct exact `Int.fib_neg_natCast`.
+**Next:** construct and independently qualify the target-owned bridge `(Int.fib m).natAbs = Nat.fib m.natAbs`, then compose exact `Int.gcd_def`, admitted `Nat.fib_gcd`, and admitted `Int.fib_neg` into the selected `Int.gcd_fib` theorem.
 
 <!-- plan-section: landed-changes -->
+
+| 2026-08-21 | (pending) | The newly ready `Int.gcd_fib` route is frozen through one target-owned Fibonacci/natAbs bridge and the two exact admitted premise capsules before source construction or proof-stream access |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |

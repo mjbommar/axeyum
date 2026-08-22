@@ -220,6 +220,7 @@ compounding, not automation theatre.
 | [Exact `Int.fib_neg` root audit result](192-int-fib-neg-root-audit-result.md) | Is the official theorem directly admissible, and which exact dependency frontier must replace it when it is not? |
 | [Exact `Int.fib_neg` dependency audit plan](193-int-fib-neg-dependency-audit-plan.md) | Which of the official proof's exact 26 direct dependencies are clean mathematical supports, and which carry the measured assumptions? |
 | [Exact `Int.fib_neg` dependency audit result](194-int-fib-neg-dependency-audit-result.md) | Does the clean outer case split suffice, or is the negative-natural Fibonacci core itself the next assumption-bearing frontier? |
+| [Exact `Int.gcd_fib` construction plan](225-int-gcd-fib-construction-plan.md) | How do the two now-settled premises compose through a clean integer-Fibonacci absolute-value bridge, without consulting the target proof? |
 | [`Int.fib_neg_natCast` dependency audit plan](195-int-fib-neg-natcast-dependency-audit-plan.md) | Which exact supports beneath the negative-natural core can seed a clean target-owned parity/sign reconstruction? |
 | [`Int.fib_neg_natCast` dependency audit result](196-int-fib-neg-natcast-dependency-audit-result.md) | Does the negative-natural surface retain clean transport, and which parity/Fibonacci core remains to replace? |
 | [Private `Int.fib_of_odd` root audit plan](197-int-fib-of-odd-private-root-audit-plan.md) | What kernel footprint and dependency surface sit beneath the one private theorem supporting the remaining Fibonacci core? |

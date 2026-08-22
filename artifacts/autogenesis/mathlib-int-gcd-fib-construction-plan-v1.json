@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-fib-construction-plan-v1",
+  "state": "preregistered-before-source-construction-or-proof-stream-read",
+  "target": {
+    "fact_id": "F:ml430-int-gcd-fib-73bdafc2",
+    "fact_path": "artifacts/facts/F-ml430-int-gcd-fib-73bdafc2.json",
+    "fact_sha256": "0363e2fa200d99356050891f3c697b5447ca9744965ea0c554b0070f7f8607c5",
+    "required_status": "open",
+    "name": "Int.gcd_fib",
+    "statement": "∀ (m n : ℤ), (Int.fib m).gcd (Int.fib n) = Nat.fib (m.gcd n)"
+  },
+  "settled_premises": [
+    {
+      "fact_id": "F:ml430-int-fib-neg-b4021d37",
+      "fact_sha256": "378e894e7687c9dea85c5dde0df485a45f10c9064eae8b402a80a71ee249b419",
+      "operation_id": "authoritative-mathlib-int-fib-neg-kernel-capsule-v1",
+      "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-exact-v1/root.ndjson",
+      "capsule_sha256": "d787dc502dff901cab0cab22bf8fd11578bf6e1632892651b1bf67b3d786d257"
+    },
+    {
+      "fact_id": "F:ml430-nat-fib-gcd-d1d98407",
+      "fact_sha256": "6c6ed24ea4f5c7ffef1fe4ad14fdce2335ba0e46d789b7d40eec83a3d2ba22cc",
+      "operation_id": "authoritative-mathlib-nat-fib-gcd-kernel-capsule-v1",
+      "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/749f30f65-nat-fib-gcd-v3/target-1.ndjson",
+      "capsule_sha256": "8ac3c35874540a10e5fa393c65f3ad313a6cf6a06303cec68fec3ec45d0f04cd"
+    }
+  ],
+  "construction": {
+    "first_bridge_name": "Axeyum.Autogenesis.intFibNatAbsV1",
+    "first_bridge_statement": "∀ (m : ℤ), (Int.fib m).natAbs = Nat.fib m.natAbs",
+    "mathematical_route": [
+      "establish the first bridge by integer constructor cases using exact Int.fib_neg and target-owned clean natAbs transport",
+      "rewrite both sides of the left gcd through the exact Int.gcd source equation",
+      "transport both gcd arguments through the first bridge",
+      "apply the admitted exact Nat.fib_gcd capsule",
+      "rewrite the index gcd through the same exact Int.gcd source equation"
+    ],
+    "max_lean_compiler_invocations": 1,
+    "max_exporter_invocations": 2,
+    "max_proof_stream_reads": 2,
+    "max_retries": 0,
+    "target_theorem_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "lean_version": "4.30.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "exports_byte_identical": true,
+    "fresh_imports": 2,
+    "bridge_axiom_footprint": [],
+    "proof_bodies_inspected": false,
+    "held_out_inspected": false,
+    "next_on_accept": "freeze exact composition of Int.gcd_fib from the bridge, Int.gcd_def, Int.fib_neg, and Nat.fib_gcd before target code"
+  },
+  "authority": {
+    "untrusted_search_may_propose": true,
+    "only_independently_checkable_evidence_is_durable": true,
+    "official_target_proof_body_allowed": false,
+    "same_name_declaration_transport_allowed": false,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "limitations": "This plan authorizes only one bounded support construction. It does not establish Int.gcd_fib, admit a fact, or grant authority to reuse the official target proof. Any assumption-bearing bridge is a measured decline, not partial theorem credit."
+}
