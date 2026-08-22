@@ -79,25 +79,26 @@ fn run() -> Result<(), String> {
     }
 
     let mut kernel = imports[0].kernel().clone();
-    let mut ordinary_receipts = Vec::new();
-    ordinary_receipts.push(compose(
-        imports[1].kernel(),
-        &mut kernel,
-        &[FIB_NATCAST],
-        "clean fib natCast",
-    )?);
-    ordinary_receipts.push(compose(
-        imports[3].kernel(),
-        &mut kernel,
-        &[NEG_NEG],
-        "clean double negation",
-    )?);
-    ordinary_receipts.push(compose(
-        imports[2].kernel(),
-        &mut kernel,
-        &[EVEN_POS, EVEN_NEG_NAT],
-        "concrete parity",
-    )?);
+    let ordinary_receipts = vec![
+        compose(
+            imports[1].kernel(),
+            &mut kernel,
+            &[FIB_NATCAST],
+            "clean fib natCast",
+        )?,
+        compose(
+            imports[3].kernel(),
+            &mut kernel,
+            &[NEG_NEG],
+            "clean double negation",
+        )?,
+        compose(
+            imports[2].kernel(),
+            &mut kernel,
+            &[EVEN_POS, EVEN_NEG_NAT],
+            "concrete parity",
+        )?,
+    ];
 
     let branch_composition = compose_checked_theorem_slice_with_target_leaves(
         imports[4].kernel(),
