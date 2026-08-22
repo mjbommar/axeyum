@@ -59,6 +59,7 @@
 | 2026-08-22 | (pending) | V5 freezes exact sudo-scoped module staging, one compile, two exports, two imports, cleanup, and empty-footprint acceptance before producing a durable direct multiplication capsule |
 | 2026-08-22 | (pending) | V5 exports and imports byte-identically with an empty footprint, but declines before sealing because the root records `Eq.symm` plus its private helper instead of the predicted empty direct dependency set |
 | 2026-08-22 | (pending) | V6 freezes hash-only qualification of the exact two-dependency empty closure and one manifest write, with exporter/importer reruns and target authority forbidden |
+| 2026-08-22 | (pending) | V6 qualifies and seals exact `intNatAbsMulDirectV1`: two byte-identical streams, exact two-dependency closure, empty footprint, no rerun, and zero target or ledger writes |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |

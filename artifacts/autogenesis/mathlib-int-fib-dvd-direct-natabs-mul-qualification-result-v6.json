@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-direct-natabs-mul-qualification-result-v6",
+  "state": "exact-two-dependency-empty-closure-qualified-and-sealed",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-direct-natabs-mul-qualification-plan-v6.json",
+    "sha256": "5c02c0ee3e5b2a2f506b5c62909cb5d8a31308a99101711047a15d0883ffa72d"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-natabs-mul-direct-v1",
+    "manifest_sha256": "bf9b9f0116008382f4bab42c4fac3ee36885d4b824e9e42f547fd076f55e734c",
+    "directory_mode": "0555",
+    "file_mode": "0444",
+    "root_sha256": "09ebd925b3af67009b1806fd157a25b195e046124065778ec6eaf754f5ecfc04",
+    "replay_sha256": "09ebd925b3af67009b1806fd157a25b195e046124065778ec6eaf754f5ecfc04",
+    "audit_sha256": "e3a9dc2f6c393594a4ff9e95feed18be7192392a90a2204fbff8b7114e1b9715"
+  },
+  "theorem": {
+    "name": "Axeyum.Autogenesis.intNatAbsMulDirectV1",
+    "declaration_sha256": "ebfbf0442e5e7d93a2a38e70e51b364100455633f44832878ed34ec37de01bb3",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [
+      "Eq.symm",
+      "_private.AxeyumIntNatAbsMulDirectV1.0.Axeyum.Autogenesis.intNatAbsNegOfNatDirectV1"
+    ]
+  },
+  "execution": {
+    "stream_hash_reads": 2,
+    "audit_report_reads": 0,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "manifest_writes": 1,
+    "retries": 0,
+    "target_fib_dvd_submissions": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "support_theorem_credit": 1,
+    "target_fib_dvd_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "construct direct Int divisibility witness transport over the qualified multiplication root"
+}
