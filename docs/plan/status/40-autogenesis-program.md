@@ -4,7 +4,7 @@
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_gcd`, and now `Int.fib_dvd` are durably proved with empty kernel footprints. The exact `Int.fib_dvd` operation survived an exit-75 intent fault without changing the fact, recovery performed exactly one authoritative ledger write, the measured frontier produced the preregistered empty unlock delta, and isolated replay `e836fa51…667f` reproduced all ten semantic checks from a clean reconstructed prestate.
 
-**Next:** export the compiled direct constructor residual twice from pinned s5, import both observations, and accept it only with empty footprint and all four forbidden roots absent; exact target specialization remains unauthorized.
+**Next:** freeze an explicit pinned `lean -o AxeyumIntFibOfNonnegResidualV1.olean` compilation before two fresh exporter invocations; the zero-exit unknown-module attempt receives no residual credit.
 
 <!-- plan-section: landed-changes -->
 
@@ -112,6 +112,7 @@
 | 2026-08-22 | (pending) | Both directional order roots also reproduce through `propext`; they are sealed as rejected, localizing the clean route below theorem-level order to direct indexed-hypothesis elimination |
 | 2026-08-22 | (pending) | V3 freezes a target-owned function-parameterized residual with direct constructor matching and `nomatch`, forbidding all four rejected order/target roots before source code |
 | 2026-08-22 | (pending) | V3 compiles on pinned Lean 4.30: the `ofNat` branch uses only the positive presentation and the impossible `negSucc` branch closes directly by indexed `nomatch`, below theorem-level order |
+| 2026-08-22 | (pending) | Plain typechecking creates no `.olean`; the first exporter exits zero with unknown-module stderr and an empty root, so the second export never starts and all residual/target credit remains zero |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |

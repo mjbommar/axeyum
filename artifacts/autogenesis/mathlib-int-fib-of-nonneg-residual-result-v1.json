@@ -1,0 +1,10 @@
+{
+  "schema_version":1,"kind":"axeyum-autogenesis-mathlib-int-fib-of-nonneg-residual-result-v1","state":"declined-export-before-stream-missing-olean",
+  "plan":{"path":"artifacts/autogenesis/mathlib-int-fib-of-nonneg-residual-plan-v1.json","sha256":"eab2422a7165ff03f3584f9d151b0aefa062bf3bc432ceb8cbfebe08317fc981"},
+  "source":{"path":"artifacts/autogenesis/sources/int-fib-of-nonneg-residual-v1.lean","sha256":"356fd8da67487c1f6b049ad9760a9d7b94545d590f11e3f708d52af14dcd8333","typecheck_status":0,"olean_created":false},
+  "attempt":{"module":"AxeyumIntFibOfNonnegResidualV1","exporter_exit_status":0,"diagnostic":"unknown module prefix AxeyumIntFibOfNonnegResidualV1","completed_export":false},
+  "rejected_pack":{"path":"/nas3/data/axeyum/autogenesis/reference-packs/int-fib-of-nonneg-residual-v1","root_bytes":0,"root_sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","manifest_sha256":"cc950bf2c1a21ec64460aa162d94e9a1c8595760a2e838d87f8f82ae55b506f3"},
+  "execution":{"compiler_invocations":1,"exporter_attempts":1,"completed_exporter_invocations":0,"second_export_started":false,"importer_runs":0,"target_theorem_submissions":0,"ledger_writes":0},
+  "authority":{"residual_credit":0,"target_theorem_credit":0,"fact_status_changes":0,"ledger_writes":0},
+  "next":"freeze an explicit lean -o module.olean compilation before two fresh exporter invocations"
+}
