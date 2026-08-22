@@ -136,3 +136,9 @@ infer an open term without a local context, so the reported free variable is
 the diagnostic's defect. V12 changes no proof node. It closes each proof under
 the two integer lambdas and each expected proposition under matching Pis before
 inference, preserving opaque failure reporting and the same zero-retry budget.
+
+V12 accepts `p0` and identifies the first genuine mismatch at the manual
+`congrArg` application in `p1`. V13 replaces both congruence applications with
+the already established `Eq.rec` construction over the identical functions and
+equalities. This leaves the five-step mathematical chain unchanged and removes
+`congrArg` from the expected direct theorem dependencies.

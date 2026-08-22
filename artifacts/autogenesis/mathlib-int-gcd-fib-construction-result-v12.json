@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-fib-construction-result-v12",
+  "state": "closed-diagnostic-localizes-first-congrarg-no-target-submission",
+  "plan": {"path": "artifacts/autogenesis/mathlib-int-gcd-fib-construction-plan-v12.json", "sha256": "ac4513efa4b67f615c9ffa956a9e9aa826b26f9ec90e493c4a79cc666f20aa82"},
+  "producer": {"commit": "7117b0bec95cf6b7823a5ba26daf1f378550e91a", "path": "crates/axeyum-lean-import/examples/int_gcd_fib_exact.rs", "sha256": "ea9f00e221c55d6a411584522c4c13a8691fffc56c02f10363f72ef7ef3e343f"},
+  "observation": {
+    "exit_code": 1,
+    "accepted_links": ["p0 Int.gcd_def"],
+    "first_failing_link": "p1 first natAbs transport",
+    "error": "TypeMismatch { expected: ExprId(1), got: ExprId(118580) }",
+    "output_absent": true
+  },
+  "execution": {"complete_invocations": 1, "input_stream_reads": 2, "target_theorem_submissions": 0, "target_exports": 0, "fresh_target_imports": 0, "retries": 0, "ledger_writes": 0},
+  "authority": {"diagnostic_credit": 1, "theorem_credit": 0, "fact_status_changes": 0, "ledger_writes": 0, "rendered_material": 0}
+}

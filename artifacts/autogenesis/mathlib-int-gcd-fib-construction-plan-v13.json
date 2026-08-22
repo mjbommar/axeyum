@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-fib-construction-plan-v13",
+  "state": "preregistered-eq-rec-congruence-repair-before-code",
+  "predecessor": {"path": "artifacts/autogenesis/mathlib-int-gcd-fib-construction-result-v12.json", "sha256": "cc1fbb5f04ded7cc4e2d0eeb9e5a88d40d64aa34738341c7a2bc7d76517904a7"},
+  "repair": {
+    "replace": ["p1 manual congrArg", "p4 manual congrArg"],
+    "with": "established Eq.rec congruence construction over the same functions and equalities",
+    "mathematical_chain_changes": 0,
+    "input_changes": 0,
+    "expected_direct_theorem_dependencies": ["Axeyum.Autogenesis.intFibNatAbsV1", "Eq.symm", "Eq.trans", "Int.gcd_def", "Nat.fib_gcd"]
+  },
+  "execution": {"max_complete_invocations": 1, "max_input_stream_reads": 2, "max_target_theorem_submissions": 1, "max_target_exports": 1, "required_fresh_imports_on_accept": 2, "max_retries": 0, "max_ledger_writes": 0},
+  "acceptance": {"target": "Int.gcd_fib", "axiom_footprint": [], "exact_dependency_set": true, "rendered_material": 0},
+  "next_on_accept": "seal exact Int.gcd_fib and bind canonical goal identity",
+  "next_on_decline": "record the first remaining closed link failure"
+}
