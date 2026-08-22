@@ -147,6 +147,11 @@ now. Nothing was deleted.
 | 2026-08-22 | (pending) | Bi-infinite recurrence uniqueness exports twice byte-identically and imports twice with an empty footprint; one public induction-API type query is frozen before specialization support code |
 | 2026-08-22 | (pending) | The sole pinned query finds no public `Int.inductionOn`; no second query is allowed, and a constructor-split plus `Nat.rec` induction adapter is frozen instead |
 | 2026-08-22 | (pending) | The constructive split-plus-`Nat.rec` adapter compiles on its first bounded attempt with forbidden classical and Fibonacci names absent; qualification remains separate |
+| 2026-08-22 | (pending) | The constructive induction adapter exports and imports twice with an empty footprint; the direct constructor split plus four exact succ/pred laws are frozen next |
+| 2026-08-22 | (pending) | Direct constructor split and four succ/pred laws all compile by constructor reduction on the first bounded attempt; five-root qualification remains separate |
+| 2026-08-22 | (pending) | All five constructor supports export byte-identically and import twice empty-footprint; exact constructive integer induction composition is frozen next |
+| 2026-08-22 | (pending) | Exact constructive integer induction compiles on the first bounded attempt from only target-owned adapter and constructor supports; qualification remains separate |
+| 2026-08-22 | (pending) | Exact constructive integer induction exports twice byte-identically and imports twice with an empty footprint; exact `Int.fib_add` specialization is the next bounded increment |
 | 2026-08-22 | (pending) | Durable V5 paths identify official `Int.fib` through its Even decider as the common carrier of all eight assumptions; V6 freezes a fully function-abstracted, decision-free eight-parameter residual before source construction |
 | 2026-08-22 | (pending) | V6 stops before export because each universal natAbs rewrite leaves its second occurrence; V7 freezes only three explicit repeated rewrite sequences with the abstraction boundary unchanged |
 | 2026-08-22 | (pending) | V7 exports twice as the same 351,201-byte residual, imports twice with zero axioms, and retains only clean Eq.symm/congrArg; exact eight-parameter specialization remains separately unauthorized |
@@ -1942,7 +1947,7 @@ per-instance identical to the committed artifact.
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_dvd`, `Int.fib_of_nonneg`, `Nat.fib_pos`, `Nat.fib_eq_zero`, and now `Int.fib_eq_zero` are durably proved with empty kernel footprints. An isolated clean replay independently reproduced `Int.fib_eq_zero` selection, certified execution, exit-75 recovery, exactly one ledger write, its proved fact, and the preregistered empty readiness delta.
 
-**Next:** export and freshly import the compiled constructive integer induction adapter twice, then build the exact split and four constructor-step laws for recurrence specialization.
+**Next:** preregister exact `Int.fib_add` specialization over sealed recurrence uniqueness, exact constructive induction, admitted `Int.fib_add_two`, and the smallest clean algebra/base-value supports.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
