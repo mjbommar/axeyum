@@ -82,6 +82,7 @@
 | 2026-08-22 | (pending) | V16 constructs the exact conclusion directly and builds Clippy-clean; both former open-term inference sites are gone while proof, capsules, and dependency contract remain unchanged |
 | 2026-08-22 | (pending) | V17 freezes one fully direct-typed execution of the unchanged proof over four sealed capsules, with one target, two fresh imports, no retries, and zero ledger writes |
 | 2026-08-22 | (pending) | V17 reaches kernel submission but the closed target is rejected with a type mismatch; no theorem is accepted or exported, so V18 will typecheck all five proof links under closed binders first |
+| 2026-08-22 | (pending) | V18 freezes five binder-closed infer/definitional-equality checks from forward witness through final reverse transport, with the proof term unchanged and target submission forbidden during instrumentation |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |

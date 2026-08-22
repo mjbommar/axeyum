@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-link-diagnostics-plan-v18",
+  "state": "preregistered-five-closed-link-checks-before-instrumentation",
+  "predecessor": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-exact-execution-result-v17.json",
+    "sha256": "a7f469bac1314fac5d92312170e83c769d439a82183a71ddf6f93d3800819c2d"
+  },
+  "implementation": "crates/axeyum-lean-import/examples/int_fib_dvd_exact.rs",
+  "checks": [
+    "forward witness proof has type m.natAbs divides n.natAbs",
+    "Nat.fib_dvd application has type fib(m.natAbs) divides fib(n.natAbs)",
+    "second equality transport has type fib(m.natAbs) divides natAbs(fib n)",
+    "first equality transport has type natAbs(fib m) divides natAbs(fib n)",
+    "reverse transport proof has the exact Int.fib_dvd conclusion"
+  ],
+  "closure": "close each proof and expected proposition over the same h, n, and m binders before infer and def_eq",
+  "proof_change_forbidden": true,
+  "execution": {
+    "max_driver_builds": 1,
+    "max_complete_invocations": 0,
+    "max_input_stream_reads": 0,
+    "max_target_theorem_submissions": 0,
+    "max_retries": 0,
+    "ledger_writes": 0
+  },
+  "next_on_accept": "run once to identify the first non-convertible closed link before target submission"
+}
