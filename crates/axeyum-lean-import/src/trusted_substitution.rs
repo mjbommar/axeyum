@@ -51,6 +51,32 @@
 //! [`crate::nat_order_substitution`] module, which admits under the stream's
 //! own declared type rather than one this module invents; see that module's
 //! own doc comment for why.
+//!
+//! `eq_of_heq` was added the same way once
+//! `docs/autogenesis/236-…`/`237-…` measured it as the single largest
+//! *first-reported* blocker (41 of 114 rows) once `congrArg`/`congr`/`mt` no
+//! longer shadowed it. `HEq` (heterogeneous equality) is, like `Eq`, a
+//! universal logical primitive — an `Inductive` with one constructor
+//! `HEq.refl` — never stream-specific data, so this builds both the type and
+//! the value itself exactly like `congrArg`/`Eq.symm`, never reading the
+//! stream's own `eq_of_heq` record. The construction mirrors Lean 4 core's
+//! own `eq_of_heq` verbatim (confirmed by inspecting a real stream's `thm`
+//! record for it): generalize over an *independent* type variable `β` and
+//! transport across the type-level equality `α = β` via `cast`, because
+//! `HEq.rec`'s motive necessarily varies in `β` (unlike `Eq.rec`, which fixes
+//! a single carrier). The refl case needs `cast α α h a` to reduce
+//! definitionally to `a` for an *arbitrary* proof `h : α = α` (not just
+//! `Eq.refl`), which is exactly what `axeyum-lean-kernel`'s K-like reduction
+//! (`crates/axeyum-lean-kernel/tests/k_like_reduction.rs`) exists for; the
+//! `eq_of_heq_reconstructs_and_kernel_checks` test below is the confirmation
+//! that this kernel's own K-like support is strong enough to typecheck it,
+//! not an assumption.
+//!
+//! `cast` itself is referenced directly by name (a `Definition`, never
+//! Axiom/Theorem/Opaque/Quotient) rather than rebuilt from `Eq.rec` — the
+//! same discipline `nat_order_substitution` uses for the stream's own
+//! `Nat.pred`/`Nat.sub`/`Nat.ble`: reusing a non-trusted declaration by name
+//! is not "citing the stream", only reusing a *theorem* would be.
 
 use axeyum_lean_kernel::{
     BinderInfo, Declaration, ExprId, Kernel, LevelId, NameId, ReducibilityHint,
@@ -59,7 +85,8 @@ use axeyum_lean_kernel::{
 /// The complete, reviewed set of trusted theorem names this module will
 /// substitute a self-derived proof for. `propext` is a genuine axiom and must
 /// never be added here.
-pub(crate) const SUBSTITUTABLE_THEOREMS: &[&str] = &["congrArg", "congr", "mt", "Eq.symm"];
+pub(crate) const SUBSTITUTABLE_THEOREMS: &[&str] =
+    &["congrArg", "congr", "mt", "Eq.symm", "eq_of_heq"];
 
 /// First free-variable id this module mints. Chosen far above any id an
 /// import stream or another producer's search would use — exported
@@ -200,6 +227,21 @@ fn lam_fv(
 ) -> ExprId {
     let abstracted = kernel.abstract_fvars(body, &[fv]);
     kernel.lam(name, ty, abstracted, info)
+}
+
+/// `(name : ty) -> body[fv]` — the `Pi` (type-level) counterpart of
+/// [`lam_fv`], for a binder whose body is itself a *type* (e.g. one more
+/// argument of a motive that returns `Sort _`), not a value.
+fn pi_fv(
+    kernel: &mut Kernel,
+    name: NameId,
+    fv: u64,
+    ty: ExprId,
+    body: ExprId,
+    info: BinderInfo,
+) -> ExprId {
+    let abstracted = kernel.abstract_fvars(body, &[fv]);
+    kernel.pi(name, ty, abstracted, info)
 }
 
 /// `congrArg f h : Eq result_level result_carrier (f hyp_lhs) (f hyp_rhs)`
@@ -586,6 +628,182 @@ fn eq_symm_pair(kernel: &mut Kernel) -> Result<(ExprId, ExprId, Vec<NameId>), Su
     Ok((value, ty, vec![u_name]))
 }
 
+/// The ambient `HEq`/`HEq.refl`/`HEq.rec`/`cast` primitives `eq_of_heq_pair`
+/// depends on, discovered by exact display name and checked rather than
+/// assumed, for the same reason [`discover_eq`] does.
+struct HeqPrimitives {
+    heq: NameId,
+    heq_rec: NameId,
+    cast: NameId,
+}
+
+fn discover_heq(kernel: &Kernel) -> Result<HeqPrimitives, SubstitutionError> {
+    let heq = exact_name(kernel, "HEq")?;
+    let heq_refl = exact_name(kernel, "HEq.refl")?;
+    if !matches!(
+        kernel.environment().get(heq_refl),
+        Some(Declaration::Constructor { .. })
+    ) {
+        return Err(SubstitutionError::UnexpectedShape(
+            "HEq.refl is not a Constructor",
+        ));
+    }
+    let heq_rec = exact_name(kernel, "HEq.rec")?;
+    let Some(Declaration::Recursor { uparams, .. }) = kernel.environment().get(heq_rec) else {
+        return Err(SubstitutionError::UnexpectedShape(
+            "HEq.rec is not a Recursor declaration",
+        ));
+    };
+    if uparams.len() != 2 {
+        return Err(SubstitutionError::UnexpectedShape(
+            "HEq.rec does not have exactly two universe parameters",
+        ));
+    }
+    let cast_name = exact_name(kernel, "cast")?;
+    match kernel.environment().get(cast_name) {
+        Some(Declaration::Definition { uparams, hint, .. })
+            if uparams.len() == 1 && !matches!(hint, ReducibilityHint::Opaque) => {}
+        _ => {
+            return Err(SubstitutionError::UnexpectedShape(
+                "cast is not a one-universe-param unfoldable Definition",
+            ));
+        }
+    }
+    Ok(HeqPrimitives {
+        heq,
+        heq_rec,
+        cast: cast_name,
+    })
+}
+
+/// `eq_of_heq.{u} : {alpha : Sort u} -> {a a' : alpha} -> HEq alpha a alpha
+/// a' -> Eq alpha a a'`, built directly from `HEq.rec`/`cast` — mirroring
+/// Lean 4 core's own definition verbatim (see this module's doc comment for
+/// why the `cast`-across-`β` detour is unavoidable and what it depends on
+/// the kernel for).
+#[allow(
+    clippy::many_single_char_names,
+    clippy::similar_names,
+    clippy::too_many_lines
+)]
+fn eq_of_heq_pair(kernel: &mut Kernel) -> Result<(ExprId, ExprId, Vec<NameId>), SubstitutionError> {
+    let eqp = discover_eq(kernel)?;
+    let heqp = discover_heq(kernel)?;
+    let mut next_fvar = FVAR_BASE;
+    let anon = kernel.anon();
+    let u_name = kernel.name_str(anon, "u");
+    let u = kernel.level_param(u_name);
+    let u_plus1 = kernel.level_succ(u);
+    let sort_u = kernel.sort(u);
+    let zero = kernel.level_zero();
+
+    let alpha_fv = fresh(&mut next_fvar);
+    let alpha = kernel.fvar(alpha_fv);
+    let a_fv = fresh(&mut next_fvar);
+    let a = kernel.fvar(a_fv);
+    let ap_fv = fresh(&mut next_fvar);
+    let ap = kernel.fvar(ap_fv);
+    let h_fv = fresh(&mut next_fvar);
+    let h = kernel.fvar(h_fv);
+
+    let build_heq = |kernel: &mut Kernel, ty1: ExprId, x1: ExprId, ty2: ExprId, x2: ExprId| {
+        let head = kernel.const_(heqp.heq, vec![u]);
+        let w1 = kernel.app(head, ty1);
+        let w2 = kernel.app(w1, x1);
+        let w3 = kernel.app(w2, ty2);
+        kernel.app(w3, x2)
+    };
+    let cast_at = |kernel: &mut Kernel, ty1: ExprId, ty2: ExprId, heq_ty_eq: ExprId, x: ExprId| {
+        let head = kernel.const_(heqp.cast, vec![u]);
+        let w1 = kernel.app(head, ty1);
+        let w2 = kernel.app(w1, ty2);
+        let w3 = kernel.app(w2, heq_ty_eq);
+        kernel.app(w3, x)
+    };
+
+    let ty_h = build_heq(kernel, alpha, a, alpha, ap);
+
+    // motive := fun (beta:Sort u) (b:beta) (_:HEq alpha a beta b) =>
+    //   (heq_ty : Eq.{u+1} (Sort u) alpha beta) -> Eq beta (cast alpha beta heq_ty a) b
+    let beta_fv = fresh(&mut next_fvar);
+    let beta = kernel.fvar(beta_fv);
+    let b_fv = fresh(&mut next_fvar);
+    let b = kernel.fvar(b_fv);
+    let witness_fv = fresh(&mut next_fvar);
+    let heq_ty_eq_fv = fresh(&mut next_fvar);
+    let heq_ty_eq = kernel.fvar(heq_ty_eq_fv);
+    let motive = {
+        let cast_app = cast_at(kernel, alpha, beta, heq_ty_eq, a);
+        let concl = build_eq(kernel, eqp.eq, u, beta, cast_app, b);
+        let heq_ty_eq_ty = build_eq(kernel, eqp.eq, u_plus1, sort_u, alpha, beta);
+        let inner = pi_fv(
+            kernel,
+            anon,
+            heq_ty_eq_fv,
+            heq_ty_eq_ty,
+            concl,
+            BinderInfo::Default,
+        );
+        let witness_ty = build_heq(kernel, alpha, a, beta, b);
+        let with_witness = lam_fv(
+            kernel,
+            anon,
+            witness_fv,
+            witness_ty,
+            inner,
+            BinderInfo::Default,
+        );
+        let with_b = lam_fv(kernel, anon, b_fv, beta, with_witness, BinderInfo::Default);
+        lam_fv(kernel, anon, beta_fv, sort_u, with_b, BinderInfo::Default)
+    };
+
+    // refl_case : (heq_ty : Eq.{u+1} (Sort u) alpha alpha) -> Eq alpha (cast alpha alpha heq_ty a) a
+    let refl_case = {
+        let heq_ty_eq2_fv = fresh(&mut next_fvar);
+        let heq_ty_eq2 = kernel.fvar(heq_ty_eq2_fv);
+        let cast_app = cast_at(kernel, alpha, alpha, heq_ty_eq2, a);
+        let refl_proof = build_eq_refl(kernel, eqp.eq_refl, u, alpha, cast_app);
+        let heq_ty_eq2_ty = build_eq(kernel, eqp.eq, u_plus1, sort_u, alpha, alpha);
+        lam_fv(
+            kernel,
+            anon,
+            heq_ty_eq2_fv,
+            heq_ty_eq2_ty,
+            refl_proof,
+            BinderInfo::Default,
+        )
+    };
+
+    // this := HEq.rec.{0,u} alpha a motive refl_case alpha ap h
+    //   : (heq_ty : Eq.{u+1} (Sort u) alpha alpha) -> Eq alpha (cast alpha alpha heq_ty a) ap
+    let this = {
+        let rec = kernel.const_(heqp.heq_rec, vec![zero, u]);
+        let w1 = kernel.app(rec, alpha);
+        let w2 = kernel.app(w1, a);
+        let w3 = kernel.app(w2, motive);
+        let w4 = kernel.app(w3, refl_case);
+        let w5 = kernel.app(w4, alpha);
+        let w6 = kernel.app(w5, ap);
+        kernel.app(w6, h)
+    };
+    // eq_of_heq alpha a a' h := this (Eq.refl.{u+1} (Sort u) alpha) : Eq alpha (cast alpha alpha rfl a) a'
+    // — independently re-verified below to be def-eq to the intended
+    // `Eq alpha a a'` (relying on the kernel's own K-like reduction of
+    // `cast alpha alpha rfl a` down to `a`, never assumed here).
+    let alpha_self_eq = build_eq_refl(kernel, eqp.eq_refl, u_plus1, sort_u, alpha);
+    let value_body = kernel.app(this, alpha_self_eq);
+    let type_body = build_eq(kernel, eqp.eq, u, alpha, a, ap);
+
+    let binders = [
+        (alpha_fv, sort_u, BinderInfo::Default),
+        (a_fv, alpha, BinderInfo::Default),
+        (ap_fv, alpha, BinderInfo::Default),
+        (h_fv, ty_h, BinderInfo::Default),
+    ];
+    let (value, ty) = close_telescope(kernel, &binders, value_body, type_body);
+    Ok((value, ty, vec![u_name]))
+}
+
 /// Attempt to reconstruct `rendered` as a kernel-checked declaration built
 /// entirely from this module's own primitives, never from the untrusted
 /// stream, **or** (for the twenty names in
@@ -611,6 +829,7 @@ pub(crate) fn reconstruct(
             "congr" => congr_pair(kernel)?,
             "mt" => mt_pair(kernel)?,
             "Eq.symm" => eq_symm_pair(kernel)?,
+            "eq_of_heq" => eq_of_heq_pair(kernel)?,
             _ => unreachable!("checked against SUBSTITUTABLE_THEOREMS above"),
         };
         return Ok(Some(Declaration::Theorem {
@@ -621,6 +840,25 @@ pub(crate) fn reconstruct(
         }));
     }
     if let Some(value) = crate::nat_order_substitution::reconstruct(kernel, rendered, wire_ty)? {
+        return Ok(Some(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: wire_ty,
+            value,
+        }));
+    }
+    if let Some((value, uparams)) =
+        crate::nat_no_confusion_substitution::reconstruct(kernel, rendered, wire_ty)?
+    {
+        return Ok(Some(Declaration::Theorem {
+            name,
+            uparams,
+            ty: wire_ty,
+            value,
+        }));
+    }
+    if let Some(value) = crate::nat_le_brecon_substitution::reconstruct(kernel, rendered, wire_ty)?
+    {
         return Ok(Some(Declaration::Theorem {
             name,
             uparams: vec![],
@@ -718,6 +956,17 @@ mod tests {
         assert!(matches!(
             eq_symm_pair(&mut kernel),
             Err(SubstitutionError::RequiredDeclarationUnavailable("Eq"))
+        ));
+    }
+
+    #[test]
+    fn eq_of_heq_declines_when_heq_is_missing() {
+        // The quotient fixture (used above) carries `Eq` but not `HEq`; this
+        // must decline cleanly, never panic or fabricate.
+        let mut kernel = fixture_kernel();
+        assert!(matches!(
+            eq_of_heq_pair(&mut kernel),
+            Err(SubstitutionError::RequiredDeclarationUnavailable("HEq"))
         ));
     }
 
@@ -847,5 +1096,102 @@ mod tests {
             congr_arg_pair(&mut kernel),
             Err(SubstitutionError::RequiredDeclarationUnavailable("Eq"))
         ));
+    }
+}
+
+#[cfg(test)]
+mod real_stream_eq_of_heq_tests {
+    //! Not run by default (reads the frozen census archive, host-local under
+    //! `/nas3`, not part of this repository). Run explicitly with
+    //! `cargo test -p axeyum-lean-import --lib trusted_substitution::real_stream_eq_of_heq_tests -- --ignored --nocapture`,
+    //! optionally overriding the directory with
+    //! `AXEYUM_EQ_OF_HEQ_PROBE_DIR`. This is the independent, real-kernel
+    //! confirmation that this crate's K-like reduction support is strong
+    //! enough for `eq_of_heq_pair`'s refl case (see this module's doc
+    //! comment) — not merely that it compiles.
+    use super::*;
+    use crate::{ImportLimits, import_ndjson};
+    use std::fs::File;
+    use std::io::BufReader;
+
+    const DEFAULT_DIR: &str = "/nas3/data/axeyum/autogenesis/coverage/26fcc2c2f-mathlib-v4.30.0-reflexivity-train-development-v1/streams";
+
+    #[test]
+    #[ignore = "reads the frozen census archive under /nas3, not part of this repository"]
+    fn probe_real_archive() {
+        let dir =
+            std::env::var("AXEYUM_EQ_OF_HEQ_PROBE_DIR").unwrap_or_else(|_| DEFAULT_DIR.into());
+        let mut entries: Vec<_> = std::fs::read_dir(&dir)
+            .unwrap_or_else(|e| panic!("read_dir {dir}: {e}"))
+            .filter_map(Result::ok)
+            .map(|e| e.path())
+            .filter(|p| p.extension().is_some_and(|ext| ext == "ndjson"))
+            .take(20)
+            .collect();
+        entries.sort();
+        assert!(!entries.is_empty(), "no .ndjson files found under {dir}");
+
+        let mut present = 0u32;
+        let mut ok = 0u32;
+        let mut failed = Vec::new();
+        for path in &entries {
+            let file = File::open(path).unwrap_or_else(|e| panic!("open {path:?}: {e}"));
+            let reader = BufReader::new(file);
+            let Ok(completed) = import_ndjson(reader, ImportLimits::default()) else {
+                continue;
+            };
+            let (mut kernel, _report) = completed.into_parts();
+            let has_eq_of_heq = kernel.environment().iter().any(|(name, decl)| {
+                matches!(decl, Declaration::Theorem { .. })
+                    && kernel.display_name(*name).to_string() == "eq_of_heq"
+            });
+            if !has_eq_of_heq {
+                continue;
+            }
+            present += 1;
+            match eq_of_heq_pair(&mut kernel) {
+                Ok((value, ty, uparams)) => {
+                    let name = {
+                        let root = kernel.anon();
+                        kernel.name_str(root, "ProbeReconstructEqOfHeq")
+                    };
+                    match kernel.add_declaration(Declaration::Theorem {
+                        name,
+                        uparams,
+                        ty,
+                        value,
+                    }) {
+                        Ok(()) => {
+                            let footprint = kernel.axiom_footprint(name);
+                            assert!(
+                                footprint.is_empty(),
+                                "{path:?}: nonempty axiom footprint {footprint:?}"
+                            );
+                            let deps = kernel.theorem_dependencies(name);
+                            assert!(
+                                deps.is_empty(),
+                                "{path:?}: cites another theorem: {:?}",
+                                deps.iter()
+                                    .map(|&n| kernel.display_name(n).to_string())
+                                    .collect::<Vec<_>>()
+                            );
+                            ok += 1;
+                        }
+                        Err(e) => failed.push(format!("{path:?}: admission failed: {e:?}")),
+                    }
+                }
+                Err(e) => failed.push(format!("{path:?}: {e}")),
+            }
+        }
+        println!("files examined: {}", entries.len());
+        println!("eq_of_heq: present={present} ok={ok}");
+        for e in &failed {
+            println!("    decline: {e}");
+        }
+        assert!(present > 0, "no examined stream carried eq_of_heq");
+        assert_eq!(
+            ok, present,
+            "eq_of_heq_pair must succeed on every present row"
+        );
     }
 }

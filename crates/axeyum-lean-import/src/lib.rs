@@ -43,6 +43,8 @@ use serde_json::{Map, Value};
 mod checked_theorem_receipt;
 mod contract_residualization;
 mod identity;
+mod nat_le_brecon_substitution;
+mod nat_no_confusion_substitution;
 mod nat_order_substitution;
 mod semantic_contract_receipt;
 mod source_delta_trace;

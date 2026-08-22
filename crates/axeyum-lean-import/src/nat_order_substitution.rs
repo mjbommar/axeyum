@@ -79,6 +79,29 @@ use crate::trusted_substitution::{SubstitutionError, exact_name};
 /// under the stream's own declared type. Adding a name here is a deliberate,
 /// reviewed source edit exactly like
 /// [`SUBSTITUTABLE_THEOREMS`](super::trusted_substitution::SUBSTITUTABLE_THEOREMS).
+///
+/// **Known limitation, confirmed against the real archive (not this crate's
+/// own prelude), not yet fixed**: [`discover`] requires `Nat.pred`/`Nat.sub`/
+/// `Nat.ble` to already be declared *unconditionally*, even for a name (e.g.
+/// `Nat.zero_le`, `Nat.succ_le_succ`) whose own construction never uses them.
+/// A real stream that declares one of these names *before* `Nat.pred` (Lean's
+/// own declaration order, not something this module controls) makes
+/// [`reconstruct`] decline with `RequiredDeclarationUnavailable("Nat.pred")`
+/// for that row even though the requested lemma has nothing to do with
+/// `pred`. Measured 2026-08-22 on `streams/r000.ndjson`: `Nat.zero_le`,
+/// `Nat.succ_le_succ`, `Nat.ble_self_eq_true`, `Nat.ble_succ_eq_true`,
+/// `Nat.ble_eq_true_of_le`, `Nat.le_of_ble_eq_true`, and
+/// `Nat.not_le_of_not_ble_eq_true` all decline this way in that one file,
+/// pre-existing and unrelated to any name added since. The fix is to split
+/// [`Prims`] into an always-required core plus `pred`/`sub`/`ble` discovered
+/// lazily per name in [`build`] — not attempted here because every builder
+/// closure in this module (`induct`'s and `induct_le`'s `&dyn Fn(...) ->
+/// ExprId` callback shapes) would need to become fallible, a large,
+/// higher-risk refactor of an already-shipped module rather than a
+/// blocker-specific fix. Adding a name here is still strictly non-regressive
+/// even when it hits this gap: on decline, the caller falls back to the
+/// ordinary untrusted-theorem admission exactly as if the name were absent
+/// from this list.
 pub(crate) const SUBSTITUTABLE_NAT_ORDER_THEOREMS: &[&str] = &[
     "Nat.le_refl",
     "Nat.le_succ",
@@ -90,6 +113,7 @@ pub(crate) const SUBSTITUTABLE_NAT_ORDER_THEOREMS: &[&str] = &[
     "Nat.not_succ_le_self",
     "Nat.le_succ_of_le",
     "Nat.zero_lt_succ",
+    "Nat.zero_le",
     "Nat.pred_le",
     "Nat.pred_le_pred",
     "Nat.sub_le",
@@ -1133,6 +1157,7 @@ fn build(b: &mut B<'_>, rendered: &str) -> Result<ExprId, SubstitutionError> {
             b.lam_fv(n_fv, nat, with_m)
         }
         "Nat.sub_lt" => build_sub_lt(b),
+        "Nat.zero_le" => b.zero_le_value(),
         "Nat.ble_self_eq_true" => {
             let n_fv = b.fresh();
             let n = b.kernel.fvar(n_fv);
@@ -1500,6 +1525,7 @@ mod tests {
             "Nat.not_succ_le_self" => p.not_succ_le_self,
             "Nat.le_succ_of_le" => p.le_succ_of_le,
             "Nat.zero_lt_succ" => p.zero_lt_succ,
+            "Nat.zero_le" => p.zero_le,
             "Nat.pred_le" => p.pred_le,
             "Nat.pred_le_pred" => p.pred_le_pred,
             "Nat.sub_le" => p.sub_le,
