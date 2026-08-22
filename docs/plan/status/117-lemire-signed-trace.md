@@ -61,4 +61,25 @@ only the two `ell=22` rank positions (`12773/32768` and `10742/32768`).  The
 strong finite `(ICV)` margins remain evidence for a possible localization
 bridge, never an established inequality.
 
+**Rung 2 (lemire-signed-trace, 2026-08-21 evening):** exact layer tables now
+reach `ell=23` (`data/layers-ell23-n47.txt`): worst high-order ratios relative
+to the `1/(4ell)` threshold are `0.21x` (orders `>= 8`), `0.10x` (`>= 16`),
+`0.04x` (`>= 32`), continuing the monotone fall from `2.2x` at `ell=12`. The
+one-sided `(ICV)` object is measured directly: the identity cylinder's
+variance is typical (rank mid-pack among all `2^{a-1}` cylinders at every
+`ell`, max/avg `<= 1.8`), the average matches the Sato--Tate prediction to
+10--16%, and the twisted cylinder sums have rms equal to the random-phase
+prediction to three digits with sup over all cylinders `0.36..0.94` of the
+`2^{ell-1}` target (Weil: `76..84x`). Note 02 records four further exact
+reformulations (Type I exactness making the top layer a second difference of
+Moebius interval sums, checked; Teichmueller curve against the Witt trace-zero
+subgroup; power-map pullbacks for prime `n`; `Z/2^e` trace code) and the
+shortcuts killed (parity of `I_n(1)` irregular for `n <= 38`; Swan; Oesterle
+LP; Cauchy over twists). A primary-source check found no integer- or
+function-field method beating Weil/GRH by a logarithm for a single
+prime-power modulus (best: Banks--Shparlinski exponent `2.1115`; DPR averages
+over moduli). The minimal sufficient statement is now the open fact
+`F:gf2-lemire-cylinder-twist-sup-bound` (empty evidence, by design). The
+theorem state is unchanged: Lemire's conjecture is not proved.
+
 <!-- plan-section: landed-changes -->
