@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-native-int-left-unit-sign-plan",
+  "state": "preregistered-before-native-prelude-code",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-left-unit-sign-multiplication-result-v3.json",
+    "required_state": "int-constructor-cases-still-need-native-multiplication-lemmas"
+  },
+  "native_theorems": [
+    {
+      "name": "Int.one_mul",
+      "statement": "forall a : Int, 1 * a = a",
+      "proof_route": "Int.mul_comm 1 a followed by Int.mul_one a"
+    },
+    {
+      "name": "Int.neg_one_mul",
+      "statement": "forall a : Int, (-1) * a = -a",
+      "proof_route": "case split a; use mul_negOfNat_ofNat or mul_negOfNat_negSucc at magnitude one, normalize one-times-magnitude with the native Nat one_mul theorem, and transport through the matching Int constructor"
+    }
+  ],
+  "owned_code": [
+    "crates/axeyum-lean-kernel/src/int_prelude.rs",
+    "crates/axeyum-lean-kernel/src/int_prelude/statements.rs",
+    "crates/axeyum-lean-kernel/src/int_prelude/algebra.rs",
+    "crates/axeyum-lean-kernel/src/int_prelude/sign.rs",
+    "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs",
+    "crates/axeyum-lean-import/examples/int_left_unit_sign_native_capsule.rs"
+  ],
+  "budget": {
+    "trusted_theorem_declarations": 2,
+    "capsule_builder_invocations": 1,
+    "capsule_exports": 1,
+    "fresh_capsule_imports": 2,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "workspace_format_and_focused_clippy_must_pass": true,
+    "focused_int_prelude_tests_must_pass": true,
+    "both_theorem_axiom_footprints_must_be_empty": true,
+    "capsule_must_survive_two_fresh_imports": true,
+    "no_unsafe_code": true
+  },
+  "output": "artifacts/autogenesis/int-left-unit-sign-native-result-v1.json",
+  "limitations": "The native laws remain support-only until the final negative-Fibonacci composition succeeds."
+}

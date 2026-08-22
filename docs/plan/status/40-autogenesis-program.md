@@ -66,6 +66,7 @@
 | 2026-08-21 | (pending) | Exact power parity specializes, replays, and survives two fresh imports with the registered five dependencies; the final two left-multiplication leaves are frozen before source construction |
 | 2026-08-21 | (pending) | Multiplication V1 finds the audited ring-law names absent from `Int.Basic`; V2 freezes only the narrow `Mathlib.Algebra.Ring.Int.Defs` import repair |
 | 2026-08-21 | (pending) | V2 shows clean abstract ring laws become `propext`-bearing through the Int instance; V3 freezes direct constructor-case computation instead |
+| 2026-08-21 | (pending) | V3 exposes four non-definitional constructor goals; native `Int.one_mul` and `Int.neg_one_mul` are frozen over the existing axiom-free prelude machinery before code |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
