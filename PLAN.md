@@ -137,6 +137,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Closure analysis corrects the bridge boundary before execution: export a dependency-free two-parameter residual, then specialize it with exact clean `Int.fib_neg` and `Int.natAbs_neg` roots |
 | 2026-08-21 | (pending) | The corrected residual exports twice byte-identically but is rejected with eight assumptions; all five direct theorem dependencies are clean, localizing the next audit to non-theorem declaration closure before any specialization or ledger write |
 | 2026-08-21 | (pending) | One non-rendering declaration-path read is frozen from the declined natAbs residual to its exact eight blockers before choosing replacement carriers |
+| 2026-08-21 | (pending) | The first path audit yields no durable report and receives zero credit; V4 freezes a five-nearest-carrier projection before one fresh read |
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
 | 2026-08-21 | `98657cef7` | V2 source compiles but a direct exporter invocation yields an empty stream; V3 freezes the unchanged source and exact `lake env lean4export` command |

@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-fib-construction-plan-v4",
+  "state": "preregistered-before-single-bounded-blocker-path-read",
+  "parent_result": {
+    "path": "artifacts/autogenesis/mathlib-int-gcd-fib-construction-result-v3.json",
+    "sha256": "156aefdf357b7c104f77682f373aef90119192801ec300add258ddcf0f1e289f"
+  },
+  "input": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-natabs-residual-v1/residual-2.ndjson",
+    "bytes": 9846065,
+    "sha256": "5ae684d7b5e254e4f523aff84816b697f3647e8fa51c7d1dae98401ace367152",
+    "mode": "0444",
+    "textual_read_allowed": false
+  },
+  "root": "Axeyum.Autogenesis.intFibNatAbsResidualV1",
+  "ordered_blockers": [
+    "Classical.choice",
+    "Lean.opaqueId",
+    "Quot",
+    "Quot.lift",
+    "Quot.mk",
+    "Quot.sound",
+    "String.Internal.append",
+    "propext"
+  ],
+  "projection": {
+    "format": "one compact JSON row per blocker",
+    "fields": ["name", "present_in_root_closure", "carrier_count", "nearest_five"],
+    "max_carriers_per_blocker": 5,
+    "proof_terms_types_or_values_rendered": 0
+  },
+  "budget": {
+    "max_importer_runs": 1,
+    "max_proof_bearing_stream_reads": 1,
+    "max_retries": 0,
+    "max_theorem_submissions": 0,
+    "max_ledger_writes": 0
+  },
+  "authority": {
+    "reconstruction_allowed": false,
+    "proof_bodies_readable_by_model": false,
+    "definition_bodies_readable_by_model": false,
+    "theorem_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "output": "artifacts/autogenesis/mathlib-int-gcd-fib-construction-result-v4.json"
+}

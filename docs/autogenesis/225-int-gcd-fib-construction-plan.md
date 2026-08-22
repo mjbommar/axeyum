@@ -64,3 +64,8 @@ non-theorem declaration retained by source-level reduction or case analysis;
 the next bounded step is a non-rendering path audit to identify that carrier.
 V3 freezes that single read over the eight exact blockers and forbids rendering
 proof terms, theorem types or definition bodies.
+
+V3 produced no durable output through the execution channel and therefore gets
+zero diagnostic credit. V4 retains the same non-rendering audit but limits its
+output to five nearest carriers per blocker, making the evidence small enough
+to preserve before another proof-bearing read.

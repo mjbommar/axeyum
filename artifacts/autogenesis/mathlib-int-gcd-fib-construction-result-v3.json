@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-fib-construction-result-v3",
+  "state": "no-durable-report-no-diagnostic-credit",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-gcd-fib-construction-plan-v3.json",
+    "sha256": "cb0719694437e6ef87092bd2d4455e5e3a03eafd1bed97da808be6b4797b267c"
+  },
+  "execution": {
+    "importer_invocations": 1,
+    "proof_bearing_stream_reads": 1,
+    "completed_audit_documents": 0,
+    "stdout_bytes_observed": 0,
+    "retries": 0,
+    "theorem_submissions": 0,
+    "ledger_writes": 0
+  },
+  "measured": {
+    "blocker_paths": null,
+    "conclusion": "No durable report exists, so the run establishes no carrier identity."
+  },
+  "next_boundary": "Preregister the same audit with a bounded nearest-carrier JSON projection before one fresh read.",
+  "authority": {
+    "rendered_proof_terms": 0,
+    "rendered_theorem_types": 0,
+    "rendered_definition_bodies": 0,
+    "diagnostic_credit": 0,
+    "theorem_credit": 0,
+    "ledger_writes": 0
+  }
+}
