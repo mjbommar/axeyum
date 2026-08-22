@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-fib-construction-result-v8",
+  "state": "exact-support-identities-qualified-no-specialization",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-gcd-fib-construction-plan-v8.json",
+    "sha256": "ae7799165e839cae4c5ecd22d9bfc84dc9b29c2c0433fc0444b8e197a5f25bd5"
+  },
+  "measured_roots": [
+    {
+      "name": "Axeyum.Autogenesis.intFibNegativeEvenV1",
+      "declaration_sha256": "719bfe6684e7903a60c118dd261df37f10dc30372da9935589b9b4030301c9f0",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": [
+        "Axeyum.Autogenesis.intFibNegativeEvenAdapterV1",
+        "Int.fib_neg_natCast_presentation"
+      ]
+    },
+    {
+      "name": "Axeyum.Autogenesis.intFibNegativeOddV1",
+      "declaration_sha256": "fcfd9c8b21b97945fddfd59023f9f9ca2718796a1e41b0d9781ca0ee0f72919d",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": [
+        "Axeyum.Autogenesis.intFibNegativeOddAdapterV1",
+        "Int.fib_neg_natCast_presentation"
+      ]
+    },
+    {
+      "name": "Int.natAbs_neg",
+      "declaration_sha256": "5e699010815310a983c3ef94d450aa8fd66bb41ba4dd424d073ad552f13fc2a5",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": []
+    }
+  ],
+  "execution": {
+    "importer_runs": 2,
+    "proof_bearing_stream_reads": 2,
+    "completed_fresh_stdout_documents": 1,
+    "natabs_identity_corroborated_by_prior_immutable_audit": true,
+    "retries": 0,
+    "theorem_submissions": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "rendered_proof_terms": 0,
+    "rendered_theorem_types": 0,
+    "rendered_theorem_values": 0,
+    "support_identity_credit": 3,
+    "theorem_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  }
+}

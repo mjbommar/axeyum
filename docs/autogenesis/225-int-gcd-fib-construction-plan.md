@@ -100,3 +100,9 @@ instead of V1's 9,846,065, both fresh imports report no axioms, and the only
 direct theorem dependencies are clean `Eq.symm` and `congrArg`. Exact
 specialization remains separate and must bind all eight explicit contracts to
 already sealed clean roots.
+
+V8 binds the remaining support identities: both negative presentations and
+`Int.natAbs_neg` are empty-footprint. V9 freezes a five-stream exact
+composition, one conversion-only `intNatAbsOfNatV1` submission, and one
+specialization to `intFibNatAbsV1`. The expected result has exactly seven named
+theorem dependencies and still carries no `Int.gcd_fib` submission authority.

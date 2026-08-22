@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-fib-construction-plan-v9",
+  "state": "preregistered-before-exact-natabs-composition-driver",
+  "support_inventory": {
+    "path": "artifacts/autogenesis/mathlib-int-gcd-fib-construction-result-v8.json",
+    "sha256": "3153e6f87a716396007d1d0457e48d5131608e4cd7184cbce583542ac2445339"
+  },
+  "driver": {
+    "path": "crates/axeyum-lean-import/examples/int_fib_natabs_exact.rs",
+    "must_not_exist_before_plan": true,
+    "output": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-natabs-exact-v1/root.ndjson",
+    "output_must_not_preexist": true
+  },
+  "inputs": [
+    {
+      "role": "clean Int.fib and positive presentation base",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-clean-definition-v1/int-fib-clean.ndjson",
+      "sha256": "f0e34ecb1dff747938b7f1079c307af5f4e79e7a67e3bc514feee03e4f30656d"
+    },
+    {
+      "role": "negative-even and negative-odd presentations",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-natcast-decision-free-exact-v1/exact.ndjson",
+      "sha256": "6c803eff520a62d6925db5ed30f78714d9923281becfd78239cc28278bc9159f"
+    },
+    {
+      "role": "clean modulo-two cases",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-clean-parity-leaves-v4/roots.ndjson",
+      "sha256": "0e310823ba37adfbd9087c0da2f85ad57261228d601d9388800cf069b5b2ce82"
+    },
+    {
+      "role": "official clean natAbs-neg root",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-root-audit-v1/int-fib-neg.ndjson",
+      "sha256": "7df7f5dce9c7159f9c468b6f47f13be3e589fb2c1559af554ce73cc48b18730e"
+    },
+    {
+      "role": "function-abstracted residual",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-natabs-residual-v2/residual-1.ndjson",
+      "sha256": "03efd3c14aaac8cb610e72283e783dcf4fcf90bb223112a74b1058b0a05fe793"
+    }
+  ],
+  "composition_order": [
+    "start from clean Int.fib definition capsule",
+    "compose intFibNegativeEvenV1 and intFibNegativeOddV1",
+    "compose Axeyum.IntFib.modCases",
+    "compose Int.natAbs_neg",
+    "compose intFibNatAbsResidualV2",
+    "construct intNatAbsOfNatV1 by Eq.refl after conversion",
+    "specialize residual with Int.fib, Nat.fib, and six theorem arguments"
+  ],
+  "target": {
+    "name": "Axeyum.Autogenesis.intFibNatAbsV1",
+    "statement": "forall m : Int, (Int.fib m).natAbs = Nat.fib m.natAbs",
+    "expected_direct_theorem_dependencies": [
+      "Axeyum.Autogenesis.intFibNatAbsResidualV2",
+      "Axeyum.Autogenesis.intFibNegativeEvenV1",
+      "Axeyum.Autogenesis.intFibNegativeOddV1",
+      "Axeyum.Autogenesis.intNatAbsOfNatV1",
+      "Axeyum.IntFib.modCases",
+      "Int.fib_natCast",
+      "Int.natAbs_neg"
+    ]
+  },
+  "execution": {
+    "max_complete_invocations": 1,
+    "max_input_stream_reads": 5,
+    "max_composition_operations": 4,
+    "max_composition_replays": 4,
+    "max_support_theorem_submissions": 1,
+    "max_target_specializations": 1,
+    "max_target_specialization_replays": 1,
+    "max_target_exports": 1,
+    "required_fresh_imports": 2,
+    "max_retries": 0,
+    "max_ledger_writes": 0
+  },
+  "acceptance": {
+    "all_input_hashes_bound": true,
+    "target_axiom_footprint": [],
+    "exact_dependency_set": true,
+    "fresh_imports": 2,
+    "proof_terms_types_or_values_rendered": 0
+  },
+  "next_on_accept": "freeze exact Int.gcd_fib composition over this bridge, Int.gcd_def, and admitted Nat.fib_gcd"
+}
