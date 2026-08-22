@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-of-nonneg-support-audit-result-v1",
+  "state": "declined-candidate-support-absent-from-clean-definition-capsule",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-of-nonneg-support-audit-plan-v1.json",
+    "sha256": "a4e94727bf7b40361a78edc349e09d13b37a4bbdc7805c697c356c07c3b4e5f2"
+  },
+  "tool": {
+    "path": "crates/axeyum-lean-import/examples/theorem_goal_identity_audit.rs",
+    "sha256": "a2f09df135fba32b00edf1b7263343d388cf7725688116a4faafd72afe5d923b"
+  },
+  "input": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-clean-definition-v1/int-fib-clean.ndjson",
+    "bytes": 374550,
+    "sha256": "f0e34ecb1dff747938b7f1079c307af5f4e79e7a67e3bc514feee03e4f30656d"
+  },
+  "candidate_support": {
+    "name": "if_pos",
+    "verdict": "absent",
+    "diagnostic": "requested theorem is absent: if_pos"
+  },
+  "execution": {
+    "complete_invocations": 1,
+    "importer_runs": 1,
+    "stream_reads": 1,
+    "exit_status": 1,
+    "retries": 0,
+    "target_theorem_submissions": 0,
+    "exports": 0,
+    "ledger_writes": 0
+  },
+  "rendered_material": {
+    "proof_terms": 0,
+    "theorem_types": 0,
+    "theorem_values": 0
+  },
+  "authority": {
+    "theorem_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next": "preregister one pinned Lean core export of if_pos, audit its exact closure, and keep Int.fib_of_nonneg construction separately unauthorized"
+}
