@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-exact-execution-result-v13",
+  "state": "declined-after-compositions-at-free-variable-hypothesis-inference",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-exact-execution-plan-v13.json",
+    "sha256": "d1d0264295ec19c9a25adfb104b67be8f813ce039a9a8a432aa3b350cdd04064"
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/int_fib_dvd_exact.rs",
+    "sha256": "8c17371a667f57bf6ee60efac1342b1d2b83a04cf9c8bcb16f79591925c12ae8"
+  },
+  "diagnostic": {
+    "stage": "forward-hypothesis-domain-inference-before-target-submission",
+    "class": "UnboundFVar",
+    "free_variable_role": "one of the preregistered integer theorem binders m or n",
+    "correction": "construct Dvd.dvd Int Int.instDvd m n directly instead of asking infer outside a LocalContext",
+    "output_remains_absent": true
+  },
+  "execution": {
+    "driver_builds": 1,
+    "complete_invocations": 1,
+    "input_stream_reads": 4,
+    "composition_operations": 3,
+    "composition_replays": 3,
+    "target_theorem_submissions": 0,
+    "target_exports": 0,
+    "fresh_target_imports": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "composition_credit": 0,
+    "target_credit": 0,
+    "ledger_writes": 0
+  }
+}

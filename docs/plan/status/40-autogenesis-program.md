@@ -73,6 +73,7 @@
 | 2026-08-22 | (pending) | V12 freezes one complete, no-retry execution of the Clippy-clean exact driver: four reads, three checked compositions and replays, one target, one export, and two fresh imports |
 | 2026-08-22 | (pending) | V12 wrapper stops before driver launch because Clippy produced metadata but no runnable example binary; output stays absent and every proof-read, composition, target, and ledger counter remains zero |
 | 2026-08-22 | (pending) | V13 freezes one `cargo run` that includes the missing executable build and the unchanged four-input proof execution, with the same no-retry target and import budgets |
+| 2026-08-22 | (pending) | V13 reads all four capsules and replays three compositions, then declines before target submission because `infer` cannot type an open `m,n` hypothesis; output and ledger remain untouched |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
