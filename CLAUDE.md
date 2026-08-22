@@ -814,9 +814,18 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   *completed* to the coordinator — the task notification arrives with a
   no-content result and nothing indicates the work is done but unreported.
 
-  So, when briefing a subagent: tell it to run checks in the foreground with an
-  explicit bounded timeout, and to report partial results rather than hold them
-  for completeness. And note that prebuilt binaries under
+  **Telling it not to is not enough — measured 2026-08-22, a fourth lane stalled
+  after the brief explicitly said "foreground with bounded timeouts, report
+  partial results rather than holding them".** The instruction does not survive
+  contact with a slow gate: the agent reasons that one more check would make the
+  report complete, and a backgrounded check looks like the way to get it.
+
+  What does work is removing the temptation. Give the subagent the specific
+  bounded command to run and tell it that a check which did not complete is
+  reported as "did not run" — and point it at the prebuilt binaries under
+  `target/release/examples/`, which take no cargo lock, for everything that is
+  only a measurement. Better still, tell it not to measure at all and do the
+  measuring yourself: the coordinator has to re-verify the numbers anyway. And note that prebuilt binaries under
   `target/release/examples/` run directly, take no cargo lock at all, and are the
   right tool for measurement when several lanes are contending — a sweep that
   queues behind three other lanes is what tempts an agent to background it in the
