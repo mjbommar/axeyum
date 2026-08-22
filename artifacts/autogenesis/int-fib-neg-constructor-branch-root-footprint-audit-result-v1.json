@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-constructor-branch-root-footprint-audit-result",
+  "state": "both-selected-source-roots-propext-bearing-before-target-leaf-composition",
+  "plan": "artifacts/autogenesis/int-fib-neg-constructor-branch-root-footprint-audit-plan-v1.json",
+  "input": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-constructor-branches-v1/roots-1.ndjson",
+    "bytes": 9843378,
+    "sha256": "0803256ec044d9e3ce59d2fb33c0465f464c9ac754d85ac471410adb8502f060",
+    "stream_axioms": ["Classical.choice", "Quot.sound", "propext"]
+  },
+  "roots": [
+    {
+      "name": "Axeyum.Autogenesis.intFibNegPositiveBranchResidualV1",
+      "declaration_sha256": "2e795f93c16c2106424ae46804c77107dd4796d14552b3eff7d188086533d711",
+      "class": "propext-bearing",
+      "axiom_footprint": ["Classical.choice", "Lean.opaqueId", "Quot", "Quot.lift", "Quot.mk", "Quot.sound", "String.Internal.append", "propext"]
+    },
+    {
+      "name": "Axeyum.Autogenesis.intFibNegNegativeBranchResidualV1",
+      "declaration_sha256": "1f46603078c88099664b64cb13726b8c606e9072ba8a9070c5270bcb68fd3b48",
+      "class": "propext-bearing",
+      "axiom_footprint": ["Classical.choice", "Lean.opaqueId", "Quot", "Quot.lift", "Quot.mk", "Quot.sound", "String.Internal.append", "propext"]
+    }
+  ],
+  "shared_direct_theorem_dependencies": ["Eq.symm", "Eq.trans", "Iff.mp", "Iff.mpr", "Nat.zero_ne_one", "congrArg", "if_neg", "if_pos"],
+  "execution": {
+    "stream_reads": 1,
+    "root_audits": 2,
+    "composition_operations": 0,
+    "specialization_operations": 0,
+    "capsule_writes": 0,
+    "ledger_writes": 0,
+    "retries": 0
+  },
+  "credit": "source-root contamination localized; no clean theorem credit",
+  "diagnosis": "The source residuals capture the official Even decision closure. That is the closure the already-planned checked target-leaf composition is intended to rebuild over clean Int.even_iff; source cleanliness is therefore the wrong precondition.",
+  "next": "Bind both source-root identities, require clean Int.even_iff in the destination, and require empty footprints only after checked target-leaf composition."
+}

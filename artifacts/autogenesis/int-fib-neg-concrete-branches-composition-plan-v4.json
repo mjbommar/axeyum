@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-concrete-branches-composition-plan",
+  "state": "preregistered-route-specific-source-identity-and-post-composition-assurance",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-fib-neg-constructor-branch-root-footprint-audit-result-v1.json",
+    "required_state": "both-selected-source-roots-propext-bearing-before-target-leaf-composition"
+  },
+  "change_from_v3": "Do not require the entire residual stream to be axiom-free. Bind the exact identities of both selected contaminated source roots, perform the already-planned checked target-leaf replacement of Int.even_iff, then require both composed residual roots and both specialized concrete roots to be empty-footprint.",
+  "source_roots": [
+    {"name": "Axeyum.Autogenesis.intFibNegPositiveBranchResidualV1", "declaration_sha256": "2e795f93c16c2106424ae46804c77107dd4796d14552b3eff7d188086533d711"},
+    {"name": "Axeyum.Autogenesis.intFibNegNegativeBranchResidualV1", "declaration_sha256": "1f46603078c88099664b64cb13726b8c606e9072ba8a9070c5270bcb68fd3b48"}
+  ],
+  "clean_target_leaf": {"name": "Int.even_iff", "declaration_sha256": "6ec4a6f5577bc3602d13ff02907469045f0987323f6f9f84f8c4b7b23c243c13", "axiom_footprint": []},
+  "required_postconditions": [
+    "checked target-leaf composition and receipt replay succeed",
+    "both composed residual roots have empty axiom footprints",
+    "both specialization receipts replay",
+    "both concrete roots have empty axiom footprints",
+    "one root capsule exports and imports freshly twice with unchanged evidence"
+  ],
+  "budget": {"complete_invocations": 1, "retries": 0, "ledger_writes": 0},
+  "stop_rule": "Any identity, target-leaf, composition, replay, specialization, footprint, export, or fresh-import failure stops without retry or ledger authority.",
+  "output": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-concrete-branches-v1/roots.ndjson",
+  "next_on_accept": "Specialize the clean function-level outer residual with Int.fib and these two exact concrete branches."
+}
