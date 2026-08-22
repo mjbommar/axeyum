@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-iff-residual-plan",
+  "state": "preregistered-before-source-construction",
+  "predecessor": {"path": "artifacts/autogenesis/int-even-iff-dependency-audit-result-v1.json", "required_state": "exact-even-equivalence-assumption-bearing-two-direction-factorization-selected"},
+  "contract": {
+    "forward": "forall n : Int, Even n -> n % 2 = 0",
+    "backward": "forall n : Int, n % 2 = 0 -> Even n",
+    "result": "forall n : Int, Even n iff n % 2 = 0"
+  },
+  "proof_route": "lambda over n returning Iff.intro of the two injected directions; no simp, private theorem, decision instance, or official Int.even_iff use",
+  "source": "artifacts/autogenesis/sources/int-even-iff-residual-v1.lean",
+  "budget": {"source_constructions": 1, "compilations": 1, "exports": 2, "footprint_audits": 1, "exact_target_submissions": 0, "retries": 0, "ledger_writes": 0},
+  "acceptance": {"exports_byte_identical": true, "axiom_footprint": [], "direct_theorem_dependencies": [], "proof_terms_types_or_values_may_be_rendered": false},
+  "next_on_accept": "Qualify the forward direction from even witnesses and clean modulo multiplication, then the backward direction from explicit quotient witnesses.",
+  "limitations": "The residual is support-only and cannot replace Int.even_iff until both arithmetic directions are cleanly specialized."
+}
