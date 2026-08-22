@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-witness-transport-export-result-v9",
+  "state": "two-direct-witness-transports-reproduced-empty-footprint-and-sealed",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-witness-transport-export-plan-v9.json",
+    "sha256": "70bd07b8078ee0c5868f55cd7cd6a3ac268c0e5ff3e92ce4dc43c24b1b4e03d8"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-dvd-natabs-witness-transport-v1",
+    "manifest_sha256": "1903848769db7471818b6a64cd4e665ca4c8ccddcb24903893d41ef71be081e6",
+    "directory_mode": "0555",
+    "file_mode": "0444",
+    "root_bytes": 131025,
+    "root_sha256": "66faaafc0b7a34267d22427cd968fe3649e31cae3dcf9b87c56ab3db83004bc6",
+    "replay_sha256": "66faaafc0b7a34267d22427cd968fe3649e31cae3dcf9b87c56ab3db83004bc6",
+    "audit_sha256": "c3c319bf67e0857cc68fe9bc06c9a8397adee35f0bdef899af9aa8a60ecd8f56"
+  },
+  "roots": [
+    {
+      "name": "Axeyum.Autogenesis.intNatAbsDvdForwardResidualV1",
+      "declaration_sha256": "d542789b57420405457285516702575360ce7f9a4c8ba45d2e78319f27d74e26",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": ["Eq.symm"]
+    },
+    {
+      "name": "Axeyum.Autogenesis.intDvdOfNatAbsDvdDirectV1",
+      "declaration_sha256": "9da5f612a874815dd7aaed32791eb6636da801a1054884937ad0ff477c8ba319",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": ["Eq.symm", "congrArg", "noConfusion_of_Nat"]
+    }
+  ],
+  "execution": {
+    "staging_source_writes": 1,
+    "module_compiles": 1,
+    "exporter_invocations": 2,
+    "root_stream_writes": 2,
+    "importer_runs": 2,
+    "exports_byte_identical": true,
+    "imports_byte_identical": true,
+    "staging_paths_removed": true,
+    "retries": 0,
+    "target_fib_dvd_submissions": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "transport_theorem_credit": 2,
+    "target_fib_dvd_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "specialize the forward residual with sealed intNatAbsMulDirectV1 and compose exact Int.fib_dvd"
+}
