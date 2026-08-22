@@ -48,6 +48,7 @@
 | 2026-08-22 | (pending) | Exact `Int.fib_gcd` sealed-capsule execution is registered through typed frontier, execution, transaction, and replay machinery with four fixed dependencies and zero ledger writes so far |
 | 2026-08-22 | (pending) | Exit-75 intent fault leaves `Int.fib_gcd` unchanged; recovery performs exactly one ledger write, its settled checker passes, and the measured readiness delta is empty as preregistered |
 | 2026-08-22 | (pending) | Isolated clean replay `400c8829…3d72` independently repeats selection, certified execution, exit-75 recovery, one write, and the exact empty readiness delta |
+| 2026-08-22 | (pending) | Next collision-free foundation is `Int.fib_dvd`; one pinned v4.30 root export of core `Int.natAbs_dvd_natAbs` is frozen before reading support bytes or constructing the target |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
