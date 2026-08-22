@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-direct-natabs-mul-result-v3",
+  "state": "declined-at-two-cross-sign-definitional-equality-branches",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-direct-natabs-mul-plan-v3.json",
+    "sha256": "bc7f9c203886c6b22bdb2aa50804d7d5bb94638684585915c244775e54dd4d46"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-natabs-mul-direct-v1.lean",
+    "sha256": "288d6d4ae90f0b943bdf5270e4678b0c48044c645a9189a07c9b1afca5622ddd",
+    "forbidden_dependency_mentions": 0
+  },
+  "diagnostic": {
+    "accepted_branches": ["ofNat.ofNat", "negSucc.negSucc"],
+    "rejected_branches": ["ofNat.negSucc", "negSucc.ofNat"],
+    "common_residual": "natAbs (Int.negOfNat n) = n",
+    "class": "not-definitionally-equal",
+    "compiler_exit_status": 1
+  },
+  "execution": {
+    "source_writes": 1,
+    "staging_copy_failures_before_compiler": 1,
+    "compile_invocations": 1,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "retries": 0,
+    "target_fib_dvd_submissions": 0,
+    "ledger_writes": 0
+  },
+  "decision": {
+    "target_credit": 0,
+    "next_boundary": "prove natAbs (Int.negOfNat n) = n by Nat constructor cases and use it only in the two cross-sign branches"
+  }
+}
