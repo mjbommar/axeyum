@@ -246,6 +246,7 @@ compounding, not automation theatre.
 | [Bounded-model screen coverage](234-bounded-model-screen-coverage.md) | A screen for undiscovered false statements reached 7% of the population; the `CANNOT_EVALUATE` count, not the counterexample count, is the finding. |
 | [`congrArg`/`congr`/`mt` substitution result](235-congrarg-congr-mt-substitution-result.md) | All three are now self-derived from `Eq.rec` and never trusted — and the census is unchanged, because doc 233 measured the FIRST blocker per row, not the closure. |
 | [The real adapter closure and what it costs](236-the-real-adapter-closure-and-what-it-costs.md) | Median 86 trusted theorems per statement, 1,615 distinct; a greedy curve showing 200 theorems buys 75% of the population and the last 28 rows cost 1,400 more. |
+| [Foundations progress and the generated blockers](237-foundations-progress-and-the-generated-blockers.md) | Twenty-one Nat lemmas moved top-50 coverage 8 → 28; what remains is kernel-generated, not hand-provable. |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
