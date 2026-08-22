@@ -78,6 +78,81 @@
 //! the step case — silently building an ILL-TYPED term that only the FINAL
 //! kernel re-check caught, turning a declinable shape mismatch into a hard
 //! kernel rejection of the whole candidate instead of a clean decline.
+//!
+//! ## Case-split elimination and diagonal generalization
+//!
+//! [`Search::try_case_split_elimination`] supplies the genuine case split
+//! the previous section named: for a stuck goal it looks for a retained
+//! hypothesis whose type unfolds to a [`LeShape`]-shaped family at a
+//! SUCC-shaped (not zero-shaped) index, and consumes both of that family's
+//! constructors — the "at-param" branch recovers `n = k'` (via the family's
+//! `refl` shape) and transports a proof of the goal's own predecessor
+//! instance along it; the "step" branch recovers a strictly smaller
+//! instance of the outer family and re-applies whichever induction
+//! hypothesis was stuck waiting for exactly that predecessor
+//! ([`Search::stuck_hyps`]). This closes `descFactorial_of_lt`'s step case
+//! down to needing `n - n = 0` at the `n = k'` branch, exactly as
+//! diagnosed — and does so as its own nested, budget-sharing proof
+//! obligation, not a corollary of absurd elimination.
+//!
+//! `Nat.sub_self` itself needs two further, independently-motivated
+//! generalizations of the residual mechanism, because its own step case is
+//! NOT a single congruence rewrite: `succ n' - succ n' = 0` from IH `n' -
+//! n' = 0` has no occurrence of the IH's LHS anywhere in the goal's
+//! reduced form at all (`Nat.sub` recurses on its SECOND argument, so
+//! `succ n' - succ n'` unfolds to `pred (succ n' - n')` — a term about
+//! `succ n'`, never `n'` alone).
+//!
+//! - [`Search::try_split_congruence`] closes the gap this leaves in
+//!   [`Search::try_residual_lemma`]: when a congruence wrap's residual
+//!   `Eq(candidate, expected)` has the SAME head applied to the SAME
+//!   arguments on both sides but collapsed onto ONE occurrence site (`n' -
+//!   n'` vs `succ n' - succ n'` — the same `n'` at every position), the
+//!   existing narrowing can only re-pose the identical diagonal goal one
+//!   level down, self-similar under induction and never simpler.
+//!   Generalizing the two occurrence SITES independently, rather than by
+//!   shared free-variable identity, poses the STRICTLY MORE GENERAL `∀ n m,
+//!   n - m = succ n - succ m` — provable by ordinary induction on `m` alone
+//!   (`n` stays fixed) — and re-specializing both fresh variables back to
+//!   the one original value closes the specific diagonal instance. Always
+//!   sound: the general statement is independently kernel-checked before
+//!   ever being instantiated, so an attempted split that happens to be
+//!   FALSE (e.g. `descFactorial y0 y1 = descFactorial (succ y0) (succ
+//!   y1)`, tried and declined when this fires from an unrelated degenerate
+//!   match) simply fails to prove, never fabricates a wrong witness.
+//! - [`Search::try_absorbing_argument`] supplies the hypothesis-INDEPENDENT
+//!   half: once `n - n = 0` and `0 * x = 0` are each real but unrelated
+//!   facts, closing `(succ q - succ q) * descFactorial (succ q) (succ q) =
+//!   0` needs BOTH chained by congruence with NEITHER ever occurring in the
+//!   induction hypothesis at all (the recursive call's own first argument
+//!   has already moved past it) — a shape the single IH-driven rewrite in
+//!   [`Search::try_congr_rewrite`] cannot reach regardless of how the
+//!   residual it poses is generalized. It tries each top-level argument
+//!   position of the goal's own (WHNF-reduced) application spine as an
+//!   independent target for `Eq(arg, goal.rhs)`, and on success asks for
+//!   the OPERATOR's plain fact about every OTHER position generalized to a
+//!   fresh, opaque variable — `0 * x = 0`, never `0 * (this specific
+//!   term's other operand) = 0`.
+//!
+//! Measured 2026-08-22 against `F:ml430-nat-descfactorial-of-lt-fbcf5d26`
+//! (`∀ n k, n < k -> descFactorial n k = 0`): both new mechanisms close
+//! their own instances — `n - n = 0` (with the `∀ n m, n - m = succ n -
+//! succ m` generalization proved en route) and, separately, `0 - x = 0` via
+//! `try_absorbing_argument` — but the theorem as a whole still declines.
+//! The remaining gap is precise and NOT a budget shortfall: once `succ q -
+//! succ q = 0` closes the first factor, the second half of the chain needs
+//! `0 * descFactorial (succ q) (succ q) = 0`, and this kernel compiles
+//! `descFactorial`'s course-of-values recursion so that WHNF-reducing the
+//! goal to expose that multiplication's SECOND operand as a separable
+//! top-level argument requires ALSO forcing the (still `succ q`-generic,
+//! un-inducted) recursive value's own `brecOn`/`below` structure — which
+//! entangles the operand with the very `q` this producer is still
+//! generalizing, so [`Search::generalize_opaque_operands`]'s re-`whnf`
+//! attempt reproduces the SAME entangled expression rather than a clean
+//! `HMul.hMul 0 B`. Separating that operand without already knowing
+//! `descFactorial`'s specific recursive shape needs a genuinely different
+//! introspection strategy than WHNF-then-`app_spine`, and is not
+//! implemented here.
 
 use std::collections::BTreeSet;
 
@@ -87,7 +162,7 @@ use axeyum_lean_kernel::{
 
 /// Maximum number of leading `Pi` binders this producer will peel (shared
 /// budget across plain generalization and structural induction).
-pub const MAX_BINDERS: usize = 8;
+pub const MAX_BINDERS: usize = 12;
 
 /// Maximum number of structural inductions this producer will perform while
 /// building one candidate. Bounded so the search cannot recurse without limit
@@ -104,7 +179,58 @@ pub const MAX_INDUCTIONS: usize = 2;
 /// and proved via a nested, budget-sharing call to [`Search::attempt`] —
 /// this bounds how many such side quests one derivation may spawn, so the
 /// capability cannot turn a single decline into unbounded extra search.
-pub const MAX_RESIDUAL_LEMMAS: usize = 4;
+pub const MAX_RESIDUAL_LEMMAS: usize = 300;
+
+/// Minimum number of structural inductions guaranteed to a nested residual
+/// proof ([`Search::prove_universal_identity_with`]'s own call to
+/// [`Search::attempt`]), regardless of how much of the OUTER derivation's
+/// shared [`MAX_INDUCTIONS`] budget is already "in flight" — permanently
+/// consumed for as long as the successful outer branch that used it keeps
+/// executing (`Search::attempt`'s Pi-branch only ever releases a consumed
+/// induction slot when `try_induction` returns `Err`, i.e. on backtrack; a
+/// SUCCESSFUL outer induction several levels up keeps its slot spent for
+/// every nested call made while it is still on the stack). A residual lemma
+/// is a self-contained side quest about a DIFFERENT statement than whatever
+/// the outer derivation is proving, so its own single induction should not
+/// be hostage to how deep the outer derivation happened to nest before
+/// asking for it: closing `Nat.sub_self` as a residual three inductions deep
+/// into an unrelated derivation needs exactly one induction of its own,
+/// no matter how many the surrounding context already spent. Applied as a
+/// FLOOR (`.max`), never a reduction — a healthy outer budget is never made
+/// worse by this constant, and the boosted amount is always restored to
+/// its exact pre-boost value afterward, so it can never leak into a SIBLING
+/// call the way a permanent bump to [`MAX_INDUCTIONS`] itself would.
+const MIN_RESIDUAL_INDUCTIONS: usize = 1;
+
+/// As [`MIN_RESIDUAL_INDUCTIONS`], for [`MAX_BINDERS`]: a residual goal
+/// needs enough leading `Pi`s peeled to reach its own induction variable
+/// and close the base/step goals that induction produces (each of which may
+/// itself carry a further ordinary hypothesis binder, e.g. a case split's
+/// own recovered equality).
+const MIN_RESIDUAL_BINDERS: usize = 4;
+
+/// Maximum nesting depth of [`Search::prove_universal_identity_with`] calls
+/// ([`Search::residual_depth`]). This is a DEPTH bound, deliberately
+/// separate from [`MAX_RESIDUAL_LEMMAS`]'s COUNT bound: the
+/// [`MIN_RESIDUAL_INDUCTIONS`]/[`MIN_RESIDUAL_BINDERS`] floors mean a
+/// residual attempt that would otherwise decline immediately (no budget
+/// left to induct) now gets just enough rope to try its own induction and
+/// pose a FURTHER nested residual from its own stuck step case — sound
+/// either way (nothing is accepted without the kernel re-checking it), but
+/// an unproductive chain of these (e.g. repeatedly re-deriving a false
+/// shifted-argument identity) can still be within `MAX_RESIDUAL_LEMMAS`'s
+/// total-count budget while nesting the native call stack (`attempt` ->
+/// `try_induction` -> `attempt` -> `close_terminal` -> `try_congr_rewrite`
+/// -> `try_residual_lemma` -> `prove_universal_identity_with` -> `attempt`
+/// -> …) far enough to overflow it — measured directly: without this bound,
+/// closing `F:ml430-nat-descfactorial-of-lt-fbcf5d26` crashed with a stack
+/// overflow. Six is enough for the deepest CORRECT chain this producer
+/// needs (case-split's own predecessor proof, nested inside which is the
+/// absorbing-argument split, nested inside which is the sub-self instance,
+/// nested inside which is the split-congruence generalization) with one
+/// level of slack; exhausting it is an ordinary decline, never a hang or a
+/// crash.
+const MAX_RESIDUAL_CHAIN_DEPTH: usize = 6;
 
 /// First free-variable id this producer mints. Chosen far above anything an
 /// import stream or the kernel's own `LocalContext` would use, so this
@@ -180,6 +306,49 @@ fn app_spine(kernel: &Kernel, mut expression: ExprId) -> (ExprId, Vec<ExprId>) {
     }
     arguments.reverse();
     (expression, arguments)
+}
+
+/// Maximum number of beta-reduction steps [`beta_whnf`] will perform.
+/// Generous but finite — the only thing it ever reduces is a literal
+/// `(fun x => body) arg` redex left behind by this producer's own
+/// congruence wraps, which cannot chain more than a handful deep.
+const MAX_BETA_STEPS: usize = 64;
+
+/// Reduce `e` at its head by BETA ALONE, repeatedly, never unfolding any
+/// constant's own definition — unlike [`Kernel::whnf`], which aggressively
+/// delta/iota-unfolds through a STUCK recursive definition (e.g. `Nat.sub`
+/// applied to a non-literal argument) even though doing so cannot make
+/// progress toward a literal constructor, because whnf's job is "reduce as
+/// far as possible", not "reduce only if it helps."
+///
+/// That distinction matters for [`Search::try_split_congruence`]: given
+/// `candidate = (fun x0 => x0) (n - n)` and `expected = succ n - succ n`,
+/// `Kernel::whnf` unfolds `n - n` (stuck on the generic `n`) all the way
+/// into its raw `brecOn`/`below` recursor encoding, while `succ n - succ n`
+/// unfolds ONE further iota step (its outer argument IS literally
+/// `succ`-shaped) into a DIFFERENT recursor-encoded shape — so the two
+/// sides never end up sharing a comparable head/arity, even though the
+/// ORIGINAL, unreduced applications (`HSub.hSub … n n` vs `HSub.hSub …
+/// (succ n) (succ n)`) obviously do. Reducing by beta only leaves the
+/// `HSub.hSub` application spine completely intact on both sides — it only
+/// ever strips the congruence wrap's own identity/name lambda — so
+/// `app_spine` sees the same head and arity it would see on the source
+/// term directly.
+fn beta_whnf(kernel: &mut Kernel, mut e: ExprId) -> ExprId {
+    let mut budget = MAX_BETA_STEPS;
+    loop {
+        if budget == 0 {
+            return e;
+        }
+        budget -= 1;
+        let ExprNode::App(f, a) = kernel.expr_node(e).clone() else {
+            return e;
+        };
+        let ExprNode::Lam(_, _, body, _) = kernel.expr_node(f).clone() else {
+            return e;
+        };
+        e = kernel.instantiate(body, &[a]);
+    }
 }
 
 /// Maximum number of sub-expression nodes [`kabstract_occurrences`] will
@@ -822,6 +991,21 @@ struct Search {
     /// of — [`MAX_BINDERS`]/[`MAX_INDUCTIONS`], which the residual attempt
     /// also shares and is bound by.
     residual_budget: usize,
+    /// Current nesting depth of [`Search::prove_universal_identity_with`]
+    /// calls — incremented on entry, decremented on exit regardless of
+    /// outcome. Distinct from [`Search::residual_budget`], which bounds the
+    /// TOTAL number of residual attempts across the whole derivation but
+    /// not how deep any one CHAIN of them nests: the [`MIN_RESIDUAL_…`]
+    /// floors guarantee every residual its own minimum induction/binder
+    /// capability regardless of how exhausted the outer derivation's shared
+    /// budget already is, which is exactly what lets an unproductive
+    /// recursive chain (e.g. repeatedly re-posing a false auxiliary
+    /// statement that itself induces yet another residual) keep making
+    /// just enough apparent progress to recurse again — bounded in COUNT by
+    /// `residual_budget`, but not in native call-stack DEPTH, and a bounded
+    /// count reached through unbounded depth still overflows the stack.
+    /// [`Search::MAX_RESIDUAL_CHAIN_DEPTH`] bounds depth directly.
+    residual_depth: usize,
     /// Every ordinary (non-induction) Pi-bound hypothesis introduced along
     /// the CURRENT derivation path: `(free variable, its type)`. Pushed by
     /// the plain-generalization branch of [`Search::attempt`] right before
@@ -910,6 +1094,9 @@ impl Search {
             return self
                 .try_absurd_elimination(kernel, target)
                 .or_else(|| self.try_case_split_elimination(kernel, goal))
+                .or_else(|| {
+                    self.try_absorbing_argument(kernel, goal, std::env::var("BIS_DEBUG").is_ok())
+                })
                 .ok_or(DeclineReason::TerminalNotDefEqNoRewrite);
         };
         // Try deriving the rewrite "wrap" `f` by abstracting every occurrence
@@ -973,6 +1160,7 @@ impl Search {
         );
         self.try_absurd_elimination(kernel, target)
             .or_else(|| self.try_case_split_elimination(kernel, goal))
+            .or_else(|| self.try_absorbing_argument(kernel, goal, debug))
             .ok_or(DeclineReason::TerminalNotDefEqNoRewrite)
     }
 
@@ -1525,6 +1713,7 @@ impl Search {
             p_at_k_pred_goal.carrier,
             p_at_k_pred_goal.lhs,
             p_at_k_pred_goal.rhs,
+            false,
             debug,
         );
         if let Some(pos) = removed_at {
@@ -1756,6 +1945,291 @@ impl Search {
         Some(applied)
     }
 
+    /// Maximum number of top-level argument positions of the WHNF-reduced
+    /// goal LHS's application spine [`Search::try_absorbing_argument`] will
+    /// try as an independent, hypothesis-free rewrite target. Ordinary
+    /// arithmetic operators are binary (once typeclass/instance arguments
+    /// are counted too), so this is a generous, still-finite ceiling.
+    const MAX_ABSORB_ARGS: usize = 8;
+
+    /// Rebuild `expr`'s own top-level application spine, generalizing every
+    /// argument position of carrier type `carrier` that is NOT (up to
+    /// `def_eq`) `fixed_value` to a fresh, OPAQUE variable — never
+    /// decomposing an argument's own internal structure, and never
+    /// generalizing `fixed_value` itself (the value
+    /// [`Search::try_absorbing_argument`] just proved some other position
+    /// equals, e.g. the literal `0` a subtraction was rewritten to; treating
+    /// it as opaque too would ask for the operator's identity to hold at
+    /// EVERY value there, not just the one already established).
+    ///
+    /// Returns the rebuilt expression (using the fresh variables) alongside
+    /// the map from each fresh variable back to the ORIGINAL argument it
+    /// replaced, in the exact shape
+    /// [`Search::prove_universal_identity_with`]'s `reinstantiate_as`
+    /// expects. An argument whose type cannot be inferred, or is not
+    /// `carrier`-typed, is left untouched (literal) — still sound, only
+    /// loses generality if that literal form is not itself provable.
+    fn generalize_opaque_operands(
+        &mut self,
+        kernel: &mut Kernel,
+        carrier: ExprId,
+        fixed_value: ExprId,
+        expr: ExprId,
+        local_ctx: &mut LocalContext,
+    ) -> (ExprId, std::collections::BTreeMap<u64, ExprId>) {
+        let (head, args) = app_spine(kernel, expr);
+        let mut reinstantiate_as = std::collections::BTreeMap::new();
+        let mut rebuilt = head;
+        for arg in &args {
+            if kernel.def_eq(*arg, fixed_value) {
+                rebuilt = kernel.app(rebuilt, *arg);
+                continue;
+            }
+            let generalized = match kernel.infer_in(*arg, local_ctx) {
+                Ok(ty) if kernel.def_eq(ty, carrier) => {
+                    let fresh = self.fresh_fvar_typed(ty);
+                    reinstantiate_as.insert(fresh, *arg);
+                    Some(kernel.fvar(fresh))
+                }
+                _ => None,
+            };
+            rebuilt = kernel.app(rebuilt, generalized.unwrap_or(*arg));
+        }
+        (rebuilt, reinstantiate_as)
+    }
+
+    /// Close a terminal `Eq(goal.lhs, goal.rhs)` when the induction
+    /// hypothesis is no help at all — not even through the degenerate match
+    /// [`Search::try_congr_rewrite`] takes when the hypothesis's own RHS
+    /// happens to equal `goal.rhs` — because the fact actually needed has
+    /// NOTHING to do with the induction currently in progress.
+    ///
+    /// `(succ q - succ q) * descFactorial (succ q) (succ q) = 0` is exactly
+    /// this shape: the induction hypothesis (`descFactorial q (succ q) =
+    /// 0`) never occurs in the goal at all (the recursive call's own first
+    /// argument has already moved on to `succ q`), yet the goal is true via
+    /// TWO facts that are each independent of that induction — `succ q -
+    /// succ q = 0` and `0 * x = 0` — chained by ordinary congruence.
+    ///
+    /// Tries each top-level argument position `i` of the WHNF-reduced
+    /// `goal.lhs`'s application spine, in turn: if `Eq(arg_i, goal.rhs)` is
+    /// itself provable via a nested, hypothesis-INDEPENDENT
+    /// [`Search::prove_universal_identity`] call (its own bounded,
+    /// budget-sharing side quest — this is where `succ q - succ q = 0`
+    /// gets proved, with no reference to the surrounding multiplication),
+    /// the remaining gap is `Eq(head(..., goal.rhs, ...), goal.rhs)` — the
+    /// SAME operator with position `i` now fixed at the target value and
+    /// every OTHER top-level argument position generalized to a fresh,
+    /// OPAQUE variable (never decomposed further), so what gets asked for
+    /// is the plain operator fact (`0 * x = 0`), never a claim tied to
+    /// whatever this specific term's other argument happens to be built
+    /// from (`0 * descFactorial n n = 0`, which is not simpler and may not
+    /// even be true of the general shape reached by re-deriving it). Both
+    /// steps chain via `Eq.trans`.
+    #[allow(clippy::too_many_lines)]
+    fn try_absorbing_argument(
+        &mut self,
+        kernel: &mut Kernel,
+        goal: EqGoal,
+        debug: bool,
+    ) -> Option<ExprId> {
+        let lhs_whnf = kernel.whnf(goal.lhs);
+        let (head, args) = app_spine(kernel, lhs_whnf);
+        if args.is_empty() || args.len() > Self::MAX_ABSORB_ARGS {
+            return None;
+        }
+        let anon = kernel.anon();
+        let mut local_ctx = LocalContext::new();
+        for (&fv, &ty) in &self.fvar_types {
+            local_ctx.push(LocalDecl {
+                fvar: fv,
+                name: anon,
+                ty,
+                info: BinderInfo::Default,
+            });
+        }
+        for i in 0..args.len() {
+            let Ok(arg_ty) = kernel.infer_in(args[i], &mut local_ctx) else {
+                continue;
+            };
+            if !kernel.def_eq(arg_ty, goal.carrier) {
+                continue;
+            }
+            // Position `i` itself must already be def_eq to `goal.rhs`, or
+            // this whole path is pointless -- skip straight past the
+            // (budget-consuming) nested proof attempt in that case.
+            if kernel.def_eq(args[i], goal.rhs) {
+                continue;
+            }
+            let placeholder_fv = self.fresh_fvar();
+            let placeholder = kernel.fvar(placeholder_fv);
+            let mut kb = MAX_KABSTRACT_NODES;
+            let (replaced, found) =
+                kabstract_occurrences(kernel, lhs_whnf, args[i], placeholder, &mut kb);
+            if !found {
+                continue;
+            }
+            let Some(arg_eq_target) = self.prove_universal_identity(
+                kernel,
+                goal.level,
+                goal.carrier,
+                args[i],
+                goal.rhs,
+                true,
+                debug,
+            ) else {
+                continue;
+            };
+            if debug {
+                eprintln!(
+                    "  [absorb] position {i}: {} = {} proved",
+                    kernel.render_lean(args[i]),
+                    kernel.render_lean(goal.rhs)
+                );
+            }
+            let abstracted = kernel.abstract_fvars(replaced, &[placeholder_fv]);
+            let g = kernel.lam(anon, arg_ty, abstracted, BinderInfo::Default);
+            let step1 = self.build_congr_arg(
+                kernel,
+                g,
+                goal.level,
+                goal.carrier,
+                goal.level,
+                goal.carrier,
+                args[i],
+                goal.rhs,
+                arg_eq_target,
+            );
+            let mid = kernel.app(g, goal.rhs);
+
+            // Build `head(..., goal.rhs at i, ..., untouched elsewhere)`
+            // literally, THEN re-`whnf` it before looking for other
+            // argument positions to generalize — never the other way
+            // around. Fixing position `i` at a LITERAL value can unlock
+            // further beta/iota reduction this producer could not see
+            // before (a course-of-values `brecOn` step function applied to
+            // the now-concrete `goal.rhs` reduces into its own body, which
+            // is where an operator like multiplication's SECOND operand
+            // first appears as a genuine, separable argument rather than
+            // being buried inside the unevaluated continuation) — acting on
+            // the ORIGINAL `args` positions from `lhs_whnf` alone would
+            // keep treating that still-fused operand as opaque, unable to
+            // recognize `0 * x = 0` as a plain fact about `HMul.hMul`, ever
+            // reduced to `0 * descFactorial …`, one fixed shape at a time.
+            let mut lhs_after_literal = head;
+            for (j, arg) in args.iter().enumerate() {
+                lhs_after_literal =
+                    kernel.app(lhs_after_literal, if j == i { goal.rhs } else { *arg });
+            }
+            let lhs_after_whnf = kernel.whnf(lhs_after_literal);
+            if debug {
+                let literal_s = kernel.render_lean(lhs_after_literal);
+                let whnf_s = kernel.render_lean(lhs_after_whnf);
+                eprintln!(
+                    "  [absorb-remainder] literal={literal_s} whnf={whnf_s} changed={}",
+                    literal_s != whnf_s
+                );
+            }
+            let (lhs_after, reinstantiate_as) = self.generalize_opaque_operands(
+                kernel,
+                goal.carrier,
+                goal.rhs,
+                lhs_after_whnf,
+                &mut local_ctx,
+            );
+            if debug {
+                eprintln!(
+                    "  [absorb-remainder] rebuilt={} other_positions={}",
+                    kernel.render_lean(lhs_after),
+                    reinstantiate_as.len()
+                );
+            }
+            let remainder = if reinstantiate_as.is_empty() {
+                if kernel.def_eq(lhs_after, goal.rhs) {
+                    Some(build_eq_refl(
+                        kernel,
+                        self.eqp_refl,
+                        goal.level,
+                        goal.carrier,
+                        goal.rhs,
+                    ))
+                } else {
+                    self.prove_universal_identity(
+                        kernel,
+                        goal.level,
+                        goal.carrier,
+                        lhs_after,
+                        goal.rhs,
+                        true,
+                        debug,
+                    )
+                }
+            } else {
+                self.prove_universal_identity_with(
+                    kernel,
+                    goal.level,
+                    goal.carrier,
+                    lhs_after,
+                    goal.rhs,
+                    &reinstantiate_as,
+                    true,
+                    debug,
+                )
+            };
+            let Some(remainder_proof) = remainder else {
+                if debug {
+                    eprintln!("  [absorb] position {i}: remainder FAILED");
+                }
+                continue;
+            };
+            let result = self.build_eq_trans(
+                kernel,
+                goal.level,
+                goal.carrier,
+                lhs_whnf,
+                mid,
+                goal.rhs,
+                step1,
+                remainder_proof,
+            );
+            // Independently confirm the inferred type before returning —
+            // same discipline as `try_absurd_from_hypothesis` and
+            // `try_case_split_from_hypothesis`: a malformed candidate
+            // declines here, never reaches the caller's `add_declaration`.
+            let target = build_eq(
+                kernel,
+                self.eqp_eq,
+                goal.level,
+                goal.carrier,
+                goal.lhs,
+                goal.rhs,
+            );
+            match kernel.infer_in(result, &mut local_ctx) {
+                Ok(inferred) if kernel.def_eq(inferred, target) => {
+                    if debug {
+                        eprintln!("  [absorb] position {i}: SUCCESS");
+                    }
+                    return Some(result);
+                }
+                Ok(inferred) => {
+                    if debug {
+                        eprintln!(
+                            "  [absorb] position {i}: inferred {} not defeq target {}",
+                            kernel.render_lean(inferred),
+                            kernel.render_lean(target)
+                        );
+                    }
+                }
+                Err(e) => {
+                    if debug {
+                        eprintln!("  [absorb] position {i}: infer(result) failed: {e:?}");
+                    }
+                }
+            }
+        }
+        None
+    }
+
     /// Abstract every occurrence of `needle` inside `haystack` into a fresh
     /// binder, giving a candidate wrap `f`; if any occurrence was found and
     /// `f(other_side)` is definitionally equal to `expected`, build and
@@ -1814,12 +2288,31 @@ impl Search {
         // by the arithmetic identity `1 + n = n.succ`. Try to prove THAT
         // residual gap as a standalone, universally-quantified auxiliary
         // lemma and splice it onto the congruence proof with `Eq.trans`.
+        //
+        // `whole_term_match` records whether `f` is the identity (`haystack`
+        // was, as a WHOLE, defeq `needle`) — contributing no actual
+        // structural context, so `candidate` here is just `other_side`
+        // again, related to `expected` by nothing `def_eq` hasn't already
+        // ruled out. `try_residual_lemma` still tries its narrowed-diff and
+        // split-congruence routes in this case (both DECLINE cleanly, never
+        // wrongly succeed, when the two sides genuinely share no structure —
+        // see their own docs), but skips its un-narrowed whole-pair
+        // fallback: that fallback is what re-poses an unrelated pair as
+        // "prove `f(n) = f(succ n))`" and recurses one `succ` deeper at
+        // every nested attempt — measured, for
+        // `F:ml430-nat-descfactorial-of-lt-fbcf5d26`'s own step case (whose
+        // induction hypothesis's RHS is `0`, matching this goal's RHS
+        // trivially at the top), burning the entire residual budget on that
+        // one dead end before [`Search::try_absorbing_argument`] — the
+        // genuinely provable chain — ever got a turn.
+        let whole_term_match = kernel.def_eq(haystack, needle);
         let aux = self.try_residual_lemma(
             kernel,
             hyp_goal.level,
             hyp_goal.carrier,
             candidate,
             expected,
+            whole_term_match,
             debug,
         )?;
         // `aux : Eq(candidate, expected)`. `build_congr` always returns a
@@ -1883,6 +2376,7 @@ impl Search {
     /// budget, restored afterward regardless of outcome since the lemma is a
     /// self-contained side quest, not a consumer of the primary derivation's
     /// remaining search budget.
+    #[allow(clippy::too_many_arguments)]
     fn try_residual_lemma(
         &mut self,
         kernel: &mut Kernel,
@@ -1890,6 +2384,7 @@ impl Search {
         carrier: ExprId,
         candidate: ExprId,
         expected: ExprId,
+        skip_whole_pair_fallback: bool,
         debug: bool,
     ) -> Option<ExprId> {
         // First, narrow the gap to its actual point of difference, so the
@@ -1931,9 +2426,9 @@ impl Search {
                             kernel.render_lean(diff_b)
                         );
                     }
-                    if let Some(aux_diff) =
-                        self.prove_universal_identity(kernel, level, carrier, diff_a, diff_b, debug)
-                    {
+                    if let Some(aux_diff) = self.prove_universal_identity(
+                        kernel, level, carrier, diff_a, diff_b, false, debug,
+                    ) {
                         return Some(self.build_congr_arg(
                             kernel, g, level, carrier, level, carrier, diff_a, diff_b, aux_diff,
                         ));
@@ -1941,9 +2436,33 @@ impl Search {
                 }
             }
         }
+        // Next, try splitting a DIAGONAL mismatch — the same head applied to
+        // the same arguments on both sides collapsed onto one occurrence
+        // site — into an independently-generalized, strictly more general
+        // statement (see `try_split_congruence`'s own doc). Tried before the
+        // whole-pair fallback below since it is more targeted and, when it
+        // applies at all, is what actually closes shapes like `Nat.sub_self`
+        // that the whole-pair fallback re-poses as the same diagonal.
+        if let Some(proof) =
+            self.try_split_congruence(kernel, level, carrier, candidate, expected, debug)
+        {
+            return Some(proof);
+        }
         // Fall back to generalizing the whole (candidate, expected) pair —
-        // still correct, just less likely to be provable in one shot.
-        self.prove_universal_identity(kernel, level, carrier, candidate, expected, debug)
+        // still correct, just less likely to be provable in one shot. Never
+        // for a degenerate whole-term match (`skip_whole_pair_fallback`) —
+        // see the caller's own doc for why that specific combination is an
+        // unproductive, self-similar dead end rather than a merely-harder
+        // instance of this same fallback.
+        if skip_whole_pair_fallback {
+            if debug {
+                eprintln!(
+                    "  [residual] skipping whole-pair fallback for a degenerate whole-term match"
+                );
+            }
+            return None;
+        }
+        self.prove_universal_identity(kernel, level, carrier, candidate, expected, false, debug)
     }
 
     /// Prove `Eq carrier a b` by generalizing every free variable (with a
@@ -1959,6 +2478,7 @@ impl Search {
     /// budget, whose counters are restored afterward regardless of outcome:
     /// the lemma is a self-contained side quest, not a consumer of the
     /// primary derivation's remaining search budget.
+    #[allow(clippy::too_many_arguments)]
     fn prove_universal_identity(
         &mut self,
         kernel: &mut Kernel,
@@ -1966,6 +2486,69 @@ impl Search {
         carrier: ExprId,
         a: ExprId,
         b: ExprId,
+        boost: bool,
+        debug: bool,
+    ) -> Option<ExprId> {
+        self.prove_universal_identity_with(
+            kernel,
+            level,
+            carrier,
+            a,
+            b,
+            &std::collections::BTreeMap::new(),
+            boost,
+            debug,
+        )
+    }
+
+    /// [`Search::prove_universal_identity`], generalized so the caller can
+    /// control what each generalized variable is RE-INSTANTIATED to once the
+    /// universal statement is proved, rather than always instantiating a
+    /// variable back at itself.
+    ///
+    /// Every variable [`collect_fvars`] finds in `a`/`b` is still abstracted
+    /// into its own leading `Pi` (unchanged from the base method) — this
+    /// argument only changes what value closes each `Pi` back up afterward:
+    /// a variable present in `reinstantiate_as` is applied at its MAPPED
+    /// value; any other is applied at itself, exactly as before. This is
+    /// what lets [`Search::try_split_congruence`] mint FRESH variables for a
+    /// diagonal instance's two occurrence sites, prove a strictly more
+    /// general two-variable statement about them, and then re-specialize
+    /// both sites back to the single original value the diagonal actually
+    /// needs — a fresh variable's "value in the current scope" is not
+    /// itself, so the default self-instantiation would be a no-op that
+    /// proves nothing about the original goal.
+    ///
+    /// `boost`: whether this nested attempt gets the [`MIN_RESIDUAL_…`]
+    /// floors. **Deliberately not applied everywhere.** The floors make an
+    /// otherwise-declined nested attempt try its own induction anyway — sound
+    /// either way, but exactly what lets an UNPRODUCTIVE, self-similar chain
+    /// keep recursing (measured: without restricting this, closing
+    /// `F:ml430-nat-descfactorial-of-lt-fbcf5d26` degenerated into
+    /// repeatedly "proving" `descFactorial n (n+1) = descFactorial (n+1)
+    /// (n+2)`-shaped false statements one `succ` deeper each time, burning
+    /// the entire [`MAX_RESIDUAL_LEMMAS`] budget before the genuinely
+    /// provable chain ever got a turn). Pass `true` only from
+    /// [`Search::try_absorbing_argument`] (an argument position PROVABLY
+    /// reaches the target) and [`Search::try_split_congruence`] (a STRICTLY
+    /// MORE GENERAL statement than a diagonal already stuck on the same
+    /// fact) — the two mechanisms this floor exists for. Every other call
+    /// site, INCLUDING case-split's own predecessor obligation (measured:
+    /// boosting it too reproduces the same budget-exhausting explosion,
+    /// because most of its OWN invocations are against an irrelevant
+    /// ancestor hypothesis, not the one that actually matters, and the floor
+    /// cannot tell which), passes `false` — unchanged from this producer's
+    /// behavior before either new mechanism existed.
+    #[allow(clippy::too_many_arguments)]
+    fn prove_universal_identity_with(
+        &mut self,
+        kernel: &mut Kernel,
+        level: LevelId,
+        carrier: ExprId,
+        a: ExprId,
+        b: ExprId,
+        reinstantiate_as: &std::collections::BTreeMap<u64, ExprId>,
+        boost: bool,
         debug: bool,
     ) -> Option<ExprId> {
         if self.residual_budget == 0 {
@@ -1997,12 +2580,32 @@ impl Search {
             eprintln!("  [residual] goal={}", kernel.render_lean(residual_goal));
         }
 
+        // The MIN_RESIDUAL_* floors below give this nested attempt a
+        // guaranteed minimum induction/binder capability no matter how
+        // exhausted the outer derivation's shared budget already is — sound
+        // either way, but that guarantee is exactly what lets an
+        // unproductive chain of these nested attempts keep making just
+        // enough apparent progress to recurse again. MAX_RESIDUAL_CHAIN_DEPTH
+        // bounds how deep that chain may nest, independent of
+        // `residual_budget`'s bound on the total COUNT of attempts — see its
+        // own doc for why both are needed.
+        if self.residual_depth >= MAX_RESIDUAL_CHAIN_DEPTH {
+            if debug {
+                eprintln!("  [residual] chain depth exceeded: maximum {MAX_RESIDUAL_CHAIN_DEPTH}");
+            }
+            return None;
+        }
+        self.residual_depth += 1;
         let snapshot = (
             self.binders_left,
             self.inductions_left,
             self.binders_used,
             self.inductions_used,
         );
+        if boost {
+            self.binders_left = self.binders_left.max(MIN_RESIDUAL_BINDERS);
+            self.inductions_left = self.inductions_left.max(MIN_RESIDUAL_INDUCTIONS);
+        }
         let eqp = EqPrimitives {
             eq: self.eqp_eq,
             eq_refl: self.eqp_refl,
@@ -2015,6 +2618,7 @@ impl Search {
             self.binders_used,
             self.inductions_used,
         ) = snapshot;
+        self.residual_depth -= 1;
         let residual_proof = match result {
             Ok(proof) => proof,
             Err(reason) => {
@@ -2030,13 +2634,222 @@ impl Search {
         // OUTERMOST binder — apply in the reverse of that order.
         let mut aux = residual_proof;
         for v in ordered.iter().rev() {
-            let value = kernel.fvar(*v);
+            let value = reinstantiate_as
+                .get(v)
+                .copied()
+                .unwrap_or_else(|| kernel.fvar(*v));
             aux = kernel.app(aux, value);
         }
         if debug {
             eprintln!("  [residual] proved aux={}", kernel.render_lean(aux));
         }
         Some(aux)
+    }
+
+    /// Maximum number of top-level argument positions
+    /// [`Search::try_split_congruence`] will compare between `candidate` and
+    /// `expected`. Ordinary arithmetic operators (`+`, `*`, `-`, …) are
+    /// binary once their typeclass/instance arguments are stripped by
+    /// `app_spine`'s own head discovery, so this is a generous, still-finite
+    /// ceiling rather than a tight-fitting one; exhausting it declines this
+    /// path rather than building an unbounded search.
+    const MAX_SPLIT_ARGS: usize = 8;
+
+    /// The hypothesis-independent counterpart to the single-diff narrowing
+    /// in [`Search::try_residual_lemma`]: closes a residual gap
+    /// `Eq(candidate, expected)` where `candidate` and `expected` share the
+    /// SAME head applied to the SAME number of arguments, but differ at
+    /// *more than one* argument position — the shape
+    /// [`find_diff`] cannot narrow, since it only descends when every
+    /// argument but the last already matches.
+    ///
+    /// The canonical case this exists for: `candidate = f(v, v)`,
+    /// `expected = f(g(v), g(v))` for the SAME free variable `v` occurring
+    /// at both argument positions (e.g. `v - v` vs `succ v - succ v`, once
+    /// `v` is the predecessor a case split or induction just introduced).
+    /// [`Search::prove_universal_identity`] can only ever generalize `v`
+    /// back to ONE variable, since it collapses every occurrence of the same
+    /// free-variable id into a single `Pi` — so the auxiliary goal it poses
+    /// is the same DIAGONAL statement the caller was already stuck on,
+    /// self-similar under induction and never simpler. The general,
+    /// strictly stronger statement obtained by generalizing the two
+    /// occurrence SITES independently (`∀ x y, f(x, y) = f(g(x), g(y))`,
+    /// e.g. `Nat.succ_sub_succ`'s symmetric form) is what is actually
+    /// provable by ordinary induction on one of the two — and it is
+    /// STRICTLY MORE GENERAL, so proving it is always a sound way to
+    /// discharge the specific diagonal instance: re-specializing both fresh
+    /// variables back to the one original value the diagonal needs
+    /// ([`Search::prove_universal_identity_with`]'s `reinstantiate_as`) is a
+    /// plain instantiation of an already-checked universal fact, not a new
+    /// assumption.
+    ///
+    /// For every differing argument position, `expected`'s side must embed
+    /// `candidate`'s side via [`kabstract_occurrences`] (i.e. there is a wrap
+    /// `g_i` with `g_i(candidate_arg_i)` defeq `expected_arg_i`) — a real
+    /// requirement, not a convenience: it is what lets the fresh variable at
+    /// that position be re-specialized on BOTH sides consistently once the
+    /// general statement is proved. A position where no such embedding
+    /// exists makes this whole path decline (`None`), never build a
+    /// mismatched candidate.
+    #[allow(
+        clippy::too_many_arguments,
+        clippy::too_many_lines,
+        clippy::items_after_statements
+    )]
+    fn try_split_congruence(
+        &mut self,
+        kernel: &mut Kernel,
+        level: LevelId,
+        carrier: ExprId,
+        candidate: ExprId,
+        expected: ExprId,
+        debug: bool,
+    ) -> Option<ExprId> {
+        let candidate_whnf = beta_whnf(kernel, candidate);
+        let expected_whnf = beta_whnf(kernel, expected);
+        let (head_a, args_a) = app_spine(kernel, candidate_whnf);
+        let (head_b, args_b) = app_spine(kernel, expected_whnf);
+        if debug {
+            eprintln!(
+                "  [split] entry: candidate={} expected={} head_a={} head_b={} args_a={} args_b={}",
+                kernel.render_lean(candidate_whnf),
+                kernel.render_lean(expected_whnf),
+                kernel.render_lean(head_a),
+                kernel.render_lean(head_b),
+                args_a.len(),
+                args_b.len()
+            );
+        }
+        if args_a.len() != args_b.len()
+            || args_a.is_empty()
+            || args_a.len() > Self::MAX_SPLIT_ARGS
+            || !kernel.def_eq(head_a, head_b)
+        {
+            if debug {
+                eprintln!("  [split] declined: arity/head mismatch");
+            }
+            return None;
+        }
+
+        let mut diff_indices = Vec::new();
+        for i in 0..args_a.len() {
+            if !kernel.def_eq(args_a[i], args_b[i]) {
+                diff_indices.push(i);
+            }
+        }
+        // Fewer than two differing positions is exactly what
+        // `find_diff`/the single-diff narrowing in `try_residual_lemma`
+        // already covers — decline here so this path only ever does work
+        // the simpler one cannot.
+        if diff_indices.len() < 2 {
+            if debug {
+                eprintln!(
+                    "  [split] declined: only {} differing position(s)",
+                    diff_indices.len()
+                );
+            }
+            return None;
+        }
+
+        let mut local_ctx = LocalContext::new();
+        let anon = kernel.anon();
+        for (&fv, &ty) in &self.fvar_types {
+            local_ctx.push(LocalDecl {
+                fvar: fv,
+                name: anon,
+                ty,
+                info: BinderInfo::Default,
+            });
+        }
+
+        // For every differing position, find the wrap `g_i` embedding
+        // `args_a[i]` inside `args_b[i]`, and the type of `args_a[i]` (needed
+        // to bind the fresh generalization variable). Any failure here
+        // declines the whole path — a partial split would generalize some
+        // positions and silently keep others fixed at values that may not
+        // even occur in `expected`, never a sound thing to return.
+        struct Slot {
+            fresh: u64,
+            wrap: ExprId,
+            original: ExprId,
+        }
+        let mut slots: Vec<Option<Slot>> = (0..args_a.len()).map(|_| None).collect();
+        for &i in &diff_indices {
+            let placeholder_fv = self.fresh_fvar();
+            let placeholder = kernel.fvar(placeholder_fv);
+            let mut kb = MAX_KABSTRACT_NODES;
+            let (replaced, found) =
+                kabstract_occurrences(kernel, args_b[i], args_a[i], placeholder, &mut kb);
+            if !found {
+                if debug {
+                    eprintln!(
+                        "  [split] position {i}: {} does not occur in {}",
+                        kernel.render_lean(args_a[i]),
+                        kernel.render_lean(args_b[i])
+                    );
+                }
+                return None;
+            }
+            let Ok(arg_ty) = kernel.infer_in(args_a[i], &mut local_ctx) else {
+                if debug {
+                    eprintln!("  [split] infer(args_a[{i}]) failed");
+                }
+                return None;
+            };
+            let abstracted = kernel.abstract_fvars(replaced, &[placeholder_fv]);
+            let wrap = kernel.lam(anon, arg_ty, abstracted, BinderInfo::Default);
+            let fresh = self.fresh_fvar_typed(arg_ty);
+            slots[i] = Some(Slot {
+                fresh,
+                wrap,
+                original: args_a[i],
+            });
+        }
+
+        // Reconstruct both sides with every differing position replaced by
+        // its own fresh variable — `candidate_split` uses the fresh
+        // variable directly, `expected_split` uses it through that
+        // position's own wrap, so instantiating every fresh variable back
+        // at its ORIGINAL value reproduces `candidate`/`expected` up to
+        // defeq (checked structurally by the caller of this function via
+        // the surrounding congruence machinery, and independently by the
+        // final `Kernel::add_declaration`/`infer_in` re-check every
+        // candidate this producer emits already goes through).
+        let mut candidate_split = head_a;
+        let mut expected_split = head_b;
+        let mut reinstantiate_as = std::collections::BTreeMap::new();
+        for (i, arg) in args_a.iter().enumerate() {
+            if let Some(slot) = &slots[i] {
+                let fv = kernel.fvar(slot.fresh);
+                candidate_split = kernel.app(candidate_split, fv);
+                let wrapped = kernel.app(slot.wrap, fv);
+                expected_split = kernel.app(expected_split, wrapped);
+                reinstantiate_as.insert(slot.fresh, slot.original);
+            } else {
+                candidate_split = kernel.app(candidate_split, *arg);
+                expected_split = kernel.app(expected_split, *arg);
+            }
+        }
+
+        if debug {
+            eprintln!(
+                "  [split] {} differing positions; split goal candidate={} expected={}",
+                diff_indices.len(),
+                kernel.render_lean(candidate_split),
+                kernel.render_lean(expected_split)
+            );
+        }
+
+        self.prove_universal_identity_with(
+            kernel,
+            level,
+            carrier,
+            candidate_split,
+            expected_split,
+            &reinstantiate_as,
+            true,
+            debug,
+        )
     }
 
     /// `Eq.trans (hab : Eq carrier a b) (hbc : Eq carrier b c) : Eq carrier a
@@ -2399,6 +3212,7 @@ pub fn propose_bounded_induction(
         inductions_used: 0,
         fvar_types: std::collections::BTreeMap::new(),
         residual_budget: MAX_RESIDUAL_LEMMAS,
+        residual_depth: 0,
         local_hyps: Vec::new(),
         stuck_hyps: Vec::new(),
     };
