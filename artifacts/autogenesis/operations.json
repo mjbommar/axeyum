@@ -729,6 +729,8 @@
       "scope": "authoritative",
       "reviewed_gate_mentions": [
         "check-autogenesis-int-fib-neg-capsule.py",
+        "check-autogenesis-int-fib-neg-root-audit-plan.py",
+        "check-autogenesis-int-gcd-contract-theorem-control-policy.py",
         "validate-autogenesis-operations.py"
       ],
       "applicability": {
