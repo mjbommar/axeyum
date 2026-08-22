@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-direct-natabs-mul-qualification-plan-v6",
+  "state": "preregistered-hash-only-closure-qualification-before-sealing",
+  "predecessor": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-direct-natabs-mul-export-result-v5.json",
+    "sha256": "2b8efdf21cce392e31426fabca87488105fb6975c6bbca5ae2fac88e51ea0888"
+  },
+  "fixed_evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-natabs-mul-direct-v1",
+    "root_sha256": "09ebd925b3af67009b1806fd157a25b195e046124065778ec6eaf754f5ecfc04",
+    "replay_sha256": "09ebd925b3af67009b1806fd157a25b195e046124065778ec6eaf754f5ecfc04",
+    "audit_sha256": "e3a9dc2f6c393594a4ff9e95feed18be7192392a90a2204fbff8b7114e1b9715",
+    "root": "Axeyum.Autogenesis.intNatAbsMulDirectV1",
+    "declaration_sha256": "ebfbf0442e5e7d93a2a38e70e51b364100455633f44832878ed34ec37de01bb3",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [
+      "Eq.symm",
+      "_private.AxeyumIntNatAbsMulDirectV1.0.Axeyum.Autogenesis.intNatAbsNegOfNatDirectV1"
+    ]
+  },
+  "qualification": {
+    "reason": "the root footprint already computes the complete reachable axiom closure; both exact direct dependencies are retained for composition and neither weakens the empty-footprint result",
+    "render_proof_terms": false,
+    "render_theorem_types": false,
+    "render_theorem_values": false,
+    "write_manifest_and_seal_fixed_bytes": true
+  },
+  "execution": {
+    "max_stream_hash_reads": 2,
+    "max_audit_report_reads": 0,
+    "max_exporter_invocations": 0,
+    "max_importer_runs": 0,
+    "max_manifest_writes": 1,
+    "max_retries": 0,
+    "target_fib_dvd_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "fixed_streams_identical": true,
+    "fixed_root_axiom_footprint": [],
+    "exact_dependencies_retained": true,
+    "sealed_output": true
+  },
+  "next_on_accept": "compose direct Int divisibility witness transport over the qualified multiplication root"
+}
