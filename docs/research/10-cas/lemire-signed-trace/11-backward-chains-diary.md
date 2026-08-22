@@ -174,3 +174,75 @@ controls, asserts the engines agree.
   `F:gf2-lemire-monomial-composition-family`, cyclotomic fact kept as its `m=2` case with
   its false scope sentences fixed; scripts README. **Next agent:** the construction angle
   is closed and *located* -- structurally silent at prime `n`. Do not re-open it.
+
+## Entry 2 -- angle 4 (horizontal Deligne budget; Katz's Betti question re-posed)
+
+Lane `lemire-signed-trace`, 2026-08-22. Note
+[12-horizontal-deligne-budget.md](12-horizontal-deligne-budget.md); script
+`lemire_horizontal_weights.py` (six controls, five mutation controls, exits
+nonzero). Bulk producer: new Rust bin `axeyum-lemire-horizontal` (mirrored as
+`axeyum-lemire-horizontal.rs.txt`); cross-checked against python-flint and an
+exact Witt/Walsh--Hadamard engine that solves `j = 2` in closed form.
+
+- **Budget VERIFIED, one correction:** `#Prim_j(F_2) = 2^{j-1}`, not `2^j`, so
+  the trivial bound is `2^{j-1}(j-1)2^{n/2}` and `k >= 2 log2(8 ell C/(j-1))`
+  top degrees must vanish, not `2 log2(4 sqrt2 ...)`. **Note 10's Q1 was
+  mis-posed; it is now (Q1').** A Betti bound ALONE cannot give `(HWO)`: with
+  `i_max in {2j, 2j-1, 2j-2}` the budget forces `C < 1/4`, impossible for
+  nonzero cohomology however good the bound. The question is the PAIR
+  `(i_max, C)`; do not re-open "is `C(2,j,Xi)` polynomial" on its own.
+- **Middle concentration is impossible here (new).** Katz's `Prim_j` is
+  literally `G_m x A^{j-1}`, and the trace function of `Xi_n(L_univ)` is
+  `G_m`-invariant (`F(T) -> t^n F(T/t)` preserves degree and `Lambda`). A full
+  `q-1` never cancels, so `i_max >= j+1`; the sharp target is `i_max = j+1`
+  with `C <= (j-1)2^{(j-1)/2}/(8 ell)`. Derived control, true on every row:
+  `(2^r - 1) | A_r(n,j)`.
+- **`j = 2` is completely solved** (Prop. 3, exact, `r <= 16`): `C = 2`,
+  `i_max = 2j-1` (odd `n`), `2j` (`n = 0 mod 4`), `H^*_c = 0` (`n = 2 mod 4`).
+  Careful: at `j = 2`, `2j-1 = j+1`, so only the `n = 0 mod 4` rows separate the
+  shapes -- and they are the worst case, `H^{2j}_c != 0`.
+- **Three in-range rows resolve AND separate the shapes; all three are bad:**
+  `(8,2)`, `(12,2)` (`i_max = 2j`) and `(7,3)` -- the one such row on the
+  critical line `n = 2j+1` -- where `A_r = 64^r - 32^r` exactly for `r <= 6`,
+  so `C = 2` and `i_max >= 2j-1 = 5 > j+1`. Their size is exactly
+  `q^{j-1}(q-1)q^{(n-1)/2}`: one square root over the whole `j`-dimensional
+  family, none of the Weil factor `(j-1)`. `j >= 4` is **not resolved** (cost
+  `q^{j+2}` caps `r <= 33/(j+2)`; several eigenvalues with nontrivial phases --
+  cube roots of unity already at `(7,4)`). `(9,3)` goes the other way and is
+  exact: `N_3(1) = q^{n-3}` on the nose, top weight only `n+j`.
+  Reading `i_max`, `C` off in `r` is legitimate (both are geometric); the
+  `q`-aspect SIZE does not extrapolate to `q = 2` -- the `G_m` factor has one
+  `F_2`-point, and at `q = 2` the saving is the random value of notes 05/07.
+- **A tool lied; control C5 caught it.** The Rust `r = 8` row was wrong: the
+  modulus was irreducible but NOT primitive (AES polynomial, `ord(x) = 51`), so
+  most of the log table was zero. `assert(a == 1)` after `q-1` steps does not
+  detect this.
+- **To resolve `j >= 4` you need a different algorithm.** The window scan costs
+  `q^{j+2}` on the critical line (`r <= 33/(j+2)`). Instead use
+  `L(chi,T) = sum_{m<j} c_m(chi)T^m`, `c_m = sum_{g in V_m} chi(g)` over the
+  image `V_m` of the monic degree-`m` polynomials: one Fourier transform over
+  `E_j` per `m`, `~(j-1)q^j log q`, independent of `n`. `lemire_anchor.py` has
+  the group structure and characters at `q = 2`; generalize them to `F_q`.
+- **Next agents (2, 1, 5):** the route is relocated, not closed. It needs a
+  DEGREE theorem, and the literature has none for this family: middle
+  concentration in print comes from forget-supports being an isomorphism
+  (Katz--Laumon 5.4, generic in the parameter), genericity in a twisting
+  character, or a singular-locus bound -- never from big monodromy, which only
+  kills `H^{2d}_c`; nothing found controls `H^{2d-1}_c`. Katz's own Thm 8.2 is
+  the `i_max = 2dim-1` shape, hence `~8.5x` short even where it applies.
+
+### Entry 2 addendum (coordinator)
+
+- The resolved rows `j <= 3` are in a finite-monodromy regime (8th / 24th
+  roots of unity as eigenvalue angles), which forces exactly the top-degree
+  (co)invariant classes seen; they do not extrapolate.
+- Summing the `ell = 24` layer dumps to conductor sums: `|A_j|/2^{n/2} =
+  2^{(j+1)/2} x O(1..3)` for `j = 18..24` -- the `i_max = j+1`, small-`C`
+  size; (H) over-predicts `30..100x`. **(H) is false at large `j`; the `F_2`
+  data are consistent with the ALIVE case of (Q1').** Note 12 sec. 9.
+- Angle 4b (priority follow-up after the five angles, or sooner if the owner
+  prefers): `L`-function-route resolution of `(2j+1, j)`, `j = 4..6`, and the
+  monodromy transition of `L_univ` at `p = 2`.
+- MO question 39100 (Voloch, 2010; owner supplied): the Carlitz-cyclotomic
+  curve formulation, `q^n/n + O(g q^{n/2})`, genus `g ~ m q^m`, nothing at
+  `m ~ n/2` -- identical to note 01's setup. No new content.

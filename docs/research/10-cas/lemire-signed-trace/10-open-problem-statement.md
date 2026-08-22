@@ -77,12 +77,41 @@ Kaser--Lemire (proved, notes 00--01; endpoint ledger replayed
 
 ## The precise questions for a specialist
 
-1. Is there a uniform bound, in `ell` at fixed `p = 2`, for the sum of Betti
-   numbers `C(2, j, Xi) = sum_i h^i_c(Prim_j (x) F_2-bar, Xi(L_univ))` for the
-   representation `Xi` picking out the exact-order-`2^s` layer? Katz (IMRN 2013,
-   proof of Thm 8.1) states this is unknown for small `p`; his Thm 8.2 gives it
-   only for `p > 2n-1` (where the Witt structure degenerates to ordinary
-   Artin--Schreier). A polynomial-in-`j` bound would give `(HWO)`.
+1. **(Q1')** Fix `p = 2`, and for the representation `Xi` picking out the
+   exact-order-`2^s` layer put
+
+   ```text
+   C(2,j,Xi)     = sum_i h^i_c(Prim_j (x) F_2-bar, Xi(L_univ)),
+   i_max(2,j,Xi) = max { i : h^i_c(Prim_j (x) F_2-bar, Xi(L_univ)) != 0 }.
+   ```
+
+   Is the **pair** `(i_max, C)` inside the Deligne budget, i.e. is
+   `C(2,j,Xi) <= (j-1) 2^{j-1-i_max/2} / (4 ell)`?  Equivalently, writing
+   `k = 2j - i_max`, do the top `k` cohomological degrees vanish with
+   `k >= 2 log2(8 ell C(2,j,Xi)/(j-1))` -- a *logarithmic* number of vanishing
+   top degrees once `C` is polynomial in `j`?
+
+   A bound on the Betti sum **alone is not enough**, and the earlier form of
+   this question ("a polynomial-in-`j` bound would give `(HWO)`") was wrong: if
+   `i_max` is `2j`, `2j-1` or `2j-2` then the budget forces `C < 1/4`, which is
+   impossible for a nonzero cohomology however good the Betti bound
+   ([12-horizontal-deligne-budget.md](12-horizontal-deligne-budget.md),
+   Prop. 1).  `Prim_j` is `G_m x A^{j-1}` and the trace function of
+   `Xi(L_univ)` is invariant under the `G_m`-action `x -> tx` on `E_j`, so
+   `i_max >= j+1` always (ibid., Prop. 2): middle concentration is unavailable,
+   and the sharp target is
+
+   * **(Q1'-a)** `H^i_c(Prim_j (x) F_2-bar, Xi(L_univ)) = 0` for `i > j+1`;
+   * **(Q1'-b)** `C(2,j,Xi) <= (j-1) 2^{(j-1)/2} / (8 ell)`, which follows from
+     *any* polynomial-in-`j` Betti bound.
+
+   Katz (IMRN 2013, proof of Thm 8.1) states that even a `p`-uniform bound on
+   `C(p,n,Xi)` is unknown; his Thm 8.2 gives one only for `p > 2n-1` (where the
+   Witt structure degenerates to ordinary Artin--Schreier), and its proof has
+   the `i_max = 2 dim - 1` shape, which Prop. 1 shows can never reach `(HWO)`.
+   Nothing is known toward (Q1'-a) for this family: in the literature,
+   middle-degree concentration never comes from big monodromy, and `H^{2d-1}_c`
+   is controlled by no theorem we could find.
 2. Does the joint monodromy of the pair `(L_univ, L_univ o [x -> x^{2^s}])`
    over `Prim_j` at `p = 2` force first-moment cancellation of the layer sum --
    a "horizontal" (conductor-aspect, fixed field) equidistribution -- rather
@@ -100,7 +129,9 @@ bound, which the data show is already at the random value and `40x` short).
 
 ## Reproducibility
 
-Notes 00--09 and `scripts/lemire-signed-trace/` (flint-backed exact data to
+Notes 00--09, note 12 (the Deligne budget behind the corrected Q1', with the
+exact `q`-aspect experiment that measures `i_max` at small `(n,j)`), and
+`scripts/lemire-signed-trace/` (flint-backed exact data to
 `ell = 24`, cross-checked against the branch CAS and the roadmap pins); facts
 `F:gf2-lemire-cylinder-twist-sup-bound` (open, the minimal sufficient
 statement) and `F:gf2-lemire-cyclotomic-infinite-family` (proved).

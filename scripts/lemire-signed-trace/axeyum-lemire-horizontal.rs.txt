@@ -1,0 +1,391 @@
+//! Exact horizontal (conductor-aspect) character sums for the Kaser--Lemire lane.
+//!
+//! For `q = 2^r` let `E_j = (1 + x F_q[x])/x^{j+1}`, `<F>_j = x^{deg F} F(1/x) mod
+//! x^{j+1}`, and
+//!
+//! ```text
+//! N_j(1) = sum_{F monic, deg F = n, <F>_j = 1} Lambda(F)
+//! ```
+//!
+//! (the Mangoldt mass of the monic degree-`n` polynomials whose top `j`
+//! non-leading coefficients vanish).  Orthogonality on `E_j` gives the sum of
+//! `S_n(chi)` over the characters of exact conductor `j`:
+//!
+//! ```text
+//! A_r(n,j) = q^j N_j(1) - q^{j-1} N_{j-1}(1).
+//! ```
+//!
+//! This binary computes `N_j(1)` exactly, for every `j >= jstart`, by one pass
+//! over the `q^{n-jstart}` monic polynomials in the depth-`jstart` window
+//! (irreducibles, by a distinct-degree/Rabin test) plus a separate exact pass
+//! over the proper prime powers `P^{n/d}`, `d | n`, `d < n`.
+//!
+//! Usage: `axeyum-lemire-horizontal <n> <r> <jstart> [threads]`
+//!
+//! Output: one `N|j|value` line per `j`, then one `A|j|value` line per
+//! `j > jstart`, then `META|...`.  Everything is exact integer arithmetic
+//! (`i128`); the caller re-derives `A` independently and compares.
+
+use std::env;
+use std::sync::Mutex;
+
+/// PRIMITIVE polynomials over `F_2` defining `F_{2^r}` (bit `i` = coefficient of
+/// `x^i`).  Primitivity, not just irreducibility, is required: the log/antilog
+/// tables below are built by iterating `x`, so a merely irreducible modulus (the
+/// AES polynomial `x^8+x^4+x^3+x+1`, for one, where `x` has order 51) leaves most
+/// of the table zero and every product wrong.  `Field::new` checks it at runtime.
+const MODULI: [u32; 17] = [
+    0, 0b11, 0b111, 0b1011, 0b10011, 0b100101, 0b1000011, 0b10000011, 0b100011101,
+    0b1000010001, 0b10000001001, 0b100000000101, 0b1000001010011, 0b10000000011011,
+    0b100010001000011, 0b1000000000000011, 0b10001000000001011,
+];
+
+/// `F_{2^r}` with log/antilog tables; elements are `0..q`, `0` is zero and `1` is one.
+struct Field {
+    r: u32,
+    q: u32,
+    log: Vec<u32>,
+    exp: Vec<u32>,
+}
+
+impl Field {
+    fn new(r: u32) -> Field {
+        assert!((1..=16).contains(&r), "r out of range");
+        let q = 1u32 << r;
+        let m = MODULI[r as usize];
+        let mut exp = vec![0u32; (2 * q) as usize];
+        let mut log = vec![0u32; q as usize];
+        let mut a = 1u32;
+        for i in 0..(q - 1) {
+            exp[i as usize] = a;
+            log[a as usize] = i;
+            a <<= 1;
+            if a & q != 0 {
+                a ^= m;
+            }
+        }
+        assert_eq!(a, 1, "generator does not have order q-1");
+        // The table is only a field if x is PRIMITIVE: every nonzero element must
+        // occur exactly once among exp[0..q-1].
+        let mut seen = vec![false; q as usize];
+        for i in 0..(q - 1) {
+            let v = exp[i as usize] as usize;
+            assert!(v != 0 && !seen[v], "modulus for r={r} is not primitive");
+            seen[v] = true;
+        }
+        for i in (q - 1)..(2 * (q - 1)) {
+            exp[i as usize] = exp[(i - (q - 1)) as usize];
+        }
+        Field { r, q, log, exp }
+    }
+    #[inline(always)]
+    fn mul(&self, a: u32, b: u32) -> u32 {
+        if a == 0 || b == 0 {
+            return 0;
+        }
+        self.exp[(self.log[a as usize] + self.log[b as usize]) as usize]
+    }
+    #[inline(always)]
+    fn sqr(&self, a: u32) -> u32 {
+        if a == 0 {
+            return 0;
+        }
+        let l = self.log[a as usize] * 2;
+        self.exp[(l % (self.q - 1)) as usize]
+    }
+    #[inline(always)]
+    fn inv(&self, a: u32) -> u32 {
+        debug_assert!(a != 0);
+        if a == 1 {
+            return 1;
+        }
+        self.exp[(self.q - 1 - self.log[a as usize]) as usize]
+    }
+}
+
+const MAXN: usize = 16;
+
+/// Monic `F` of degree `n` given by its low coefficients `f[0..n]`.
+struct Modulus {
+    n: usize,
+    f: [u32; MAXN],
+    /// `x^{n+k} mod F` for `k = 0 .. n-2`, each a degree-`<n` coefficient vector.
+    red: [[u32; MAXN]; MAXN],
+}
+
+impl Modulus {
+    fn new(fld: &Field, n: usize, f: &[u32; MAXN]) -> Modulus {
+        let mut red = [[0u32; MAXN]; MAXN];
+        // x^n = F - x^n  (char 2: = sum f[i] x^i)
+        for i in 0..n {
+            red[0][i] = f[i];
+        }
+        for k in 1..(n - 1).max(1) {
+            // x^{n+k} = x * x^{n+k-1}
+            let prev = red[k - 1];
+            let top = prev[n - 1];
+            let mut cur = [0u32; MAXN];
+            for i in (1..n).rev() {
+                cur[i] = prev[i - 1];
+            }
+            cur[0] = 0;
+            if top != 0 {
+                for i in 0..n {
+                    cur[i] ^= fld.mul(top, f[i]);
+                }
+            }
+            red[k] = cur;
+        }
+        Modulus { n, f: *f, red }
+    }
+    /// `a <- a^2 mod F` (characteristic two: squaring is coefficient-wise).
+    #[inline]
+    fn square(&self, fld: &Field, a: &mut [u32; MAXN]) {
+        let n = self.n;
+        let mut wide = [0u32; 2 * MAXN];
+        for i in 0..n {
+            if a[i] != 0 {
+                wide[2 * i] ^= fld.sqr(a[i]);
+            }
+        }
+        for k in (0..(n - 1)).rev() {
+            let c = wide[n + k];
+            if c != 0 {
+                wide[n + k] = 0;
+                let row = &self.red[k];
+                for i in 0..n {
+                    if row[i] != 0 {
+                        wide[i] ^= fld.mul(c, row[i]);
+                    }
+                }
+            }
+        }
+        for i in 0..n {
+            a[i] = wide[i];
+        }
+    }
+}
+
+/// `gcd(a, F) == 1`?  `a` is a degree-`<n` coefficient vector, `F` monic of degree `n`.
+fn gcd_is_one(fld: &Field, m: &Modulus, a: &[u32; MAXN]) -> bool {
+    let n = m.n;
+    let mut u = [0u32; MAXN + 1];
+    let mut v = [0u32; MAXN + 1];
+    for i in 0..n {
+        u[i] = m.f[i];
+    }
+    u[n] = 1;
+    v[..n].copy_from_slice(&a[..n]);
+    let mut du = n as i32;
+    let mut dv: i32 = -1;
+    for i in (0..n).rev() {
+        if v[i] != 0 {
+            dv = i as i32;
+            break;
+        }
+    }
+    while dv >= 0 {
+        let lead = fld.inv(v[dv as usize]);
+        while du >= dv {
+            let c = fld.mul(u[du as usize], lead);
+            if c != 0 {
+                for i in 0..=(dv as usize) {
+                    u[(du as usize) - (dv as usize) + i] ^= fld.mul(c, v[i]);
+                }
+            }
+            u[du as usize] = 0;
+            du -= 1;
+            while du >= 0 && u[du as usize] == 0 {
+                du -= 1;
+            }
+            if du < 0 {
+                break;
+            }
+        }
+        std::mem::swap(&mut u, &mut v);
+        std::mem::swap(&mut du, &mut dv);
+    }
+    du == 0
+}
+
+/// Is the monic degree-`n` polynomial with low coefficients `f` irreducible over `F_q`?
+fn is_irreducible(fld: &Field, n: usize, f: &[u32; MAXN]) -> bool {
+    if n == 0 {
+        return false;
+    }
+    if n == 1 {
+        return true;
+    }
+    // Cheap filter: a root in F_q.  Only worth it while q is small relative to
+    // the cost r*n^2 of the first Frobenius round.
+    if fld.q <= 2 * fld.r * (n as u32) {
+    for c in 0..fld.q {
+        let mut acc = 1u32;
+        for i in (0..n).rev() {
+            acc = fld.mul(acc, c) ^ f[i];
+        }
+        if acc == 0 {
+            return false;
+        }
+    }
+    }
+    let m = Modulus::new(fld, n, f);
+    // h = x^{q^i} mod F; F is irreducible iff gcd(h - x, F) = 1 for all i <= n/2.
+    let mut h = [0u32; MAXN];
+    h[1 % n] = if n > 1 { 1 } else { 0 };
+    if n == 1 {
+        return true;
+    }
+    for _i in 1..=(n / 2) {
+        for _ in 0..fld.r {
+            m.square(fld, &mut h);
+        }
+        let mut d = h;
+        d[1] ^= 1;
+        if d.iter().all(|&c| c == 0) {
+            return false; // x^{q^i} = x with i < n
+        }
+        if !gcd_is_one(fld, &m, &d) {
+            return false;
+        }
+    }
+    true
+}
+
+/// Multiply monic `p` (degree `d`, low coefficients `p[0..d]`) into `acc` of degree `da`.
+fn poly_mul(fld: &Field, acc: &mut Vec<u32>, p: &[u32]) {
+    let mut out = vec![0u32; acc.len() + p.len() - 1];
+    for (i, &a) in acc.iter().enumerate() {
+        if a == 0 {
+            continue;
+        }
+        for (k, &b) in p.iter().enumerate() {
+            if b != 0 {
+                out[i + k] ^= fld.mul(a, b);
+            }
+        }
+    }
+    *acc = out;
+}
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    if args.len() < 4 {
+        eprintln!("usage: axeyum-lemire-horizontal <n> <r> <jstart> [threads]");
+        std::process::exit(2);
+    }
+    let n: usize = args[1].parse().expect("n");
+    let r: u32 = args[2].parse().expect("r");
+    let jstart: usize = args[3].parse().expect("jstart");
+    let threads: usize = if args.len() > 4 { args[4].parse().expect("threads") } else { 8 };
+    assert!(n >= 2 && n < MAXN, "n out of range");
+    assert!(jstart >= 1 && jstart <= n, "jstart out of range");
+    let fld = Field::new(r);
+    let q = fld.q as u128;
+
+    // Free coefficients: a_{n-jstart-1} .. a_0, i.e. m = n - jstart of them.
+    let m = n - jstart;
+    let total: u128 = (q).pow(m as u32);
+    let counts = Mutex::new(vec![0i128; n + 2]);
+
+    let nthreads = threads.max(1);
+    std::thread::scope(|scope| {
+        for t in 0..nthreads {
+            let counts = &counts;
+            let fld = &fld;
+            scope.spawn(move || {
+                let mut local = vec![0i128; n + 2];
+                let mut idx = t as u128;
+                let step = nthreads as u128;
+                let mut f = [0u32; MAXN];
+                while idx < total {
+                    // decode idx -> (c_0 .. c_{m-1}) with c_k = a_{n-jstart-1-k}
+                    let mut v = idx;
+                    // f[i] = coefficient of x^i, i = 0..n-1; the top jstart are zero.
+                    for i in 0..n {
+                        f[i] = 0;
+                    }
+                    for k in 0..m {
+                        let c = (v % q) as u32;
+                        v /= q;
+                        // c_k sits at exponent n - jstart - 1 - k
+                        f[n - jstart - 1 - k] = c;
+                    }
+                    // leading-zero depth z: number of vanishing a_{n-1}, a_{n-2}, ...
+                    let mut z = 0usize;
+                    while z < n && f[n - 1 - z] == 0 {
+                        z += 1;
+                    }
+                    if is_irreducible(fld, n, &f) {
+                        for j in jstart..=z.min(n) {
+                            local[j] += n as i128;
+                        }
+                    }
+                    idx += step;
+                }
+                let mut g = counts.lock().expect("lock");
+                for j in 0..local.len() {
+                    g[j] += local[j];
+                }
+            });
+        }
+    });
+    let mut nvals = counts.into_inner().expect("into_inner");
+
+    // Proper prime powers: F = P^{n/d}, d | n, d < n.
+    for d in 1..n {
+        if n % d != 0 {
+            continue;
+        }
+        let k = n / d;
+        let tot: u128 = q.pow(d as u32);
+        for idx in 0..tot {
+            let mut v = idx;
+            let mut p = [0u32; MAXN];
+            for i in 0..d {
+                p[i] = (v % q) as u32;
+                v /= q;
+            }
+            if !is_irreducible(&fld, d, &p) {
+                continue;
+            }
+            let mut pv: Vec<u32> = p[..d].to_vec();
+            pv.push(1);
+            let mut acc = vec![1u32];
+            for _ in 0..k {
+                poly_mul(&fld, &mut acc, &pv);
+            }
+            debug_assert_eq!(acc.len(), n + 1);
+            let mut z = 0usize;
+            while z < n && acc[n - 1 - z] == 0 {
+                z += 1;
+            }
+            for j in jstart..=z.min(n) {
+                nvals[j] += d as i128;
+            }
+        }
+    }
+
+    // N_j for j < jstart are not computed here; N_0 = q^n and N_1 = q^{n-1} are exact
+    // (conductor-1 characters have L = 1, so S_n = 0).
+    let qi = fld.q as i128;
+    for j in 0..jstart.min(2) {
+        nvals[j] = qi.pow((n - j) as u32);
+    }
+    println!("META|n={n}|r={r}|q={}|jstart={jstart}|window={total}", fld.q);
+    for j in 0..=n {
+        if j < jstart && j > 1 {
+            continue;
+        }
+        println!("N|{j}|{}", nvals[j]);
+    }
+    let lo = if jstart <= 1 { 1 } else { jstart };
+    for j in (lo + 1)..=n {
+        let a = qi.pow(j as u32) * nvals[j] - qi.pow((j - 1) as u32) * nvals[j - 1];
+        println!("A|{j}|{a}");
+    }
+    if jstart <= 1 {
+        let a = qi * nvals[1] - nvals[0];
+        println!("A|1|{a}");
+    }
+}

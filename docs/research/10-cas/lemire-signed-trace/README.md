@@ -57,6 +57,20 @@ Kaser--Lemire half-degree-irreducibles chain (sibling repository
   estimate `(HWO)` stated for a specialist (Katz--Sawin monodromy / ASW towers
   / fixed-q pair correlation), with its three equivalent faces and the three
   precise questions whose answer would close the chain.
+- [11-backward-chains-diary.md](11-backward-chains-diary.md) -- running diary
+  of the five backward-chain angles (construction, geometry, sieve, Frobenius
+  angles, uniformization), one Opus agent each, with the ground truth and the
+  primary-source literature check every agent starts from.
+- [12-horizontal-deligne-budget.md](12-horizontal-deligne-budget.md) -- angle 4:
+  what a cohomological bound on Katz's `Prim_j` would have to look like.
+  Proposition 1 (the Deligne budget: a Betti bound ALONE can never give
+  `(HWO)`; the binding constraint is the top cohomological DEGREE, and a
+  logarithmic number of top degrees must vanish), Proposition 2 (`Prim_j` is
+  `G_m x A^{j-1}` and the trace function is `G_m`-invariant, so middle
+  concentration is impossible and `i_max >= j+1`), Proposition 3 (`j = 2`
+  solved exactly: `C = 2`, `i_max = 2j-1` or `2j`), and the exact `q`-aspect
+  experiment that measures the top weight at small `(n,j)`. Rewrites Q1 of
+  note 10 as (Q1'). Script `lemire_horizontal_weights.py`.
 
 Executable companions live in
 [`scripts/lemire-signed-trace/`](../../../../scripts/lemire-signed-trace/README.md).

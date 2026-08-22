@@ -113,6 +113,64 @@ test, roughly 100x slower. Nothing else is required.
   Generated table: `data/composition-coverage.txt`.  Ledger fact:
   `F:gf2-lemire-monomial-composition-family`.
 
+- `lemire_horizontal_weights.py` -- the **horizontal (conductor-aspect) sums**
+  of [note 12](../../docs/research/10-cas/lemire-signed-trace/12-horizontal-deligne-budget.md).
+  Computes, exactly, `A_r(n,j) = sum_{chi in Prim_j(F_{2^r})} S_n(chi)
+  = q^j N_j(1) - q^{j-1} N_{j-1}(1)`, and reads the largest Frobenius weight
+  present off its growth in `r` at fixed `(n,j)` -- which is a lower bound on
+  the top cohomological degree `i_max` of `H^*_c(Prim_j, Xi_n L_univ)`, the
+  quantity the corrected question (Q1') of note 10 turns on.
+
+  Three engines, no shared implementation. **`witt`** (exact, `j = 2`, every
+  `n`, `r <= 16`): the Artin--Hasse identification `E_2 = W_2(F_q)`, the
+  explicit order-4 character `chi_c(w) = i^{tr_W(c.w)}`, the reduction of the
+  `L`-polynomial root to `alpha_d = -sum_u i^{Tr u} (-1)^{Tr(d u^2) + e_2(u)}`
+  with `d = c_1/c_0^2` the `G_m`-invariant, and one Walsh--Hadamard transform.
+  **`flint`**: direct window enumeration through `is_irreducible` plus a
+  separate exact pass over the proper prime powers. **`rust`**: the lane's bulk
+  engine `axeyum-lemire-horizontal` (source mirrored here as
+  `axeyum-lemire-horizontal.rs.txt`; drop it into `crates/axeyum-cas/src/bin/`
+  of a snapshot of branch `agent/gf2/lemire-proof` and build with
+  `AXEYUM_CARGO_LOCK=... scripts/cargo-serialized.sh build --release -p
+  axeyum-cas --bin axeyum-lemire-horizontal`), 24-threaded, own `F_{2^r}` log
+  tables and Rabin/distinct-degree test, `~4e7` polynomials/s -- about `10x`
+  python-flint and the only way to reach `r = 8`. Point
+  `AXEYUM_LEMIRE_HORIZONTAL` at the binary or pass `--rust-binary`; the script
+  refuses a silent fallback when `--grid` is requested without it.
+
+  Six controls: (C1) `A_r(n,1) = 0` identically, with `N_1(1)` **computed** over
+  the full `a_{n-1} = 0` window rather than assumed; (C2) Weil,
+  `|alpha_d|^2 = q` exactly for every `d` and `r`; (C3) `witt` == `flint` on
+  `A_r(n,2)`; (C4) `rust` == `flint` on every `N_j` in the overlap; (C5)
+  `(2^r - 1) | A_r(n,j)` on every row (the `G_m` factor of note 12 Prop. 2);
+  (C6) at `q = 2`, `I_n(1) = (N_j(1) - Theta(1))/n` with `j = ceil(n/2)-1`
+  reproduces `data/irreducible-counts-n2-38.txt` for 20 degrees. C5 caught a
+  real engine bug on its first run -- a merely *irreducible* (not primitive)
+  field modulus at `r = 8`, which left most of the log table zero; the Rust
+  engine now checks primitivity at startup.
+
+  Five mutation controls, each killing the run through a *named* check:
+  `--mutate 1` drops the Witt carry `e_2` (dies on C2), `2` sums over `q`
+  instead of `q-1` characters per `G_m`-orbit (dies on the two-term Frobenius
+  structure and C3), `3` drops the proper prime powers (dies on C1), `4` uses
+  `q^j N_{j-1}` for `q^{j-1} N_{j-1}` (dies on C1), `5` shifts the window depth
+  by one (dies on C3 and C6).
+
+  ```sh
+  python lemire_horizontal_weights.py
+  AXEYUM_LEMIRE_HORIZONTAL=<snapshot>/target/release/axeyum-lemire-horizontal \
+      python lemire_horizontal_weights.py --grid 9:5:3,11:4:4 \
+      --out data/horizontal-weights.txt
+  ```
+
+  Generated table: `data/horizontal-weights.txt`; the Rust dumps it is read
+  from are `data/horizontal-grid.txt` (pass `--grid-file` to regenerate
+  without re-running the engine). `data/horizontal-grid-primitivity-bug.txt` is
+  a **deliberately kept bad dump** -- the wrong `r = 8` rows from the
+  non-primitive modulus -- and running the script against it must exit 1 with
+  `control C5: (q-1) does not divide A_8(7,4) = 190017374764662784`. Do not use
+  it as data.
+
 - `lemire_witness_search.py <lo> <hi>` -- flint-based sparse witness search with
   independent pure-Python Rabin re-verification (cross-check for the Rust certifier).
 
