@@ -88,6 +88,7 @@ step autogenesis-must-decline-population-tests python3 -m unittest scripts.tests
 # in CLAUDE.md, applied one arrow upstream to the PRODUCER for the first time.
 step autogenesis-must-decline-population python3 scripts/check-autogenesis-must-decline-population.py
 step autogenesis-bounded-induction-family python3 scripts/check-autogenesis-bounded-induction-family.py
+step established-fact-bounded-truth python3 scripts/check-established-facts-bounded-truth.py
 step lane-turn-controls ./scripts/tests/test-check-lane-turn.sh
 step autogenesis-nursery python3 scripts/check-autogenesis-nursery.py
 step autogenesis-mathlib-nursery-split python3 scripts/create-autogenesis-mathlib-nursery-split.py --check

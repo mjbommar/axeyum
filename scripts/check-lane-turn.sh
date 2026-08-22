@@ -44,6 +44,7 @@ GATES=(
   "nursery|python3 scripts/check-autogenesis-nursery.py"
   "mathlib-fact-catalog|python3 scripts/create-autogenesis-mathlib-fact-catalog.py --check"
   "must-decline|python3 scripts/check-autogenesis-must-decline-population.py"
+  "established-fact-truth|python3 scripts/check-established-facts-bounded-truth.py"
   "operations-registry|python3 scripts/validate-autogenesis-operations.py"
   "operations-registry-tests|python3 -m unittest scripts.tests.test_validate_autogenesis_operations"
   "plan-generated|python3 scripts/gen-plan.py --check"
