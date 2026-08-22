@@ -776,9 +776,12 @@
       "id": "authoritative-mathlib-int-gcd-fib-kernel-capsule-v1",
       "scope": "authoritative",
       "reviewed_gate_mentions": [
-        "check-autogenesis-int-gcd-fib-capsule.py",
         "check-autogenesis-int-gcd-fib-admission-plan.py",
         "check-autogenesis-int-gcd-contract-theorem-control-policy.py",
+        "check-autogenesis-int-gcd-fib-capsule.py",
+        "check-autogenesis-int-gcd-fib-construction-plan.py",
+        "check-autogenesis-nat-fib-gcd-premise-selection-policy.py",
+        "check-autogenesis-nat-fib-gcd-surface-plan.py",
         "validate-autogenesis-operations.py"
       ],
       "applicability": {

@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, and `Int.fib_neg` are durably proved with empty kernel footprints. The selected `Int.gcd_fib` target now reconstructs bottom-up, passes every link check, and survives two fresh imports with an empty footprint and exactly five dependencies; ledger admission remains separate.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, and `Int.fib_neg` are durably proved with empty kernel footprints. The selected `Int.gcd_fib` target reconstructs bottom-up, passes every link check, survives two fresh imports with an empty footprint and exactly five dependencies, and is now uniquely selected by the machine frontier; ledger admission remains separate.
 
-**Next:** bind the sealed `Int.gcd_fib` theorem to the statement-only ledger goal's canonical type, then preregister and execute its crash-safe fact operation and independently replay the admission.
+**Next:** execute the preregistered crash-safe `Int.gcd_fib` fact operation from an exact clean commit, commit the one-write settlement, then independently replay the admission and confirm the predicted `Int.fib_gcd` unlock.
 
 <!-- plan-section: landed-changes -->
 
@@ -36,6 +36,7 @@
 | 2026-08-22 | (pending) | Hash-only audit binds canonical `Int.gcd_fib` type `050ddb31…901b` with unchanged empty footprint and five dependencies; the sealed-capsule checker is ready before operation registration |
 | 2026-08-22 | (pending) | Exact crash-safe `Int.gcd_fib` admission is frozen against receipt `d02db0ee…3ac1`, one ledger write, one recovery, one isolated replay, and the predicted `Int.fib_gcd` unlock before registry code |
 | 2026-08-22 | (pending) | The exact sealed-capsule operation is registered through existing typed execution and transaction machinery; the older `Int.gcd_def` calibration gate now validates either the frozen open target or its proved empty-footprint poststate |
+| 2026-08-22 | (pending) | Machine-derived gate coupling is reviewed against all seven current mentions; no stale or unreviewed gates remain and the frontier uniquely selects `Int.gcd_fib` for crash-safe admission |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
