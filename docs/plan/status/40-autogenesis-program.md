@@ -14,6 +14,7 @@
 | 2026-08-22 | (pending) | Historical-source preflight correctly rejects its still-open fact; V3 freezes the exact detached transition child, which preserves the registration gate surface and recovered post-state required by replay verification |
 | 2026-08-22 | (pending) | Isolated replay `b63854f8…bfaa0` independently repeats `Nat.fib_eq_zero` selection, certified execution, exit-75 recovery, one write, and the exact empty readiness delta |
 | 2026-08-22 | (pending) | Exact `Int.fib_eq_zero` is frozen bottom-up through a target-owned natAbs-zero support, a five-parameter residual, admitted `Nat.fib_eq_zero`, and the sealed integer Fibonacci/natAbs bridge before source construction |
+| 2026-08-22 | (pending) | First residual compile stops before export at two elaboration-only seams; V2 freezes explicit zero implications and direct use of the abstract natAbs-zero parameter with theorem boundaries unchanged |
 
 | 2026-08-21 | (pending) | The newly ready `Int.gcd_fib` route is frozen through one target-owned Fibonacci/natAbs bridge and the two exact admitted premise capsules before source construction or proof-stream access |
 | 2026-08-21 | (pending) | Closure analysis corrects the bridge boundary before execution: export a dependency-free two-parameter residual, then specialize it with exact clean `Int.fib_neg` and `Int.natAbs_neg` roots |
