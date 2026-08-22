@@ -4,7 +4,7 @@
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_dvd`, `Int.fib_of_nonneg`, and now `Nat.fib_pos` are durably proved with empty kernel footprints. `Nat.fib_pos` survived an exit-75 intent fault unchanged, recovered with exactly one ledger write, passed its registered checker, and produced the preregistered empty readiness delta.
 
-**Next:** compile V3's single `nomatch` correction, then export the accepted unchanged-contract residual twice and inspect its exact clean dependency closure.
+**Next:** execute V4's explicit `.olean`/`.ilean` rebuild, remove only the zero-byte partial stream, then export twice and inspect the exact residual closure.
 
 <!-- plan-section: landed-changes -->
 
@@ -169,6 +169,7 @@
 | 2026-08-22 | (pending) | `Nat.fib_eq_zero` V1 is frozen as a function-abstracted Nat case split over zero presentation, admitted positivity, and successor positivity, forbidding the concrete Fibonacci function and both official target roots |
 | 2026-08-22 | (pending) | V1 writes the residual once but stops before Lean at missing noninteractive `lake`; V2 freezes the located absolute Lean 4.30 Lake path with no source rewrite or extra authority |
 | 2026-08-22 | (pending) | V2 reaches one empty-inductive seam: `0 < 0` is not definitionally literal `False`; V3 freezes only replacing `False.elim` with `nomatch`, preserving statement and contracts |
+| 2026-08-22 | (pending) | V3 compiles the corrected proof but first export cannot locate an unmaterialized module and skips export two; V4 freezes explicit Lake module outputs plus removal of only the zero-byte partial |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
