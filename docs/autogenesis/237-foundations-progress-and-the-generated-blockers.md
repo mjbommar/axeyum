@@ -36,7 +36,7 @@ these is needed by all 114 rows:
 | Blocker | Kind |
 |---|---|
 | `Nat.le.brecOn` | **kernel-generated** — course-of-values recursor |
-| `noConfusion_of_Nat`, `noConfusion_of_Nat.aux` | **kernel-generated** — constructor disjointness |
+| `noConfusion_of_Nat`, `noConfusion_of_Nat.aux` | **NOT what this row said** — see the correction below |
 | `Nat.div_rec_lemma`, `Nat.div_rec_fuel_lemma` | well-founded-recursion scaffolding |
 | `eq_of_heq` | heterogeneous equality elimination |
 
@@ -49,6 +49,26 @@ So the next step is not "prove twenty more lemmas". Our kernel **also generates*
 recursors for its inductives. The route is to generate our own equivalents and
 substitute those, exactly as `congrArg` is now built from `Eq.rec` rather than
 borrowed — a mechanism question, not a mathematics one.
+
+> ### Correction, 2026-08-22 (same day)
+>
+> **`noConfusion_of_Nat` is not the kernel's `Nat.noConfusion`.** This document
+> assumed it was Lean's mangling of the constructor-disjointness principle we
+> generate in `nat_prelude/no_confusion.rs`, and that only a naming bridge was
+> needed. Inspecting a real stream shows otherwise: it is Lean core's generic
+> `Init.Prelude` helper — universe-polymorphic in an *arbitrary carrier* `α`,
+> embedding into `Nat` via `Nat.beq`, and used to derive `noConfusion` and
+> `DecidableEq` for OTHER types. Different construction, different arity,
+> different purpose. Same name, different thing.
+>
+> It has since been reconstructed anyway (`nat_no_confusion_substitution.rs`), by
+> ordinary `Nat.rec` induction rather than by reusing our disjointness
+> construction. `Nat.le.brecOn` likewise turned out to be pure combinator
+> plumbing over a generated auxiliary inductive `Nat.le.below`, not the
+> large-elimination problem it looked like.
+>
+> The section's conclusion — that the residue is a mechanism question rather than
+> a mathematics one — survives. Its identification of *which* mechanism did not.
 
 `Nat.not_lt_zero` (76 rows) is the exception: an ordinary lemma, and the obvious
 next hand-proved target.
