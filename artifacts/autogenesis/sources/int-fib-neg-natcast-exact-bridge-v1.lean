@@ -3,6 +3,15 @@ import AxeyumIntFibNegativePresentationV1
 
 namespace Axeyum.Autogenesis
 
+def cleanNatDecEq : (a b : Nat) → Decidable (a = b)
+  | 0, 0 => isTrue rfl
+  | 0, _ + 1 => isFalse (fun h => Nat.noConfusion h)
+  | _ + 1, 0 => isFalse (fun h => Nat.noConfusion h)
+  | a + 1, b + 1 =>
+      match cleanNatDecEq a b with
+      | isTrue h => isTrue (congrArg Nat.succ h)
+      | isFalse h => isFalse (fun hs => h (Nat.noConfusion hs))
+
 theorem intFibNegNatCastExactBridgeV1
     (negativePresentation : ∀ n : Nat,
       Int.fib (-(n : Int)) =
@@ -17,7 +26,7 @@ theorem intFibNegNatCastExactBridgeV1
     Int.fib
     Nat.fib
     (fun n => n % 2 = 0)
-    (fun n => Nat.decEq (n % 2) 0)
+    (fun n => cleanNatDecEq (n % 2) 0)
     negativePresentation
     powerPresentation
     negOneMul

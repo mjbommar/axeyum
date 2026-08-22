@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-exact-int-fib-neg-natcast-composition-plan",
+  "state": "preregistered-local-structural-nat-deceq-before-sixth-bridge-compilation",
+  "predecessor": {"path": "artifacts/autogenesis/int-fib-neg-natcast-exact-composition-result-v5.json", "required_state": "deterministic-core-deceq-bridge-still-rejected-for-propext"},
+  "repair": {
+    "new_definition": "Axeyum.Autogenesis.cleanNatDecEq",
+    "construction": "structural recursion on both Nat constructors; equal branches use rfl/congrArg and unequal branches use Nat.noConfusion",
+    "only_bridge_body_change": "replace Nat.decEq with cleanNatDecEq",
+    "target_statement_unchanged": true,
+    "four_proof_arguments_unchanged": true,
+    "sealed_inputs_unchanged": true
+  },
+  "budget": {"additional_bridge_compilations": 1, "bridge_exports": 2, "bridge_footprint_audits": 1, "complete_composition_invocations": 1, "composition_operations": 4, "composition_replays": 4, "specialization_operations": 1, "specialization_replays": 1, "target_submissions": 1, "target_exports": 1, "fresh_target_imports": 2, "retries": 0, "ledger_writes": 0},
+  "acceptance": "Both cleanNatDecEq's declaration closure and the bridge theorem footprint must exclude propext before any composition driver code.",
+  "output": "artifacts/autogenesis/int-fib-neg-natcast-exact-composition-result-v6.json",
+  "limitations": "The local decider is support-only and grants no exact-target or ledger authority."
+}

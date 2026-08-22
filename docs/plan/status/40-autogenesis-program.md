@@ -74,6 +74,7 @@
 | 2026-08-21 | (pending) | V2 resolves the import path but stops before elaboration at Lean's package-root check; V3 freezes only the documented shared-directory `--root` flag |
 | 2026-08-21 | (pending) | V3 accepts both driver repairs and exposes the absent target-owned `Int.fib` module; V4 freezes only importing its already sealed presentation source |
 | 2026-08-21 | (pending) | V4 exports deterministically but generic parity instance synthesis reaches `propext`; V5 freezes only explicit core `Nat.decEq` as the decision provider |
+| 2026-08-21 | (pending) | V5 shows official `Nat.decEq` still traverses proposition-equality carriers; V6 freezes a local structural Nat decider using only recursion and no-confusion |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
