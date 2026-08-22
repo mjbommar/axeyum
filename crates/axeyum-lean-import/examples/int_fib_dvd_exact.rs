@@ -254,6 +254,7 @@ fn add_int_fib_dvd(kernel: &mut Kernel) -> Result<(), String> {
         second_motive,
         nat_fibonacci_divisibility,
         second_bridge_reverse,
+        140_301,
     )?;
     let first_transport_ty = dvd(kernel, nat_ty, "Nat.instDvd", nat_fib_abs_m, abs_fib_n)?;
     require_closed_link(
@@ -280,6 +281,7 @@ fn add_int_fib_dvd(kernel: &mut Kernel) -> Result<(), String> {
         first_motive,
         first_transport,
         first_bridge_reverse,
+        140_401,
     )?;
     let both_transport_ty = dvd(kernel, nat_ty, "Nat.instDvd", abs_fib_m, abs_fib_n)?;
     require_closed_link(
@@ -415,7 +417,21 @@ fn eq_rec_transport(
     motive: ExprId,
     value: ExprId,
     equality: ExprId,
+    id_suffix: u64,
 ) -> Result<ExprId, String> {
+    let destination_id = u64::MAX - id_suffix;
+    let equality_id = u64::MAX - id_suffix - 1;
+    let destination = kernel.fvar(destination_id);
+    let result = kernel.app(motive, destination);
+    let premise = equality_type(kernel, domain, left, destination)?;
+    let dependent_motive = close_lam(kernel, equality_id, "h", premise, result);
+    let dependent_motive = close_lam(
+        kernel,
+        destination_id,
+        "b",
+        domain,
+        dependent_motive,
+    );
     let rec = find_name(kernel, "Eq.rec")?;
     let zero = kernel.level_zero();
     let domain_level = kernel.level_succ(zero);
@@ -423,8 +439,20 @@ fn eq_rec_transport(
         kernel,
         rec,
         &[zero, domain_level],
-        &[domain, left, motive, value, right, equality],
+        &[domain, left, dependent_motive, value, right, equality],
     ))
+}
+
+fn equality_type(
+    kernel: &mut Kernel,
+    carrier: ExprId,
+    left: ExprId,
+    right: ExprId,
+) -> Result<ExprId, String> {
+    let eq = find_name(kernel, "Eq")?;
+    let zero = kernel.level_zero();
+    let level = kernel.level_succ(zero);
+    Ok(app_const(kernel, eq, &[level], &[carrier, left, right]))
 }
 
 fn compose(

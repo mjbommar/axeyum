@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-eq-rec-motive-result-v20",
+  "state": "dependent-motive-implemented-build-declines-only-on-argument-count-lint",
+  "plan": {"path": "artifacts/autogenesis/mathlib-int-fib-dvd-eq-rec-motive-plan-v20.json", "sha256": "83110ce61ad3bf6520ead5c7c58f0a89bb29e11de256d7faa655011043bc5b27"},
+  "implementation": {"path": "crates/axeyum-lean-import/examples/int_fib_dvd_exact.rs", "sha256": "0a08f6798c75fdeb573fc4e63b8d8ce39de4a25f22b1731451afd5886e0467f5"},
+  "diagnostic": {"stage": "focused-clippy", "class": "too_many_arguments", "function": "eq_rec_transport", "arguments": 8, "limit": 7},
+  "execution": {"driver_builds": 1, "focused_clippy_exit_status": 101, "complete_invocations": 0, "input_stream_reads": 0, "target_theorem_submissions": 0, "retries": 0, "ledger_writes": 0},
+  "authority": {"target_credit": 0, "ledger_writes": 0}
+}
