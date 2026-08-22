@@ -612,6 +612,21 @@ pub struct CRealPrelude {
     /// derived from [`Self::abs_nonneg`] and the theorem above rather than by
     /// computing on a representative.
     pub not_equiv_abs_neg_one: NameId,
+
+    // --- the Archimedean property (ADR-0512 phase R5) ------------------------
+    /// `CReal.ofNat : Nat → CReal := fun n => CReal.ofRat (Rat.natDivSucc n 0)`
+    /// — the embedding `ℕ ↪ ℝ`, reusing [`RatPrelude::nat_div_succ`] at
+    /// denominator index `0` (`k/(0+1) = k/1`) rather than adding a second
+    /// numeral development.
+    pub of_nat: NameId,
+    /// `CReal.archimedean : ∀ x, ∃ n, CReal.le x (CReal.ofNat n)`.
+    ///
+    /// The witness is computed, not searched for: `n := CReal.bound x + 1`, the
+    /// same magnitude [`Self::bound_within`] already proves bounds `seq x m`
+    /// **for every** `m` — so the single inequality `bound_within` supplies is
+    /// already stronger than the one index `CReal.le`'s definition asks for,
+    /// and no case split on `x`'s sign, and no search over `n`, is needed.
+    pub archimedean: NameId,
 }
 
 impl CRealPrelude {
@@ -760,6 +775,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         abs_nonneg: kernel.name_str(creal, "abs_nonneg"),
         not_le_zero_neg_one: kernel.name_str(creal, "not_le_zero_neg_one"),
         not_equiv_abs_neg_one: kernel.name_str(creal, "not_equiv_abs_neg_one"),
+        of_nat: kernel.name_str(creal, "ofNat"),
+        archimedean: kernel.name_str(creal, "archimedean"),
     }
 }
 
@@ -826,7 +843,8 @@ pub(crate) fn build_creal_prelude_uncached(
         product::declare_product(&mut d, prelude)?;
         field::declare_field(&mut d, prelude)?;
         inverse::declare_inverse(&mut d, prelude)?;
-        lattice::declare_lattice(&mut d, prelude)
+        lattice::declare_lattice(&mut d, prelude)?;
+        archimedean::declare_archimedean(&mut d, prelude)
     })();
     match built {
         Ok(()) => {
@@ -1739,6 +1757,7 @@ fn declare_discrimination(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
     })
 }
 
+mod archimedean;
 mod field;
 mod inverse;
 mod lattice;

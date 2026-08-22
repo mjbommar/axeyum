@@ -129,6 +129,7 @@ use crate::name::NameId;
 
 mod algebra;
 mod bezout;
+mod ble;
 mod defs;
 mod divisibility;
 mod division;
@@ -137,6 +138,7 @@ mod helpers;
 mod modular;
 mod ops;
 mod order;
+mod order_extra;
 mod primes;
 
 pub use ops::{NatDev, NatOps, NatState};
@@ -146,6 +148,7 @@ use algebra::{
     declare_subtraction_theorems,
 };
 use bezout::{declare_euclid_lemma, declare_gcd_bezout};
+use ble::declare_boolean_le;
 use defs::{
     declare_arithmetic, declare_boolean_equality, declare_defining_equations,
     declare_executable_division, declare_finite_ranges, declare_subtraction,
@@ -155,6 +158,7 @@ use division::declare_euclidean_division;
 use gcd::{declare_executable_gcd, declare_gcd_semantics};
 use modular::declare_modular_congruence;
 use order::declare_order;
+use order_extra::declare_order_extra;
 use primes::{declare_euclid, declare_primes};
 
 /// The interned names produced by [`build_nat_prelude`]: the inductive `Nat`
@@ -401,6 +405,66 @@ pub struct NatPrelude {
     pub mul_sub_left_distrib: NameId,
     /// Unconditional truncated distributivity `b*(q-a) = b*q-b*a`.
     pub mul_sub_left_distrib_total: NameId,
+
+    // --- additional order/pred/sub lemmas (imported-corpus bridge names) ----
+    // These are the exact Lean-core flat names a reconstructed corpus proof's
+    // type closure resolves against; several are thin wrappers restating an
+    // existing prelude fact (a constructor, or a differently-named theorem)
+    // under its Lean-core name, proved independently from our own
+    // definitions rather than aliased.
+    /// `Nat.le_refl : ∀ (n : Nat), Le n n` — the flat top-level name matching
+    /// [`le_refl`](Self::le_refl) (`Nat.le.refl`, the constructor).
+    pub le_refl_thm: NameId,
+    /// `Nat.le_succ : ∀ (n : Nat), Le n (succ n)`.
+    pub le_succ: NameId,
+    /// `Nat.succ_le_succ : ∀ (n m : Nat), Le n m → Le (succ n) (succ m)` — the
+    /// Lean-core name matching [`le_succ_succ`](Self::le_succ_succ).
+    pub succ_le_succ: NameId,
+    /// `Nat.le_of_lt_succ : ∀ (n m : Nat), Lt n (succ m) → Le n m`.
+    pub le_of_lt_succ: NameId,
+    /// `Nat.lt_succ_self : ∀ (n : Nat), Lt n (succ n)`.
+    pub lt_succ_self: NameId,
+    /// `Nat.lt_succ_of_le : ∀ (n m : Nat), Le n m → Lt n (succ m)`.
+    pub lt_succ_of_le: NameId,
+    /// `Nat.lt_add_one : ∀ (n : Nat), Lt n (add n (succ zero))`.
+    pub lt_add_one: NameId,
+    /// `Nat.not_succ_le_self : ∀ (n : Nat), Not (Le (succ n) n)` — the
+    /// Lean-core name matching [`lt_irrefl`](Self::lt_irrefl) unfolded at
+    /// `Lt n n`.
+    pub not_succ_le_self: NameId,
+    /// `Nat.le_succ_of_le : ∀ (n m : Nat), Le n m → Le n (succ m)` — the
+    /// Lean-core name matching the [`le_step`](Self::le_step) constructor.
+    pub le_succ_of_le: NameId,
+    /// `Nat.zero_lt_succ : ∀ (n : Nat), Lt zero (succ n)`.
+    pub zero_lt_succ: NameId,
+    /// `Nat.pred_le : ∀ (n : Nat), Le (pred n) n`.
+    pub pred_le: NameId,
+    /// `Nat.pred_le_pred : ∀ (n m : Nat), Le n m → Le (pred n) (pred m)`.
+    pub pred_le_pred: NameId,
+    /// `Nat.sub_le : ∀ (n m : Nat), Le (sub n m) n`.
+    pub sub_le: NameId,
+    /// `Nat.sub_lt : ∀ (n m : Nat), Lt zero n → Lt zero m → Lt (sub n m) n`.
+    pub sub_lt: NameId,
+    /// `Nat.succ_sub_succ_eq_sub : ∀ (n m : Nat), sub (succ n) (succ m) = sub n m`
+    /// — the Lean-core name matching [`succ_sub_succ`](Self::succ_sub_succ).
+    pub succ_sub_succ_eq_sub: NameId,
+
+    // --- boolean `≤`, bridging `Nat.ble` to `Nat.le` -------------------------
+    /// `Nat.ble : Nat → Nat → Bool` — the executable analogue of [`beq`](Self::beq):
+    /// `ble zero _ ≡ true`, `ble (succ _) zero ≡ false`,
+    /// `ble (succ x) (succ y) ≡ ble x y`, all definitionally.
+    pub ble: NameId,
+    /// `Nat.ble_self_eq_true : ∀ (n : Nat), ble n n = true`.
+    pub ble_self_eq_true: NameId,
+    /// `Nat.ble_succ_eq_true : ∀ (n m : Nat), ble n m = true → ble n (succ m) = true`.
+    pub ble_succ_eq_true: NameId,
+    /// `Nat.ble_eq_true_of_le : ∀ (n m : Nat), Le n m → ble n m = true`.
+    pub ble_eq_true_of_le: NameId,
+    /// `Nat.le_of_ble_eq_true : ∀ (n m : Nat), ble n m = true → Le n m`.
+    pub le_of_ble_eq_true: NameId,
+    /// `Nat.not_le_of_not_ble_eq_true :
+    ///   ∀ (n m : Nat), Not (ble n m = true) → Not (Le n m)`.
+    pub not_le_of_not_ble_eq_true: NameId,
 
     // --- Euclidean division -------------------------------------------------
     /// `Nat.divMod d n q r := n = d*q+r ∧ r<d`.
@@ -731,6 +795,27 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             sub_le_iff_le_add: kernel.name_str(nat, "sub_le_iff_le_add"),
             mul_sub_left_distrib: kernel.name_str(nat, "mul_sub_left_distrib"),
             mul_sub_left_distrib_total: kernel.name_str(nat, "mul_sub_left_distrib_total"),
+            le_refl_thm: kernel.name_str(nat, "le_refl"),
+            le_succ: kernel.name_str(nat, "le_succ"),
+            succ_le_succ: kernel.name_str(nat, "succ_le_succ"),
+            le_of_lt_succ: kernel.name_str(nat, "le_of_lt_succ"),
+            lt_succ_self: kernel.name_str(nat, "lt_succ_self"),
+            lt_succ_of_le: kernel.name_str(nat, "lt_succ_of_le"),
+            lt_add_one: kernel.name_str(nat, "lt_add_one"),
+            not_succ_le_self: kernel.name_str(nat, "not_succ_le_self"),
+            le_succ_of_le: kernel.name_str(nat, "le_succ_of_le"),
+            zero_lt_succ: kernel.name_str(nat, "zero_lt_succ"),
+            pred_le: kernel.name_str(nat, "pred_le"),
+            pred_le_pred: kernel.name_str(nat, "pred_le_pred"),
+            sub_le: kernel.name_str(nat, "sub_le"),
+            sub_lt: kernel.name_str(nat, "sub_lt"),
+            succ_sub_succ_eq_sub: kernel.name_str(nat, "succ_sub_succ_eq_sub"),
+            ble: kernel.name_str(nat, "ble"),
+            ble_self_eq_true: kernel.name_str(nat, "ble_self_eq_true"),
+            ble_succ_eq_true: kernel.name_str(nat, "ble_succ_eq_true"),
+            ble_eq_true_of_le: kernel.name_str(nat, "ble_eq_true_of_le"),
+            le_of_ble_eq_true: kernel.name_str(nat, "le_of_ble_eq_true"),
+            not_le_of_not_ble_eq_true: kernel.name_str(nat, "not_le_of_not_ble_eq_true"),
             div_mod: kernel.name_str(nat, "divMod"),
             div_mod_exists: kernel.name_str(nat, "div_mod_exists"),
             div_mod_unique: kernel.name_str(nat, "div_mod_unique"),
@@ -814,6 +899,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_multiplicative_theorems(&mut d, &p)?;
         declare_finite_sum_theorems(&mut d, &p)?;
         declare_order(&mut d, &p)?;
+        declare_order_extra(&mut d, &p)?;
+        declare_boolean_le(&mut d, &p)?;
         declare_euclidean_division(&mut d, &p)?;
         declare_divisibility(&mut d, &p)?;
         declare_executable_gcd(&mut d, &p)?;

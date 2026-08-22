@@ -5,7 +5,7 @@ use crate::{Declaration, Kernel};
 
 /// A built `CReal` kernel, as a **clone of one template**.
 ///
-/// The full development is now 94 declarations over the constructed ℚ and takes
+/// The full development is now 96 declarations over the constructed ℚ and takes
 /// tens of seconds to type-check; seventeen tests each building it from scratch
 /// dominated this crate's test time. The argument for cloning is
 /// [`prelude_cache`](crate::prelude_cache)'s, verbatim: prelude construction is
@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 94] = [
+    let expected: [(&str, crate::NameId, &str); 96] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -188,6 +188,8 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             p.not_equiv_abs_neg_one,
             "theorem",
         ),
+        ("CReal.ofNat", p.of_nat, "def"),
+        ("CReal.archimedean", p.archimedean, "theorem"),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel

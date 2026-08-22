@@ -218,6 +218,12 @@ pub trait NatOps {
         self.const_app(f, &[x, y])
     }
 
+    /// Computational natural-number `≤`, `Nat.ble x y : Bool`.
+    fn ble(&mut self, x: ExprId, y: ExprId) -> ExprId {
+        let f = self.prelude().ble;
+        self.const_app(f, &[x, y])
+    }
+
     /// Shared executable division state; `selector = true` gives the quotient
     /// and `selector = false` the remainder.
     fn div_mod_state(&mut self, divisor: ExprId, dividend: ExprId, selector: ExprId) -> ExprId {

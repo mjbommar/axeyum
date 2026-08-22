@@ -5,24 +5,24 @@
 
 | Prelude | Theorems (cumulative) | Originated here | Axiom-free | Axiom-bearing |
 |---|---:|---:|---:|---:|
-| `axreal` | 2 | 0 | 2 | 0 |
-| `complex` | 414 | 24 | 414 | 0 |
-| `creal` | 390 | 70 | 390 | 0 |
-| `integer` | 201 | 62 | 201 | 0 |
-| `logic` | 2 | 2 | 2 | 0 |
-| `nat` | 139 | 137 | 139 | 0 |
-| `rat` | 320 | 119 | 320 | 0 |
-| `string` | 6 | 4 | 6 | 0 |
-| **distinct** | **418** | **418** | **418** | **0** |
+| `axreal` | 3 | 0 | 3 | 0 |
+| `complex` | 436 | 24 | 436 | 0 |
+| `creal` | 412 | 71 | 412 | 0 |
+| `integer` | 222 | 62 | 222 | 0 |
+| `logic` | 3 | 3 | 3 | 0 |
+| `nat` | 160 | 157 | 160 | 0 |
+| `rat` | 341 | 119 | 341 | 0 |
+| `string` | 7 | 4 | 7 | 0 |
+| **distinct** | **440** | **440** | **440** | **0** |
 
-- **418 distinct theorems**, of which **418 rest on no assumption at all** (0 are axiom-bearing).
+- **440 distinct theorems**, of which **440 rest on no assumption at all** (0 are axiom-bearing).
 
 **Do not sum the second column.** Preludes nest, so `rat` contains every
 Nat and Int theorem beneath it. The *Originated here* column is the one
 that partitions the library, and it sums to the distinct total by
 construction — the generator fails if it does not.
 
-Origin ties: 2. A tie is two preludes with identical theorem sets
+Origin ties: 3. A tie is two preludes with identical theorem sets
 (`axreal` builds `logic` and adds no theorems of its own); the earlier
 prelude in dependency order takes the credit.
 

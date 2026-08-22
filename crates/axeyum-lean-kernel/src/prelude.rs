@@ -104,6 +104,12 @@ pub struct LogicPrelude {
     pub eq_rec: NameId,
     /// The universe parameter `u` shared by `Eq`/`Eq.refl`/`Eq.rec`.
     pub eq_uparam: NameId,
+    /// `Eq.symm.{u} : ∀ {α : Sort u} {a b : α}, Eq a b → Eq b a` — built directly
+    /// from `Eq.rec` (the standard `motive x _ := Eq x a` transport at `a`),
+    /// universe-polymorphic like `Eq`/`Eq.refl`/`Eq.rec` themselves so it
+    /// applies uniformly to equalities between propositions, naturals, or
+    /// anything else built on top.
+    pub eq_symm: NameId,
 
     /// `Exists.{u} : ∀ (α : Sort u), (α → Prop) → Prop`.
     pub exists_: NameId,
@@ -186,6 +192,19 @@ fn apply_all(kernel: &mut Kernel, mut function: ExprId, arguments: &[ExprId]) ->
         function = kernel.app(function, argument);
     }
     function
+}
+
+/// `Eq.{u_lvl} alpha x y`, i.e. `x = y` at the carrier `alpha : Sort u_lvl`.
+fn eq_app(
+    kernel: &mut Kernel,
+    eq: NameId,
+    u_lvl: LevelId,
+    alpha: ExprId,
+    x: ExprId,
+    y: ExprId,
+) -> ExprId {
+    let e = kernel.const_(eq, vec![u_lvl]);
+    apply_all(kernel, e, &[alpha, x, y])
 }
 
 fn lam_fvar(kernel: &mut Kernel, fvar: u64, ty: ExprId, body: ExprId, info: BinderInfo) -> ExprId {
@@ -418,6 +437,62 @@ pub(crate) fn build_logic_prelude_uncached(
             kernel.add_inductive(eq, &[eq_uparam], 2, eq_ty, &[(eq_refl, refl_ty)])?;
         }
         let eq_rec = kernel.name_str(eq, "rec");
+
+        // --- Eq.symm.{u} : Π (α : Sort u) (a b : α), Eq α a b → Eq α b a -----
+        // `motive := fun (x : α) (_ : Eq α a x) => Eq α x a`; `Eq.rec` at the
+        // refl case `Eq.refl α a : Eq α a a` transported along `h : Eq α a b`
+        // gives `Eq α b a`. The standard symmetry proof, universe-polymorphic.
+        let eq_symm = kernel.name_str(eq, "symm");
+        {
+            let u_lvl = kernel.level_param(eq_uparam);
+            let sort_u = kernel.sort(u_lvl);
+            let zero_lvl = kernel.level_zero();
+
+            let alpha_fvar = 22_000;
+            let a_fvar = 22_001;
+            let b_fvar = 22_002;
+            let h_fvar = 22_003;
+            let x_fvar = 22_004;
+            let alpha = kernel.fvar(alpha_fvar);
+            let a = kernel.fvar(a_fvar);
+            let b = kernel.fvar(b_fvar);
+            let x = kernel.fvar(x_fvar);
+
+            let ab_eq = eq_app(kernel, eq, u_lvl, alpha, a, b);
+            let ba_eq = eq_app(kernel, eq, u_lvl, alpha, b, a);
+
+            // --- type: Π (α : Sort u) (a b : α), Eq α a b → Eq α b a --------
+            let with_h = kernel.pi(anon, ab_eq, ba_eq, BinderInfo::Default);
+            let with_b = pi_fvar(kernel, b_fvar, alpha, with_h, BinderInfo::Default);
+            let with_a = pi_fvar(kernel, a_fvar, alpha, with_b, BinderInfo::Default);
+            let symm_ty = pi_fvar(kernel, alpha_fvar, sort_u, with_a, BinderInfo::Implicit);
+
+            // --- value --------------------------------------------------------
+            // motive := fun (x : α) (_ : Eq α a x) => Eq α x a   [a, x free here]
+            let a_x_eq = eq_app(kernel, eq, u_lvl, alpha, a, x);
+            let x_a_eq = eq_app(kernel, eq, u_lvl, alpha, x, a);
+            let motive_inner = kernel.lam(anon, a_x_eq, x_a_eq, BinderInfo::Default);
+            let motive = lam_fvar(kernel, x_fvar, alpha, motive_inner, BinderInfo::Default);
+
+            let eq_refl_const = kernel.const_(eq_refl, vec![u_lvl]);
+            let refl_case = apply_all(kernel, eq_refl_const, &[alpha, a]);
+
+            let eq_rec_const = kernel.const_(eq_rec, vec![zero_lvl, u_lvl]);
+            let h = kernel.fvar(h_fvar);
+            let applied = apply_all(kernel, eq_rec_const, &[alpha, a, motive, refl_case, b, h]);
+
+            let with_h = lam_fvar(kernel, h_fvar, ab_eq, applied, BinderInfo::Default);
+            let with_b = lam_fvar(kernel, b_fvar, alpha, with_h, BinderInfo::Default);
+            let with_a = lam_fvar(kernel, a_fvar, alpha, with_b, BinderInfo::Default);
+            let symm_value = lam_fvar(kernel, alpha_fvar, sort_u, with_a, BinderInfo::Implicit);
+
+            kernel.add_declaration(Declaration::Theorem {
+                name: eq_symm,
+                uparams: vec![eq_uparam],
+                ty: symm_ty,
+                value: symm_value,
+            })?;
+        }
 
         // --- Exists.{u} (α : Sort u) (p : α → Prop) : Prop -------------------
         // The existential: a parametric, NON-indexed inductive (2 params, 0
@@ -1735,6 +1810,7 @@ pub(crate) fn build_logic_prelude_uncached(
             eq_refl,
             eq_rec,
             eq_uparam,
+            eq_symm,
             exists_,
             exists_intro,
             exists_rec,
