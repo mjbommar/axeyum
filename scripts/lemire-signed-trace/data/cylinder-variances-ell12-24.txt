@@ -12,3 +12,4 @@ ell=22 n=46 a=16 |K|= 128 cylinders=  32768 N_id= 16805618 mean_K= 16778952.3 de
 ell=23 n=47 a=17 |K|= 128 cylinders=  65536 N_id= 16834790 mean_K= 16781401.4 dev_id= +53388.6 | SSD_id=4.325e+10 avg=4.487e+10 max=7.317e+10 rank=39139/65536 | ST~4.94e+10 thr=2^(2ell-2)=1.76e+13 SSD_id/thr=2.46e-03
 ell=23 n=48 a=17 |K|= 128 cylinders=  65536 N_id= 33466096 mean_K= 33547762.4 dev_id= -81666.4 | SSD_id=1.007e+11 avg=8.983e+10 max=1.567e+11 rank=10904/65536 | ST~9.88e+10 thr=2^(2ell-2)=1.76e+13 SSD_id/thr=5.72e-03
 ell=24 n=49 a=18 |K|= 128 cylinders= 131072 N_id= 33556083 mean_K= 33558321.8 dev_id=  -2238.8 | SSD_id=8.689e+10 avg=9.402e+10 max=1.496e+11 rank=94045/131072 | ST~1.03e+11 thr=2^(2ell-2)=7.04e+13 SSD_id/thr=1.23e-03
+ell=24 n=50 a=18 |K|= 128 cylinders= 131072 N_id= 67113651 mean_K= 67111220.5 dev_id=  +2430.5 | SSD_id=2.051e+11 avg=1.880e+11 max=3.355e+11 rank=29889/131072 | ST~2.06e+11 thr=2^(2ell-2)=7.04e+13 SSD_id/thr=2.91e-03

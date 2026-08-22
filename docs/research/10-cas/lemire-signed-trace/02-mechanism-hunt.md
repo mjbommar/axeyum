@@ -7,7 +7,7 @@ shortcuts that the data or a two-line argument kill. It is written so that no
 idea here has to be re-derived or re-refuted.
 
 Companion: [01-target-and-toolkit.md](01-target-and-toolkit.md) (target,
-formulations, literature, tooling). Data: `scripts/lemire-signed-trace/data/` (layer tables to `ell = 23`, cylinder table to `ell = 23`).
+formulations, literature, tooling). Data: `scripts/lemire-signed-trace/data/` (layer, cylinder and twisted-sum tables to `ell = 24`).
 
 ## 1. What the exact layer data say (`ell <= 24`)
 
@@ -33,6 +33,7 @@ ell  n    orders >= 2^3      orders >= 2^4
 23   47   0.21 x             0.10 x   (orders >= 2^5: 0.04 x)
 23   48   0.81 x             0.81 x   (orders >= 2^5: exact zero at (17,5))
 24   49   0.19 x             0.19 x   (orders >= 2^5: 0.03 x; all orders 0.60 x)
+24   50   0.12 x             0.12 x   (orders >= 2^5: 0.12 x; all orders 1.17 x at (23,1))
 ```
 
 Orders `2` and `4` sit at `1--3 x` threshold throughout; for `ell >= 200`
@@ -71,7 +72,7 @@ the would-be recursion is wrong.
 (`|K| = 2^{ell-a+1}`, elementary abelian since `a > ell/2`), put
 `SSD_h = sum_{g in hK} (N(g) - mean_{hK})^2` for each of the `2^{a-1}`
 cylinders `h`. `(REL)` follows from `SSD_1 < 2^{2 ell - 2}` (identity
-cylinder). Measured (`data/cylinder-variances-ell12-23.txt`):
+cylinder). Measured (`data/cylinder-variances-ell12-24.txt`):
 
 ```text
 ell n   a  |K| cylinders  SSD_id/avg  rank of id   max/avg  SSD_id/2^{2ell-2}  avg/SatoTate
@@ -86,6 +87,7 @@ ell n   a  |K| cylinders  SSD_id/avg  rank of id   max/avg  SSD_id/2^{2ell-2}  a
 23 47  17 128    65536     0.96     39139/65536    1.63     0.0025            0.91
 23 48  17 128    65536     1.12     10904/65536    1.74     0.0057            0.91
 24 49  18 128   131072     0.92     94045/131072   1.59     0.0012            0.91
+24 50  18 128   131072     1.09     29889/131072   1.78     0.0029            0.91
 ```
 
 Three facts. (i) The identity cylinder is typical: within 25% of the average
@@ -115,7 +117,7 @@ interval against sign patterns of the next `log2 ell + 2` coefficients, and
 it holds for every cylinder with margin growing like `2^{ell/2}/ell`.
 
 The full sweep (`lemire_twists.py`, exact Walsh transforms,
-`data/twisted-sums-ell14-23.txt`), reported as `max |A_psi| / 2^{ell-1}`:
+`data/twisted-sums-ell14-24.txt`), reported as `max |A_psi| / 2^{ell-1}`:
 
 ```text
 ell n   rms/random-phase   identity cylinder   sup over all cylinders
@@ -132,6 +134,7 @@ ell n   rms/random-phase   identity cylinder   sup over all cylinders
 23 47   0.957              0.15                0.27
 23 48   0.957              0.23                0.41
 24 49   0.959              0.09                0.21
+24 50   0.959              0.15                0.31
 ```
 
 The identity-cylinder statement of the open fact
