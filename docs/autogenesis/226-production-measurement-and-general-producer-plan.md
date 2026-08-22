@@ -214,7 +214,30 @@ The ledger's own prose switches when either becomes nonzero, so a report saying
 that does not touch the classifier, after a first attempt where it was killed by
 the classifier's own mutation and therefore pinned nothing new.
 
-### P3 — Producer census over train + development (medium; the headline)
+### P3 — Producer census — **FIRST RESULT LANDED 2026-08-22**
+
+The census the plan asks for had in fact already been run on 2026-08-19 with a
+generic producer, and its funnel is
+[`22-mathlib-reflexivity-coverage.md`](22-mathlib-reflexivity-coverage.md):
+114 adapter-rejection / 15 producer-decline / 7 kernel-rejection / 2 admissible.
+Both middle buckets are now characterised
+([`230`](230-producer-decline-shape-census.md),
+[`233`](233-adapter-blocker-is-three-theorems.md)), and a second, more capable
+producer has landed and been credited:
+
+- [`232`](232-first-general-producer-result.md) — a target-agnostic bounded-induction
+  producer proves **three** goals and declines the false control.
+- **`multi_target_operations` 0 → 1**, `via_multi_target` 0 → 1.
+  `F:ml430-nat-descfactorial-one-d4856d4a` is `proved`, `kernel-lean`, axiom-free,
+  the first result here credited to an operation covering more than one fact.
+- The must-decline negative controls the plan asked for exist, are gated, and are
+  independently recomputed (`must-decline-mutations-v1.json`).
+
+**The dominant cluster is named and is not what the plan assumed.** It is not a
+producer capability at all: 113 of the 114 unreachable rows are blocked by three
+*theorems* — `congrArg`, `congr`, `mt` — all derivable in our own kernel. That is
+P4's target.
+
 
 Run one genuinely general producer over the dependency-ready train and
 development rows under fixed budgets, with held-out untouched. After the P0
