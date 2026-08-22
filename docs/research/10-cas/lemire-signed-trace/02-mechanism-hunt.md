@@ -31,6 +31,7 @@ ell  n    orders >= 2^3      orders >= 2^4
 22   45   0.23 x             0.23 x
 22   46   0.22 x             0.22 x
 23   47   0.21 x             0.10 x   (orders >= 2^5: 0.04 x)
+23   48   0.81 x             0.81 x   (orders >= 2^5: exact zero at (17,5))
 ```
 
 Orders `2` and `4` sit at `1--3 x` threshold throughout; for `ell >= 200`
@@ -82,6 +83,7 @@ ell n   a  |K| cylinders  SSD_id/avg  rank of id   max/avg  SSD_id/2^{2ell-2}  a
 22 45  16 128    32768     1.03     12773/32768    1.59     0.0050            0.90
 22 46  16 128    32768     1.05     10742/32768    1.69     0.010             0.90
 23 47  17 128    65536     0.96     39139/65536    1.63     0.0025            0.91
+23 48  17 128    65536     1.12     10904/65536    1.74     0.0057            0.91
 ```
 
 Three facts. (i) The identity cylinder is typical: within 25% of the average
@@ -126,6 +128,7 @@ ell n   rms/random-phase   identity cylinder   sup over all cylinders
 22 45   0.954              0.20                0.36
 22 46   0.954              0.30                0.50
 23 47   0.957              0.15                0.27
+23 48   0.957              0.23                0.41
 ```
 
 The identity-cylinder statement of the open fact

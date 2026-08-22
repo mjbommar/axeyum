@@ -9,3 +9,4 @@ ell=20 n=42 a=14 |K|= 128 cylinders=  8192 rms|A_psi|=98591.2 (random-phase 1036
 ell=22 n=45 a=16 |K|= 128 cylinders= 32768 rms|A_psi|=146674.0 (random-phase 153695.5, ratio 0.954) | max|A_psi| identity=413056 (0.197 thr) all=758160 (0.362 thr) | thr 2^(ell-1)=2097152 Weil=(ell-1)2^ceil(n/2)=176160768
 ell=22 n=46 a=16 |K|= 128 cylinders= 32768 rms|A_psi|=207451.6 (random-phase 217358.3, ratio 0.954) | max|A_psi| identity=629488 (0.300 thr) all=1038312 (0.495 thr) | thr 2^(ell-1)=2097152 Weil=(ell-1)2^ceil(n/2)=176160768
 ell=23 n=47 a=17 |K|= 128 cylinders= 65536 rms|A_psi|=212656.9 (random-phase 222243.4, ratio 0.957) | max|A_psi| identity=640235 (0.153 thr) all=1119117 (0.267 thr) | thr 2^(ell-1)=4194304 Weil=(ell-1)2^ceil(n/2)=369098752
+ell=23 n=48 a=17 |K|= 128 cylinders= 65536 rms|A_psi|=300886.1 (random-phase 314299.6, ratio 0.957) | max|A_psi| identity=981320 (0.234 thr) all=1711968 (0.408 thr) | thr 2^(ell-1)=4194304 Weil=(ell-1)2^ceil(n/2)=369098752
