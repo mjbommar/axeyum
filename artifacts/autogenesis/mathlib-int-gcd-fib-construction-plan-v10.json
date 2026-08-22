@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-fib-construction-plan-v10",
+  "state": "preregistered-before-exact-int-gcd-fib-driver",
+  "predecessor": {
+    "path": "artifacts/autogenesis/mathlib-int-gcd-fib-construction-result-v9.json",
+    "sha256": "a9e9fd5cfec0e979ecebff54d0ec9bf94209b4195b0775cbefe6f225cd1e8622"
+  },
+  "facts": {
+    "premise": {
+      "path": "artifacts/facts/F-ml430-nat-fib-gcd-d1d98407.json",
+      "sha256": "6c6ed24ea4f5c7ffef1fe4ad14fdce2335ba0e46d789b7d40eec83a3d2ba22cc",
+      "required_status": "proved"
+    },
+    "target": {
+      "path": "artifacts/facts/F-ml430-int-gcd-fib-73bdafc2.json",
+      "sha256": "0363e2fa200d99356050891f3c697b5447ca9744965ea0c554b0070f7f8607c5",
+      "required_status": "open"
+    }
+  },
+  "inputs": [
+    {
+      "role": "exact integer Fibonacci natAbs bridge",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-natabs-exact-v1/root.ndjson",
+      "sha256": "1ec10d475fb3c77fea3353036e2a09f70abf88f03402a2912407c71b26e3b7e4",
+      "root": "Axeyum.Autogenesis.intFibNatAbsV1",
+      "declaration_sha256": "deee672b0430d982d1df383c933b520de37ffcaba4dcb23d5231c29926493e83"
+    },
+    {
+      "role": "admitted exact natural Fibonacci gcd theorem",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/749f30f65-nat-fib-gcd-v3/target-1.ndjson",
+      "sha256": "8ac3c35874540a10e5fa393c65f3ad313a6cf6a06303cec68fec3ec45d0f04cd",
+      "root": "Nat.fib_gcd",
+      "declaration_sha256": "2b5f52996fdc275c859364de7b99bf32ab4ba01e24fc14e10cf65bbd5724ea8d"
+    }
+  ],
+  "int_gcd": {
+    "definition_name": "Int.gcd",
+    "definition": "fun m n : Int => Nat.gcd m.natAbs n.natAbs",
+    "source_content_sha256": "1b4460e69780e5080a107bc178b77ffe064585b9712c5f7468a80c02cdee0655",
+    "source_contract_receipt_sha256": "ae7585751df713ac8fda6f611c3197b0917c9001dc8bda134e9a43416ce3ec82",
+    "equation_name": "Int.gcd_def",
+    "equation": "forall m n : Int, Int.gcd m n = Nat.gcd m.natAbs n.natAbs",
+    "construction": "submit the exact transparent definition, then its two-binder Eq.refl equation in the composed kernel"
+  },
+  "target": {
+    "name": "Int.gcd_fib",
+    "statement": "forall m n : Int, Int.gcd (Int.fib m) (Int.fib n) = Nat.fib (Int.gcd m n)",
+    "construction": [
+      "rewrite the left Int.gcd with Int.gcd_def",
+      "transport intFibNatAbsV1 through the first and second Nat.gcd arguments",
+      "apply Eq.symm to Nat.fib_gcd at m.natAbs and n.natAbs",
+      "use conversion through Int.gcd_def for the final Nat.fib argument"
+    ],
+    "expected_direct_theorem_dependencies": [
+      "Axeyum.Autogenesis.intFibNatAbsV1",
+      "Eq.symm",
+      "Eq.trans",
+      "Int.gcd_def",
+      "Nat.fib_gcd",
+      "congrArg"
+    ]
+  },
+  "driver": {
+    "path": "crates/axeyum-lean-import/examples/int_gcd_fib_exact.rs",
+    "must_not_exist_before_plan": true,
+    "output": "/nas3/data/axeyum/autogenesis/reference-packs/int-gcd-fib-exact-v1/root.ndjson",
+    "output_must_not_preexist": true
+  },
+  "execution": {
+    "max_complete_invocations": 1,
+    "max_input_stream_reads": 2,
+    "max_composition_operations": 1,
+    "max_composition_replays": 1,
+    "max_definition_submissions": 1,
+    "max_support_theorem_submissions": 1,
+    "max_target_theorem_submissions": 1,
+    "max_target_exports": 1,
+    "required_fresh_imports": 2,
+    "max_retries": 0,
+    "max_ledger_writes": 0
+  },
+  "acceptance": {
+    "target_axiom_footprint": [],
+    "exact_dependency_set": true,
+    "fresh_imports": 2,
+    "proof_terms_types_or_values_rendered": 0
+  },
+  "next_on_accept": "bind canonical Int.gcd_fib goal identity and preregister crash-safe admission"
+}

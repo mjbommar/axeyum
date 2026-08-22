@@ -116,3 +116,10 @@ is sealed read-only at
 No fact or ledger row changed. The next bounded increment is the direct
 `Int.gcd_fib` composition over this bridge, exact `Int.gcd_def`, and admitted
 `Nat.fib_gcd`.
+
+V10 freezes that final join before driver code. It starts from the sealed natAbs
+bridge, composes only the admitted `Nat.fib_gcd` root, reconstructs the exact
+transparent `Int.gcd` equation already covered by the source-contract receipt,
+and submits one explicit equality chain. The expected target depends directly
+on the bridge, `Nat.fib_gcd`, `Int.gcd_def`, and the three equality combinators;
+no official `Int.gcd_fib` proof stream is an input.
