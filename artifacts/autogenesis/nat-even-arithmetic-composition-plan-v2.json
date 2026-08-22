@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-even-arithmetic-composition-plan",
+  "state": "preregistered-after-line-threshold",
+  "predecessor": {
+    "path": "artifacts/autogenesis/nat-even-arithmetic-composition-driver-result-v1.json",
+    "required_state": "focused-build-failed-before-stream-access"
+  },
+  "only_code_change": "add #[allow(clippy::too_many_lines)] to run, matching other bounded exact-composition examples",
+  "unchanged": {
+    "proof_logic": true,
+    "input_paths_and_hashes": true,
+    "target_names": true,
+    "receipt_replay_requirements": true,
+    "dependency_and_footprint_assertions": true,
+    "execution_budget": true,
+    "ledger_authority": 0
+  },
+  "budget": {
+    "focused_builds": 1,
+    "complete_invocations": 1,
+    "retries_after_build": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": "The focused Clippy build passes with -D warnings before any input stream may be read.",
+  "stop_rule": "Any further diagnostic stops before execution and requires a new preregistered correction."
+}
