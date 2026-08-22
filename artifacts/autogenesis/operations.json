@@ -872,6 +872,53 @@
         "axiom_footprint_policy": "must-be-empty",
         "axiom_footprint": []
       }
+    },
+    {
+      "id": "authoritative-mathlib-int-fib-dvd-kernel-capsule-v1",
+      "scope": "authoritative",
+      "reviewed_gate_mentions": [
+        "check-autogenesis-int-fib-dvd-admission-plan.py",
+        "check-autogenesis-int-fib-dvd-support-export-plan.py",
+        "validate-autogenesis-operations.py"
+      ],
+      "applicability": {
+        "fact_ids": ["F:ml430-int-fib-dvd-ffb3c5c1"],
+        "formal_languages": ["lean4-surface"],
+        "fragments": ["Int"]
+      },
+      "producer": {
+        "operation": "dependent-integer-fibonacci-divisibility-transport-v1",
+        "implementation": "crates/axeyum-lean-import/examples/int_fib_dvd_exact.rs",
+        "input_kind": "axeyum-sealed-kernel-theorem-capsule",
+        "output_kind": "axeyum-sealed-kernel-theorem-capsule"
+      },
+      "checker": {
+        "operation": "axeyum-lean-import/sealed-int-fib-dvd-capsule-receipt-v1",
+        "implementation": "scripts/check-autogenesis-int-fib-dvd-capsule.py",
+        "input_kind": "axeyum-sealed-kernel-theorem-capsule",
+        "output_kind": "axeyum-checked-sealed-kernel-capsule-receipt-v1"
+      },
+      "executor": {
+        "driver": "axeyum-lean-import/sealed-kernel-capsule-v1",
+        "implementation": "scripts/execute-autogenesis-operation.py",
+        "input_fact_id": "F:ml430-int-fib-dvd-ffb3c5c1",
+        "result_manifest": "artifacts/autogenesis/mathlib-int-fib-dvd-goal-identity-result-v1.json",
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-dvd-exact-v1/root.ndjson",
+        "capsule_sha256": "f684a4de870734f60f33abe1da468637697c0d27ce988a47d08dfed601ec6af0",
+        "target_theorem": "Int.fib_dvd",
+        "goal_sha256": "ed84c258cad64868b6e14a1fe1cf46732aa2ca7e231defa0a627a16fae795016",
+        "declaration_sha256": "2d4463d2a000519460bc3c7e644d2880af49c95ff9d51edcb16379ed974b22aa",
+        "receipt_sha256": "a39586b5f2cc15a7e6f6b9d2ac189035c6b81df1825ca83a5c864095bf99b897",
+        "timeout_seconds": 120,
+        "expected_evidence_label": "kernel-term-mathlib-int-fib-dvd-capsule-axiom-free"
+      },
+      "admission": {
+        "epistemic_status": "proved",
+        "proof_route": "kernel-lean",
+        "evidence_kind": "kernel-term",
+        "axiom_footprint_policy": "must-be-empty",
+        "axiom_footprint": []
+      }
     }
   ]
 }

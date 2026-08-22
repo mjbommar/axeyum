@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, and now `Int.fib_gcd` are durably proved with empty kernel footprints. The exact `Int.fib_gcd` operation survived an exit-75 intent fault, recovery performed one authoritative ledger write, the measured frontier produced the preregistered empty unlock delta, and an isolated clean replay reproduced every semantic check.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, and `Int.fib_gcd` are durably proved with empty kernel footprints. Exact `Int.fib_dvd` is now constructed and sealed empty-footprint from six fixed dependencies, bound to its canonical Mathlib goal identity, and registered as the frontier's unique admissible operation with exact current gate coupling; its ledger fact remains open pending crash-safe execution.
 
-**Next:** reconstruct the two directional natAbs/divisibility implications needed by `Int.fib_dvd` from explicit witnesses and clean multiplication identities; do not import the assumption-bearing official biconditional.
+**Next:** derive the `Int.fib_dvd` transaction from this clean registration commit, inject the preregistered exit-75 intent fault, prove the fact unchanged, recover with exactly one authoritative write, then reproduce the admission in isolation before selecting the next bottom-up fact.
 
 <!-- plan-section: landed-changes -->
 
@@ -95,6 +95,7 @@
 | 2026-08-22 | (pending) | One hash-only, nonrendering read of the sealed `Int.fib_dvd` root is frozen to bind its canonical kernel type before operation registration or ledger authority |
 | 2026-08-22 | (pending) | Hash-only audit binds canonical `Int.fib_dvd` type `ed84c258…5016`, unchanged empty footprint, and six exact dependencies with zero rendering or ledger authority |
 | 2026-08-22 | (pending) | Exact crash-safe `Int.fib_dvd` admission is frozen against receipt `a39586b5…b897`, one ledger write, one recovery, and one isolated replay before operation registration |
+| 2026-08-22 | (pending) | Exact `Int.fib_dvd` sealed-capsule execution is registered through typed frontier, execution, transaction, and replay machinery with six fixed dependencies; exact live gate coupling leaves it uniquely admissible with zero ledger writes so far |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |

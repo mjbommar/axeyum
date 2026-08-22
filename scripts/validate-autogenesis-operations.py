@@ -98,6 +98,13 @@ SEALED_CAPSULE_CONTRACTS = {
         "target_theorem": "Int.fib_gcd",
         "receipt_sha256": "6c5a72c0853beb1136f4934b92ce189427b05e58e2f4af020509b718e8b602cc",
     },
+    "F:ml430-int-fib-dvd-ffb3c5c1": {
+        "result_manifest": "artifacts/autogenesis/mathlib-int-fib-dvd-goal-identity-result-v1.json",
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-dvd-exact-v1/root.ndjson",
+        "capsule_sha256": "f684a4de870734f60f33abe1da468637697c0d27ce988a47d08dfed601ec6af0",
+        "target_theorem": "Int.fib_dvd",
+        "receipt_sha256": "a39586b5f2cc15a7e6f6b9d2ac189035c6b81df1825ca83a5c864095bf99b897",
+    },
     "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d": {
         "result_manifest": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-goal-identity-result-v1.json",
         "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-recurrence-corollary-composition-v3/int-fib-recurrence-corollary-1.ndjson",
@@ -374,6 +381,7 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             "F:ml430-int-fib-neg-b4021d37",
             "F:ml430-int-gcd-fib-73bdafc2",
             "F:ml430-int-fib-gcd-3a8bfdec",
+            "F:ml430-int-fib-dvd-ffb3c5c1",
         }:
             theorem = manifest.get("theorem") or {}
             execution = manifest.get("execution") or {}
@@ -390,6 +398,7 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             is_neg = value["input_fact_id"] == "F:ml430-int-fib-neg-b4021d37"
             is_gcd_fib = value["input_fact_id"] == "F:ml430-int-gcd-fib-73bdafc2"
             is_fib_gcd = value["input_fact_id"] == "F:ml430-int-fib-gcd-3a8bfdec"
+            is_fib_dvd = value["input_fact_id"] == "F:ml430-int-fib-dvd-ffb3c5c1"
             expected_dependencies = (
                 [
                     "Axeyum.Autogenesis.fibAddTwo",
@@ -431,6 +440,15 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
                 if is_gcd_fib
                 else ["Eq.symm", "Eq.trans", "Int.fib_natCast", "Int.gcd_fib"]
                 if is_fib_gcd
+                else [
+                    "Axeyum.Autogenesis.intDvdOfNatAbsDvdDirectV1",
+                    "Axeyum.Autogenesis.intFibNatAbsV1",
+                    "Axeyum.Autogenesis.intNatAbsDvdForwardResidualV1",
+                    "Axeyum.Autogenesis.intNatAbsMulDirectV1",
+                    "Eq.symm",
+                    "Nat.fib_dvd",
+                ]
+                if is_fib_dvd
                 else []
             )
             if (
@@ -438,7 +456,7 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
                 or manifest.get("state")
                 != (
                     "exact-goal-identity-bound-without-rendering"
-                    if is_add_two or is_corollary or is_add_one or is_neg or is_gcd_fib or is_fib_gcd
+                    if is_add_two or is_corollary or is_add_one or is_neg or is_gcd_fib or is_fib_gcd or is_fib_dvd
                     else "single-read-hash-only-identity-qualified"
                 )
                 or value["capsule_path"] != contract["capsule_path"]
@@ -454,13 +472,13 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
                 or execution.get("importer_runs") != 1
                 or execution.get(
                     "stream_reads"
-                    if is_add_two or is_corollary or is_add_one or is_neg or is_gcd_fib or is_fib_gcd
+                    if is_add_two or is_corollary or is_add_one or is_neg or is_gcd_fib or is_fib_gcd or is_fib_dvd
                     else "proof_bearing_stream_reads"
                 )
                 != 1
                 or (
                     execution.get("theorem_submissions") != 0
-                    if not is_add_two and not is_corollary and not is_add_one and not is_neg and not is_gcd_fib and not is_fib_gcd
+                    if not is_add_two and not is_corollary and not is_add_one and not is_neg and not is_gcd_fib and not is_fib_gcd and not is_fib_dvd
                     else execution.get("ledger_writes") != 0
                 )
                 or execution.get("retries") != 0
@@ -481,6 +499,7 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
                 "F:ml430-int-fib-neg-b4021d37",
                 "F:ml430-int-gcd-fib-73bdafc2",
                 "F:ml430-int-fib-gcd-3a8bfdec",
+                "F:ml430-int-fib-dvd-ffb3c5c1",
             }
             and (
                 manifest_path != expected_manifest

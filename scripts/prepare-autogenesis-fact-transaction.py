@@ -469,6 +469,10 @@ def build_authoritative_transaction(
             operation["id"]
             == "authoritative-mathlib-int-fib-gcd-kernel-capsule-v1"
         )
+        is_int_fib_dvd = (
+            operation["id"]
+            == "authoritative-mathlib-int-fib-dvd-kernel-capsule-v1"
+        )
         expected_dependencies = (
             []
             if is_int_fib_natcast
@@ -512,6 +516,15 @@ def build_authoritative_transaction(
             if is_int_gcd_fib
             else ["Eq.symm", "Eq.trans", "Int.fib_natCast", "Int.gcd_fib"]
             if is_int_fib_gcd
+            else [
+                "Axeyum.Autogenesis.intDvdOfNatAbsDvdDirectV1",
+                "Axeyum.Autogenesis.intFibNatAbsV1",
+                "Axeyum.Autogenesis.intNatAbsDvdForwardResidualV1",
+                "Axeyum.Autogenesis.intNatAbsMulDirectV1",
+                "Eq.symm",
+                "Nat.fib_dvd",
+            ]
+            if is_int_fib_dvd
             else None
         )
         is_single_construction = (
@@ -521,6 +534,7 @@ def build_authoritative_transaction(
             or is_int_fib_neg
             or is_int_gcd_fib
             or is_int_fib_gcd
+            or is_int_fib_dvd
         )
         expected_fresh_imports = 2 if is_single_construction else 4
         expected_reconstructions = 1 if is_single_construction else 2
@@ -547,6 +561,7 @@ def build_authoritative_transaction(
                 or is_int_fib_neg
                 or is_int_gcd_fib
                 or is_int_fib_gcd
+                or is_int_fib_dvd
                 else not dependencies
             )
             or len(dependencies) != len(set(dependencies))
@@ -635,6 +650,15 @@ def build_authoritative_transaction(
                 "immutable capsule and committed identity manifest and requires its "
                 "exact theorem identity, two fresh imports, empty axiom footprint, "
                 "and four named direct theorem dependencies"
+            )
+        elif is_int_fib_dvd:
+            result_description = (
+                "six-link-composed axiom-free sealed integer Fibonacci divisibility capsule"
+            )
+            replay_description = (
+                "immutable capsule and committed identity manifest and requires its "
+                "exact theorem identity, two fresh imports, empty axiom footprint, "
+                "and six named direct theorem dependencies"
             )
         else:
             result_description = (
