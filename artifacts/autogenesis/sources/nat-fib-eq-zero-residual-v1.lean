@@ -21,7 +21,7 @@ theorem natFibEqZeroResidualV1
       · intro fibIsZero
         have positive : 0 < fibFn (Nat.succ k) := fibPos.mpr (succPos k)
         rw [fibIsZero] at positive
-        exact False.elim positive
+        nomatch positive
       · intro successorIsZero
         nomatch successorIsZero
 
