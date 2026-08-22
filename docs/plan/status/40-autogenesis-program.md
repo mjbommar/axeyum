@@ -94,6 +94,7 @@
 | 2026-08-22 | (pending) | V22 passes all five links, constructs exact `Int.fib_dvd` with six fixed dependencies and empty footprint, reproduces twice, and seals a 1,197,314-byte capsule with zero ledger writes |
 | 2026-08-22 | (pending) | One hash-only, nonrendering read of the sealed `Int.fib_dvd` root is frozen to bind its canonical kernel type before operation registration or ledger authority |
 | 2026-08-22 | (pending) | Hash-only audit binds canonical `Int.fib_dvd` type `ed84c258…5016`, unchanged empty footprint, and six exact dependencies with zero rendering or ledger authority |
+| 2026-08-22 | (pending) | Exact crash-safe `Int.fib_dvd` admission is frozen against receipt `a39586b5…b897`, one ledger write, one recovery, and one isolated replay before operation registration |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
