@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-natcast-decision-free-join-result",
+  "state": "negative-adapters-root-pack-qualified-empty-footprint",
+  "plan": "artifacts/autogenesis/int-fib-neg-natcast-decision-free-plan-v4.json",
+  "evidence": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-natcast-decision-free-v1/negative-adapters-v4-1.ndjson", "bytes": 392098, "sha256": "6701a7a2c7da44ad48d4efacdc255af514276ae027fb56ea7b35545026c89045", "exports_byte_identical": true, "stream_axioms": []},
+  "roots": [
+    {"name": "Axeyum.Autogenesis.intFibNegativeEvenAdapterV1", "declaration_sha256": "75b81f571fdcee00b05aa8e555475fb76edac24b5d13e4cb67509affcfe4fcb2", "axiom_footprint": []},
+    {"name": "Axeyum.Autogenesis.intFibNegativeOddAdapterV1", "declaration_sha256": "2d652002af90d6fdb69da662872ba7dee4058bffe6692fa796a6f6682cd16c27", "axiom_footprint": []}
+  ],
+  "execution": {"compilations": 0, "exports": 2, "footprint_audits": 1, "retries": 0, "exact_target_submissions": 0, "ledger_writes": 0},
+  "authority": {"qualified_decision_free_support_roots": 5, "exact_target_submissions": 0, "ledger_writes": 0},
+  "next_boundary": "Preregister exact composition of the five qualified decision-free support roots with sealed presentation, parity, multiplication, and recurrence capsules.",
+  "limitations": "Packaging grants no target theorem, fact transition, evaluation, or ledger credit."
+}

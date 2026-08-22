@@ -79,6 +79,7 @@
 | 2026-08-21 | (pending) | Decision-free residual and four adapters compile unchanged; V1 export omits their new olean directory and V2 freezes only the two-directory `LEAN_PATH` repair |
 | 2026-08-21 | (pending) | V2 qualifies the residual and both negative adapters; the shared broad import contaminates only power adapters, so V3 freezes a Basic-only module split |
 | 2026-08-21 | (pending) | V3 qualifies both Basic-only power adapters empty-footprint; V4 freezes root-only packaging of the already clean negative pair before exact composition |
+| 2026-08-21 | (pending) | V4 seals the negative pair in an empty-axiom root pack; exact seven-stream decision-free `Int.fib_neg_natCast` composition is frozen before driver code |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |

@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-natcast-decision-free-exact-plan",
+  "state": "preregistered-before-exact-driver-code-or-input-read",
+  "target": {"name": "Int.fib_neg_natCast", "statement": "forall n : Nat, Int.fib (-(n:Int)) = (-1:Int)^(n+1) * Int.ofNat (Nat.fib n)"},
+  "base": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-exact-composition-v2/int-fib-add-two-1.ndjson", "sha256": "0fbbb4d55ed862f7feb1b8efa3bf45eed24269067b3702c727d05e45c8947219"},
+  "inputs": [
+    {"role": "conditional negative presentation", "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-negative-presentation-v1-v1/presentation.ndjson", "sha256": "ee38fd2ff6e2427e349846e49ec603145d4f71bc1676bcfd8cd61bf061a088c0", "roots": ["Int.fib_neg_natCast_presentation"]},
+    {"role": "negative branch adapters", "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-natcast-decision-free-v1/negative-adapters-v4-1.ndjson", "sha256": "6701a7a2c7da44ad48d4efacdc255af514276ae027fb56ea7b35545026c89045", "roots": ["Axeyum.Autogenesis.intFibNegativeEvenAdapterV1", "Axeyum.Autogenesis.intFibNegativeOddAdapterV1"]},
+    {"role": "exact conditional power parity plus modulo cases", "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-neg-one-pow-parity-exact-v1/exact.ndjson", "sha256": "dbe29125ed7ffd5e66e33da9da236b22b472fa4c5527f87146adc0ca25f9faa0", "roots": ["Axeyum.Autogenesis.intNegOnePowParityV1"]},
+    {"role": "power branch adapters", "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-natcast-decision-free-v1/power-adapters-v2-1.ndjson", "sha256": "dcf683e222dae0ac7e0bb28931855a69ed97463afb3bac189402298b80ab879d", "roots": ["Axeyum.Autogenesis.intFibPowerEvenAdapterV2", "Axeyum.Autogenesis.intFibPowerOddAdapterV2"]},
+    {"role": "native multiplication leaves", "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-left-unit-sign-native-v1/int-left-unit-sign-native.ndjson", "sha256": "9b5f442a5fa98cf1116cbe8976aa23b2cae22278c56ef226b51f715b84d1f041", "roots": ["Int.neg_one_mul", "Int.one_mul"]},
+    {"role": "decision-free final residual", "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-natcast-decision-free-v1/residual-v2-1.ndjson", "sha256": "16e90aa1e7bd22f81050add555523628171d89382a96e5f047fbd4e833d0b995", "roots": ["Axeyum.Autogenesis.intFibNegNatCastDecisionFreeResidualV1"]}
+  ],
+  "sequence": [
+    "import and hash-bind all seven proof-isolated streams",
+    "compose presentation and negative adapters into the recurrence base, replay both receipts, then specialize both negative adapters",
+    "compose exact power parity and Basic-only power adapters, replay both receipts, then specialize both power adapters",
+    "compose native multiplication leaves and decision-free residual with replayed receipts",
+    "specialize the residual with Int.fib, Nat.fib, modulo cases, four branch theorems, and two multiplication laws under exact target name",
+    "require empty footprint and exact dependency identities, export once, and verify two fresh imports before write"
+  ],
+  "driver": "crates/axeyum-lean-import/examples/int_fib_neg_natcast_decision_free_exact.rs",
+  "budget": {"driver_builds": 1, "complete_invocations": 1, "input_stream_reads": 7, "composition_operations": 6, "composition_replays": 6, "support_specializations": 4, "support_specialization_replays": 4, "target_specializations": 1, "target_specialization_replays": 1, "target_submissions": 1, "target_exports": 1, "fresh_target_imports": 2, "retries": 0, "ledger_writes": 0},
+  "acceptance": {"all_stream_axioms": [], "every_composition_and_specialization_must_replay": true, "target_axiom_footprint": [], "target_must_survive_two_fresh_imports": true, "proof_terms_types_or_values_may_be_rendered": false},
+  "output": "artifacts/autogenesis/int-fib-neg-natcast-decision-free-exact-result-v1.json",
+  "limitations": "Exact evidence does not mutate the fact ledger; registration and crash-safe admission remain separately authorized."
+}
