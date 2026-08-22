@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-fib-construction-plan-v11",
+  "state": "preregistered-link-by-link-type-diagnostic-before-driver-repair",
+  "predecessor": {
+    "path": "artifacts/autogenesis/mathlib-int-gcd-fib-construction-result-v10.json",
+    "sha256": "1bc8fac222592f07e4c090c8c5ab3593018d0ca254266f3be1cd1e8b655adf95"
+  },
+  "repair": {
+    "driver": "crates/axeyum-lean-import/examples/int_gcd_fib_exact.rs",
+    "allowed_changes": [
+      "infer each of p0 through p4 against its exact expected equality",
+      "infer the completed transitivity chain against the target equality",
+      "report only the first failing stage and opaque kernel error identifiers",
+      "correct only the combinator application exposed by those checks"
+    ],
+    "forbidden_changes": [
+      "change either input stream",
+      "inspect or import the official Int.gcd_fib proof",
+      "render proof terms, theorem types, or theorem values",
+      "weaken the empty-footprint or exact-dependency requirements"
+    ]
+  },
+  "execution": {
+    "max_complete_invocations": 1,
+    "max_input_stream_reads": 2,
+    "max_target_theorem_submissions": 1,
+    "max_target_exports": 1,
+    "required_fresh_imports_on_accept": 2,
+    "max_retries": 0,
+    "max_ledger_writes": 0
+  },
+  "next_on_accept": "seal exact Int.gcd_fib and bind canonical goal identity",
+  "next_on_decline": "record the first named failing equality link and freeze only its correction"
+}

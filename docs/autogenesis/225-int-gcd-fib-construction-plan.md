@@ -123,3 +123,10 @@ transparent `Int.gcd` equation already covered by the source-contract receipt,
 and submits one explicit equality chain. The expected target depends directly
 on the bridge, `Nat.fib_gcd`, `Int.gcd_def`, and the three equality combinators;
 no official `Int.gcd_fib` proof stream is an input.
+
+The first V10 execution reaches the final target submission but the kernel
+rejects the assembled value with a type mismatch. It writes no output and gets
+zero theorem credit. V11 authorizes one diagnostic repair: check the inferred
+type of each of the five equality links and the completed chain against its
+expected proposition, expose only the first failing stage, and change only the
+malformed combinator application.

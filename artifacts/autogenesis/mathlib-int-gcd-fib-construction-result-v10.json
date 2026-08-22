@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-fib-construction-result-v10",
+  "state": "first-exact-join-declined-at-target-type-mismatch-no-output",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-gcd-fib-construction-plan-v10.json",
+    "sha256": "1b54eccd9d2a9393013f66bfbe78a2c4e82f2330605de0203f51c5f277a86c6c"
+  },
+  "producer": {
+    "commit": "452fe8b423708fdb2bcb1abd025de45980a10036",
+    "path": "crates/axeyum-lean-import/examples/int_gcd_fib_exact.rs",
+    "sha256": "e9f6376d2686eccc8565e540443d139b1a2f1ae4a453ad29c11865e35c42769a"
+  },
+  "observation": {
+    "exit_code": 1,
+    "stage": "Int.gcd_fib theorem submission",
+    "error": "TypeMismatch { expected: ExprId(1), got: ExprId(118774) }",
+    "output_absent": true
+  },
+  "execution": {
+    "complete_invocations": 1,
+    "input_stream_reads": 2,
+    "composition_operations": 1,
+    "composition_replays": 1,
+    "definition_submissions": 1,
+    "support_theorem_submissions": 1,
+    "target_theorem_submissions": 1,
+    "target_exports": 0,
+    "fresh_target_imports": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "theorem_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0,
+    "proof_terms_rendered": 0,
+    "theorem_types_rendered": 0,
+    "theorem_values_rendered": 0
+  }
+}
