@@ -239,6 +239,8 @@ compounding, not automation theatre.
 | [Held-out partition breach result](227-held-out-partition-breach-result.md) | A capsule was registered against a held-out fact and no gate looked; what was spent, how it was repaired, and the isolation gate that now exists. |
 | [Capsule lane retrospective](228-capsule-lane-retrospective.md) | Nine capsules in ten hours moved the generality metric by zero — what was structurally invisible from inside the work, and the eight things to do differently. |
 | [`Nat.descFactorial_one` reflexivity decline](229-nat-descfactorial-one-reflexivity-decline.md) | Why a general producer's `Eq.refl` is correctly rejected here, the exact unfolding that gets stuck, and the six-fact cluster it shares a shape with. |
+| [Producer-decline shape census](230-producer-decline-shape-census.md) | What the 15 goals the producer refuses actually look like, and which capability each stratum unlocks. |
+| [Weak-model flywheel experiment](231-weak-model-flywheel-experiment.md) | Can Haiku and Sonnet drive a turn? Nobody breached held-out; one produced a confident false finding, and that is a finding about the process. |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
