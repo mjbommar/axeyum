@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-bounded-induction-candidate",
+  "state": "candidate-checked-not-admitted",
+  "source_fact_id": "F:ml430-nat-ascfactorial-zero-fd183202",
+  "statement_adapter": "artifacts/autogenesis/mathlib-statement-adapter-v1.json",
+  "operation": {
+    "implementation": "crates/axeyum-lean-import/examples/bounded_induction_operation.rs",
+    "target_definition": "Axeyum.Autogenesis.Statement.natAscFactorialZero",
+    "goal_sha256": "87e37902bb8b3958514c5a6831b28ebff2824c8a30fb45601ff47736ee3853d7",
+    "proof_sha256": "1201cbe129a7623a14d1e724bd66bd5a1975b9991e3cabd9b26d485f59a10d2a",
+    "target_content_sha256": "a492e9e2f4b4386d8341eb891a3932298226d74a0472c08cf7f5ae32efa7dabe",
+    "binders_used": 1,
+    "inductions_used": 1,
+    "max_binders": 8,
+    "max_inductions": 2,
+    "admitted_declarations": 55,
+    "axioms": 0,
+    "theorem_dependencies": 0,
+    "target_dependency": false,
+    "ledger_writes": 0
+  },
+  "reproduction": "python3 scripts/check-autogenesis-bounded-induction-family.py",
+  "limitations": "This fact already carries proof credit through a different, narrower operation (authoritative-mathlib-statement-reflexivity-v1, plain Eq.refl -- the base case here already closes by reflexivity so the induction step is unused work, not a required one). This manifest records that the general bounded-induction producer ALSO independently kernel-checks it (axioms=0, target_dependency=false), as evidence of the producer's reach; it does not add a second evidence row to the fact and does not change its epistemic_status, proof_route, or existing evidence."
+}

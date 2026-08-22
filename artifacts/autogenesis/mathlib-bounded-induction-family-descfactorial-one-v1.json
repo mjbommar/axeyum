@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-bounded-induction-candidate",
+  "state": "candidate-checked-not-admitted",
+  "source_fact_id": "F:ml430-nat-descfactorial-one-d4856d4a",
+  "statement_adapter": "artifacts/autogenesis/mathlib-bounded-induction-family-statement-adapter-v1.json",
+  "operation": {
+    "implementation": "crates/axeyum-lean-import/examples/bounded_induction_operation.rs",
+    "target_definition": "Axeyum.Autogenesis.Statement.BoundedInductionFamily.natDescFactorialOne",
+    "goal_sha256": "29d67ba637045e918b70290a218dfe43db046a97bfc0cadb981d706ed37b56e4",
+    "proof_sha256": "177010044d58672157662ae640db891b2418233395b68333dfbfbfcf348eeda0",
+    "target_content_sha256": "a8adc68c502ee2679ce4aef7eedee7f996b015ed7b76b2fee59a586ff5e4263e",
+    "binders_used": 1,
+    "inductions_used": 1,
+    "max_binders": 8,
+    "max_inductions": 2,
+    "admitted_declarations": 59,
+    "axioms": 0,
+    "theorem_dependencies": 0,
+    "target_dependency": false,
+    "ledger_writes": 0
+  },
+  "reproduction": "python3 scripts/check-autogenesis-bounded-induction-family.py",
+  "limitations": "The candidate is independently kernel checked but remains uncredited until the exact registered operation completes the authoritative transaction. Bare reflexivity does not close this goal (docs/autogenesis/229-nat-descfactorial-one-reflexivity-decline.md); this is the first fact this producer closes that reflexivity alone could not."
+}

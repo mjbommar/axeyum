@@ -50,6 +50,7 @@ from typing import Any
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 NURSERY = ROOT / "artifacts/autogenesis/nursery-v1.json"
 GROUND_TRUTH = ROOT / "artifacts/autogenesis/must-decline-mutations-v1.json"
+FACTS = ROOT / "artifacts/facts"
 CENSUS = ROOT / "artifacts/autogenesis/mathlib-reflexivity-coverage-v1.json"
 
 
@@ -221,6 +222,33 @@ def load_census(path: pathlib.Path) -> list[Any]:
     return admissible
 
 
+SETTLED = {"proved", "computed"}
+
+
+def scan_ledger(must_decline: set[str], facts_dir: pathlib.Path) -> list[str]:
+    """A must-decline fact must never be SETTLED in the ledger.
+
+    `scan_census` guards the census; nothing guarded the ledger, and the two are
+    different doors into the same room. Measured 2026-08-22 by mutation: marking
+    the known-false `n! = 0` as `proved` with a forged-but-well-formed evidence
+    row passed `validate-facts.py`, this gate, the held-out isolation gate and the
+    nursery gate -- four green checks over a statement refuted by `0! = 1`.
+
+    A false theorem admitted to the ledger is the worst outcome this project has,
+    strictly worse than a wrong `sat`: it is durable, it is cited by dependents,
+    and every downstream axiom-freedom claim inherits it.
+    """
+    violations = []
+    for fact_id in sorted(must_decline):
+        path = facts_dir / (fact_id.replace("F:", "F-") + ".json")
+        if not path.is_file():
+            continue
+        status = json.loads(path.read_text()).get("epistemic_status")
+        if status in SETTLED:
+            violations.append(f"{fact_id} is {status} in the ledger")
+    return violations
+
+
 def scan_census(admissible: list[Any], must_decline: set[str]) -> list[str]:
     violations = []
     for row in admissible:
@@ -234,6 +262,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--nursery", type=pathlib.Path, default=NURSERY)
     parser.add_argument("--ground-truth", type=pathlib.Path, default=GROUND_TRUTH)
     parser.add_argument("--census", type=pathlib.Path, default=CENSUS)
+    parser.add_argument("--facts-dir", type=pathlib.Path, default=FACTS)
     args = parser.parse_args(argv)
 
     try:
@@ -244,17 +273,27 @@ def main(argv: list[str] | None = None) -> int:
         verify_counterexamples(entries)
         admissible = load_census(args.census)
         violations = scan_census(admissible, must_decline)
+        ledger_violations = scan_ledger(must_decline, args.facts_dir)
     except MustDeclineError as error:
         print(f"AUTOGENESIS_MUST_DECLINE_CENSUS_ERROR|{error}", file=sys.stderr)
         return 1
 
-    verdict = "FAIL" if violations else "PASS"
+    verdict = "FAIL" if violations or ledger_violations else "PASS"
     print(
         f"AUTOGENESIS_MUST_DECLINE_CENSUS|must_decline={len(must_decline)}|"
         f"ground_truth_verified={len(entries)}|census={args.census.name}|"
         f"admissible_total={len(admissible)}|violations={len(violations)}|"
+        f"ledger_violations={len(ledger_violations)}|"
         f"verdict={verdict}"
     )
+    for item in ledger_violations:
+        print(
+            f"  must-decline-fact-settled|{item} -- a statement refuted by a "
+            "recorded counterexample is marked settled in the ledger. A false "
+            "theorem admitted here is durable, is inherited by every dependent, "
+            "and is strictly worse than a wrong `sat`.",
+            file=sys.stderr,
+        )
     for fact_id in violations:
         print(
             f"  must-decline-fact-admitted|{fact_id} appears in "
@@ -262,7 +301,7 @@ def main(argv: list[str] | None = None) -> int:
             "admitted, so this census is VOID",
             file=sys.stderr,
         )
-    return 1 if violations else 0
+    return 1 if violations or ledger_violations else 0
 
 
 if __name__ == "__main__":

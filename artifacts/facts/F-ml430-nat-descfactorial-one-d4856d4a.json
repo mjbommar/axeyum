@@ -1,17 +1,50 @@
 {
-  "schema_version": 1,
-  "id": "F:ml430-nat-descfactorial-one-d4856d4a",
-  "title": "Mathlib v4.30 source proposition Nat.descFactorial_one",
-  "statement": "The proposition declared as `Nat.descFactorial_one` in the pinned Mathlib v4.30 source.",
+  "axiom_footprint": [],
+  "depends_on": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "id": "autogenesis-operation-13843f88b89e9a23",
+      "kind": "kernel-term",
+      "supports": "The proposition declared as `Nat.descFactorial_one` in the pinned Mathlib v4.30 source.",
+      "check_status": "checked",
+      "checkers": [
+        "bounded-induction-reflexivity-v1",
+        "axeyum-lean-import/bounded-induction-operation-v1",
+        "axeyum-lean-import/bounded-induction-multi-target-v1"
+      ],
+      "checker_command": "python3 scripts/check-autogenesis-bounded-induction-family.py",
+      "artifact": "sha256:13843f88b89e9a239bd6c7f8f498ad14cf47a8838ae78e752c3256f550dc9506",
+      "checker_operation": {
+        "admitted_declarations": 59,
+        "binders_used": 1,
+        "execution_sha256": "13843f88b89e9a239bd6c7f8f498ad14cf47a8838ae78e752c3256f550dc9506",
+        "external_artifact_sha256": "663fa3ff9f55feb872201dd3511d1427bc31ad9ac910ffff610a52b2a72c720c",
+        "formal_statement_sha256": "90324b256e9e14905a4386da129c20ebec1d1a4c86a7c9e8638c2752829f1519",
+        "goal_sha256": "29d67ba637045e918b70290a218dfe43db046a97bfc0cadb981d706ed37b56e4",
+        "id": "authoritative-mathlib-bounded-induction-factorial-family-v1",
+        "induction_manifest": "artifacts/autogenesis/mathlib-bounded-induction-family-descfactorial-one-v1.json",
+        "inductions_used": 1,
+        "max_binders": 8,
+        "max_inductions": 2,
+        "proof_sha256": "177010044d58672157662ae640db891b2418233395b68333dfbfbfcf348eeda0",
+        "registry_sha256_at_registration": "a8488d105b174b4c0ec1d584f75321cbebd4496448530a1c2d7bdebee588dd3f",
+        "statement_adapter_manifest": "artifacts/autogenesis/mathlib-bounded-induction-family-statement-adapter-v1.json",
+        "target_content_sha256": "a8adc68c502ee2679ce4aef7eedee7f996b015ed7b76b2fee59a586ff5e4263e",
+        "target_definition": "Axeyum.Autogenesis.Statement.BoundedInductionFamily.natDescFactorialOne"
+      },
+      "notes": "Derived from an independently replayed bounded-induction receipt. The registered fact-operation checker (scripts/check-autogenesis-bounded-induction-family.py) replays the proof-isolated statement artifact through a fresh importer and requires the exact kernel-checked proof and dependency-free result; no caller-authored route, footprint, checker, or shell command is accepted. This is the first fact this producer closes that bare reflexivity could not (docs/autogenesis/229-nat-descfactorial-one-reflexivity-decline.md); the operation that settles it also independently re-derives axiom-free kernel proofs of two other facts already proved through a separate, narrower operation (see artifacts/autogenesis/mathlib-bounded-induction-family-ascfactorial-zero-v1.json and mathlib-bounded-induction-family-descfactorial-zero-v1.json), which is the evidence of generality this operation is registered for."
+    }
+  ],
+  "external_status": "proved",
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ (n : ℕ), n.descFactorial 1 = n",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
-  "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "id": "F:ml430-nat-descfactorial-one-d4856d4a",
+  "notes": "CLOSED BY AXEYUM AUTOGENESIS. The registered operation authoritative-mathlib-bounded-induction-factorial-family-v1 -- the first operation in this ledger whose applicability.fact_ids names more than one fact -- produced a fresh-import axiom-free bounded-induction proof for this fact via bounded_induction_support (Eq.refl, and where that is stuck, one bounded structural induction over a discovered zero/succ binder plus one congruence rewrite driven by the induction hypothesis). Bare reflexivity does not close this goal (docs/autogenesis/229-nat-descfactorial-one-reflexivity-decline.md); this producer does.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
   "provenance": {
     "date": "2026-08-18",
     "established_by": "not established in this ledger",
@@ -26,5 +59,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "schema_version": 1,
+  "statement": "The proposition declared as `Nat.descFactorial_one` in the pinned Mathlib v4.30 source.",
+  "title": "Mathlib v4.30 source proposition Nat.descFactorial_one"
 }

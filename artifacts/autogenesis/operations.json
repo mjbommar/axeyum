@@ -1040,5 +1040,78 @@
       "executor": {"driver": "axeyum-lean-import/sealed-kernel-capsule-v1", "implementation": "scripts/execute-autogenesis-operation.py", "input_fact_id": "F:ml430-int-fib-eq-zero-8193c7cb", "result_manifest": "artifacts/autogenesis/mathlib-int-fib-eq-zero-goal-identity-result-v1.json", "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-eq-zero-exact-v1/root.ndjson", "capsule_sha256": "bd36472c8d898066df2c388d30452bd1859a42ffa1b1ae1be184ce5a494a0f73", "target_theorem": "Int.fib_eq_zero", "goal_sha256": "1822290d2018cbd3e5c956c8c7c4b42704509f20560e8177c6e9a1b9367770bc", "declaration_sha256": "3df28cc187a56dd5774f529937eeb2aff53b4c919ab130976c804b3a929b82e7", "receipt_sha256": "e005b5983b5cb2eee4350cba4ece4acee1cd0732582769778e279757d47eb00c", "timeout_seconds": 120, "expected_evidence_label": "kernel-term-mathlib-int-fib-eq-zero-capsule-axiom-free"},
       "admission": {"epistemic_status": "proved", "proof_route": "kernel-lean", "evidence_kind": "kernel-term", "axiom_footprint_policy": "must-be-empty", "axiom_footprint": []}
     }
+,
+    {
+      "id": "authoritative-mathlib-bounded-induction-factorial-family-v1",
+      "scope": "authoritative",
+      "reviewed_gate_mentions": [
+        "check-autogenesis-bounded-induction-family.py"
+      ],
+      "applicability": {
+        "fact_ids": [
+          "F:ml430-nat-descfactorial-one-d4856d4a",
+          "F:ml430-nat-ascfactorial-zero-fd183202",
+          "F:ml430-nat-descfactorial-zero-966b01df"
+        ],
+        "formal_languages": [
+          "lean4-surface"
+        ],
+        "fragments": [
+          "Nat"
+        ]
+      },
+      "producer": {
+        "operation": "bounded-induction-reflexivity-v1",
+        "implementation": "crates/axeyum-lean-import/examples/bounded_induction_support/mod.rs",
+        "input_kind": "axeyum-proof-isolated-kernel-goal",
+        "output_kind": "axeyum-bounded-induction-candidate"
+      },
+      "checker": {
+        "operation": "axeyum-lean-import/bounded-induction-operation-v1",
+        "implementation": "crates/axeyum-lean-import/examples/bounded_induction_operation.rs",
+        "input_kind": "axeyum-bounded-induction-candidate",
+        "output_kind": "axeyum-source-bound-kernel-evidence-v1"
+      },
+      "executor": {
+        "driver": "axeyum-lean-import/bounded-induction-multi-target-v1",
+        "implementation": "scripts/execute-autogenesis-operation.py",
+        "input_fact_id": "F:ml430-nat-descfactorial-one-d4856d4a",
+        "additional_fact_ids": [
+          "F:ml430-nat-ascfactorial-zero-fd183202",
+          "F:ml430-nat-descfactorial-zero-966b01df"
+        ],
+        "targets": [
+          {
+            "fact_id": "F:ml430-nat-descfactorial-one-d4856d4a",
+            "statement_adapter_manifest": "artifacts/autogenesis/mathlib-bounded-induction-family-statement-adapter-v1.json",
+            "induction_manifest": "artifacts/autogenesis/mathlib-bounded-induction-family-descfactorial-one-v1.json",
+            "target_definition": "Axeyum.Autogenesis.Statement.BoundedInductionFamily.natDescFactorialOne"
+          },
+          {
+            "fact_id": "F:ml430-nat-ascfactorial-zero-fd183202",
+            "statement_adapter_manifest": "artifacts/autogenesis/mathlib-statement-adapter-v1.json",
+            "induction_manifest": "artifacts/autogenesis/mathlib-bounded-induction-family-ascfactorial-zero-v1.json",
+            "target_definition": "Axeyum.Autogenesis.Statement.natAscFactorialZero"
+          },
+          {
+            "fact_id": "F:ml430-nat-descfactorial-zero-966b01df",
+            "statement_adapter_manifest": "artifacts/autogenesis/mathlib-descfactorial-zero-statement-adapter-v1.json",
+            "induction_manifest": "artifacts/autogenesis/mathlib-bounded-induction-family-descfactorial-zero-v1.json",
+            "target_definition": "Axeyum.Autogenesis.Statement.FactorialZero.natDescFactorialZero"
+          }
+        ],
+        "max_binders": 8,
+        "max_inductions": 2,
+        "timeout_seconds": 120,
+        "expected_evidence_label": "kernel-term-mathlib-bounded-induction-family-axiom-free"
+      },
+      "admission": {
+        "epistemic_status": "proved",
+        "proof_route": "kernel-lean",
+        "evidence_kind": "kernel-term",
+        "axiom_footprint_policy": "must-be-empty",
+        "axiom_footprint": []
+      }
+    }
   ]
 }

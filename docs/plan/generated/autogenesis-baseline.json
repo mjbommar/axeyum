@@ -59,13 +59,13 @@
   "contract": "internal-autogenesis-phase0",
   "ledger": {
     "assurance": {
-      "axiom_free_kernel_facts": 75,
+      "axiom_free_kernel_facts": 76,
       "check_statuses": {
-        "checked": 290
+        "checked": 291
       },
-      "evidence_rows": 290,
-      "with_checker_command": 288,
-      "with_multiple_named_checkers": 144
+      "evidence_rows": 291,
+      "with_checker_command": 289,
+      "with_multiple_named_checkers": 145
     },
     "dependency_graph": {
       "dangling": [],
@@ -713,7 +713,7 @@
     "facts": 342,
     "kernel_dependency_coverage": {
       "authority_gate": "scripts/check-fact-depends-derived.py",
-      "facts": 77,
+      "facts": 78,
       "named": 35,
       "unnamed_fact_ids": [
         "F:complex-admits-no-compatible-order",
@@ -734,6 +734,7 @@
         "F:ml430-int-fib-of-nonneg-438018c5",
         "F:ml430-int-gcd-fib-73bdafc2",
         "F:ml430-nat-ascfactorial-zero-fd183202",
+        "F:ml430-nat-descfactorial-one-d4856d4a",
         "F:ml430-nat-descfactorial-zero-966b01df",
         "F:ml430-nat-fib-add-two-b86e0c82",
         "F:ml430-nat-fib-coprime-fib-succ-162fc738",
@@ -763,7 +764,7 @@
     "kernel_lean_graph": {
       "dangling": [],
       "depth_histogram": {
-        "1": 31,
+        "1": 32,
         "10": 1,
         "2": 11,
         "3": 13,
@@ -1105,21 +1106,21 @@
           "premise": "F:real-axioms-modelled-by-constructed-setoid"
         }
       ],
-      "isolated": 16,
+      "isolated": 17,
       "max_depth": 10,
-      "nodes": 77,
+      "nodes": 78,
       "statuses": {
-        "proved": 77
+        "proved": 78
       },
       "unsettled": 0,
       "with_dependencies": 46,
       "with_dependents": 43
     },
     "routes": {
-      "(missing)": 203,
+      "(missing)": 202,
       "cas-certificate": 19,
       "imported-kernel-lean": 5,
-      "kernel-lean": 77,
+      "kernel-lean": 78,
       "search-certificate": 12,
       "smt-clausal": 9,
       "smt-term-level": 17
@@ -1127,8 +1128,8 @@
     "statuses": {
       "computed": 2,
       "conjectured": 3,
-      "open": 200,
-      "proved": 134,
+      "open": 199,
+      "proved": 135,
       "refuted": 3
     }
   },
@@ -1233,7 +1234,7 @@
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "d70786c6a6f65d346eacbd80b20a452b82e6f18dc433e9641df18a2f3e1bb79a",
+    "digest": "09ad01dfcc0aa911065d0643374be35b599006fe7de3a4de66520fc9c92cdf69",
     "inputs": [
       {
         "bytes": 1939,
@@ -1286,9 +1287,9 @@
         "sha256": "aa7a2769fcc51bdcf90c360b435e5efed6797751e81ae9931fd52bb89c25e7f1"
       },
       {
-        "bytes": 53218,
+        "bytes": 58547,
         "path": "artifacts/autogenesis/operations.json",
-        "sha256": "e04c6fef0c6ca826e6fd60a7c183a41eaf926a8c6814d1fa8c81f414e3d24169"
+        "sha256": "ad32ea7955786fa8843832cfaaaa5cc8b5a2c17ff43cda824524107f46b9a302"
       },
       {
         "bytes": 3519,
@@ -2141,9 +2142,9 @@
         "sha256": "ce699c6b2b948b2fb2235eb0b8a72b546010c78dc0092691671f4707e9b0f19e"
       },
       {
-        "bytes": 1562,
+        "bytes": 5129,
         "path": "artifacts/facts/F-ml430-nat-descfactorial-one-d4856d4a.json",
-        "sha256": "0fe030f54ec25e60dae0bb5c19e6aa3d99180eb66462594fe289b25e754d6658"
+        "sha256": "f39231acfc6ce53c1da5d50561bf514bea0dc11081a9310dfc77114eafd1a5b0"
       },
       {
         "bytes": 1577,
@@ -3031,9 +3032,9 @@
         "sha256": "77d0d1e654f105b7ad60a9f83b4a3ffbd6d765d53652126539fc63a39da15feb"
       },
       {
-        "bytes": 96886,
+        "bytes": 97346,
         "path": "justfile",
-        "sha256": "2305726238782ae3d3a6b6476f0a39da108dc31fbe5c76e45388cda3ee4885b3"
+        "sha256": "b3522555170163ff74243f7469458134a11ee9ae5d5865628c95cff8c30e0794"
       },
       {
         "bytes": 11929,
@@ -3106,9 +3107,9 @@
         "sha256": "745d919e6c9db709d77beb05ce7bff3f12e99daf16507edb4d883cb7860f9dbc"
       },
       {
-        "bytes": 39580,
+        "bytes": 40896,
         "path": "scripts/check.sh",
-        "sha256": "1c8ad65fab80c4e913f0f583d5dda74cca7bf4c00fdcae83aebb42bcc20cb3c6"
+        "sha256": "7a1aa5406941db0be2384af4878a3fadbe28c9c73983db62a29d580d065ba525"
       },
       {
         "bytes": 6846,
@@ -3256,9 +3257,9 @@
         "sha256": "b8b8cd547a1626597e4c03c5d84bcf2e293703d451fce4a19a172c1218efdf39"
       },
       {
-        "bytes": 43880,
+        "bytes": 49337,
         "path": "scripts/validate-autogenesis-operations.py",
-        "sha256": "837ae9aa1612794c488a1629d17c02b452e7c3ddeae4d2889100431afdad6ff6"
+        "sha256": "790e64060c361bec532fbc16663ea42724e68a0a40627e5b764c2b09029fef10"
       },
       {
         "bytes": 2711,

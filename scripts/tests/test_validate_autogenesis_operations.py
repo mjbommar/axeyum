@@ -376,6 +376,43 @@ class OperationRegistryTests(unittest.TestCase):
                 ):
                     registry_module.validate_registry(mutated, ROOT)
 
+    def test_bounded_induction_multi_target_driver_binds_exact_fact_ids(self) -> None:
+        mutated = copy.deepcopy(self.registry)
+        mutated["operations"][24]["applicability"]["fact_ids"] = list(
+            reversed(mutated["operations"][24]["applicability"]["fact_ids"])
+        )
+        with self.assertRaisesRegex(
+            registry_module.RegistryError, "must bind exactly its applicable fact ids"
+        ):
+            registry_module.validate_registry(mutated, ROOT)
+
+    def test_bounded_induction_multi_target_driver_is_exactly_manifest_bound(self) -> None:
+        mutated = copy.deepcopy(self.registry)
+        mutated["operations"][24]["executor"]["targets"][0]["target_definition"] = (
+            "Axeyum.Wrong"
+        )
+        with self.assertRaisesRegex(
+            registry_module.RegistryError, "bounded-induction manifests disagree"
+        ):
+            registry_module.validate_registry(mutated, ROOT)
+
+        mutated = copy.deepcopy(self.registry)
+        mutated["operations"][24]["executor"]["max_inductions"] = 3
+        with self.assertRaisesRegex(
+            registry_module.RegistryError, "bounded-induction manifests disagree"
+        ):
+            registry_module.validate_registry(mutated, ROOT)
+
+        mutated = copy.deepcopy(self.registry)
+        mutated["operations"][24]["executor"]["targets"] = mutated["operations"][24][
+            "executor"
+        ]["targets"][:2]
+        with self.assertRaisesRegex(
+            registry_module.RegistryError,
+            "must have exactly one entry per named fact id",
+        ):
+            registry_module.validate_registry(mutated, ROOT)
+
     def test_sealed_kernel_capsule_driver_is_exactly_manifest_bound(self) -> None:
         for operation_index in (8, 9, 13):
             for field, value in (

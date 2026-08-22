@@ -21,6 +21,7 @@ EXECUTION_DRIVERS = {
     "axeyum-lean-kernel/nat-zero-add-induction-v1",
     "axeyum-lean-kernel/nat-mul-one-episode-apply-v1",
     "axeyum-lean-import/statement-reflexivity-v1",
+    "axeyum-lean-import/bounded-induction-multi-target-v1",
     "axeyum-lean-import/checked-theorem-receipt-v1",
     "axeyum-lean-import/dependency-theorem-receipt-v1",
     "axeyum-lean-import/sealed-kernel-capsule-v1",
@@ -253,6 +254,13 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             "max_binders",
             "max_constructed_nodes",
         }
+    elif driver == "axeyum-lean-import/bounded-induction-multi-target-v1":
+        expected = common | {
+            "additional_fact_ids",
+            "targets",
+            "max_binders",
+            "max_inductions",
+        }
     elif driver == "axeyum-lean-import/checked-theorem-receipt-v1":
         expected = common | {
             "receipt_manifest",
@@ -360,6 +368,103 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             != adapter.get("source_statement_sha256")
         ):
             raise RegistryError(f"{label} statement identity disagrees with its fact")
+    elif driver == "axeyum-lean-import/bounded-induction-multi-target-v1":
+        additional = nonempty_strings(
+            value["additional_fact_ids"], f"{label}.additional_fact_ids"
+        )
+        for fid in additional:
+            if not FACT_ID_RE.fullmatch(fid):
+                raise RegistryError(
+                    f"{label}.additional_fact_ids has invalid fact id {fid!r}"
+                )
+        all_fact_ids = [value["input_fact_id"], *additional]
+        if len(all_fact_ids) != len(set(all_fact_ids)):
+            raise RegistryError(
+                f"{label} names a fact id more than once across "
+                "input_fact_id/additional_fact_ids"
+            )
+        targets = value["targets"]
+        if not isinstance(targets, list) or len(targets) != len(all_fact_ids):
+            raise RegistryError(
+                f"{label}.targets must have exactly one entry per named fact id"
+            )
+        expected_root = (root / "artifacts/autogenesis").resolve()
+        target_fact_ids: list[str] = []
+        for t_index, target in enumerate(targets):
+            t_label = f"{label}.targets[{t_index}]"
+            if not isinstance(target, dict):
+                raise RegistryError(f"{t_label} must be an object")
+            exact_keys(
+                target,
+                {
+                    "fact_id",
+                    "statement_adapter_manifest",
+                    "induction_manifest",
+                    "target_definition",
+                },
+                t_label,
+            )
+            fid = target["fact_id"]
+            if not isinstance(fid, str) or not FACT_ID_RE.fullmatch(fid):
+                raise RegistryError(f"{t_label}.fact_id is invalid")
+            target_fact_ids.append(fid)
+            adapter_path = repository_file(
+                target["statement_adapter_manifest"],
+                f"{t_label}.statement_adapter_manifest",
+                root,
+            )
+            induction_path = repository_file(
+                target["induction_manifest"], f"{t_label}.induction_manifest", root
+            )
+            if (
+                adapter_path.parent != expected_root
+                or induction_path.parent != expected_root
+            ):
+                raise RegistryError(
+                    f"{t_label} manifests must be canonical autogenesis artifacts"
+                )
+            adapter = json.loads(adapter_path.read_text())
+            induction = json.loads(induction_path.read_text())
+            induction_op = induction.get("operation") or {}
+            if (
+                adapter.get("kind") != "axeyum-autogenesis-mathlib-statement-adapter"
+                or adapter.get("state") != "independent-kernel-goal-admitted-proof-free"
+                or induction.get("kind")
+                != "axeyum-autogenesis-mathlib-bounded-induction-candidate"
+                or induction.get("state") != "candidate-checked-not-admitted"
+                or adapter.get("source_fact_id") != fid
+                or induction.get("source_fact_id") != fid
+                or induction.get("statement_adapter")
+                != target["statement_adapter_manifest"]
+                or induction_op.get("target_definition")
+                != target["target_definition"]
+                or induction_op.get("max_binders") != value["max_binders"]
+                or induction_op.get("max_inductions") != value["max_inductions"]
+                or induction_op.get("axioms") != 0
+                or induction_op.get("theorem_dependencies") != 0
+                or induction_op.get("target_dependency") is not False
+            ):
+                raise RegistryError(
+                    f"{t_label} bounded-induction manifests disagree"
+                )
+            fact_path = root / "artifacts/facts" / (
+                fid.replace("F:", "F-") + ".json"
+            )
+            fact = json.loads(fact_path.read_text())
+            statement = (fact.get("formal") or {}).get("statement")
+            if (
+                not isinstance(statement, str)
+                or hashlib.sha256(statement.encode()).hexdigest()
+                != adapter.get("source_statement_sha256")
+            ):
+                raise RegistryError(
+                    f"{t_label} statement identity disagrees with its fact"
+                )
+        if target_fact_ids != all_fact_ids:
+            raise RegistryError(
+                f"{label}.targets fact_id order must match input_fact_id "
+                "followed by additional_fact_ids"
+            )
     elif driver == "axeyum-lean-import/checked-theorem-receipt-v1":
         manifest_path = repository_file(
             value["receipt_manifest"], f"{label}.receipt_manifest", root
@@ -776,7 +881,17 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
             raise RegistryError(f"{label}.admission footprint violates its policy")
         if scope == "authoritative":
             executor = operation["executor"]
-            if executor["input_fact_id"] not in fact_ids or fact_ids != [
+            if executor["driver"] == "axeyum-lean-import/bounded-induction-multi-target-v1":
+                all_ids = [
+                    executor["input_fact_id"],
+                    *executor.get("additional_fact_ids", []),
+                ]
+                if fact_ids != all_ids:
+                    raise RegistryError(
+                        f"{label}.executor must bind exactly its applicable fact "
+                        "ids, in order (input_fact_id then additional_fact_ids)"
+                    )
+            elif executor["input_fact_id"] not in fact_ids or fact_ids != [
                 executor["input_fact_id"]
             ]:
                 raise RegistryError(
@@ -800,7 +915,10 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
                     raise RegistryError(
                         f"{label}.executor driver is inconsistent with applicability/admission"
                     )
-            elif executor["driver"] == "axeyum-lean-import/statement-reflexivity-v1":
+            elif executor["driver"] in {
+                "axeyum-lean-import/statement-reflexivity-v1",
+                "axeyum-lean-import/bounded-induction-multi-target-v1",
+            }:
                 if (
                     applicability["formal_languages"] != ["lean4-surface"]
                     or applicability["fragments"] != ["Nat"]

@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-bounded-induction-candidate",
+  "state": "candidate-checked-not-admitted",
+  "source_fact_id": "F:ml430-nat-descfactorial-zero-966b01df",
+  "statement_adapter": "artifacts/autogenesis/mathlib-descfactorial-zero-statement-adapter-v1.json",
+  "operation": {
+    "implementation": "crates/axeyum-lean-import/examples/bounded_induction_operation.rs",
+    "target_definition": "Axeyum.Autogenesis.Statement.FactorialZero.natDescFactorialZero",
+    "goal_sha256": "84c2cb6ba48868786799c28aef4104a845cf9d238ff6786285645562570c5d23",
+    "proof_sha256": "613a9e5e68715e263f7bd2d052603b6ff6491afd64ddb0d855a200be4afa1718",
+    "target_content_sha256": "c92518c5aa5532a7583223937b8f355f1ea36187c2c5e399a9ee5b4932a03493",
+    "binders_used": 1,
+    "inductions_used": 1,
+    "max_binders": 8,
+    "max_inductions": 2,
+    "admitted_declarations": 59,
+    "axioms": 0,
+    "theorem_dependencies": 0,
+    "target_dependency": false,
+    "ledger_writes": 0
+  },
+  "reproduction": "python3 scripts/check-autogenesis-bounded-induction-family.py",
+  "limitations": "This fact already carries proof credit through a different, narrower operation (authoritative-mathlib-nat-descfactorial-zero-reflexivity-v1, plain Eq.refl -- the base case here already closes by reflexivity so the induction step is unused work, not a required one). This manifest records that the general bounded-induction producer ALSO independently kernel-checks it (axioms=0, target_dependency=false), as evidence of the producer's reach; it does not add a second evidence row to the fact and does not change its epistemic_status, proof_route, or existing evidence."
+}

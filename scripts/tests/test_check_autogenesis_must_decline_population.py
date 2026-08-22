@@ -330,5 +330,58 @@ class MustDeclinePopulationTests(unittest.TestCase):
         self.assertIn("verdict=PASS", out)
 
 
+
+class MustDeclineLedgerGuardTests(unittest.TestCase):
+    """The census and the ledger are two doors into the same room.
+
+    Added 2026-08-22 after a mutation showed the census guard alone was not
+    enough: marking the known-false `n! = 0` as `proved` with a forged-but-
+    well-formed evidence row passed `validate-facts.py`, this gate, the held-out
+    isolation gate and the nursery gate -- four green checks over a statement
+    refuted by `0! = 1`.
+    """
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.facts = pathlib.Path(self._tmp.name)
+        self.fact_id = "F:ml430-mutation-deadbeef"
+        self.path = self.facts / "F-ml430-mutation-deadbeef.json"
+
+    def tearDown(self) -> None:
+        self._tmp.cleanup()
+
+    def write(self, status: str) -> None:
+        self.path.write_text(json.dumps({"id": self.fact_id, "epistemic_status": status}))
+
+    def test_a_settled_must_decline_fact_is_a_violation(self) -> None:
+        self.write("proved")
+        self.assertEqual(
+            len(guard.scan_ledger({self.fact_id}, self.facts)), 1
+        )
+
+    def test_a_computed_must_decline_fact_is_also_a_violation(self) -> None:
+        self.write("computed")
+        self.assertEqual(len(guard.scan_ledger({self.fact_id}, self.facts)), 1)
+
+    def test_an_open_must_decline_fact_is_not_a_violation(self) -> None:
+        """Discriminating: a guard that flags every must-decline fact would fire
+        on the committed tree, where all nine are correctly `open`."""
+        self.write("open")
+        self.assertEqual(guard.scan_ledger({self.fact_id}, self.facts), [])
+
+    def test_a_missing_fact_file_is_skipped_not_flagged(self) -> None:
+        self.assertEqual(guard.scan_ledger({self.fact_id}, self.facts), [])
+
+    def test_the_committed_ledger_has_no_settled_must_decline_fact(self) -> None:
+        """The live assertion. If this ever fails, a statement with a recorded
+        counterexample has been admitted and everything downstream is suspect."""
+        ids = {
+            e["fact_id"]
+            for e in json.loads(guard.GROUND_TRUTH.read_text())["entries"]
+        }
+        self.assertEqual(len(ids), 9)
+        self.assertEqual(guard.scan_ledger(ids, guard.FACTS), [])
+
+
 if __name__ == "__main__":
     unittest.main()

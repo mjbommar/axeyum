@@ -87,6 +87,7 @@ step autogenesis-must-decline-population-tests python3 -m unittest scripts.tests
 # `explain_corpus IS NOT AN ORACLE` and the checker-that-cannot-fail discipline
 # in CLAUDE.md, applied one arrow upstream to the PRODUCER for the first time.
 step autogenesis-must-decline-population python3 scripts/check-autogenesis-must-decline-population.py
+step autogenesis-bounded-induction-family python3 scripts/check-autogenesis-bounded-induction-family.py
 step lane-turn-controls ./scripts/tests/test-check-lane-turn.sh
 step autogenesis-nursery python3 scripts/check-autogenesis-nursery.py
 step autogenesis-mathlib-nursery-split python3 scripts/create-autogenesis-mathlib-nursery-split.py --check
