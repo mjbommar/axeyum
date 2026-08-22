@@ -665,6 +665,65 @@ pub struct CRealPrelude {
     /// both `Apart` disjuncts — no new estimate, since `Apart x y := lt x y ∨
     /// lt y x` already carries the case split.
     pub apart_cotrans: NameId,
+
+    // --- Bishop completeness (ADR-0512 phase R8) ------------------------------
+    /// `CReal.RegularSeq : (Nat → CReal) → Prop` —
+    /// `RegularSeq X := ∀ m n, Within (seq (X m) m − seq (X n) n) (1/(m+1)+1/(n+1))`.
+    ///
+    /// **The canonical-sample formulation, not the arbitrary-index one.** The
+    /// textbook statement compares `X m` and `X n` as reals at an arbitrary
+    /// shared representative index (`CReal.le`/`CReal.add`-shaped, the way
+    /// [`Self::le`] itself is stated), which routes every consumer through
+    /// `CReal.add`'s index shift before it can be unfolded at all. This
+    /// definition instead compares the sample **each real already offers at
+    /// its own index** — `seq (X m) m`, exactly the quantity
+    /// [`Self::rat_approx_upper`]/[`Self::rat_approx_lower`] already prove is
+    /// within `1/(m+1)` of the real `X m` — so it is equivalent up to a
+    /// constant factor to the textbook condition, never mentions `CReal.add`,
+    /// and is what [`Self::limit`] below is built from directly.
+    pub regular_seq: NameId,
+    /// `CReal.limitSeq : (Nat → CReal) → Nat → Rat` —
+    /// `limitSeq X n := seq (X (2n+1)) (2n+1)`.
+    ///
+    /// The **diagonal**, sampled at Bishop's shift `2n+1` rather than at `n`
+    /// itself: [`Self::limit_seq_regular`]'s estimate needs the two halves of
+    /// each pairwise bound to fuse via
+    /// [`Rat.natDivSucc_halve`](crate::RatPrelude::nat_div_succ_halve) into
+    /// exactly `1/(n+1)`, which only happens at this shift — sampling at `n`
+    /// leaves a bound twice the size [`Self::regular_pred`] asks for, with no
+    /// rearrangement able to close the gap.
+    pub limit_seq: NameId,
+    /// `CReal.limitSeq_regular : ∀ X, RegularSeq X → Regular (limitSeq X)`.
+    ///
+    /// **Obligation 1: the diagonal is a `CReal` at all.** The proof needs no
+    /// arbitrary third index and no Archimedean closing step — unlike
+    /// `Equiv.trans`/`le_trans` — because [`Self::regular_seq`]'s hypothesis
+    /// is already stated at the two *fixed* diagonal indices `shift m` and
+    /// `shift n`; from there it is one instantiation of `RegularSeq` plus
+    /// [`weaken`] against the rational fact `modulus (shift m) (shift n) ≤
+    /// modulus m n`.
+    pub limit_seq_regular: NameId,
+    /// `CReal.limit : (X : Nat → CReal) → RegularSeq X → CReal := fun X h =>
+    /// CReal.mk (limitSeq X) (limitSeq_regular X h)`.
+    ///
+    /// **Bishop completeness, the construction half.** Every `RegularSeq`
+    /// sequence of reals has a limit, produced rather than merely asserted to
+    /// exist.
+    pub limit: NameId,
+    /// `CReal.limit_dist : ∀ X (h : RegularSeq X) n k, Within (seq (X n) k −
+    /// seq (limit X h) k) (2/(k+1) + 2/(n+1))`.
+    ///
+    /// **Bishop completeness, the convergence half**, at the rate `X`'s own
+    /// regularity carries (`O(1/n)`, uniformly in the sampling index `k`) —
+    /// not merely `∀ n, Equiv (X n) (limit ...)`, which is false in general
+    /// (a converging sequence is generally not equal to its limit at any
+    /// finite `n`). The estimate chains `X n`'s own regularity between `(k,
+    /// n)` with one [`Self::regular_seq`] instance at `(n, shift k)`, folds
+    /// the two `seq (X n) n` occurrences via `Rat.sub_add_sub`, and widens
+    /// `1/(shift k + 1)` up to `1/(k+1)` — no arbitrary third index or
+    /// Archimedean lemma needed, for the same reason as
+    /// [`Self::limit_seq_regular`].
+    pub limit_dist: NameId,
 }
 
 impl CRealPrelude {
@@ -820,6 +879,11 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         density: kernel.name_str(creal, "density"),
         lt_cotrans: kernel.name_str(creal, "lt_cotrans"),
         apart_cotrans: kernel.name_str(creal, "apart_cotrans"),
+        regular_seq: kernel.name_str(creal, "RegularSeq"),
+        limit_seq: kernel.name_str(creal, "limitSeq"),
+        limit_seq_regular: kernel.name_str(creal, "limitSeq_regular"),
+        limit: kernel.name_str(creal, "limit"),
+        limit_dist: kernel.name_str(creal, "limit_dist"),
     }
 }
 
@@ -889,7 +953,8 @@ pub(crate) fn build_creal_prelude_uncached(
         lattice::declare_lattice(&mut d, prelude)?;
         archimedean::declare_archimedean(&mut d, prelude)?;
         density::declare_density(&mut d, prelude)?;
-        cotransitivity::declare_cotransitivity(&mut d, prelude)
+        cotransitivity::declare_cotransitivity(&mut d, prelude)?;
+        completeness::declare_completeness(&mut d, prelude)
     })();
     match built {
         Ok(()) => {
@@ -1803,6 +1868,7 @@ fn declare_discrimination(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
 }
 
 mod archimedean;
+mod completeness;
 mod cotransitivity;
 mod density;
 mod field;
