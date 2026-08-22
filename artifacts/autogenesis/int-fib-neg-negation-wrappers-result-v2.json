@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-negation-wrappers-result",
+  "state": "wrapper-batch-rejected-on-propext-bearing-int-neg-add",
+  "plan": "artifacts/autogenesis/int-fib-neg-negation-wrappers-plan-v2.json",
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-negation-wrappers-v2",
+    "source_sha256": "4328cf6c2468df2470874e30fdaf4448124158cd302b74154d333f1c1ab436da",
+    "olean_sha256": "4a7311bf5769dca3ab97e19a2143adb304a904b1bb2d3614eecf0c22ffea0a2b",
+    "stream_bytes": 738598,
+    "stream_sha256": "22a7252af7c92318170aa9712fbdaeaf75fe094c371b95033e7c582cba65bb6f",
+    "exports_byte_identical": true
+  },
+  "roots": [
+    {
+      "name": "Axeyum.Autogenesis.intNegAddV2",
+      "declaration_sha256": "24695930b70078e15c3f8a1177687c2766f661893275c7aa06effb586d88ac5a",
+      "axiom_footprint": [
+        "propext"
+      ],
+      "direct_theorem_dependencies": [
+        "Int.neg_add"
+      ]
+    },
+    {
+      "name": "Axeyum.Autogenesis.intNegNegV2",
+      "declaration_sha256": "2374f330709695733d084b219646e308d34b3a362d3d304b30ec866f3d385297",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": [
+        "Int.neg_neg"
+      ]
+    }
+  ],
+  "execution": {
+    "directory_creations": 1,
+    "source_constructions": 1,
+    "source_stagings": 1,
+    "module_builds": 1,
+    "exports": 2,
+    "root_audits": 1,
+    "retries": 0,
+    "composition_operations": 0,
+    "exact_target_submissions": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "wrapper_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0
+  },
+  "decision": "Replace the stronger general negAdd premise with the only law consumed by Even-negation transport: negation of an integer double."
+}

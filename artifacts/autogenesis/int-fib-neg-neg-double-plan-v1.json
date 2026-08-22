@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-neg-double-plan",
+  "state": "preregistered-before-source-construction",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-fib-neg-negation-wrappers-result-v2.json",
+    "required_state": "wrapper-batch-rejected-on-propext-bearing-int-neg-add"
+  },
+  "residual": {
+    "parameters": [
+      "natDoubleNeg : forall q : Nat, -((q:Int)+(q:Int)) = -(q:Int)+-(q:Int)",
+      "negNeg : forall x : Int, -(-x) = x"
+    ],
+    "target": "forall x : Int, -(x+x) = -x + -x",
+    "proof": "Case on x. The ofNat branch is natDoubleNeg. For negSucc n, represent x as -(n+1), negate natDoubleNeg by congrArg, reverse it, and close with negNeg."
+  },
+  "source": "artifacts/autogenesis/sources/int-fib-neg-neg-double-v1.lean",
+  "evidence_pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-neg-double-v1",
+  "budget": {
+    "directory_creations": 1,
+    "source_constructions": 1,
+    "source_stagings": 1,
+    "module_builds": 1,
+    "exports": 2,
+    "root_audits": 1,
+    "retries": 0,
+    "composition_operations": 0,
+    "exact_target_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "root": "Axeyum.Autogenesis.intNegDoubleResidualV1",
+    "exports_byte_identical": true,
+    "proof_terms_types_or_values_rendered": 0
+  },
+  "stop_rule": "Any construction, staging, elaboration, export, determinism, or audit failure stops without retry or theorem/ledger authority.",
+  "output_result": "artifacts/autogenesis/int-fib-neg-neg-double-result-v1.json",
+  "next_on_accept": "Change only the parity adapter's negAdd parameter to negDouble, compose it with clean intNegNatDoubleV2 and clean Int.neg_neg, then specialize concrete parity adapters.",
+  "limitations": "The parameterized double-negation law alone grants no parity, Fibonacci, fact, or ledger credit."
+}
