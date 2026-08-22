@@ -57,6 +57,7 @@ mod characterization;
 mod complex;
 mod creal;
 mod creal_model;
+mod creal_point;
 mod env;
 mod expr;
 mod inductive;
@@ -88,6 +89,7 @@ pub use characterization::{
 pub use complex::{ComplexPrelude, build_complex_prelude};
 pub use creal::{CRealPrelude, build_creal_prelude};
 pub use creal_model::{CRealModel, CRealModelLaw, build_creal_model_of_arith};
+pub use creal_point::{CPointPrelude, build_cpoint_prelude};
 pub use env::{Declaration, Environment, QuotKind, RecRule, ReducibilityHint};
 pub use expr::{BinderInfo, ExprId, ExprNode, Lit, NatLit};
 pub use inductive::InductiveFamilySpec;
