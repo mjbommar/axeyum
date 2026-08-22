@@ -693,14 +693,30 @@ that read as "we are slower" is substantially "we stop early". And 26 files —
   `QF_SLIA` using `(_ BitVec n)`; z3 rejects all five at the parser, we decide
   one), and the reason not to enforce is that a logic → theory table with a hole
   refuses a *correct* file. And a `QF_UF` `(get-model)` is **refused**, because
-  z3's `U!val!0` universe block is a z3 extension rather than SMT-LIB — the
-  largest named residual, with arrays and datatypes beside it.
+  z3's `U!val!0` universe block is a z3 extension rather than SMT-LIB.
+
+  A census picked which refusal to stop making. Over 400 corpus files,
+  `(get-model)` was refused 66 times and **58 were arrays** — more than every
+  other cause combined — so arrays now render as
+  `(store … ((as const (Array I E)) default) …)`, and the same census re-run
+  reads **166 rendered, 9 refused** (7 uninterpreted-sort tokens, 2 algebraic
+  reals). Uninterpreted sorts *felt* like the gap; arrays were ten times the
+  volume, and only the measurement said so.
 
   The new answers are cross-validated by z3 rather than diffed against it, since
   two models are both correct: every reported value is pinned as an equation on
-  the original script and z3 must call it `sat` (**66/66**), and every unsat core
-  is re-run alone and z3 must call it `unsat` (**122/122**). Both checks were
-  shown to fire on a corrupted value and on a core with one member removed.
+  the original script and z3 must call it `sat` (**133/133**), and every unsat
+  core is re-run alone and z3 must call it `unsat` (**122/122**). Both checks
+  were shown to fire — on a corrupted value and on a core with one member
+  removed — and both took a fix to get there. The value control first reported
+  DID NOT FIRE because z3 **error-recovers**: a sort-broken pin draws
+  `(error …)` and the following `(check-sat)` still prints a verdict for the
+  rest of the script, so the check passed on a script that never contained the
+  corruption. And the harness's own `(get-value)` parser read the first
+  parenthesised group as the *term*, which is wrong when the term is an atom and
+  the value is an array — 89 files came back as "z3 rejected our model" and the
+  models were fine. Whenever a harness and the thing it measures disagree,
+  suspect the harness first.
 - **Gap #2's gate**, ahead of its measurement:
   `scripts/check-parity-freshness.py` fails when a division's ledger entry ages
   past 14 days, wired into both gate sets. It reads `FAIL` today, which is the
