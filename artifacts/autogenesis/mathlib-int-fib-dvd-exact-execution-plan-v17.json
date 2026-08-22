@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-exact-execution-plan-v17",
+  "state": "preregistered-one-fully-direct-typed-cargo-run",
+  "predecessor": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-exact-construction-result-v16.json",
+    "sha256": "eed42ed1e29654cedd87cf95e869cd4d3d2abae0859726be74e6df444fe6a14f"
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/int_fib_dvd_exact.rs",
+    "sha256": "2cbaf9137fe0201ec630ddab8c7ed059e74edf343565400f29959c7ceeae755c"
+  },
+  "output": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-dvd-exact-v1/root.ndjson",
+  "execution": {
+    "max_driver_builds": 1,
+    "max_complete_invocations": 1,
+    "max_input_stream_reads": 4,
+    "max_composition_operations": 3,
+    "max_composition_replays": 3,
+    "max_target_theorem_submissions": 1,
+    "max_target_exports": 1,
+    "max_fresh_target_imports": 2,
+    "max_retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "target_name": "Int.fib_dvd",
+    "target_axiom_footprint": [],
+    "exact_six_dependencies": true,
+    "fresh_imports_reproduce_evidence": true
+  },
+  "next_on_accept": "seal exact capsule and bind canonical type before operation registration"
+}
