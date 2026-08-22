@@ -162,6 +162,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Isolated replay repeats selection, exit-75 recovery, exact checked result, one write, and the empty readiness delta from source commit `20ffd649b` |
 | 2026-08-21 | (pending) | `Int.fib_neg_natCast` is frozen as a parameterized join of recurrence-derived negative values and independent sign-power parity, before source construction or target submission |
 | 2026-08-21 | (pending) | V1 stops before export at one `Nat`/`Int` binder inference mismatch; V2 freezes only explicit natural-number annotations in both presentation contracts |
+| 2026-08-21 | (pending) | V2 cleanly reconstructs the conditional negative-Fibonacci join twice; only recurrence-derived negative values, sign-power alternation, and two multiplication leaves remain explicit |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
