@@ -98,4 +98,16 @@ The minimal sufficient statement is now the open fact
 `F:gf2-lemire-cylinder-twist-sup-bound` (empty evidence, by design). The
 theorem state is unchanged: Lemire's conjecture is not proved.
 
+**Rung 3 (lemire-signed-trace, 2026-08-21 night):** data closed at `ell=24`
+(both endpoints; worst open-layer ratio `0.12..0.19x` threshold, twisted-sum
+sup over all 131072 cylinders `0.21..0.31` of `2^{ell-1}`). Three parallel
+mechanism attempts (note 02 section 5): the Witt-digit tower yields an exact
+carry calculus (`c_k = ab(a+b)^{2^k-2}`, checked) but no inequality; the
+coset-product Weil polynomial has exact integral power sums and Newton
+polygons but the `Q^k` construction shows no generic invariant can force the
+saving; additive/multiplicative and constructive routes are closed. The
+remaining step is a single open statement, `F:gf2-lemire-cylinder-twist-sup-
+bound`, at the edge of every known method; the next rung needs a new input
+that controls a constrained character sum over a sparse set of size `2^{n/2}`.
+
 <!-- plan-section: landed-changes -->
