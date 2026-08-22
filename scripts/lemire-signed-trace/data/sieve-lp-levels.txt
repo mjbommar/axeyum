@@ -1,0 +1,100 @@
+# The sieve level ledger for the Kaser--Lemire window.
+#
+# LP(n,K) = min sum_{F irreducible, deg F = n} w(F)
+#           subject to  w >= 0 on the monic polynomials of degree n
+#                       sum_{F : d | F} w(F) = 2^(n - deg d)  for every monic d, deg d <= K.
+# By LP duality LP(n,K) is exactly the best lower bound on the number of
+# irreducibles in a window W_n that any nonnegative combination of the Type-I
+# counts at level 2^K can prove; multiply by 2^(h-n), h = floor(n/2)+1, to put
+# it in the W_n normalisation (ambient mass 2^n vs |W_n| = 2^h).
+# k_max(n) = min{K : LP(n,K) > 0}.  The window's EXACT (zero-remainder) level is
+# K = h, so the barrier is the statement k_max(n) > h.
+#
+# Producer: scipy/HiGHS (venv), constraints built exactly; the LP=0 rows are
+# re-certified over Q by the exact rational populations in
+# sieve-parity-population-n*.txt.
+# Columns: n | h | K | LP(n,K) | I_n (true count of degree-n irreducibles)
+LP|6|4|3|0|9
+LP|6|4|4|4|9
+LP|6|4|5|8|9
+LP|6|4|6|9|9
+LP|7|4|3|0|18
+LP|7|4|4|8|18
+LP|7|4|5|16|18
+LP|7|4|6|18|18
+LP|8|5|4|0|30
+LP|8|5|5|8|30
+LP|8|5|6|20|30
+LP|8|5|7|26|30
+LP|9|5|4|0|56
+LP|9|5|5|16|56
+LP|9|5|6|40|56
+LP|9|5|7|52|56
+LP|10|6|3|0|99
+LP|10|6|4|0|99
+LP|10|6|5|0|99
+LP|10|6|6|0|99
+LP|10|6|7|48|99
+LP|10|6|8|76|99
+LP|10|6|9|84|99
+LP|10|6|10|99|99
+LP|11|6|5|0|186
+LP|11|6|6|0|186
+LP|11|6|7|96|186
+LP|11|6|8|144|186
+LP|12|7|6|0|335
+LP|12|7|7|0|335
+LP|12|7|8|96|335
+LP|12|7|9|192|335
+LP|13|7|6|0|630
+LP|13|7|7|0|630
+LP|13|7|8|192|630
+LP|13|7|9|336.22857143|630
+LP|14|8|7|0|1161
+LP|14|8|8|0|1161
+LP|14|8|9|32|1161
+LP|14|8|10|344.08004732|1161
+LP|15|8|8|0|2182
+LP|15|8|9|64|2182
+LP|16|9|9|0|4080
+LP|16|9|10|0|4080
+LP|16|9|11|298.08292516|4080
+LP|17|9|9|0|7710
+LP|17|9|10|0|7710
+# k_max: n | h | k_max(n) | k_max - h   ('>=' means the scan stopped there)
+KMAX|6|4|4|0
+KMAX|7|4|4|0
+KMAX|8|5|5|0
+KMAX|9|5|5|0
+KMAX|10|6|7|1
+KMAX|11|6|7|1
+KMAX|12|7|8|1
+KMAX|13|7|8|1
+KMAX|14|8|9|1
+KMAX|15|8|9|1
+KMAX|16|9|11|2
+KMAX|17|9|>=11|>=2
+# The same LP with the population CONFINED to W_n itself (b >= 0 supported on
+# W_n, same equalities): the value is then the FULL prime count from K = h on,
+# and k_max^W(n) = h-1.  Confinement to the window is not a sieve hypothesis --
+# a sieve never learns which subset of the degree-n monics its sequence is --
+# so these rows are a contrast, not a barrier.
+LPW|11|6|5|0|4
+LPW|11|6|6|4|4
+LPW|12|7|6|0|12
+LPW|12|7|7|12|12
+LPW|13|7|6|0|6
+LPW|13|7|7|6|6
+LPW|14|8|7|18|19
+LPW|14|8|8|19|19
+# forced odd-Omega mass: min sum_{Omega(F) odd} w(F) at K = h (ambient 2^n).
+# Support confined to Omega even is INFEASIBLE for every n tested (8..14):
+# exact Type-I data at level 2^h rules out the pure Liouville population.
+ODD|8|5|40|256
+ODD|10|6|113.454545|1024
+ODD|11|6|288|2048
+ODD|12|7|173.226667|4096
+ODD|13|7|597.333333|8192
+ODD|14|8|526.676092|16384
+ODD|15|8|1227.456308|32768
+ODD|16|9|616.727273|65536

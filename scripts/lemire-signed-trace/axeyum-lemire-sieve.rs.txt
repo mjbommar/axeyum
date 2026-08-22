@@ -1,0 +1,486 @@
+//! Sieve-face data for the Kaser--Lemire lane (angle 2).
+//!
+//! The window is `W_n = { x^n + g : deg g <= floor(n/2) }`, `|W_n| = 2^h` with
+//! `h = floor(n/2)+1`; put `ell = n - h = ceil(n/2)-1`.
+//!
+//! Subcommands
+//!
+//! * `typei <n> <kextra>` -- exact Type-I counts `A_d = #{F in W_n : d | F}` for
+//!   every monic `d` of degree `k <= h + kextra`, by enumerating the divisors of
+//!   every element of the window.  Reports, per `k`, how many distinct `d`
+//!   occur, the min/max of `A_d` over the `d` that occur, and the number of
+//!   exceptions to `A_d = 2^{h-k}` (`k <= h`) or `A_d in {0,1}` (`k > h`).
+//! * `factor <n>` -- the joint histogram of (number of irreducible factors with
+//!   multiplicity, least factor degree) over `W_n`, plus the irreducible count.
+//! * `dump <n>` -- one line per `F in W_n` carrying the full factorization.
+//! * `selfcheck <trials>` -- the local `u64` polynomial layer against the
+//!   crate's `Gf2Poly`/`Gf2Context` (multiply, div_rem, gcd) on pseudorandom
+//!   inputs, and the local factorization against `certify_irreducible`.
+//!
+//! All arithmetic is exact.  Polynomials of degree `<= 63` are `u64` bitmasks
+//! (bit `i` = coefficient of `x^i`); products go through `u128`.  The
+//! factorization is squarefree-split + distinct-degree + Cantor--Zassenhaus
+//! equal-degree with a fixed deterministic LCG, so runs are reproducible.
+
+use std::collections::HashMap;
+use std::env;
+
+use axeyum_cas::gf2::{Gf2Context, Gf2Limits, Gf2Poly, certify_irreducible};
+
+// ---------------------------------------------------------------- u64 layer
+
+fn deg(a: u64) -> i32 {
+    if a == 0 {
+        -1
+    } else {
+        63 - a.leading_zeros() as i32
+    }
+}
+
+fn deg128(a: u128) -> i32 {
+    if a == 0 {
+        -1
+    } else {
+        127 - a.leading_zeros() as i32
+    }
+}
+
+fn mul(a: u64, b: u64) -> u128 {
+    let mut acc: u128 = 0;
+    let mut x = a as u128;
+    let mut y = b;
+    while y != 0 {
+        if y & 1 == 1 {
+            acc ^= x;
+        }
+        x <<= 1;
+        y >>= 1;
+    }
+    acc
+}
+
+fn rem128(mut a: u128, m: u64) -> u64 {
+    let dm = deg(m);
+    assert!(dm >= 0, "modulus is zero");
+    let m128 = m as u128;
+    let mut da = deg128(a);
+    while da >= dm {
+        a ^= m128 << (da - dm);
+        da = deg128(a);
+    }
+    a as u64
+}
+
+fn divrem(a: u64, b: u64) -> (u64, u64) {
+    let db = deg(b);
+    assert!(db >= 0, "division by zero polynomial");
+    let mut r = a;
+    let mut q: u64 = 0;
+    let mut dr = deg(r);
+    while dr >= db {
+        let s = (dr - db) as u32;
+        q ^= 1u64 << s;
+        r ^= b << s;
+        dr = deg(r);
+    }
+    (q, r)
+}
+
+fn gcd(mut a: u64, mut b: u64) -> u64 {
+    while b != 0 {
+        let (_, r) = divrem(a, b);
+        a = b;
+        b = r;
+    }
+    a
+}
+
+fn mulmod(a: u64, b: u64, m: u64) -> u64 {
+    rem128(mul(a, b), m)
+}
+
+fn sqrmod(a: u64, m: u64) -> u64 {
+    // Carry-less squaring: spread the bits.
+    let mut acc: u128 = 0;
+    let mut y = a;
+    let mut i = 0u32;
+    while y != 0 {
+        if y & 1 == 1 {
+            acc ^= 1u128 << (2 * i);
+        }
+        y >>= 1;
+        i += 1;
+    }
+    rem128(acc, m)
+}
+
+fn derivative(a: u64) -> u64 {
+    // In characteristic 2 only the odd-exponent terms survive, shifted down.
+    let mut r: u64 = 0;
+    let mut i = 1u32;
+    while i < 64 {
+        if a >> i & 1 == 1 && i % 2 == 1 {
+            r |= 1u64 << (i - 1);
+        }
+        i += 1;
+    }
+    r
+}
+
+fn sqrt_poly(a: u64) -> u64 {
+    // Only called when the derivative vanishes, i.e. a is a square.
+    let mut r: u64 = 0;
+    let mut i = 0u32;
+    while i < 64 {
+        if a >> i & 1 == 1 {
+            assert!(i % 2 == 0, "sqrt of a non-square");
+            r |= 1u64 << (i / 2);
+        }
+        i += 1;
+    }
+    r
+}
+
+// ------------------------------------------------------- factorization
+
+struct Lcg(u64);
+
+impl Lcg {
+    fn next(&mut self) -> u64 {
+        self.0 = self
+            .0
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        self.0
+    }
+}
+
+/// Split a product of distinct irreducibles all of degree `d` (Cantor--Zassenhaus).
+fn edf(g: u64, d: usize, rng: &mut Lcg, out: &mut Vec<u64>) {
+    let dg = deg(g) as usize;
+    if dg == 0 {
+        return;
+    }
+    if dg == d {
+        out.push(g);
+        return;
+    }
+    loop {
+        let r = rng.next() & ((1u64 << dg) - 1);
+        if r == 0 {
+            continue;
+        }
+        // Trace map t = r + r^2 + r^4 + ... + r^{2^{d-1}} mod g.
+        let mut t = r;
+        let mut cur = r;
+        for _ in 1..d {
+            cur = sqrmod(cur, g);
+            t ^= cur;
+        }
+        let h = gcd(t, g);
+        let dh = deg(h);
+        if dh > 0 && (dh as usize) < dg {
+            let (q, rr) = divrem(g, h);
+            assert_eq!(rr, 0, "edf split is not a divisor");
+            edf(h, d, rng, out);
+            edf(q, d, rng, out);
+            return;
+        }
+    }
+}
+
+/// All irreducible factors (no multiplicities) of a squarefree `f`.
+fn ddf(f: u64, rng: &mut Lcg, out: &mut Vec<u64>) {
+    let mut cur = f;
+    let mut xq = 0b10u64; // x^{2^0}
+    let mut d = 1usize;
+    while deg(cur) >= 2 * d as i32 {
+        xq = sqrmod(xq, cur);
+        let g = gcd(xq ^ 0b10, cur);
+        if deg(g) > 0 {
+            edf(g, d, rng, out);
+            let (q, r) = divrem(cur, g);
+            assert_eq!(r, 0, "ddf split is not a divisor");
+            cur = q;
+            xq = rem128(xq as u128, cur);
+        }
+        d += 1;
+    }
+    if deg(cur) > 0 {
+        out.push(cur);
+    }
+}
+
+/// Every irreducible factor of `f` (multiplicities dropped).
+fn irreducible_factors(f: u64, rng: &mut Lcg, out: &mut Vec<u64>) {
+    if deg(f) <= 0 {
+        return;
+    }
+    let d = derivative(f);
+    if d == 0 {
+        irreducible_factors(sqrt_poly(f), rng, out);
+        return;
+    }
+    let g = gcd(f, d);
+    let (s, r) = divrem(f, g);
+    assert_eq!(r, 0, "squarefree split is not a divisor");
+    if deg(s) > 0 {
+        ddf(s, rng, out);
+    }
+    if deg(g) > 0 {
+        irreducible_factors(g, rng, out);
+    }
+}
+
+/// Full factorization with multiplicities, sorted by (degree, bitmask).
+fn factor(f: u64, rng: &mut Lcg) -> Vec<(u64, usize)> {
+    let mut raw = Vec::new();
+    irreducible_factors(f, rng, &mut raw);
+    raw.sort_unstable();
+    raw.dedup();
+    let mut result = Vec::new();
+    let mut rest = f;
+    for p in raw {
+        let mut e = 0usize;
+        loop {
+            let (q, r) = divrem(rest, p);
+            if r != 0 {
+                break;
+            }
+            rest = q;
+            e += 1;
+        }
+        assert!(e > 0, "claimed factor does not divide");
+        result.push((p, e));
+    }
+    assert_eq!(rest, 1, "factorization did not exhaust the polynomial");
+    result.sort_unstable_by_key(|&(p, _)| (deg(p), p));
+    result
+}
+
+/// Every monic divisor of `f` of degree `<= kmax`, given its factorization.
+fn divisors_up_to(fac: &[(u64, usize)], kmax: usize) -> Vec<u64> {
+    let mut acc = vec![1u64];
+    for &(p, e) in fac {
+        let mut next = Vec::new();
+        for &d in &acc {
+            let mut cur = d;
+            next.push(cur);
+            for _ in 0..e {
+                let prod = mul(cur, p);
+                if deg128(prod) > kmax as i32 {
+                    break;
+                }
+                cur = prod as u64;
+                next.push(cur);
+            }
+        }
+        next.sort_unstable();
+        next.dedup();
+        acc = next;
+    }
+    acc
+}
+
+// ------------------------------------------------------------- window
+
+fn window(n: usize) -> (usize, usize, Vec<u64>) {
+    let h = n / 2 + 1;
+    let ell = n - h;
+    let base = 1u64 << n;
+    let mut out = Vec::with_capacity(1usize << h);
+    for g in 0..(1u64 << h) {
+        out.push(base | g);
+    }
+    (h, ell, out)
+}
+
+// ------------------------------------------------------------ commands
+
+fn cmd_typei(n: usize, kextra: usize) {
+    let (h, ell, w) = window(n);
+    let kmax = h + kextra;
+    let mut rng = Lcg(0x5eed_1eaf_0000_0001);
+    let mut counts: HashMap<u64, u64> = HashMap::new();
+    for &f in &w {
+        let fac = factor(f, &mut rng);
+        for d in divisors_up_to(&fac, kmax) {
+            *counts.entry(d).or_insert(0) += 1;
+        }
+    }
+    println!("META|n={n}|h={h}|ell={ell}|window={}|kmax={kmax}", w.len());
+    for k in 0..=kmax {
+        let mut distinct = 0u64;
+        let mut minv = u64::MAX;
+        let mut maxv = 0u64;
+        let mut total = 0u64;
+        let mut exceptions = 0u64;
+        for (&d, &c) in &counts {
+            if deg(d) == k as i32 {
+                distinct += 1;
+                minv = minv.min(c);
+                maxv = maxv.max(c);
+                total += c;
+                let ok = if k <= h { c == 1u64 << (h - k) } else { c == 1 };
+                if !ok {
+                    exceptions += 1;
+                }
+            }
+        }
+        if k == 0 {
+            distinct = 1;
+            minv = w.len() as u64;
+            maxv = minv;
+            total = minv;
+            exceptions = u64::from(minv != 1u64 << h);
+        }
+        let expected_distinct = if k <= h { 1u64 << k } else { 0 };
+        if minv == u64::MAX {
+            minv = 0;
+        }
+        let predicted = if k <= h { 1u64 << (h - k) } else { 0 };
+        println!(
+            "TYPEI|n={n}|k={k}|distinct={distinct}|expected_distinct={expected_distinct}|predicted={predicted}|min={minv}|max={maxv}|sum={total}|exceptions={exceptions}"
+        );
+    }
+}
+
+fn cmd_factor(n: usize) {
+    let (h, ell, w) = window(n);
+    let mut rng = Lcg(0x5eed_1eaf_0000_0002);
+    let mut joint: HashMap<(usize, usize), u64> = HashMap::new();
+    let mut irred = 0u64;
+    for &f in &w {
+        let fac = factor(f, &mut rng);
+        let omega: usize = fac.iter().map(|&(_, e)| e).sum();
+        let mindeg = fac.iter().map(|&(p, _)| deg(p) as usize).min().unwrap_or(0);
+        *joint.entry((omega, mindeg)).or_insert(0) += 1;
+        if omega == 1 && mindeg == n {
+            irred += 1;
+        }
+    }
+    println!("META|n={n}|h={h}|ell={ell}|window={}", w.len());
+    println!("IRRED|n={n}|count={irred}");
+    let mut keys: Vec<_> = joint.keys().copied().collect();
+    keys.sort_unstable();
+    for (omega, mindeg) in keys {
+        println!(
+            "JOINT|n={n}|omega={omega}|mindeg={mindeg}|count={}",
+            joint[&(omega, mindeg)]
+        );
+    }
+}
+
+fn cmd_dump(n: usize) {
+    let (h, ell, w) = window(n);
+    let mut rng = Lcg(0x5eed_1eaf_0000_0003);
+    println!("META|n={n}|h={h}|ell={ell}|window={}", w.len());
+    for &f in &w {
+        let fac = factor(f, &mut rng);
+        let parts: Vec<String> = fac
+            .iter()
+            .map(|&(p, e)| format!("{p:x}^{e}"))
+            .collect();
+        println!("F|{f:x}|{}", parts.join(","));
+    }
+}
+
+fn cmd_selfcheck(trials: usize) {
+    let limits = Gf2Limits::default();
+    let mut rng = Lcg(0x5eed_1eaf_0000_0004);
+    let mut bad = 0u64;
+    for _ in 0..trials {
+        let a = rng.next() >> (rng.next() % 40);
+        let b = (rng.next() >> (rng.next() % 40)) | 1;
+        let mut ctx = Gf2Context::new(limits);
+        let pa = Gf2Poly::from_words(vec![a]);
+        let pb = Gf2Poly::from_words(vec![b]);
+        // multiply (keep the product inside 64 bits so it is one word)
+        if deg(a) + deg(b) < 64 {
+            let prod = ctx.multiply(&pa, &pb).expect("multiply");
+            let mine = mul(a, b) as u64;
+            if prod.words().first().copied().unwrap_or(0) != mine {
+                bad += 1;
+            }
+        }
+        let (q, r) = ctx.div_rem(&pa, &pb).expect("div_rem");
+        let (mq, mr) = divrem(a, b);
+        if q.words().first().copied().unwrap_or(0) != mq
+            || r.words().first().copied().unwrap_or(0) != mr
+        {
+            bad += 1;
+        }
+        let g = ctx.gcd(&pa, &pb).expect("gcd");
+        if g.words().first().copied().unwrap_or(0) != gcd(a, b) {
+            bad += 1;
+        }
+    }
+    // factorization against certify_irreducible on every monic of degree <= 14
+    let mut frng = Lcg(0x5eed_1eaf_0000_0005);
+    let mut checked = 0u64;
+    for d in 1..=14usize {
+        for low in 0..(1u64 << d) {
+            let f = (1u64 << d) | low;
+            if f & 1 == 0 {
+                // divisible by x; still a valid factorization test
+            }
+            let fac = factor(f, &mut frng);
+            let mine_irred = fac.len() == 1 && fac[0].1 == 1;
+            let poly = Gf2Poly::from_words(vec![f]);
+            let theirs = certify_irreducible(&poly, Gf2Limits::default())
+                .expect("certify")
+                .is_some();
+            if mine_irred != theirs {
+                bad += 1;
+            }
+            // the factorization must multiply back
+            let mut prod: u64 = 1;
+            for &(p, e) in &fac {
+                for _ in 0..e {
+                    prod = mul(prod, p) as u64;
+                }
+            }
+            if prod != f {
+                bad += 1;
+            }
+            checked += 1;
+        }
+    }
+    println!("SELFCHECK|trials={trials}|factored={checked}|mismatches={bad}");
+    if bad != 0 {
+        std::process::exit(1);
+    }
+}
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    if args.len() < 2 {
+        eprintln!(
+            "usage: axeyum-lemire-sieve typei <n> <kextra> | factor <n> | dump <n> | selfcheck <trials>"
+        );
+        std::process::exit(2);
+    }
+    match args[1].as_str() {
+        "typei" => {
+            let n: usize = args[2].parse().expect("n");
+            let kextra: usize = args[3].parse().expect("kextra");
+            cmd_typei(n, kextra);
+        }
+        "factor" => {
+            let n: usize = args[2].parse().expect("n");
+            cmd_factor(n);
+        }
+        "dump" => {
+            let n: usize = args[2].parse().expect("n");
+            cmd_dump(n);
+        }
+        "selfcheck" => {
+            let t: usize = args[2].parse().expect("trials");
+            cmd_selfcheck(t);
+        }
+        other => {
+            eprintln!("unknown subcommand {other}");
+            std::process::exit(2);
+        }
+    }
+}

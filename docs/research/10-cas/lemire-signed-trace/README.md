@@ -71,6 +71,21 @@ Kaser--Lemire half-degree-irreducibles chain (sibling repository
   solved exactly: `C = 2`, `i_max = 2j-1` or `2j`), and the exact `q`-aspect
   experiment that measures the top weight at small `(n,j)`. Rewrites Q1 of
   note 10 as (Q1'). Script `lemire_horizontal_weights.py`.
+- [13-sieve-face.md](13-sieve-face.md) -- angle 2: the sieve face. Lemma 1 (the
+  window has EXACT Type-I data, `A_d = 2^{floor(n/2)+1-k}` with identically zero
+  remainder, hence level of distribution `D = |W_n|` and sifting parameter
+  `s = 1` at the prime level; and no level beyond it, even on average). What the
+  linear sieve does prove: `P_4` with all factors of degree `> (1/4-eps)n`, `P_3`
+  with all factors of degree `> alpha n` for `alpha < 1/6` (Kuhn weights), a
+  fully explicit Brun form, and an exact Selberg Brun--Titchmarsh with no error
+  term. The parity barrier as a theorem with an exact rational witness: for
+  `10 <= n <= 15` a nonnegative prime-free population on the degree-`n` monics
+  reproduces the window's Type-I data exactly, so no lower-bound sieve at level
+  `|W_n|` can prove a prime.  The first level that does is `k_max(n) = h+1`
+  for `10 <= n <= 15` and `h+2` at `n = 16`; for `n <= 9` there is no barrier.
+  Proposition 11: any such sieve proof would prove Legendre for `F_2[t]`
+  (angle 5's uniform conjecture). Proposition 13: Type II transplants onto the
+  same `S_n(chi)` family. Script `lemire_sieve_face.py`.
 
 Executable companions live in
 [`scripts/lemire-signed-trace/`](../../../../scripts/lemire-signed-trace/README.md).

@@ -171,6 +171,54 @@ test, roughly 100x slower. Nothing else is required.
   `control C5: (q-1) does not divide A_8(7,4) = 190017374764662784`. Do not use
   it as data.
 
+- `lemire_sieve_face.py` -- checker for
+  [note 13](../../docs/research/10-cas/lemire-signed-trace/13-sieve-face.md)
+  (angle 2, the sieve face). Recomputes with python-flint, from scratch and
+  exactly, everything the Rust engine produced, and asserts each theorem's finite
+  content: the exact Type-I lemma `A_d = 2^{h-k}` for `deg d <= h` and
+  `A_d in {0,1}` above it, including the reversal criterion on every monic `d` of
+  degree `h < k <= h+3` (153 `(n,k)` pairs, `6 <= n <= 20`, plus 454 pinned CAS
+  rows with zero exceptions); the exact Mertens theorem for `F_q[t]`,
+  `log(1/V(y)) = H_y + O(q^{-y/2})`, hence constant exactly `e^{-gamma}`; the
+  window census for `n <= 44` against flint (`n <= 22`) and against the lane's
+  pinned `data/irreducible-counts-n2-38.txt`; that `mindeg > n/4` forces
+  `omega <= 3` and is nonempty for every `n <= 44`; the exact Selberg
+  Brun--Titchmarsh `#irreducible <= |W_n|/G_{floor(h/2)}`; the exact rational
+  prime-free populations for `n = 10..15` (all `2^{h+1}-1` Type-I equalities
+  verified over `Q` with `Fraction`, plus nonnegativity and vanishing on every
+  irreducible); that every one of the `2^ell` windows of length `2^h` contains an
+  irreducible for `n <= 16` (the transfer bound of note 13 Prop. 11); and the LP
+  ledger's monotonicity and `k_max` rows.
+
+  Six mutation controls, each shown to trip a *named* check: M1 corrupts one
+  `A_d`; M2 moves a unit of mass onto an irreducible; M3 perturbs one population
+  value by `1/7`; M4 lowers the `P_3` degree threshold from `n/4` to `n/5`, where
+  the implication is false; M5 triples the Selberg level so the remainders no
+  longer vanish and the "bound" falls below the truth; M6 doubles the Mertens
+  constant. Runtime about 2 s.
+
+  ```sh
+  /data0/axeyum/scratch/lemire-signed-trace-lemire-venv/bin/python \
+      scripts/lemire-signed-trace/lemire_sieve_face.py     # -> SIEVE-FACE OK
+  ```
+
+  Bulk producer: the Rust CAS binary `axeyum-lemire-sieve` (source mirrored here
+  as `axeyum-lemire-sieve.rs.txt`; drop it into `crates/axeyum-cas/src/bin/` of a
+  snapshot of branch `agent/gf2/lemire-proof` and build with
+  `AXEYUM_CARGO_LOCK=... scripts/cargo-serialized.sh build --release -p
+  axeyum-cas --bin axeyum-lemire-sieve`). Subcommands `typei <n> <kextra>`,
+  `factor <n>`, `dump <n>`, `selfcheck <trials>`; the last checks the binary's
+  local `u64` polynomial layer against the crate's `Gf2Poly`/`Gf2Context` and its
+  factorisation against `certify_irreducible` on all 32766 monic polynomials of
+  degree `<= 14`. `factor 44` (8.4M polynomials) takes 30 s (measured).
+
+  Generated tables: `data/sieve-typeI-n2-34.txt`,
+  `data/sieve-window-factorizations-n2-44.txt`, `data/sieve-lp-levels.txt`,
+  `data/sieve-parity-population-n{10,11,12,13,14,15}.txt`. The LP rows were
+  produced with scipy/HiGHS (`uv pip install scipy` in the lane venv); every row
+  claiming an LP value of 0 is re-certified over `Q` by the corresponding
+  population file, so no floating-point result is load-bearing.
+
 - `lemire_witness_search.py <lo> <hi>` -- flint-based sparse witness search with
   independent pure-Python Rabin re-verification (cross-check for the Rust certifier).
 

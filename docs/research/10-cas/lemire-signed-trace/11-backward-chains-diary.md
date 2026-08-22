@@ -246,3 +246,52 @@ exact Witt/Walsh--Hadamard engine that solves `j = 2` in closed form.
 - MO question 39100 (Voloch, 2010; owner supplied): the Carlitz-cyclotomic
   curve formulation, `q^n/n + O(g q^{n/2})`, genus `g ~ m q^m`, nothing at
   `m ~ n/2` -- identical to note 01's setup. No new content.
+
+## Entry 3 -- angle 2 (sieve face: exact Type I, P_3 theorem, parity population, Type II transplant)
+
+Lane `lemire-signed-trace`, 2026-08-22. Note
+[13-sieve-face.md](13-sieve-face.md); script `lemire_sieve_face.py` (six mutation
+controls, exits nonzero). Producer: new Rust CAS bin `axeyum-lemire-sieve`
+(mirrored as `axeyum-lemire-sieve.rs.txt`; its factorisation agrees with
+`certify_irreducible` on all 32766 monics of degree `<= 14`); cross-check
+python-flint; LPs scipy/HiGHS, every LP-value-zero row re-certified over `Q`.
+
+- **Type I is EXACT, remainder identically zero, to `D = |W_n| = 2^h`,
+  `h = floor(n/2)+1`** (reversal: `d*m* = 1 mod x^{ell+1}` fixes the top `ell`
+  coefficients of `m` unitriangularly). Verified `n <= 34`, `k <= h+3`, **zero
+  exceptions** in 454 rows. Above `h`, `A_d in {0,1}`, exactly `2^h` of the `2^k`
+  divisors occur, and `sum_{deg d=k}|r_d| = 2|W_n|` for EVERY `k > h`: there is no
+  averaged (Bombieri--Vinogradov) level past `2^h` either. `s = h/(n/2) -> 1`.
+- **The brief was off by one.** `s > 2` at `y = (1/4-eps)n` gives `P_4`, not
+  `P_3`. `P_3` needs Kuhn weights (`y_1 = alpha n`, `y_2 = n/3`, `lambda = 1/2`)
+  and then only for `alpha < 1/6`, margin `G(alpha) = 2e^gamma alpha
+  log((1-2alpha)/(4alpha))`, `G(1/8) = 0.1805`; `n_0 = max(300, 2825 K^3)` with
+  `K` the (unpublished) Jurkat--Richert constant. Fully explicit fallback with no
+  black box: Brun's pure sieve, exact because every Bonferroni term has
+  `deg d <= (2r+1)y <= h` -- no factor of degree `<= 3` for `n >= 28`, `<= 10`
+  for `n >= 138`, but only `P_{O(log n)}`.
+- **`P_3` with factors `> n/4` is TRUE and abundant** (5% of `W_44`, CAS census
+  `n <= 44`) **and provably unreachable by the linear sieve**: `y = n/4` gives
+  `s = 2 + 4/n`, main term `4e^gamma/n`, sieve error `O(n^{-1/3})`. The sieve
+  face reproduces the lane's `1/n` deficit exactly, from a different direction.
+- **Exact Brun--Titchmarsh, no error term** (Selberg, weights `deg d <= h/2`, so
+  every entry of the quadratic form is exact): `#irred <= |W_n|/G_{floor(h/2)}`,
+  measured `3.0--3.3x` the truth, `-> 4x`.
+- **Parity barrier is a theorem with an exact witness.** For `10 <= n <= 15`
+  there is an explicit nonnegative rational `w` on ALL degree-`n` monics,
+  vanishing on every irreducible, matching `W_n`'s Type-I data exactly to level
+  `2^h`; so by LP duality no lower-bound sieve at the window's own level proves a
+  prime. `k_max(n) = h+1` for `10 <= n <= 15`, `>= h+2` at `n = 16`; for
+  `n <= 9` there is NO barrier (small `n` is misleading here). The support must
+  meet `Omega` odd -- pure Liouville `1+lambda` is infeasible against exact data.
+- **For angles 1 and 5, the load-bearing item:** every window
+  `{A_0 + g : deg g <= floor(n/2)}` has the SAME exact Type-I data, so any sieve
+  bound at level `2^h` positive for `W_n` is positive for all `2^ell` of them.
+  **A sieve proof of Lemire at level `X^{1/2}` IS a proof of angle 5's uniform
+  conjecture** (Legendre for `F_2[t]`); conversely one prime-free window at any
+  `n` would kill the route. None exists for `n <= 16` (checked). Angle 5 should
+  treat this as the equivalence it asks for, not look for a separation here.
+- **Type II does not bypass `(HWO)`** (Prop. 13): `1[ml in W_n] = 2^{-ell}
+  sum_chi chi(<m>)chi(<l>)`, so every bilinear form is a reweighting of the same
+  Hayes family, `A_M(chi)B_L(chi)` for `S_n(chi)`; angle 4's horizontal sums are
+  the `alpha = beta = 1` case. Converse: `(HWO)` gives the count only.
