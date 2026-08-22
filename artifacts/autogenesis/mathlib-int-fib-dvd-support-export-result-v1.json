@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-support-export-result-v1",
+  "state": "official-root-rejected-for-nonempty-axiom-footprint",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-support-export-plan-v1.json",
+    "sha256": "588929f04cdf14d811a4f9d9d310aa8749572633060250c69e3e2d4ee54e2d3b"
+  },
+  "environment": {
+    "host": "server5",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean_version": "4.30.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "lean4export_binary_sha256": "8e763913b03762488571a93ced6ec1a4e04f7d8eebbe40bd1215ba41a6bd4449"
+  },
+  "capsule": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-natabs-dvd-natabs-official-v1/root.ndjson",
+    "bytes": 1005835,
+    "sha256": "186e2317ccfd8aaf2265c2d41c4ad4b10cf24be09816988e19a3a741740a75c5",
+    "mode": "0444",
+    "directory_mode": "0555",
+    "manifest_sha256": "12be21b2f90d8756451ebb6af32a3c683e4f45bbab13824875283fac015c9e93"
+  },
+  "root": {
+    "name": "Int.natAbs_dvd_natAbs",
+    "declaration_sha256": "6a1e9779d4b927213174e13a2e09578a4de1062072c22ec97127e93f406b063a",
+    "axiom_footprint": ["propext"],
+    "direct_theorem_dependencies": [
+      "Eq.symm",
+      "Int.dvd_mul_right",
+      "Int.mul_neg",
+      "Int.natAbs_eq_natAbs_iff",
+      "Int.natAbs_mul",
+      "Int.natAbs_natCast",
+      "congrArg"
+    ]
+  },
+  "execution": {
+    "exporter_invocations": 1,
+    "root_stream_writes": 1,
+    "importer_runs": 2,
+    "imports_byte_identical": true,
+    "retries": 0,
+    "target_theorem_submissions": 0,
+    "ledger_writes": 0
+  },
+  "decision": {
+    "accepted_as_clean_support": false,
+    "reason": "the official biconditional reaches propext and cannot enter an empty-footprint target chain",
+    "next_boundary": "reconstruct only the two needed directional divisibility implications from witnesses and clean multiplication identities"
+  }
+}

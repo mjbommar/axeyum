@@ -28,7 +28,6 @@ def validate() -> None:
     execution = plan["execution"]
     fact_path = ROOT / target["fact_path"]
     fact = json.loads(fact_path.read_text())
-    output = pathlib.Path(plan["command"]["output"])
     if (
         plan.get("schema_version") != 1
         or plan.get("kind")
@@ -47,7 +46,7 @@ def validate() -> None:
         or support.get("module") != "Init.Data.Int.DivMod.Bootstrap"
         or support.get("root") != "Int.natAbs_dvd_natAbs"
         or support.get("target_proof_body_allowed") is not False
-        or output.exists()
+        or plan["command"].get("output_must_not_preexist") is not True
         or execution.get("max_exporter_invocations") != 1
         or execution.get("max_root_stream_writes") != 1
         or execution.get("max_importer_runs") != 2

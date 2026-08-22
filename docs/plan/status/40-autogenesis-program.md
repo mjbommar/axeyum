@@ -4,7 +4,7 @@
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, and now `Int.fib_gcd` are durably proved with empty kernel footprints. The exact `Int.fib_gcd` operation survived an exit-75 intent fault, recovery performed one authoritative ledger write, the measured frontier produced the preregistered empty unlock delta, and an isolated clean replay reproduced every semantic check.
 
-**Next:** regenerate the machine frontier after the completed integer Fibonacci/GCD chain, select the next dependency-ready bottom-up fact, and freeze its smallest independently checkable construction boundary.
+**Next:** reconstruct the two directional natAbs/divisibility implications needed by `Int.fib_dvd` from explicit witnesses and clean multiplication identities; do not import the assumption-bearing official biconditional.
 
 <!-- plan-section: landed-changes -->
 
@@ -49,6 +49,7 @@
 | 2026-08-22 | (pending) | Exit-75 intent fault leaves `Int.fib_gcd` unchanged; recovery performs exactly one ledger write, its settled checker passes, and the measured readiness delta is empty as preregistered |
 | 2026-08-22 | (pending) | Isolated clean replay `400c8829…3d72` independently repeats selection, certified execution, exit-75 recovery, one write, and the exact empty readiness delta |
 | 2026-08-22 | (pending) | Next collision-free foundation is `Int.fib_dvd`; one pinned v4.30 root export of core `Int.natAbs_dvd_natAbs` is frozen before reading support bytes or constructing the target |
+| 2026-08-22 | (pending) | Pinned support export imports twice identically but reaches `propext`; it is sealed as rejected evidence, with zero target submissions or ledger writes, and the next route narrows to directional witness reconstruction |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
