@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-negation-name-probe-result",
+  "state": "exact-int-negation-surface-names-resolved",
+  "plan": "artifacts/autogenesis/int-fib-neg-negation-name-probe-plan-v1.json",
+  "resolved": {
+    "Int.neg_add": "{a b : Int} -> -(a+b) = -a + -b",
+    "Int.neg_neg": "(a : Int) -> -(-a) = a"
+  },
+  "unresolved": [
+    "neg_add_rev",
+    "neg_neg",
+    "SubtractionMonoid.neg_add_rev",
+    "InvolutiveNeg.neg_neg"
+  ],
+  "execution": {
+    "probe_constructions": 1,
+    "compiler_invocations": 1,
+    "wrapper_source_edits": 0,
+    "exports": 0,
+    "retries": 0,
+    "theorem_submissions": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "wrapper_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0
+  },
+  "next": "Freeze replacement of only the two unavailable wrapper references with Int.neg_add and Int.neg_neg."
+}
