@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-constructor-branch-root-footprint-audit-plan",
+  "state": "preregistered-before-stream-reread",
+  "input": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-constructor-branches-v1/roots-1.ndjson",
+    "sha256": "0803256ec044d9e3ce59d2fb33c0465f464c9ac754d85ac471410adb8502f060"
+  },
+  "roots": [
+    {
+      "name": "Axeyum.Autogenesis.intFibNegPositiveBranchResidualV1",
+      "expected_declaration_sha256": "2e795f93c16c2106424ae46804c77107dd4796d14552b3eff7d188086533d711"
+    },
+    {
+      "name": "Axeyum.Autogenesis.intFibNegNegativeBranchResidualV1",
+      "expected_declaration_sha256": "1f46603078c88099664b64cb13726b8c606e9072ba8a9070c5270bcb68fd3b48"
+    }
+  ],
+  "method": "Run the non-rendering theorem footprint batch auditor once for exactly the two selected roots; compare both declaration hashes and require empty root footprints.",
+  "budget": {
+    "stream_reads": 1,
+    "root_audits": 2,
+    "composition_operations": 0,
+    "specialization_operations": 0,
+    "capsule_writes": 0,
+    "ledger_writes": 0,
+    "retries": 0
+  },
+  "acceptance": "Both selected roots retain their preregistered declaration hashes and have empty axiom footprints.",
+  "stop_rule": "Any import, identity, or footprint failure stops without composition, specialization, output, retry, or ledger authority.",
+  "next_on_accept": "Freeze V4 with route-specific residual-root assurance in place of whole-stream assurance.",
+  "next_on_decline": "Descend from the contaminated selected root rather than weakening assurance."
+}
