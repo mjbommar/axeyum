@@ -38,6 +38,10 @@ Kaser--Lemire half-degree-irreducibles chain (sibling repository
   unbounded-above tail), the pseudorandom pair correlation, and an exact proof
   that the Witt carry formula collapses to Weil above the Kerdock level
   (boundary s-1=1). Verdict: the one unblocked target, not reachable now.
+- [08-infinite-family.md](08-infinite-family.md) -- a proven infinite
+  family: Lemire holds for n = 2*3^k with witness Phi_{3^{k+1}} =
+  x^n + x^{n/2} + 1 (2 a primitive root mod 3^{k+1}); the first proven
+  infinite family for the conjecture, machine-checked. Density zero, even n.
 
 Executable companions live in
 [`scripts/lemire-signed-trace/`](../../../../scripts/lemire-signed-trace/README.md).
