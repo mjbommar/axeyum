@@ -56,6 +56,7 @@
 | 2026-08-21 | (pending) | V4 qualifies the sealed parameterized minus-one parity induction with an empty footprint; four concrete Int power/multiplication leaves are frozen before source construction |
 | 2026-08-21 | (pending) | Native-leaf V1 stops at the absent unqualified `pow_succ`; V2 freezes only the protected `Int.pow_succ` name repair before source construction |
 | 2026-08-21 | (pending) | Native-leaf V2 yields three clean roots but `Int.pow_succ` reaches `propext`; V3 freezes the identical statement with a direct `rfl` proof |
+| 2026-08-21 | (pending) | V3 confirms negative Int power successor is not definitional because power itself branches on parity; the exact raw parity presentation is frozen as an `rfl` theorem instead |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
