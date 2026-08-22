@@ -357,3 +357,25 @@ the pullback/coding descriptions), and each front ends at the same wall: a
 constrained character sum over a sparse set of size `~2^{n/2}` whose only
 provable bound is trivial or Weil. The chain remains open at
 `F:gf2-lemire-cylinder-twist-sup-bound`.
+
+### 5.1 The Adams/Liouville degree-doubling relation is tautological
+
+Candidate B's tempting identity is real but supplies no recursion.  Let
+`lambda` be the completely multiplicative polynomial Liouville function,
+`lambda(P^r)=(-1)^r`.  Euler factors give, for every Hayes character `chi`,
+
+```text
+L(lambda chi,u) = L(chi^2,u^2) / L(chi,u),
+S_m(lambda chi) + S_m(chi) = 1_{2 | m} 2 S_{m/2}(chi^2).
+```
+
+Equivalently, `S_n(chi^2) = (S_{2n}(chi) +
+S_{2n}(lambda chi))/2`.  The second summand is not a ray-class character sum:
+it is exactly the Liouville-weighted prime-power sum that the Euler-product
+identity introduces.  Therefore replacing `S_n(chi^2)` by degree `2n` trades
+the original target for an equally uncontrolled term; applying the identity
+again simply returns the first one.  Squaring also fails to preserve an exact
+conductor layer, as noted above.  This is an algebraic identity, not a
+conditional-balance theorem.  `lemire_adams_check.py` sums prime powers
+directly for every character of `E_j`, `j <= 5`, and degrees `m <= 10`;
+it asserts all 620 instances of the displayed equation.

@@ -110,4 +110,18 @@ remaining step is a single open statement, `F:gf2-lemire-cylinder-twist-sup-
 bound`, at the edge of every known method; the next rung needs a new input
 that controls a constrained character sum over a sparse set of size `2^{n/2}`.
 
+**Rung 4 (lemire-signed-trace, 2026-08-22):** candidate B's apparent
+degree-doubling relation is now exact and closed.  For polynomial Liouville
+`lambda(P^r)=(-1)^r`, Euler products give `L(lambda chi,u) =
+L(chi^2,u^2)/L(chi,u)`, hence `S_m(lambda chi)+S_m(chi) =
+1_{2|m} 2S_{m/2}(chi^2)`.  The direct prime-power checker
+`lemire_adams_check.py` verifies all 620 instances for every character of
+`E_j`, `j<=5`, `m<=10`.  This does not transport `(HWO)` to an easier degree:
+`lambda chi` is not a Hayes character, its new weighted sum is exactly the
+uncontrolled companion term, and squaring does not preserve exact conductor.
+The Hsu/Voloch forward citation graph was also checked to 2026; later work
+retains the logarithmic prescribed-coefficient gap or treats only boundedly
+many coefficients.  No endpoint theorem was found, and the open fact is
+unchanged.
+
 <!-- plan-section: landed-changes -->

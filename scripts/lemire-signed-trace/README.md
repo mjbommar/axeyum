@@ -64,6 +64,11 @@ test, roughly 100x slower. Nothing else is required.
   parity and residues (kills the parity shortcut).
 - `lemire_typeI_check.py` -- checks the exact Type-I / Moebius second-difference identity
   of note 02 section 2.1; exits nonzero on failure.
+- `lemire_adams_check.py` -- checks directly from prime powers the exact
+  Adams/Liouville identity
+  `S_m(chi lambda) + S_m(chi) = 1_{2|m} 2 S_{m/2}(chi^2)`.  It records why
+  degree-doubling through `chi -> chi^2` supplies no bound: the new
+  Liouville-weighted term is not a Hayes character sum.
 
 `data/` holds the generated tables: worst layer ratios (`layer-ratios-*`), full layer
 tables at `ell = 20..24`, cylinder variances, twisted sums, irreducible counts.
