@@ -973,6 +973,57 @@
         "axiom_footprint_policy": "must-be-empty",
         "axiom_footprint": []
       }
+    },
+    {
+      "id": "authoritative-mathlib-nat-fib-pos-kernel-capsule-v1",
+      "scope": "authoritative",
+      "reviewed_gate_mentions": [
+        "check-autogenesis-nat-fib-pos-admission-plan.py",
+        "check-autogenesis-nat-fib-pos-capsule.py",
+        "check-autogenesis-nat-fib-pos-exact-execution-plan.py",
+        "check-autogenesis-nat-fib-pos-exact-plan.py",
+        "check-autogenesis-nat-fib-pos-exact-rerun-plan.py",
+        "check-autogenesis-nat-fib-pos-goal-identity-result.py",
+        "validate-autogenesis-operations.py"
+      ],
+      "applicability": {
+        "fact_ids": ["F:ml430-nat-fib-pos-9e67bd8e"],
+        "formal_languages": ["lean4-surface"],
+        "fragments": ["Nat"]
+      },
+      "producer": {
+        "operation": "specialized-natural-fibonacci-positivity-v1",
+        "implementation": "crates/axeyum-lean-import/examples/nat_fib_pos_exact.rs",
+        "input_kind": "axeyum-sealed-kernel-theorem-capsule",
+        "output_kind": "axeyum-sealed-kernel-theorem-capsule"
+      },
+      "checker": {
+        "operation": "axeyum-lean-import/sealed-nat-fib-pos-capsule-receipt-v1",
+        "implementation": "scripts/check-autogenesis-nat-fib-pos-capsule.py",
+        "input_kind": "axeyum-sealed-kernel-theorem-capsule",
+        "output_kind": "axeyum-checked-sealed-kernel-capsule-receipt-v1"
+      },
+      "executor": {
+        "driver": "axeyum-lean-import/sealed-kernel-capsule-v1",
+        "implementation": "scripts/execute-autogenesis-operation.py",
+        "input_fact_id": "F:ml430-nat-fib-pos-9e67bd8e",
+        "result_manifest": "artifacts/autogenesis/mathlib-nat-fib-pos-goal-identity-result-v1.json",
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/nat-fib-pos-exact-v1/root.ndjson",
+        "capsule_sha256": "ec85c45183bec3c1fe4cbd0d015c76a5ded6dbbfa4be9b279d59870da12566a0",
+        "target_theorem": "Nat.fib_pos",
+        "goal_sha256": "24233cf6ebabcb044ad6fa8be564c7cfbff822a421afb1c94ff906c65d029f56",
+        "declaration_sha256": "f441b137a185604cee38d4f5c311cd48cd83ffb4279ceab467c7852dad326e65",
+        "receipt_sha256": "60954cc8fbe7d947c08ffca5dbc55e600864151ca5a824c3d950614478c46aff",
+        "timeout_seconds": 120,
+        "expected_evidence_label": "kernel-term-mathlib-nat-fib-pos-capsule-axiom-free"
+      },
+      "admission": {
+        "epistemic_status": "proved",
+        "proof_route": "kernel-lean",
+        "evidence_kind": "kernel-term",
+        "axiom_footprint_policy": "must-be-empty",
+        "axiom_footprint": []
+      }
     }
   ]
 }
