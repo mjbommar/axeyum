@@ -66,16 +66,16 @@ fn run() -> Result<(), String> {
         return Err("an input stream reaches assumptions".to_owned());
     }
 
-    let mut kernel = imports[0].kernel().clone();
+    let mut kernel = imports[1].kernel().clone();
     if optional_name(&kernel, TARGET)?.is_some() {
         return Err("exact target exists before construction".to_owned());
     }
     let compositions = [
         compose(
-            imports[1].kernel(),
+            imports[0].kernel(),
             &mut kernel,
-            &[ZERO_LT_SUCC, ADD_POS_RIGHT],
-            "core",
+            &["Nat.fib", RECURRENCE],
+            "recurrence",
         )?,
         compose(
             imports[2].kernel(),
