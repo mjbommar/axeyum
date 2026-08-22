@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-direction-composition-plan",
+  "state": "preregistered-before-driver-code",
+  "inputs": {
+    "direction_residuals": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-direction-residual-v2/residual-1.ndjson",
+      "sha256": "f530875c1fc21c3dccaddeddb0173b5c564701696c4830b6582841d1610cfa4e",
+      "roots": [
+        "Axeyum.Autogenesis.intEvenToModTwoZeroResidualV2",
+        "Axeyum.Autogenesis.intModTwoZeroToEvenResidualV2"
+      ]
+    },
+    "closed_arithmetic": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-arithmetic-closed-v1/roots.ndjson",
+      "sha256": "9850655508dde20f0fb79c09b4dfe830d7f57acf3c334a2da75b404b5c2a1748",
+      "roots": [
+        "Axeyum.Autogenesis.intDoubleModTwoZeroClosedV1",
+        "Axeyum.Autogenesis.intHalfWitnessOfModTwoZeroClosedV1"
+      ]
+    }
+  },
+  "targets": [
+    {
+      "name": "Axeyum.Autogenesis.intEvenToModTwoZeroClosedV1",
+      "statement": "forall n : Int, Even n -> n % 2 = 0",
+      "argument": "Axeyum.Autogenesis.intDoubleModTwoZeroClosedV1"
+    },
+    {
+      "name": "Axeyum.Autogenesis.intModTwoZeroToEvenClosedV1",
+      "statement": "forall n : Int, n % 2 = 0 -> Even n",
+      "argument": "Axeyum.Autogenesis.intHalfWitnessOfModTwoZeroClosedV1"
+    }
+  ],
+  "method": "Hash-bind both empty-footprint streams; compose and replay both closed arithmetic roots into the residual kernel; specialize and replay each residual with its exact premise; require exact two-theorem dependencies and empty footprints; export both directions and freshly import twice before fail-if-present write.",
+  "driver": "crates/axeyum-lean-import/examples/int_even_direction_composition.rs",
+  "output": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-directions-closed-v1/roots.ndjson",
+  "budget": {
+    "driver_constructions": 1,
+    "focused_builds": 1,
+    "complete_invocations": 1,
+    "input_stream_reads": 2,
+    "composition_operations": 1,
+    "composition_replays": 1,
+    "specialization_operations": 2,
+    "specialization_replays": 2,
+    "fresh_capsule_imports": 2,
+    "retries": 0,
+    "exact_int_even_iff_submissions": 0,
+    "decision_instance_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "all_receipts_replay": true,
+    "both_target_footprints": [],
+    "both_target_direct_dependencies_exact": true,
+    "fresh_import_evidence_unchanged": true
+  },
+  "stop_rule": "Any mismatch, decline, receipt failure, dependency drift, nonempty footprint, replay change, or preexisting output stops without retry.",
+  "limitations": "Two exact directions only; packaging as Int.even_iff, reconstructing the decision instance, Fibonacci, and ledger mutation remain unauthorized."
+}
