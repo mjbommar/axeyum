@@ -96,7 +96,18 @@ fn solve_qfbv_smtlib(
                 assertions.clear();
                 scopes.clear();
             }
-            ScriptCommand::GetAssertions => {}
+            // Output/metadata commands do not move the assertion stack, which
+            // is all this walk reconstructs. Listed rather than wildcarded so a
+            // new command that DOES move it cannot be added silently.
+            ScriptCommand::GetAssertions
+            | ScriptCommand::SetLogic(_)
+            | ScriptCommand::SetOption { .. }
+            | ScriptCommand::GetModel
+            | ScriptCommand::GetValue(_)
+            | ScriptCommand::GetUnsatCore
+            | ScriptCommand::GetProof
+            | ScriptCommand::Echo(_)
+            | ScriptCommand::UnansweredOutput(_) => {}
         }
     }
 

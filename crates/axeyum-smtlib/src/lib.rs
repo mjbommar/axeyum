@@ -47,7 +47,7 @@ pub use parse::{
 };
 pub use regex_membership::{MemberConcatDefinition, MemberVar, MembershipProblem};
 pub use sexpr::{SExpr, read_all};
-pub use write::write_script;
+pub use write::{sort_text, write_script};
 
 use axeyum_ir::IrError;
 

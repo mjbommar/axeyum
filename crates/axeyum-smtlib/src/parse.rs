@@ -55,6 +55,44 @@ pub enum ScriptCommand {
     /// `(get-assertions)` — request the current assertion stack at this command
     /// point.
     GetAssertions,
+    /// `(set-logic L)` — the declared logic, recorded **positionally** so a
+    /// driver can answer it (SMT-LIB §4.1.7: an unsupported logic gets the
+    /// `unsupported` response, at the point of the command). [`Script::logic`]
+    /// keeps the same string for the non-positional readers.
+    SetLogic(String),
+    /// `(set-option :key value)` — recorded positionally for the same reason as
+    /// [`ScriptCommand::SetLogic`]. [`Script::options`] keeps the map view, but
+    /// a map cannot say *where* the option was set and collapses a key that was
+    /// set twice, and an option is answered `success`/`unsupported` per command.
+    SetOption {
+        /// The option keyword, including its leading `:`.
+        key: String,
+        /// The option value, as written.
+        value: String,
+    },
+    /// `(get-model)` — the model of the *preceding* `check-sat`, so its answer
+    /// depends on the scoped assertion stack at the command point.
+    GetModel,
+    /// `(get-value (t …))` — each requested term as `(source text, term)`. The
+    /// text is kept because the SMT-LIB response echoes the term as written; see
+    /// [`SExpr::to_text`](crate::SExpr::to_text).
+    GetValue(Vec<(String, TermId)>),
+    /// `(get-unsat-core)` — the core of the preceding `check-sat`.
+    GetUnsatCore,
+    /// `(get-proof)` — the refutation of the preceding `check-sat`.
+    GetProof,
+    /// `(echo "…")` — echoes its argument verbatim (SMT-LIB §4.2.5), including
+    /// the quotes.
+    Echo(String),
+    /// An output command this parser accepts syntactically and no driver here
+    /// answers, carrying its keyword (`get-assignment`, `get-info`,
+    /// `get-option`, `get-objectives`, `get-unsat-assumptions`).
+    ///
+    /// Recorded rather than dropped so a driver can emit the SMT-LIB
+    /// `unsupported` response instead of staying silent — silence is
+    /// indistinguishable from an answer of "nothing", which is the failure this
+    /// variant exists to prevent.
+    UnansweredOutput(String),
 }
 
 /// A parsed benchmark script.
@@ -5950,6 +5988,9 @@ fn parse_command<'a>(
         "set-logic" => {
             exact_len(items, 2, head)?;
             script.logic = items.get(1).and_then(SExpr::atom).map(str::to_owned);
+            if let Some(logic) = &script.logic {
+                script.commands.push(ScriptCommand::SetLogic(logic.clone()));
+            }
         }
         "set-info" => {
             exact_len(items, 3, head)?;
@@ -5971,9 +6012,12 @@ fn parse_command<'a>(
                 .and_then(SExpr::atom)
                 .ok_or_else(|| SmtError::Syntax("set-option key".to_owned()))?
                 .to_owned();
-            script
-                .options
-                .insert(key, smtlib_metadata_value(sexpr_at(items, 2)?));
+            let value = smtlib_metadata_value(sexpr_at(items, 2)?);
+            script.commands.push(ScriptCommand::SetOption {
+                key: key.clone(),
+                value: value.clone(),
+            });
+            script.options.insert(key, value);
         }
         // Output/query commands: accepted as no-ops at parse time. The core is
         // produced by the solver (`solve_smtlib_unsat_core`), the model by the
@@ -5981,13 +6025,31 @@ fn parse_command<'a>(
         "get-model" => {
             exact_len(items, 1, head)?;
             script.get_model = true;
+            script.commands.push(ScriptCommand::GetModel);
         }
-        "exit"
-        | "get-unsat-core"
-        | "get-proof"
-        | "get-assignment"
-        | "get-unsat-assumptions"
-        | "get-objectives" => exact_len(items, 1, head)?,
+        "get-unsat-core" => {
+            exact_len(items, 1, head)?;
+            script.commands.push(ScriptCommand::GetUnsatCore);
+        }
+        "get-proof" => {
+            exact_len(items, 1, head)?;
+            script.commands.push(ScriptCommand::GetProof);
+        }
+        // Accepted syntactically and answered by nobody here. Recorded so a
+        // driver emits `unsupported` rather than nothing; see
+        // `ScriptCommand::UnansweredOutput`.
+        "get-assignment" | "get-unsat-assumptions" | "get-objectives" => {
+            exact_len(items, 1, head)?;
+            script
+                .commands
+                .push(ScriptCommand::UnansweredOutput(head.to_owned()));
+        }
+        // `(exit)` stays a plain no-op: this parser reads the whole script
+        // before anything is decided, so honoring it would mean DROPPING
+        // commands that follow, changing the verdict stream of every corpus
+        // file that trails an `(exit)`. Recorded as a known divergence in
+        // `axeyum_cli` rather than half-done here.
+        "exit" => exact_len(items, 1, head)?,
         "get-assertions" => {
             exact_len(items, 1, head)?;
             script.commands.push(ScriptCommand::GetAssertions);
@@ -6040,6 +6102,9 @@ fn parse_command<'a>(
                     .ok_or_else(|| SmtError::Syntax("get-option key".to_owned()))?
                     .to_owned(),
             );
+            script
+                .commands
+                .push(ScriptCommand::UnansweredOutput(head.to_owned()));
         }
         "get-info" => {
             exact_len(items, 2, head)?;
@@ -6049,8 +6114,16 @@ fn parse_command<'a>(
                     .ok_or_else(|| SmtError::Syntax("get-info key".to_owned()))?
                     .to_owned(),
             );
+            script
+                .commands
+                .push(ScriptCommand::UnansweredOutput(head.to_owned()));
         }
-        "echo" => exact_len(items, 2, head)?,
+        "echo" => {
+            exact_len(items, 2, head)?;
+            script
+                .commands
+                .push(ScriptCommand::Echo(sexpr_at(items, 1)?.to_text()));
+        }
         "get-value" => {
             exact_len(items, 2, head)?;
             let list = items
@@ -6058,6 +6131,7 @@ fn parse_command<'a>(
                 .and_then(SExpr::list)
                 .ok_or_else(|| SmtError::Syntax("get-value expects (t …)".to_owned()))?;
             let guard_checkpoint = lenabs.encoding_guard_checkpoint();
+            let mut requested = Vec::with_capacity(list.len());
             for t in list {
                 let term = parse_term(
                     &mut script.arena,
@@ -6070,8 +6144,10 @@ fn parse_command<'a>(
                     lenabs,
                 )?;
                 script.get_value_terms.push(term);
+                requested.push((t.to_text(), term));
             }
             reject_new_encoding_guards(lenabs, guard_checkpoint, head)?;
+            script.commands.push(ScriptCommand::GetValue(requested));
         }
         "check-sat-assuming" => {
             exact_len(items, 2, head)?;
