@@ -1183,11 +1183,11 @@ of two, so they cannot be folded into a Witt-digit martingale argument.
 **Next:** candidate A must tabulate the two targets separately: nonresonant
 conditional-zero-versus-unconditional means and resonant direct sparse
 discrepancies, then conditional Witt-digit biases only for the first class,
-through `ell <= 23` using branch population dumps. The first direct data at
-orders `q >= 8`, `ell=14..22`, are comfortably below the `1/(4ell)` HWO ratio
-from `ell=16` onward (worst observed factor `0.219` at `(ell,n)=(22,46)`),
-but this is finite evidence and its low-`ell` cutoff is not the eventual
-`Q=8` regime. Then candidate B (tower relations `chi, chi^2, chi^4`). Nothing
+through `ell <= 23` using branch population dumps. For the eventually relevant
+orders `q >= 16`, the first direct data are below the `1/(4ell)` HWO ratio from
+`ell=16` onward and fall to a worst observed factor `0.219` at
+`(ell,n)=(22,46)`, but this is finite evidence and not the eventual `Q=8`
+theorem regime. Then candidate B (tower relations `chi, chi^2, chi^4`). Nothing
 receives proof credit until it closes the endpoint ledger.
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd` and `Nat.fib_dvd` remain durably proved. The next premise `Int.fib_neg` has now been measured from one root-selected v4.30 export: its official proof is assumption-bearing, with 26 direct dependencies and a footprint containing `Classical.choice`, `propext`, quotient primitives, and opaque/string support. It received no theorem or ledger credit.
