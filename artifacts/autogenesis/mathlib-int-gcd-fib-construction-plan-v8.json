@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-fib-construction-plan-v8",
+  "state": "preregistered-before-two-support-identity-reads",
+  "residual_result": {
+    "path": "artifacts/autogenesis/mathlib-int-gcd-fib-construction-result-v7.json",
+    "sha256": "4d14d0dff1580f2fba7c09043207f8b1d87c353667a131899c6a83bf2be63764"
+  },
+  "already_bound_supports": [
+    {
+      "name": "Int.fib_natCast",
+      "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-clean-definition-v1/int-fib-clean.ndjson",
+      "capsule_sha256": "f0e34ecb1dff747938b7f1079c307af5f4e79e7a67e3bc514feee03e4f30656d",
+      "declaration_sha256": "73b8742709bbb1b91780f41ff4a475b5b3f0b1c2981999c868b53fc38334bea3"
+    },
+    {
+      "name": "Axeyum.IntFib.modCases",
+      "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-clean-parity-leaves-v4/roots.ndjson",
+      "capsule_sha256": "0e310823ba37adfbd9087c0da2f85ad57261228d601d9388800cf069b5b2ce82",
+      "declaration_sha256": "6a54512362abaf314e48d39a99377154c059fc83873b91c6767aab4c10f24b54"
+    }
+  ],
+  "reads": [
+    {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-natcast-decision-free-exact-v1/exact.ndjson",
+      "bytes": 773264,
+      "sha256": "6c803eff520a62d6925db5ed30f78714d9923281becfd78239cc28278bc9159f",
+      "roots": [
+        "Axeyum.Autogenesis.intFibNegativeEvenV1",
+        "Axeyum.Autogenesis.intFibNegativeOddV1"
+      ]
+    },
+    {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-root-audit-v1/int-fib-neg.ndjson",
+      "bytes": 14596588,
+      "sha256": "7df7f5dce9c7159f9c468b6f47f13be3e589fb2c1559af554ce73cc48b18730e",
+      "roots": ["Int.natAbs_neg"]
+    }
+  ],
+  "constructed_support": {
+    "name": "Axeyum.Autogenesis.intNatAbsOfNatV1",
+    "statement": "forall n : Nat, (Int.ofNat n).natAbs = n",
+    "method": "Eq.refl after kernel conversion",
+    "submissions_authorized_in_this_increment": 0
+  },
+  "execution": {
+    "tool": "theorem_footprint_batch_audit",
+    "max_importer_runs": 2,
+    "max_proof_bearing_stream_reads": 2,
+    "max_retries": 0,
+    "max_theorem_submissions": 0,
+    "max_ledger_writes": 0
+  },
+  "acceptance": {
+    "all_three_measured_roots_present": true,
+    "all_three_measured_roots_axiom_footprint": [],
+    "rendered_proof_terms": 0,
+    "rendered_theorem_types": 0,
+    "rendered_theorem_values": 0
+  },
+  "next_on_accept": "freeze exact composition order and one seven-argument specialization driver"
+}

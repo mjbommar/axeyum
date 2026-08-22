@@ -19,6 +19,7 @@
 | 2026-08-22 | (pending) | Durable V5 paths identify official `Int.fib` through its Even decider as the common carrier of all eight assumptions; V6 freezes a fully function-abstracted, decision-free eight-parameter residual before source construction |
 | 2026-08-22 | (pending) | V6 stops before export because each universal natAbs rewrite leaves its second occurrence; V7 freezes only three explicit repeated rewrite sequences with the abstraction boundary unchanged |
 | 2026-08-22 | (pending) | V7 exports twice as the same 351,201-byte residual, imports twice with zero axioms, and retains only clean Eq.symm/congrArg; exact eight-parameter specialization remains separately unauthorized |
+| 2026-08-22 | (pending) | Exact positive and modulo-case supports are already bound; V8 freezes two non-rendering reads for negative-even, negative-odd, and natAbs-neg identities before any specialization code |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
