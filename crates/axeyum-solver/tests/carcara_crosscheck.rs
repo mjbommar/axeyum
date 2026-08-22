@@ -9,8 +9,27 @@
 //!
 //! Carcara lives in the gitignored `references/` tree and is not present in CI,
 //! so each test **skips** (prints a note, passes) when the binary is absent.
-//! Build it with `cargo build --release -p carcara-cli` inside
-//! `references/carcara`, or point `AXEYUM_CARCARA_BIN` at a `carcara` binary.
+//! Point `AXEYUM_CARCARA_BIN` at a `carcara` binary, or build one:
+//!
+//! ```sh
+//! scripts/fetch-references.sh            # or: git clone --depth 1 …/carcara
+//! cd references/carcara
+//! RUSTUP_TOOLCHAIN=stable PATH="<dir-with-m4>:$PATH" \
+//!   cargo build --release -p carcara-cli
+//! ```
+//!
+//! Two things bite, measured 2026-08-21 building it here for the first time:
+//! its `rust-toolchain.toml` pins 1.87 and that channel cannot be downloaded on
+//! this box (missing `miri`/`cranelift` components), so override to `stable`;
+//! and `rug`'s `gmp-mpfr-sys` build needs **`m4`**, which is not installed here
+//! but ships inside a snap (`/snap/gnome-46-2404/153/usr/bin/m4` — symlink it
+//! into a directory on `$PATH`). No host package was installed to get this
+//! running.
+//!
+//! **A skipping suite is a suite that has never been shown to fail.** Nothing in
+//! this repository had a Carcara binary until that date, so every test here had
+//! been returning early for as long as the file existed; five of them failed the
+//! first time one ran. Confirm the binary is found before believing a green run.
 #![cfg(feature = "full")]
 
 use std::path::{Path, PathBuf};
