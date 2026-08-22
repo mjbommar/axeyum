@@ -49,6 +49,25 @@ test, roughly 100x slower. Nothing else is required.
   cd scripts/lemire-signed-trace && python lemire_witt.py 13 6
   ```
 
+- `lemire_layers.py <dump>` -- exact-order / exact-conductor layer analysis from a
+  class-population dump (`axeyum-gf2-dump-populations <ell> <degree>`, built from
+  `axeyum-gf2-dump-populations.rs.txt` dropped into `crates/axeyum-cas/src/bin/` of a
+  snapshot of branch `agent/gf2/lemire-proof`): `P_{j,s}`, `Delta_{j,s}`, `T_{j,s}`,
+  `#X_{j,s}`, the ratio against the `(HWO)` threshold `1/(4 ell)`; asserts the
+  three-case reduction of `T_{j,s}` on every row.
+- `lemire_cylinders.py <dump...>` -- the one-sided `(ICV)` object: per-cylinder sums of
+  squared deviations, identity-cylinder rank, Sato--Tate prediction, `2^{2ell-2}` threshold.
+- `lemire_twists.py <dump...>` -- twisted cylinder sums `A_psi^{(h)}` for every cylinder
+  and character of `K` by exact Walsh transforms; identity and all-cylinder sups against
+  `2^{ell-1}` (the open fact `F:gf2-lemire-cylinder-twist-sup-bound`).
+- `lemire_parity.py <nmax>` -- counts irreducible `x^n + g`, `deg g <= floor(n/2)`, with
+  parity and residues (kills the parity shortcut).
+- `lemire_typeI_check.py` -- checks the exact Type-I / Moebius second-difference identity
+  of note 02 section 2.1; exits nonzero on failure.
+
+`data/` holds the generated tables: worst layer ratios (`layer-ratios-*`), full layer
+tables at `ell = 20..24`, cylinder variances, twisted sums, irreducible counts.
+
 ## Cross-validation performed 2026-08-21
 
 | Quantity | Anchor | Independent source |
