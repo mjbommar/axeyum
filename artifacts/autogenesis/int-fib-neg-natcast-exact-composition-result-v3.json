@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-exact-int-fib-neg-natcast-composition-result",
+  "state": "declined-at-missing-target-owned-fibonacci-definition",
+  "plan": "artifacts/autogenesis/int-fib-neg-natcast-exact-composition-plan-v3.json",
+  "execution": {"additional_bridge_compilations": 1, "bridge_exports": 0, "composition_operations": 0, "target_submissions": 0, "ledger_writes": 0},
+  "decline": {
+    "stage": "bridge-elaboration",
+    "class": "MissingTargetOwnedDefinition",
+    "names": ["Int.fib", "Nat.fib"],
+    "module_search_and_package_root_repairs_accepted": true,
+    "partial_kernel_published": false
+  },
+  "next_boundary": "Compile and import the already sealed target-owned negative-presentation module, which defines Int.fib over Mathlib Nat.fib, before recompiling the otherwise unchanged bridge body.",
+  "limitations": "No bridge theorem, export, composition, target, fact, evaluation, or ledger credit is established."
+}

@@ -191,6 +191,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Exact `Int.fib_neg_natCast` composition is frozen as one concrete four-proof bridge over the five sealed bottom-up inputs before source construction |
 | 2026-08-21 | (pending) | V1 stops before bridge elaboration because the compiled residual module is outside Lake's search path; V2 freezes only an explicit shared-volume `LEAN_PATH` repair |
 | 2026-08-21 | (pending) | V2 resolves the import path but stops before elaboration at Lean's package-root check; V3 freezes only the documented shared-directory `--root` flag |
+| 2026-08-21 | (pending) | V3 accepts both driver repairs and exposes the absent target-owned `Int.fib` module; V4 freezes only importing its already sealed presentation source |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |

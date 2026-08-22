@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-exact-int-fib-neg-natcast-composition-plan",
+  "state": "preregistered-target-owned-definition-import-before-fourth-bridge-compilation",
+  "predecessor": {"path": "artifacts/autogenesis/int-fib-neg-natcast-exact-composition-result-v3.json", "required_state": "declined-at-missing-target-owned-fibonacci-definition"},
+  "repair": {
+    "only_source_change": "import AxeyumIntFibNegativePresentationV1 after the residual module",
+    "support_source": "artifacts/autogenesis/sources/int-fib-negative-presentation-v1.lean",
+    "reason": "that already sealed source is the target-owned definition authority for Int.fib and imports Mathlib Nat.fib",
+    "bridge_theorem_body_unchanged": true,
+    "sealed_proof_inputs_unchanged": true,
+    "target_authority_unchanged": true
+  },
+  "budget": {
+    "presentation_support_compilations": 1,
+    "additional_bridge_compilations": 1,
+    "bridge_exports": 2,
+    "complete_composition_invocations": 1,
+    "composition_operations": 4,
+    "composition_replays": 4,
+    "specialization_operations": 1,
+    "specialization_replays": 1,
+    "target_submissions": 1,
+    "target_exports": 1,
+    "fresh_target_imports": 2,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": "All V1 proof, identity, footprint, replay, and no-ledger conditions remain unchanged.",
+  "output": "artifacts/autogenesis/int-fib-neg-natcast-exact-composition-result-v4.json",
+  "limitations": "The imported presentation theorem remains a proof argument, not silently consumed authority."
+}
