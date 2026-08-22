@@ -33,6 +33,7 @@
 | 2026-08-22 | (pending) | V13 replaces all three congruence applications with the established `Eq.rec` construction, compiles Clippy-clean, and preserves link-by-link checks before one new invocation |
 | 2026-08-22 | (pending) | V13 accepts all five links, constructs exact `Int.gcd_fib` empty-footprint with five dependencies, survives two fresh imports, and seals a 1,152,698-byte capsule with zero ledger writes |
 | 2026-08-22 | (pending) | One hash-only, non-rendering read of the sealed `Int.gcd_fib` root is frozen to bind its canonical kernel type before any operation registration or ledger authority |
+| 2026-08-22 | (pending) | Hash-only audit binds canonical `Int.gcd_fib` type `050ddb31…901b` with unchanged empty footprint and five dependencies; the sealed-capsule checker is ready before operation registration |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |

@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-theorem-goal-identity-audit",
+  "state": "exact-goal-identity-bound-without-rendering",
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-gcd-fib-exact-v1/root.ndjson", "bytes": 1152698, "sha256": "b1ce136473ead161243e7cdc053f3a8e0dab81a8e253c364171e839f22fd86f6"},
+  "theorem": {
+    "name": "Int.gcd_fib",
+    "canonical_type_sha256": "050ddb31135f25341d15c5a8a0802512b11a3965983c5a1a21aaabf9a7bb901b",
+    "canonical_declaration_sha256": "44660dc7f15cda1b469f99e349f4b874afca9dbca24bcfc5c847ca226ccc357f",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": ["Axeyum.Autogenesis.intFibNatAbsV1", "Eq.symm", "Eq.trans", "Int.gcd_def", "Nat.fib_gcd"]
+  },
+  "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0},
+  "execution": {"importer_runs": 1, "stream_reads": 1, "retries": 0, "ledger_writes": 0},
+  "authority": {"qualified_exact_target": 1, "fact_status_changes": 0, "ledger_writes": 0},
+  "next": "register one exact sealed-capsule admission operation for F:ml430-int-gcd-fib-73bdafc2"
+}
