@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-decision-root-audit-result",
+  "state": "exact-decision-root-localized-to-int-even-iff",
+  "plan": "artifacts/autogenesis/int-even-decision-root-audit-plan-v1.json",
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-decision-root-audit-v1",
+    "stream": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-decision-root-audit-v1/root.ndjson", "bytes": 9831839, "sha256": "662008f9976aae9e459b325a05a6fa22d2f04997ba8623bce5480ca400e7a526"},
+    "audit": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-decision-root-audit-v1/audit.json", "bytes": 228546, "sha256": "2028121f680346bcb125890de0b2c67f2ac58c412f48750f107aa63d03abc403", "exit_status": 0}
+  },
+  "root": {"name": "Int.instDecidablePredEven", "kind": "definition", "declaration_sha256": "c01ed8edfc717e6cc0119a5c824cf94ad6fd1fb0b322487a28036b41b0713c61", "closure_size": 2530},
+  "blockers": [
+    {"name": "propext", "carrier_count": 759},
+    {"name": "Classical.choice", "carrier_count": 28},
+    {"name": "Quot.sound", "carrier_count": 185}
+  ],
+  "nearest_shared_boundary": {
+    "instance_helper": {"name": "Int.instDecidablePredEven._proof_1", "kind": "theorem", "closure_size": 2528, "declaration_sha256": "d655d0b2e356cf9b7584db3950ac315084ab174136024a63f2b8c6e42a19856b"},
+    "theorem": {"name": "Int.even_iff", "kind": "theorem", "closure_size": 2527, "declaration_sha256": "ab4300192b1073d20d0e4110a3b77a79f6a57729e337db1f92889713ac9f9fba"},
+    "finding": "Every audited blocker path from the decision instance passes through Int.even_iff; replace that exact theorem before duplicating the instance."
+  },
+  "execution": {"exporter_invocations": 1, "importer_runs": 1, "stream_reads": 1, "proof_terms_rendered": 0, "declaration_types_rendered": 0, "declaration_values_rendered": 0, "reconstruction_compilations": 0, "exact_target_submissions": 0, "ledger_writes": 0, "retries": 0},
+  "authority": {"localization_credit": 1, "replacement_credit": 0, "theorem_credit": 0, "ledger_writes": 0},
+  "limitations": "The audit identifies the boundary but does not reconstruct Int.even_iff or the instance."
+}
