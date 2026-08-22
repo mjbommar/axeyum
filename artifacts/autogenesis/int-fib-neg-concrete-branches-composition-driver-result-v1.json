@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-concrete-branches-composition-driver-result",
+  "state": "driver-build-stopped-on-vector-initialization-lint-before-stream-access",
+  "plan": "artifacts/autogenesis/int-fib-neg-concrete-branches-composition-plan-v1.json",
+  "focused_build": {
+    "command": "cargo clippy -p axeyum-lean-import --example int_fib_neg_concrete_branches_composition -- -D warnings",
+    "exit": 101,
+    "diagnostic": "vec_init_then_push"
+  },
+  "execution": {
+    "input_stream_reads": 0,
+    "composition_operations": 0,
+    "specialization_operations": 0,
+    "capsule_writes": 0,
+    "ledger_writes": 0
+  },
+  "credit": "no driver or theorem credit",
+  "next": "Freeze replacement of the three immediate pushes with one vec literal."
+}
