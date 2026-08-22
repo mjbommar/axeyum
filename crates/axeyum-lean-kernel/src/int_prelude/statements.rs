@@ -171,6 +171,22 @@ pub(super) fn mul_one(d: &mut IntDev<'_>, v: &[ExprId]) -> ExprId {
     d.ieq(left, v[0])
 }
 
+/// `Eq Int (mul one a) a`.
+pub(super) fn one_mul(d: &mut IntDev<'_>, v: &[ExprId]) -> ExprId {
+    let one = d.ione();
+    let left = d.imul(one, v[0]);
+    d.ieq(left, v[0])
+}
+
+/// `Eq Int (mul (neg one) a) (neg a)`.
+pub(super) fn neg_one_mul(d: &mut IntDev<'_>, v: &[ExprId]) -> ExprId {
+    let one = d.ione();
+    let neg_one = d.ineg(one);
+    let left = d.imul(neg_one, v[0]);
+    let right = d.ineg(v[0]);
+    d.ieq(left, right)
+}
+
 /// `Eq Int (mul a zero) zero`.
 pub(super) fn mul_zero(d: &mut IntDev<'_>, v: &[ExprId]) -> ExprId {
     let zero = d.izero();

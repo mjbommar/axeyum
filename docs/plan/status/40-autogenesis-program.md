@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, and both recurrence corollaries `Int.fib_add_one` and `Int.fib_eq_fib_add_two_sub_fib_add_one` are durably proved with empty kernel footprints. Both recurrence corollaries now have complete immutable primary archives and isolated clean replays.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, and both recurrence corollaries `Int.fib_add_one` and `Int.fib_eq_fib_add_two_sub_fib_add_one` are durably proved with empty kernel footprints. The negative-natural Fibonacci route now has an exact empty-footprint power-parity capsule, and its final two left-multiplication contracts are implemented as native axiom-free integer laws.
 
-**Next:** use both checked recurrence orientations to continue the target-owned sign/parity induction toward `Int.fib_neg_natCast` without importing official proof terms.
+**Next:** seal and independently replay the native `Int.one_mul` / `Int.neg_one_mul` capsule, then compose those laws with the checked negative-value and power-parity presentations to reconstruct exact `Int.fib_neg_natCast`.
 
 <!-- plan-section: landed-changes -->
 
@@ -67,6 +67,7 @@
 | 2026-08-21 | (pending) | Multiplication V1 finds the audited ring-law names absent from `Int.Basic`; V2 freezes only the narrow `Mathlib.Algebra.Ring.Int.Defs` import repair |
 | 2026-08-21 | (pending) | V2 shows clean abstract ring laws become `propext`-bearing through the Int instance; V3 freezes direct constructor-case computation instead |
 | 2026-08-21 | (pending) | V3 exposes four non-definitional constructor goals; native `Int.one_mul` and `Int.neg_one_mul` are frozen over the existing axiom-free prelude machinery before code |
+| 2026-08-21 | (pending) | Native `Int.one_mul` and `Int.neg_one_mul` check with empty footprints; their two-import root-capsule builder passes focused tests and Clippy without execution |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |

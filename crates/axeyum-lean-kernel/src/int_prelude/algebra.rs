@@ -215,6 +215,20 @@ pub(super) fn declare_algebra_theorems(d: &mut IntDev<'_>) -> Result<(), KernelE
         (stmt, proof)
     })?;
 
+    // one_mul : ∀ a, mul one a = a, obtained from commutativity and the
+    // already checked right-unit law. Keeping this derivation explicit makes
+    // the dependency visible in the exported theorem capsule.
+    d.int_theorem(p.one_mul, 1, &|d, v| {
+        let stmt = statements::one_mul(d, v);
+        let one = d.ione();
+        let left = d.imul(one, v[0]);
+        let middle = d.imul(v[0], one);
+        let commute = d.const_app(p.mul_comm, &[one, v[0]]);
+        let identity = d.const_app(p.mul_one, &[v[0]]);
+        let proof = d.itrans(left, middle, v[0], commute, identity);
+        (stmt, proof)
+    })?;
+
     // mul_nonneg : ∀ a b, 0 ≤ a → 0 ≤ b → 0 ≤ a*b. Only one of the four
     // branches survives: `Int.le zero (negSucc _)` reduces to `False`, so a
     // negative factor refutes its own hypothesis, and the surviving branch is
