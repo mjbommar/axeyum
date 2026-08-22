@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-natcast-decision-free-exact-result",
+  "state": "exact-target-specialized-exported-and-twice-reimported-empty-footprint",
+  "plan": "artifacts/autogenesis/int-fib-neg-natcast-decision-free-exact-plan-v1.json",
+  "source_commit": "f530cffc4cb8944d4df4f6cf371974b3c31f3588",
+  "capsule": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-natcast-decision-free-exact-v1/exact.ndjson", "bytes": 773264, "sha256": "6c803eff520a62d6925db5ed30f78714d9923281becfd78239cc28278bc9159f", "fresh_imports": 2},
+  "composition_receipt_sha256": [
+    "0edfbdfe66a039b2430989ea9c36893fcc7e938ee090cd89b53f7714ec7da85c",
+    "e710a11591adb7c6a58a1cecb782d4900155d82db97d12cc74655e6c527d411e",
+    "08f541312db59f2e8ac8f7cdda0a688ad98e7b3a7790c739d8f7eecc571c78b3",
+    "5882bf667af49740d0ed8497834f69d36b7de8f770350faa6f178d0dee8e21a9",
+    "d9e29e2b0283c916fd2d080f9c04b21949a8d15a9c0459fdad728b7a1f2a48d6",
+    "3d544871b23cc6946b5cfa61233779d1a64afc183f370ac6be5a20339712eb71"
+  ],
+  "support_specialization_receipt_sha256": [
+    "c9df4f2a8110aa362ef992754e64b05a3f980584a5436b91d1d88d550cd9d040",
+    "90491ec7bd5d45e83def0d03ec722a609865cbe9e457fbe52b61fec914b16c71",
+    "8d19cd4e01fe2184c367e1571cf1fd761f3b505ad1b6273a398ec088bfd14e84",
+    "50b9b98bdc6c12caccb4644cf8059429bd335d1fd07e6a55513edb8006c20d4a"
+  ],
+  "target_specialization_receipt_sha256": "970cad1fcf3ce2358e9540197d55b928626dd7ca1fa26becd66d6858222247b5",
+  "target": {
+    "name": "Int.fib_neg_natCast",
+    "declaration_sha256": "db090b11cf74c91607d5d0aabe43d364f9260c41f7de6bcd460cc59907deb087",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [
+      "Axeyum.Autogenesis.intFibNegNatCastDecisionFreeResidualV1",
+      "Axeyum.Autogenesis.intFibNegativeEvenV1",
+      "Axeyum.Autogenesis.intFibNegativeOddV1",
+      "Axeyum.Autogenesis.intFibPowerEvenV1",
+      "Axeyum.Autogenesis.intFibPowerOddV1",
+      "Axeyum.IntFib.modCases",
+      "Int.neg_one_mul",
+      "Int.one_mul"
+    ]
+  },
+  "execution": {"complete_invocations": 1, "input_stream_reads": 7, "composition_operations": 6, "composition_replays": 6, "support_specializations": 4, "support_specialization_replays": 4, "target_specializations": 1, "target_specialization_replays": 1, "target_exports": 1, "fresh_target_imports": 2, "retries": 0, "ledger_writes": 0},
+  "authority": {"exact_theorem_credit": 1, "fact_status_changes": 0, "ledger_writes": 0},
+  "next_boundary": "Perform one non-rendering canonical goal-identity audit, then separately preregister exact crash-safe fact admission.",
+  "limitations": "The exact theorem is constructed but not yet registered or admitted in the fact ledger."
+}
