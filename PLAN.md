@@ -127,6 +127,7 @@ now. Nothing was deleted.
 | 2026-08-21 | `e7d8629c5` | `docs/PROJECT-STATE.md` said the parity ledger holds "eleven divisions" and named QF_ABV among its parity cells. It holds nine and has never held a QF_ABV entry — that list is committed and was never run. Two guards added to `check-parity-docs.py`, both derived from the ledger and both shown to fire on the real tree before the prose was fixed. |
 | 2026-08-21 | `35f46112b` | `scripts/parity-run.sh` was invoked by NO gate, so the repository's declared headline froze on 2026-08-06 for fifteen days and nothing went red. `scripts/check-parity-freshness.py` fails past 14 days per logic (warn 10), wired into BOTH `scripts/check.sh` and the justfile's `check`. Parser classifies every `## ` header and exits 2 on one it does not recognise — a silently skipped entry is indistinguishable from an absent one, which is how a stale logic reads as fresh. 12 controls, every guard mutation-verified. |
 | 2026-08-21 | `45587c513` | QF_NIA gap #4 diagnosed. "Multi-year catch-up" confirmed for the search — three cheapest levers yield 0 / +1 / +3 files, 4× clock buys 0 of 20 timeouts — and three premises corrected: **cvc5 is on this host** (`/nas3/data/axeyum/harness/bin/cvc5`, not on `$PATH`; two docs say otherwise), **z3 is 60 files from cvc5 here** (136 vs 76, cvc5's set a strict subset), and **the deficit is one family** (`VeryMax/ITS` = 74 of 104 misses; excluding it, 74.4 % of cvc5). `int-blast-ladder` decisive on 158/161; its constant-fit rule leaves **1 live rung on 32 files, 0 decided**. Four per-file passes committed. |
+| 2026-08-21 | `PENDING` | Gap #6: `nra-even-power`, `finite-array-extensionality` and `finite-domain-pigeonhole` no longer checked by re-running their producer — 11 guards, 11 satisfiable-query fixtures, each deletion killing exactly one test. All 28 remaining re-run checkers classified: **16 instances are a complete decision procedure re-run, not the defect**; 14 across 5 families cannot be made independent without a certificate change and are now named in the code. |
 | 2026-08-21 | `c4c6524ac` | Exact `Int.fib_neg` root audit is frozen against the pinned clean exporter environment with zero reconstruction or ledger authority |
 | 2026-08-21 | (pending) | One root export and non-rendering importer pass find 26 direct dependencies and an assumption-bearing official `Int.fib_neg` proof |
 | 2026-08-21 | `1c728c757` | Exact 26-root dependency descent is frozen against the immutable `Int.fib_neg` stream with zero theorem authority |
@@ -1339,6 +1340,49 @@ Next, if this is picked up: an **eager** small-domain split feeding the resultin
 linear integer problem to the LIA route, measured against the 74 `VeryMax/ITS`
 misses. It is the one hypothesis these measurements have not refuted; it is
 unpriced, and it is a route, not a constant.
+
+**Gap #6, second and third turns: three more families converted, and the row's
+own denominator corrected (`WIP`, agent-checker-independence, 2026-08-21).**
+[Gap analysis](docs/plan/gap-analysis-smt-solvers-2026-08-21.md) §9 row 6 / §6.2.
+
+`nra-even-power` (10 certified `unsat`), `finite-array-extensionality` (4) and
+`finite-domain-pigeonhole` (3) no longer rest on
+`producer(arena, assertions).is_some_and(|fresh| fresh == *cert)`. Each is now
+decided from the certificate and the query, with **no fall-through** to the
+re-run — the lesson from the array-axiom turn, where the same guards placed in
+front of the equality comparison killed nothing because the comparison subsumed
+them. Eleven guards, eleven adversarial fixtures over **satisfiable** queries,
+each deletion killing exactly one test.
+
+**The row's headline number is wrong in our favour, and that is the more useful
+finding.** "~30 of 34 checkers re-run the producer" counts one shape and three
+situations. All 28 remaining were read:
+
+- **3 families (16 instances) are not the defect at all.** `bool-uf-exhaustive`
+  (7), `bool-euf-exhaustive` (6) and `bool-euf-online` (3) re-run a *complete
+  decision procedure* over the original assertions — exhaustive enumeration with
+  a trusted evaluator, or the online EUF solver. A satisfiable query is refused
+  by the re-run itself; there is no recognizer whose mistake could be reproduced.
+- **18 families / 33 instances are convertible** — the certificate names terms, sorts, counts
+  or coefficients from which its claim is re-derivable. Largest still owed:
+  `bv-forall-nonconstant` (6), `bv-uf-local` (6), `set-cardinality` (4),
+  `term-identity` (3).
+- **5 families (14 instances) cannot be made independent without changing the
+  CERTIFICATE**, and are now named in `evidence.rs` beside their checkers rather
+  than implied away: `uf-arith-congruence` (4, two counts),
+  `bv-abstraction` (4, discards the inner QF_BV evidence that establishes the
+  `unsat`), `datatype-structural` (3, one count),
+  `cross-store-array-disequality` (2, no derivation chain),
+  `fifo-bc04` (1, a whole-instance fingerprint plus compile-time constants).
+  `bool-euf-online` (3) is in both (A) and this class: its certificate is one
+  `atoms: usize`, so the re-run is the whole check — sound only because the
+  thing re-run is a decision procedure.
+
+Next in this lane, largest first: `bv-forall-nonconstant` and `bv-uf-local` (6
+each), then `set-cardinality` and `term-identity`. `bv-abstraction` is the one
+worth doing as a *certificate* change instead — it already produces and
+self-checks a QF_BV proof and then throws it away, so carrying it would move 4
+instances from class (C) straight into the externally-portable DRAT column.
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, and now `Int.fib_natCast` are durably proved. The target-owned integer Fibonacci definition replaces the official `Int.instDecidablePredEven` closure with constructor matching and explicit Nat parity; crash-safe recovery admitted its exact natural-cast theorem with an empty footprint and made `Int.fib_add_two` newly ready.
 
