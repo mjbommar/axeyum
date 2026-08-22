@@ -4,7 +4,7 @@
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_gcd`, and now `Int.fib_dvd` are durably proved with empty kernel footprints. The exact `Int.fib_dvd` operation survived an exit-75 intent fault without changing the fact, recovery performed exactly one authoritative ledger write, the measured frontier produced the preregistered empty unlock delta, and isolated replay `e836fa51…667f` reproduced all ten semantic checks from a clean reconstructed prestate.
 
-**Next:** preregister exact crash-safe admission of `Int.fib_of_nonneg` against canonical type `a413a3af…f0a`, the sealed capsule, one ledger write, exit-75 recovery, and isolated replay.
+**Next:** register the exact `Int.fib_of_nonneg` sealed-capsule operation through typed execution and transaction validation; do not write the ledger yet.
 
 <!-- plan-section: landed-changes -->
 
@@ -125,6 +125,7 @@
 | 2026-08-22 | (pending) | V2 composes and specializes exact `Int.fib_of_nonneg`, replays both receipts, survives two fresh imports, and seals a 401,185-byte empty-footprint capsule with exactly two direct theorem dependencies and zero ledger writes |
 | 2026-08-22 | (pending) | One hash-only, non-rendering read of the sealed `Int.fib_of_nonneg` root is frozen to bind its canonical kernel type before operation registration or ledger authority |
 | 2026-08-22 | (pending) | Hash-only audit binds canonical `Int.fib_of_nonneg` type `a413a3af…9f0a` with unchanged empty footprint and two dependencies; operation registration remains unauthorized |
+| 2026-08-22 | (pending) | Exact crash-safe `Int.fib_of_nonneg` admission is frozen against receipt `21be310e…ed0e2`, one ledger write, one recovery, one isolated replay, and an expected empty unlock delta |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
