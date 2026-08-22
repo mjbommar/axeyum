@@ -131,6 +131,7 @@ now. Nothing was deleted.
 | 2026-08-22 | (pending) | Helper extraction clears the line limit; V3 freezes one shared-reference correction for the serialization-only evidence argument before another focused compile |
 | 2026-08-22 | (pending) | Shared-reference correction passes focused Clippy; one no-retry execution is frozen over three reads, two checked compositions, one specialization, and zero ledger writes |
 | 2026-08-22 | (pending) | One authorized run constructs exact `Int.fib_eq_zero`, replays both compositions and specialization, survives two fresh imports, and seals a 624,146-byte empty-footprint capsule with four dependencies |
+| 2026-08-22 | (pending) | One nonrendering read of the sealed `Int.fib_eq_zero` root is frozen to bind its canonical kernel type before manifest creation or admission authority |
 | 2026-08-22 | (pending) | Durable V5 paths identify official `Int.fib` through its Even decider as the common carrier of all eight assumptions; V6 freezes a fully function-abstracted, decision-free eight-parameter residual before source construction |
 | 2026-08-22 | (pending) | V6 stops before export because each universal natAbs rewrite leaves its second occurrence; V7 freezes only three explicit repeated rewrite sequences with the abstraction boundary unchanged |
 | 2026-08-22 | (pending) | V7 exports twice as the same 351,201-byte residual, imports twice with zero axioms, and retains only clean Eq.symm/congrArg; exact eight-parameter specialization remains separately unauthorized |
