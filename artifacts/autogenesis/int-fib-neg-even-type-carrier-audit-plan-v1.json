@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-even-type-carrier-audit-plan",
+  "state": "preregistered-before-single-nonrendering-stream-read",
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-outer-residual-v2/residual-1.ndjson", "bytes": 9843050, "sha256": "ba8493ff4fa32e0c8ec1a085d797dc1fe39713e5f98295cebdb1eaaa54cde707", "root": "Axeyum.Autogenesis.intFibNegOuterResidualV2"},
+  "ordered_blockers": ["propext", "Classical.choice", "Quot.sound"],
+  "operation": "run declaration_blocker_path_batch_audit once, render no theorem type/value/proof, and record nearest-first carrier names, kinds, closure sizes, and hashes",
+  "decision_rule": "Select the nearest shared definition or instance on all relevant paths that belongs to Even/Decidable/ite infrastructure. Do not descend generic simp closures unless no narrower carrier exists.",
+  "budget": {"stream_reads": 1, "audit_invocations": 1, "proof_terms_rendered": 0, "theorem_types_rendered": 0, "theorem_values_rendered": 0, "reconstruction_compilations": 0, "exact_target_submissions": 0, "ledger_writes": 0, "retries": 0},
+  "output": "artifacts/autogenesis/int-fib-neg-even-type-carrier-audit-result-v1.json",
+  "limitations": "This is localization only and grants no parity-support, theorem, fact, or ledger credit."
+}
