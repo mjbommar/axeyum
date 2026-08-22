@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-nat-fib-pos-exact",
+  "state": "exact-target-specialized-exported-and-twice-reimported-empty-footprint",
+  "source_commit": "8e725d4bf8cdd034b6e4915fb8f917f1a6910718",
+  "input_sha256": ["8b2913beb2896442e86e2f5840aaf5bf31c46a4f4ce2a2469ad6a2b0bfd052bc", "7f59cee9c23e306ad0f45b1ae0cc02908aafd26338fea01020eb66da84f0d81d", "065d5ed0ea1d6c02a24775bdc4bc7607392c5fad50e728b256a2ab9692d05f5d", "755cc8963198446f567622465e0ad87e1496d83fcaacf2362e1da0e7d8e6bb4f"],
+  "composition_receipt_sha256": ["774fc28fb48f17401c23e6967f8910b1b0af671d953ff149a9ebdab54da36c2c", "a9180c2cc087c69440ed9d633ea2addde6ddcb7aa0046fc0db97a09e7f829d61", "82ae23748d9b61a4b1981cae9b8a2f6231cc237c6c3c8691ba1a27aa53544e00"],
+  "support": {
+    "zero": {"name":"Axeyum.Autogenesis.natFibZeroV1","declaration_sha256":"f1e348e6c9de7e51acdb6357b4a88157d49b0b6d99b3ad30d7ec46e80cc32eac","axiom_footprint":[],"direct_theorem_dependencies":[]},
+    "one": {"name":"Axeyum.Autogenesis.natFibOnePositiveV1","declaration_sha256":"19c42085e5354ee22220f279bac4a7b193c22d6a1b7ece27f01b495f8c033b44","axiom_footprint":[],"direct_theorem_dependencies":["Nat.zero_lt_succ"]},
+    "step": {"name":"Axeyum.Autogenesis.natFibStepPositiveV1","declaration_sha256":"d72cdcd991cce51be786441688eedf4b6eab6517c66b966eef2a9808bc53f4fc","axiom_footprint":[],"direct_theorem_dependencies":["Axeyum.Autogenesis.natFibStepPositiveResidualV1","Nat.add_pos_right","Nat.fib_add_two"]}
+  },
+  "step_specialization_receipt_sha256": "26021050b760b278786aa6738ae8f0600559510d93a22198e560187fc47582d8",
+  "target_specialization_receipt_sha256": "c5dd84e07a594cff35760a08dcec2a4ca6744d51a8de9a03ca315b37fed364ee",
+  "target": {"name":"Nat.fib_pos","declaration_sha256":"f441b137a185604cee38d4f5c311cd48cd83ffb4279ceab467c7852dad326e65","axiom_footprint":[],"direct_theorem_dependencies":["Axeyum.Autogenesis.natFibOnePositiveV1","Axeyum.Autogenesis.natFibPosResidualV1","Axeyum.Autogenesis.natFibStepPositiveV1","Axeyum.Autogenesis.natFibZeroV1","Nat.zero_lt_succ"]},
+  "capsule": {"path":"/nas3/data/axeyum/autogenesis/reference-packs/nat-fib-pos-exact-v1/root.ndjson","bytes":190972,"sha256":"ec85c45183bec3c1fe4cbd0d015c76a5ded6dbbfa4be9b279d59870da12566a0","fresh_imports":2,"mode":"0444","directory_mode":"0555"},
+  "execution": {"complete_invocations":1,"input_stream_reads":4,"composition_operations":3,"composition_replays":3,"support_theorem_submissions":2,"specializations":2,"specialization_replays":2,"target_exports":1,"fresh_imports":2,"retries":0,"fact_status_changes":0,"ledger_writes":0},
+  "rendered_material": {"proof_terms":0,"theorem_types":0,"theorem_values":0}
+}

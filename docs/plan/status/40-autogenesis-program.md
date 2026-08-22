@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_gcd`, `Int.fib_dvd`, and now `Int.fib_of_nonneg` are durably proved with empty kernel footprints. The new operation survived an exit-75 intent fault without changing the fact, recovery performed exactly one authoritative ledger write, and an isolated exact-commit replay reproduced every primary byte identity and the preregistered empty unlock delta.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_gcd`, `Int.fib_dvd`, and `Int.fib_of_nonneg` are durably proved with empty kernel footprints. Exact `Nat.fib_pos` is additionally reconstructed in a sealed 190,972-byte capsule, has an empty footprint, and survives two fresh imports; ledger admission remains deliberately separate.
 
-**Next:** execute committed V14: create only the missing dedicated capsule directory, rerun the unchanged binary once, and seal the accepted empty-footprint output.
+**Next:** bind the canonical kernel type identity of sealed `Nat.fib_pos`, then preregister its crash-safe fact-ledger admission before granting any mutation authority.
 
 <!-- plan-section: landed-changes -->
 
@@ -154,6 +154,7 @@
 | 2026-08-22 | (pending) | The V12 theorem-root correction passes focused Clippy without reading proof streams; its stale executable remains unauthorized for rerun |
 | 2026-08-22 | (pending) | V13 freezes one current-source rebuild and one fail-if-present rerun from `6a4e3b60b`, with four sealed reads and zero ledger writes |
 | 2026-08-22 | (pending) | V13 constructs exact empty-footprint `Nat.fib_pos` and survives two fresh imports, then fails only because the dedicated output directory is absent; V14 freezes that filesystem-only correction and one unchanged-binary rerun |
+| 2026-08-22 | (pending) | V14 creates only the dedicated output directory, reconstructs exact `Nat.fib_pos` unchanged, replays all five receipts, survives two fresh imports, and seals a 190,972-byte empty-footprint capsule with zero ledger writes |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
