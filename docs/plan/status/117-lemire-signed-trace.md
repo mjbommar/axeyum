@@ -54,4 +54,11 @@ argument or a separately proved uniform upper bound remains open. Then
 candidate B (tower relations `chi, chi^2, chi^4`). Nothing receives proof
 credit until it closes the endpoint ledger.
 
+**Evidence correction:** the cylinder-variance analyzer now accumulates every
+cylinder's scaled variance numerator as an integer.  This preserves all
+identity-cylinder values in the checked `ell <= 22` table, while correcting
+only the two `ell=22` rank positions (`12773/32768` and `10742/32768`).  The
+strong finite `(ICV)` margins remain evidence for a possible localization
+bridge, never an established inequality.
+
 <!-- plan-section: landed-changes -->

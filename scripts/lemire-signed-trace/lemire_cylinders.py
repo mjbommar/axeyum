@@ -32,32 +32,54 @@ def cylinder_stats(ell: int, degree: int, counts: np.ndarray):
         stride *= o
     ncyl = 1 << (a - 1)
     K = 1 << (ell - a + 1)
-    # per-cylinder sums and sums of squares (exact via Python ints on small arrays)
-    sums = np.bincount(proj, weights=counts.astype(np.float64), minlength=ncyl)
-    sq = np.bincount(proj, weights=(counts.astype(np.float64)) ** 2, minlength=ncyl)
-    # exact recomputation for the identity cylinder with Python ints
-    id_mask = proj == 0
-    id_counts = [int(v) for v in counts[id_mask]]
-    assert len(id_counts) == K
-    tot = sum(id_counts)
-    ssd_id_num = K * sum(v * v for v in id_counts) - tot * tot  # = K * SSD (exact)
-    ssd_id = ssd_id_num / K
-    ssd_all = sq - sums * sums / K
-    rank = int((ssd_all > ssd_id).sum()) + 1
-    mean_id = tot / K
+    # Keep the scaled variance numerator
+    #
+    #   V_c = K sum_{g in c} N(g)^2 - (sum_{g in c} N(g))^2 = K * SSD_c
+    #
+    # as an integer.  At ell=22 the float64 route rounds enough terms to
+    # change the identity-cylinder rank, even though it leaves its displayed
+    # scientific-notation value unchanged.
+    sums = np.zeros(ncyl, dtype=np.int64)
+    squares = np.zeros(ncyl, dtype=np.int64)
+    np.add.at(sums, proj, counts)
+    np.add.at(squares, proj, counts * counts)
+    variance_numerators = [
+        K * int(square_sum) - int(total) * int(total)
+        for total, square_sum in zip(sums, squares, strict=True)
+    ]
+    ssd_id_num = variance_numerators[0]
+    rank = sum(value > ssd_id_num for value in variance_numerators) + 1
+    total = int(sums[0])
+    mean_id = total / K
     thr = 2 ** (2 * ell - 2)
     st = ell * 2 ** (n - a + 1)  # diagonal prediction ~ ell * cylinder total
-    return dict(ell=ell, n=n, a=a, K=K, ncyl=ncyl, N_id=int(counts[0]), mean_id=mean_id,
-                ssd_id=ssd_id, ssd_avg=float(ssd_all.mean()), ssd_max=float(ssd_all.max()),
-                rank=rank, thr=thr, st=st, dev_id=int(counts[0]) - mean_id)
+    return dict(
+        ell=ell,
+        n=n,
+        a=a,
+        K=K,
+        ncyl=ncyl,
+        N_id=int(counts[0]),
+        mean_id=mean_id,
+        ssd_id_num=ssd_id_num,
+        ssd_average_num=sum(variance_numerators),
+        ssd_max_num=max(variance_numerators),
+        rank=rank,
+        thr=thr,
+        st=st,
+        dev_id=int(counts[0]) - mean_id,
+    )
 
 
 if __name__ == "__main__":
     for path in sys.argv[1:]:
         ell, degree, factors, counts = load_dump(path)
         r = cylinder_stats(ell, degree, counts)
+        ssd_id = r["ssd_id_num"] / r["K"]
+        ssd_avg = r["ssd_average_num"] / (r["K"] * r["ncyl"])
+        ssd_max = r["ssd_max_num"] / r["K"]
         print(f"ell={r['ell']:2d} n={r['n']:2d} a={r['a']:2d} |K|={r['K']:4d} cylinders={r['ncyl']:7d} "
               f"N_id={r['N_id']:9d} mean_K={r['mean_id']:11.1f} dev_id={r['dev_id']:+9.1f} | "
-              f"SSD_id={r['ssd_id']:.3e} avg={r['ssd_avg']:.3e} max={r['ssd_max']:.3e} "
+              f"SSD_id={ssd_id:.3e} avg={ssd_avg:.3e} max={ssd_max:.3e} "
               f"rank={r['rank']}/{r['ncyl']} | ST~{r['st']:.2e} thr=2^(2ell-2)={r['thr']:.2e} "
-              f"SSD_id/thr={r['ssd_id']/r['thr']:.2e}")
+              f"SSD_id/thr={ssd_id/r['thr']:.2e}")

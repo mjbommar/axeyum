@@ -1196,6 +1196,13 @@ argument or a separately proved uniform upper bound remains open. Then
 candidate B (tower relations `chi, chi^2, chi^4`). Nothing receives proof
 credit until it closes the endpoint ledger.
 
+**Evidence correction:** the cylinder-variance analyzer now accumulates every
+cylinder's scaled variance numerator as an integer.  This preserves all
+identity-cylinder values in the checked `ell <= 22` table, while correcting
+only the two `ell=22` rank positions (`12773/32768` and `10742/32768`).  The
+strong finite `(ICV)` margins remain evidence for a possible localization
+bridge, never an established inequality.
+
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd` and `Nat.fib_dvd` remain durably proved. The next premise `Int.fib_neg` has now been measured from one root-selected v4.30 export: its official proof is assumption-bearing, with 26 direct dependencies and a footprint containing `Classical.choice`, `propext`, quotient primitives, and opaque/string support. It received no theorem or ledger credit.
 
 **Next:** preregister one non-rendering classification pass over the exact 26 `Int.fib_neg` dependencies in the sealed stream, isolate the clean parity/sign and `Int.fib_neg_natCast` core, then preregister the smallest target-owned reconstruction before any target submission.
