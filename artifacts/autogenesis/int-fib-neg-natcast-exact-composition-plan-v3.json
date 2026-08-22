@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-exact-int-fib-neg-natcast-composition-plan",
+  "state": "preregistered-root-flag-only-repair-before-third-bridge-compilation",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-fib-neg-natcast-exact-composition-result-v2.json",
+    "required_state": "declined-before-bridge-elaboration-at-package-root"
+  },
+  "repair": {
+    "only_change": "add --root=/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-natcast-exact-bridge-v1, the exact shared directory already prepended to LEAN_PATH",
+    "evidence": "Lean 4.30 --help documents -R/--root as the package root from which the input module name is calculated",
+    "bridge_source_unchanged": true,
+    "proof_route_unchanged": true,
+    "sealed_inputs_unchanged": true,
+    "target_authority_unchanged": true
+  },
+  "budget": {
+    "additional_bridge_compilations": 1,
+    "bridge_exports": 2,
+    "complete_composition_invocations": 1,
+    "composition_operations": 4,
+    "composition_replays": 4,
+    "specialization_operations": 1,
+    "specialization_replays": 1,
+    "target_submissions": 1,
+    "target_exports": 1,
+    "fresh_target_imports": 2,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": "All V1 acceptance conditions remain unchanged after the root-flag-only repair.",
+  "output": "artifacts/autogenesis/int-fib-neg-natcast-exact-composition-result-v3.json",
+  "limitations": "This compiler-driver repair grants no theorem or ledger credit before every original proof and replay check succeeds."
+}
