@@ -1,0 +1,11 @@
+{
+  "schema_version":1,"kind":"axeyum-autogenesis-mathlib-int-fib-of-nonneg-directional-order-plan-v1","state":"preregistered-before-directional-order-root-export",
+  "predecessor":{"path":"artifacts/autogenesis/mathlib-int-fib-of-nonneg-negsucc-support-result-v1.json","sha256":"7fe49815d047f00fe5d5bd43f5fd0eb022c3050445755cc2a3b8eaf79856eef5","required_state":"rejected-assumption-bearing-biconditional"},
+  "target":{"fact_id":"F:ml430-int-fib-of-nonneg-438018c5","fact_path":"artifacts/facts/F-ml430-int-fib-of-nonneg-438018c5.json","fact_sha256":"312711e8dc1d54a17b9efdad9c61ab46ca9ef77747acc80a0c24d5f6821d6d6e","required_status":"open"},
+  "fixed_environment":{"ssh_alias":"s5","hostname":"server5","mathlib_checkout":"/home/mjbommar/lean-import-scale/mathlib4","mathlib_commit":"c5ea00351c28e24afc9f0f84379aa41082b1188f","lean_version":"4.30.0","lean_githash":"d024af099ca4bf2c86f649261ebf59565dc8c622","lean4export_binary":"/home/mjbommar/lean-import-scale/lean4export/.lake/build/bin/lean4export","lean4export_binary_sha256":"8e763913b03762488571a93ced6ec1a4e04f7d8eebbe40bd1215ba41a6bd4449"},
+  "support":{"module":"Mathlib.Data.Int.Fib.Basic","ordered_roots":["Int.negSucc_lt_zero","Int.not_le_of_gt"],"composition":"Int.not_le_of_gt (Int.negSucc_lt_zero k) hn yields False","forbidden_roots":["Int.negSucc_not_nonneg","Int.fib_of_nonneg"],"root_selection_required":true},
+  "command":{"output":"/nas3/data/axeyum/autogenesis/reference-packs/int-negsucc-directional-order-v1/root.ndjson","output_must_not_preexist":true,"stderr_must_be_empty":true,"minimum_bytes":174},
+  "execution":{"max_exporter_invocations":1,"max_root_stream_writes":1,"max_importer_runs":2,"max_retries":0,"rendered_proof_terms":0,"rendered_theorem_types":0,"rendered_theorem_values":0,"target_theorem_submissions":0,"ledger_writes":0},
+  "acceptance":{"root_names":["Int.negSucc_lt_zero","Int.not_le_of_gt"],"axiom_footprint":[],"two_fresh_imports":true,"observations_identical":true,"forbidden_roots_absent":true,"sealed_output":true},
+  "next_on_accept":"freeze corrected constructor-case Int.fib_of_nonneg construction over the two directional roots"
+}
