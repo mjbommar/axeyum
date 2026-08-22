@@ -1,30 +1,69 @@
 {
-  "schema_version": 1,
-  "id": "F:ml430-int-fib-eq-zero-8193c7cb",
-  "title": "Mathlib v4.30 source proposition Int.fib_eq_zero",
-  "statement": "The proposition declared as `Int.fib_eq_zero` in the pinned Mathlib v4.30 source.",
-  "formal": {
-    "language": "lean4-surface",
-    "statement": "∀ {n : ℤ}, Int.fib n = 0 ↔ n = 0",
-    "fragment": "Int"
-  },
-  "epistemic_status": "open",
-  "external_status": "proved",
+  "axiom_footprint": [],
   "depends_on": [],
-  "evidence": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "artifact": "sha256:a8bcaf1be20e266aaa0be4c6ce572c0046de5b71bd0c45cb861f28cdfef19c9c",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-autogenesis-fact-operation.py --fact artifacts/facts/F-ml430-int-fib-eq-zero-8193c7cb.json",
+      "checker_operation": {
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-eq-zero-exact-v1/root.ndjson",
+        "capsule_sha256": "bd36472c8d898066df2c388d30452bd1859a42ffa1b1ae1be184ce5a494a0f73",
+        "declaration_sha256": "3df28cc187a56dd5774f529937eeb2aff53b4c919ab130976c804b3a929b82e7",
+        "direct_theorem_dependencies": [
+          "Axeyum.Autogenesis.intFibEqZeroResidualV1",
+          "Axeyum.Autogenesis.intFibNatAbsV1",
+          "Axeyum.Autogenesis.intNatAbsEqZeroV1",
+          "Nat.fib_eq_zero"
+        ],
+        "execution_sha256": "a8bcaf1be20e266aaa0be4c6ce572c0046de5b71bd0c45cb861f28cdfef19c9c",
+        "formal_statement_sha256": "4a6350052e0084d786afbe9f7114f5e76f33e7b27dd70c465e855465626351e0",
+        "frontier_sha256": "9fa48cc91a98bd59d6c75de94fed93113d33f734701936c4b42b516b6ec63103",
+        "goal_sha256": "1822290d2018cbd3e5c956c8c7c4b42704509f20560e8177c6e9a1b9367770bc",
+        "id": "authoritative-mathlib-int-fib-eq-zero-kernel-capsule-v1",
+        "operation_sha256": "8711153052beb52e0b326ba489cff2a81ea62c3e58a05e9e4b697a7bc7edbc87",
+        "receipt_sha256": "e005b5983b5cb2eee4350cba4ece4acee1cd0732582769778e279757d47eb00c",
+        "registry_sha256_at_execution": "6de9a9251eb96ca1c3c69db9d285e58391ad61b3d75d453c0874143f04ab3d14",
+        "result_manifest": "artifacts/autogenesis/mathlib-int-fib-eq-zero-goal-identity-result-v1.json",
+        "result_manifest_sha256": "a0d853441c0419d1ec20bec8b0c72a71895307a173fa90786f774270dcd1344d",
+        "target_theorem": "Int.fib_eq_zero"
+      },
+      "checkers": [
+        "specialized-integer-fibonacci-zero-characterization-v1",
+        "axeyum-lean-import/sealed-int-fib-eq-zero-capsule-receipt-v1",
+        "axeyum-lean-import/sealed-kernel-capsule-v1"
+      ],
+      "id": "autogenesis-operation-a8bcaf1be20e266a",
+      "kind": "kernel-term",
+      "notes": "Derived from a clean-commit typed execution receipt. The registered fact-operation checker replays the immutable capsule and committed identity manifest and requires its exact theorem identity, two fresh imports, empty axiom footprint, and four named direct theorem dependencies; no caller-authored route, footprint, checker, or shell command is accepted.",
+      "supports": "The proposition declared as `Int.fib_eq_zero` in the pinned Mathlib v4.30 source."
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Int",
+    "language": "lean4-surface",
+    "statement": "\u2200 {n : \u2124}, Int.fib n = 0 \u2194 n = 0"
+  },
+  "id": "F:ml430-int-fib-eq-zero-8193c7cb",
+  "notes": "CLOSED BY AXEYUM AUTOGENESIS. The machine frontier selected this exact fact for registered operation `authoritative-mathlib-int-fib-eq-zero-kernel-capsule-v1`; execution receipt `a8bcaf1be20e266aaa0be4c6ce572c0046de5b71bd0c45cb861f28cdfef19c9c` produced a four-link-specialized axiom-free sealed integer Fibonacci zero capsule, and the typed transaction derived this status, route, footprint, evidence row, checker, and provenance without caller-authored admission metadata.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
   "provenance": {
     "date": "2026-08-18",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Int.fib_eq_zero` from Mathlib v4.30.0; no proof value was exposed",
+    "established_by": "axeyum-autogenesis execution c26c3a7703c34a2fab7c31bc7410f64835e38af29f07019afc4476466eccf1a4",
     "prior_art": [
       {
-        "who": "the Mathlib contributors",
+        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted",
         "what": "the theorem declaration `Int.fib_eq_zero`",
         "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
-        "year": 2026,
-        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted"
+        "who": "the Mathlib contributors",
+        "year": 2026
       }
-    ]
+    ],
+    "source": "statement-only extraction of `Int.fib_eq_zero` from Mathlib v4.30.0; no proof value was exposed"
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "schema_version": 1,
+  "statement": "The proposition declared as `Int.fib_eq_zero` in the pinned Mathlib v4.30 source.",
+  "title": "Mathlib v4.30 source proposition Int.fib_eq_zero"
 }
