@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, and both recurrence corollaries `Int.fib_add_one` and `Int.fib_eq_fib_add_two_sub_fib_add_one` are durably proved with empty kernel footprints. The first corollary has a clean replay; the add-one primary archive is complete and its replay is pending.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, and both recurrence corollaries `Int.fib_add_one` and `Int.fib_eq_fib_add_two_sub_fib_add_one` are durably proved with empty kernel footprints. Both recurrence corollaries now have complete immutable primary archives and isolated clean replays.
 
-**Next:** complete the isolated clean replay for `Int.fib_add_one`, then use both checked recurrence orientations to continue the target-owned sign/parity induction toward `Int.fib_neg_natCast` without importing official proof terms.
+**Next:** use both checked recurrence orientations to continue the target-owned sign/parity induction toward `Int.fib_neg_natCast` without importing official proof terms.
 
 <!-- plan-section: landed-changes -->
 
@@ -40,6 +40,7 @@
 | 2026-08-21 | (pending) | Exact crash-safe `Int.fib_add_one` admission is frozen against its sealed four-dependency capsule before operation code or ledger mutation |
 | 2026-08-21 | (pending) | Exact capsule checker, operation registry, transaction assurance, and mutation controls make `Int.fib_add_one` uniquely executable with zero ledger writes |
 | 2026-08-21 | (pending) | Exit-75 intent fault leaves the fact unchanged; one recovery write admits exact `Int.fib_add_one`, and the complete immutable primary archive binds an empty readiness delta |
+| 2026-08-21 | (pending) | Isolated replay repeats selection, exit-75 recovery, exact checked result, one write, and the empty readiness delta from source commit `20ffd649b` |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
