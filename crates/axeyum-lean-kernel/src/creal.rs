@@ -648,6 +648,23 @@ pub struct CRealPrelude {
     /// **Density of ℚ in ℝ**, packaged: [`Self::rat_approx_upper`] and
     /// [`Self::rat_approx_lower`] at the witness `q := seq x n`.
     pub density: NameId,
+
+    // --- cotransitivity (ADR-0512 phase R7) -----------------------------------
+    /// `CReal.lt_cotrans : ∀ x y, lt x y → ∀ z, Or (lt x z) (lt z y)`.
+    ///
+    /// Bishop's cotransitivity: the property that makes the strict order
+    /// *usable* constructively, since `lt` is not decidable and no `lt_total`
+    /// is assumed or provable over `CReal`. Every real `z` can be compared
+    /// against the rational gap a `lt x y` witness already carries, via
+    /// [`RatPrelude::le_or_lt`](crate::RatPrelude::le_or_lt) — decidability
+    /// lives in `ℚ`, not in `ℝ`.
+    pub lt_cotrans: NameId,
+    /// `CReal.apart_cotrans : ∀ x y, Apart x y → ∀ z, Or (Apart x z) (Apart z y)`.
+    ///
+    /// Cotransitivity of [`Self::apart`], read off [`Self::lt_cotrans`] in
+    /// both `Apart` disjuncts — no new estimate, since `Apart x y := lt x y ∨
+    /// lt y x` already carries the case split.
+    pub apart_cotrans: NameId,
 }
 
 impl CRealPrelude {
@@ -801,6 +818,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         rat_approx_upper: kernel.name_str(creal, "rat_approx_upper"),
         rat_approx_lower: kernel.name_str(creal, "rat_approx_lower"),
         density: kernel.name_str(creal, "density"),
+        lt_cotrans: kernel.name_str(creal, "lt_cotrans"),
+        apart_cotrans: kernel.name_str(creal, "apart_cotrans"),
     }
 }
 
@@ -869,7 +888,8 @@ pub(crate) fn build_creal_prelude_uncached(
         inverse::declare_inverse(&mut d, prelude)?;
         lattice::declare_lattice(&mut d, prelude)?;
         archimedean::declare_archimedean(&mut d, prelude)?;
-        density::declare_density(&mut d, prelude)
+        density::declare_density(&mut d, prelude)?;
+        cotransitivity::declare_cotransitivity(&mut d, prelude)
     })();
     match built {
         Ok(()) => {
@@ -1783,6 +1803,7 @@ fn declare_discrimination(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
 }
 
 mod archimedean;
+mod cotransitivity;
 mod density;
 mod field;
 mod inverse;
