@@ -69,3 +69,9 @@ V3 produced no durable output through the execution channel and therefore gets
 zero diagnostic credit. V4 retains the same non-rendering audit but limits its
 output to five nearest carriers per blocker, making the evidence small enough
 to preserve before another proof-bearing read.
+
+V4 completed after more than a minute with healthy memory but again left no
+durable report. Before another read, the shared blocker-path auditor will cache
+candidate closures across blockers and gain a fail-if-present explicit output
+path. Four controls retain the legacy interface, prove durable creation and
+overwrite refusal, and count closure computations under shared carriers.

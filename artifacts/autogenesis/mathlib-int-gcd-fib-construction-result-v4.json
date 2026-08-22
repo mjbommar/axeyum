@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-fib-construction-result-v4",
+  "state": "computation-completed-without-durable-report-no-diagnostic-credit",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-gcd-fib-construction-plan-v4.json",
+    "sha256": "a0c85ae6733cc417328ba6573773c3284361af1b6de8bff60c3ed42154f660e2"
+  },
+  "execution": {
+    "importer_invocations": 1,
+    "proof_bearing_stream_reads": 1,
+    "process_observed_running": true,
+    "process_observed_completed": true,
+    "completed_audit_documents": 0,
+    "durable_output_bytes": 0,
+    "retries": 0,
+    "theorem_submissions": 0,
+    "ledger_writes": 0
+  },
+  "measured": {
+    "elapsed_class": "greater-than-one-minute",
+    "memory_pressure_observed": false,
+    "blocker_paths": null,
+    "conclusion": "The output projection did not make the report durable; the auditor needs an explicit output contract, and its repeated closure walks need memoization before another stream read."
+  },
+  "authority": {
+    "diagnostic_credit": 0,
+    "theorem_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  }
+}

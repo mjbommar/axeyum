@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-gcd-fib-blocker-auditor-repair-plan-v1",
+  "state": "preregistered-before-tool-edit-no-proof-stream-read",
+  "parent_result": {
+    "path": "artifacts/autogenesis/mathlib-int-gcd-fib-construction-result-v4.json",
+    "sha256": "7510cc96dde3fe2e5740b059fb83867afc49304b2abf49f69bd44e5256889091"
+  },
+  "tool": {
+    "path": "crates/axeyum-lean-import/examples/declaration_blocker_path_batch_audit.rs",
+    "before_sha256": "cdf582bc9226aa2dd31bcfa172042f14ba6af582f99eb93ee61ca39904852d6a"
+  },
+  "authorized_changes": [
+    "memoize each candidate declaration closure once across all blockers",
+    "accept an optional explicit output path and write the complete JSON report there",
+    "retain stdout behavior when no output path is supplied",
+    "fail before overwrite when the explicit output already exists"
+  ],
+  "required_controls": [
+    "legacy stdout invocation remains accepted",
+    "explicit output creates one parseable report",
+    "preexisting output is rejected without mutation",
+    "two blockers sharing carriers do not recompute candidate closures"
+  ],
+  "budget": {
+    "proof_bearing_stream_reads": 0,
+    "theorem_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_on_accept": "preregister one exact stream read through the repaired durable-output interface"
+}
