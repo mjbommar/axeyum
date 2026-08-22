@@ -12,6 +12,13 @@ theorem intDoubleModTwoZeroLiftV1
       rw [succOne (natDouble n)]
       rfl
 
+theorem intNegNatDoubleV2 : ∀ q : Nat,
+    -((q : Int) + (q : Int)) = -(q : Int) + -(q : Int)
+  | 0 => rfl
+  | q + 1 => by
+      change Int.negSucc (Nat.succ q + q) = Int.negSucc (Nat.succ (q + q))
+      exact congrArg Int.negSucc (Nat.succ_add q q)
+
 theorem intHalfWitnessOfModTwoZeroLiftV1
     (natHalf : ∀ n : Nat, n % 2 = 0 → ∃ q : Nat, n = q + q)
     (modCases : ∀ n : Nat, n % 2 = 0 ∨ n % 2 = 1)
@@ -37,6 +44,6 @@ theorem intHalfWitnessOfModTwoZeroLiftV1
           congrArg (fun x : Nat => -(x : Int)) hq
         _ = -((q : Int) + (q : Int)) :=
           congrArg (fun x : Int => -x) (Int.natCast_add q q)
-        _ = -(q : Int) + -(q : Int) := Int.neg_add
+        _ = -(q : Int) + -(q : Int) := intNegNatDoubleV2 q
 
 end Axeyum.Autogenesis
