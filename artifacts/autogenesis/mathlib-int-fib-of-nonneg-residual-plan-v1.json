@@ -1,0 +1,10 @@
+{
+  "schema_version":1,"kind":"axeyum-autogenesis-mathlib-int-fib-of-nonneg-residual-plan-v1","state":"preregistered-before-direct-residual-source",
+  "predecessor":{"path":"artifacts/autogenesis/mathlib-int-fib-of-nonneg-directional-order-result-v1.json","sha256":"8203cb1ad5c0bf544ab85e755cb97d80281f3ddbcf40240feec3d429cad76d85","required_state":"rejected-both-directional-roots-reach-propext"},
+  "target":{"fact_id":"F:ml430-int-fib-of-nonneg-438018c5","fact_path":"artifacts/facts/F-ml430-int-fib-of-nonneg-438018c5.json","fact_sha256":"312711e8dc1d54a17b9efdad9c61ab46ca9ef77747acc80a0c24d5f6821d6d6e","required_status":"open"},
+  "residual":{"name":"Axeyum.Autogenesis.intFibOfNonnegResidualV1","source":"artifacts/autogenesis/sources/int-fib-of-nonneg-residual-v1.lean","source_must_not_preexist":true,"parameters":["fibFn : Int -> Int","natFib : Nat -> Nat","positivePresentation : forall n, fibFn (Int.ofNat n) = Int.ofNat (natFib n)"],"method":"case split n; use positivePresentation in ofNat; eliminate the indexed 0 <= Int.negSucc k hypothesis directly with nomatch","forbidden_roots":["Int.fib_of_nonneg","Int.negSucc_not_nonneg","Int.negSucc_lt_zero","Int.not_le_of_gt"]},
+  "output":{"pack":"/nas3/data/axeyum/autogenesis/reference-packs/int-fib-of-nonneg-residual-v1","root":"root.ndjson","must_not_preexist":true},
+  "execution":{"max_source_writes":1,"max_compiler_invocations":1,"max_exporter_invocations":2,"max_importer_runs":2,"max_retries":0,"residual_theorem_submissions":1,"target_theorem_submissions":0,"rendered_proof_terms":0,"rendered_theorem_types":0,"rendered_theorem_values":0,"ledger_writes":0},
+  "acceptance":{"axiom_footprint":[],"forbidden_roots_absent":true,"exports_byte_identical":true,"imports_identical":true,"sealed_output":true},
+  "next_on_accept":"freeze exact specialization over target-owned Int.fib, Nat.fib, and Int.fib_natCast"
+}
