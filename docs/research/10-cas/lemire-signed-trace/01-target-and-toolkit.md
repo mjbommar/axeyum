@@ -66,22 +66,41 @@ Layers with `2^s <= Q` are paid by the individual Weil bound
 ```
 
 and `(HWO) => (REL) =>` conjecture is proved (endpoint ledger replayed on the
-branch for `200 <= ell <= 1024`). Cancelling the positive character count,
-with `d_s = floor((j-1)/2^s)`, `R = 2^{d_{s-1} - d_s}`,
-`Delta_{j,s} = 2 P_{j,s} - P_{j-1,s}`:
+branch for `200 <= ell <= 1024`). Every nonempty high layer has
+`q = 2^s` not dividing `j` (else the layer is empty), so
+`Delta_{j,s} = 2P_{j,s}-P_{j-1,s}` is literally the signed imbalance of the
+newly exposed coefficient `x^j` over `q E_j`. The exact reduction of `(HWO)`
+has a necessary conductor/order case split. Write `d_s = floor((j-1)/q)` and,
+when `q/2` does not divide `j`, put `R = 2^{d_{s-1}-d_s}`.
 
 ```text
-(NSD)   4 ell |R Delta_{j,s} - Delta_{j,s-1}| <= (R-1)(j-1) 2^{ceil(n/2)}.
+nonresonant (q/2 does not divide j):
+  T_{j,s} = 2^{j-1-d_{s-1}} (R Delta_{j,s} - Delta_{j,s-1}),
+  #X_{j,s} = 2^{j-1-d_{s-1}} (R-1),
+  so 4 ell |R Delta_{j,s} - Delta_{j,s-1}|
+       <= (R-1)(j-1) 2^{ceil(n/2)}.                         (NSD)
+
+resonant (q/2 divides j, q does not):
+  T_{j,s} = #X_{j,s} Delta_{j,s} = 2^{j-1-d_s} Delta_{j,s},
+  so 4 ell |Delta_{j,s}| <= (j-1) 2^{ceil(n/2)}.             (RSD)
 ```
 
-Every nonempty high layer has `2^s` not dividing `j` (else the layer is
-empty), so `Delta_{j,s}` is literally the signed imbalance of the newly
-exposed coefficient `x^j` over the sparse subgroup `2^s E_j`, and the
-remaining work is one uniform square-root-scale discrepancy theorem over the
-polynomially many (`< 8 ell^3`) classes of those subgroups. The top layer at
-conductor `j`, with `m = floor(log2 j)` and `u = 1 + x^{2^m} = (1+x)^{2^m}`,
-is the identity-ray increment itself: `(NSD)` reads
-`4 ell |H_j(1) - H_j(u)| <= (j-1) 2^{ceil(n/2)}`.
+Thus only the nonresonant layers compare consecutive precisions. For
+`delta_s = Delta_{j,s}/2^{d_s}`, their normalized form is
+
+```text
+4 ell |delta_s-delta_{s-1}|
+  <= (1-1/R)(j-1)2^{ceil(n/2)} / 2^{d_s};
+```
+
+the factor `2^{-d_s}` is essential. The resonant layers are not an exceptional
+small-level phenomenon: at the eventual first row `ell=j=200`, order `q=16`
+is high, `8 | 200`, and `16` does not divide `200`. They require a direct
+sparse-discrepancy estimate `(RSD)`. The remaining work is therefore a
+uniform square-root-scale theorem over the polynomially many (`< 8 ell^3`)
+sparse classes, with these two targets. The top layer at conductor `j`, with
+`m = floor(log2 j)` and `u = 1 + x^{2^m} = (1+x)^{2^m}`, is nonresonant and
+`(NSD)` reads `4 ell |H_j(1) - H_j(u)| <= (j-1) 2^{ceil(n/2)}`.
 
 Scale check (what makes this the critical line). At `j` near `ell`, each
 population in `Delta` is about `2^{n-j} ~ 2^{n/2+1}`, the Weil error per

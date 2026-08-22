@@ -334,6 +334,44 @@ def T_four_population(levels: dict[int, dict[int, int]], j: int, s: int) -> int:
             - h(j - 1, s) * P(Nj1, j - 1, s) + h(j - 1, s - 1) * P(Nj1, j - 1, s - 1))
 
 
+def check_order_conductor_reductions(levels: dict[int, dict[int, int]], j: int) -> None:
+    """Check the two exact reductions of an order/conductor layer.
+
+    Put q = 2^s and Delta_s = 2 P_{j,s} - P_{j-1,s}.  When q does not
+    divide j, the q-power subgroup forces the new x^j coefficient to zero.
+    There are then two genuinely different cases:
+
+      * q/2 does not divide j:
+        T_{j,s} = 2^(j-1-d_{s-1}) (R Delta_s - Delta_{s-1});
+      * q/2 divides j (the conductor/order resonance):
+        T_{j,s} = 2^(j-1-d_s) Delta_s.
+
+    The second case has no adjacent-precision difference. This check is
+    population-side, independent of the character transform.
+    """
+    if j == 0:
+        return
+    for s in range(1, j.bit_length() + 1):
+        q = 1 << s
+        if j % q == 0:
+            continue
+        delta_s = 2 * P(levels[j], j, s) - P(levels[j - 1], j - 1, s)
+        actual = T_four_population(levels, j, s)
+        d_s = (j - 1) // q
+        if j % (q >> 1) == 0:
+            predicted = (1 << (j - 1 - d_s)) * delta_s
+        else:
+            d_previous = (j - 1) // (q >> 1)
+            delta_previous = (
+                2 * P(levels[j], j, s - 1) - P(levels[j - 1], j - 1, s - 1)
+            )
+            refinement = 1 << (d_previous - d_s)
+            predicted = (1 << (j - 1 - d_previous)) * (
+                refinement * delta_s - delta_previous
+            )
+        assert actual == predicted, (j, s, actual, predicted)
+
+
 def C_ln(levels: dict[int, dict[int, int]], l: int) -> int:
     c = math.ceil(math.log2(l))
     a = l - c - 1
@@ -360,6 +398,8 @@ if __name__ == "__main__":
         dt = time.time() - t0
         N_id = levels[l][1]
         I_n = len(irreducibles(n))
+        for j in range(1, l + 1):
+            check_order_conductor_reductions(levels, j)
         print(f"l={l} n={n}: N_l(1)={N_id}  I_n={I_n}  C_{{l,n}}={C_ln(levels, l)}  B={B_ln(l, n)}  "
               f"2^(n-l)-2^l={(1 << (n - l)) - (1 << l)}  ({dt:.1f}s)")
         if n % 2 == 1:
