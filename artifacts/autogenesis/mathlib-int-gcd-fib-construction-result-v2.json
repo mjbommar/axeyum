@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-fib-construction-result-v2",
+  "state": "declined-assumption-bearing-before-specialization",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-gcd-fib-construction-plan-v2.json",
+    "sha256": "5e66c22365fb3a39bf04b4484e3a8320146b9313be36cb01899124f1ffeb3460"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-natabs-residual-v1.lean",
+    "sha256": "d9da13870cd87bc646dcec2e37e1f6c3c7711bf3ca4c6473460e9243fd8b302c",
+    "compiler_invocations": 1,
+    "compiler_accepted": true
+  },
+  "exports": {
+    "root": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-natabs-residual-v1",
+    "stream_sha256": "5ae684d7b5e254e4f523aff84816b697f3647e8fa51c7d1dae98401ace367152",
+    "stream_bytes": 9846065,
+    "exporter_invocations": 2,
+    "byte_identical": true,
+    "residual_imports": 2
+  },
+  "root": {
+    "name": "Axeyum.Autogenesis.intFibNatAbsResidualV1",
+    "declaration_sha256": "bbbc332712076f99547a25cf22efe3497eaaf3e6284c5bfa6eb36dc7242b9f1d",
+    "axiom_footprint": [
+      "Classical.choice",
+      "Lean.opaqueId",
+      "Quot",
+      "Quot.lift",
+      "Quot.mk",
+      "Quot.sound",
+      "String.Internal.append",
+      "propext"
+    ],
+    "direct_theorem_dependencies": [
+      "Eq.symm",
+      "congrArg",
+      "congrFun'",
+      "if_neg",
+      "if_pos"
+    ]
+  },
+  "direct_dependency_audit": {
+    "all_five_empty_footprint": true,
+    "rendered_proof_terms": 0,
+    "rendered_theorem_types": 0,
+    "rendered_theorem_values": 0,
+    "diagnosis": "The assumptions enter through non-theorem declaration closure retained by the source proof, not through any of its five direct theorem dependencies."
+  },
+  "execution": {
+    "specialization_submissions": 0,
+    "int_gcd_fib_submissions": 0,
+    "retries": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Preregister one non-rendering declaration-path audit from the residual root to the eight blockers; then replace the nearest contaminated carriers with explicit target-owned parameters or direct kernel construction."
+}
