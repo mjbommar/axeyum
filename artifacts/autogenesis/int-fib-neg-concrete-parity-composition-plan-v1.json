@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-concrete-parity-composition-plan",
+  "state": "preregistered-before-driver-code-or-stream-reread",
+  "inputs": {
+    "clean_decision": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-decision-clean-v1/root.ndjson",
+      "sha256": "29053dba3b90cecf5a70ba347ea7dba81a19990f715e69d5fc0a1c60cb9a6c07"
+    },
+    "nat_double_neg": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-constructor-lift-v2/roots-1.ndjson",
+      "sha256": "a00d0b93b55500c04928939ea2ff00d4d35b4caa0e0fa96fefeebf1be3f3c6",
+      "root": "Axeyum.Autogenesis.intNegNatDoubleV2"
+    },
+    "neg_neg": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-negation-wrappers-v2/roots-1.ndjson",
+      "sha256": "22a7252af7c92318170aa9712fbdaeaf75fe094c371b95033e7c582cba65bb6f",
+      "root": "Axeyum.Autogenesis.intNegNegV2"
+    },
+    "neg_double_residual": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-neg-double-v1/root-1.ndjson",
+      "sha256": "0547aedeece1147719fc8adfae83a517daca460a8125c087e15989811184b098",
+      "root": "Axeyum.Autogenesis.intNegDoubleResidualV1"
+    },
+    "parity_residuals": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-parity-adapters-v2/roots-1.ndjson",
+      "sha256": "e26dbda36de1c09154da8e761dfedfec08c21b61c8be4669830fc6729e9d0715"
+    }
+  },
+  "specializations": [
+    "intNegDoubleResidualV1(intNegNatDoubleV2, intNegNegV2) -> intNegDoubleV1",
+    "intEvenNegResidualV2(intNegDoubleV1, intNegNegV2) -> intEvenNegV1",
+    "intEvenOfNatModTwoResidualV2(Int.even_iff) -> intEvenOfNatModTwoV1",
+    "intEvenNegOfNatModTwoResidualV2(intEvenNegV1, intEvenOfNatModTwoV1) -> intEvenNegOfNatModTwoV1"
+  ],
+  "driver": "crates/axeyum-lean-import/examples/int_fib_neg_concrete_parity_composition.rs",
+  "output": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-concrete-parity-v1/roots.ndjson",
+  "budget": {
+    "directory_creations": 1,
+    "driver_constructions": 1,
+    "focused_builds": 1,
+    "complete_invocations": 1,
+    "input_stream_reads": 5,
+    "composition_operations": 4,
+    "composition_replays": 4,
+    "specialization_operations": 4,
+    "specialization_replays": 4,
+    "capsule_exports": 1,
+    "fresh_imports": 2,
+    "retries": 0,
+    "exact_target_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "exported_roots": [
+      "Axeyum.Autogenesis.intNegDoubleV1",
+      "Axeyum.Autogenesis.intEvenNegV1",
+      "Axeyum.Autogenesis.intEvenOfNatModTwoV1",
+      "Axeyum.Autogenesis.intEvenNegOfNatModTwoV1"
+    ],
+    "axiom_footprints": [],
+    "fresh_import_evidence_unchanged": true
+  },
+  "stop_rule": "Any preparation/input mismatch, composition or specialization decline, receipt mismatch, nonempty footprint, replay change, or preexisting output stops without retry or target/ledger authority.",
+  "output_result": "artifacts/autogenesis/int-fib-neg-concrete-parity-composition-result-v1.json",
+  "next_on_accept": "Specialize the two constructor branch residuals from clean Fibonacci and concrete parity supports, then specialize exact Int.fib_neg.",
+  "limitations": "Concrete parity support alone grants no exact Fibonacci target, fact, or ledger credit."
+}
