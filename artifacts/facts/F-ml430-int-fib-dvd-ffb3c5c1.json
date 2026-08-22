@@ -1,30 +1,71 @@
 {
-  "schema_version": 1,
-  "id": "F:ml430-int-fib-dvd-ffb3c5c1",
-  "title": "Mathlib v4.30 source proposition Int.fib_dvd",
-  "statement": "The proposition declared as `Int.fib_dvd` in the pinned Mathlib v4.30 source.",
-  "formal": {
-    "language": "lean4-surface",
-    "statement": "∀ (m n : ℤ), m ∣ n → Int.fib m ∣ Int.fib n",
-    "fragment": "Int"
-  },
-  "epistemic_status": "open",
-  "external_status": "proved",
+  "axiom_footprint": [],
   "depends_on": [],
-  "evidence": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "artifact": "sha256:43d85f970d3ed020c503de4c44bb5d0e0073988f99a9b9a37fc2b83e08d1e9ea",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-autogenesis-fact-operation.py --fact artifacts/facts/F-ml430-int-fib-dvd-ffb3c5c1.json",
+      "checker_operation": {
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-dvd-exact-v1/root.ndjson",
+        "capsule_sha256": "f684a4de870734f60f33abe1da468637697c0d27ce988a47d08dfed601ec6af0",
+        "declaration_sha256": "2d4463d2a000519460bc3c7e644d2880af49c95ff9d51edcb16379ed974b22aa",
+        "direct_theorem_dependencies": [
+          "Axeyum.Autogenesis.intDvdOfNatAbsDvdDirectV1",
+          "Axeyum.Autogenesis.intFibNatAbsV1",
+          "Axeyum.Autogenesis.intNatAbsDvdForwardResidualV1",
+          "Axeyum.Autogenesis.intNatAbsMulDirectV1",
+          "Eq.symm",
+          "Nat.fib_dvd"
+        ],
+        "execution_sha256": "43d85f970d3ed020c503de4c44bb5d0e0073988f99a9b9a37fc2b83e08d1e9ea",
+        "formal_statement_sha256": "cf2527e56abffca07e18942978b0e87b7b85a3cd1952b5f9d292d51779d41324",
+        "frontier_sha256": "4db9c4916a431dc1f53251be5d7717826d5480fb02f87b3fce004d13edc02111",
+        "goal_sha256": "ed84c258cad64868b6e14a1fe1cf46732aa2ca7e231defa0a627a16fae795016",
+        "id": "authoritative-mathlib-int-fib-dvd-kernel-capsule-v1",
+        "operation_sha256": "36f2daeb174b418a2d1cbe98222981be9ef177bad9f4edf3abb3ee7e4fe0ef74",
+        "receipt_sha256": "a39586b5f2cc15a7e6f6b9d2ac189035c6b81df1825ca83a5c864095bf99b897",
+        "registry_sha256_at_execution": "49de82affd0608cec4bdee26d39cc2c1a46b9ebb9389662c57d14a809006a12a",
+        "result_manifest": "artifacts/autogenesis/mathlib-int-fib-dvd-goal-identity-result-v1.json",
+        "result_manifest_sha256": "676e0e95878f466aeb08f8ae843ba679241ebc21c6b3e7aedc8449dbd77a93a4",
+        "target_theorem": "Int.fib_dvd"
+      },
+      "checkers": [
+        "dependent-integer-fibonacci-divisibility-transport-v1",
+        "axeyum-lean-import/sealed-int-fib-dvd-capsule-receipt-v1",
+        "axeyum-lean-import/sealed-kernel-capsule-v1"
+      ],
+      "id": "autogenesis-operation-43d85f970d3ed020",
+      "kind": "kernel-term",
+      "notes": "Derived from a clean-commit typed execution receipt. The registered fact-operation checker replays the immutable capsule and committed identity manifest and requires its exact theorem identity, two fresh imports, empty axiom footprint, and six named direct theorem dependencies; no caller-authored route, footprint, checker, or shell command is accepted.",
+      "supports": "The proposition declared as `Int.fib_dvd` in the pinned Mathlib v4.30 source."
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Int",
+    "language": "lean4-surface",
+    "statement": "\u2200 (m n : \u2124), m \u2223 n \u2192 Int.fib m \u2223 Int.fib n"
+  },
+  "id": "F:ml430-int-fib-dvd-ffb3c5c1",
+  "notes": "CLOSED BY AXEYUM AUTOGENESIS. The machine frontier selected this exact fact for registered operation `authoritative-mathlib-int-fib-dvd-kernel-capsule-v1`; execution receipt `43d85f970d3ed020c503de4c44bb5d0e0073988f99a9b9a37fc2b83e08d1e9ea` produced a six-link-composed axiom-free sealed integer Fibonacci divisibility capsule, and the typed transaction derived this status, route, footprint, evidence row, checker, and provenance without caller-authored admission metadata.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
   "provenance": {
     "date": "2026-08-18",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Int.fib_dvd` from Mathlib v4.30.0; no proof value was exposed",
+    "established_by": "axeyum-autogenesis execution 8907b469b5c1cf55466bcbc2f0d8ad4f6cf3c6391d9e9a9b14600d342aeb59ef",
     "prior_art": [
       {
-        "who": "the Mathlib contributors",
+        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted",
         "what": "the theorem declaration `Int.fib_dvd`",
         "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
-        "year": 2026,
-        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted"
+        "who": "the Mathlib contributors",
+        "year": 2026
       }
-    ]
+    ],
+    "source": "statement-only extraction of `Int.fib_dvd` from Mathlib v4.30.0; no proof value was exposed"
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "schema_version": 1,
+  "statement": "The proposition declared as `Int.fib_dvd` in the pinned Mathlib v4.30 source.",
+  "title": "Mathlib v4.30 source proposition Int.fib_dvd"
 }
