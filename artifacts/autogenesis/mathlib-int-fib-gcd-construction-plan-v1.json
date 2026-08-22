@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-gcd-construction-plan-v1",
+  "state": "preregistered-before-source-construction-or-proof-stream-read",
+  "facts": {
+    "premise": {
+      "fact_id": "F:ml430-int-gcd-fib-73bdafc2",
+      "path": "artifacts/facts/F-ml430-int-gcd-fib-73bdafc2.json",
+      "sha256": "2ecf80bc2b4b0ff986249271d69afc9bf49d120be7305c4547a52c73b9d61d50",
+      "required_status": "proved",
+      "operation_id": "authoritative-mathlib-int-gcd-fib-kernel-capsule-v1"
+    },
+    "target": {
+      "fact_id": "F:ml430-int-fib-gcd-3a8bfdec",
+      "path": "artifacts/facts/F-ml430-int-fib-gcd-3a8bfdec.json",
+      "sha256": "a608cd1893289740a18c2df3d5ba711b44e9c7d9a7022839870010cc09e90e40",
+      "required_status": "open"
+    }
+  },
+  "input": {
+    "role": "admitted exact integer gcd-of-Fibonacci theorem and its checked closure",
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-gcd-fib-exact-v1/root.ndjson",
+    "bytes": 1152698,
+    "sha256": "b1ce136473ead161243e7cdc053f3a8e0dab81a8e253c364171e839f22fd86f6",
+    "root": "Int.gcd_fib",
+    "declaration_sha256": "44660dc7f15cda1b469f99e349f4b874afca9dbca24bcfc5c847ca226ccc357f",
+    "required_support": {
+      "name": "Int.fib_natCast",
+      "declaration_sha256": "73b8742709bbb1b91780f41ff4a475b5b3f0b1c2981999c868b53fc38334bea3"
+    }
+  },
+  "target": {
+    "name": "Int.fib_gcd",
+    "statement": "forall m n : Int, Int.fib (Int.ofNat (Int.gcd m n)) = Int.ofNat (Int.gcd (Int.fib m) (Int.fib n))",
+    "construction": [
+      "specialize Int.fib_natCast at Int.gcd m n",
+      "apply Eq.symm to Int.gcd_fib m n",
+      "transport that natural equality through Int.ofNat with the established Eq.rec congruence construction",
+      "join the two integer equalities with Eq.trans"
+    ],
+    "expected_direct_theorem_dependencies": [
+      "Eq.symm",
+      "Eq.trans",
+      "Int.fib_natCast",
+      "Int.gcd_fib"
+    ]
+  },
+  "driver": {
+    "path": "crates/axeyum-lean-import/examples/int_fib_gcd_exact.rs",
+    "must_not_exist_before_plan": true,
+    "output": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-gcd-exact-v1/root.ndjson",
+    "output_must_not_preexist": true
+  },
+  "execution": {
+    "max_complete_invocations": 1,
+    "max_input_stream_reads": 1,
+    "max_target_theorem_submissions": 1,
+    "max_target_exports": 1,
+    "required_fresh_imports": 2,
+    "max_retries": 0,
+    "max_ledger_writes": 0
+  },
+  "acceptance": {
+    "target_axiom_footprint": [],
+    "exact_dependency_set": true,
+    "fresh_imports": 2,
+    "proof_terms_types_or_values_rendered": 0
+  },
+  "authority": {
+    "official_target_proof_body_allowed": false,
+    "same_name_declaration_transport_allowed": false,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_on_accept": "bind canonical Int.fib_gcd goal identity and preregister crash-safe admission"
+}
