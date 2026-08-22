@@ -78,6 +78,7 @@
 | 2026-08-22 | (pending) | V14 removes open-term inference, constructs the exact Int divisibility hypothesis directly, and builds Clippy-clean without reading any capsule or submitting the target |
 | 2026-08-22 | (pending) | V15 freezes one post-repair `cargo run` over the same four capsules and unchanged six-dependency target contract before rereading any proof stream |
 | 2026-08-22 | (pending) | V15 constructs the complete proof after three replayed compositions, then declines only when inferring its open `m,n` result; target submission, output, and ledger remain zero |
+| 2026-08-22 | (pending) | V16 freezes direct construction of the exact Fibonacci divisibility conclusion, removing only open-result inference while leaving the completed proof term unchanged |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |

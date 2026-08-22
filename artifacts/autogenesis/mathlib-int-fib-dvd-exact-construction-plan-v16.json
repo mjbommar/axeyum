@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-exact-construction-plan-v16",
+  "state": "preregistered-direct-target-proposition-before-code-change",
+  "predecessor": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-exact-execution-result-v15.json",
+    "sha256": "c75627af6fc138eba9f4ebe7ede16eb57d4d512d8d80653f52cde364e64c5994"
+  },
+  "correction": {
+    "implementation": "crates/axeyum-lean-import/examples/int_fib_dvd_exact.rs",
+    "remove": "infer the completed open proof result",
+    "add": "construct Dvd.dvd Int Int.instDvd (Int.fib m) (Int.fib n) directly",
+    "proof_term_change": "none",
+    "expected_new_theorem_dependencies": []
+  },
+  "execution": {
+    "max_driver_builds": 1,
+    "max_complete_invocations": 0,
+    "max_input_stream_reads": 0,
+    "max_target_theorem_submissions": 0,
+    "max_retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "focused_clippy_exit_status": 0,
+    "no_open_proof_inference": true
+  },
+  "next_on_accept": "authorize one complete execution with the unchanged proof term"
+}
