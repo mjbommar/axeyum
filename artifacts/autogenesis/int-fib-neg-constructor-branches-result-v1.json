@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-constructor-branches-result",
+  "state": "both-parameterized-constructor-branches-reproduced",
+  "plan": "artifacts/autogenesis/int-fib-neg-constructor-branches-plan-v1.json",
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-constructor-branches-v1",
+    "source_sha256": "c9ce23edede171b833ba49db118ab451f19d69aaa4c105604387f1dbad936dc6",
+    "olean_sha256": "15530407ee4387c999d23350be0257867e5111c26a2a8de9589ff90e38942e94",
+    "stream_bytes": 9843378,
+    "stream_sha256": "0803256ec044d9e3ce59d2fb33c0465f464c9ac754d85ac471410adb8502f060",
+    "exports": 2,
+    "exports_byte_identical": true
+  },
+  "roots": [
+    {
+      "name": "Axeyum.Autogenesis.intFibNegPositiveBranchResidualV1",
+      "declaration_sha256": "2e795f93c16c2106424ae46804c77107dd4796d14552b3eff7d188086533d711"
+    },
+    {
+      "name": "Axeyum.Autogenesis.intFibNegNegativeBranchResidualV1",
+      "declaration_sha256": "1f46603078c88099664b64cb13726b8c606e9072ba8a9070c5270bcb68fd3b48"
+    }
+  ],
+  "shared_direct_theorem_dependencies": [
+    "Eq.symm",
+    "Eq.trans",
+    "Iff.mp",
+    "Iff.mpr",
+    "Nat.zero_ne_one",
+    "congrArg",
+    "if_neg",
+    "if_pos"
+  ],
+  "execution": {
+    "directory_creations": 1,
+    "source_constructions": 1,
+    "source_stagings": 1,
+    "module_builds": 1,
+    "exports": 2,
+    "root_audits": 1,
+    "retries": 0,
+    "composition_operations": 0,
+    "exact_target_submissions": 0,
+    "ledger_writes": 0
+  },
+  "credit": "parameterized branch residuals only",
+  "next": "Construct clean positive-cast and negation parity adapters, then specialize both branches against existing clean Fibonacci supports."
+}

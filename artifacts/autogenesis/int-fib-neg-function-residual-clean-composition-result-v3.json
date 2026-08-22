@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-function-residual-clean-composition-result",
+  "state": "function-residual-composed-exported-and-reimported-empty-footprint",
+  "plan": "artifacts/autogenesis/int-fib-neg-function-residual-clean-composition-plan-v3.json",
+  "capsule": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-function-residual-clean-v1/root.ndjson",
+    "bytes": 756528,
+    "sha256": "607614dcd5a9843102ad2f2e8cddffda673603a3852dc544b61ca13e703ba420",
+    "fresh_imports": 2
+  },
+  "receipts": {
+    "support_composition_sha256": "73396a3bddb8024774a9bd597982e7d99c1067c4c3cb2e33abc21680ac93ef1c",
+    "even_iff_target_leaf_composition_sha256": "faae3c5654d0d4d86a594911eaa96e0ef85249ae09cba061fd071901f1df099b"
+  },
+  "root": {
+    "name": "Axeyum.Autogenesis.intFibNegFunctionResidualV1",
+    "declaration_sha256": "370a37c020c431310a8dcc40b6117f49e332cba77d9a6efc3387a90176c5b0a4",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [
+      "Eq.symm"
+    ]
+  },
+  "execution": {
+    "complete_invocations": 1,
+    "input_stream_reads": 3,
+    "ordinary_compositions": 1,
+    "ordinary_replays": 1,
+    "target_leaf_compositions": 1,
+    "target_leaf_replays": 1,
+    "support_submissions": 1,
+    "capsule_exports": 1,
+    "fresh_imports": 2,
+    "exact_target_submissions": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "generic_residual_credit": 1,
+    "exact_target_credit": 0,
+    "fact_status_changes": 0
+  },
+  "next": "Construct both integer-constructor branch contracts bottom-up, then specialize this residual with clean Int.fib and the two branches."
+}

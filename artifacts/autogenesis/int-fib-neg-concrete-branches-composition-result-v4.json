@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-int-fib-neg-concrete-branches-composition",
+  "state": "both-concrete-constructor-branches-specialized-exported-and-reimported-empty-footprint",
+  "plan": "artifacts/autogenesis/int-fib-neg-concrete-branches-composition-plan-v4.json",
+  "input_sha256": [
+    "6c803eff520a62d6925db5ed30f78714d9923281becfd78239cc28278bc9159f",
+    "f0e34ecb1dff747938b7f1079c307af5f4e79e7a67e3bc514feee03e4f30656d",
+    "e1ab008fd4b32ff2d2a6d39f0a2797031092eba39d6678b9496f07a3222897ae",
+    "22a7252af7c92318170aa9712fbdaeaf75fe094c371b95033e7c582cba65bb6f",
+    "0803256ec044d9e3ce59d2fb33c0465f464c9ac754d85ac471410adb8502f060"
+  ],
+  "ordinary_composition_receipt_sha256": [
+    "1e5d4e0f9cb77e6bc3971eb4ce397ee03b1417d18cd28276ae7862061883b4a4",
+    "6ea261643fd8e75088d507d3c74e5fa75020c9697cb00a143aaaee7ce3fc771e",
+    "2fb7ebb2fb3355eaa362a97eec9016aac0990d52f3262f4c529cc61d3988a070"
+  ],
+  "target_leaf_composition_receipt_sha256": "ef3163daed4f533ac2402be9b87e0cbe0a8f876635fa02230b8948a653a88d73",
+  "specialization_receipt_sha256": [
+    "8e6e8a29b4f6f8f01f3151950178f1d0c6d59dfdfacb5affbecb42dfdf3b6bc2",
+    "956cf3060af3ad1858e8d1d4c6b5fa31c0a9e36caeccfbe415d062f82fbc67c9"
+  ],
+  "roots": [
+    {"name": "Axeyum.Autogenesis.intFibNegPositiveBranchV1", "declaration_sha256": "9762cd8b5b9b7c84ffad1c8074e04d4308d3ed4b9c294d906d25664894798ab2", "axiom_footprint": [], "direct_theorem_dependencies": ["Axeyum.Autogenesis.intEvenOfNatModTwoV1", "Axeyum.Autogenesis.intFibNegPositiveBranchResidualV1", "Axeyum.Autogenesis.intFibNegativeEvenV1", "Axeyum.Autogenesis.intFibNegativeOddV1", "Axeyum.IntFib.modCases", "Int.fib_natCast"]},
+    {"name": "Axeyum.Autogenesis.intFibNegNegativeBranchV1", "declaration_sha256": "e5fb7bd4b9c712618af0c0375ba0ad9d2b4717c89f104464c27039c4e2f523fd", "axiom_footprint": [], "direct_theorem_dependencies": ["Axeyum.Autogenesis.intEvenNegOfNatModTwoV1", "Axeyum.Autogenesis.intFibNegNegativeBranchResidualV1", "Axeyum.Autogenesis.intFibNegativeEvenV1", "Axeyum.Autogenesis.intFibNegativeOddV1", "Axeyum.Autogenesis.intNegNegV2", "Axeyum.IntFib.modCases", "Int.fib_natCast"]}
+  ],
+  "capsule": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-concrete-branches-v1/roots.ndjson", "bytes": 821459, "sha256": "1ac583c0fded419966c964e5cf52be55f2f8397b4a7d82a208bb94d3144830fa", "fresh_imports": 2},
+  "execution": {"complete_invocations": 1, "input_stream_reads": 5, "ordinary_compositions": 3, "ordinary_replays": 3, "target_leaf_compositions": 1, "target_leaf_replays": 1, "specialization_operations": 2, "specialization_replays": 2, "capsule_exports": 1, "fresh_imports": 2, "retries": 0, "exact_target_submissions": 0, "ledger_writes": 0},
+  "next": "Compose the clean function-level outer residual and specialize it with Int.fib plus these two concrete branches."
+}

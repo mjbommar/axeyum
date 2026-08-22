@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-exact-composition-plan",
+  "state": "preregistered-scoped-driver-line-count-allowance",
+  "predecessor": {"path": "artifacts/autogenesis/int-fib-neg-exact-composition-driver-result-v1.json", "required_state": "focused-clippy-declined-before-stream-access-on-line-count"},
+  "change_from_v1": "Add only #[allow(clippy::too_many_lines)] to the evidence-heavy run function. All inputs, identities, operations, acceptance conditions, output, retry budget, and zero-ledger authority remain unchanged.",
+  "driver": "crates/axeyum-lean-import/examples/int_fib_neg_exact_composition.rs",
+  "budget": {"driver_edits": 1, "focused_builds": 1, "input_stream_reads": 0, "composition_operations": 0, "specialization_operations": 0, "capsule_writes": 0, "ledger_writes": 0},
+  "stop_rule": "Any further compile or lint diagnostic stops before stream access and requires a newly frozen correction.",
+  "next_on_accept": "Run the one fail-if-present exact composition invocation from V1."
+}

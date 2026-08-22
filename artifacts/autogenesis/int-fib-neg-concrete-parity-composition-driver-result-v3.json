@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-concrete-parity-composition-driver-result",
+  "state": "corrected-hash-driver-builds-clippy-clean-before-stream-reread",
+  "plan": "artifacts/autogenesis/int-fib-neg-concrete-parity-composition-plan-v3.json",
+  "focused_build": {
+    "command": "cargo clippy -p axeyum-lean-import --example int_fib_neg_concrete_parity_composition -- -D warnings",
+    "exit": 0
+  },
+  "authorized_changes": 1,
+  "execution": {
+    "input_stream_reads": 0,
+    "composition_operations": 0,
+    "specialization_operations": 0,
+    "capsule_writes": 0,
+    "ledger_writes": 0
+  },
+  "credit": "driver assurance only",
+  "next": "Run exactly one composition against all five corrected hash-bound inputs."
+}

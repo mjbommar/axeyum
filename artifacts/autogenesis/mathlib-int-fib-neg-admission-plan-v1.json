@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-neg-admission-plan-v1",
+  "state": "preregistered-sealed-capsule-admission-before-operation-code-or-ledger-write",
+  "target": {"fact_id": "F:ml430-int-fib-neg-b4021d37", "fact_sha256": "be84c078d1d9b2a5af3119a2d86ef2a7511d541e8e8aaf7c8971b42203c6695d", "name": "Int.fib_neg"},
+  "evidence": {
+    "construction_result": "artifacts/autogenesis/int-fib-neg-exact-composition-result-v1.json",
+    "construction_result_sha256": "13ad5b85bdf81e4017db46ffb101bf2d896f16d7968244816493bf5668ae2102",
+    "identity_result": "artifacts/autogenesis/int-fib-neg-goal-identity-result-v1.json",
+    "identity_result_sha256": "f3624680c2c811bc85bcfd890462c3b1dbdb2339768cdb284529c676d4f6e31e",
+    "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-exact-v1/root.ndjson",
+    "capsule_sha256": "d787dc502dff901cab0cab22bf8fd11578bf6e1632892651b1bf67b3d786d257",
+    "capsule_bytes": 826942,
+    "goal_sha256": "08d500fc21c56161f8f8368ff771541c95f7e851b61d23e04361b6a66d7defb0",
+    "declaration_sha256": "55e3a3efbd6e435e5b02ce4382af74763b7be21c1a351cfc5798249f5798feb0",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": ["Axeyum.Autogenesis.intFibNegFunctionResidualV1", "Axeyum.Autogenesis.intFibNegNegativeBranchV1", "Axeyum.Autogenesis.intFibNegPositiveBranchV1"]
+  },
+  "protocol": {"seal_exact_pack": true, "register_exact_operation": true, "derive_transaction_from_clean_commit": true, "fault_injection_after_intent_exit": 75, "require_fact_unchanged_before_recovery": true, "authoritative_ledger_writes": 1, "fixture_writes": 0, "archive_primary_run": true, "isolated_clean_replay": true},
+  "budget": {"max_pack_manifest_writes": 1, "max_operation_registrations": 1, "max_fault_injection_executions": 1, "max_authoritative_ledger_writes": 1, "max_recovery_executions": 1, "max_clean_replays": 1, "max_search_invocations": 0, "max_evaluations": 0},
+  "expected_newly_ready": [],
+  "next_on_accept": "measure the fact frontier and select the next dependency-ready bottom-up theorem",
+  "limitations": "This authorizes only one exact fact transition from the named immutable capsule and grants no authority to close any other proposition."
+}

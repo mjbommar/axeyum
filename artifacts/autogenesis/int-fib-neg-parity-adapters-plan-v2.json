@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-parity-adapters-plan",
+  "state": "preregistered-neg-double-premise-repair-before-source-construction",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-fib-neg-neg-double-result-v1.json",
+    "required_state": "parameterized-int-neg-double-reproduced-empty-footprint"
+  },
+  "repair": {
+    "old_parameter": "negAdd : forall a b : Int, -(a+b) = -a + -b",
+    "new_parameter": "negDouble : forall x : Int, -(x+x) = -x + -x",
+    "only_proof_change": "replace negAdd r r with negDouble r in both witness directions",
+    "positive_and_negative_modulo_adapters_unchanged": true
+  },
+  "source": "artifacts/autogenesis/sources/int-fib-neg-parity-adapters-v2.lean",
+  "evidence_pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-parity-adapters-v2",
+  "budget": {
+    "directory_creations": 1,
+    "source_constructions": 1,
+    "source_stagings": 1,
+    "module_builds": 1,
+    "exports": 2,
+    "root_audits": 1,
+    "retries": 0,
+    "composition_operations": 0,
+    "exact_target_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "roots": [
+      "Axeyum.Autogenesis.intEvenNegResidualV2",
+      "Axeyum.Autogenesis.intEvenOfNatModTwoResidualV2",
+      "Axeyum.Autogenesis.intEvenNegOfNatModTwoResidualV2"
+    ],
+    "exports_byte_identical": true,
+    "axiom_footprints": [],
+    "proof_terms_types_or_values_rendered": 0
+  },
+  "stop_rule": "Any source drift beyond the frozen premise repair, build/export mismatch, nonempty footprint, or preexisting output stops without retry or theorem/ledger authority.",
+  "output_result": "artifacts/autogenesis/int-fib-neg-parity-adapters-result-v2.json",
+  "limitations": "Parameterized parity adapters alone grant no concrete branch, target, fact, or ledger credit."
+}

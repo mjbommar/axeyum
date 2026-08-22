@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-concrete-parity-composition-result",
+  "state": "four-concrete-parity-supports-specialized-exported-and-reimported-empty-footprint",
+  "plan": "artifacts/autogenesis/int-fib-neg-concrete-parity-composition-plan-v4.json",
+  "capsule": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-concrete-parity-v1/roots.ndjson",
+    "bytes": 717488,
+    "sha256": "e1ab008fd4b32ff2d2a6d39f0a2797031092eba39d6678b9496f07a3222897ae",
+    "fresh_imports": 2
+  },
+  "roots": [
+    {
+      "name": "Axeyum.Autogenesis.intNegDoubleV1",
+      "declaration_sha256": "01cd296e393e043b6f2c4267d108ec5726b0312fa5f11a64bda39eede98f04ac",
+      "axiom_footprint": []
+    },
+    {
+      "name": "Axeyum.Autogenesis.intEvenNegV1",
+      "declaration_sha256": "fca5eb1b7ee914ed01bbff6c3440a949fe99bd3676de8fb7cb5581e36c630aa3",
+      "axiom_footprint": []
+    },
+    {
+      "name": "Axeyum.Autogenesis.intEvenOfNatModTwoV1",
+      "declaration_sha256": "4ef2377778be8048715b96c1e237c0f5fd27b118088e01c08bb51df0c54ad76d",
+      "axiom_footprint": []
+    },
+    {
+      "name": "Axeyum.Autogenesis.intEvenNegOfNatModTwoV1",
+      "declaration_sha256": "3c1c09362f0275b11acf2c60b76039f33e29574cd39a8a892c02933d9c5b3c50",
+      "axiom_footprint": []
+    }
+  ],
+  "receipts": {
+    "composition_sha256": [
+      "9dd23b40105012d67282c17f0d8c84b1ce724298e27c7e75a4d2cd2386aecf15",
+      "b92f41cc12c523a3e6e9a5b7ea982336aac7ce3ddcd38295fcf0d9d200a15d8b",
+      "3fecf84e7cb69bbc490856e2d739d3138d37a6dc5f2da23c89234f79253422f0"
+    ],
+    "specialization_sha256": [
+      "4869ab62d931391206e70149ffff040fb13a262822e2dcacccb4ca33248e37be",
+      "eb5e9a0ed106f120b18315a3e7e7dec8d273eab02118beae8faf65d5ed635b50",
+      "291c7f6e121ebba9147ead6ba42b7702f4c04d0909eca37500b757a8dea09ffd",
+      "9ce5472b722f9b63a6240a0ca35b5e0b94be483ab1ceef5ec2f3d78a6fba2478"
+    ]
+  },
+  "execution": {
+    "complete_invocations": 1,
+    "input_stream_reads": 5,
+    "exact_reuse_checks": 1,
+    "composition_operations": 3,
+    "composition_replays": 3,
+    "specialization_operations": 4,
+    "specialization_replays": 4,
+    "capsule_exports": 1,
+    "fresh_imports": 2,
+    "retries": 0,
+    "exact_target_submissions": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "support_roots": 4,
+    "exact_target_credit": 0,
+    "fact_status_changes": 0
+  }
+}

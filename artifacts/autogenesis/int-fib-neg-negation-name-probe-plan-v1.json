@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-negation-name-probe-plan",
+  "state": "preregistered-fixed-name-probe-before-source-change",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-fib-neg-negation-wrappers-result-v1.json",
+    "required_state": "stopped-before-export-on-two-unavailable-surface-names"
+  },
+  "fixed_candidates": [
+    "Int.neg_add",
+    "Int.neg_neg",
+    "neg_add_rev",
+    "neg_neg",
+    "SubtractionMonoid.neg_add_rev",
+    "InvolutiveNeg.neg_neg"
+  ],
+  "import": "Mathlib.Data.Int.Basic",
+  "probe": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-negation-wrappers-v1/IntFibNegNegationNameProbeV1.lean",
+  "budget": {
+    "probe_constructions": 1,
+    "compiler_invocations": 1,
+    "wrapper_source_edits": 0,
+    "exports": 0,
+    "retries": 0,
+    "theorem_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "at_least_one_exact_neg_add_type": true,
+    "at_least_one_exact_neg_neg_type": true
+  },
+  "stop_rule": "The fixed probe receives one compiler invocation. Record every resolved and unresolved name; do not edit the wrapper theorem until a successor plan binds the selected names.",
+  "output_result": "artifacts/autogenesis/int-fib-neg-negation-name-probe-result-v1.json",
+  "limitations": "Name resolution grants no proof, wrapper, target, fact, or ledger credit."
+}

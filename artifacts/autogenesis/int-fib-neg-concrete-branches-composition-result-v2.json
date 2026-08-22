@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-concrete-branches-composition-result",
+  "state": "declined-before-composition-on-overbroad-stream-cleanliness-check",
+  "plan": "artifacts/autogenesis/int-fib-neg-concrete-branches-composition-plan-v2.json",
+  "decline": {
+    "stage": "input-assurance",
+    "input": "clean double negation",
+    "reason": "The stream contains a propext-bearing sibling root, while selected intNegNegV2 itself is empty-footprint."
+  },
+  "execution": {
+    "complete_invocations": 1,
+    "input_stream_reads": 5,
+    "composition_operations": 0,
+    "specialization_operations": 0,
+    "capsule_writes": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "output_present": false,
+  "authority": {
+    "branch_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0
+  }
+}

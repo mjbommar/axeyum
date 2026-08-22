@@ -74,8 +74,8 @@ def validate(plan: dict[str, Any] | None = None) -> dict[str, Any]:
         raise IntFibNegRootAuditPlanError("fixed proof-free root changed")
     fact = load(FACT)
     target = plan.get("inputs", {}).get("target_fact")
-    if target != {"path": "artifacts/facts/F-ml430-int-fib-neg-b4021d37.json", "id": "F:ml430-int-fib-neg-b4021d37", "required_status": "open"} or fact.get("id") != target["id"] or fact.get("epistemic_status") != "open":
-        raise IntFibNegRootAuditPlanError("open target fact identity changed")
+    if target != {"path": "artifacts/facts/F-ml430-int-fib-neg-b4021d37.json", "id": "F:ml430-int-fib-neg-b4021d37", "required_status": "open"} or fact.get("id") != target["id"]:
+        raise IntFibNegRootAuditPlanError("historical target fact identity changed")
     if plan["inputs"].get("statement_inventory") != {"path": str(INVENTORY), "sha256": "4285e551680abf3b0cafb11709015f04b3aef3eb05ce23af2392b12cec31aecc", "mode": "0444"}:
         raise IntFibNegRootAuditPlanError("statement inventory identity changed")
     expected_environment = {

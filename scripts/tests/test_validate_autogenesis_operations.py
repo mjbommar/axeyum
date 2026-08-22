@@ -24,9 +24,9 @@ class OperationRegistryTests(unittest.TestCase):
             (ROOT / "artifacts/autogenesis/operations.json").read_text()
         )
 
-    def test_committed_registry_has_one_fixture_and_fifteen_authoritative_operations(self) -> None:
+    def test_committed_registry_has_one_fixture_and_sixteen_authoritative_operations(self) -> None:
         registry_module.validate_registry(self.registry, ROOT)
-        self.assertEqual(len(self.registry["operations"]), 16)
+        self.assertEqual(len(self.registry["operations"]), 17)
         self.assertEqual(
             self.registry["operations"][0]["scope"], "counterfactual-fixture-only"
         )
@@ -158,6 +158,16 @@ class OperationRegistryTests(unittest.TestCase):
             int_fib_add_one["executor"]["driver"],
             "axeyum-lean-import/sealed-kernel-capsule-v1",
         )
+        int_fib_neg = self.registry["operations"][16]
+        self.assertEqual(
+            int_fib_neg["applicability"]["fact_ids"],
+            ["F:ml430-int-fib-neg-b4021d37"],
+        )
+        self.assertEqual(int_fib_neg["applicability"]["fragments"], ["Int"])
+        self.assertEqual(
+            int_fib_neg["executor"]["driver"],
+            "axeyum-lean-import/sealed-kernel-capsule-v1",
+        )
 
     def test_integer_fibonacci_capsule_identity_is_exact(self) -> None:
         mutated = copy.deepcopy(self.registry)
@@ -176,6 +186,13 @@ class OperationRegistryTests(unittest.TestCase):
 
         mutated = copy.deepcopy(self.registry)
         mutated["operations"][14]["executor"]["goal_sha256"] = "0" * 64
+        with self.assertRaisesRegex(
+            registry_module.RegistryError, "integer Fibonacci capsule contract"
+        ):
+            registry_module.validate_registry(mutated, ROOT)
+
+        mutated = copy.deepcopy(self.registry)
+        mutated["operations"][16]["executor"]["goal_sha256"] = "0" * 64
         with self.assertRaisesRegex(
             registry_module.RegistryError, "integer Fibonacci capsule contract"
         ):

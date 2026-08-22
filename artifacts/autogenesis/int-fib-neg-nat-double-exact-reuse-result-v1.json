@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-nat-double-exact-reuse-result",
+  "state": "natural-double-negation-exact-reuse-qualified",
+  "plan": "artifacts/autogenesis/int-fib-neg-nat-double-exact-reuse-plan-v1.json",
+  "declaration": {
+    "name": "Axeyum.Autogenesis.intNegNatDoubleV2",
+    "source_declaration_sha256": "693e5bf7ae54debf66eca058b166b6e1e91898524b8a21d6471eba65ce168c2f",
+    "target_declaration_sha256": "693e5bf7ae54debf66eca058b166b6e1e91898524b8a21d6471eba65ce168c2f",
+    "compatibility": "exact-declaration",
+    "checked_reused_declaration_compatibility": "kernel-type-shape"
+  },
+  "execution": {
+    "complete_audits": 1,
+    "source_stream_reads": 1,
+    "target_stream_reads": 1,
+    "kernel_submissions": 0,
+    "exports": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "reuse_qualified": 1,
+    "new_theorem_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0
+  },
+  "next": "Replace only the NoAdditions composition edge with exact identity and empty-footprint reuse checks."
+}

@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-neg-double-result",
+  "state": "parameterized-int-neg-double-reproduced-empty-footprint",
+  "plan": "artifacts/autogenesis/int-fib-neg-neg-double-plan-v1.json",
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-neg-double-v1",
+    "source_sha256": "ddb7c9850898dcf7ab4dc50d47103f4dce618a0ad4d4dcbf2a4ab98d4101181b",
+    "olean_sha256": "072798783c90cfec1698674750193c195ad2dd7651c3a276c8ec4e9d42da8582",
+    "stream_bytes": 84802,
+    "stream_sha256": "0547aedeece1147719fc8adfae83a517daca460a8125c087e15989811184b098",
+    "exports": 2,
+    "exports_byte_identical": true,
+    "stream_axioms": []
+  },
+  "root": {
+    "name": "Axeyum.Autogenesis.intNegDoubleResidualV1",
+    "declaration_sha256": "57e36635abd3e0ee07615b93b0e581c896c234f7ddb5a553611adb1e2f250c94",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [
+      "Eq.symm",
+      "Eq.trans",
+      "congrArg"
+    ]
+  },
+  "execution": {
+    "directory_creations": 1,
+    "source_constructions": 1,
+    "source_stagings": 1,
+    "module_builds": 1,
+    "exports": 2,
+    "root_audits": 1,
+    "retries": 0,
+    "composition_operations": 0,
+    "exact_target_submissions": 0,
+    "ledger_writes": 0
+  },
+  "credit": "parameterized negated-double residual only",
+  "next": "Replace only the parity adapter's general negAdd premise with negDouble and reproduce all three adapters."
+}

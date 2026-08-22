@@ -723,6 +723,54 @@
         "axiom_footprint_policy": "must-be-empty",
         "axiom_footprint": []
       }
+    },
+    {
+      "id": "authoritative-mathlib-int-fib-neg-kernel-capsule-v1",
+      "scope": "authoritative",
+      "reviewed_gate_mentions": [
+        "check-autogenesis-int-fib-neg-capsule.py",
+        "check-autogenesis-int-fib-neg-root-audit-plan.py",
+        "check-autogenesis-int-gcd-contract-theorem-control-policy.py",
+        "validate-autogenesis-operations.py"
+      ],
+      "applicability": {
+        "fact_ids": ["F:ml430-int-fib-neg-b4021d37"],
+        "formal_languages": ["lean4-surface"],
+        "fragments": ["Int"]
+      },
+      "producer": {
+        "operation": "three-root-integer-fibonacci-negation-composition-v1",
+        "implementation": "crates/axeyum-lean-import/examples/int_fib_neg_exact_composition.rs",
+        "input_kind": "axeyum-checked-theorem-slices",
+        "output_kind": "axeyum-sealed-kernel-theorem-capsule"
+      },
+      "checker": {
+        "operation": "axeyum-lean-import/sealed-int-fib-neg-capsule-receipt-v1",
+        "implementation": "scripts/check-autogenesis-int-fib-neg-capsule.py",
+        "input_kind": "axeyum-sealed-kernel-theorem-capsule",
+        "output_kind": "axeyum-checked-sealed-kernel-capsule-receipt-v1"
+      },
+      "executor": {
+        "driver": "axeyum-lean-import/sealed-kernel-capsule-v1",
+        "implementation": "scripts/execute-autogenesis-operation.py",
+        "input_fact_id": "F:ml430-int-fib-neg-b4021d37",
+        "result_manifest": "artifacts/autogenesis/int-fib-neg-goal-identity-result-v1.json",
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-exact-v1/root.ndjson",
+        "capsule_sha256": "d787dc502dff901cab0cab22bf8fd11578bf6e1632892651b1bf67b3d786d257",
+        "target_theorem": "Int.fib_neg",
+        "goal_sha256": "08d500fc21c56161f8f8368ff771541c95f7e851b61d23e04361b6a66d7defb0",
+        "declaration_sha256": "55e3a3efbd6e435e5b02ce4382af74763b7be21c1a351cfc5798249f5798feb0",
+        "receipt_sha256": "6e57d30c732edf80a6a5c5f82c91cb27e6c8d715beca00ff0d5d5d9f2494fbef",
+        "timeout_seconds": 120,
+        "expected_evidence_label": "kernel-term-mathlib-int-fib-neg-capsule-axiom-free"
+      },
+      "admission": {
+        "epistemic_status": "proved",
+        "proof_route": "kernel-lean",
+        "evidence_kind": "kernel-term",
+        "axiom_footprint_policy": "must-be-empty",
+        "axiom_footprint": []
+      }
     }
   ]
 }

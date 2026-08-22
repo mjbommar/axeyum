@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-exact-composition-plan",
+  "state": "preregistered-before-driver-code-or-stream-reread",
+  "predecessors": [
+    {"path": "artifacts/autogenesis/int-fib-neg-function-residual-clean-composition-result-v3.json", "required_state": "function-residual-composed-exported-and-reimported-empty-footprint"},
+    {"path": "artifacts/autogenesis/int-fib-neg-concrete-branches-composition-result-v4.json", "required_state": "both-concrete-constructor-branches-specialized-exported-and-reimported-empty-footprint"}
+  ],
+  "inputs": {
+    "outer_residual": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-function-residual-clean-v1/root.ndjson", "sha256": "607614dcd5a9843102ad2f2e8cddffda673603a3852dc544b61ca13e703ba420", "root": "Axeyum.Autogenesis.intFibNegFunctionResidualV1", "declaration_sha256": "370a37c020c431310a8dcc40b6117f49e332cba77d9a6efc3387a90176c5b0a4"},
+    "branches": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-concrete-branches-v1/roots.ndjson", "sha256": "1ac583c0fded419966c964e5cf52be55f2f8397b4a7d82a208bb94d3144830fa", "roots": [
+      {"name": "Axeyum.Autogenesis.intFibNegPositiveBranchV1", "declaration_sha256": "9762cd8b5b9b7c84ffad1c8074e04d4308d3ed4b9c294d906d25664894798ab2"},
+      {"name": "Axeyum.Autogenesis.intFibNegNegativeBranchV1", "declaration_sha256": "e5fb7bd4b9c712618af0c0375ba0ad9d2b4717c89f104464c27039c4e2f523fd"}
+    ]}
+  },
+  "method": "Require both streams and all three selected roots exact and empty-footprint. Compose and replay the clean function residual into the branch kernel, specialize it with Int.fib plus the positive and negative concrete branches under the exact name Int.fib_neg, replay the specialization, require the exact target empty-footprint, export only that root, and freshly import it twice with unchanged evidence.",
+  "target": {"name": "Int.fib_neg", "formal_statement": "forall n : Int, Int.fib (-n) = if Even n then -Int.fib n else Int.fib n", "fact": "artifacts/facts/F-ml430-int-fib-neg-b4021d37.json"},
+  "driver": "crates/axeyum-lean-import/examples/int_fib_neg_exact_composition.rs",
+  "output": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-exact-v1/root.ndjson",
+  "budget": {"directory_creations": 1, "driver_constructions": 1, "focused_builds": 1, "complete_invocations": 1, "input_stream_reads": 2, "composition_operations": 1, "composition_replays": 1, "specialization_operations": 1, "specialization_replays": 1, "capsule_exports": 1, "fresh_imports": 2, "exact_target_submissions": 1, "retries": 0, "ledger_writes": 0},
+  "acceptance": {"target_name": "Int.fib_neg", "axiom_footprint": [], "fresh_import_evidence_unchanged": true, "proof_terms_types_or_values_rendered": 0},
+  "stop_rule": "Any preparation, identity, footprint, composition, replay, specialization, export, or fresh-import failure stops without retry or ledger authority.",
+  "next_on_accept": "Bind the canonical target type to the open fact, then preregister crash-safe admission.",
+  "limitations": "A clean exact capsule alone does not mutate the fact ledger or establish crash-safe admission/replay."
+}

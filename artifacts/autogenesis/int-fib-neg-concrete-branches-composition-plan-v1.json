@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-concrete-branches-composition-plan",
+  "state": "preregistered-before-driver-code-or-stream-reread",
+  "inputs": {
+    "clean_natcast": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-natcast-decision-free-exact-v1/exact.ndjson",
+      "sha256": "6c803eff520a62d6925db5ed30f78714d9923281becfd78239cc28278bc9159f"
+    },
+    "clean_fib_natcast": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-clean-definition-v1/int-fib-clean.ndjson",
+      "sha256": "f0e34ecb1dff747938b7f1079c307af5f4e79e7a67e3bc514feee03e4f30656d",
+      "root": "Int.fib_natCast"
+    },
+    "concrete_parity": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-concrete-parity-v1/roots.ndjson",
+      "sha256": "e1ab008fd4b32ff2d2a6d39f0a2797031092eba39d6678b9496f07a3222897ae"
+    },
+    "neg_neg": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-negation-wrappers-v2/roots-1.ndjson",
+      "sha256": "22a7252af7c92318170aa9712fbdaeaf75fe094c371b95033e7c582cba65bb6f",
+      "root": "Axeyum.Autogenesis.intNegNegV2"
+    },
+    "branch_residuals": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-constructor-branches-v1/roots-1.ndjson",
+      "sha256": "0803256ec044d9e3ce59d2fb33c0465f464c9ac754d85ac471410adb8502f060",
+      "target_theorem_leaf": "Int.even_iff"
+    }
+  },
+  "specializations": {
+    "positive": [
+      "Int.fib",
+      "Nat.fib",
+      "Int.fib_natCast",
+      "Axeyum.Autogenesis.intFibNegativeEvenV1",
+      "Axeyum.Autogenesis.intFibNegativeOddV1",
+      "Axeyum.IntFib.modCases",
+      "Axeyum.Autogenesis.intEvenOfNatModTwoV1"
+    ],
+    "negative": [
+      "Int.fib",
+      "Nat.fib",
+      "Int.fib_natCast",
+      "Axeyum.Autogenesis.intFibNegativeEvenV1",
+      "Axeyum.Autogenesis.intFibNegativeOddV1",
+      "Axeyum.IntFib.modCases",
+      "Axeyum.Autogenesis.intEvenNegOfNatModTwoV1",
+      "Axeyum.Autogenesis.intNegNegV2"
+    ]
+  },
+  "driver": "crates/axeyum-lean-import/examples/int_fib_neg_concrete_branches_composition.rs",
+  "output": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-concrete-branches-v1/roots.ndjson",
+  "budget": {
+    "directory_creations": 1,
+    "driver_constructions": 1,
+    "focused_builds": 1,
+    "complete_invocations": 1,
+    "input_stream_reads": 5,
+    "ordinary_compositions": 3,
+    "ordinary_replays": 3,
+    "target_leaf_compositions": 1,
+    "target_leaf_replays": 1,
+    "specialization_operations": 2,
+    "specialization_replays": 2,
+    "capsule_exports": 1,
+    "fresh_imports": 2,
+    "retries": 0,
+    "exact_target_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "exported_roots": [
+      "Axeyum.Autogenesis.intFibNegPositiveBranchV1",
+      "Axeyum.Autogenesis.intFibNegNegativeBranchV1"
+    ],
+    "axiom_footprints": [],
+    "fresh_import_evidence_unchanged": true
+  },
+  "stop_rule": "Any preparation/input, composition, target-leaf, specialization, receipt, footprint, replay, or output mismatch stops without retry or target/ledger authority.",
+  "output_result": "artifacts/autogenesis/int-fib-neg-concrete-branches-composition-result-v1.json",
+  "next_on_accept": "Specialize the clean function residual with Int.fib and both concrete branches to exact Int.fib_neg.",
+  "limitations": "Concrete branches alone grant no exact target, fact, or ledger credit."
+}
