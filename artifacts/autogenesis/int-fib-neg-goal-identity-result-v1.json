@@ -1,6 +1,7 @@
 {
   "schema_version": 1,
   "kind": "axeyum-theorem-goal-identity-audit",
+  "state": "exact-goal-identity-bound-without-rendering",
   "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-exact-v1/root.ndjson", "bytes": 826942, "sha256": "d787dc502dff901cab0cab22bf8fd11578bf6e1632892651b1bf67b3d786d257"},
   "theorem": {
     "name": "Int.fib_neg",
@@ -10,6 +11,7 @@
     "direct_theorem_dependencies": ["Axeyum.Autogenesis.intFibNegFunctionResidualV1", "Axeyum.Autogenesis.intFibNegNegativeBranchV1", "Axeyum.Autogenesis.intFibNegPositiveBranchV1"]
   },
   "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0},
+  "execution": {"importer_runs": 1, "stream_reads": 1, "retries": 0, "ledger_writes": 0},
   "authority": {"qualified_exact_target": 1, "fact_status_changes": 0, "ledger_writes": 0},
   "next": "Register one exact sealed-capsule admission operation for F:ml430-int-fib-neg-b4021d37."
 }
