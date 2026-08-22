@@ -90,6 +90,7 @@
 | 2026-08-22 | (pending) | V20 implements the dependent motive but its build declines only because the deterministic suffix makes `eq_rec_transport` eight-argument; no execution or proof-stream read occurs |
 | 2026-08-22 | (pending) | V21 freezes one scoped `too_many_arguments` allowance on `eq_rec_transport`; the dependent motive and entire proof remain byte-for-byte unchanged before rebuilding |
 | 2026-08-22 | (pending) | V21 adds exactly that scoped allowance and builds the dependent `Eq.rec` motive Clippy-clean, without reading capsules or changing the proof |
+| 2026-08-22 | (pending) | V22 freezes one dependent-motive execution through all five closed link checks, one target submission, one export, and two fresh imports before rereading capsules |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
