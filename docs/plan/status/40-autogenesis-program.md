@@ -4,7 +4,7 @@
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_dvd`, `Int.fib_of_nonneg`, `Nat.fib_pos`, `Nat.fib_eq_zero`, and now `Int.fib_eq_zero` are durably proved with empty kernel footprints. An isolated clean replay independently reproduced `Int.fib_eq_zero` selection, certified execution, exit-75 recovery, exactly one ledger write, its proved fact, and the preregistered empty readiness delta.
 
-**Next:** resolve the exact pinned public type of `Int.inductionOn` once, then freeze the smallest clean succ/pred induction adapter consumed by recurrence uniqueness.
+**Next:** compile a constructive integer succ/pred induction adapter from an abstract constructor split plus `Nat.rec`, then separately qualify its footprint before concrete constructor laws.
 
 <!-- plan-section: landed-changes -->
 
@@ -36,6 +36,7 @@
 | 2026-08-22 | (pending) | Hash-only V2 accepts the pair eliminator with exact clean dependencies; recurrence uniqueness replaces four separate sign quadrants as the smaller reusable route to `Int.fib_add` |
 | 2026-08-22 | (pending) | Generic bi-infinite recurrence uniqueness compiles on the first bounded attempt with Fibonacci names absent; two exports and two imports remain separately authorized before theorem credit |
 | 2026-08-22 | (pending) | Bi-infinite recurrence uniqueness exports twice byte-identically and imports twice with an empty footprint; one public induction-API type query is frozen before specialization support code |
+| 2026-08-22 | (pending) | The sole pinned query finds no public `Int.inductionOn`; no second query is allowed, and a constructor-split plus `Nat.rec` induction adapter is frozen instead |
 
 | 2026-08-21 | (pending) | The newly ready `Int.gcd_fib` route is frozen through one target-owned Fibonacci/natAbs bridge and the two exact admitted premise capsules before source construction or proof-stream access |
 | 2026-08-21 | (pending) | Closure analysis corrects the bridge boundary before execution: export a dependency-free two-parameter residual, then specialize it with exact clean `Int.fib_neg` and `Int.natAbs_neg` roots |
