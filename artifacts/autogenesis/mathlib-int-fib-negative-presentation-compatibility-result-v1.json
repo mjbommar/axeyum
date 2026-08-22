@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-target-owned-definition-compatibility-result",
+  "state": "dependency-carriers-exact-root-identity-unreported",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-negative-presentation-compatibility-plan-v1.json",
+    "sha256": "a33b9e1435ee82d09439c62fd8b6205e194b9248ebfa63858d46731ab2283a0d",
+    "commit": "043118c32c6bd1ab3ef3c2e66d6ff97d5afb0d5b"
+  },
+  "evidence": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-negative-presentation-compatibility-v1/audit.json",
+    "sha256": "091427e507df1918bd372c8b3a321aed1c501c2724a9d3742dc03b744fb64171",
+    "sealed": true
+  },
+  "observed": {
+    "root": "Int.fib",
+    "root_closure_size": 216,
+    "reported_carriers": 60,
+    "reported_exact_declaration_carriers": 60,
+    "root_reported": false,
+    "root_identity_qualified": false
+  },
+  "execution": {
+    "source_stream_reads": 1,
+    "target_stream_reads": 1,
+    "importer_runs": 2,
+    "kernel_submissions": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "diagnosis": "The dependency-path auditor excludes its root from declaration_dependency_closure(root), so every reported dependency carrier is exact but the planned Int.fib root-identity acceptance condition is unmeasured.",
+  "authority": {
+    "support_credit": 0,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Preregister a generic non-rendering two-stream comparator that reports the named root declaration itself.",
+  "limitations": "Exact compatibility of dependencies does not imply exact compatibility of the omitted root declaration."
+}
