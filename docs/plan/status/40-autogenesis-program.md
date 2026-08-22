@@ -63,6 +63,7 @@
 | 2026-08-22 | (pending) | V7 freezes forward and reverse divisibility transport as direct existential-witness constructions, with same-sign/ofNat and opposite-sign/negOfNat witnesses and every rejected helper forbidden |
 | 2026-08-22 | (pending) | V7 compiles the forward transport and both same-sign reverse branches; only the two opposite-sign `Int.negOfNat 0` representations remain, before any export or target submission |
 | 2026-08-22 | (pending) | V8 freezes quotient-case splits only in the two opposite-sign branches: one impossible zero case, one genuine zero witness, and `negSucc` witnesses for both positive quotients |
+| 2026-08-22 | (pending) | V8 compiles both direct witness transports with no rejected helper named; the only new case splits are the preregistered opposite-sign quotient boundaries, before export or theorem credit |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |

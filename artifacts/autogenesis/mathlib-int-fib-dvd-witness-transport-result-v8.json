@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-witness-transport-result-v8",
+  "state": "both-direct-witness-transports-compile",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-witness-transport-plan-v8.json",
+    "sha256": "a0a58a12a1b6a764a3e1272e84a2efe60652b4aaffbc929d26d85e9e2586cfa4"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-dvd-natabs-witness-transport-v1.lean",
+    "sha256": "be3e6f696f41c2158587aa97318c72039299c6f18728cd9056a6857b9fc363b5",
+    "roots": [
+      "Axeyum.Autogenesis.intNatAbsDvdForwardResidualV1",
+      "Axeyum.Autogenesis.intDvdOfNatAbsDvdDirectV1"
+    ],
+    "forbidden_dependency_mentions": 0
+  },
+  "execution": {
+    "source_rewrites": 1,
+    "compile_invocations": 1,
+    "compiler_exit_status": 0,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "retries": 0,
+    "target_fib_dvd_submissions": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "source_compile_credit": 1,
+    "transport_theorem_credit": 0,
+    "target_fib_dvd_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "export twice and require deterministic empty-footprint evidence for both roots"
+}

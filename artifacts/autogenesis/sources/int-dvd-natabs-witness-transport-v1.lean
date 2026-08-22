@@ -18,11 +18,18 @@ theorem intDvdOfNatAbsDvdDirectV1 (a b : Int) :
       | ofNat b =>
           exact ⟨Int.ofNat k, congrArg Int.ofNat hk⟩
       | negSucc b =>
-          exact ⟨Int.negOfNat k, congrArg Int.negOfNat hk⟩
+          cases k with
+          | zero => cases hk
+          | succ k =>
+              exact ⟨Int.negSucc k, congrArg Int.negOfNat hk⟩
   | negSucc a =>
       cases b with
       | ofNat b =>
-          exact ⟨Int.negOfNat k, congrArg Int.ofNat hk⟩
+          cases k with
+          | zero =>
+              exact ⟨Int.ofNat 0, congrArg Int.ofNat hk⟩
+          | succ k =>
+              exact ⟨Int.negSucc k, congrArg Int.ofNat hk⟩
       | negSucc b =>
           exact ⟨Int.ofNat k, congrArg Int.negOfNat hk⟩
 
