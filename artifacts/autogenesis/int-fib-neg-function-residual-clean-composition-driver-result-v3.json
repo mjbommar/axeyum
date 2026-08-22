@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-function-residual-clean-composition-driver-result",
+  "state": "target-leaf-driver-builds-clippy-clean-before-stream-reread",
+  "plan": "artifacts/autogenesis/int-fib-neg-function-residual-clean-composition-plan-v3.json",
+  "driver": "crates/axeyum-lean-import/examples/int_fib_neg_function_residual_clean_composition.rs",
+  "focused_build": {
+    "command": "cargo clippy -p axeyum-lean-import --example int_fib_neg_function_residual_clean_composition -- -D warnings",
+    "exit": 0
+  },
+  "authorized_change": "one run-local clippy::too_many_lines allowance",
+  "execution": {
+    "driver_edits": 1,
+    "focused_builds": 1,
+    "input_stream_reads": 0,
+    "composition_operations": 0,
+    "support_submissions": 0,
+    "capsule_writes": 0,
+    "exact_target_submissions": 0,
+    "ledger_writes": 0
+  },
+  "credit": "driver assurance only",
+  "next_boundary": "Run exactly one target-leaf composition against the unchanged three hash-bound inputs."
+}

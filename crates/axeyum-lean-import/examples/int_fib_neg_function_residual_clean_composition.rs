@@ -30,6 +30,7 @@ fn main() {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn run() -> Result<(), String> {
     let mut arguments = std::env::args_os().skip(1);
     let residual_path = path(&mut arguments)?;
