@@ -45,6 +45,7 @@
 | 2026-08-21 | (pending) | V1 stops before export at one `Nat`/`Int` binder inference mismatch; V2 freezes only explicit natural-number annotations in both presentation contracts |
 | 2026-08-21 | (pending) | V2 cleanly reconstructs the conditional negative-Fibonacci join twice; only recurrence-derived negative values, sign-power alternation, and two multiplication leaves remain explicit |
 | 2026-08-21 | (pending) | The negative-value leaf is frozen as a two-constructor definitional proof over the already admitted target-owned `Int.fib`, testing whether recurrence is unnecessary at this boundary |
+| 2026-08-21 | (pending) | The presentation theorem is dependency-free, but V1 rejects its `Int.fib` identity against the official blocker hash; one exact two-stream compatibility audit is frozen against the admitted recurrence capsule |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
