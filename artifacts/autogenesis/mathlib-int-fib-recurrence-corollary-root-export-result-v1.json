@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-recurrence-corollary-root-export-result",
+  "state": "export-succeeds-root-closure-remains-large-audit-emits-no-report",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-root-export-plan-v1.json",
+    "commit": "93a314e15e1be8d891b2917900e5070b3e6aa377"
+  },
+  "evidence": {
+    "directory": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-recurrence-corollary-root-export-v1",
+    "index_sha256": "878051dc7b7a3ed349abf0021f38f0714ac6ae0a9a74a3b07dddd081fdf4694f",
+    "stream_sha256": "352c25f472900529728805362c806b30f319a1b080d01af7e835cb1b81c351d1",
+    "stream_bytes": 15109745,
+    "export_stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "audit_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "audit_bytes": 0,
+    "sealed": true
+  },
+  "execution": {
+    "exporter_invocations": 1,
+    "successful_exports": 1,
+    "importer_runs": 1,
+    "completed_audit_reports": 0,
+    "retries": 0,
+    "theorem_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "measurement": {
+    "root_selection_reduced_closure": false,
+    "stream_larger_than_prior_full_closure": true,
+    "prior_stream_bytes": 14596588,
+    "new_stream_bytes": 15109745,
+    "root_rows_produced": 0,
+    "claims_accepted": 0
+  },
+  "authority": {
+    "proof_terms_rendered": 0,
+    "theorem_types_rendered": 0,
+    "theorem_values_rendered": 0,
+    "support_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "decision": "Decline further official-closure imports for these corollaries. Construct a target-owned generic integer recurrence rearrangement over primitive Int constructors, audit it in a small authored capsule, then specialize the already admitted Int.fib_add_two theorem.",
+  "limitations": "The export proves only that the pinned exporter can materialize both requested roots. The absent audit report establishes no footprint, dependency, theorem, or target claim."
+}

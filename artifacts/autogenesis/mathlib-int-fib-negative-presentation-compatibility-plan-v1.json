@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-target-owned-definition-compatibility-plan",
+  "state": "preregistered-before-two-stream-compatibility-audit",
+  "source": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-negative-presentation-v1-v1/presentation.ndjson",
+    "sha256": "ee38fd2ff6e2427e349846e49ec603145d4f71bc1676bcfd8cd61bf061a088c0",
+    "Int_fib_declaration_sha256": "0f6d661f551f49ff74a05124a452fed97d8fdb4aee7637a88ae68db208927360"
+  },
+  "target": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-exact-composition-v2/int-fib-add-two-1.ndjson",
+    "sha256": "0fbbb4d55ed862f7feb1b8efa3bf45eed24269067b3702c727d05e45c8947219",
+    "role": "exact admitted recurrence capsule"
+  },
+  "tool": {
+    "path": "crates/axeyum-lean-import/examples/declaration_dependency_path_audit.rs",
+    "interface": "declaration_dependency_path_audit <source> <target> Int.fib Eq.refl",
+    "proof_terms_types_or_values_may_be_rendered": false
+  },
+  "budget": {
+    "source_stream_reads": 1,
+    "target_stream_reads": 1,
+    "importer_runs": 2,
+    "kernel_submissions": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "source_and_target_hashes_must_match": true,
+    "Int_fib_must_exist_in_both_streams": true,
+    "source_and_target_declaration_sha256_must_match": true,
+    "compatibility_must_be_exact_declaration": true
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-negative-presentation-compatibility-result-v1.json",
+  "limitations": "Compatibility qualification grants support composition authority only; it does not establish Int.fib_neg_natCast or mutate the ledger."
+}

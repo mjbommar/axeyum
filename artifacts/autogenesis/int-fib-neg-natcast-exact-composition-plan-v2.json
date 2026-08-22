@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-exact-int-fib-neg-natcast-composition-plan",
+  "state": "preregistered-search-path-only-repair-before-second-bridge-compilation",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-fib-neg-natcast-exact-composition-result-v1.json",
+    "required_state": "declined-before-bridge-elaboration-at-module-search-path"
+  },
+  "repair": {
+    "only_change": "invoke Lean through the pinned Lake environment with LEAN_PATH explicitly prepended by the shared bridge-pack directory containing AxeyumIntFibNegNatcastResidualV2.olean",
+    "bridge_source_unchanged": true,
+    "proof_route_unchanged": true,
+    "sealed_inputs_unchanged": true,
+    "target_authority_unchanged": true
+  },
+  "fixed_environment": {
+    "host": "s5",
+    "lean_version": "4.30.0",
+    "mathlib_checkout": "/home/mjbommar/lean-import-scale/mathlib4",
+    "module_directory": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-natcast-exact-bridge-v1"
+  },
+  "budget": {
+    "additional_bridge_compilations": 1,
+    "bridge_exports": 2,
+    "complete_composition_invocations": 1,
+    "composition_operations": 4,
+    "composition_replays": 4,
+    "specialization_operations": 1,
+    "specialization_replays": 1,
+    "target_submissions": 1,
+    "target_exports": 1,
+    "fresh_target_imports": 2,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": "All V1 acceptance conditions remain unchanged after the search-path-only repair.",
+  "output": "artifacts/autogenesis/int-fib-neg-natcast-exact-composition-result-v2.json",
+  "limitations": "This repair grants no theorem or ledger credit before the bridge and full exact composition satisfy all original checks."
+}

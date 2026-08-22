@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-constructor-lift-result",
+  "state": "revised-helper-and-both-lifts-qualified-empty-footprint",
+  "plan": "artifacts/autogenesis/int-even-constructor-lift-plan-v6.json",
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-constructor-lift-v2",
+    "source_sha256": "c82856dc2700e897fc13337d445b1952494ca6e85d8c21ec7043553403949e45",
+    "olean_sha256": "a1cf8f93af79a9ac514e148e8ae62e8f6b22584cf2525968d8425d11d226ec4a",
+    "stream_bytes": 407082,
+    "stream_sha256": "a00d0b93b55500c04928939ea2ff00c4d0d35b4caa0e0fa96fefeebf1be3f3c6",
+    "exports": 2,
+    "exports_byte_identical": true
+  },
+  "roots": [
+    {
+      "name": "Axeyum.Autogenesis.intNegNatDoubleV2",
+      "declaration_sha256": "693e5bf7ae54debf66eca058b166b6e1e91898524b8a21d6471eba65ce168c2f",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": ["Nat.succ_add", "congrArg"],
+      "audit_sha256": "7e7dbc20458ee99c31be9d43658940ebf5b39af922cf29ef2e000a728e346f0c"
+    },
+    {
+      "name": "Axeyum.Autogenesis.intDoubleModTwoZeroLiftV1",
+      "declaration_sha256": "0b090af5449ad2c472c083f30ff7abe7ee4b37b095d2b8a38eaaa52386969ab8",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": ["congrArg"],
+      "audit_sha256": "66c32a446a3ba31e5d9a46ad341bb3740cd9477919ed81dc6e5c9841076c118f"
+    },
+    {
+      "name": "Axeyum.Autogenesis.intHalfWitnessOfModTwoZeroLiftV1",
+      "declaration_sha256": "4c281eb93a9631614ad3daf0b59131c9a356757de688266cd70e27e4a28b199d",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": [
+        "Axeyum.Autogenesis.intNegNatDoubleV2",
+        "Int.natCast_add",
+        "Int.ofNat.inj",
+        "congrArg",
+        "noConfusion_of_Nat"
+      ],
+      "audit_sha256": "f6239e0ffbd15dc9a0d2d1c59c0d81a4e0488fb6a3bf33a9314a4667cd3ac49c"
+    }
+  ],
+  "comparison_to_v1": {
+    "stream_bytes_before": 874587,
+    "stream_bytes_after": 407082,
+    "removed_direct_dependency": "Int.neg_add",
+    "half_footprint_before": ["propext"],
+    "half_footprint_after": []
+  },
+  "execution": {
+    "module_builds": 1,
+    "exports": 2,
+    "root_footprint_audits": 3,
+    "retries": 0,
+    "specializations": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Preregister exact specialization of double lift with natDouble+succOne and half lift with natHalf+modCases+succZero.",
+  "limitations": "The lift contracts remain explicit; exact integer directions, Int.even_iff, decision reconstruction, Fibonacci, and ledger mutation remain pending."
+}

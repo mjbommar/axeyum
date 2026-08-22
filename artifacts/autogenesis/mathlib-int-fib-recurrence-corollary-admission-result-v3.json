@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-recurrence-corollary-admission-result-v3",
+  "state": "cross-filesystem-journal-rejected-before-durable-intent",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-admission-plan-v3.json",
+    "execution_commit": "2f9dd5bef26d4d65a63ba48790d06521aaaf5693"
+  },
+  "execution_worktree": {
+    "path": "/data0/axeyum/admit-int-fib-recurrence-corollary",
+    "head": "2f9dd5bef26d4d65a63ba48790d06521aaaf5693",
+    "initial_status": "clean"
+  },
+  "execution": {
+    "fault_flag_invocations": 1,
+    "exit": 1,
+    "diagnostic": "journal and fact must be on the same filesystem",
+    "durable_intents": 0,
+    "authoritative_ledger_writes": 0,
+    "recovery_invocations": 0
+  },
+  "safety": {
+    "before_fact_sha256": "aeb5bcc29621ce36f402eb1fc316771d29af39dceef0910535b979480801c9f8",
+    "fact_unchanged_byte_for_byte": true,
+    "fact_epistemic_status": "open"
+  },
+  "next_boundary": "Retain the exact-commit worktree and preregister a dedicated journal sibling on /data0, the same filesystem as the canonical fact.",
+  "limitations": "No crash boundary was reached, no intent exists, and no theorem admission or ledger transition receives credit."
+}

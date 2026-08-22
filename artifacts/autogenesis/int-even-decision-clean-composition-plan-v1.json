@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-decision-clean-composition-plan",
+  "state": "preregistered-before-driver-code",
+  "inputs": {
+    "carrier": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-decision-carrier-v1/root-1.ndjson",
+      "sha256": "cbf4e87694ecfc5422cbdcf2ee219db37905168d414a8a479236604fb02315f7",
+      "root": "Axeyum.Autogenesis.intEvenDecisionCarrierV1"
+    },
+    "clean_even_iff": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-iff-clean-v1/root.ndjson",
+      "sha256": "faa3a54842b1e4883e85fc153b8be8059257ff07ce137bc3c618352b13641d51",
+      "target_leaf": "Int.even_iff"
+    }
+  },
+  "method": "Use compose_checked_theorem_slice_with_target_leaves with the carrier theorem root and exact Int.even_iff target leaf; replay through verify_checked_theorem_composition_with_target_leaves; require exact official instance name/kind/declaration identity, empty helper and carrier footprints, and absence of the official Int.even_iff declaration identity; root-export the carrier closure and freshly import twice before fail-if-present write.",
+  "driver": "crates/axeyum-lean-import/examples/int_even_decision_clean_composition.rs",
+  "output": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-decision-clean-v1/root.ndjson",
+  "budget": {
+    "driver_constructions": 1,
+    "focused_builds": 1,
+    "complete_invocations": 1,
+    "input_stream_reads": 2,
+    "target_leaf_compositions": 1,
+    "target_leaf_replays": 1,
+    "fresh_imports": 2,
+    "retries": 0,
+    "fib_neg_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "instance_name": "Int.instDecidablePredEven",
+    "instance_kind": "definition",
+    "instance_declaration_sha256": "c01ed8edfc717e6cc0119a5c824cf94ad6fd1fb0b322487a28036b41b0713c61",
+    "helper_footprint": [],
+    "carrier_footprint": [],
+    "target_leaf_receipt_exact": true,
+    "fresh_import_evidence_unchanged": true
+  },
+  "stop_rule": "Any target-leaf incompatibility, composition/replay decline, instance identity drift, nonempty helper/carrier footprint, or replay change stops without retry.",
+  "limitations": "A clean exact decision-instance capsule only; Int.fib_neg reconstruction and ledger mutation remain unauthorized."
+}

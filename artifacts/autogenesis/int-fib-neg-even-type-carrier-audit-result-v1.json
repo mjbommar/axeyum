@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-even-type-carrier-audit-result",
+  "state": "full-residual-carrier-audit-finished-without-captured-report-no-credit",
+  "plan": "artifacts/autogenesis/int-fib-neg-even-type-carrier-audit-plan-v1.json",
+  "execution": {"stream_reads": 1, "audit_invocations": 1, "captured_reports": 0, "proof_terms_rendered": 0, "theorem_types_rendered": 0, "theorem_values_rendered": 0, "reconstruction_compilations": 0, "exact_target_submissions": 0, "ledger_writes": 0, "retries": 0},
+  "observation": "The 9.8 MB full residual audit process completed after its output channel detached, producing no durable report; no carrier path is inferred.",
+  "bounded_source_inventory": {"file": "Mathlib/Algebra/Group/Int/Even.lean", "line": 42, "declaration_surface": "anonymous instance DecidablePred (Even : Int -> Prop) defined through decidable_of_iff and Int.even_iff", "candidate_name_observed_in_export": "Int.instDecidablePredEven"},
+  "decision": "Freeze a fresh root-selected export of only Int.instDecidablePredEven from pinned Mathlib 4.30 and audit that bounded closure instead of the full Fibonacci residual.",
+  "authority": {"carrier_credit": 0, "theorem_credit": 0, "ledger_writes": 0},
+  "limitations": "Source inventory identifies a candidate boundary but does not prove its exact identity or footprint."
+}

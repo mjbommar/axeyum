@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-neg-one-power-parity-bridge-plan",
+  "state": "preregistered-before-concrete-power-bridge-source",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-neg-one-pow-parity-bridge-result-v1.json",
+    "required_state": "function-parameterized-bridge-reconstructed-empty-footprint"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-neg-one-pow-parity-bridge-v2.lean",
+    "state_at_preregistration": "absent",
+    "only_change_from_v1": "remove powFn and replace every powFn k occurrence with (-1 : Int)^k; proof structure and four proof contracts remain unchanged"
+  },
+  "target": {
+    "name": "Axeyum.Autogenesis.intNegOnePowParityBridgeV2",
+    "statement_role": "four-proof residual whose specialization is the concrete sign-power parity theorem"
+  },
+  "budget": {
+    "source_constructions": 1,
+    "compiler_invocations": 1,
+    "exporter_invocations": 2,
+    "importer_runs": 2,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "compiler_must_accept": true,
+    "two_exports_must_be_byte_identical": true,
+    "axiom_footprint": []
+  },
+  "next_on_accept": "compose the raw theorem and three clean modulo supports, then specialize the four proof arguments into an exact power-parity capsule",
+  "output": "artifacts/autogenesis/int-neg-one-pow-parity-bridge-result-v2.json",
+  "limitations": "The residual is not the exact theorem until checked specialization succeeds."
+}

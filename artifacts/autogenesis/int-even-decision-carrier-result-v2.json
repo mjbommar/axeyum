@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-decision-carrier-result",
+  "state": "carrier-reproducible-exact-instance-chain-confirmed",
+  "plan": "artifacts/autogenesis/int-even-decision-carrier-plan-v2.json",
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-decision-carrier-v1",
+    "source_sha256": "a817f71f93aaa1b2cc5bf9d3017f1772ea6bc6abd9fdbc3acd625061d0871af1",
+    "olean_sha256": "a8e4b865eda4e04964b43a644b2358999b08acd8c1a92cd1a1c5cd63060b519c",
+    "stream_bytes": 9838616,
+    "stream_sha256": "cbf4e87694ecfc5422cbdcf2ee219db37905168d414a8a479236604fb02315f7",
+    "exports": 2,
+    "exports_byte_identical": true,
+    "closure_audit_sha256": "9d61c6240881d0ad50e7075eed80af15168f20d24c782925d301e8250d7874fa"
+  },
+  "root": {
+    "name": "Axeyum.Autogenesis.intEvenDecisionCarrierV1",
+    "kind": "theorem",
+    "declaration_sha256": "d2d4a41964a86ea36be237eccbb13f795686b4d022af6d03278132cc5b83f223",
+    "closure_size": 2531
+  },
+  "confirmed_chain": [
+    {
+      "name": "Int.instDecidablePredEven",
+      "kind": "definition",
+      "declaration_sha256": "c01ed8edfc717e6cc0119a5c824cf94ad6fd1fb0b322487a28036b41b0713c61",
+      "closure_size": 2530
+    },
+    {
+      "name": "Int.instDecidablePredEven._proof_1",
+      "kind": "theorem",
+      "declaration_sha256": "d655d0b2e356cf9b7584db3950ac315084ab174136024a63f2b8c6e42a19856b",
+      "closure_size": 2528
+    },
+    {
+      "name": "Int.even_iff",
+      "kind": "theorem",
+      "declaration_sha256": "ab4300192b1073d20d0e4110a3b77a79f6a57729e337db1f92889713ac9f9fba",
+      "closure_size": 2527
+    }
+  ],
+  "credit": "carrier and exact closure localization only; the exported carrier remains assumption-bearing",
+  "next_boundary": "Compose the carrier root into the clean Int.even_iff capsule with Int.even_iff as an explicit checked target theorem leaf.",
+  "limitations": "No clean decision-instance, Fibonacci theorem, or ledger mutation is claimed."
+}

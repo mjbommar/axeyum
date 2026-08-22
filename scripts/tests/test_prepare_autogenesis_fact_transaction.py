@@ -17,6 +17,11 @@ FIB_FACT = "F:ml430-nat-fib-add-two-b86e0c82"
 FIB_COPRIME_FACT = "F:ml430-nat-fib-coprime-fib-succ-162fc738"
 GCD_GREATEST_FACT = "F:ml430-nat-gcd-greatest-0a04214a"
 INT_FIB_NATCAST_FACT = "F:ml430-int-fib-natcast-d5886be4"
+INT_FIB_ADD_TWO_FACT = "F:ml430-int-fib-add-two-739358dd"
+INT_FIB_COROLLARY_FACT = (
+    "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d"
+)
+INT_FIB_ADD_ONE_FACT = "F:ml430-int-fib-add-one-33f1b748"
 
 
 def settle_reflexivity_fact(facts):
@@ -26,6 +31,9 @@ def settle_reflexivity_fact(facts):
         FIB_COPRIME_FACT,
         GCD_GREATEST_FACT,
         INT_FIB_NATCAST_FACT,
+        INT_FIB_ADD_TWO_FACT,
+        INT_FIB_COROLLARY_FACT,
+        INT_FIB_ADD_ONE_FACT,
     ):
         target = copy.deepcopy(facts[fact_id])
         target["epistemic_status"] = "proved"
@@ -560,6 +568,133 @@ class AuthoritativeFactTransactionTests(unittest.TestCase):
             "checker_operation"
         ]
         self.assertEqual(binding["direct_theorem_dependencies"], [])
+
+        changed = copy.deepcopy(execution_receipt)
+        changed["result"]["observation"]["fresh_imports"] = 4
+        with self.assertRaisesRegex(MODULE.TransactionError, "assurance"):
+            MODULE.build_authoritative_transaction(
+                before_fact=before,
+                execution=changed,
+                operation=operation,
+                registry=registry,
+            )
+
+    def test_three_dependency_integer_fibonacci_corollary_is_admissible(self):
+        executor = MODULE.load_module(
+            "executor_for_int_fib_corollary_transaction_test",
+            MODULE.EXECUTOR_SCRIPT,
+        )
+        frontier_module = executor.load_module(
+            "frontier_for_int_fib_corollary_transaction_test",
+            executor.FRONTIER_SCRIPT,
+        )
+        facts = frontier_module.load()
+        settle_reflexivity_fact(facts)
+        target = copy.deepcopy(facts[INT_FIB_COROLLARY_FACT])
+        target["epistemic_status"] = "open"
+        target["evidence"] = []
+        target.pop("proof_route", None)
+        target.pop("axiom_footprint", None)
+        facts[INT_FIB_COROLLARY_FACT] = target
+        frontier = frontier_module.build_machine_frontier(facts)
+        before, operation, registry = executor.selected_inputs(frontier, facts)
+        self.assertEqual(before["id"], INT_FIB_COROLLARY_FACT)
+        observation = executor.expected_sealed_kernel_capsule_observation(
+            operation, before
+        )
+        self.assertEqual(
+            observation["retained_answer_dependencies"],
+            [
+                "Axeyum.Autogenesis.intFibEqAddTwoSubAddOneResidualV2",
+                "Int.add_neg_cancel_right",
+                "Int.fib_add_two",
+            ],
+        )
+        execution_receipt = executor.build_receipt(
+            frontier={"frontier_sha256": "6" * 64},
+            fact=before,
+            operation=operation,
+            registry=registry,
+            git_commit="7" * 40,
+            observation=observation,
+        )
+        transaction = MODULE.build_authoritative_transaction(
+            before_fact=before,
+            execution=execution_receipt,
+            operation=operation,
+            registry=registry,
+        )
+        binding = transaction["authoritative_write"]["after_fact"]["evidence"][0][
+            "checker_operation"
+        ]
+        self.assertEqual(
+            binding["direct_theorem_dependencies"],
+            observation["retained_answer_dependencies"],
+        )
+
+        changed = copy.deepcopy(execution_receipt)
+        changed["result"]["observation"]["fresh_imports"] = 4
+        with self.assertRaisesRegex(MODULE.TransactionError, "assurance"):
+            MODULE.build_authoritative_transaction(
+                before_fact=before,
+                execution=changed,
+                operation=operation,
+                registry=registry,
+            )
+
+    def test_four_dependency_integer_fibonacci_add_one_is_admissible(self):
+        executor = MODULE.load_module(
+            "executor_for_int_fib_add_one_transaction_test",
+            MODULE.EXECUTOR_SCRIPT,
+        )
+        frontier_module = executor.load_module(
+            "frontier_for_int_fib_add_one_transaction_test",
+            executor.FRONTIER_SCRIPT,
+        )
+        facts = frontier_module.load()
+        settle_reflexivity_fact(facts)
+        target = copy.deepcopy(facts[INT_FIB_ADD_ONE_FACT])
+        target["epistemic_status"] = "open"
+        target["evidence"] = []
+        target.pop("proof_route", None)
+        target.pop("axiom_footprint", None)
+        facts[INT_FIB_ADD_ONE_FACT] = target
+        frontier = frontier_module.build_machine_frontier(facts)
+        before, operation, registry = executor.selected_inputs(frontier, facts)
+        self.assertEqual(before["id"], INT_FIB_ADD_ONE_FACT)
+        observation = executor.expected_sealed_kernel_capsule_observation(
+            operation, before
+        )
+        self.assertEqual(
+            observation["retained_answer_dependencies"],
+            [
+                "Axeyum.Autogenesis.intFibAddOneResidualV3",
+                "Int.add_comm",
+                "Int.add_neg_cancel_right",
+                "Int.fib_add_two",
+            ],
+        )
+        execution_receipt = executor.build_receipt(
+            frontier={"frontier_sha256": "8" * 64},
+            fact=before,
+            operation=operation,
+            registry=registry,
+            git_commit="9" * 40,
+            observation=observation,
+        )
+        transaction = MODULE.build_authoritative_transaction(
+            before_fact=before,
+            execution=execution_receipt,
+            operation=operation,
+            registry=registry,
+        )
+        binding = transaction["authoritative_write"]["after_fact"]["evidence"][0][
+            "checker_operation"
+        ]
+        self.assertEqual(
+            binding["direct_theorem_dependencies"],
+            observation["retained_answer_dependencies"],
+        )
 
         changed = copy.deepcopy(execution_receipt)
         changed["result"]["observation"]["fresh_imports"] = 4

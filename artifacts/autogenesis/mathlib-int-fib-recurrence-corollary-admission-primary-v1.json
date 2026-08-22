@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-sealed-kernel-capsule-admission-primary",
+  "state": "durably-admitted-archived-replay-pending",
+  "fact_id": "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
+  "operation_id": "authoritative-mathlib-int-fib-recurrence-corollary-kernel-capsule-v1",
+  "registration_commit": "2f9dd5bef26d4d65a63ba48790d06521aaaf5693",
+  "fact_commit": "6dd5cd1c2cc6d8a5845b50f6d24b9f1452f15ca8",
+  "external_root": "/nas3/data/axeyum/autogenesis/admissions/2f9dd5bef-int-fib-recurrence-corollary-v4",
+  "external_index_sha256": "14e67d97f6acaa660e7fe5de64cf311dc0ee2cdd983f72291d5da39fce4cfb7c",
+  "source_bundle_sha256": "3b220089e06ecdcaf5c7f1b15390bea057cc314776010e6fc03b77b269a5ba52",
+  "identities": {
+    "frontier_before_sha256": "078babba6f0c67bbd6d49d9d70bacc5e7278c692c7e45d955c9725f851e51296",
+    "execution_sha256": "d9d8e4b4551397b71e97ab7116e969c950fa00311137e65d56dec6193544f1dc",
+    "transaction_sha256": "11b4fb9f5aaf325800ba319698e15a12d241b46091e0279768bf7f65b339e88b",
+    "admission_event_sha256": "ab9c54c8a4fd132ace2eb8d5092550c3dcc86eb8ae041b14ba440914d3ec4895",
+    "frontier_after_sha256": "b48f8c5fdd34d6c9873808f14373e087f97ef7341d4204a523fbacbff1a28fd5",
+    "readiness_delta_sha256": "993b3e4b2f9abd34d08864c30b802dd54d574736d5a91751456cc37fff252006",
+    "before_fact_sha256": "1e9e1cb47a301c1e13b77c3137a12c1fce9a2275b89c5c79cf4e1f3aef350f42",
+    "after_fact_sha256": "996e233f55c83711f0c561eb8f56476fa3a9806e68c46538b427895f499b1460"
+  },
+  "fault_injection": {
+    "boundary": "after-intent",
+    "exit_status": 75,
+    "fact_unchanged_before_recovery": true
+  },
+  "result": {
+    "authoritative_ledger_writes": 1,
+    "fixture_writes": 0,
+    "newly_ready": [],
+    "axiom_footprint": [],
+    "theorem_dependencies": [
+      "Axeyum.Autogenesis.intFibEqAddTwoSubAddOneResidualV2",
+      "Int.add_neg_cancel_right",
+      "Int.fib_add_two"
+    ]
+  },
+  "retained_fail_closed_attempts": [
+    "archived before-fact path rejected as noncanonical",
+    "descendant checkout rejected as stale receipt identity",
+    "cross-filesystem journal rejected before intent"
+  ],
+  "packaging": {
+    "complete_archive": "v4",
+    "earlier_archives": "v1-v3 are retained immutable packaging attempts; only v4 contains the complete journal tree required by generic replay"
+  },
+  "next_boundary": "Run one isolated clean semantic replay from the complete v4 archive and bind its fresh identities.",
+  "limitations": "Primary admission is established, but clean replay remains pending and no descendant fact is newly ready."
+}

@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-constructor-lift-result",
+  "state": "transport-failed-before-compilation",
+  "plan": "artifacts/autogenesis/int-even-constructor-lift-plan-v4.json",
+  "failure": {
+    "operation": "install sealed source into new shared evidence pack",
+    "diagnostic": "target directory int-even-constructor-lift-v2 does not exist",
+    "lean_processes_started": 0,
+    "compilations": 0,
+    "exports": 0,
+    "ledger_writes": 0
+  },
+  "credit": "none",
+  "next_boundary": "Preregister creation of exactly the named shared pack directory, then compile the unchanged source once."
+}

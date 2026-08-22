@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-theorem-goal-identity-plan",
+  "state": "preregistered-before-sealed-stream-read",
+  "target": {
+    "fact_id": "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
+    "theorem": "Int.fib_eq_fib_add_two_sub_fib_add_one",
+    "formal_statement": "∀ (n : ℤ), Int.fib n = Int.fib (n + 2) - Int.fib (n + 1)"
+  },
+  "input": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-recurrence-corollary-composition-v3/int-fib-recurrence-corollary-1.ndjson",
+    "sha256": "d8823373479dce23213aa004b58e9e0c8912fd413b2cb29e52195639f57a7987"
+  },
+  "tool": {
+    "path": "crates/axeyum-lean-import/examples/theorem_goal_identity_audit.rs",
+    "mode": "hash-only; render no proof term, theorem type, or theorem value"
+  },
+  "budget": {
+    "stream_reads": 1,
+    "importer_runs": 1,
+    "retries": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "name_must_match": true,
+    "canonical_type_sha256_must_be_64_hex": true,
+    "canonical_declaration_sha256": "095a25341329591091b618d64fbc2f249ed3d33337bf06e499d0c9a10f436a93",
+    "axiom_footprint_must_be_empty": true,
+    "direct_theorem_dependencies_must_match_composition_result": true
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-goal-identity-result-v1.json",
+  "limitations": "Goal identity grants no admission or ledger mutation authority."
+}

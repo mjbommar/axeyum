@@ -121,6 +121,14 @@ pub(super) fn add_neg(d: &mut IntDev<'_>, v: &[ExprId]) -> ExprId {
     d.ieq(left, zero)
 }
 
+/// `Eq Int (add (add a b) (neg b)) a`.
+pub(super) fn add_neg_cancel_right(d: &mut IntDev<'_>, v: &[ExprId]) -> ExprId {
+    let sum = d.iadd(v[0], v[1]);
+    let negated = d.ineg(v[1]);
+    let left = d.iadd(sum, negated);
+    d.ieq(left, v[0])
+}
+
 /// `le zero a → le b c → le (mul a b) (mul a c)`.
 pub(super) fn mul_le_mul_of_nonneg_left(d: &mut IntDev<'_>, v: &[ExprId]) -> ExprId {
     let left = d.imul(v[0], v[1]);
@@ -161,6 +169,22 @@ pub(super) fn mul_one(d: &mut IntDev<'_>, v: &[ExprId]) -> ExprId {
     let one = d.ione();
     let left = d.imul(v[0], one);
     d.ieq(left, v[0])
+}
+
+/// `Eq Int (mul one a) a`.
+pub(super) fn one_mul(d: &mut IntDev<'_>, v: &[ExprId]) -> ExprId {
+    let one = d.ione();
+    let left = d.imul(one, v[0]);
+    d.ieq(left, v[0])
+}
+
+/// `Eq Int (mul (neg one) a) (neg a)`.
+pub(super) fn neg_one_mul(d: &mut IntDev<'_>, v: &[ExprId]) -> ExprId {
+    let one = d.ione();
+    let neg_one = d.ineg(one);
+    let left = d.imul(neg_one, v[0]);
+    let right = d.ineg(v[0]);
+    d.ieq(left, right)
 }
 
 /// `Eq Int (mul a zero) zero`.

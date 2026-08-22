@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-sealed-kernel-capsule-admission-primary",
+  "state": "durably-admitted-archived-replay-pending",
+  "fact_id": "F:ml430-int-fib-add-one-33f1b748",
+  "operation_id": "authoritative-mathlib-int-fib-add-one-kernel-capsule-v1",
+  "registration_commit": "bbd80166eec199b801a23e0c7a06de4767e26e79",
+  "fact_commit": "20ffd649bb3497ec858d3ef96227fa6c1c80ee74",
+  "external_root": "/nas3/data/axeyum/autogenesis/admissions/bbd80166e-int-fib-add-one-v1",
+  "external_index_sha256": "8c61785e1e3c46a5a06de3972dfd984a9ec165987cbe9a6ba643b5d06f3c40d5",
+  "source_bundle_sha256": "5e06afefdc2da8c7b75247d2d9f22c00800cca33f94dcb642ba634c0eaeb0047",
+  "identities": {
+    "frontier_before_sha256": "449388cb9b17ab9b0c3ec833e60af808bfc13464b89242fafd5141d88e5847e0",
+    "execution_sha256": "51583865cbfc892ac1c3ff05f1df7ac7421f4064f824290cf57d76f5694e3d6e",
+    "transaction_sha256": "d27435d09db4ef59b54451e6511a5133fdc32260f6b9a46a87c34d2de548ac12",
+    "admission_event_sha256": "dac2b55960948bb1bb1937aa260e88f21417ac9a821309bd4cc7628516cc4d25",
+    "frontier_after_sha256": "e0b749e28b84c2305fff88287884d8ac61395ff2cbe99d16de8a929593e3d78e",
+    "readiness_delta_sha256": "e73addc15984c32a13adb62d7774628c8a8bbc057a0034677837025adfa295c1",
+    "before_fact_sha256": "fd8b6560340a98a5b8a40a38c76b17833f5ea3ace51c09c6531917e41ce06774",
+    "after_fact_sha256": "1e8c7d39859142b5838ba40bf49e0277c5d10d5e4fcdbfbc678a5a45ba8140b6"
+  },
+  "fault_injection": {
+    "boundary": "after-intent",
+    "exit_status": 75,
+    "fact_unchanged_before_recovery": true
+  },
+  "result": {
+    "authoritative_ledger_writes": 1,
+    "fixture_writes": 0,
+    "newly_ready": [],
+    "axiom_footprint": [],
+    "theorem_dependencies": [
+      "Axeyum.Autogenesis.intFibAddOneResidualV3",
+      "Int.add_comm",
+      "Int.add_neg_cancel_right",
+      "Int.fib_add_two"
+    ]
+  },
+  "packaging": {
+    "complete_archive": "v1",
+    "journal_tree_complete": true,
+    "source_bundle_complete_history": true
+  },
+  "next_boundary": "Run one isolated clean semantic replay from the complete archive and bind its fresh identities.",
+  "limitations": "Primary admission is established, but clean replay remains pending and no descendant fact is newly ready."
+}

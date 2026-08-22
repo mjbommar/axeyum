@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-authoritative-admission-replay-plan",
+  "state": "preregistered-before-isolated-clean-replay",
+  "source": {
+    "commit": "20ffd649bb3497ec858d3ef96227fa6c1c80ee74",
+    "required_status": "clean"
+  },
+  "retained_admission": {
+    "path": "/nas3/data/axeyum/autogenesis/admissions/bbd80166e-int-fib-add-one-v1",
+    "index_sha256": "8c61785e1e3c46a5a06de3972dfd984a9ec165987cbe9a6ba643b5d06f3c40d5",
+    "fact_id": "F:ml430-int-fib-add-one-33f1b748",
+    "operation_id": "authoritative-mathlib-int-fib-add-one-kernel-capsule-v1"
+  },
+  "runner": "scripts/replay-autogenesis-authoritative-admission.sh",
+  "output": "/nas3/data/axeyum/autogenesis/replays/20ffd649b-int-fib-add-one-v1",
+  "budget": {
+    "clean_replays": 1,
+    "fault_injection_executions": 1,
+    "recovery_executions": 1,
+    "fresh_authoritative_writes": 1,
+    "retries": 0
+  },
+  "acceptance": {
+    "same_fact": true,
+    "same_registered_operation": true,
+    "same_certified_result": true,
+    "same_acceptance_policy": true,
+    "selected_before": true,
+    "admitted_event": true,
+    "removed_from_ready": true,
+    "newly_ready_must_equal_retained": [],
+    "one_authoritative_write": true,
+    "zero_fixture_writes": true,
+    "source_checkout_must_remain_clean": true
+  },
+  "limitations": "The replay reproduces one historical admission and grants no new ledger authority in the source checkout."
+}

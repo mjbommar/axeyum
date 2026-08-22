@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-decision-carrier-plan",
+  "state": "preregistered-before-source-construction",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-even-iff-exact-composition-result-v1.json",
+    "required_state": "exact-target-specialized-exported-and-reimported-empty-footprint"
+  },
+  "goal": "Expose the exact official Int.instDecidablePredEven definition as part of a theorem-rooted selected closure so checked target-leaf composition can replace only official Int.even_iff with the clean exact-name theorem.",
+  "source": "artifacts/autogenesis/sources/int-even-decision-carrier-v1.lean",
+  "root": {
+    "name": "Axeyum.Autogenesis.intEvenDecisionCarrierV1",
+    "statement": "Int.instDecidablePredEven = Int.instDecidablePredEven",
+    "proof": "rfl",
+    "mathematical_credit": 0
+  },
+  "expected_closure": {
+    "must_contain": [
+      "Int.instDecidablePredEven",
+      "Int.instDecidablePredEven._proof_1",
+      "Int.even_iff"
+    ],
+    "later_target_leaf": "Int.even_iff"
+  },
+  "environment": {
+    "host": "s5",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean_version": "4.30.0",
+    "import": "Mathlib.Algebra.Group.Int.Even"
+  },
+  "budget": {
+    "source_constructions": 1,
+    "compilations": 1,
+    "exports": 2,
+    "closure_audits": 1,
+    "retries": 0,
+    "composition_operations": 0,
+    "decision_instance_credit": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": "The root exports reproducibly and a nonrendering closure audit proves the exact definition/helper/even_iff chain is selected.",
+  "stop_rule": "Any missing closure member, compile/export failure, or byte mismatch stops before target-leaf composition.",
+  "output": "artifacts/autogenesis/int-even-decision-carrier-result-v1.json",
+  "limitations": "The carrier is intentionally assumption-bearing until later checked target-leaf composition; it provides no decision-instance or theorem credit by itself."
+}

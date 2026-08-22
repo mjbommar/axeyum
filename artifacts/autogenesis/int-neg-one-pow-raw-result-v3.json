@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-native-neg-one-raw-power-result",
+  "state": "nat-mul-one-not-definitional",
+  "plan": {
+    "path": "artifacts/autogenesis/int-neg-one-pow-raw-plan-v3.json",
+    "sha256": "276b1cd32cbfd384a4102e9dd45992bc366fed6b03027a9bbcce6b96ec9a3f6c",
+    "commit": "611f33a98214c164384f0716a1ca00b63bb631db"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-neg-one-pow-raw-v3.lean",
+    "sha256": "79452ab76d9ae1a6fdbe239ee7bfb0dc6896bbae8ca6b8103457dbc80e18933f"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-neg-one-pow-raw-v3",
+    "compiler_exit_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "compiler_stdout_sha256": "89717c1552e737abb98474dda6662e09148893d729d4e8c4e3402f447c8654cb"
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit_status": 1,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "diagnosis": "The successor power goal is exposed correctly. Its remaining subgoal is 1^k * 1 = 1, and Nat multiplication by one is propositionally rather than definitionally equal because it reduces through zero addition.",
+  "authority": {
+    "support_credit": 0,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Construct zero-add and multiply-one structurally, then chain multiply-one with the unchanged power induction hypothesis.",
+  "limitations": "The source does not compile and grants no support authority."
+}

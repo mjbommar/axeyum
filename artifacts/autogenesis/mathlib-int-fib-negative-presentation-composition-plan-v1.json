@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-negative-fibonacci-presentation-composition-plan",
+  "state": "preregistered-before-kernel-checked-composition",
+  "source": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-negative-presentation-v1-v1/presentation.ndjson",
+    "sha256": "ee38fd2ff6e2427e349846e49ec603145d4f71bc1676bcfd8cd61bf061a088c0",
+    "root": "Int.fib_neg_natCast_presentation",
+    "root_declaration_sha256": "798d978f52ee18f5cb219dae7727a8290ef1faefe9aa77fd1f9e358f58c40849",
+    "axiom_footprint": []
+  },
+  "target": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-exact-composition-v2/int-fib-add-two-1.ndjson",
+    "sha256": "0fbbb4d55ed862f7feb1b8efa3bf45eed24269067b3702c727d05e45c8947219",
+    "role": "exact admitted recurrence capsule"
+  },
+  "tool": {
+    "path": "crates/axeyum-lean-import/examples/lean4export_composition.rs",
+    "interface": "lean4export_composition <source.ndjson> <target.ndjson> Int.fib_neg_natCast_presentation",
+    "proof_terms_types_or_values_may_be_rendered": false
+  },
+  "budget": {
+    "source_stream_reads": 1,
+    "target_stream_reads": 1,
+    "importer_runs": 2,
+    "composition_attempts": 1,
+    "composition_replays": 1,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "both_inputs_must_be_proof_isolated": true,
+    "composition_must_succeed": true,
+    "composition_receipt_must_replay": true,
+    "exactly_one_theorem_must_be_added": true,
+    "added_theorem_must_be_Int_fib_neg_natCast_presentation": true,
+    "added_theorem_axiom_footprint_must_be_empty": true
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-negative-presentation-composition-result-v1.json",
+  "limitations": "A successful composition qualifies only the conditional negative-value presentation as support. It does not establish sign-power parity, the final join, or ledger admission."
+}

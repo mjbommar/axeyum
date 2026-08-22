@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-function-residual-clean-composition-plan",
+  "state": "preregistered-before-driver-code-or-stream-reread",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-fib-neg-function-residual-result-v2.json",
+    "required_state": "function-parameterized-residual-reproduced-with-fibonacci-closure-absent"
+  },
+  "inputs": {
+    "function_residual": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-function-residual-v1/root-1.ndjson",
+      "sha256": "0136201181ae82b0b1dae091190a4a961f53574cd24d686a2c075b5e6599337c",
+      "root": "Axeyum.Autogenesis.intFibNegFunctionResidualV1"
+    },
+    "clean_natcast": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-natcast-decision-free-exact-v1/exact.ndjson",
+      "sha256": "6c803eff520a62d6925db5ed30f78714d9923281becfd78239cc28278bc9159f",
+      "root": "Int.fib_neg_natCast"
+    },
+    "clean_decision": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-decision-clean-v1/root.ndjson",
+      "sha256": "29053dba3b90cecf5a70ba347ea7dba81a19990f715e69d5fc0a1c60cb9a6c07"
+    }
+  },
+  "method": "Create the output parent, compose and replay clean natCast into the clean decision kernel, then compose and replay only the function-parameterized constructor residual. Require the resulting residual footprint empty, root-export, and freshly import twice before fail-if-present write.",
+  "driver": "crates/axeyum-lean-import/examples/int_fib_neg_function_residual_clean_composition.rs",
+  "output": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-function-residual-clean-v1/root.ndjson",
+  "budget": {
+    "directory_creations": 1,
+    "driver_constructions": 1,
+    "focused_builds": 1,
+    "complete_invocations": 1,
+    "input_stream_reads": 3,
+    "composition_operations": 2,
+    "composition_replays": 2,
+    "support_submissions": 1,
+    "capsule_exports": 1,
+    "fresh_imports": 2,
+    "exact_target_submissions": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "root": "Axeyum.Autogenesis.intFibNegFunctionResidualV1",
+    "axiom_footprint": [],
+    "fresh_import_evidence_unchanged": true,
+    "proof_terms_types_or_values_rendered": 0
+  },
+  "stop_rule": "Any preparation/input mismatch, composition decline, receipt mismatch, nonempty residual footprint, replay change, or preexisting output stops without retry or theorem/ledger authority.",
+  "output_result": "artifacts/autogenesis/int-fib-neg-function-residual-clean-composition-result-v1.json",
+  "next_on_accept": "Build the positive and negative constructor branch contracts in the compatible clean representation, then specialize the residual with Int.fib.",
+  "limitations": "The clean generic residual alone proves neither branch and grants no selected-fact credit."
+}

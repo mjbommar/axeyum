@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-decision-carrier-result",
+  "state": "carrier-source-compiles-export-pending",
+  "plan": "artifacts/autogenesis/int-even-decision-carrier-plan-v1.json",
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-even-decision-carrier-v1.lean",
+    "sha256": "a817f71f93aaa1b2cc5bf9d3017f1772ea6bc6abd9fdbc3acd625061d0871af1",
+    "root": "Axeyum.Autogenesis.intEvenDecisionCarrierV1"
+  },
+  "execution": {
+    "compilations": 1,
+    "compile_exit": 0,
+    "exports": 0,
+    "closure_audits": 0,
+    "ledger_writes": 0
+  },
+  "credit": "construction only; no carrier closure or instance claim",
+  "next_boundary": "Preregister an explicit-root importable module build and two root exports before auditing the selected closure."
+}

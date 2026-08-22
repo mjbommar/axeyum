@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-sealed-kernel-capsule-admission",
+  "state": "durably-admitted-archived-and-clean-replayed",
+  "fact_id": "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
+  "operation_id": "authoritative-mathlib-int-fib-recurrence-corollary-kernel-capsule-v1",
+  "registration_commit": "2f9dd5bef26d4d65a63ba48790d06521aaaf5693",
+  "external_root": "/nas3/data/axeyum/autogenesis/admissions/2f9dd5bef-int-fib-recurrence-corollary-v4",
+  "external_index_sha256": "14e67d97f6acaa660e7fe5de64cf311dc0ee2cdd983f72291d5da39fce4cfb7c",
+  "source_bundle_sha256": "3b220089e06ecdcaf5c7f1b15390bea057cc314776010e6fc03b77b269a5ba52",
+  "identities": {
+    "frontier_before_sha256": "078babba6f0c67bbd6d49d9d70bacc5e7278c692c7e45d955c9725f851e51296",
+    "execution_sha256": "d9d8e4b4551397b71e97ab7116e969c950fa00311137e65d56dec6193544f1dc",
+    "transaction_sha256": "11b4fb9f5aaf325800ba319698e15a12d241b46091e0279768bf7f65b339e88b",
+    "admission_event_sha256": "ab9c54c8a4fd132ace2eb8d5092550c3dcc86eb8ae041b14ba440914d3ec4895",
+    "frontier_after_sha256": "b48f8c5fdd34d6c9873808f14373e087f97ef7341d4204a523fbacbff1a28fd5",
+    "readiness_delta_sha256": "993b3e4b2f9abd34d08864c30b802dd54d574736d5a91751456cc37fff252006",
+    "before_fact_sha256": "1e9e1cb47a301c1e13b77c3137a12c1fce9a2275b89c5c79cf4e1f3aef350f42",
+    "after_fact_sha256": "996e233f55c83711f0c561eb8f56476fa3a9806e68c46538b427895f499b1460"
+  },
+  "external_files": {
+    "frontier-before.json": "a21a7a96045287b91bd07dd119f94e05110c674cfb4c6fe59a3ac2ac8a9ac5a1",
+    "execution.json": "41cbca4c1441957f546d1e4cce0194629c935d193c29a9102f7ca1b5a0f8aff7",
+    "transaction.json": "fc57caa389f5cd7c1d6f52e669578a8f2466301e6b26125f275bbc878aa99560",
+    "admission-event.json": "16a13e50f50bd071e5161eb05578a37c4c4068d7b4f652db204ef3716c865b9e",
+    "frontier-after.json": "deeced81595e9bbb1cae945bce36acdf9696764f8086ecfc39f34062164b4cd0",
+    "readiness.json": "15d16b7aedf9a32af98fe289887c91664a7464ef33561fabb39b0a1e5dec8b62",
+    "before-fact.json": "aeb5bcc29621ce36f402eb1fc316771d29af39dceef0910535b979480801c9f8",
+    "after-fact.json": "5c200d87d2d2ca8dd40fb4e94af54717b75669758dfea8c3dca49af2f8070338"
+  },
+  "fault_injection": {
+    "boundary": "after-intent",
+    "exit_status": 75,
+    "fact_unchanged_before_recovery": true
+  },
+  "result": {
+    "authoritative_ledger_writes": 1,
+    "fixture_writes": 0,
+    "newly_ready": [],
+    "axiom_footprint": [],
+    "theorem_dependencies": [
+      "Axeyum.Autogenesis.intFibEqAddTwoSubAddOneResidualV2",
+      "Int.add_neg_cancel_right",
+      "Int.fib_add_two"
+    ],
+    "target_dependency": null
+  },
+  "clean_replay": {
+    "source_commit": "6dd5cd1c2cc6d8a5845b50f6d24b9f1452f15ca8",
+    "external_root": "/nas3/data/axeyum/autogenesis/replays/6dd5cd1c2-int-fib-recurrence-corollary-v1",
+    "external_index_sha256": "2c7cf772039bd6730657fa7de7bef0eabecb5a5a0359c509d5e0afab7bd0a824",
+    "replay_file_sha256": "d0f0286b42cfb6ab793d3457bb88a837b169a0e8be90c5a8cc145a78270e5ccc",
+    "replay_sha256": "f28b0b91fe103e0188d93be8f52f4a2dfe4f35f38c3c1832b7b83987f644c012",
+    "fresh_execution_sha256": "326d715d7cca6962a2e88b3c741d674fb96c497075b72bf0786c1a6e9d11a3f9",
+    "fresh_transaction_sha256": "23f0166b74bc67ddf33c79dfa46d3fe57a8352c7ae622c7c9013b31ceb373e48",
+    "fresh_event_sha256": "f39355dc5ec849eebbf225d8ff1032ef2c1be5401745e812e79dc903292c7324",
+    "fresh_readiness_delta_sha256": "fabc643d164dca86b08e21173d80a31621c46df2ae0993975ef1b7da8e06c466"
+  },
+  "reproduction": "python3 scripts/check-autogenesis-statement-reflexivity-admission.py --manifest artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-admission-v1.json",
+  "limitations": "This admits one exact Mathlib v4.30 integer Fibonacci recurrence corollary. It grants no authority to close any other proposition."
+}

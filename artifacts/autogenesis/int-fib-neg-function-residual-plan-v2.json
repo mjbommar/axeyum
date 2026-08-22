@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-function-residual-plan",
+  "state": "preregistered-project-root-staging-before-build",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-fib-neg-function-residual-result-v1.json",
+    "required_state": "stopped-before-elaboration-on-source-outside-project-root"
+  },
+  "correction": {
+    "sealed_source": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-function-residual-v1/IntFibNegFunctionResidualV1.lean",
+    "sealed_source_sha256": "379e24e9e5045d22ea4ac7bf184f738c160c14b7739ce5a73f864dc5cf5ed116",
+    "staged_source": "/home/mjbommar/lean-import-scale/mathlib4/IntFibNegFunctionResidualV1.lean",
+    "require_staged_hash_unchanged": true,
+    "proof_changed": false
+  },
+  "fixed_environment": {
+    "host": "server5",
+    "mathlib_checkout": "/home/mjbommar/lean-import-scale/mathlib4",
+    "lean_version": "4.30.0",
+    "lean4export": "/home/mjbommar/lean-import-scale/lean4export/.lake/build/bin/lean4export"
+  },
+  "operation": {
+    "module": "IntFibNegFunctionResidualV1",
+    "root": "Axeyum.Autogenesis.intFibNegFunctionResidualV1",
+    "olean": "/home/mjbommar/lean-import-scale/mathlib4/.lake/build/lib/lean/IntFibNegFunctionResidualV1.olean",
+    "exports": [
+      "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-function-residual-v1/root-1.ndjson",
+      "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-function-residual-v1/root-2.ndjson"
+    ]
+  },
+  "budget": {
+    "source_stagings": 1,
+    "module_builds": 1,
+    "exports": 2,
+    "closure_audits": 1,
+    "retries": 0,
+    "composition_operations": 0,
+    "exact_target_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "root": "Axeyum.Autogenesis.intFibNegFunctionResidualV1",
+    "exports_byte_identical": true,
+    "closure_must_not_contain": [
+      "Int.fib",
+      "Lean.RArray"
+    ],
+    "proof_terms_types_or_values_rendered": 0
+  },
+  "stop_rule": "Any source hash drift, build/export mismatch, unexpected Int.fib or Lean.RArray closure member, or preexisting output stops without retry or theorem/ledger authority.",
+  "output_result": "artifacts/autogenesis/int-fib-neg-function-residual-result-v2.json",
+  "limitations": "The generic residual proves no Fibonacci branch and grants no exact-target or ledger credit."
+}

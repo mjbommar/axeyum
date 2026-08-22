@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-even-arithmetic-export-result",
+  "state": "failed-closed-before-module-or-export",
+  "plan": "artifacts/autogenesis/nat-even-arithmetic-export-plan-v2.json",
+  "execution": {
+    "host": "s5",
+    "source_sha256": "f9e4b52ad28f861790b91c60ca91890e71620d7b9df0969f56d78c6386bbdc76",
+    "module_build_exit": 1,
+    "diagnostic": "input file must be contained in root directory /home/mjbommar/lean-import-scale/mathlib4",
+    "exports_attempted": 0,
+    "retries": 0
+  },
+  "outputs": {
+    "olean_exists": false,
+    "roots_1_exists": false,
+    "roots_2_exists": false,
+    "proof_submissions": 0,
+    "ledger_writes": 0
+  },
+  "credit": "none",
+  "diagnosis": "The shared source is deliberately outside the quota-constrained Mathlib checkout, but the command omitted Lean's explicit --root mapping for that source directory.",
+  "next_boundary": "Preregister the same sealed source and proof under an exact --root mapping; do not retry V2."
+}

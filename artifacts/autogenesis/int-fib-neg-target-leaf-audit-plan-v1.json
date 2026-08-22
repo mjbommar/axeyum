@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-target-leaf-audit-plan",
+  "state": "preregistered-before-driver-code-or-stream-read",
+  "source": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-root-audit-v1/int-fib-neg.ndjson", "sha256": "7df7f5dce9c7159f9c468b6f47f13be3e589fb2c1559af554ce73cc48b18730e", "root": "Int.fib_neg", "official_axiom_footprint": ["Classical.choice", "Lean.opaqueId", "Quot", "Quot.ind", "Quot.lift", "Quot.mk", "Quot.sound", "String.Internal.append", "propext"]},
+  "target_leaf": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-natcast-decision-free-exact-v1/exact.ndjson", "sha256": "6c803eff520a62d6925db5ed30f78714d9923281becfd78239cc28278bc9159f", "name": "Int.fib_neg_natCast", "declaration_sha256": "db090b11cf74c91607d5d0aabe43d364f9260c41f7de6bcd460cc59907deb087", "canonical_type_sha256": "8696d229d7af2ee3fe3510a0782e54bcb217503ceef268a7d908e407ab447dad", "axiom_footprint": []},
+  "operation": "compose official Int.fib_neg into the exact support kernel with Int.fib_neg_natCast as its sole checked target leaf; replay the receipt if accepted, then report the resulting root footprint and direct dependencies without export or theorem credit",
+  "decision_rule": "If the composition accepts, freeze the remaining exact blocker set beneath the composed root. If it declines on target-leaf type shape or missing carriers, report the precise boundary and reconstruct the outer theorem directly.",
+  "budget": {"driver_builds": 1, "complete_invocations": 1, "source_stream_reads": 1, "target_stream_reads": 1, "composition_attempts": 1, "composition_replays": 1, "exports": 0, "exact_target_submissions": 0, "fact_status_changes": 0, "ledger_writes": 0, "retries": 0},
+  "driver": "crates/axeyum-lean-import/examples/int_fib_neg_target_leaf_audit.rs",
+  "output": "artifacts/autogenesis/int-fib-neg-target-leaf-audit-result-v1.json",
+  "limitations": "This is a non-publishing localization audit. Even an accepted composition receives no theorem or ledger credit while any assumption remains."
+}

@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-constructor-lift-plan",
+  "state": "preregistered-before-root-export",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-even-constructor-lift-result-v2.json",
+    "required_state": "two-parameterized-constructor-lifts-compile"
+  },
+  "sealed_source": {
+    "repository_path": "artifacts/autogenesis/sources/int-even-constructor-lift-v1.lean",
+    "shared_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-constructor-lift-v1/IntEvenConstructorLiftV1.lean",
+    "sha256": "2d7d716428e87dd86eec51fde4207ecf26071db8cbbce4ad004835dd3cbd20a3"
+  },
+  "fixed_environment": {
+    "host": "s5",
+    "mathlib_checkout": "/home/mjbommar/lean-import-scale/mathlib4",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean_version": "4.30.0",
+    "lake": "/home/mjbommar/.elan/toolchains/leanprover--lean4---v4.30.0/bin/lake",
+    "exporter": "/home/mjbommar/lean-import-scale/lean4export/.lake/build/bin/lean4export"
+  },
+  "operation": {
+    "module": "IntEvenConstructorLiftV1",
+    "module_build": "lake env lean --root=<shared-pack> -o <shared-pack>/IntEvenConstructorLiftV1.olean <sealed-source>",
+    "roots": [
+      "Axeyum.Autogenesis.intDoubleModTwoZeroLiftV1",
+      "Axeyum.Autogenesis.intHalfWitnessOfModTwoZeroLiftV1"
+    ],
+    "exports": ["roots-1.ndjson", "roots-2.ndjson"],
+    "all_outputs_must_be_absent": true
+  },
+  "budget": {
+    "module_builds": 1,
+    "exports": 2,
+    "root_footprint_audits": 2,
+    "retries": 0,
+    "specializations": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "exports_byte_identical": true,
+    "both_root_footprints": [],
+    "proof_terms_types_or_values_may_be_rendered": false
+  },
+  "stop_rule": "Any preexisting output, source mismatch, build/export failure, byte mismatch, or nonempty footprint stops without retry or specialization.",
+  "output": "artifacts/autogenesis/int-even-constructor-lift-result-v3.json",
+  "limitations": "Parameterized lift qualification only; Nat-support specialization and exact direction reconstruction remain unauthorized."
+}

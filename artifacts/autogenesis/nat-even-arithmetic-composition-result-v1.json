@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-even-arithmetic-composition-result",
+  "state": "two-closed-targets-specialized-exported-and-reimported-empty-footprint",
+  "plan": "artifacts/autogenesis/nat-even-arithmetic-composition-plan-v2.json",
+  "inputs": {
+    "parameterized_sha256": "ba1061b18f46a989a9cffd19acac624c451caa739e71a914198d01460e491da9",
+    "parity_sha256": "0e310823ba37adfbd9087c0da2f85ad57261228d601d9388800cf069b5b2ce82"
+  },
+  "composition_receipt_sha256": "db6ee902b72aaf4e156352b82036e957107fad79fb904ac0f77b078739329632",
+  "specialization_receipt_sha256": {
+    "double_mod_zero": "7fc4087d0019dbb6fecbaff939d66b79bc1e62471fa082e7e1a6f4bbf0c1c611",
+    "half_witness": "0baec26c403db4b194e44d2eee2e69a6585b218363d075474685621b29b6f085"
+  },
+  "targets": [
+    {
+      "name": "Axeyum.Autogenesis.natDoubleModTwoZeroClosedV1",
+      "declaration_sha256": "716194a6a15775cb50c93e60ed4196bdcb18fad5c95e2c8cb3bd8fa4472c51a2",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": [
+        "Axeyum.Autogenesis.natDoubleModTwoZeroV1",
+        "Axeyum.IntFib.modStepTwo"
+      ]
+    },
+    {
+      "name": "Axeyum.Autogenesis.natHalfWitnessOfModTwoZeroClosedV1",
+      "declaration_sha256": "a28ee791cebe7dd6098816c8842ecc39fc228c16206272bde62c82cc9efaa8b8",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": [
+        "Axeyum.Autogenesis.natHalfWitnessOfModTwoZeroV1",
+        "Axeyum.IntFib.modStepTwo"
+      ]
+    }
+  ],
+  "capsule": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/nat-even-arithmetic-closed-v1/roots.ndjson",
+    "bytes": 508435,
+    "sha256": "e2593bac01c81881c4fcace0133f93c7bdb5fd9884e2aed035083f1af9bfb77d",
+    "fresh_imports": 2,
+    "result_sha256": "251f2dce96c0e2c3008b05c4df64a49c324cd09f78c8007dfb350367b7e9834b"
+  },
+  "execution": {
+    "complete_invocations": 1,
+    "input_stream_reads": 2,
+    "composition_operations": 1,
+    "composition_replays": 1,
+    "specialization_operations": 2,
+    "specialization_replays": 2,
+    "capsule_exports": 1,
+    "fresh_capsule_imports": 2,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Preregister target-owned Int constructor lifts for double-mod-zero and half-witness before source construction.",
+  "limitations": "No integer theorem, Int.even_iff, decision instance, Fibonacci theorem, or ledger mutation is claimed."
+}

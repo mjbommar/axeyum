@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-natcast-goal-identity-plan",
+  "state": "preregistered-before-single-hash-only-capsule-read",
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-natcast-decision-free-exact-v1/exact.ndjson", "bytes": 773264, "sha256": "6c803eff520a62d6925db5ed30f78714d9923281becfd78239cc28278bc9159f"},
+  "target": {"name": "Int.fib_neg_natCast", "declaration_sha256": "db090b11cf74c91607d5d0aabe43d364f9260c41f7de6bcd460cc59907deb087", "axiom_footprint": [], "direct_theorem_dependency_count": 8},
+  "operation": "run theorem_goal_identity_audit once and record only canonical type/declaration hashes, footprint, and named direct dependencies",
+  "budget": {"capsule_reads": 1, "audit_invocations": 1, "proof_terms_rendered": 0, "theorem_types_rendered": 0, "theorem_values_rendered": 0, "fact_status_changes": 0, "ledger_writes": 0},
+  "acceptance": {"input_identity_must_match": true, "theorem_identity_must_match": true, "axiom_footprint": [], "direct_dependencies_must_match_construction_result": true},
+  "output": "artifacts/autogenesis/int-fib-neg-natcast-goal-identity-result-v1.json",
+  "next_on_accept": "Treat the theorem as a qualified target leaf for a separately preregistered exact Int.fib_neg reconstruction; do not create an unreviewed fact outside the generated Mathlib catalog.",
+  "limitations": "This support theorem is not a selected ledger fact. Identity qualification grants no fact mutation or evaluation credit."
+}

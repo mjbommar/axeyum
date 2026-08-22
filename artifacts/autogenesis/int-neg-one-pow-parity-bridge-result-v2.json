@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-neg-one-power-parity-bridge-result",
+  "state": "concrete-power-four-proof-bridge-empty-footprint",
+  "plan": {
+    "path": "artifacts/autogenesis/int-neg-one-pow-parity-bridge-plan-v2.json",
+    "sha256": "f763eceaef54751a80172e4f404b324a6852083d5aaec7f2cd6b138cf34febcb",
+    "commit": "6e2ee38e6335893da1e706ce67640aae1d86e830"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-neg-one-pow-parity-bridge-v2.lean",
+    "sha256": "eddbd9a5542fdbe29df6865d81857aa16486460f16109fe513b5db615d3277c6"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-neg-one-pow-parity-bridge-v2",
+    "stream_sha256": "3b6fe9b5be8457ec5d9d02fe3dfe8c263240ddcba8bdeba4c5988c5079bf1442",
+    "stream_bytes": 415353,
+    "audit_1_sha256": "2752e4b996e94d19ca6bc3c51e4e97f1611e8ebb87f5e81a55b11b1c6e27deec",
+    "audit_2_sha256": "d8d1578f094c19fe18010e0ffd3fc236c8843ea6e18b6306879436d93625d935",
+    "two_exports_byte_identical": true
+  },
+  "theorem": {
+    "name": "Axeyum.Autogenesis.intNegOnePowParityBridgeV2",
+    "canonical_declaration_sha256": "62bb0acdc0e362cc39ab833f83acd6de4217e8c68794ca3240273927299aeb93",
+    "canonical_type_sha256": "f267201b6b27a072de96d320284745f2920ae1843ba05f1defbe9b33265303c6",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [
+      "Eq.symm",
+      "Eq.trans",
+      "if_neg",
+      "if_pos",
+      "noConfusion_of_Nat"
+    ]
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit_status": 0,
+    "exporter_invocations": 2,
+    "importer_runs": 2,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "parameterized_support_credit": 1,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Compose raw power and three parity roots into this bridge kernel, then specialize its four proof arguments.",
+  "limitations": "The bridge is concrete in its expression but remains parameterized by four proof contracts until checked specialization."
+}

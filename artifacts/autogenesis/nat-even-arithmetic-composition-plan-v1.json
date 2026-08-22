@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-even-arithmetic-composition-plan",
+  "state": "preregistered-before-driver-code",
+  "inputs": {
+    "parameterized": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/nat-even-arithmetic-v1/roots-1.ndjson",
+      "sha256": "ba1061b18f46a989a9cffd19acac624c451caa739e71a914198d01460e491da9",
+      "roots": [
+        "Axeyum.Autogenesis.natDoubleModTwoZeroV1",
+        "Axeyum.Autogenesis.natHalfWitnessOfModTwoZeroV1"
+      ]
+    },
+    "modulo_recurrence": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-clean-parity-leaves-v4/roots.ndjson",
+      "sha256": "0e310823ba37adfbd9087c0da2f85ad57261228d601d9388800cf069b5b2ce82",
+      "root": "Axeyum.IntFib.modStepTwo",
+      "declaration_sha256": "56a2192a5f4afe4a7b284f3083809c16bd6790cfe2b9b7679f423c7fe5604300"
+    }
+  },
+  "targets": [
+    {
+      "name": "Axeyum.Autogenesis.natDoubleModTwoZeroClosedV1",
+      "statement": "forall q : Nat, (q + q) % 2 = 0"
+    },
+    {
+      "name": "Axeyum.Autogenesis.natHalfWitnessOfModTwoZeroClosedV1",
+      "statement": "forall n : Nat, n % 2 = 0 -> exists q : Nat, n = q + q"
+    }
+  ],
+  "method": "Import both hash-bound empty-footprint streams, compose only modStepTwo into the parameterized kernel and replay its receipt, specialize each generic root with that exact theorem and replay each receipt, require exact two-theorem dependency sets and empty footprints, root-export both targets, and freshly reimport twice before a fail-if-present write.",
+  "driver": "crates/axeyum-lean-import/examples/nat_even_arithmetic_composition.rs",
+  "output": "/nas3/data/axeyum/autogenesis/reference-packs/nat-even-arithmetic-closed-v1/roots.ndjson",
+  "budget": {
+    "driver_constructions": 1,
+    "focused_builds": 1,
+    "complete_invocations": 1,
+    "input_stream_reads": 2,
+    "composition_operations": 1,
+    "composition_replays": 1,
+    "specialization_operations": 2,
+    "specialization_replays": 2,
+    "capsule_exports": 1,
+    "fresh_capsule_imports": 2,
+    "retries": 0,
+    "int_lift_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "both_target_footprints": [],
+    "both_target_direct_dependencies_exact": true,
+    "all_receipts_replay": true,
+    "fresh_import_evidence_unchanged": true,
+    "proof_terms_types_or_values_may_be_rendered": false
+  },
+  "stop_rule": "Any input mismatch, composition/specialization decline, receipt failure, dependency drift, nonempty footprint, replay change, or preexisting output stops without retry.",
+  "limitations": "These are closed Nat supports only; Int constructor lifting, exact Int.even_iff, decision reconstruction, Fibonacci, and the fact ledger remain unauthorized."
+}

@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-clean-outer-residual-composition-result",
+  "state": "declined-on-broad-source-recursive-inductive-before-support-publication",
+  "plan": "artifacts/autogenesis/int-fib-neg-clean-outer-residual-composition-plan-v1.json",
+  "decline": {
+    "stage": "outer-residual-composition-after-clean-natcast-support",
+    "class": "UnsupportedMissingDeclaration",
+    "name": "Lean.RArray",
+    "kind": "recursive-inductive",
+    "partial_kernel_published": false
+  },
+  "execution": {
+    "directory_creations": 1,
+    "driver_constructions": 1,
+    "focused_builds": 1,
+    "complete_invocations": 1,
+    "input_stream_reads": 3,
+    "composition_operations": 2,
+    "composition_replays": 1,
+    "support_submissions": 0,
+    "capsule_exports": 0,
+    "fresh_imports": 0,
+    "exact_target_submissions": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "output": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-outer-residual-clean-v1/root.ndjson",
+    "present": false
+  },
+  "authority": {
+    "support_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0
+  },
+  "diagnosis": "The residual source still names Int.fib, so its selected declaration closure imports the broad target-owned Fibonacci representation and reaches unsupported Lean.RArray before the tiny case proof can be reused.",
+  "next": "Rebuild the same constructor residual over a function parameter so its source closure cannot carry any Int.fib implementation."
+}

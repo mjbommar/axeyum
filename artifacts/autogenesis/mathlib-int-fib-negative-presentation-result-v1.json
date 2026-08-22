@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-target-owned-negative-fibonacci-presentation-result",
+  "state": "clean-definitional-presentation-rejected-on-definition-identity-contract",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-negative-presentation-plan-v1.json",
+    "sha256": "6701573545229186cbf7747bf84adbe6f2499a6b9ee854a95422108963c2bbdb",
+    "commit": "6deef5311c6b4007ed52a701dcd1ed495af13028"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-negative-presentation-v1.lean",
+    "sha256": "c5c58969037dcb95b8ab4b953446475f595726aebf0afa59fd0b44f8a04015fc"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-negative-presentation-v1-v1",
+    "manifest_sha256": "cbf29cddb3f002d802dc3f3ea9a9abbb5e0bb23a1ae46a66943479e653859c07",
+    "stream_sha256": "ee38fd2ff6e2427e349846e49ec603145d4f71bc1676bcfd8cd61bf061a088c0",
+    "stream_bytes": 376164,
+    "theorem_audit_sha256": "8df2dd7ad44458c3b319ac10209154cecc6b11ad35f4e1d8bf745c19d2495a12",
+    "definition_audit_sha256": "51f2b7e5276d5502299627ef777b5d0c1a9010ce88e224661878fb6551fa7abe",
+    "sealed": true
+  },
+  "observed": {
+    "definition": {
+      "name": "Int.fib",
+      "declaration_sha256": "0f6d661f551f49ff74a05124a452fed97d8fdb4aee7637a88ae68db208927360",
+      "planned_sha256": "8f0b6b257623d1257c8137da80d11104781e854045b1ac2f4e92b41e89bf5a46",
+      "planned_identity_matched": false
+    },
+    "theorem": {
+      "name": "Int.fib_neg_natCast_presentation",
+      "declaration_sha256": "798d978f52ee18f5cb219dae7727a8290ef1faefe9aa77fd1f9e358f58c40849",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": []
+    }
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit": 0,
+    "exporter_invocations": 1,
+    "exporter_exit": 0,
+    "importer_runs": 2,
+    "retries": 0
+  },
+  "diagnosis": "The theorem is a clean definitional proof, but the plan incorrectly used the official assumption-bearing Int.fib declaration identity as the expected identity of the target-owned representation. Exact compatibility with the admitted recurrence capsule remains unmeasured.",
+  "authority": {
+    "support_credit": 0,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Preregister one exact non-rendering declaration compatibility audit against the admitted recurrence capsule.",
+  "limitations": "Empty footprint and definitional proof do not authorize composition while the target declaration identity is unbound."
+}

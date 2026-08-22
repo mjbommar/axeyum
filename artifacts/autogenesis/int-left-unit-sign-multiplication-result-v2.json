@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-left-unit-sign-multiplication-result",
+  "state": "generic-laws-clean-specialized-int-instance-propext-bearing",
+  "plan": {
+    "path": "artifacts/autogenesis/int-left-unit-sign-multiplication-plan-v2.json",
+    "sha256": "33420cdbdd6086aa15728b2eb588b6f88ed487d482bbb1b73c9fae3ea0a129f9",
+    "commit": "371a4591639e3b6f7b4a28c12cd3dc72e9f3a4e2"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-left-unit-sign-multiplication-v2.lean",
+    "sha256": "3974c2c36db7fb1a3885e6e15886c5e0e263bea9ad121e9ccd07a964a226c859"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-left-unit-sign-multiplication-v2",
+    "stream_sha256": "40daff435c06fe3129087ce1901f787c45f4e8dc865af0ec30d07a8bb9268b27",
+    "stream_bytes": 2263275,
+    "audit_1_sha256": "a157f07358c8628e0eb3958f4401be45d9facec2468568eed9e6d1a3ce5d9d5e",
+    "audit_2_sha256": "bf570ae8553c4b929c16cd814d6fabfe911aacf85d44ab3b90c4acd38fd114b7"
+  },
+  "roots": [
+    {
+      "name": "Axeyum.Autogenesis.intOneMulV1",
+      "declaration_sha256": "b560e3cf6ab9c906bf4f6bcfb691bdb4225bb181fc50187ca8861ebc9a76af41",
+      "axiom_footprint": ["propext"]
+    },
+    {
+      "name": "Axeyum.Autogenesis.intNegOneMulV1",
+      "declaration_sha256": "53bc3bfa0fa7f452afdc001ba68e28c56b9c15e8d4f589c555adb2f64fe3ecbf",
+      "axiom_footprint": ["propext"]
+    }
+  ],
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit_status": 0,
+    "exporter_invocations": 2,
+    "importer_runs": 2,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "diagnosis": "The abstract one_mul and neg_mul declarations are clean, but applying their implicit algebra-instance arguments to Mathlib's Int commutative-ring instance reaches propext. Abstract-root cleanliness did not authorize specialized Int theorem credit.",
+  "authority": {
+    "support_credit": 0,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Prove both concrete Int laws by direct cases on the Int constructors under Mathlib.Data.Int.Basic, with no typeclass theorem dependency.",
+  "limitations": "Neither propext-bearing specialized theorem is accepted."
+}

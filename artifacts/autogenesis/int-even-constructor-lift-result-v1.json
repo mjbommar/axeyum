@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-constructor-lift-result",
+  "state": "source-reaches-final-unavailable-name",
+  "plan": "artifacts/autogenesis/int-even-constructor-lift-plan-v1.json",
+  "execution": {
+    "source_constructions": 1,
+    "compilations": 1,
+    "compile_exit": 1,
+    "retries": 0,
+    "exports": 0,
+    "ledger_writes": 0
+  },
+  "diagnostic": {
+    "line": 40,
+    "unknown_identifier": "neg_add_rev",
+    "obligations_before_failure": "all constructor, modulo, parity-case, and witness obligations elaborated"
+  },
+  "credit": "none; the source did not compile",
+  "next_boundary": "Preregister replacement of only the final generic negation-distribution name with narrow-import theorem Int.neg_add."
+}

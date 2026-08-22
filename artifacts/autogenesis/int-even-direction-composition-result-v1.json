@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-direction-composition-result",
+  "state": "both-directions-specialized-exported-and-reimported-empty-footprint",
+  "plan": "artifacts/autogenesis/int-even-direction-composition-plan-v1.json",
+  "input_sha256": {
+    "directions": "f530875c1fc21c3dccaddeddb0173b5c564701696c4830b6582841d1610cfa4e",
+    "arithmetic": "9850655508dde20f0fb79c09b4dfe830d7f57acf3c334a2da75b404b5c2a1748"
+  },
+  "composition_receipt_sha256": "16e0c79d9d9472992cb0f12db5de1fbe999893ffad94f09e251c9d5038ef129c",
+  "specialization_receipt_sha256": {
+    "even_to_mod_zero": "ea1b2fc1c270f1e42a1520d5ef6524569b1b36da554052c52d365b11c6505efe",
+    "mod_zero_to_even": "e0fea776d6b0897c71a6329114685dbff852f03889991d192c595070f38be289"
+  },
+  "targets": [
+    {
+      "name": "Axeyum.Autogenesis.intEvenToModTwoZeroClosedV1",
+      "declaration_sha256": "8a1714d3e77feeefd820edbb6ee021a2b384a04a88bdb3535abccaa74a71c4a2",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": [
+        "Axeyum.Autogenesis.intDoubleModTwoZeroClosedV1",
+        "Axeyum.Autogenesis.intEvenToModTwoZeroResidualV2"
+      ]
+    },
+    {
+      "name": "Axeyum.Autogenesis.intModTwoZeroToEvenClosedV1",
+      "declaration_sha256": "4b06fe434de396ec9fe1801c75191bf9100da4a06aac401856b3102e5c92469f",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": [
+        "Axeyum.Autogenesis.intHalfWitnessOfModTwoZeroClosedV1",
+        "Axeyum.Autogenesis.intModTwoZeroToEvenResidualV2"
+      ]
+    }
+  ],
+  "capsule": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-directions-closed-v1/roots.ndjson",
+    "bytes": 689880,
+    "sha256": "11e4f56e745c1708855d64ddf7fc256cd20e97391f222e0cb1e993b8e8cb74da",
+    "fresh_imports": 2,
+    "result_sha256": "fcc2d038c7bdf89723af214d63520dfbc98e50c61839631d5f2c12464a9ea185"
+  },
+  "execution": {
+    "complete_invocations": 1,
+    "input_stream_reads": 2,
+    "composition_operations": 1,
+    "composition_replays": 1,
+    "specialization_operations": 2,
+    "specialization_replays": 2,
+    "fresh_capsule_imports": 2,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Specialize the already-qualified two-direction Iff residual with these exact roots before any decision-instance work.",
+  "limitations": "The exact Int.even_iff wrapper, decision instance, Fibonacci theorem, and ledger mutation remain pending."
+}

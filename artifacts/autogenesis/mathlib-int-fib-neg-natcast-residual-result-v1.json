@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-parameterized-negative-fibonacci-residual-result",
+  "state": "source-stops-at-negative-presentation-binder-inference",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-neg-natcast-residual-plan-v1.json",
+    "sha256": "76790a5733dbc385bf432c0764b29ca93b6f594aaca1aee6aed7ce35042be852",
+    "commit": "ca603a6623fbdf844ef81d938252182df724b03b"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-neg-natcast-residual-v1.lean",
+    "sha256": "6ecf6749a336be47be43d82f730afab97025317eb8f3ee3c7d3eb051a93defe9"
+  },
+  "execution": {
+    "source_constructions": 1,
+    "compiler_invocations": 1,
+    "compiler_exit": 1,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "diagnostic": {
+    "location": "negativePresentation binder",
+    "cause": "Lean inferred the unannotated universally quantified n as Int from fibFn (-(n : Int)), then rejected parity n and natFib n, which require Nat",
+    "repair": "annotate n : Nat in both conditional presentation contracts; leave the theorem statement and proof body unchanged"
+  },
+  "authority": {
+    "residual_credit": 0,
+    "exact_target_credit": 0
+  },
+  "next_boundary": "Preregister V2 with only explicit natural-number binder annotations before constructing a corrected source.",
+  "limitations": "No export, kernel import, theorem submission, fact transition, or ledger write occurred."
+}

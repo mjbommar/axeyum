@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-outer-residual-result",
+  "state": "deterministic-residual-rejected-for-environment-contaminated-case-split",
+  "plan": "artifacts/autogenesis/int-fib-neg-outer-residual-plan-v1.json",
+  "evidence": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-outer-residual-v1/residual-1.ndjson", "bytes": 9844645, "sha256": "77c9709d58a51c644f3fed9256242bca2f17232a547aad3a917d8aaf7f2f5ea6", "exports_byte_identical": true, "root": "Axeyum.Autogenesis.intFibNegOuterResidualV1", "declaration_sha256": "184cc468bfe6dce1c3ead155b43e6c7f0d0fda23e78fe4a82c261ef9295b5d8a", "axiom_footprint": ["Classical.choice", "Lean.opaqueId", "Quot", "Quot.lift", "Quot.mk", "Quot.sound", "String.Internal.append", "propext"], "direct_theorem_dependencies": ["Eq.symm", "Int.eq_nat_or_neg"]},
+  "finding": "Int.eq_nat_or_neg was clean in the narrow dependency audit but its declaration closure in this broad imported module reaches assumptions; coverage-specific cleanliness cannot be transferred between streams.",
+  "authority": {"residual_credit": 0, "exact_target_submissions": 0, "ledger_writes": 0},
+  "next_boundary": "Replace only the helper theorem with direct Int constructor cases and state the negative branch over negSucc k exactly.",
+  "limitations": "Determinism does not overcome the nonempty footprint."
+}

@@ -70,6 +70,27 @@ SEALED_CAPSULE_CONTRACTS = {
         "target_theorem": "Int.fib_natCast",
         "receipt_sha256": "2ff124525a245094f2715ac2cca99915c023210d3eccde9721b71da21d4cfdfa",
     },
+    "F:ml430-int-fib-add-two-739358dd": {
+        "result_manifest": "artifacts/autogenesis/int-fib-add-two-goal-identity-result-v1.json",
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-exact-composition-v2/int-fib-add-two-1.ndjson",
+        "capsule_sha256": "0fbbb4d55ed862f7feb1b8efa3bf45eed24269067b3702c727d05e45c8947219",
+        "target_theorem": "Int.fib_add_two",
+        "receipt_sha256": "abccdebb1725d2853f204c342f9fd01625c70deefa41963618e41e1bfa2e6a1a",
+    },
+    "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d": {
+        "result_manifest": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-goal-identity-result-v1.json",
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-recurrence-corollary-composition-v3/int-fib-recurrence-corollary-1.ndjson",
+        "capsule_sha256": "d8823373479dce23213aa004b58e9e0c8912fd413b2cb29e52195639f57a7987",
+        "target_theorem": "Int.fib_eq_fib_add_two_sub_fib_add_one",
+        "receipt_sha256": "90360a5c12c827afcdcd77fc9b02ff2ef2868b74a71010dddc19d67de65fe276",
+    },
+    "F:ml430-int-fib-add-one-33f1b748": {
+        "result_manifest": "artifacts/autogenesis/mathlib-int-fib-add-one-goal-identity-result-v1.json",
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-one-composition-v1/int-fib-add-one.ndjson",
+        "capsule_sha256": "81fb760e78ee25d12fa7b78f8e2d84892809a36db8a4f8d9cc63fda6be66f27c",
+        "target_theorem": "Int.fib_add_one",
+        "receipt_sha256": "b90147a33567106afe6c5532246d5684637e7ef1f45d93c2fffec47949ee3d9c",
+    },
 }
 
 
@@ -324,12 +345,59 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             raise RegistryError(f"{label} exceeds the exact sealed-capsule scope")
         expected_manifest = (root / contract["result_manifest"]).resolve()
         manifest = json.loads(manifest_path.read_text())
-        if value["input_fact_id"] == "F:ml430-int-fib-natcast-d5886be4":
+        if value["input_fact_id"] in {
+            "F:ml430-int-fib-natcast-d5886be4",
+            "F:ml430-int-fib-add-two-739358dd",
+            "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
+            "F:ml430-int-fib-add-one-33f1b748",
+        }:
             theorem = manifest.get("theorem") or {}
             execution = manifest.get("execution") or {}
+            is_add_two = (
+                value["input_fact_id"] == "F:ml430-int-fib-add-two-739358dd"
+            )
+            is_corollary = (
+                value["input_fact_id"]
+                == "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d"
+            )
+            is_add_one = (
+                value["input_fact_id"] == "F:ml430-int-fib-add-one-33f1b748"
+            )
+            expected_dependencies = (
+                [
+                    "Axeyum.Autogenesis.fibAddTwo",
+                    "Axeyum.IntFib.castAdd",
+                    "Axeyum.IntFib.evenAdd",
+                    "Axeyum.IntFib.modCases",
+                    "Axeyum.IntFib.oddAdd",
+                    "Axeyum.IntFib.succOne",
+                    "Axeyum.IntFib.succZero",
+                    "Int.fib_add_two_residual",
+                ]
+                if is_add_two
+                else [
+                    "Axeyum.Autogenesis.intFibEqAddTwoSubAddOneResidualV2",
+                    "Int.add_neg_cancel_right",
+                    "Int.fib_add_two",
+                ]
+                if is_corollary
+                else [
+                    "Axeyum.Autogenesis.intFibAddOneResidualV3",
+                    "Int.add_comm",
+                    "Int.add_neg_cancel_right",
+                    "Int.fib_add_two",
+                ]
+                if is_add_one
+                else []
+            )
             if (
                 manifest_path != expected_manifest
-                or manifest.get("state") != "single-read-hash-only-identity-qualified"
+                or manifest.get("state")
+                != (
+                    "exact-goal-identity-bound-without-rendering"
+                    if is_add_two or is_corollary or is_add_one
+                    else "single-read-hash-only-identity-qualified"
+                )
                 or value["capsule_path"] != contract["capsule_path"]
                 or value["capsule_sha256"] != contract["capsule_sha256"]
                 or value["target_theorem"] != contract["target_theorem"]
@@ -338,10 +406,20 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
                 or theorem.get("canonical_declaration_sha256")
                 != value["declaration_sha256"]
                 or theorem.get("axiom_footprint") != []
-                or theorem.get("direct_theorem_dependencies") != []
+                or theorem.get("direct_theorem_dependencies")
+                != expected_dependencies
                 or execution.get("importer_runs") != 1
-                or execution.get("proof_bearing_stream_reads") != 1
-                or execution.get("theorem_submissions") != 0
+                or execution.get(
+                    "stream_reads"
+                    if is_add_two or is_corollary or is_add_one
+                    else "proof_bearing_stream_reads"
+                )
+                != 1
+                or (
+                    execution.get("theorem_submissions") != 0
+                    if not is_add_two and not is_corollary and not is_add_one
+                    else execution.get("ledger_writes") != 0
+                )
                 or execution.get("retries") != 0
                 or value["receipt_sha256"] != contract["receipt_sha256"]
             ):
@@ -351,7 +429,13 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
         theorem = manifest.get("target") or {}
         execution = manifest.get("execution") or {}
         if (
-            value["input_fact_id"] != "F:ml430-int-fib-natcast-d5886be4"
+            value["input_fact_id"]
+            not in {
+                "F:ml430-int-fib-natcast-d5886be4",
+                "F:ml430-int-fib-add-two-739358dd",
+                "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
+                "F:ml430-int-fib-add-one-33f1b748",
+            }
             and (
                 manifest_path != expected_manifest
                 or manifest.get("state")

@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-parameterized-residual-result",
+  "state": "declined-before-source-construction-equality-direction-mismatch",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-add-one-residual-plan-v2.json",
+    "sha256": "1b3ae325e6f2979b638d807b019bf216af4e4919f3b54dc0066ce2b0cedc39ab",
+    "commit": "c1b1565c5be87d6c5433a976bc2165e4f845ff03"
+  },
+  "diagnosis": "Transporting the recurrence under addition of -fibFn n, commuting the recurrence sum, and applying right cancellation naturally proves fibFn (n+2) - fibFn n = fibFn (n+1). The ledger target has the reverse orientation, so the exact residual dependency set must include Eq.symm.",
+  "execution": {
+    "source_constructions": 0,
+    "compiler_invocations": 0,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "residual_credit": 0,
+    "exact_target_credit": 0
+  },
+  "next_boundary": "Preregister V3 with Eq.symm added to the exact dependency contract before constructing source.",
+  "limitations": "This is a fail-closed theorem-direction diagnosis. No theorem source exists and no proof-bearing tool was invoked."
+}

@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-function-residual-clean-composition-plan",
+  "state": "preregistered-scoped-line-count-allowance-before-rebuild",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-fib-neg-function-residual-clean-composition-driver-result-v2.json",
+    "required_state": "driver-build-stopped-on-scoped-line-count-before-stream-reread"
+  },
+  "correction": {
+    "allowed_code_change": "add #[allow(clippy::too_many_lines)] to run only",
+    "proof_route_changed": false,
+    "target_leaf_set_changed": false,
+    "input_or_output_changed": false
+  },
+  "driver": "crates/axeyum-lean-import/examples/int_fib_neg_function_residual_clean_composition.rs",
+  "inputs_and_output": "unchanged from artifacts/autogenesis/int-fib-neg-function-residual-clean-composition-plan-v2.json",
+  "budget": {
+    "driver_edits": 1,
+    "focused_builds": 1,
+    "complete_invocations": 1,
+    "input_stream_reads": 3,
+    "ordinary_compositions": 1,
+    "ordinary_replays": 1,
+    "target_leaf_compositions": 1,
+    "target_leaf_replays": 1,
+    "support_submissions": 1,
+    "capsule_exports": 1,
+    "fresh_imports": 2,
+    "exact_target_submissions": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "focused_clippy_exit": 0,
+    "root": "Axeyum.Autogenesis.intFibNegFunctionResidualV1",
+    "target_theorem_leaves": [
+      "Int.even_iff"
+    ],
+    "axiom_footprint": [],
+    "fresh_import_evidence_unchanged": true
+  },
+  "stop_rule": "Any build, input, target-leaf, receipt, footprint, replay, or output mismatch stops without retry or theorem/ledger authority.",
+  "output_result": "artifacts/autogenesis/int-fib-neg-function-residual-clean-composition-result-v3.json",
+  "limitations": "The clean generic residual alone proves neither branch and grants no selected-fact credit."
+}

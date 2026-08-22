@@ -197,6 +197,7 @@ fn int_footprints_name_only_what_a_declaration_actually_uses() {
         "Int.add_comm",
         "Int.add_neg",
         "Int.add_assoc",
+        "Int.add_neg_cancel_right",
         "Int.mul_assoc",
         "Int.left_distrib",
         "Int.add_le_add",

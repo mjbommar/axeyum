@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-recurrence-corollary-admission-result-v2",
+  "state": "execution-replay-rejected-before-durable-intent",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-admission-plan-v2.json",
+    "execution_commit": "e1e9a6d9b50a5dbd5ae8c80d5791a64bdbd9aa2a"
+  },
+  "external_root": "/nas3/data/axeyum/autogenesis/admissions/2f9dd5bef-int-fib-recurrence-corollary-v1",
+  "execution": {
+    "fault_flag_invocations": 1,
+    "exit": 1,
+    "diagnostic": "typed operation execution replay failed: execution receipt is stale or mutated",
+    "durable_intents": 0,
+    "authoritative_ledger_writes": 0,
+    "recovery_invocations": 0
+  },
+  "diagnosis": "The receipt is correctly bound to clean registration commit 2f9dd5bef, while committing the V2 plan advanced the executing checkout to e1e9a6d9b. The apply protocol replays that Git identity and refused the descendant checkout.",
+  "safety": {
+    "before_fact_sha256": "aeb5bcc29621ce36f402eb1fc316771d29af39dceef0910535b979480801c9f8",
+    "fact_unchanged_byte_for_byte": true,
+    "fact_epistemic_status": "open"
+  },
+  "next_boundary": "Run the fixed transaction from a dedicated clean worktree at exact registration commit 2f9dd5bef, commit only the resulting fact there, and integrate that commit forward.",
+  "limitations": "No crash boundary was reached, no intent exists, and no theorem admission or ledger transition receives credit."
+}

@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-native-neg-one-raw-power-result",
+  "state": "one-power-not-definitionally-normalized",
+  "plan": {
+    "path": "artifacts/autogenesis/int-neg-one-pow-raw-plan-v1.json",
+    "sha256": "4653fb627de1a3f6e9cf30a2d859255c0e6464d9d92d1f49011033b57dd02086",
+    "commit": "a34fe853bff1fef8bffff616bee3d135b2f952ac"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-neg-one-pow-raw-v1.lean",
+    "sha256": "dee427bc1c7e5bbbdf6458596faf886a863e7280b944be50818badaea0da32a1"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-neg-one-pow-raw-v1",
+    "compiler_exit_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "compiler_stdout_sha256": "3f8bddb4a3d1c668cfc8049130a343fb7460f4b750d0e328d96e60cfd3bb7ca0"
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit_status": 1,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "diagnosis": "The negative-power definition reduces to parity branches containing Int.ofNat (1^k) or Int.negOfNat (1^k). Nat exponentiation at variable k is not definitionally normalized to one.",
+  "authority": {
+    "support_credit": 0,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Prove 1^k = 1 by structural Nat recursion and transport it through both definitional Int power branches.",
+  "limitations": "The failed source grants no support authority."
+}

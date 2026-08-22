@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-direction-result",
+  "state": "official-forward-candidate-rejected-before-source-construction",
+  "plan": "artifacts/autogenesis/int-even-direction-plan-v1.json",
+  "candidate_audit": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-decision-root-audit-v1/mul-emod-right-audit.json", "sha256": "93114d98afa2abe78b6c55e7b50f6eeb740b1dfbfd1080a148bd1c8021d2330e", "exit_status": 0, "root": "Int.mul_emod_right", "declaration_sha256": "e098f9ae78ecff6dfe2195456cdd2f79dc653b47bf1090bd162b1a6c57d9d78d", "axiom_footprint": ["propext"], "direct_theorem_dependencies": ["Int.mul_comm", "Int.mul_emod_left", "congrArg"]},
+  "decision": "Reject official Int.mul_emod_right and do not construct the V1 direction source. Factor forward over an explicit double-mod-two-zero contract and backward over an explicit half witness.",
+  "execution": {"existing_stream_reads": 1, "candidate_audits": 1, "source_constructions": 0, "compilations": 0, "exports": 0, "exact_target_submissions": 0, "ledger_writes": 0, "retries": 0},
+  "authority": {"direction_credit": 0, "ledger_writes": 0},
+  "limitations": "No parity direction theorem is established."
+}

@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-exact-int-fib-neg-natcast-composition-result",
+  "state": "declined-before-bridge-elaboration-at-module-search-path",
+  "plan": "artifacts/autogenesis/int-fib-neg-natcast-exact-composition-plan-v1.json",
+  "source": "artifacts/autogenesis/sources/int-fib-neg-natcast-exact-bridge-v1.lean",
+  "execution": {
+    "initial_source_transport_to_s5_tmp": "failed-before-compilation-due-to-host-storage",
+    "shared_volume_source_transport": "accepted",
+    "residual_module_compilations": 1,
+    "bridge_module_compilations": 1,
+    "bridge_exports": 0,
+    "composition_operations": 0,
+    "target_submissions": 0,
+    "ledger_writes": 0
+  },
+  "decline": {
+    "stage": "bridge-import-resolution-before-elaboration",
+    "class": "LeanModuleSearchPath",
+    "message": "unknown module prefix 'AxeyumIntFibNegNatcastResidualV2'",
+    "proof_source_rejected": false,
+    "partial_kernel_published": false
+  },
+  "next_boundary": "Preregister only an explicit LEAN_PATH containing the already compiled residual module; keep the bridge theorem text, inputs, proof route, and all target authority unchanged.",
+  "limitations": "No bridge theorem, export, composition, target theorem, fact transition, evaluation, or ledger credit is established."
+}

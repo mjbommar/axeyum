@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-clean-instance-composition-result",
+  "state": "declined-on-clean-natcast-target-leaf-type-shape",
+  "plan": "artifacts/autogenesis/int-fib-neg-clean-instance-composition-plan-v3.json",
+  "decline": {
+    "stage": "official-target-composition-after-clean-support-composition",
+    "class": "TypeShapeMismatch",
+    "name": "Int.fib_neg_natCast",
+    "source_sha256": "4687bfc14ad5ee51e88f25f65cdfac1719a0f8a862efdcb5acf19ffb9e7bc9c3",
+    "target_sha256": "385a8db32311903d2e3fd60ccf3b33bde361ec0e9fc046f97cfa2b7834e7c56d",
+    "partial_kernel_published": false
+  },
+  "execution": {
+    "directory_creations": 1,
+    "driver_constructions": 1,
+    "focused_builds": 1,
+    "complete_invocations": 1,
+    "input_stream_reads": 3,
+    "support_compositions": 1,
+    "support_replays": 1,
+    "target_leaf_compositions": 1,
+    "target_leaf_replays": 0,
+    "target_submissions": 0,
+    "fresh_target_imports": 0,
+    "capsule_writes": 0,
+    "ledger_writes": 0,
+    "retries": 0
+  },
+  "output": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-clean-v1/root.ndjson",
+    "present": false
+  },
+  "authority": {
+    "support_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0
+  },
+  "decision": "Do not retry the official proof closure. Reuse the already exported target-owned constructor residual whose Int.fib representation matches the clean natCast construction, and qualify it inside the clean decision kernel before constructing either branch.",
+  "limitations": "The decline identifies a nominal same-name theorem type-shape incompatibility; it establishes no exact Int.fib_neg theorem."
+}

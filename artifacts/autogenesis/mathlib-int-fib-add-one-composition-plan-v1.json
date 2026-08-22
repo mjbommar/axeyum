@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-exact-theorem-composition-plan",
+  "state": "preregistered-before-driver-implementation",
+  "target": {
+    "fact_id": "F:ml430-int-fib-add-one-33f1b748",
+    "theorem": "Int.fib_add_one",
+    "statement": "forall n : Int, Int.fib (n+1) = Int.fib (n+2) - Int.fib n"
+  },
+  "inputs": [
+    {
+      "role": "exact Fibonacci definition and admitted recurrence",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-exact-composition-v2/int-fib-add-two-1.ndjson",
+      "sha256": "0fbbb4d55ed862f7feb1b8efa3bf45eed24269067b3702c727d05e45c8947219",
+      "roots": [
+        "Int.fib",
+        "Int.fib_add_two"
+      ]
+    },
+    {
+      "role": "native integer commutativity and right cancellation",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-add-comm-cancel-right-native-v1/int-add-comm-cancel-right.ndjson",
+      "sha256": "42683af8480ea4d7bef42b32ecab3f3d43a2228c8a30f8b73417bbda6eca4fa2",
+      "roots": [
+        "Int.add_comm",
+        "Int.add_neg_cancel_right"
+      ]
+    },
+    {
+      "role": "parameterized recurrence rearrangement",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-one-residual-v3-v1/int-fib-add-one-residual.ndjson",
+      "sha256": "1705049d25be1b04447d7cd02b08f02c18d7f11e62dd500ad5f980be352bd65b",
+      "roots": [
+        "Axeyum.Autogenesis.intFibAddOneResidualV3"
+      ]
+    }
+  ],
+  "driver": "crates/axeyum-lean-import/examples/int_fib_add_one_composition.rs",
+  "method": "use the recurrence capsule as the base, compose the residual and native pair with replay-checked receipts, assert the target remains absent, specialize the residual with Int.fib, Int.fib_add_two, Int.add_comm, and Int.add_neg_cancel_right, replay the specialization receipt, require exact dependency and empty-footprint evidence, then root-export and freshly import twice",
+  "budget": {
+    "driver_implementations": 1,
+    "complete_invocations": 1,
+    "target_submissions": 1,
+    "exports": 1,
+    "fresh_imports": 2,
+    "retries": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "all_input_hashes_must_match": true,
+    "all_input_roots_must_have_empty_footprints": true,
+    "target_must_be_absent_before_specialization": true,
+    "specialization_receipt_must_replay": true,
+    "target_axiom_footprint_must_be_empty": true,
+    "expected_direct_dependencies": [
+      "Axeyum.Autogenesis.intFibAddOneResidualV3",
+      "Int.add_comm",
+      "Int.add_neg_cancel_right",
+      "Int.fib_add_two"
+    ],
+    "target_type_must_match_fact_statement": true,
+    "two_fresh_imports_must_preserve_evidence": true
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-add-one-composition-result-v1.json",
+  "next_on_accept": "bind the non-rendered canonical target type identity before separately registering any ledger admission operation",
+  "limitations": "Even a successful exact capsule receives zero ledger authority until a separately preregistered operation validates goal identity and performs crash-safe admission."
+}

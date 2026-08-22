@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-arithmetic-composition-result",
+  "state": "two-closed-int-targets-specialized-exported-and-reimported-empty-footprint",
+  "plan": "artifacts/autogenesis/int-even-arithmetic-composition-plan-v1.json",
+  "input_sha256": {
+    "lifts": "a00d0b93b55500c04928939ea2ff00c4d0d35b4caa0e0fa96fefeebf1be3f3c6",
+    "closed_nat": "e2593bac01c81881c4fcace0133f93c7bdb5fd9884e2aed035083f1af9bfb77d",
+    "parity": "0e310823ba37adfbd9087c0da2f85ad57261228d601d9388800cf069b5b2ce82"
+  },
+  "composition_receipt_sha256": {
+    "closed_nat": "402491cbd2cef9a1242a6821f877cb25b455ecb7a82cf81a7faee8d6703616ac",
+    "parity": "bb031e2329bcbfabcd4600120c31a17a412795cd081de7caab0342b79b1662fd"
+  },
+  "specialization_receipt_sha256": {
+    "double_mod_zero": "0cb15aa8a1fda3e469f62cc5442b71cc096a4d8d2ef340a1851a825ea36347a8",
+    "half_witness": "de676654be2ecb546aee3d9678ccdd5cd2d33649121f99df6cfaa5b6e2d383d8"
+  },
+  "targets": [
+    {
+      "name": "Axeyum.Autogenesis.intDoubleModTwoZeroClosedV1",
+      "declaration_sha256": "6d6f14534c6332800ef1f3541f1cebe74110179fa397a7e62de7e3d659e9bfef",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": [
+        "Axeyum.Autogenesis.intDoubleModTwoZeroLiftV1",
+        "Axeyum.Autogenesis.natDoubleModTwoZeroClosedV1",
+        "Axeyum.IntFib.succOne"
+      ]
+    },
+    {
+      "name": "Axeyum.Autogenesis.intHalfWitnessOfModTwoZeroClosedV1",
+      "declaration_sha256": "107830370bfb0bb08339413b921d414876e3462f3a2a9b88e11463baf66bdf53",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": [
+        "Axeyum.Autogenesis.intHalfWitnessOfModTwoZeroLiftV1",
+        "Axeyum.Autogenesis.natHalfWitnessOfModTwoZeroClosedV1",
+        "Axeyum.IntFib.modCases",
+        "Axeyum.IntFib.succZero"
+      ]
+    }
+  ],
+  "capsule": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-arithmetic-closed-v1/roots.ndjson",
+    "bytes": 683437,
+    "sha256": "9850655508dde20f0fb79c09b4dfe830d7f57acf3c334a2da75b404b5c2a1748",
+    "fresh_imports": 2,
+    "result_sha256": "58fe6cc3790e104a1f1d2551a8483ad66a690d2e0496858744a3e0cfacc839fe"
+  },
+  "execution": {
+    "complete_invocations": 1,
+    "input_stream_reads": 3,
+    "composition_operations": 2,
+    "composition_replays": 2,
+    "specialization_operations": 2,
+    "specialization_replays": 2,
+    "fresh_capsule_imports": 2,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Preregister exact specialization of both qualified Even direction residuals with these two closed integer premises.",
+  "limitations": "Exact directions, Int.even_iff, decision reconstruction, Fibonacci, and ledger mutation remain pending."
+}

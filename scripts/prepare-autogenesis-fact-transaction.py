@@ -445,10 +445,55 @@ def build_authoritative_transaction(
             operation["id"]
             == "authoritative-mathlib-int-fib-natcast-kernel-capsule-v1"
         )
-        expected_dependencies = [] if is_int_fib_natcast else None
-        expected_fresh_imports = 2 if is_int_fib_natcast else 4
-        expected_reconstructions = 1 if is_int_fib_natcast else 2
-        expected_submissions = 1 if is_int_fib_natcast else 2
+        is_int_fib_add_two = (
+            operation["id"]
+            == "authoritative-mathlib-int-fib-add-two-kernel-capsule-v1"
+        )
+        is_int_fib_recurrence_corollary = (
+            operation["id"]
+            == "authoritative-mathlib-int-fib-recurrence-corollary-kernel-capsule-v1"
+        )
+        is_int_fib_add_one = (
+            operation["id"]
+            == "authoritative-mathlib-int-fib-add-one-kernel-capsule-v1"
+        )
+        expected_dependencies = (
+            []
+            if is_int_fib_natcast
+            else [
+                "Axeyum.Autogenesis.fibAddTwo",
+                "Axeyum.IntFib.castAdd",
+                "Axeyum.IntFib.evenAdd",
+                "Axeyum.IntFib.modCases",
+                "Axeyum.IntFib.oddAdd",
+                "Axeyum.IntFib.succOne",
+                "Axeyum.IntFib.succZero",
+                "Int.fib_add_two_residual",
+            ]
+            if is_int_fib_add_two
+            else [
+                "Axeyum.Autogenesis.intFibEqAddTwoSubAddOneResidualV2",
+                "Int.add_neg_cancel_right",
+                "Int.fib_add_two",
+            ]
+            if is_int_fib_recurrence_corollary
+            else [
+                "Axeyum.Autogenesis.intFibAddOneResidualV3",
+                "Int.add_comm",
+                "Int.add_neg_cancel_right",
+                "Int.fib_add_two",
+            ]
+            if is_int_fib_add_one
+            else None
+        )
+        is_single_construction = (
+            is_int_fib_natcast
+            or is_int_fib_recurrence_corollary
+            or is_int_fib_add_one
+        )
+        expected_fresh_imports = 2 if is_single_construction else 4
+        expected_reconstructions = 1 if is_single_construction else 2
+        expected_submissions = 1 if is_single_construction else 2
         if (
             identity.get("formal_statement_sha256") != expected_statement_sha
             or identity.get("receipt_sha256") != executor["receipt_sha256"]
@@ -465,6 +510,9 @@ def build_authoritative_transaction(
             or (
                 dependencies != expected_dependencies
                 if is_int_fib_natcast
+                or is_int_fib_add_two
+                or is_int_fib_recurrence_corollary
+                or is_int_fib_add_one
                 else not dependencies
             )
             or len(dependencies) != len(set(dependencies))
@@ -499,6 +547,33 @@ def build_authoritative_transaction(
                 "immutable capsule and committed identity manifest and requires its "
                 "exact theorem identity, two fresh imports, empty axiom footprint, "
                 "and empty direct theorem dependency set"
+            )
+        elif is_int_fib_add_two:
+            result_description = (
+                "eight-root-composed axiom-free sealed integer Fibonacci recurrence capsule"
+            )
+            replay_description = (
+                "immutable capsule and committed identity manifest and requires its "
+                "exact theorem identity, four fresh imports, empty axiom footprint, "
+                "and eight named direct theorem dependencies"
+            )
+        elif is_int_fib_recurrence_corollary:
+            result_description = (
+                "three-root-composed axiom-free sealed integer Fibonacci recurrence corollary capsule"
+            )
+            replay_description = (
+                "immutable capsule and committed identity manifest and requires its "
+                "exact theorem identity, two fresh imports, empty axiom footprint, "
+                "and three named direct theorem dependencies"
+            )
+        elif is_int_fib_add_one:
+            result_description = (
+                "four-root-composed axiom-free sealed integer Fibonacci add-one capsule"
+            )
+            replay_description = (
+                "immutable capsule and committed identity manifest and requires its "
+                "exact theorem identity, two fresh imports, empty axiom footprint, "
+                "and four named direct theorem dependencies"
             )
         else:
             result_description = (

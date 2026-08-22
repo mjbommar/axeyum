@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-clean-instance-composition-driver-result",
+  "state": "driver-builds-clippy-clean-before-stream-access",
+  "plan": "artifacts/autogenesis/int-fib-neg-clean-instance-composition-plan-v3.json",
+  "driver": "crates/axeyum-lean-import/examples/int_fib_neg_clean_instance_composition.rs",
+  "focused_build": {
+    "command": "cargo clippy -p axeyum-lean-import --example int_fib_neg_clean_instance_composition -- -D warnings",
+    "exit": 0
+  },
+  "execution": {
+    "directory_creations": 1,
+    "input_stream_reads": 0,
+    "support_compositions": 0,
+    "target_leaf_compositions": 0,
+    "target_submissions": 0,
+    "capsule_writes": 0,
+    "ledger_writes": 0
+  },
+  "credit": "driver assurance only",
+  "next_boundary": "Run exactly one checked composition against the three hash-bound inputs and fail-if-present output."
+}

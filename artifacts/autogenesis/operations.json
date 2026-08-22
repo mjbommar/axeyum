@@ -584,6 +584,145 @@
         "axiom_footprint_policy": "must-be-empty",
         "axiom_footprint": []
       }
+    },
+    {
+      "id": "authoritative-mathlib-int-fib-add-two-kernel-capsule-v1",
+      "scope": "authoritative",
+      "reviewed_gate_mentions": [
+        "check-autogenesis-int-fib-add-two-capsule.py",
+        "check-autogenesis-int-fib-natcast-admission-plan.py",
+        "validate-autogenesis-operations.py"
+      ],
+      "applicability": {
+        "fact_ids": ["F:ml430-int-fib-add-two-739358dd"],
+        "formal_languages": ["lean4-surface"],
+        "fragments": ["Int"]
+      },
+      "producer": {
+        "operation": "eight-root-integer-fibonacci-recurrence-composition-v1",
+        "implementation": "crates/axeyum-lean-import/examples/int_fib_add_two_composition.rs",
+        "input_kind": "axeyum-checked-theorem-slices",
+        "output_kind": "axeyum-sealed-kernel-theorem-capsule"
+      },
+      "checker": {
+        "operation": "axeyum-lean-import/sealed-int-fib-add-two-capsule-receipt-v1",
+        "implementation": "scripts/check-autogenesis-int-fib-add-two-capsule.py",
+        "input_kind": "axeyum-sealed-kernel-theorem-capsule",
+        "output_kind": "axeyum-checked-sealed-kernel-capsule-receipt-v1"
+      },
+      "executor": {
+        "driver": "axeyum-lean-import/sealed-kernel-capsule-v1",
+        "implementation": "scripts/execute-autogenesis-operation.py",
+        "input_fact_id": "F:ml430-int-fib-add-two-739358dd",
+        "result_manifest": "artifacts/autogenesis/int-fib-add-two-goal-identity-result-v1.json",
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-exact-composition-v2/int-fib-add-two-1.ndjson",
+        "capsule_sha256": "0fbbb4d55ed862f7feb1b8efa3bf45eed24269067b3702c727d05e45c8947219",
+        "target_theorem": "Int.fib_add_two",
+        "goal_sha256": "acd1e0af4faea9717102d1a977fa510295245969d95f86f64cbfcdacd33f3508",
+        "declaration_sha256": "cd1612aa68107d4b35b842f4ad2798f07d15256462d49236b8d34ab852de805f",
+        "receipt_sha256": "abccdebb1725d2853f204c342f9fd01625c70deefa41963618e41e1bfa2e6a1a",
+        "timeout_seconds": 120,
+        "expected_evidence_label": "kernel-term-mathlib-int-fib-add-two-capsule-axiom-free"
+      },
+      "admission": {
+        "epistemic_status": "proved",
+        "proof_route": "kernel-lean",
+        "evidence_kind": "kernel-term",
+        "axiom_footprint_policy": "must-be-empty",
+        "axiom_footprint": []
+      }
+    },
+    {
+      "id": "authoritative-mathlib-int-fib-recurrence-corollary-kernel-capsule-v1",
+      "scope": "authoritative",
+      "reviewed_gate_mentions": [
+        "check-autogenesis-int-fib-recurrence-corollary-capsule.py",
+        "validate-autogenesis-operations.py"
+      ],
+      "applicability": {
+        "fact_ids": ["F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d"],
+        "formal_languages": ["lean4-surface"],
+        "fragments": ["Int"]
+      },
+      "producer": {
+        "operation": "three-root-integer-fibonacci-recurrence-corollary-composition-v1",
+        "implementation": "crates/axeyum-lean-import/examples/int_fib_recurrence_corollary_composition.rs",
+        "input_kind": "axeyum-checked-theorem-slices",
+        "output_kind": "axeyum-sealed-kernel-theorem-capsule"
+      },
+      "checker": {
+        "operation": "axeyum-lean-import/sealed-int-fib-recurrence-corollary-capsule-receipt-v1",
+        "implementation": "scripts/check-autogenesis-int-fib-recurrence-corollary-capsule.py",
+        "input_kind": "axeyum-sealed-kernel-theorem-capsule",
+        "output_kind": "axeyum-checked-sealed-kernel-capsule-receipt-v1"
+      },
+      "executor": {
+        "driver": "axeyum-lean-import/sealed-kernel-capsule-v1",
+        "implementation": "scripts/execute-autogenesis-operation.py",
+        "input_fact_id": "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
+        "result_manifest": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-goal-identity-result-v1.json",
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-recurrence-corollary-composition-v3/int-fib-recurrence-corollary-1.ndjson",
+        "capsule_sha256": "d8823373479dce23213aa004b58e9e0c8912fd413b2cb29e52195639f57a7987",
+        "target_theorem": "Int.fib_eq_fib_add_two_sub_fib_add_one",
+        "goal_sha256": "2295addae4552672b3f69a9a489c9173deddc7e68c74cfa12429490fffc825ad",
+        "declaration_sha256": "095a25341329591091b618d64fbc2f249ed3d33337bf06e499d0c9a10f436a93",
+        "receipt_sha256": "90360a5c12c827afcdcd77fc9b02ff2ef2868b74a71010dddc19d67de65fe276",
+        "timeout_seconds": 120,
+        "expected_evidence_label": "kernel-term-mathlib-int-fib-recurrence-corollary-capsule-axiom-free"
+      },
+      "admission": {
+        "epistemic_status": "proved",
+        "proof_route": "kernel-lean",
+        "evidence_kind": "kernel-term",
+        "axiom_footprint_policy": "must-be-empty",
+        "axiom_footprint": []
+      }
+    },
+    {
+      "id": "authoritative-mathlib-int-fib-add-one-kernel-capsule-v1",
+      "scope": "authoritative",
+      "reviewed_gate_mentions": [
+        "check-autogenesis-int-fib-add-one-capsule.py",
+        "validate-autogenesis-operations.py"
+      ],
+      "applicability": {
+        "fact_ids": ["F:ml430-int-fib-add-one-33f1b748"],
+        "formal_languages": ["lean4-surface"],
+        "fragments": ["Int"]
+      },
+      "producer": {
+        "operation": "four-root-integer-fibonacci-add-one-composition-v1",
+        "implementation": "crates/axeyum-lean-import/examples/int_fib_add_one_composition.rs",
+        "input_kind": "axeyum-checked-theorem-slices",
+        "output_kind": "axeyum-sealed-kernel-theorem-capsule"
+      },
+      "checker": {
+        "operation": "axeyum-lean-import/sealed-int-fib-add-one-capsule-receipt-v1",
+        "implementation": "scripts/check-autogenesis-int-fib-add-one-capsule.py",
+        "input_kind": "axeyum-sealed-kernel-theorem-capsule",
+        "output_kind": "axeyum-checked-sealed-kernel-capsule-receipt-v1"
+      },
+      "executor": {
+        "driver": "axeyum-lean-import/sealed-kernel-capsule-v1",
+        "implementation": "scripts/execute-autogenesis-operation.py",
+        "input_fact_id": "F:ml430-int-fib-add-one-33f1b748",
+        "result_manifest": "artifacts/autogenesis/mathlib-int-fib-add-one-goal-identity-result-v1.json",
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-one-composition-v1/int-fib-add-one.ndjson",
+        "capsule_sha256": "81fb760e78ee25d12fa7b78f8e2d84892809a36db8a4f8d9cc63fda6be66f27c",
+        "target_theorem": "Int.fib_add_one",
+        "goal_sha256": "b9c99a22010f3a1e749e9647604da9107259f8ed6bd3010a2520778efcff41c6",
+        "declaration_sha256": "2ee4a2c5dbea36f73b7fea51b74d134e75630e3f860c033720a7e679cabfb5a7",
+        "receipt_sha256": "b90147a33567106afe6c5532246d5684637e7ef1f45d93c2fffec47949ee3d9c",
+        "timeout_seconds": 120,
+        "expected_evidence_label": "kernel-term-mathlib-int-fib-add-one-capsule-axiom-free"
+      },
+      "admission": {
+        "epistemic_status": "proved",
+        "proof_route": "kernel-lean",
+        "evidence_kind": "kernel-term",
+        "axiom_footprint_policy": "must-be-empty",
+        "axiom_footprint": []
+      }
     }
   ]
 }

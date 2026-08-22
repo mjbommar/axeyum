@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-function-residual-result",
+  "state": "stopped-before-elaboration-on-source-outside-project-root",
+  "plan": "artifacts/autogenesis/int-fib-neg-function-residual-plan-v1.json",
+  "sealed_source": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-function-residual-v1/IntFibNegFunctionResidualV1.lean",
+    "bytes": 617,
+    "sha256": "379e24e9e5045d22ea4ac7bf184f738c160c14b7739ce5a73f864dc5cf5ed116"
+  },
+  "decline": {
+    "stage": "lean-project-root-preflight",
+    "message": "input file must be contained in root directory",
+    "elaboration_started": false
+  },
+  "execution": {
+    "directory_creations": 1,
+    "source_constructions": 1,
+    "module_builds": 0,
+    "exports": 0,
+    "closure_audits": 0,
+    "retries": 0,
+    "composition_operations": 0,
+    "exact_target_submissions": 0,
+    "ledger_writes": 0
+  },
+  "outputs": {
+    "olean_present": false,
+    "root_1_present": false,
+    "root_2_present": false
+  },
+  "authority": {
+    "residual_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0
+  },
+  "next": "Freeze staging of the unchanged sealed source under the pinned Mathlib project root before one V2 build."
+}

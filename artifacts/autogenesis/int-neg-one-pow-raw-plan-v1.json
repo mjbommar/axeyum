@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-native-neg-one-raw-power-plan",
+  "state": "preregistered-before-definitional-source",
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-neg-one-pow-raw-v1.lean",
+    "state_at_preregistration": "absent"
+  },
+  "root": {
+    "name": "Axeyum.Autogenesis.intNegOnePowRawV1",
+    "statement": "forall k : Nat, (-1 : Int)^k = if k % 2 = 0 then 1 else -1",
+    "proof": "rfl"
+  },
+  "environment": {
+    "host": "s5",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean_version": "4.30.0",
+    "module": "AxeyumIntNegOnePowRawV1",
+    "module_output": ".lake/build/lib/lean/AxeyumIntNegOnePowRawV1.olean"
+  },
+  "budget": {
+    "source_constructions": 1,
+    "compiler_invocations": 1,
+    "exporter_invocations": 2,
+    "importer_runs": 2,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "compiler_must_accept": true,
+    "two_exports_must_be_byte_identical": true,
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": []
+  },
+  "next_on_accept": "construct a parameterized parity-flip bridge from the raw exponent presentation and the three clean modulo supports",
+  "output": "artifacts/autogenesis/int-neg-one-pow-raw-result-v1.json",
+  "limitations": "The raw exponent presentation still needs the successor-parity bridge before it matches Int.fib_neg_natCast."
+}

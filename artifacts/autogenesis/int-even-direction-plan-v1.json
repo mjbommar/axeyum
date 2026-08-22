@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-direction-plan",
+  "state": "preregistered-before-clean-candidate-audit-or-source-construction",
+  "predecessor": {"path": "artifacts/autogenesis/int-even-iff-residual-result-v1.json", "required_state": "two-direction-residual-qualified-empty-footprint"},
+  "forward": {
+    "goal": "forall n : Int, Even n -> n % 2 = 0",
+    "route": "destructure Even witness n = m + m, normalize to a multiple of two, and use Int.mul_emod_right only if its exact root footprint is empty",
+    "candidate_audit_root": "Int.mul_emod_right"
+  },
+  "backward": {
+    "goal": "forall n : Int, n % 2 = 0 -> Even n",
+    "route": "obtain an explicit quotient witness n = 2*q from Euclidean division at positive divisor two, then return q as the Even witness",
+    "prohibited": ["official Int.even_iff", "private simp proof", "Classical.choice"]
+  },
+  "sequence": ["audit Int.mul_emod_right once in the existing bounded stream", "construct parameterized forward/backward source using only accepted arithmetic contracts", "qualify both direction roots independently before exact residual specialization"],
+  "budget": {"existing_stream_reads": 1, "candidate_audits": 1, "source_constructions": 1, "compilations": 1, "exports": 2, "direction_footprint_audits": 1, "exact_target_submissions": 0, "retries": 0, "ledger_writes": 0},
+  "acceptance": {"both_direction_footprints": [], "proof_terms_types_or_values_may_be_rendered": false},
+  "output": "artifacts/autogenesis/int-even-direction-result-v1.json",
+  "limitations": "This increment may qualify directions only; exact Int.even_iff and the decision instance remain separate composition work."
+}

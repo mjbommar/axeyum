@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-natcast-decision-free-join-plan",
+  "state": "preregistered-negative-adapter-root-only-packaging",
+  "predecessor": {"path": "artifacts/autogenesis/int-fib-neg-natcast-decision-free-result-v3.json", "required_state": "basic-only-power-adapters-qualified-empty-footprint"},
+  "input": {"module": "AxeyumIntFibNegNatcastDecisionFreeAdaptersV1", "combined_stream_sha256": "9b5d199e973e86e79b204c6471ff3758a0e6c35e8d2fa1ce2d43b00d86e7b9a3", "accepted_roots": ["Axeyum.Autogenesis.intFibNegativeEvenAdapterV1", "Axeyum.Autogenesis.intFibNegativeOddAdapterV1"]},
+  "operation": "export only the two already qualified negative roots from the unchanged compiled module, twice, then require an empty stream axiom set and unchanged declaration identities",
+  "budget": {"compilations": 0, "exports": 2, "footprint_audits": 1, "retries": 0, "exact_target_submissions": 0, "ledger_writes": 0},
+  "acceptance": {"exports_byte_identical": true, "stream_axioms": [], "root_declaration_sha256": ["75b81f571fdcee00b05aa8e555475fb76edac24b5d13e4cb67509affcfe4fcb2", "2d652002af90d6fdb69da662872ba7dee4058bffe6692fa796a6f6682cd16c27"]},
+  "output": "artifacts/autogenesis/int-fib-neg-natcast-decision-free-result-v4.json",
+  "limitations": "Packaging changes no theorem and grants no exact-target authority."
+}

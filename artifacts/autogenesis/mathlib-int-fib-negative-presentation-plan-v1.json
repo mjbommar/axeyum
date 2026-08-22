@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-target-owned-negative-fibonacci-presentation-plan",
+  "state": "preregistered-before-source-construction",
+  "inputs": {
+    "accepted_definition_source": "artifacts/autogenesis/sources/int-fib-add-two-residual-v3.lean",
+    "accepted_definition_capsule": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-exact-composition-v2/int-fib-add-two-1.ndjson",
+    "expected_Int_fib_declaration_sha256": "8f0b6b257623d1257c8137da80d11104781e854045b1ac2f4e92b41e89bf5a46",
+    "parity_support": "artifacts/autogenesis/int-fib-clean-parity-leaves-result-v4.json"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-negative-presentation-v1.lean",
+    "theorem": "Int.fib_neg_natCast_presentation",
+    "must_not_exist_before_execution": true
+  },
+  "method": "copy the already accepted target-owned Int.fib definition verbatim, case-split only on n : Nat, and require both zero and successor branches to close by definitional equality",
+  "target_statement": "forall n:Nat, Int.fib (-(n:Int)) = if n%2=0 then -Int.ofNat (Nat.fib n) else Int.ofNat (Nat.fib n)",
+  "top_down_role": "supply the negative-value presentation contract of the accepted Int.fib_neg_natCast residual",
+  "bottom_up_role": "test whether negative natural inputs are already computational content of the admitted representation, avoiding unnecessary recurrence and automation dependencies",
+  "budget": {
+    "source_constructions": 1,
+    "compiler_invocations": 1,
+    "exporter_invocations": 1,
+    "importer_runs": 2,
+    "retries": 0,
+    "exact_Int_fib_neg_natCast_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "source_must_compile": true,
+    "Int_fib_definition_identity_must_match": true,
+    "presentation_axiom_footprint_must_be_empty": true,
+    "presentation_direct_theorem_dependencies_must_be_empty": true,
+    "two_fresh_imports_must_preserve_evidence": true,
+    "official_Int_fib_neg_natCast_proof_forbidden": true
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-negative-presentation-result-v1.json",
+  "next_on_accept": "qualify the independent minus-one power parity presentation, then compose both leaves through the accepted negative-index residual",
+  "limitations": "This can establish only the target-owned conditional presentation; it grants no exact negative Fibonacci theorem or ledger authority."
+}

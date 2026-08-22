@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-natcast-decision-free-join-plan",
+  "state": "preregistered-architecture-pivot-before-source-construction",
+  "predecessor": {"path": "artifacts/autogenesis/int-fib-neg-natcast-exact-composition-result-v6.json", "required_state": "declined-at-decision-witness-dependent-ite-shape"},
+  "gap": "The final mathematics is proved in both parity branches, but proposition-indexed ite embeds the selected Decidable implementation into the kernel expression and makes clean and official presentations type-shape-incompatible.",
+  "replacement_contract": {
+    "parity_evidence": "forall n, n % 2 = 0 or n % 2 = 1",
+    "negative_even": "n % 2 = 0 -> Int.fib (-(n:Int)) = -Int.ofNat (Nat.fib n)",
+    "negative_odd": "n % 2 = 1 -> Int.fib (-(n:Int)) = Int.ofNat (Nat.fib n)",
+    "power_even": "n % 2 = 0 -> (-1:Int)^(n+1) = -1",
+    "power_odd": "n % 2 = 1 -> (-1:Int)^(n+1) = 1",
+    "multiplication": ["Int.neg_one_mul", "Int.one_mul"]
+  },
+  "sequence": [
+    "construct a six-proof-argument residual that cases only on the explicit modulo-two disjunction and contains no ite or Decidable parameter",
+    "derive the four branch contracts as clean adapters from the sealed conditional presentations using the branch equality proofs",
+    "qualify each adapter footprint independently before any exact composition",
+    "compose the decision-free residual and six checked supports into exact Int.fib_neg_natCast",
+    "export and reimport twice before separate ledger registration"
+  ],
+  "stop_rules": [
+    "reject any adapter reaching propext",
+    "do not treat the prior deterministic but contaminated bridges as support",
+    "do not submit or register Int.fib_neg_natCast before exact replay and empty footprint"
+  ],
+  "budget": {"residual_source_constructions": 1, "adapter_source_constructions": 1, "compilations": 2, "exports_per_source": 2, "exact_target_submissions": 0, "retries": 0, "ledger_writes": 0},
+  "next_on_accept": "Preregister the exact multi-capsule composition with fixed hashes and dependency identities.",
+  "limitations": "This increment can qualify only the decision-free residual and adapters, not the final theorem or ledger state."
+}

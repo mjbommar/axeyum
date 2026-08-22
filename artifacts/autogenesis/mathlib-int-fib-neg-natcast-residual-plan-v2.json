@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-parameterized-negative-fibonacci-residual-plan",
+  "state": "preregistered-before-binder-annotation-repair",
+  "predecessor": "artifacts/autogenesis/mathlib-int-fib-neg-natcast-residual-result-v1.json",
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-neg-natcast-residual-v2.lean",
+    "theorem": "Axeyum.Autogenesis.intFibNegNatCastResidualV2",
+    "must_not_exist_before_execution": true
+  },
+  "contract": "unchanged from artifacts/autogenesis/mathlib-int-fib-neg-natcast-residual-plan-v1.json",
+  "only_change": "write (n : Nat) explicitly in negativePresentation and powerPresentation; rename the theorem V2",
+  "budget": {
+    "source_constructions": 1,
+    "compiler_invocations": 1,
+    "exporter_invocations": 1,
+    "importer_runs": 2,
+    "retries": 0,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": "unchanged from artifacts/autogenesis/mathlib-int-fib-neg-natcast-residual-plan-v1.json",
+  "output": "artifacts/autogenesis/mathlib-int-fib-neg-natcast-residual-result-v2.json",
+  "limitations": "This remains a parameterized residual with no exact negative Fibonacci or ledger authority."
+}

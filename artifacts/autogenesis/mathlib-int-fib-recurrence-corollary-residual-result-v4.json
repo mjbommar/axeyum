@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-parameterized-residual-export-result",
+  "state": "export-blocked-by-host-user-quota",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-residual-plan-v4.json",
+    "commit": "fb81c699c3a0cbff994546e8f76d11d18b6df764"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-recurrence-corollary-residual-v2.lean",
+    "sha256": "8ccbbf2e436afd0c5f7315f0e281bf11989abd7394056ca45b9fdf20b48e11d6",
+    "change_from_v3": "none"
+  },
+  "execution": {
+    "host": "s5",
+    "exporter_invocations": 1,
+    "export_stream_bytes": 0,
+    "importer_runs": 0,
+    "retries": 0,
+    "shell_error": "printf: write error: Disk quota exceeded"
+  },
+  "diagnosis": "The corrected absolute exporter invocation reached output setup, but s5's per-user writable quota prevented even the exit marker from being written. The shared /nas3 evidence filesystem is writable with 16 TB free.",
+  "authority": {
+    "residual_credit": 0,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Preregister the same exact exporter command with output written directly to a new immutable pack on /nas3.",
+  "limitations": "No export stream or audit exists, so this result establishes no theorem identity, dependency closure, footprint, or ledger transition."
+}

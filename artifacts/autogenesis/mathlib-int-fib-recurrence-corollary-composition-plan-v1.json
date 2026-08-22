@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-exact-theorem-composition-plan",
+  "state": "preregistered-before-driver-implementation",
+  "target": {
+    "fact_id": "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
+    "theorem": "Int.fib_eq_fib_add_two_sub_fib_add_one"
+  },
+  "inputs": [
+    {
+      "role": "exact Fibonacci definition and recurrence",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-exact-composition-v2/int-fib-add-two-1.ndjson",
+      "sha256": "0fbbb4d55ed862f7feb1b8efa3bf45eed24269067b3702c727d05e45c8947219",
+      "roots": ["Int.fib", "Int.fib_add_two"]
+    },
+    {
+      "role": "native integer right cancellation",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-add-neg-cancel-right-native-v1/int-add-neg-cancel-right-1.ndjson",
+      "sha256": "42683af8480ea4d7bef42b32ecab3f3d43a2228c8a30f8b73417bbda6eca4fa2",
+      "roots": ["Int.add_neg_cancel_right"]
+    },
+    {
+      "role": "parameterized rearrangement",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-recurrence-corollary-residual-v5/residual.ndjson",
+      "sha256": "69b5c02680e30e4ef31a368a6b86dd33a6997249a8538bcae60c3e3e9b2b58f1",
+      "roots": ["Axeyum.Autogenesis.intFibEqAddTwoSubAddOneResidualV2"]
+    }
+  ],
+  "driver": "crates/axeyum-lean-import/examples/int_fib_recurrence_corollary_composition.rs",
+  "method": "compose all three checked roots, assert the exact target is absent, specialize the residual with Int.fib, Int.fib_add_two, and Int.add_neg_cancel_right, replay the specialization receipt, require empty footprint and exact fact type, then root-export and freshly import twice",
+  "budget": {
+    "driver_implementations": 1,
+    "complete_invocations": 1,
+    "target_submissions": 1,
+    "exports": 1,
+    "fresh_imports": 2,
+    "retries": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "all_input_hashes_must_match": true,
+    "all_input_roots_must_have_empty_footprints": true,
+    "target_must_be_absent_before_specialization": true,
+    "specialization_receipt_must_replay": true,
+    "target_axiom_footprint_must_be_empty": true,
+    "target_type_must_match_fact_statement": true,
+    "two_fresh_imports_must_preserve_evidence": true
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-composition-result-v1.json",
+  "limitations": "Even a successful exact capsule receives zero ledger authority until a separately preregistered operation validates goal identity and performs crash-safe admission."
+}

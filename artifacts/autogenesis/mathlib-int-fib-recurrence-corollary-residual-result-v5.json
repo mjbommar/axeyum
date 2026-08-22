@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-parameterized-residual-result",
+  "state": "exported-and-reproduced-empty-footprint",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-residual-plan-v5.json",
+    "sha256": "299955fd4069e28ba2fbb01060441cb4cabdd9673d12018ecea9a3c7bb0c38de",
+    "commit": "bc55d7d5b37d3d8cf23f3862ec41d67b2ae34240"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-recurrence-corollary-residual-v2.lean",
+    "sha256": "8ccbbf2e436afd0c5f7315f0e281bf11989abd7394056ca45b9fdf20b48e11d6"
+  },
+  "environment": {
+    "host": "s5",
+    "lean_version": "4.30.0",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-recurrence-corollary-residual-v5",
+    "manifest_sha256": "a1ec3ccce6d8322e4fc81091cb1091cf8c329569e01a61a89665f4152789fc8b",
+    "stream_sha256": "69b5c02680e30e4ef31a368a6b86dd33a6997249a8538bcae60c3e3e9b2b58f1",
+    "audit_sha256": "7982ea415ce87ad50b3ae34932ed4b48822d2bf77227d20c909fc9633d34030f"
+  },
+  "execution": {
+    "compiler_invocations": 0,
+    "exporter_invocations": 1,
+    "exporter_exit": 0,
+    "importer_runs": 2,
+    "retries": 0
+  },
+  "audit": {
+    "theorem": "Axeyum.Autogenesis.intFibEqAddTwoSubAddOneResidualV2",
+    "declaration_sha256": "16d242723385113bf5c5f42f994ce1b58db458fda42ce771ffc09a8d81f34072",
+    "direct_theorem_dependencies": [
+      "Eq.symm",
+      "Eq.trans",
+      "congrArg"
+    ],
+    "axiom_footprint": []
+  },
+  "authority": {
+    "residual_credit": 1,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Compose the exact admitted Int.fib definition and recurrence plus native right cancellation, then specialize this residual to the exact ledger theorem name.",
+  "limitations": "The residual is accepted only as a parameterized support theorem. It does not by itself establish the exact Fibonacci corollary or mutate the fact ledger."
+}

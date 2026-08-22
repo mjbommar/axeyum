@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-native-neg-one-raw-power-plan",
+  "state": "preregistered-before-structural-mul-one",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-neg-one-pow-raw-result-v3.json",
+    "required_state": "nat-mul-one-not-definitional"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-neg-one-pow-raw-v4.lean",
+    "state_at_preregistration": "absent"
+  },
+  "roots": [
+    "Axeyum.Autogenesis.natZeroAddV1",
+    "Axeyum.Autogenesis.natMulOneV1",
+    "Axeyum.Autogenesis.natOnePowV1",
+    "Axeyum.Autogenesis.intNegOnePowRawV2"
+  ],
+  "method": {
+    "zero_add": "structural recursion on the right operand",
+    "mul_one": "use the definitional reduction n * 1 = 0 + n and target-owned zero-add",
+    "one_power": "chain target-owned multiply-one with the induction hypothesis",
+    "int_raw_power": "unchanged explicit transport through both definitional parity branches"
+  },
+  "forbidden": [
+    "Nat.zero_add",
+    "Nat.mul_one",
+    "Nat.one_pow",
+    "Nat.pow_succ",
+    "Int.pow_succ",
+    "Int.negSucc_pow",
+    "simp",
+    "simpa",
+    "propext"
+  ],
+  "environment": {
+    "host": "s5",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean_version": "4.30.0",
+    "module": "AxeyumIntNegOnePowRawV4",
+    "module_output": ".lake/build/lib/lean/AxeyumIntNegOnePowRawV4.olean"
+  },
+  "budget": {
+    "source_constructions": 1,
+    "compiler_invocations": 1,
+    "exporter_invocations": 2,
+    "importer_runs": 2,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "compiler_must_accept": true,
+    "two_exports_must_be_byte_identical": true,
+    "all_four_axiom_footprints_must_be_empty": true
+  },
+  "output": "artifacts/autogenesis/int-neg-one-pow-raw-result-v4.json",
+  "limitations": "The raw theorem still requires the separately checked successor-parity bridge."
+}

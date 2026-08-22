@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-exact-int-fib-neg-natcast-composition-plan",
+  "state": "preregistered-before-concrete-bridge-source-or-proof-stream-access",
+  "target": {
+    "name": "Int.fib_neg_natCast",
+    "statement": "forall n : Nat, Int.fib (-(n : Int)) = (-1 : Int)^(n+1) * Int.ofNat (Nat.fib n)"
+  },
+  "top_down_join": {
+    "generic_residual": "Axeyum.Autogenesis.intFibNegNatCastResidualV2",
+    "concrete_bridge": "Axeyum.Autogenesis.intFibNegNatCastExactBridgeV1",
+    "fixed_parameters": [
+      "fibFn := Int.fib",
+      "natFib := Nat.fib",
+      "parity := fun n => n % 2 = 0",
+      "parityDec := the native decision procedure for that equality"
+    ],
+    "remaining_proof_arguments": [
+      "Int.fib_neg_natCast_presentation",
+      "Axeyum.Autogenesis.intNegOnePowParityV1",
+      "Int.neg_one_mul",
+      "Int.one_mul"
+    ]
+  },
+  "bottom_up_inputs": [
+    {
+      "role": "admitted-recurrence-compatible Int.fib base",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-add-two-exact-composition-v2/int-fib-add-two-1.ndjson",
+      "sha256": "0fbbb4d55ed862f7feb1b8efa3bf45eed24269067b3702c727d05e45c8947219"
+    },
+    {
+      "role": "negative-value presentation source",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-negative-presentation-v1-v1/presentation.ndjson",
+      "sha256": "ee38fd2ff6e2427e349846e49ec603145d4f71bc1676bcfd8cd61bf061a088c0",
+      "root": "Int.fib_neg_natCast_presentation"
+    },
+    {
+      "role": "exact minus-one power parity",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-neg-one-pow-parity-exact-v1/exact.ndjson",
+      "sha256": "dbe29125ed7ffd5e66e33da9da236b22b472fa4c5527f87146adc0ca25f9faa0",
+      "root": "Axeyum.Autogenesis.intNegOnePowParityV1"
+    },
+    {
+      "role": "native integer left unit and sign laws",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-left-unit-sign-native-v1/int-left-unit-sign-native.ndjson",
+      "sha256": "9b5f442a5fa98cf1116cbe8976aa23b2cae22278c56ef226b51f715b84d1f041",
+      "roots": ["Int.neg_one_mul", "Int.one_mul"]
+    },
+    {
+      "role": "generic final join",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-natcast-residual-v2-v1/residual.ndjson",
+      "sha256": "cc6c1b9b450a4ac620dbfd7036809c242b075e6615301f295edfc9e10588db06",
+      "root": "Axeyum.Autogenesis.intFibNegNatCastResidualV2"
+    }
+  ],
+  "sequence": [
+    "construct and export twice a concrete four-proof-argument bridge with an empty footprint",
+    "import the admitted recurrence capsule as the target kernel base",
+    "compose and replay the negative presentation, exact power parity, native multiplication pair, and concrete bridge",
+    "specialize the bridge with exactly the four checked proof roots",
+    "require the exact target name, empty footprint, and exact direct dependency set",
+    "export once and verify with two fresh imports before writing the final capsule"
+  ],
+  "budget": {
+    "bridge_source_constructions": 1,
+    "bridge_compilations": 1,
+    "bridge_exports": 2,
+    "complete_composition_invocations": 1,
+    "composition_operations": 4,
+    "composition_replays": 4,
+    "specialization_operations": 1,
+    "specialization_replays": 1,
+    "target_submissions": 1,
+    "target_exports": 1,
+    "fresh_target_imports": 2,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "all_input_hashes_must_match": true,
+    "all_input_stream_axioms_must_be_empty": true,
+    "every_composition_and_specialization_must_replay": true,
+    "target_axiom_footprint": [],
+    "target_must_survive_two_fresh_imports": true,
+    "proof_terms_types_or_values_may_be_rendered": false
+  },
+  "bridge_source": "artifacts/autogenesis/sources/int-fib-neg-natcast-exact-bridge-v1.lean",
+  "driver": "crates/axeyum-lean-import/examples/int_fib_neg_natcast_exact_composition.rs",
+  "output": "artifacts/autogenesis/int-fib-neg-natcast-exact-composition-result-v1.json",
+  "limitations": "This operation may create exact theorem evidence only. Fact-ledger registration, crash-safe admission, evaluation credit, and descendants remain separately authorized work."
+}
