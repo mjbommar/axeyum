@@ -110,6 +110,31 @@ threshold `2^{ell-1}`, consistent with Gaussian tails over
 interval against sign patterns of the next `log2 ell + 2` coefficients, and
 it holds for every cylinder with margin growing like `2^{ell/2}/ell`.
 
+The full sweep (`lemire_twists.py`, exact Walsh transforms,
+`data/twisted-sums-ell14-23.txt`), reported as `max |A_psi| / 2^{ell-1}`:
+
+```text
+ell n   rms/random-phase   identity cylinder   sup over all cylinders
+14 29   0.923              1.31                2.51
+14 30   0.933              2.42                2.91
+16 33   0.940              0.92                1.50
+16 34   0.939              1.21                2.32
+18 37   0.945              0.81                1.18
+18 38   0.944              0.87                1.71
+20 41   0.951              0.46                0.63
+20 42   0.951              0.61                0.94
+22 45   0.954              0.20                0.36
+22 46   0.954              0.30                0.50
+23 47   0.957              0.15                0.27
+```
+
+The identity-cylinder statement of the open fact
+`F:gf2-lemire-cylinder-twist-sup-bound` holds from `ell = 16` (odd) and
+`ell = 18` (even) on; the uniform-in-cylinder version holds from `ell = 20`;
+both margins double roughly every two steps of `ell`, as the random model
+(`2^{ell/2}/ell` against Gaussian tails over `2^{a-1}(|K|-1)` samples)
+predicts.
+
 ## 2. Four further exact reformulations
 
 ### 2.1 Type I is exact; the top layer is a second difference of Moebius interval sums
