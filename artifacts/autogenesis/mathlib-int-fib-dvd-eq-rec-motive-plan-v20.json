@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-eq-rec-motive-plan-v20",
+  "state": "preregistered-dependent-eq-rec-motive-before-code-change",
+  "predecessor": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-link-diagnostics-execution-result-v19.json",
+    "sha256": "885d456585b322df6b3febee6e4fc5d0572475e4c74dbdb74692f4c8adca1c8a"
+  },
+  "correction": {
+    "implementation": "crates/axeyum-lean-import/examples/int_fib_dvd_exact.rs",
+    "old_motive": "fun b => P b",
+    "new_motive": "fun b (_ : left = b) => P b",
+    "apply_to": ["second equality transport", "first equality transport"],
+    "proof_chain_change": "only add the equality-proof binder required by Eq.rec",
+    "expected_new_theorem_dependencies": []
+  },
+  "execution": {
+    "max_driver_builds": 1,
+    "max_complete_invocations": 0,
+    "max_input_stream_reads": 0,
+    "max_target_theorem_submissions": 0,
+    "max_retries": 0,
+    "ledger_writes": 0
+  },
+  "next_on_accept": "run all five closed link checks again before target submission"
+}
