@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-concrete-branches-composition-driver-result",
+  "state": "route-specific-source-and-post-composition-assurance-builds-clippy-clean",
+  "plan": "artifacts/autogenesis/int-fib-neg-concrete-branches-composition-plan-v4.json",
+  "driver": "crates/axeyum-lean-import/examples/int_fib_neg_concrete_branches_composition.rs",
+  "changes": [
+    "bind both selected source residual declaration identities",
+    "require exact empty-footprint Int.even_iff in the destination",
+    "require both residual roots empty after checked target-leaf composition",
+    "retain both concrete-root and fresh-import evidence checks"
+  ],
+  "focused_checks": [
+    {"command": "cargo fmt --all --check", "exit": 0},
+    {"command": "cargo clippy -p axeyum-lean-import --example int_fib_neg_concrete_branches_composition -- -D warnings", "exit": 0}
+  ],
+  "execution": {"input_stream_reads": 0, "composition_operations": 0, "specialization_operations": 0, "capsule_writes": 0, "ledger_writes": 0},
+  "credit": "driver assurance only",
+  "next": "Run exactly one V4 composition invocation against the five hash-bound inputs."
+}

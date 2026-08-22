@@ -44,6 +44,12 @@ const NEG_NEG_DECL_SHA256: &str =
 const EVEN_IFF: &str = "Int.even_iff";
 const POS_RESIDUAL: &str = "Axeyum.Autogenesis.intFibNegPositiveBranchResidualV1";
 const NEG_RESIDUAL: &str = "Axeyum.Autogenesis.intFibNegNegativeBranchResidualV1";
+const POS_RESIDUAL_DECL_SHA256: &str =
+    "2e795f93c16c2106424ae46804c77107dd4796d14552b3eff7d188086533d711";
+const NEG_RESIDUAL_DECL_SHA256: &str =
+    "1f46603078c88099664b64cb13726b8c606e9072ba8a9070c5270bcb68fd3b48";
+const EVEN_IFF_DECL_SHA256: &str =
+    "6ec4a6f5577bc3602d13ff02907469045f0987323f6f9f84f8c4b7b23c243c13";
 const POS_BRANCH: &str = "Axeyum.Autogenesis.intFibNegPositiveBranchV1";
 const NEG_BRANCH: &str = "Axeyum.Autogenesis.intFibNegNegativeBranchV1";
 const ROOTS: [&str; 2] = [POS_BRANCH, NEG_BRANCH];
@@ -74,7 +80,7 @@ fn run() -> Result<(), String> {
         .zip(LABELS)
         .map(|((path, hash), label)| import_bound(path, hash, label))
         .collect::<Result<Vec<_>, _>>()?;
-    for index in [0, 1, 2, 4] {
+    for index in [0, 1, 2] {
         if !imports[index].report().axioms.is_empty() {
             return Err(format!("{} stream reaches assumptions", LABELS[index]));
         }
@@ -86,6 +92,18 @@ fn run() -> Result<(), String> {
         return Err(format!(
             "clean double negation identity changed: expected {NEG_NEG_DECL_SHA256}, got {neg_neg_sha256}"
         ));
+    }
+    for (root, expected) in [
+        (POS_RESIDUAL, POS_RESIDUAL_DECL_SHA256),
+        (NEG_RESIDUAL, NEG_RESIDUAL_DECL_SHA256),
+    ] {
+        let name = find_name(imports[4].kernel(), root)?;
+        let observed = canonical_declaration_sha256(imports[4].kernel(), name)?;
+        if observed != expected {
+            return Err(format!(
+                "constructor residual identity changed for {root}: expected {expected}, got {observed}"
+            ));
+        }
     }
 
     let mut kernel = imports[0].kernel().clone();
@@ -110,6 +128,15 @@ fn run() -> Result<(), String> {
         )?,
     ];
 
+    let even_iff = find_name(&kernel, EVEN_IFF)?;
+    require_empty(&kernel, even_iff, EVEN_IFF)?;
+    let even_iff_sha256 = canonical_declaration_sha256(&kernel, even_iff)?;
+    if even_iff_sha256 != EVEN_IFF_DECL_SHA256 {
+        return Err(format!(
+            "clean even iff identity changed: expected {EVEN_IFF_DECL_SHA256}, got {even_iff_sha256}"
+        ));
+    }
+
     let branch_composition = compose_checked_theorem_slice_with_target_leaves(
         imports[4].kernel(),
         &kernel,
@@ -129,6 +156,9 @@ fn run() -> Result<(), String> {
     }
     let target_leaf_receipt = branch_composition.receipt().receipt_sha256.clone();
     kernel = branch_composition.kernel().clone();
+    for root in [POS_RESIDUAL, NEG_RESIDUAL] {
+        require_empty(&kernel, find_name(&kernel, root)?, root)?;
+    }
 
     let positive_receipt = specialize(
         &mut kernel,

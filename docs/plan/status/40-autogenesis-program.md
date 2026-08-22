@@ -164,6 +164,7 @@
 | 2026-08-21 | (pending) | V3 checks the selected neg-neg root's empty footprint and exact identity, then passes focused Clippy with streams unread; one invocation remains |
 | 2026-08-21 | (pending) | V3 declines before composition because the residual stream has assumptions; an exact two-root footprint audit is frozen before deciding whether route-specific assurance is sound |
 | 2026-08-21 | (pending) | Both selected source residuals are propext-bearing through the Even decision closure; V4 freezes exact source identities and requires cleanliness only after checked clean-`Int.even_iff` target-leaf replacement |
+| 2026-08-21 | (pending) | V4 binds both contaminated source identities and the exact clean destination leaf, then passes fmt and focused Clippy with streams unread; one invocation remains |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
