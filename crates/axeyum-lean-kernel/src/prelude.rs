@@ -2393,11 +2393,26 @@ pub(crate) fn build_logic_prelude_uncached(
             let with_b_v = lam_fvar(kernel, b_fvar, sort_v, with_h1, BinderInfo::Default);
             let absurd_value = lam_fvar(kernel, a_fvar, prop, with_b_v, BinderInfo::Default);
 
-            kernel.add_declaration(Declaration::Theorem {
+            // A DEFINITION, not a Theorem, and the difference is not cosmetic.
+            // `absurd`'s type lands in `Sort v` for an arbitrary universe, not in
+            // `Prop`, and a theorem's type must be a proposition. Lean itself
+            // declares it `@[macro_inline] def absurd {a : Prop} {b : Sort v}`
+            // for exactly this reason.
+            //
+            // It was declared as a `Theorem` when the logic prelude was extended
+            // on 2026-08-22. Our kernel accepted it; the REAL Lean kernel refuses
+            // it — "type of theorem 'absurd' is not a proposition" — and
+            // `tests/real_lean_wire_differential.rs::
+            // our_kernel_admits_nothing_the_real_lean_kernel_refuses` caught the
+            // divergence. That test exists for precisely this, and it is the only
+            // check in the tree that compares our admission against the real
+            // kernel's.
+            kernel.add_declaration(Declaration::Definition {
                 name: absurd,
                 uparams: vec![absurd_vparam],
                 ty: absurd_ty,
                 value: absurd_value,
+                hint: ReducibilityHint::Regular(1),
             })?;
         }
 
