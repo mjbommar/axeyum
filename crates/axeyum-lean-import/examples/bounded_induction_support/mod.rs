@@ -162,7 +162,18 @@ use axeyum_lean_kernel::{
 
 /// Maximum number of leading `Pi` binders this producer will peel (shared
 /// budget across plain generalization and structural induction).
-pub const MAX_BINDERS: usize = 12;
+pub const MAX_BINDERS: usize = 8;
+// Raised to 12 on 2026-08-22 and REVERTED the same hour. The two mechanisms added
+// with it -- `try_split_congruence` and `try_absorbing_argument` -- need the
+// deeper search to engage, but they did not close their target, and 12 changes
+// the reproduction contract of five ALREADY-ESTABLISHED facts: every
+// `mathlib-bounded-induction-family-*` manifest pins `max_binders: 8` as part of
+// its receipt, and `check-autogenesis-bounded-induction-family.py` correctly
+// refused the mismatch even though every `proof_sha256` was byte-identical.
+//
+// Perturbing a settled fact's contract to enable a capability that has not yet
+// produced a theorem is the wrong trade. Raise it again in the same change that
+// makes it pay, and update the five manifests in that change.
 
 /// Maximum number of structural inductions this producer will perform while
 /// building one candidate. Bounded so the search cannot recurse without limit
