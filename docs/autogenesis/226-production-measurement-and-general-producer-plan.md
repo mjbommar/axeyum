@@ -150,7 +150,17 @@ repaired and made enforceable.
 **Do not** re-run any producer over held-out to "check whether it mattered."
 Measuring the contaminated partition is what destroys it.
 
-### P1 — Fail-closed cross-prelude production counter (small–medium)
+### P1 — Fail-closed cross-prelude production counter — **DONE 2026-08-22**
+
+Two generated ledgers, both gated in `just check` and `scripts/check.sh`:
+
+- [`theorem-production-ledger.md`](../plan/generated/theorem-production-ledger.md) —
+  **418 distinct theorems, all axiom-free**, across all eight preludes. The
+  throughput strand's "nobody can measure this" finding is closed.
+- [`production-provenance-ledger.md`](../plan/generated/production-provenance-ledger.md) —
+  of 136 established facts, **0 via an operation covering more than one fact**,
+  21 via single-target capsules, 115 hand-constructed or imported.
+
 
 The precondition for every later phase: right now no producer work can be shown
 to have helped or hurt.
@@ -186,21 +196,23 @@ wrong number in this repository:
 `docs/plan/generated/`, wired into `scripts/flywheel-status.sh`, and the
 throughput doc's "nobody can measure this" paragraph replaced by a number.
 
-### P2 — Generality ratchet on the registry (small)
+### P2 — Generality ratchet on the registry — **DONE 2026-08-22**
+
+Both counters live in the provenance ledger above and are gated by value, so a
+new single-target capsule cannot move them and a rise is the result:
+
 
 Two counters, both currently zero, both cheap, both fail-closed:
 
 ```text
-operations whose applicability names > 1 fact        0   -> must rise
-unproved facts covered by the registry               0   -> must rise
+multi_target_operations   0   -> a rise is the first generality ever measured
+facts_via_multi_target    0   -> a rise is the first autonomous yield
 ```
 
-Gate them. Without this, the next capsule lands, activity looks high, and both
-numbers sit at zero indefinitely — which is precisely what the last four days
-look like from here.
-
-*Exit:* a new single-target operation cannot be added without either raising one
-of these counters or recording an explicit, reviewed exemption.
+The ledger's own prose switches when either becomes nonzero, so a report saying
+"both are zero" cannot survive a real result — that branch is pinned by a control
+that does not touch the classifier, after a first attempt where it was killed by
+the classifier's own mutation and therefore pinned nothing new.
 
 ### P3 — Producer census over train + development (medium; the headline)
 

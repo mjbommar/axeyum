@@ -378,6 +378,8 @@ step lean-axiom-ledger-tests python3 -m unittest scripts.tests.test_lean_axiom_l
 step lean-axiom-ledger python3 scripts/gen-lean-axiom-ledger.py --check
 step theorem-production-ledger-tests python3 -m unittest scripts.tests.test_gen_theorem_production_ledger
 step theorem-production-ledger python3 scripts/gen-theorem-production-ledger.py --check
+step production-provenance-ledger-tests python3 -m unittest scripts.tests.test_gen_production_provenance_ledger
+step production-provenance-ledger python3 scripts/gen-production-provenance-ledger.py --check
 step foundational-resources ./scripts/check-foundational-resources.sh
 # The claim ledger's structural gates ran ONLY from `just claims` (and the
 # certificate pass, which needs the gitignored drat-trim clone, deliberately

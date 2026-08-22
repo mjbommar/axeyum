@@ -93,7 +93,16 @@ if [ -f docs/plan/generated/theorem-production-ledger.md ]; then
     docs/plan/generated/theorem-production-ledger.md | sed 's/^/  /'
   echo "  DO NOT SUM the cumulative column; 'Originated here' is the partition."
   echo "  authority: python3 scripts/gen-theorem-production-ledger.py --check"
-  echo "  counts theorems, NOT autonomous ones -- that split is P1 of docs/autogenesis/226."
+  echo "  counts theorems, NOT autonomous ones -- the split is below."
+fi
+
+section "AUTONOMY — how much of it the system produced with nobody writing the proof"
+# The metric CLAUDE.md actually names, and the one the theorem count above does
+# NOT answer. Derived from applicability.fact_ids, never self-reported.
+if [ -f docs/plan/generated/production-provenance-ledger.md ]; then
+  awk '/^\| Established facts/{p=1} p{print} p&&/^$/{exit}' \
+    docs/plan/generated/production-provenance-ledger.md | sed 's/^/  /'
+  echo "  authority: python3 scripts/gen-production-provenance-ledger.py --check"
 else
   echo "  (docs/plan/generated/theorem-production-ledger.md absent — run scripts/gen-theorem-production-ledger.py)"
 fi
