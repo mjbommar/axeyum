@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_gcd`, `Int.fib_dvd`, and `Int.fib_of_nonneg` are durably proved with empty kernel footprints. Exact `Nat.fib_pos` is additionally reconstructed in a sealed 190,972-byte capsule, has an empty footprint, and survives two fresh imports; ledger admission remains deliberately separate.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_dvd`, `Int.fib_of_nonneg`, and now `Nat.fib_pos` are durably proved with empty kernel footprints. `Nat.fib_pos` survived an exit-75 intent fault unchanged, recovered with exactly one ledger write, passed its registered checker, and produced the preregistered empty readiness delta.
 
-**Next:** execute the committed exact transaction once with an exit-75 fault after durable intent; verify the fact remains byte-identical and open, then recover exactly once.
+**Next:** perform one isolated clean semantic replay of the complete `Nat.fib_pos` admission from its retained primary archive, then begin exact `Nat.fib_eq_zero` construction.
 
 <!-- plan-section: landed-changes -->
 
@@ -164,6 +164,7 @@
 | 2026-08-22 | (pending) | Transaction regression tests expose one pre-existing unreviewed `Int.fib_of_nonneg` replay-result gate when reopening that settled fixture; the exact gate name is added alongside the new Nat assurance case |
 | 2026-08-22 | (pending) | The explicit five-dependency Nat assurance path and repaired settled-fixture isolation pass all 19 transaction regression tests; transaction derivation remains unspent until the correction is committed |
 | 2026-08-22 | (pending) | Exact commit `a080a9ccc` uniquely selects `Nat.fib_pos`, checks receipt `60954cc8…6aff`, and derives transaction `6680a0de…b68e`; exit-75 recovery is frozen before intent or ledger write |
+| 2026-08-22 | (pending) | Exit-75 leaves `Nat.fib_pos` byte-identical and open; one recovery writes the proved empty-footprint fact, its registered checker passes, and the measured readiness delta is empty before isolated replay |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
