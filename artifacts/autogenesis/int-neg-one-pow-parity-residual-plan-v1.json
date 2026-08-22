@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-parameterized-neg-one-power-parity-plan",
+  "state": "preregistered-before-source-construction",
+  "target": {
+    "name": "Axeyum.Autogenesis.intNegOnePowParityResidualV1",
+    "statement_role": "derive powFn (n + 1) as the parity-indexed sign without naming the concrete power implementation"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-neg-one-pow-parity-residual-v1.lean",
+    "state_at_preregistration": "absent"
+  },
+  "explicit_contracts": {
+    "power": [
+      "powZero : powFn 0 = 1",
+      "powSucc : forall n, powFn (n + 1) = powFn n * (-1)"
+    ],
+    "integer_multiplication": [
+      "negMulNeg : (-1 : Int) * (-1) = 1",
+      "oneMulNeg : (1 : Int) * (-1) = -1"
+    ],
+    "parity": [
+      "modCases : forall n, n % 2 = 0 or n % 2 = 1",
+      "succOne : n % 2 = 0 -> (n + 1) % 2 = 1",
+      "succZero : n % 2 = 1 -> (n + 1) % 2 = 0"
+    ]
+  },
+  "method": "induct on n; rewrite the previous sign through powSucc, use only the explicit multiplication leaf for that sign, and use succOne or succZero to normalize the next conditional",
+  "forbidden": [
+    "Odd.neg_one_pow",
+    "pow_add",
+    "ring",
+    "omega",
+    "simp",
+    "simpa",
+    "native_decide",
+    "propext"
+  ],
+  "budget": {
+    "source_constructions": 1,
+    "compiler_invocations": 1,
+    "exporter_invocations": 1,
+    "importer_runs": 2,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "compiler_must_accept": true,
+    "two_exports_must_be_byte_identical": true,
+    "theorem_axiom_footprint_must_be_empty": true,
+    "direct_theorem_dependencies_must_be_exact": [
+      "Eq.trans",
+      "congrArg",
+      "if_neg",
+      "if_pos"
+    ]
+  },
+  "output": "artifacts/autogenesis/int-neg-one-pow-parity-residual-result-v1.json",
+  "next_on_accept": "compose the residual with the existing four clean parity roots and a separately qualified concrete Int power/algebra capsule",
+  "limitations": "A parameterized residual is not the concrete (-1 : Int) power theorem and grants no exact-target or ledger authority."
+}

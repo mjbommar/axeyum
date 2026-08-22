@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-parameterized-residual-export-plan",
+  "state": "preregistered-before-corrected-export",
+  "predecessor": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-residual-result-v2.json",
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-recurrence-corollary-residual-v2.lean",
+    "sha256": "8ccbbf2e436afd0c5f7315f0e281bf11989abd7394056ca45b9fdf20b48e11d6",
+    "theorem": "Axeyum.Autogenesis.intFibEqAddTwoSubAddOneResidualV2",
+    "change_from_v2": "none"
+  },
+  "environment": {
+    "host": "s5",
+    "mathlib_checkout": "/home/mjbommar/lean-import-scale/mathlib4",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "export_command": "/home/mjbommar/.elan/toolchains/leanprover--lean4---v4.30.0/bin/lake env lean4export AxeyumIntFibResidualV2 -- Axeyum.Autogenesis.intFibEqAddTwoSubAddOneResidualV2"
+  },
+  "budget": {
+    "compiler_invocations": 0,
+    "exporter_invocations": 1,
+    "importer_runs": 2,
+    "retries": 0,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "export_stream_must_be_nonempty": true,
+    "two_audits_must_be_byte_identical": true,
+    "residual_axiom_footprint_must_be_empty": true,
+    "direct_theorem_dependencies": [
+      "Eq.symm",
+      "Eq.trans",
+      "congrArg"
+    ],
+    "official_fibonacci_declarations_forbidden": true
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-residual-result-v3.json",
+  "limitations": "This execution can qualify only the parameterized residual; exact target composition and ledger authority remain forbidden."
+}

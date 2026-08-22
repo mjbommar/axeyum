@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-outer-residual-plan",
+  "state": "preregistered-before-source-construction",
+  "predecessor": {"path": "artifacts/autogenesis/int-fib-neg-target-leaf-audit-result-v1.json", "required_state": "monolithic-composition-finished-without-captured-report-no-credit"},
+  "target": "Int.fib_neg",
+  "factorization": {
+    "case_split": "Int.eq_nat_or_neg, already audited empty-footprint",
+    "positive_branch_contract": "forall n : Nat, Int.fib (-(n:Int)) = if Even (n:Int) then -Int.fib (n:Int) else Int.fib (n:Int)",
+    "negative_branch_contract": "forall n : Nat, Int.fib (-(-(n:Int))) = if Even (-(n:Int)) then -Int.fib (-(n:Int)) else Int.fib (-(n:Int))",
+    "outer_residual": "case split every integer as a natural cast or its negation and apply exactly the matching branch contract"
+  },
+  "reason": "The outer residual need not inspect or synthesize the Even decision witness; it only transports two already exact branch equalities through the clean integer case split.",
+  "source": "artifacts/autogenesis/sources/int-fib-neg-outer-residual-v1.lean",
+  "budget": {"source_constructions": 1, "compilations": 1, "exports": 2, "footprint_audits": 1, "exact_target_submissions": 0, "retries": 0, "ledger_writes": 0},
+  "acceptance": {"exports_byte_identical": true, "axiom_footprint": [], "direct_dependencies_may_include_only_clean_case_split_and_core_equality_transport": true, "proof_terms_types_or_values_may_be_rendered": false},
+  "next_on_accept": "Construct each exact branch bottom-up from clean fib_natCast, fib_neg_natCast, modulo parity, and Even transport without consulting the official fib_neg proof.",
+  "limitations": "The residual alone cannot establish either branch or mutate the selected fact."
+}

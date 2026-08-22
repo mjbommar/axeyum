@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-left-unit-sign-multiplication-result",
+  "state": "int-constructor-cases-still-need-native-multiplication-lemmas",
+  "plan": {
+    "path": "artifacts/autogenesis/int-left-unit-sign-multiplication-plan-v3.json",
+    "sha256": "ed958117f8d1a44bd5d7b5aac928263c1377bf3c3a134b3a19c050571bf449dd",
+    "commit": "d5ee4a4ecff45f8ee65171d0b21051cc6b8795fc"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-left-unit-sign-multiplication-v3.lean",
+    "sha256": "261b65243a654cc51e362f8a81f8ac0ff4e19ef4f753b52cb23006013328ce07"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-left-unit-sign-multiplication-v3",
+    "compiler_exit_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "compiler_stdout_sha256": "ac433ed5fc8626c9be8d0e3a8a7d3916205676d62f48f0b294a14e384f70fb40"
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit_status": 1,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "diagnosis": "Case splitting reaches the four correct Int constructor goals, but neither left identity nor left negative-one multiplication is definitional. Axeyum's native Int prelude already has the right-identity, commutativity, Nat normalization, and signed constructor lemmas needed to derive both without typeclasses.",
+  "authority": {
+    "support_credit": 0,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Extend the native Int prelude with Int.one_mul and Int.neg_one_mul, then export their exact root capsule.",
+  "limitations": "The Lean source does not compile and grants no support authority."
+}

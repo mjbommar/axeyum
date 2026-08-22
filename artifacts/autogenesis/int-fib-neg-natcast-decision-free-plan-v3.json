@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-natcast-decision-free-join-plan",
+  "state": "preregistered-power-adapter-module-split",
+  "predecessor": {"path": "artifacts/autogenesis/int-fib-neg-natcast-decision-free-result-v2.json", "required_state": "residual-and-negative-adapters-accepted-power-adapters-rejected"},
+  "repair": {
+    "only_change": "move the unchanged two power-adapter theorem bodies into a separate source importing only Mathlib.Data.Int.Basic; retain the accepted combined stream as authority for the two negative adapters",
+    "power_statements_unchanged": true,
+    "power_proofs_unchanged": true,
+    "accepted_residual_unchanged": true,
+    "accepted_negative_adapters_unchanged": true,
+    "target_authority_unchanged": true
+  },
+  "source": "artifacts/autogenesis/sources/int-fib-neg-natcast-power-adapters-v2.lean",
+  "budget": {"source_constructions": 1, "compilations": 1, "exports": 2, "footprint_audits": 1, "retries": 0, "exact_target_submissions": 0, "ledger_writes": 0},
+  "acceptance": {"exports_byte_identical": true, "both_power_adapter_footprints": [], "proof_terms_types_or_values_may_be_rendered": false},
+  "output": "artifacts/autogenesis/int-fib-neg-natcast-decision-free-result-v3.json",
+  "limitations": "The split can qualify only the missing two adapters; exact composition remains unauthorized until all support identities are frozen."
+}

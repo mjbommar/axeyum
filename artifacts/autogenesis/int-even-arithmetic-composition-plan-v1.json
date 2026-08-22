@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-arithmetic-composition-plan",
+  "state": "preregistered-before-driver-code",
+  "inputs": {
+    "lifts": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-constructor-lift-v2/roots-1.ndjson",
+      "sha256": "a00d0b93b55500c04928939ea2ff00c4d0d35b4caa0e0fa96fefeebf1be3f3c6",
+      "roots": [
+        "Axeyum.Autogenesis.intDoubleModTwoZeroLiftV1",
+        "Axeyum.Autogenesis.intHalfWitnessOfModTwoZeroLiftV1"
+      ]
+    },
+    "closed_nat": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/nat-even-arithmetic-closed-v1/roots.ndjson",
+      "sha256": "e2593bac01c81881c4fcace0133f93c7bdb5fd9884e2aed035083f1af9bfb77d",
+      "roots": [
+        "Axeyum.Autogenesis.natDoubleModTwoZeroClosedV1",
+        "Axeyum.Autogenesis.natHalfWitnessOfModTwoZeroClosedV1"
+      ]
+    },
+    "parity": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-clean-parity-leaves-v4/roots.ndjson",
+      "sha256": "0e310823ba37adfbd9087c0da2f85ad57261228d601d9388800cf069b5b2ce82",
+      "roots": [
+        "Axeyum.IntFib.modCases",
+        "Axeyum.IntFib.succOne",
+        "Axeyum.IntFib.succZero"
+      ]
+    }
+  },
+  "targets": [
+    {
+      "name": "Axeyum.Autogenesis.intDoubleModTwoZeroClosedV1",
+      "arguments": [
+        "Axeyum.Autogenesis.natDoubleModTwoZeroClosedV1",
+        "Axeyum.IntFib.succOne"
+      ]
+    },
+    {
+      "name": "Axeyum.Autogenesis.intHalfWitnessOfModTwoZeroClosedV1",
+      "arguments": [
+        "Axeyum.Autogenesis.natHalfWitnessOfModTwoZeroClosedV1",
+        "Axeyum.IntFib.modCases",
+        "Axeyum.IntFib.succZero"
+      ]
+    }
+  ],
+  "method": "Hash-bind and import all three empty-footprint streams; compose and replay the two Nat roots and three parity roots into the lift kernel; specialize and replay both lift contracts in exact binder order; require exact dependency sets and empty footprints; root-export both closed Int targets and freshly import twice before fail-if-present write.",
+  "driver": "crates/axeyum-lean-import/examples/int_even_arithmetic_composition.rs",
+  "output": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-arithmetic-closed-v1/roots.ndjson",
+  "budget": {
+    "driver_constructions": 1,
+    "focused_builds": 1,
+    "complete_invocations": 1,
+    "input_stream_reads": 3,
+    "composition_operations": 2,
+    "composition_replays": 2,
+    "specialization_operations": 2,
+    "specialization_replays": 2,
+    "fresh_capsule_imports": 2,
+    "retries": 0,
+    "exact_even_direction_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "all_receipts_replay": true,
+    "both_target_footprints": [],
+    "both_target_direct_dependencies_exact": true,
+    "fresh_import_evidence_unchanged": true,
+    "proof_terms_types_or_values_may_be_rendered": false
+  },
+  "stop_rule": "Any input mismatch, composition/specialization decline, receipt failure, dependency drift, nonempty footprint, fresh-import change, or preexisting output stops without retry.",
+  "limitations": "Closed integer arithmetic premises only; exact Even directions, Int.even_iff, decision reconstruction, Fibonacci, and ledger mutation remain unauthorized."
+}

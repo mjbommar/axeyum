@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-parameterized-negative-fibonacci-residual-plan",
+  "state": "preregistered-before-source-construction",
+  "target_horizon": {
+    "support_theorem": "Int.fib_neg_natCast",
+    "downstream_fact": "F:ml430-int-fib-neg-b4021d37"
+  },
+  "qualified_inputs": [
+    "artifacts/autogenesis/mathlib-int-fib-natcast-admission-v1.json",
+    "artifacts/autogenesis/mathlib-int-fib-add-two-admission-v1.json",
+    "artifacts/autogenesis/mathlib-int-fib-add-one-admission-v1.json",
+    "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-admission-v1.json",
+    "artifacts/autogenesis/int-fib-clean-parity-leaves-result-v4.json"
+  ],
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-neg-natcast-residual-v1.lean",
+    "theorem": "Axeyum.Autogenesis.intFibNegNatCastResidualV1",
+    "must_not_exist_before_execution": true
+  },
+  "contract": {
+    "parameters": [
+      "fibFn : Int -> Int",
+      "natFib : Nat -> Nat",
+      "parity : Nat -> Prop",
+      "forall n, Decidable (parity n)",
+      "forall n, fibFn (-n) = if parity n then -Int.ofNat (natFib n) else Int.ofNat (natFib n)",
+      "forall n, (-1:Int)^(n+1) = if parity n then -1 else 1",
+      "forall x:Int, (-1)*x = -x",
+      "forall x:Int, 1*x = x"
+    ],
+    "conclusion": "forall n, fibFn (-(n:Int)) = (-1)^(n+1) * Int.ofNat (natFib n)"
+  },
+  "method": "case-split only on the explicit parity decider, normalize both conditional presentations with if_pos or if_neg, transport the power equality under multiplication, and close with explicit minus-one or one multiplication contracts",
+  "top_down_role": "factor exact Int.fib_neg_natCast into a negative-index presentation and a sign-power presentation instead of descending through the official assumption-bearing proof",
+  "bottom_up_role": "make recurrence-derived negative values, clean modulo-two cases, power alternation, and two elementary multiplication leaves independently replaceable and auditable",
+  "budget": {
+    "source_constructions": 1,
+    "compiler_invocations": 1,
+    "exporter_invocations": 1,
+    "importer_runs": 2,
+    "retries": 0,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "source_must_compile": true,
+    "residual_axiom_footprint_must_be_empty": true,
+    "expected_direct_theorem_dependencies": [
+      "Eq.symm",
+      "Eq.trans",
+      "congrArg",
+      "if_neg",
+      "if_pos"
+    ],
+    "official_fibonacci_declarations_forbidden": true,
+    "official_negative_fibonacci_proofs_forbidden": true,
+    "two_fresh_imports_must_preserve_evidence": true
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-neg-natcast-residual-result-v1.json",
+  "next_on_accept": "construct the negative-index conditional presentation by Nat induction from both admitted recurrence orientations, then qualify the independent minus-one power alternation leaf",
+  "limitations": "This residual grants no exact negative Fibonacci theorem, fact transition, or ledger authority."
+}

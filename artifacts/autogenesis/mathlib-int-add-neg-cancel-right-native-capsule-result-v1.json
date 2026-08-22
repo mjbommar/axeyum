@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-native-kernel-capsule-result",
+  "state": "native-cancellation-exported-twice-byte-identical-and-freshly-imported",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-add-neg-cancel-right-native-capsule-plan-v1.json",
+    "sha256": "a21b6369756c340758deed42c9931c92f74fbb78454ed5628bb90e988488c798"
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/int_add_neg_cancel_right_capsule.rs",
+    "sha256": "db0d7d97365d7228b0669bd2d7e85eefff4b4526fe1d078222f7c5f35b7171c6"
+  },
+  "evidence": {
+    "directory": "/nas3/data/axeyum/autogenesis/reference-packs/int-add-neg-cancel-right-native-v1",
+    "index_sha256": "96d0e5feceabbf4585a05aa8d4a54e84a146a55e1a5a073fb7f647e66e5dd921",
+    "capsule_sha256": "42683af8480ea4d7bef42b32ecab3f3d43a2228c8a30f8b73417bbda6eca4fa2",
+    "capsule_bytes": 129445,
+    "run_sha256": "2246fd9833cbfbc08827927b8e1517aac31a346b0ddb3ed25b1b63608c3d6069",
+    "sealed": true
+  },
+  "theorem": {
+    "name": "Int.add_neg_cancel_right",
+    "declaration_sha256": "b18fdc69c5a4786719fec08bfe9a18fdd8a7dad3c5a7861005ca2ff0193e14e0",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [
+      "Int.add_assoc",
+      "Int.add_neg",
+      "Int.add_zero"
+    ]
+  },
+  "execution": {
+    "driver_builds": 1,
+    "complete_invocations": 2,
+    "native_prelude_builds": 2,
+    "exports": 2,
+    "fresh_imports": 2,
+    "outputs_byte_identical": true,
+    "reports_byte_identical": true,
+    "retries": 0,
+    "Fibonacci_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "generic_integer_cancellation_credit": 1,
+    "Fibonacci_target_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Compose exact Int.fib_eq_fib_add_two_sub_fib_add_one from this theorem and the admitted recurrence capsule, with no official corollary proof input.",
+  "limitations": "This establishes only the generic integer cancellation theorem. It grants no Fibonacci fact or ledger authority."
+}

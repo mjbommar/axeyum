@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-neg-one-power-parity-bridge-plan",
+  "state": "preregistered-before-source-construction",
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-neg-one-pow-parity-bridge-v1.lean",
+    "state_at_preregistration": "absent"
+  },
+  "target": {
+    "name": "Axeyum.Autogenesis.intNegOnePowParityBridgeV1",
+    "statement_role": "convert powFn k parity at k into powFn (n + 1) sign parity at n"
+  },
+  "explicit_contracts": [
+    "rawPower : forall k, powFn k = if k % 2 = 0 then 1 else -1",
+    "modCases : forall n, n % 2 = 0 or n % 2 = 1",
+    "succOne : n % 2 = 0 -> (n + 1) % 2 = 1",
+    "succZero : n % 2 = 1 -> (n + 1) % 2 = 0"
+  ],
+  "method": "split on modCases n, use the corresponding successor parity contract, normalize rawPower at n + 1, and normalize the target conditional at n",
+  "forbidden": [
+    "Odd.neg_one_pow",
+    "Int.pow_succ",
+    "simp",
+    "simpa",
+    "omega",
+    "propext"
+  ],
+  "budget": {
+    "source_constructions": 1,
+    "compiler_invocations": 1,
+    "exporter_invocations": 2,
+    "importer_runs": 2,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "compiler_must_accept": true,
+    "two_exports_must_be_byte_identical": true,
+    "axiom_footprint": []
+  },
+  "output": "artifacts/autogenesis/int-neg-one-pow-parity-bridge-result-v1.json",
+  "limitations": "The bridge remains parameterized until exact checked specialization."
+}

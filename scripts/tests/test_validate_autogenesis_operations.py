@@ -24,9 +24,9 @@ class OperationRegistryTests(unittest.TestCase):
             (ROOT / "artifacts/autogenesis/operations.json").read_text()
         )
 
-    def test_committed_registry_has_one_fixture_and_twelve_authoritative_operations(self) -> None:
+    def test_committed_registry_has_one_fixture_and_fifteen_authoritative_operations(self) -> None:
         registry_module.validate_registry(self.registry, ROOT)
-        self.assertEqual(len(self.registry["operations"]), 13)
+        self.assertEqual(len(self.registry["operations"]), 16)
         self.assertEqual(
             self.registry["operations"][0]["scope"], "counterfactual-fixture-only"
         )
@@ -128,10 +128,54 @@ class OperationRegistryTests(unittest.TestCase):
             int_fib_natcast["executor"]["driver"],
             "axeyum-lean-import/sealed-kernel-capsule-v1",
         )
+        int_fib_add_two = self.registry["operations"][13]
+        self.assertEqual(
+            int_fib_add_two["applicability"]["fact_ids"],
+            ["F:ml430-int-fib-add-two-739358dd"],
+        )
+        self.assertEqual(int_fib_add_two["applicability"]["fragments"], ["Int"])
+        self.assertEqual(
+            int_fib_add_two["executor"]["driver"],
+            "axeyum-lean-import/sealed-kernel-capsule-v1",
+        )
+        int_fib_corollary = self.registry["operations"][14]
+        self.assertEqual(
+            int_fib_corollary["applicability"]["fact_ids"],
+            ["F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d"],
+        )
+        self.assertEqual(int_fib_corollary["applicability"]["fragments"], ["Int"])
+        self.assertEqual(
+            int_fib_corollary["executor"]["driver"],
+            "axeyum-lean-import/sealed-kernel-capsule-v1",
+        )
+        int_fib_add_one = self.registry["operations"][15]
+        self.assertEqual(
+            int_fib_add_one["applicability"]["fact_ids"],
+            ["F:ml430-int-fib-add-one-33f1b748"],
+        )
+        self.assertEqual(int_fib_add_one["applicability"]["fragments"], ["Int"])
+        self.assertEqual(
+            int_fib_add_one["executor"]["driver"],
+            "axeyum-lean-import/sealed-kernel-capsule-v1",
+        )
 
     def test_integer_fibonacci_capsule_identity_is_exact(self) -> None:
         mutated = copy.deepcopy(self.registry)
         mutated["operations"][12]["executor"]["goal_sha256"] = "0" * 64
+        with self.assertRaisesRegex(
+            registry_module.RegistryError, "integer Fibonacci capsule contract"
+        ):
+            registry_module.validate_registry(mutated, ROOT)
+
+        mutated = copy.deepcopy(self.registry)
+        mutated["operations"][15]["executor"]["goal_sha256"] = "0" * 64
+        with self.assertRaisesRegex(
+            registry_module.RegistryError, "integer Fibonacci capsule contract"
+        ):
+            registry_module.validate_registry(mutated, ROOT)
+
+        mutated = copy.deepcopy(self.registry)
+        mutated["operations"][14]["executor"]["goal_sha256"] = "0" * 64
         with self.assertRaisesRegex(
             registry_module.RegistryError, "integer Fibonacci capsule contract"
         ):
@@ -265,7 +309,7 @@ class OperationRegistryTests(unittest.TestCase):
                     registry_module.validate_registry(mutated, ROOT)
 
     def test_sealed_kernel_capsule_driver_is_exactly_manifest_bound(self) -> None:
-        for operation_index in (8, 9):
+        for operation_index in (8, 9, 13):
             for field, value in (
                 ("capsule_sha256", "0" * 64),
                 ("target_theorem", "Nat.wrong"),

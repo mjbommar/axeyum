@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-native-neg-one-power-leaves-result",
+  "state": "generic-negative-power-successor-not-definitional",
+  "plan": {
+    "path": "artifacts/autogenesis/int-neg-one-pow-native-leaves-plan-v3.json",
+    "sha256": "43976823a108b2b15e6ee4c7a4c0a7f3d846fe41aea9f62b1922656b4d0f7e36",
+    "commit": "7da55e64f35aa6c4f520274bfd95a296cb18584b"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-neg-one-pow-native-leaves-v3.lean",
+    "sha256": "689583634eda51cb1c58b1022a414bd141184e81d1e9cf56e378c07fa2816fd2"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-neg-one-pow-native-leaves-v3",
+    "compiler_exit_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "compiler_stdout_sha256": "b00c8fed80bb11189a9765e1061f5f13d7dd08ef68a0adb96a1865d9ddb8fa8a",
+    "compiler_stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit_status": 1,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "diagnosis": "For negative Int bases, exponentiation is defined by exponent parity rather than multiplication recursion, so the generic successor equation is not reducible by rfl. The exact raw parity presentation is the definitional interface instead.",
+  "authority": {
+    "support_credit": 0,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Freeze the direct raw theorem (-1)^k = if k % 2 = 0 then 1 else -1 under kernel reduction.",
+  "limitations": "The failed successor source grants no support authority."
+}

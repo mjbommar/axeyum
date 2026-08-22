@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-parameterized-residual-plan",
+  "state": "preregistered-before-first-compilation",
+  "predecessor": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-residual-result-v1.json",
+  "inputs": {
+    "recurrence_fact": "F:ml430-int-fib-add-two-739358dd",
+    "recurrence_admission": "artifacts/autogenesis/mathlib-int-fib-add-two-admission-v1.json",
+    "cancellation_result": "artifacts/autogenesis/mathlib-int-add-neg-cancel-right-native-capsule-result-v1.json"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-recurrence-corollary-residual-v2.lean",
+    "theorem": "Axeyum.Autogenesis.intFibEqAddTwoSubAddOneResidualV2"
+  },
+  "contract": {
+    "parameters": [
+      "fibFn : Int -> Int",
+      "forall n, fibFn (n+2) = fibFn n + fibFn (n+1)",
+      "forall a b, a+b+(-b)=a"
+    ],
+    "conclusion": "forall n, fibFn n = fibFn (n+2) - fibFn (n+1)"
+  },
+  "method": "repeat the accepted V1 proof while abstracting the Fibonacci function itself, eliminating any type-level reachability into official opaque Int.fib",
+  "budget": {
+    "compiler_invocations": 1,
+    "exporter_invocations": 1,
+    "importer_runs": 2,
+    "retries": 0,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "source_must_compile": true,
+    "residual_axiom_footprint_must_be_empty": true,
+    "direct_theorem_dependencies": [
+      "Eq.symm",
+      "Eq.trans",
+      "congrArg"
+    ],
+    "official_fibonacci_declarations_forbidden": true,
+    "official_corollary_dependency_forbidden": true
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-residual-result-v2.json",
+  "limitations": "The residual remains parameterized and grants no exact theorem, fact transition, or ledger authority."
+}

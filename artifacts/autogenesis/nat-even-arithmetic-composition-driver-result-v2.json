@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-even-arithmetic-composition-driver-result",
+  "state": "driver-builds-clippy-clean-before-stream-access",
+  "plan": "artifacts/autogenesis/nat-even-arithmetic-composition-plan-v2.json",
+  "driver": "crates/axeyum-lean-import/examples/nat_even_arithmetic_composition.rs",
+  "focused_build": {
+    "command": "cargo clippy -p axeyum-lean-import --example nat_even_arithmetic_composition -- -D warnings",
+    "exit": 0
+  },
+  "execution": {
+    "input_stream_reads": 0,
+    "composition_operations": 0,
+    "specialization_operations": 0,
+    "target_submissions": 0,
+    "capsule_writes": 0,
+    "ledger_writes": 0
+  },
+  "credit": "driver assurance only",
+  "next_boundary": "Run exactly one complete invocation against the two hash-bound inputs and fail-if-present output."
+}

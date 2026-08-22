@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-parameterized-neg-one-power-parity-result",
+  "state": "plan-budget-contradiction-before-execution",
+  "plan": {
+    "path": "artifacts/autogenesis/int-neg-one-pow-parity-residual-plan-v1.json",
+    "sha256": "b34036268cd7ac2eeee8b72e5cb3fd74b0b6f0464d32d57b85e21916473b23e4",
+    "commit": "914962cda5aada8d355cfa086b8584134ba6e8cd"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-neg-one-pow-parity-residual-v1.lean",
+    "sha256": "2bc12b049f38701d3442258d64385ad84c38bc621624a72e7be8b94cea2a807c",
+    "constructions": 1
+  },
+  "diagnosis": "The plan requires two independently generated exports to be byte-identical but budgets only one exporter invocation. Both conditions cannot be satisfied in one execution.",
+  "execution": {
+    "compiler_invocations": 0,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "theorem_submissions": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "support_credit": 0,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Freeze the unchanged source under a two-export budget before any compiler or exporter execution.",
+  "limitations": "Source text alone is not proof evidence."
+}

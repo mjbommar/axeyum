@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-constructor-lift-plan",
+  "state": "preregistered-before-revised-root-export",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-even-constructor-lift-result-v5.json",
+    "required_state": "target-owned-neg-double-source-compiles"
+  },
+  "sealed_source": {
+    "repository_path": "artifacts/autogenesis/sources/int-even-constructor-lift-v1.lean",
+    "shared_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-constructor-lift-v2/IntEvenConstructorLiftV2.lean",
+    "sha256": "c82856dc2700e897fc13337d445b1952494ca6e85d8c21ec7043553403949e45"
+  },
+  "operation": {
+    "host": "s5",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean_version": "4.30.0",
+    "module": "IntEvenConstructorLiftV2",
+    "module_build_uses_explicit_shared_root": true,
+    "roots": [
+      "Axeyum.Autogenesis.intNegNatDoubleV2",
+      "Axeyum.Autogenesis.intDoubleModTwoZeroLiftV1",
+      "Axeyum.Autogenesis.intHalfWitnessOfModTwoZeroLiftV1"
+    ],
+    "exports": ["roots-1.ndjson", "roots-2.ndjson"],
+    "all_outputs_must_be_absent": true
+  },
+  "budget": {
+    "module_builds": 1,
+    "exports": 2,
+    "root_footprint_audits": 3,
+    "retries": 0,
+    "specializations": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "exports_byte_identical": true,
+    "all_three_root_footprints": [],
+    "half_root_must_not_depend_on": ["Int.neg_add"],
+    "proof_terms_types_or_values_may_be_rendered": false
+  },
+  "stop_rule": "Any build/export failure, byte mismatch, nonempty footprint, retained Int.neg_add dependency, or preexisting output stops without specialization.",
+  "output": "artifacts/autogenesis/int-even-constructor-lift-result-v6.json"
+}

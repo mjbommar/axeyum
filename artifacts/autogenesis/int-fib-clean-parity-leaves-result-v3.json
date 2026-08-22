@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-clean-reconstruction-result",
+  "state": "explicit-cases-substitute-successful-goals",
+  "plan_sha256": "59ddedc4494886af7bcf6ccfcb4e6ad603feb4919a480401771a12ba60fb2994",
+  "source": {"path": "artifacts/autogenesis/sources/int-fib-clean-parity-leaves-v3.lean", "sha256": "e67ce730739643ac2d5edc6ee1e63008c123fcdc1c7e09dc74049fd8590a55bd"},
+  "execution": {"compiler_invocations": 1, "compiler_exit_status": 1, "exporter_invocations": 0, "importer_runs": 0, "retries": 0, "theorem_submissions": 0, "ledger_writes": 0},
+  "diagnostic": {"mathematical_route_rejected": false, "cause": "cases hmod substitutes the remainder into both successful branch goals", "repair": "replace Or.inl hmod and Or.inr hmod with Or.inl rfl and Or.inr rfl"},
+  "cleanup": {"temporary_source_removed": true, "temporary_olean_removed": true, "temporary_ilean_removed": true, "checkout_baseline_restored": true},
+  "authority": {"support_credit": 0, "closed_target_authorized": false, "ledger_writes": 0}
+}

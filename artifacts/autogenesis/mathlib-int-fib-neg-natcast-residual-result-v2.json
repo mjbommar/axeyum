@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-parameterized-negative-fibonacci-residual-result",
+  "state": "conditional-negative-fibonacci-join-reconstructs-empty-footprint",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-neg-natcast-residual-plan-v2.json",
+    "sha256": "b8263c51072eba56c49155df7eacbf8145a486298e658ea0288938c105a3e861",
+    "commit": "46e31c754cc510059a539954c7547dc1d4664dd5"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-neg-natcast-residual-v2.lean",
+    "sha256": "4a784376ae92a674747ea4dda0ac487f84e011b491ffb88db1e5bc9894a093c5"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-natcast-residual-v2-v1",
+    "manifest_sha256": "aee40701dc33f2d4b893aada8b826da26790c4369d683da999e49429fb3820e4",
+    "stream_sha256": "cc6c1b9b450a4ac620dbfd7036809c242b075e6615301f295edfc9e10588db06",
+    "stream_bytes": 421482,
+    "audit_sha256": "78605b729976acab1dadf18a776b0d209aecfd49757c6711d183effbdae42809",
+    "sealed": true
+  },
+  "execution": {
+    "source_constructions": 1,
+    "compiler_invocations": 1,
+    "compiler_exit": 0,
+    "exporter_invocations": 1,
+    "exporter_exit": 0,
+    "importer_runs": 2,
+    "retries": 0
+  },
+  "theorem": {
+    "name": "Axeyum.Autogenesis.intFibNegNatCastResidualV2",
+    "declaration_sha256": "a1c9a9bdb4de7f2130369b577d948c123c5e0d5c0ca0290a46f87504cd3d9cd1",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [
+      "Eq.symm",
+      "Eq.trans",
+      "congrArg",
+      "if_neg",
+      "if_pos"
+    ]
+  },
+  "remaining_contracts": {
+    "negative_presentation": "derive fibFn (-(n:Int)) as a parity-indexed signed Nat Fibonacci cast using the admitted recurrence orientations",
+    "power_presentation": "derive (-1:Int)^(n+1) as the same parity-indexed sign",
+    "multiplication_leaves": [
+      "forall x:Int, (-1)*x=-x",
+      "forall x:Int, 1*x=x"
+    ]
+  },
+  "authority": {
+    "parameterized_support_credit": 1,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Preregister the recurrence-derived negative presentation as a separate induction theorem using both admitted recurrence orientations and the already qualified parity cases.",
+  "limitations": "This residual does not establish exact Int.fib_neg_natCast or Int.fib_neg and grants no ledger authority."
+}

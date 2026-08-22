@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-native-kernel-capsule-result",
+  "state": "native-algebra-pair-exported-and-twice-reimported-empty-footprint",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-add-comm-cancel-right-native-capsule-plan-v1.json",
+    "sha256": "e6c022155c0d789819d147ed26280abdc60667ef529f31e874bb3a168b49cd7e",
+    "commit": "b5ca5cc01eb45f9767d62e99c61b6e8d61775282"
+  },
+  "driver": {
+    "path": "crates/axeyum-lean-import/examples/int_add_comm_cancel_right_capsule.rs",
+    "sha256": "c5e24ff58b149b271234d44ed7fa372d975d5983a369f9c486dbbfc5389ee6f7",
+    "commit": "9255958334e6faea8353d7ea7d0e776940f43701"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-add-comm-cancel-right-native-v1",
+    "manifest_sha256": "a9b0471a0cc69db1bc50bc8cf60e74793ae172765537a71647a8cbdef4dddc7d",
+    "capsule_sha256": "42683af8480ea4d7bef42b32ecab3f3d43a2228c8a30f8b73417bbda6eca4fa2",
+    "capsule_bytes": 129445,
+    "run_sha256": "afb30ec931fdb14fe36ed36b923eacb484546911226ee7433339eed889ae7626",
+    "sealed": true
+  },
+  "theorems": [
+    {
+      "name": "Int.add_comm",
+      "declaration_sha256": "d0e9af08cbf588a07a42e356753b92ee61078db5184e59ba0462179e0d978091",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": [
+        "Nat.add_comm"
+      ]
+    },
+    {
+      "name": "Int.add_neg_cancel_right",
+      "declaration_sha256": "b18fdc69c5a4786719fec08bfe9a18fdd8a7dad3c5a7861005ca2ff0193e14e0",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": [
+        "Int.add_assoc",
+        "Int.add_neg",
+        "Int.add_zero"
+      ]
+    }
+  ],
+  "execution": {
+    "complete_invocations": 1,
+    "native_prelude_builds": 1,
+    "exports": 1,
+    "fresh_imports": 2,
+    "retries": 0,
+    "Fibonacci_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "identity_observation": "The capsule is byte-identical to the accepted right-cancellation capsule because Int.add_comm was already in that root's transitive closure; this run explicitly qualifies both names as reusable roots.",
+  "authority": {
+    "generic_integer_algebra_credit": 2,
+    "Fibonacci_target_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Compose exact Int.fib_add_one from this capsule, the admitted recurrence capsule, and the accepted parameterized residual.",
+  "limitations": "This establishes only two generic integer algebra roots in one portable capsule. It grants no Fibonacci fact or ledger authority."
+}

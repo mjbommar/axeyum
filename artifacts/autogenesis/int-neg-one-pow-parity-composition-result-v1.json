@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-exact-neg-one-power-parity-composition-result",
+  "state": "exact-power-parity-specialized-empty-footprint",
+  "plan": {
+    "path": "artifacts/autogenesis/int-neg-one-pow-parity-composition-plan-v1.json",
+    "sha256": "db3169df6705c900de4393a8d8176abb07fbb4b1580929d9dc8b6fb612b6349f",
+    "commit": "dbdb3bf7c2728b8e08a5a18498249ea7774c3249"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-neg-one-pow-parity-exact-v1",
+    "capsule_sha256": "dbe29125ed7ffd5e66e33da9da236b22b472fa4c5527f87146adc0ca25f9faa0",
+    "capsule_bytes": 693007,
+    "result_sha256": "1ccbba9d781ba993422935dabf07ae35a8abe77944dd4ab9cf179dda5256fe87",
+    "exit_code_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "sealed": true
+  },
+  "receipts": {
+    "raw_power_composition": "c8fc68b14c044482a38f99b0d5a35a15a779127bc7f1c560b2aa6eb4fc5a4d4e",
+    "parity_composition": "595575fb5293d92091066bd9b9adc39c6401fa8ad82843f38e15f431ef826263",
+    "specialization": "582d862897f070ddcaf833f9a2804baaf7d88a9656db19c9a924e0fe7d2da8d4"
+  },
+  "target": {
+    "name": "Axeyum.Autogenesis.intNegOnePowParityV1",
+    "declaration_sha256": "c0ee4ea81e5b73dd58f0f67182f56d6bd75d789cfa0511ad5a9c5634e1191d55",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [
+      "Axeyum.Autogenesis.intNegOnePowParityBridgeV2",
+      "Axeyum.Autogenesis.intNegOnePowRawV2",
+      "Axeyum.IntFib.modCases",
+      "Axeyum.IntFib.succOne",
+      "Axeyum.IntFib.succZero"
+    ]
+  },
+  "execution": {
+    "complete_invocations": 1,
+    "input_stream_reads": 3,
+    "composition_operations": 2,
+    "composition_replays": 2,
+    "specialization_operations": 1,
+    "specialization_replays": 1,
+    "capsule_exports": 1,
+    "fresh_capsule_imports": 2,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "exact_support_credit": 1,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Qualify concrete Int left-one and left-negative-one multiplication leaves, then compose this support with the negative-value presentation through the accepted final residual.",
+  "limitations": "The exact sign-power theorem is support only and does not mutate the fact ledger."
+}

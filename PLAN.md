@@ -127,6 +127,137 @@ now. Nothing was deleted.
 | 2026-08-21 | `e7d8629c5` | `docs/PROJECT-STATE.md` said the parity ledger holds "eleven divisions" and named QF_ABV among its parity cells. It holds nine and has never held a QF_ABV entry — that list is committed and was never run. Two guards added to `check-parity-docs.py`, both derived from the ledger and both shown to fire on the real tree before the prose was fixed. |
 | 2026-08-21 | `35f46112b` | `scripts/parity-run.sh` was invoked by NO gate, so the repository's declared headline froze on 2026-08-06 for fifteen days and nothing went red. `scripts/check-parity-freshness.py` fails past 14 days per logic (warn 10), wired into BOTH `scripts/check.sh` and the justfile's `check`. Parser classifies every `## ` header and exits 2 on one it does not recognise — a silently skipped entry is indistinguishable from an absent one, which is how a stale logic reads as fresh. 12 controls, every guard mutation-verified. |
 | 2026-08-21 | `45587c513` | QF_NIA gap #4 diagnosed. "Multi-year catch-up" confirmed for the search — three cheapest levers yield 0 / +1 / +3 files, 4× clock buys 0 of 20 timeouts — and three premises corrected: **cvc5 is on this host** (`/nas3/data/axeyum/harness/bin/cvc5`, not on `$PATH`; two docs say otherwise), **z3 is 60 files from cvc5 here** (136 vs 76, cvc5's set a strict subset), and **the deficit is one family** (`VeryMax/ITS` = 74 of 104 misses; excluding it, 74.4 % of cvc5). `int-blast-ladder` decisive on 158/161; its constant-fit rule leaves **1 live rung on 32 files, 0 decided**. Four per-file passes committed. |
+| 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
+| 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
+| 2026-08-21 | `98657cef7` | V2 source compiles but a direct exporter invocation yields an empty stream; V3 freezes the unchanged source and exact `lake env lean4export` command |
+| 2026-08-21 | `fb81c699c` | V3 exposes that `lean4export` is not installed by name; V4 freezes `lake env` plus the absolute pinned exporter path |
+| 2026-08-21 | `bc55d7d5b` | V4 is blocked by s5's user quota before any bytes exist; V5 freezes direct output to the writable shared evidence pack |
+| 2026-08-21 | `cfd23abfa` | V5 exports the function-parameterized rearrangement twice with empty footprint; exact three-capsule specialization is frozen before driver code exists |
+| 2026-08-21 | `339213b8e` | First composition declines at recursive `Nat.le` while importing recurrence into the tiny residual base; V2 freezes recurrence as the base before one code repair |
+| 2026-08-21 | `8fa456002` | V2 reaches an empty-footprint exact target but rejects a role-ordered expected dependency array; V3 freezes the lexical order repair |
+| 2026-08-21 | `3ad85619a` | V3 specializes and reimports the exact corollary empty-footprint; one hash-only sealed-stream read is frozen before admission authority exists |
+| 2026-08-21 | `4263b1c04` | Hash-only audit binds canonical type `2295adda…25ad`; exact three-dependency crash-safe admission is frozen before operation code or ledger write |
+| 2026-08-21 | `2f9dd5bef` | Exact capsule checker, operation registry, gate coupling, and transaction mutation control make the corollary uniquely executable with zero ledger writes |
+| 2026-08-21 | `e1e9a6d9b` | First apply preflight rejects an archived `--before-fact` before intent or write; V2 freezes the canonical fact path with unchanged transaction identities |
+| 2026-08-21 | `72a756086` | V2 correctly rejects receipt replay from a descendant checkout; V3 freezes a dedicated clean worktree at exact registration commit `2f9dd5bef` |
+| 2026-08-21 | `11ceccd8d` | V3 reaches apply preflight but rejects a cross-filesystem journal; V4 freezes a dedicated `/data0` journal beside the exact-commit worktree |
+| 2026-08-21 | `6dd5cd1c2` | V4 stops after durable intent with exit 75, recovery performs one write, and the exact corollary settles axiom-free with no newly ready descendants |
+| 2026-08-21 | `f6937f80d` | Complete immutable archive v4 binds all primary identities; one isolated clean semantic replay is frozen before execution |
+| 2026-08-21 | (pending) | Isolated replay repeats selection, exit-75 recovery, exact checked result, one write, and the empty readiness delta from source commit `6dd5cd1c2` |
+| 2026-08-21 | (pending) | The remaining `Int.fib_add_one` orientation is frozen as a function-parameterized right-cancellation residual before source construction or trusted execution |
+| 2026-08-21 | (pending) | V1 fails closed before source construction because it reverses the admitted recurrence summands; V2 freezes explicit clean commutativity plus right cancellation |
+| 2026-08-21 | (pending) | V2 fails closed before source construction because the final target equality needs symmetry; V3 freezes the exact `Eq.symm`, `Eq.trans`, and `congrArg` dependency set |
+| 2026-08-21 | (pending) | V3 reconstructs the function-parameterized `fib_add_one` residual twice byte-identically with an empty footprint; exact specialization remains unauthorized |
+| 2026-08-21 | (pending) | A same-kernel native capsule for `Int.add_comm` plus `Int.add_neg_cancel_right` is frozen before driver code so exact `fib_add_one` composition cannot mix incompatible theorem handles |
+| 2026-08-21 | (pending) | The native algebra-pair driver compiles and passes focused Clippy without executing the prelude build or writing a proof capsule |
+| 2026-08-21 | (pending) | One native build explicitly qualifies `Int.add_comm` and right cancellation through two fresh imports; the capsule is byte-identical to the earlier cancellation closure |
+| 2026-08-21 | (pending) | Exact `Int.fib_add_one` specialization is frozen across the admitted recurrence, explicitly qualified native algebra pair, and clean parameterized residual before driver code |
+| 2026-08-21 | (pending) | The exact add-one composition driver compiles and passes focused Clippy without reading proof streams or submitting the target |
+| 2026-08-21 | (pending) | Exact `Int.fib_add_one` specializes once, replays its composition receipts, survives two fresh imports, and has an empty footprint with zero ledger writes |
+| 2026-08-21 | (pending) | One hash-only sealed-stream read is frozen to bind exact `Int.fib_add_one` type identity before any admission authority exists |
+| 2026-08-21 | (pending) | Hash-only audit binds canonical `Int.fib_add_one` type `b9c99a22…41c6` with unchanged empty footprint and zero ledger authority |
+| 2026-08-21 | (pending) | Exact crash-safe `Int.fib_add_one` admission is frozen against its sealed four-dependency capsule before operation code or ledger mutation |
+| 2026-08-21 | (pending) | Exact capsule checker, operation registry, transaction assurance, and mutation controls make `Int.fib_add_one` uniquely executable with zero ledger writes |
+| 2026-08-21 | (pending) | Exit-75 intent fault leaves the fact unchanged; one recovery write admits exact `Int.fib_add_one`, and the complete immutable primary archive binds an empty readiness delta |
+| 2026-08-21 | (pending) | Isolated replay repeats selection, exit-75 recovery, exact checked result, one write, and the empty readiness delta from source commit `20ffd649b` |
+| 2026-08-21 | (pending) | `Int.fib_neg_natCast` is frozen as a parameterized join of recurrence-derived negative values and independent sign-power parity, before source construction or target submission |
+| 2026-08-21 | (pending) | V1 stops before export at one `Nat`/`Int` binder inference mismatch; V2 freezes only explicit natural-number annotations in both presentation contracts |
+| 2026-08-21 | (pending) | V2 cleanly reconstructs the conditional negative-Fibonacci join twice; only recurrence-derived negative values, sign-power alternation, and two multiplication leaves remain explicit |
+| 2026-08-21 | (pending) | The negative-value leaf is frozen as a two-constructor definitional proof over the already admitted target-owned `Int.fib`, testing whether recurrence is unnecessary at this boundary |
+| 2026-08-21 | (pending) | The presentation theorem is dependency-free, but V1 rejects its `Int.fib` identity against the official blocker hash; one exact two-stream compatibility audit is frozen against the admitted recurrence capsule |
+| 2026-08-21 | (pending) | The compatibility audit qualifies all 60 reported dependency carriers but omits the root by design; V2 freezes a generic non-rendering root declaration comparator before code exists |
+| 2026-08-21 | (pending) | Root comparison finds matching definition kinds and kernel type shapes but different complete bodies; one checked presentation-theorem composition is frozen before execution |
+| 2026-08-21 | (pending) | Checked composition transports the negative-value presentation into the admitted recurrence capsule, replays, and adds exactly one axiom-free theorem; sign-power parity is now the remaining mathematical leaf |
+| 2026-08-21 | (pending) | Minus-one power parity is frozen as a function-parameterized induction over four explicit algebra contracts and the already sealed modulo-parity supports, before source construction |
+| 2026-08-21 | (pending) | V1 fails closed before Lean execution because one exporter invocation cannot prove two-export determinism; V2 freezes the unchanged source with a consistent two-export budget |
+| 2026-08-21 | (pending) | V2 compiles the residual unchanged, but the first exporter finds no installed module; V3 freezes an explicit Lake module output before recompilation |
+| 2026-08-21 | (pending) | V3 exports twice byte-identically with an empty footprint and zero direct theorem dependencies, but rejects its overstated four-dependency contract; V4 freezes one fresh exact empty-dependency audit |
+| 2026-08-21 | (pending) | V4 qualifies the sealed parameterized minus-one parity induction with an empty footprint; four concrete Int power/multiplication leaves are frozen before source construction |
+| 2026-08-21 | (pending) | Native-leaf V1 stops at the absent unqualified `pow_succ`; V2 freezes only the protected `Int.pow_succ` name repair before source construction |
+| 2026-08-21 | (pending) | Native-leaf V2 yields three clean roots but `Int.pow_succ` reaches `propext`; V3 freezes the identical statement with a direct `rfl` proof |
+| 2026-08-21 | (pending) | V3 confirms negative Int power successor is not definitional because power itself branches on parity; the exact raw parity presentation is frozen as an `rfl` theorem instead |
+| 2026-08-21 | (pending) | Raw V1 exposes the remaining `1^k` normalization; V2 freezes a structural `Nat` one-power proof and explicit transport through the two definitional Int branches |
+| 2026-08-21 | (pending) | Raw V2 reaches only overloaded successor-power elaboration; V3 freezes an explicit `1^k * 1 = 1` goal before reusing the same induction hypothesis |
+| 2026-08-21 | (pending) | Raw V3 exposes multiplication by one as the next propositional layer; V4 freezes target-owned structural zero-add, multiply-one, and one-power before rebuilding the raw Int theorem |
+| 2026-08-21 | (pending) | Raw V4 reconstructs zero-add, multiply-one, one-power, and exact negative-one power parity with empty footprints; the successor-parity bridge is frozen before source construction |
+| 2026-08-21 | (pending) | Bridge V1 reconstructs empty-footprint but its anonymous function binder cannot enter named-declaration specialization; V2 freezes only the concrete `(-1)^k` substitution |
+| 2026-08-21 | (pending) | Bridge V2 reconstructs the concrete expression with four proof contracts and an empty footprint; exact raw/parity specialization is frozen before driver code |
+| 2026-08-21 | (pending) | Exact power parity specializes, replays, and survives two fresh imports with the registered five dependencies; the final two left-multiplication leaves are frozen before source construction |
+| 2026-08-21 | (pending) | Multiplication V1 finds the audited ring-law names absent from `Int.Basic`; V2 freezes only the narrow `Mathlib.Algebra.Ring.Int.Defs` import repair |
+| 2026-08-21 | (pending) | V2 shows clean abstract ring laws become `propext`-bearing through the Int instance; V3 freezes direct constructor-case computation instead |
+| 2026-08-21 | (pending) | V3 exposes four non-definitional constructor goals; native `Int.one_mul` and `Int.neg_one_mul` are frozen over the existing axiom-free prelude machinery before code |
+| 2026-08-21 | (pending) | Native `Int.one_mul` and `Int.neg_one_mul` check with empty footprints; their two-import root-capsule builder passes focused tests and Clippy without execution |
+| 2026-08-21 | (pending) | One 58,304-byte native left-unit/sign capsule exports and survives two fresh imports with both theorem footprints empty and zero ledger writes |
+| 2026-08-21 | (pending) | Exact `Int.fib_neg_natCast` composition is frozen as one concrete four-proof bridge over the five sealed bottom-up inputs before source construction |
+| 2026-08-21 | (pending) | V1 stops before bridge elaboration because the compiled residual module is outside Lake's search path; V2 freezes only an explicit shared-volume `LEAN_PATH` repair |
+| 2026-08-21 | (pending) | V2 resolves the import path but stops before elaboration at Lean's package-root check; V3 freezes only the documented shared-directory `--root` flag |
+| 2026-08-21 | (pending) | V3 accepts both driver repairs and exposes the absent target-owned `Int.fib` module; V4 freezes only importing its already sealed presentation source |
+| 2026-08-21 | (pending) | V4 exports deterministically but generic parity instance synthesis reaches `propext`; V5 freezes only explicit core `Nat.decEq` as the decision provider |
+| 2026-08-21 | (pending) | V5 shows official `Nat.decEq` still traverses proposition-equality carriers; V6 freezes a local structural Nat decider using only recursion and no-confusion |
+| 2026-08-21 | (pending) | V6 proves proposition `ite` retains its decision witness in kernel shape; the next join is frozen decision-free over explicit modulo-two branch evidence |
+| 2026-08-21 | (pending) | Decision-free residual and four adapters compile unchanged; V1 export omits their new olean directory and V2 freezes only the two-directory `LEAN_PATH` repair |
+| 2026-08-21 | (pending) | V2 qualifies the residual and both negative adapters; the shared broad import contaminates only power adapters, so V3 freezes a Basic-only module split |
+| 2026-08-21 | (pending) | V3 qualifies both Basic-only power adapters empty-footprint; V4 freezes root-only packaging of the already clean negative pair before exact composition |
+| 2026-08-21 | (pending) | V4 seals the negative pair in an empty-axiom root pack; exact seven-stream decision-free `Int.fib_neg_natCast` composition is frozen before driver code |
+| 2026-08-21 | (pending) | Exact decision-free driver compiles Clippy-clean with six replayed compositions, five replayed specializations, and two fresh imports required before write |
+| 2026-08-21 | (pending) | Exact `Int.fib_neg_natCast` specializes once, replays all eleven receipts, survives two fresh imports, and closes with an empty footprint and eight dependencies |
+| 2026-08-21 | (pending) | Hash-only identity audit of the sealed negative-natural theorem is frozen before its one reread; it will feed exact selected-fact `Int.fib_neg`, not create an ad hoc fact |
+| 2026-08-21 | (pending) | Canonical support type `8696d229…447dad` is bound empty-footprint; one nonpublishing official-root composition audit is frozen with it as the sole target leaf |
+| 2026-08-21 | (pending) | The target-leaf audit driver compiles Clippy-clean and preserves both caller kernels whether exact official-root composition accepts or declines |
+| 2026-08-21 | (pending) | Monolithic target-leaf composition exits without a durable report and gets zero credit; bounded target-owned `Int.eq_nat_or_neg` outer residual is frozen instead |
+| 2026-08-21 | (pending) | Outer V1 is deterministic but its broad-environment case-split helper is contaminated; V2 freezes direct `Int` constructor cases with no helper theorem |
+| 2026-08-21 | (pending) | Direct constructor V2 retains assumptions through exact `Even`/conditional type closure; one nonrendering nearest-carrier audit is frozen before parity infrastructure work |
+| 2026-08-21 | (pending) | Full residual carrier audit again yields no durable report; bounded root export of `Int.instDecidablePredEven` is frozen as the exact parity-decision boundary |
+| 2026-08-21 | (pending) | Bounded decision-root audit localizes every blocker family through `Int.even_iff`; one direct-dependency audit is frozen before its target-owned reconstruction |
+| 2026-08-21 | (pending) | `Int.even_iff` audit exposes private/simp contamination around clean arithmetic; an explicit two-implication residual is frozen before source construction |
+| 2026-08-21 | (pending) | Two-direction `Int.even_iff` residual exports twice empty-footprint with zero theorem dependencies; forward modulo and backward quotient witnesses are frozen next |
+| 2026-08-21 | (pending) | Official `Int.mul_emod_right` reaches `propext` and is rejected; V2 freezes direction residuals over explicit double-mod-zero and half-witness leaves |
+| 2026-08-21 | (pending) | Both direction residuals export twice empty-footprint; two bounded core division/modulo candidates are frozen for one direct audit before arithmetic construction |
+| 2026-08-21 | (pending) | Both general Int division/modulo candidates reach `propext`; target-owned Nat double-mod-zero and half-witness parity arithmetic are frozen before Int lifting |
+| 2026-08-21 | (pending) | Two parameterized natural parity residuals compile once under pinned Lean 4.30; qualification and all downstream integer work remain pending |
+| 2026-08-21 | (pending) | Exact shared-filesystem module build and two root exports are frozen before execution; no composition or ledger authority is included |
+| 2026-08-21 | (pending) | V2 stops before module output because the shared source lacks an explicit Lean package root; V3 freezes only `--root` before one corrected execution |
+| 2026-08-21 | (pending) | V3 exports both parameterized natural parity roots twice byte-identically and independently audits both empty-footprint; modulo-step specialization remains separate |
+| 2026-08-21 | (pending) | Exact checked specialization of both natural parity residuals with clean `modStepTwo` is frozen before driver code or stream execution |
+| 2026-08-21 | (pending) | Closure driver V1 stops before stream access at Clippy's line threshold; V2 freezes only one function-scoped allowance before rebuilding |
+| 2026-08-21 | (pending) | Closure driver V2 passes focused Clippy with every proof stream still unread; one fail-if-present invocation remains authorized |
+| 2026-08-21 | (pending) | Clean `modStepTwo` closes both natural parity residuals through replayed specialization; both targets survive two fresh imports empty-footprint |
+| 2026-08-21 | (pending) | Target-owned `Int.ofNat`/`Int.negSucc` lifts are frozen over the new Nat supports plus clean modulo cases/successor flips before source construction |
+| 2026-08-21 | (pending) | Constructor lift V1 reaches only unavailable `neg_add_rev` at the final line; V2 freezes its exact narrow-import replacement `Int.neg_add` |
+| 2026-08-21 | (pending) | Constructor lift V2 compiles both positive/negative integer parity contracts under narrow Basic; export and footprint qualification remain separate |
+| 2026-08-21 | (pending) | Exact root-mapped module build, two exports, and two independent lift audits are frozen before qualification execution |
+| 2026-08-21 | (pending) | Integer double-mod lift qualifies empty-footprint; half-witness is rejected at `propext`, and its five direct theorem dependencies are frozen for one audit |
+| 2026-08-21 | (pending) | Half-lift contamination localizes solely to `Int.neg_add`; V4 freezes a target-owned raw-constructor proof for negated natural doubling |
+| 2026-08-21 | (pending) | V4 transport stops before Lean because its new evidence-pack directory is absent; V5 freezes only exact directory creation before unchanged compilation |
+| 2026-08-21 | (pending) | V5 compiles the target-owned raw `intNegNatDoubleV2` replacement; revised support and both lift footprints remain unqualified |
+| 2026-08-21 | (pending) | Revised helper plus both integer lift roots are frozen for two exports and three independent audits before any Nat-support specialization |
+| 2026-08-21 | (pending) | Target-owned negated doubling removes `Int.neg_add`; helper plus both integer lifts qualify empty-footprint in a 53% smaller root capsule |
+| 2026-08-21 | (pending) | Exact five-contract specialization of both integer lifts is frozen over closed Nat support plus clean parity roots before driver code |
+| 2026-08-21 | (pending) | Closed integer arithmetic driver passes focused Clippy with all three proof streams unread; one fail-if-present invocation remains |
+| 2026-08-21 | (pending) | Five clean contracts close both integer parity arithmetic premises through replayed specialization and two fresh imports |
+| 2026-08-21 | (pending) | Both exact `Even n`/`n % 2 = 0` directions are frozen for specialization over the closed integer premises before driver code |
+| 2026-08-21 | (pending) | Exact direction driver passes focused Clippy with both proof streams unread; one fail-if-present composition remains |
+| 2026-08-21 | (pending) | Both exact integer evenness directions specialize, replay, and survive two fresh imports with empty footprints |
+| 2026-08-21 | (pending) | Exact-name clean `Int.even_iff` reconstruction is frozen over the two closed directions with mandatory target absence before driver code |
+| 2026-08-21 | (pending) | Exact-Iff driver V1 stops before stream access on Clippy's primitive stable sort; V2 freezes only `sort_unstable` |
+| 2026-08-21 | (pending) | Exact-Iff driver V2 passes focused Clippy with both streams unread; one exact-name invocation remains |
+| 2026-08-21 | (pending) | Exact-name `Int.even_iff` reconstructs from clean directions, replays, and survives two fresh imports with an empty footprint |
+| 2026-08-21 | (pending) | A reflexive theorem carrier is frozen to expose the exact decision-instance definition closure for later clean `Int.even_iff` target-leaf composition |
+| 2026-08-21 | (pending) | Decision carrier source compiles; V2 freezes a separate explicit-root module build and reproducible closure export |
+| 2026-08-21 | (pending) | Carrier closure confirms exact instance→helper→`Int.even_iff`; checked target-leaf replacement with the clean theorem is frozen before driver code |
+| 2026-08-21 | (pending) | Clean decision target-leaf driver passes focused Clippy with both streams unread; one fail-if-present composition remains |
+| 2026-08-21 | (pending) | Exact official integer-even decision instance reconstructs over clean `Int.even_iff`, replays, and survives two fresh imports with empty helper/carrier footprints |
+| 2026-08-21 | (pending) | Exact `Int.fib_neg` is frozen for official-root composition over clean natCast plus clean exact decision/`even_iff` leaves before driver code |
+| 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
+| 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
+| 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
+| 2026-08-21 | (pending) | The Lean surface exposes four borrow goals; native `Int.add_neg_cancel_right` is derived instead from Axeyum's axiom-free associativity, inverse, and zero laws |
+| 2026-08-21 | `93a314e15` | A fresh pinned Mathlib 4.30 two-root export is frozen to replace the failed full-closure corollary audit |
+| 2026-08-21 | (pending) | The two-root export remains 15.1 MB and its audit emits no report, so official closure import is declined in favor of target-owned rearrangement |
+| 2026-08-21 | `6f10d2c1a` | The two newly ready integer Fibonacci recurrence corollaries are frozen for one exact non-rendering root audit before route selection |
+| 2026-08-21 | (pending) | The single full-closure audit emits no report and receives no retry; the route moves to a fresh bounded two-root export |
+| 2026-08-21 | `c254e3c9a` | Crash-safe recovery admits exact `Int.fib_add_two` with one authoritative write and makes two integer Fibonacci descendants newly ready |
+| 2026-08-21 | (pending) | Immutable primary evidence and an isolated clean replay seal the exact recurrence admission and reproduce its two-fact readiness delta |
 | 2026-08-21 | `c4c6524ac` | Exact `Int.fib_neg` root audit is frozen against the pinned clean exporter environment with zero reconstruction or ledger authority |
 | 2026-08-21 | (pending) | One root export and non-rendering importer pass find 26 direct dependencies and an assumption-bearing official `Int.fib_neg` proof |
 | 2026-08-21 | `1c728c757` | Exact 26-root dependency descent is frozen against the immutable `Int.fib_neg` stream with zero theorem authority |
@@ -388,6 +519,19 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Recurrence audit isolates `Nat.mod_eq` as the sole direct assumption carrier; its four-edge `modCore` boundary is frozen next |
 | 2026-08-21 | (pending) | `Nat.modCore_eq` is the deepest assumption-bearing bridge; its finite direct closure is frozen to separate recursion from simp infrastructure |
 | 2026-08-21 | (pending) | All modulo recursion machinery is clean; only generic simp proposition equalities carry assumptions, so a manual branch proof is frozen |
+| 2026-08-21 | (pending) | Manual modulo-core V1 preserves the route and stops on three elaboration details; V2 freezes only those corrections |
+| 2026-08-21 | (pending) | V2 reaches the inaccessible private clean fuel theorem; V3 freezes a local structural duplicate plus the unchanged branch proof |
+| 2026-08-21 | (pending) | V3 reconstructs fuel congruence and `modCoreEq` with empty footprints; the three clean public modulo bridges are frozen next |
+| 2026-08-21 | (pending) | Bridge V1 fails before execution on a self-containment policy conflict; V2 permits only the already-qualified fuel reduction |
+| 2026-08-21 | (pending) | V2 reconstructs all public modulo bridges empty-footprint; exact modulo-two step, cases, and successor leaves are frozen next |
+| 2026-08-21 | (pending) | Parity V1 finds its specialized recurrence already normalized; V2 removes only the redundant `dsimp` before qualification |
+| 2026-08-21 | (pending) | Parity V2 qualifies step and both successor roots cleanly; V3 replaces only `modCases`'s dependent match carrier |
+| 2026-08-21 | (pending) | Parity V3's explicit cases are accepted; V4 freezes the two required reflexive successful branches |
+| 2026-08-21 | (pending) | Parity V4 closes all four roots empty-footprint; exact eight-root `Int.fib_add_two` kernel composition is frozen before code |
+| 2026-08-21 | (pending) | Exact composition V1 fails before submission on the wrong Fibonacci support shape; V2 freezes the exact one-index recurrence capsule |
+| 2026-08-21 | (pending) | Exact composition V2 reconstructs `Int.fib_add_two` twice byte-identically with an empty footprint; ledger admission remains separate |
+| 2026-08-21 | (pending) | Exact recurrence admission freezes one non-rendering canonical goal-identity audit before operation registration |
+| 2026-08-21 | (pending) | Canonical goal identity matches the exact capsule; one eight-dependency sealed-capsule operation is registered pending crash-safe execution |
 | 2026-08-21 | `40a1ab969` | `crates/axeyum-solver/src/dpll_lia.rs` + ADR-0538 + `bench-results/lia-core-minimisation-20260821/`: theory-core minimisation rationed by an oracle-call work budget instead of a core-width gate. QF_UFLIA 92 → 114 (+22, −0) at 0 disagreements against z3 and 0 against the declared `:status`. |
 | 2026-08-21 | (pending) | `docs/research/05-algorithms/linear-arithmetic-deficit-diagnosis-2026-08-21.md` + `bench-results/linear-arithmetic-diagnosis-20260821/`: gap #1 diagnosed — three causes not one, 800-file per-file classification, two A/Bs (one refuted, one +17 QF_UFLIA files at 0 disagreements). |
 | 2026-08-21 | `9333f779d` | **`bv_nego` returned a wrong `sat` above 128 bits.** `1u128 << (w - 1)` with legal widths to 65536: Rust masks the shift mod 128, so at `w = 129` the term became `x == 1` instead of `x == 2^128` and the shipped `SatBvBackend` answered **`sat`** to an unsatisfiable query (measured with overflow checks off; debug panicked instead). Fixed by following `bv_umulo`'s existing wide branch. Corpus reachability, which the gap analysis marked UNVERIFIED: **0 of 1430** tracked `.smt2` files use `bvnego` (control: `bvadd` in 106), so it is reachable only from the parser on user input. Three tests close the width asymmetry that hid it — widths 129/130/191/192/193/256/4096 by value *and* by the constant's structure, the 128-bit boundary staying narrow, and the end-to-end backend verdict. Two guards, each mutation-verified to kill exactly one test, registered as `ir-bv-nego-width`. |
@@ -1340,9 +1484,9 @@ linear integer problem to the LIA route, measured against the 74 `VeryMax/ITS`
 misses. It is the one hypothesis these measurements have not refuted; it is
 unpriced, and it is a route, not a constant.
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, and now `Int.fib_natCast` are durably proved. The target-owned integer Fibonacci definition replaces the official `Int.instDecidablePredEven` closure with constructor matching and explicit Nat parity; crash-safe recovery admitted its exact natural-cast theorem with an empty footprint and made `Int.fib_add_two` newly ready.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, and both recurrence corollaries `Int.fib_add_one` and `Int.fib_eq_fib_add_two_sub_fib_add_one` are durably proved with empty kernel footprints. The negative-natural Fibonacci route now has an exact empty-footprint power-parity capsule, and its final two left-multiplication contracts are implemented as native axiom-free integer laws.
 
-**Next:** rebuild exact `Int.fib_add_two` over the admitted target-owned integer Fibonacci definition, then use it with the clean sign/parity transports to reconstruct `Int.fib_neg_natCast`.
+**Next:** seal and independently replay the native `Int.one_mul` / `Int.neg_one_mul` capsule, then compose those laws with the checked negative-value and power-parity presentations to reconstruct exact `Int.fib_neg_natCast`.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
@@ -2849,7 +2993,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | CAS parity | `BLOCKED` by deliberate pause | Wave-24 code `01d47334` and pause commit `245d8f25` are ancestors of current main. Do not start wave 25 until the user resumes it and retained specialized gate evidence is re-audited. |
 | Consumer apps / verified systems | `WIP`, non-critical path | Existing EVM, verifier, property, reflection, and symbolic-execution slices remain useful; do not preempt A2–A7 without measured demand. |
 | Foundational resources | `WIP`, separate content lane | Keep generated-resource gates green; record only project-level priority changes here. |
-| Public documentation and examples | `DONE`, current comprehensive pass | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; all 128 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, optional EVM/verifier certificate fields, and source-comment UNSAT-proof overclaims. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; reopen only for concrete drift. |
+| Public documentation and examples | `DONE`, current comprehensive pass | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; all 131 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, optional EVM/verifier certificate fields, and source-comment UNSAT-proof overclaims. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; reopen only for concrete drift. |
 | Worktree and build-cache hygiene | `WIP`, recovered | A11; only clean `main` is registered and published. A verified 2026-08-12 external Git bundle preserves the retired refs/stashes; all old branches, salvage stashes, inactive checkouts, and their large Cargo targets are removed. Next automate deterministic read-only inventory and exact-target cleanup classification. |
 
 ## Resume protocol

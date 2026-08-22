@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-iff-exact-composition-plan",
+  "state": "preregistered-before-driver-code",
+  "inputs": {
+    "iff_residual": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-iff-residual-v1/residual-1.ndjson",
+      "sha256": "71238c494f33b99420351baaed7ed5c3f06e918e6b36cd70db980826a5a04770",
+      "root": "Axeyum.Autogenesis.intEvenIffResidualV1"
+    },
+    "closed_directions": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-directions-closed-v1/roots.ndjson",
+      "sha256": "11e4f56e745c1708855d64ddf7fc256cd20e97391f222e0cb1e993b8e8cb74da",
+      "roots": [
+        "Axeyum.Autogenesis.intEvenToModTwoZeroClosedV1",
+        "Axeyum.Autogenesis.intModTwoZeroToEvenClosedV1"
+      ]
+    }
+  },
+  "target": {
+    "name": "Int.even_iff",
+    "statement": "forall n : Int, Even n iff n % 2 = 0",
+    "must_be_absent_before_specialization": true,
+    "expected_direct_dependencies": [
+      "Axeyum.Autogenesis.intEvenIffResidualV1",
+      "Axeyum.Autogenesis.intEvenToModTwoZeroClosedV1",
+      "Axeyum.Autogenesis.intModTwoZeroToEvenClosedV1"
+    ]
+  },
+  "method": "Hash-bind both empty-footprint streams; compose and replay both directions into the residual kernel; prove exact target absence; specialize the residual in forward/backward binder order under exact name Int.even_iff; replay the receipt; require exact dependencies and empty footprint; root-export and freshly import twice before fail-if-present write.",
+  "driver": "crates/axeyum-lean-import/examples/int_even_iff_exact_composition.rs",
+  "output": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-iff-clean-v1/root.ndjson",
+  "budget": {
+    "driver_constructions": 1,
+    "focused_builds": 1,
+    "complete_invocations": 1,
+    "input_stream_reads": 2,
+    "composition_operations": 1,
+    "composition_replays": 1,
+    "specialization_operations": 1,
+    "specialization_replays": 1,
+    "target_submissions": 1,
+    "fresh_target_imports": 2,
+    "retries": 0,
+    "decision_instance_submissions": 0,
+    "fib_neg_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "target_name_exact": true,
+    "target_footprint": [],
+    "target_direct_dependencies_exact": true,
+    "all_receipts_replay": true,
+    "fresh_import_evidence_unchanged": true
+  },
+  "stop_rule": "Any preexisting target, mismatch, decline, receipt failure, dependency drift, nonempty footprint, replay change, or preexisting output stops without retry.",
+  "limitations": "Clean exact Int.even_iff reconstruction only; replacing the decision instance, completing Int.fib_neg, and ledger mutation remain unauthorized."
+}

@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-iff-dependency-audit-result",
+  "state": "exact-even-equivalence-assumption-bearing-two-direction-factorization-selected",
+  "plan": "artifacts/autogenesis/int-even-iff-dependency-audit-plan-v1.json",
+  "evidence": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-decision-root-audit-v1/even-iff-audit.json", "bytes": 1469, "sha256": "c5aece07002866ddef596e828e468257c19f866d387e75080559046305581905", "exit_status": 0},
+  "root": {"name": "Int.even_iff", "declaration_sha256": "ab4300192b1073d20d0e4110a3b77a79f6a57729e337db1f92889713ac9f9fba", "axiom_footprint": ["Classical.choice", "Lean.opaqueId", "Quot", "Quot.lift", "Quot.mk", "Quot.sound", "String.Internal.append", "propext"], "direct_theorem_dependencies": ["Eq.trans", "Int.mul_emod_right", "_private.Mathlib.Algebra.Group.Int.Even.0.Int.even_iff._proof_1_4", "_private.Mathlib.Algebra.Group.Int.Even.0.Int.even_iff._simp_1_3", "congrArg", "congrFun'", "eq_self", "of_eq_true"]},
+  "factorization": {"forward": "forall n, Even n -> n % 2 = 0", "backward": "forall n, n % 2 = 0 -> Even n", "join": "construct Iff directly from the two implications without official simp/private roots"},
+  "authority": {"localization_credit": 1, "theorem_credit": 0, "ledger_writes": 0},
+  "limitations": "The exact two arithmetic directions remain unproved."
+}

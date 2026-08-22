@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-decision-clean-composition-driver-result",
+  "state": "driver-builds-clippy-clean-before-stream-access",
+  "plan": "artifacts/autogenesis/int-even-decision-clean-composition-plan-v1.json",
+  "driver": "crates/axeyum-lean-import/examples/int_even_decision_clean_composition.rs",
+  "focused_build": {
+    "command": "cargo clippy -p axeyum-lean-import --example int_even_decision_clean_composition -- -D warnings",
+    "exit": 0
+  },
+  "execution": {
+    "input_stream_reads": 0,
+    "target_leaf_compositions": 0,
+    "capsule_writes": 0,
+    "ledger_writes": 0
+  },
+  "credit": "driver assurance only",
+  "next_boundary": "Run exactly one checked target-leaf composition against both hash-bound inputs."
+}

@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-parameterized-residual-plan",
+  "state": "preregistered-before-source-construction",
+  "predecessor": "artifacts/autogenesis/mathlib-int-fib-add-one-residual-result-v2.json",
+  "inputs": "unchanged from artifacts/autogenesis/mathlib-int-fib-add-one-residual-plan-v2.json",
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-add-one-residual-v3.lean",
+    "theorem": "Axeyum.Autogenesis.intFibAddOneResidualV3",
+    "must_not_exist_before_execution": true
+  },
+  "contract": "unchanged from artifacts/autogenesis/mathlib-int-fib-add-one-residual-plan-v2.json",
+  "method": "build the equality from fibFn (n+2) - fibFn n to fibFn (n+1) by recurrence transport, commutativity transport, and right cancellation, then apply Eq.symm exactly once",
+  "budget": {
+    "source_constructions": 1,
+    "compiler_invocations": 1,
+    "exporter_invocations": 1,
+    "importer_runs": 2,
+    "retries": 0,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "source_must_compile": true,
+    "residual_axiom_footprint_must_be_empty": true,
+    "direct_theorem_dependencies": [
+      "Eq.symm",
+      "Eq.trans",
+      "congrArg"
+    ],
+    "official_fibonacci_declarations_forbidden": true,
+    "official_corollary_dependency_forbidden": true,
+    "two_fresh_imports_must_preserve_evidence": true
+  },
+  "output": "artifacts/autogenesis/mathlib-int-fib-add-one-residual-result-v3.json",
+  "next_on_accept": "preregister exact specialization over the admitted Int.fib_add_two capsule and native Int.add_comm plus Int.add_neg_cancel_right support",
+  "limitations": "The residual remains parameterized and grants no exact theorem, fact transition, or ledger authority."
+}

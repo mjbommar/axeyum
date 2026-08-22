@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-arithmetic-candidate-audit-result",
+  "state": "both-official-candidates-rejected-target-owned-parity-arithmetic-selected",
+  "plan": "artifacts/autogenesis/int-even-arithmetic-candidate-audit-plan-v1.json",
+  "evidence": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-decision-root-audit-v1/arithmetic-candidate-audit.json", "sha256": "9bb437c3f8f504e64aa1e96cfdf21774e5be61e6e60b372765762ea75f707ebd", "exit_status": 0},
+  "rows": [
+    {"name": "Int.add_mul_emod_self_left", "declaration_sha256": "94e5b75971cb84a88824c9a83d08c2d6167d185a4365bfa833b6268a7d9489d0", "axiom_footprint": ["propext"], "direct_theorem_dependencies": ["Int.add_mul_emod_self_right", "Int.mul_comm", "congrArg"]},
+    {"name": "Int.mul_ediv_add_emod", "declaration_sha256": "a25d7c81f58c7756725bbe1205bc6b91f638a3b11078667e98074b880751277e", "axiom_footprint": ["propext"], "direct_theorem_dependencies": ["Int.add_comm", "Int.emod_add_mul_ediv", "congrArg"]}
+  ],
+  "decision": "Reject both general official wrappers. Construct the divisor-two arithmetic bottom-up from Nat modulo parity and lift it through Int constructors.",
+  "authority": {"candidate_credit": 0, "theorem_credit": 0, "ledger_writes": 0},
+  "limitations": "No double-mod-zero or half-witness theorem is established."
+}

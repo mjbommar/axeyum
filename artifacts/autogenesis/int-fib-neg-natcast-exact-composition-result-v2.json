@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-exact-int-fib-neg-natcast-composition-result",
+  "state": "declined-before-bridge-elaboration-at-package-root",
+  "plan": "artifacts/autogenesis/int-fib-neg-natcast-exact-composition-plan-v2.json",
+  "execution": {
+    "additional_bridge_compilations": 1,
+    "bridge_exports": 0,
+    "composition_operations": 0,
+    "target_submissions": 0,
+    "ledger_writes": 0
+  },
+  "decline": {
+    "stage": "bridge-input-root-validation-before-elaboration",
+    "class": "LeanPackageRoot",
+    "message": "input file must be contained in root directory",
+    "module_search_path_repair_applied": true,
+    "proof_source_rejected": false,
+    "partial_kernel_published": false
+  },
+  "next_boundary": "Preregister adding the pinned compiler's documented --root shared-module-directory flag alongside the accepted LEAN_PATH repair.",
+  "limitations": "No theorem, export, composition, fact, evaluation, or ledger credit is established."
+}

@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-half-lift-dependency-audit-plan",
+  "state": "preregistered-before-single-read",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-even-constructor-lift-result-v3.json",
+    "required_state": "double-lift-clean-half-lift-rejected-propext"
+  },
+  "input": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-constructor-lift-v1/roots-1.ndjson",
+    "sha256": "cf8c4fcb7981f1c0286e92570c08264749439e1f9962d125b494bc5b8308f887"
+  },
+  "roots": [
+    "Int.natCast_add",
+    "Int.neg_add",
+    "Int.ofNat.inj",
+    "congrArg",
+    "noConfusion_of_Nat"
+  ],
+  "operation": "one theorem_root_audit invocation over all five roots without rendering theorem types or values",
+  "budget": {
+    "stream_reads": 1,
+    "importer_runs": 1,
+    "retries": 0,
+    "source_changes": 0,
+    "theorem_submissions": 0,
+    "ledger_writes": 0
+  },
+  "stop_rule": "If the audit cannot classify every named root from this exact stream, stop rather than infer from source text.",
+  "output": "artifacts/autogenesis/int-even-half-lift-dependency-audit-result-v1.json"
+}

@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-native-neg-one-power-leaves-result",
+  "state": "unqualified-power-successor-name-absent",
+  "plan": {
+    "path": "artifacts/autogenesis/int-neg-one-pow-native-leaves-plan-v1.json",
+    "sha256": "873b80b0bcb9e262d1312558e19d973dada35f258ec13a6c89d09e611e6b6c60",
+    "commit": "dd3149ffa09498efd7a9b1a5cb942a41ab63502e"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-neg-one-pow-native-leaves-v1.lean",
+    "sha256": "b4413dbd836df1d283097a05a9bc04268237646645d6d8edfa68dca301e11765"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-neg-one-pow-native-leaves-v1",
+    "compiler_exit_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "compiler_stdout_sha256": "005da88e393dd7beb29fda4b6b712adff5058d8415bb17a5ad94431cae440234",
+    "compiler_stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "execution": {
+    "source_constructions": 1,
+    "compiler_invocations": 1,
+    "compiler_exit_status": 1,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "diagnosis": "The source elaborates through both definitional multiplication leaves but Mathlib.Data.Int.Basic exposes the power recursion as protected Int.pow_succ, not unqualified pow_succ.",
+  "authority": {
+    "support_credit": 0,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Freeze a V2 source changing only pow_succ to Int.pow_succ before recompilation.",
+  "limitations": "A source that does not compile grants no support authority."
+}

@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-exact-neg-one-power-parity-composition-plan",
+  "state": "preregistered-before-driver-code",
+  "inputs": {
+    "bridge": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-neg-one-pow-parity-bridge-v2/bridge-1.ndjson",
+      "sha256": "3b6fe9b5be8457ec5d9d02fe3dfe8c263240ddcba8bdeba4c5988c5079bf1442",
+      "root": "Axeyum.Autogenesis.intNegOnePowParityBridgeV2"
+    },
+    "raw_power": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-neg-one-pow-raw-v4/raw-1.ndjson",
+      "sha256": "051c38c0001b01fa375c97aec93857e6afb173b89a852162a71939bf9683cde5",
+      "root": "Axeyum.Autogenesis.intNegOnePowRawV2"
+    },
+    "parity": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-clean-parity-leaves-v4/roots.ndjson",
+      "sha256": "0e310823ba37adfbd9087c0da2f85ad57261228d601d9388800cf069b5b2ce82",
+      "roots": [
+        "Axeyum.IntFib.modCases",
+        "Axeyum.IntFib.succOne",
+        "Axeyum.IntFib.succZero"
+      ]
+    }
+  },
+  "driver": {
+    "path": "crates/axeyum-lean-import/examples/int_neg_one_pow_parity_composition.rs",
+    "state_at_preregistration": "absent"
+  },
+  "target": {
+    "name": "Axeyum.Autogenesis.intNegOnePowParityV1",
+    "expected_axiom_footprint": [],
+    "expected_direct_theorem_dependencies": [
+      "Axeyum.Autogenesis.intNegOnePowParityBridgeV2",
+      "Axeyum.Autogenesis.intNegOnePowRawV2",
+      "Axeyum.IntFib.modCases",
+      "Axeyum.IntFib.succOne",
+      "Axeyum.IntFib.succZero"
+    ]
+  },
+  "execution_budget": {
+    "complete_invocations": 1,
+    "input_stream_reads": 3,
+    "composition_operations": 2,
+    "composition_replays": 2,
+    "specialization_operations": 1,
+    "specialization_replays": 1,
+    "capsule_exports": 1,
+    "fresh_capsule_imports": 2,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "all_inputs_must_match_hashes": true,
+    "all_input_roots_must_have_empty_footprints": true,
+    "all_receipts_must_replay": true,
+    "target_dependency_set_must_match_exactly": true,
+    "target_axiom_footprint_must_be_empty": true,
+    "two_fresh_imports_must_preserve_target_evidence": true
+  },
+  "output": "artifacts/autogenesis/int-neg-one-pow-parity-composition-result-v1.json",
+  "limitations": "The exact power-parity support does not establish or admit Int.fib_neg_natCast by itself."
+}

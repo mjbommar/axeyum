@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-direction-result",
+  "state": "direction-residuals-qualified-empty-footprint",
+  "plan": "artifacts/autogenesis/int-even-direction-plan-v2.json",
+  "evidence": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-direction-residual-v2/residual-1.ndjson", "bytes": 341578, "sha256": "f530875c1fc21c3dccaddeddb0173b5c564701696c4830b6582841d1610cfa4e", "exports_byte_identical": true, "stream_axioms": []},
+  "roots": [
+    {"name": "Axeyum.Autogenesis.intEvenToModTwoZeroResidualV2", "declaration_sha256": "d5d2c1c838e14babd28afea65c719d4577a471e01498992aa96571698247f692", "axiom_footprint": [], "direct_theorem_dependencies": ["Eq.symm"]},
+    {"name": "Axeyum.Autogenesis.intModTwoZeroToEvenResidualV2", "declaration_sha256": "b04cd7aaead54e3cc592f1f15f0415d34a55b2926fa933b3d5bd8de1ba26a478", "axiom_footprint": [], "direct_theorem_dependencies": []}
+  ],
+  "execution": {"source_constructions": 1, "compilations": 1, "exports": 2, "footprint_audits": 1, "exact_target_submissions": 0, "retries": 0, "ledger_writes": 0},
+  "authority": {"qualified_direction_residuals": 2, "exact_direction_credit": 0, "ledger_writes": 0},
+  "limitations": "double_mod_zero and half_witness remain explicit arithmetic obligations."
+}

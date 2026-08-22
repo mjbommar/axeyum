@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-constructor-lift-result",
+  "state": "two-parameterized-constructor-lifts-compile",
+  "plan": "artifacts/autogenesis/int-even-constructor-lift-plan-v2.json",
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-even-constructor-lift-v1.lean",
+    "roots": [
+      "Axeyum.Autogenesis.intDoubleModTwoZeroLiftV1",
+      "Axeyum.Autogenesis.intHalfWitnessOfModTwoZeroLiftV1"
+    ],
+    "import": "Mathlib.Data.Int.Basic"
+  },
+  "environment": {
+    "host": "s5",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean_version": "4.30.0"
+  },
+  "execution": {
+    "compilations": 1,
+    "compile_exit": 0,
+    "exports": 0,
+    "footprint_audits": 0,
+    "exact_direction_submissions": 0,
+    "ledger_writes": 0
+  },
+  "construction": {
+    "positive_branch": "definitional Int.ofNat addition/emod plus closed Nat parity",
+    "negative_double_branch": "definitional negSucc addition/emod plus natDouble and succOne",
+    "negative_half_branch": "modCases, succZero, natHalf, and Int.neg_add",
+    "forbidden_automation_used": []
+  },
+  "credit": "source construction only; no footprint or closed theorem claim",
+  "next_boundary": "Preregister two reproducible root exports and independent footprint audits before composing any Nat support.",
+  "limitations": "The Nat parity contracts remain explicit parameters; export, qualification, specialization, exact directions, Int.even_iff, Fibonacci, and ledger mutation remain pending."
+}

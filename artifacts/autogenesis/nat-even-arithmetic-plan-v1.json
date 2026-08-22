@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-even-arithmetic-plan",
+  "state": "preregistered-before-source-construction",
+  "predecessor": {"path": "artifacts/autogenesis/int-even-arithmetic-candidate-audit-result-v1.json", "required_state": "both-official-candidates-rejected-target-owned-parity-arithmetic-selected"},
+  "targets": [
+    {"name": "Axeyum.Autogenesis.natDoubleModTwoZeroV1", "statement": "forall q : Nat, (q + q) % 2 = 0"},
+    {"name": "Axeyum.Autogenesis.natHalfWitnessOfModTwoZeroV1", "statement": "forall n : Nat, n % 2 = 0 -> exists q : Nat, n = q + q"}
+  ],
+  "proof_route": "simultaneous structural parity development by zero/successor cases and two-step induction, reusing only the already clean target-owned modulo-two cases and successor-flip supports; no Nat.div, generic Even instance, simp, omega, or official parity proof",
+  "sequence": ["construct a parameterized residual if modulo recurrence leaves are still required", "compile once under Mathlib.Data.Int.Basic", "export both roots twice and audit independently", "only then preregister their Int constructor lifts"],
+  "source": "artifacts/autogenesis/sources/nat-even-arithmetic-v1.lean",
+  "budget": {"source_constructions": 1, "compilations": 1, "exports": 2, "footprint_audits": 1, "retries": 0, "int_lift_submissions": 0, "exact_int_even_iff_submissions": 0, "ledger_writes": 0},
+  "acceptance": {"both_root_footprints": [], "exports_byte_identical": true, "proof_terms_types_or_values_may_be_rendered": false},
+  "stop_rule": "If direct construction needs a new modulo recurrence law, fail closed and preregister that exact law rather than invoking automation.",
+  "output": "artifacts/autogenesis/nat-even-arithmetic-result-v1.json",
+  "limitations": "Natural parity arithmetic is support only; integer lifting, Int.even_iff, the decision instance, and Fibonacci remain downstream."
+}

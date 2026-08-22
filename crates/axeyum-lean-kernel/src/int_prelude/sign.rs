@@ -194,6 +194,49 @@ pub(super) fn declare_sign_lemmas(d: &mut IntDev<'_>) -> Result<(), KernelError>
     Ok(())
 }
 
+/// Declare `Int.neg_one_mul` after the mixed-sign multiplication lemmas on
+/// which its two integer-constructor branches depend.
+pub(super) fn declare_neg_one_mul(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.neg_one_mul, 1, &|d, v| {
+        let stmt = statements::neg_one_mul(d, v);
+        let proof = case_split(d, v, &statements::neg_one_mul, &|d, b| {
+            let magnitude = b[0].1;
+            let one = d.num(1);
+            let nat_one_mul = d.int().nat.one_mul;
+            match b[0].0 {
+                Shape::OfNat => {
+                    let product = NatOps::mul(d, one, magnitude);
+                    let start = d.neg_of_nat(product);
+                    let end = d.neg_of_nat(magnitude);
+                    let first = d.const_app(p.mul_neg_of_nat_of_nat, &[one, magnitude]);
+                    let step = d.const_app(nat_one_mul, &[magnitude]);
+                    let second = d.nat_eq_to_int(product, magnitude, step, &|d, x| d.neg_of_nat(x));
+                    let neg_one = d.neg_of_nat(one);
+                    let value = d.of_nat(magnitude);
+                    let left = d.imul(neg_one, value);
+                    d.itrans(left, start, end, first, second)
+                }
+                Shape::NegSucc => {
+                    let successor = d.succ(magnitude);
+                    let product = NatOps::mul(d, one, successor);
+                    let start = d.of_nat(product);
+                    let end = d.of_nat(successor);
+                    let first = d.const_app(p.mul_neg_of_nat_neg_succ, &[one, magnitude]);
+                    let step = d.const_app(nat_one_mul, &[successor]);
+                    let second = d.nat_eq_to_int(product, successor, step, &|d, x| d.of_nat(x));
+                    let neg_one = d.neg_of_nat(one);
+                    let value = d.neg_succ(magnitude);
+                    let left = d.imul(neg_one, value);
+                    d.itrans(left, start, end, first, second)
+                }
+            }
+        });
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// Declare `Int.mul_assoc`.
 ///
 /// Eight branches, each one application of `Nat.mul_assoc` to the two magnitudes

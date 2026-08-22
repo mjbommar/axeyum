@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-parameterized-residual-result",
+  "state": "declined-before-source-construction-contract-orientation-mismatch",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-add-one-residual-plan-v1.json",
+    "sha256": "95573acbcdaed14c5fe2e66d7235984982e23c3cae2243deab7db133d1a33da4",
+    "commit": "0768774ea6d56c37836d1b0b8ee1ff986a31af19"
+  },
+  "measured_inputs": {
+    "recurrence_fact": "F:ml430-int-fib-add-two-739358dd",
+    "canonical_statement": "forall n : Int, Int.fib (n+2) = Int.fib n + Int.fib (n+1)",
+    "planned_statement": "forall n, fibFn (n+2) = fibFn (n+1) + fibFn n"
+  },
+  "diagnosis": "The V1 contract silently reversed the two recurrence summands. Native right cancellation removes the right summand, so deriving Int.fib_add_one from the admitted recurrence also requires a checked commutativity premise.",
+  "execution": {
+    "source_constructions": 0,
+    "compiler_invocations": 0,
+    "exporter_invocations": 0,
+    "importer_runs": 0,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "residual_credit": 0,
+    "exact_target_credit": 0
+  },
+  "next_boundary": "Preregister V2 with the canonical recurrence orientation and explicit axiom-free Int.add_comm support before constructing source.",
+  "limitations": "This is a fail-closed contract diagnosis. No theorem source exists and no proof-bearing tool was invoked."
+}

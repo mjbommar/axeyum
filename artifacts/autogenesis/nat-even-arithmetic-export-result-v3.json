@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-even-arithmetic-export-result",
+  "state": "two-parameterized-roots-qualified-empty-footprint",
+  "plan": "artifacts/autogenesis/nat-even-arithmetic-export-plan-v3.json",
+  "environment": {
+    "host": "s5",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean_version": "4.30.0"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/nat-even-arithmetic-v1",
+    "source_sha256": "f9e4b52ad28f861790b91c60ca91890e71620d7b9df0969f56d78c6386bbdc76",
+    "olean_sha256": "1a3a361f14028b55bda3cc755a27c551cee2ffa91a2a4e2c9ab8f08c67cad89a",
+    "stream_bytes": 357467,
+    "stream_sha256": "ba1061b18f46a989a9cffd19acac624c451caa739e71a914198d01460e491da9",
+    "exports": 2,
+    "exports_byte_identical": true
+  },
+  "roots": [
+    {
+      "name": "Axeyum.Autogenesis.natDoubleModTwoZeroV1",
+      "declaration_sha256": "0cc8702b11868b244963e25f858c1417f7820c9e2af3248b718754f6266d56b7",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": [],
+      "audit_path": "/nas3/data/axeyum/autogenesis/reference-packs/nat-even-arithmetic-v1/double-audit.json",
+      "audit_sha256": "40a0cdff552d45adeca04f9110f49e11e90d6b3e43610ae1b091a5eb37293bde"
+    },
+    {
+      "name": "Axeyum.Autogenesis.natHalfWitnessOfModTwoZeroV1",
+      "declaration_sha256": "702c97b3e85ad4e91a03c93739bae93972b781884e8d18a4701db48c81a82f27",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": [],
+      "audit_path": "/nas3/data/axeyum/autogenesis/reference-packs/nat-even-arithmetic-v1/half-audit.json",
+      "audit_sha256": "6a076f6c4b86b09ba0783b45b91dcc75c3b4cd23d29554ea4700e9e37ffd7173"
+    }
+  ],
+  "execution": {
+    "module_builds": 1,
+    "exports": 2,
+    "root_footprint_audits": 2,
+    "retries": 0,
+    "proof_submissions": 0,
+    "ledger_writes": 0
+  },
+  "credit": "The two parameterized natural parity supports are reproducible and empty-footprint; their premise has not yet been discharged.",
+  "next_boundary": "Preregister exact checked specialization of both roots with the already-qualified Axeyum.IntFib.modStepTwo capsule.",
+  "limitations": "No closed natural theorem, integer lift, Int.even_iff, decision instance, Fibonacci theorem, or fact-ledger mutation has been produced."
+}

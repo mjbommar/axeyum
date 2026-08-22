@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-constructor-lift-plan",
+  "state": "preregistered-after-missing-pack-directory",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-even-constructor-lift-result-v4.json",
+    "required_state": "transport-failed-before-compilation"
+  },
+  "sole_setup_change": "create /nas3/data/axeyum/autogenesis/reference-packs/int-even-constructor-lift-v2 before installing the unchanged source",
+  "unchanged": {
+    "source": "artifacts/autogenesis/sources/int-even-constructor-lift-v1.lean",
+    "proof_text": true,
+    "import": "Mathlib.Data.Int.Basic",
+    "targets": true
+  },
+  "budget": {
+    "directory_creations": 1,
+    "source_transfers": 1,
+    "compilations": 1,
+    "retries": 0,
+    "exports": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": "The unchanged V4 mathematical source compiles once under pinned Lean 4.30.",
+  "stop_rule": "Any Lean diagnostic stops before export.",
+  "output": "artifacts/autogenesis/int-even-constructor-lift-result-v5.json"
+}

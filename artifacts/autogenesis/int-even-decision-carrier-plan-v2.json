@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-decision-carrier-plan",
+  "state": "preregistered-before-importable-module-build",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-even-decision-carrier-result-v1.json",
+    "required_state": "carrier-source-compiles-export-pending"
+  },
+  "sealed_source": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-decision-carrier-v1/IntEvenDecisionCarrierV1.lean",
+    "sha256": "a817f71f93aaa1b2cc5bf9d3017f1772ea6bc6abd9fdbc3acd625061d0871af1"
+  },
+  "operation": {
+    "module": "IntEvenDecisionCarrierV1",
+    "module_build_uses_explicit_shared_root": true,
+    "root": "Axeyum.Autogenesis.intEvenDecisionCarrierV1",
+    "exports": ["root-1.ndjson", "root-2.ndjson"],
+    "all_outputs_must_be_absent": true
+  },
+  "budget": {
+    "module_builds": 1,
+    "exports": 2,
+    "closure_audits": 1,
+    "retries": 0,
+    "composition_operations": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "exports_byte_identical": true,
+    "closure_must_contain": [
+      "Int.instDecidablePredEven",
+      "Int.instDecidablePredEven._proof_1",
+      "Int.even_iff"
+    ]
+  },
+  "stop_rule": "Any build/export failure, mismatch, missing closure member, or preexisting output stops before target-leaf composition.",
+  "output": "artifacts/autogenesis/int-even-decision-carrier-result-v2.json"
+}

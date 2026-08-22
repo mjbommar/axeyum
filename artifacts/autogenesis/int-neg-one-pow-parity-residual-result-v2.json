@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-parameterized-neg-one-power-parity-result",
+  "state": "proof-compiles-exporter-cannot-find-uninstalled-module",
+  "plan": {
+    "path": "artifacts/autogenesis/int-neg-one-pow-parity-residual-plan-v2.json",
+    "sha256": "3a789d5eab6859dea0befe45f58aaf4010aafc010c8334150db05580e6a379cd",
+    "commit": "48a84090e93aab16982acbaee7c25d5bd32024eb"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-neg-one-pow-parity-residual-v1.lean",
+    "sha256": "2bc12b049f38701d3442258d64385ad84c38bc621624a72e7be8b94cea2a807c"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-neg-one-pow-parity-residual-v2",
+    "compiler_exit_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "compiler_stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "compiler_stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "exporter_1_exit_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "exporter_1_stderr_sha256": "7778264020ce5cd4bd8ad9959c7ef12ee56eb60c9e1f9eed9098ab68aa8a9a40"
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit_status": 0,
+    "exporter_invocations": 1,
+    "exporter_1_exit_status": 1,
+    "exporter_2_invocations": 0,
+    "importer_runs": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "diagnosis": "The proof compiles unchanged. The compiler command checked the standalone source but did not place AxeyumIntNegOnePowParityResidualV1.olean in Lake's module search path, so lean4export rejected the unknown module prefix before producing bytes.",
+  "authority": {
+    "support_credit": 0,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Freeze the unchanged source with an explicit .lake/build/lib/lean module output path before recompiling and exporting.",
+  "limitations": "Compiler acceptance without an importable module and checked export is not reconstruction evidence."
+}

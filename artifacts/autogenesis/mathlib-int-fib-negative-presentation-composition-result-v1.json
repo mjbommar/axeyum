@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-negative-fibonacci-presentation-composition-result",
+  "state": "kernel-checked-presentation-composed-empty-footprint",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-negative-presentation-composition-plan-v1.json",
+    "sha256": "e838add22204384517b130ad3eaac9bce4f3344e285ce4115f3742ed1f29a155",
+    "commit": "c59be43da89adcbba8aad5199d066a8627fb59b0"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-negative-presentation-composition-v1",
+    "receipt_sha256": "8a772969bec1b0f2e504271b7c5ce81782e3d87204b2aab66538339a03d3f475",
+    "composition_receipt_sha256": "0edfbdfe66a039b2430989ea9c36893fcc7e938ee090cd89b53f7714ec7da85c",
+    "exit_code_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "sealed": true
+  },
+  "observed": {
+    "added_theorems": [
+      {
+        "name": "Int.fib_neg_natCast_presentation",
+        "source_declaration_sha256": "798d978f52ee18f5cb219dae7727a8290ef1faefe9aa77fd1f9e358f58c40849",
+        "target_declaration_sha256": "798d978f52ee18f5cb219dae7727a8290ef1faefe9aa77fd1f9e358f58c40849",
+        "axiom_footprint": []
+      }
+    ],
+    "added_definitions": [
+      {
+        "name": "Int.fib_neg_natCast_presentation.match_1_1",
+        "declaration_sha256": "da497afc537132c3878986d6cdf913a31b5190a1a419483f6ed92a3673b844e8"
+      }
+    ],
+    "reused_declarations": 232,
+    "Int_fib_reuse": {
+      "compatibility": "kernel-type-shape",
+      "source_declaration_sha256": "0f6d661f551f49ff74a05124a452fed97d8fdb4aee7637a88ae68db208927360",
+      "target_declaration_sha256": "5b20e8693270b29a959bc7d4ab28140b87ee7b6d79868405b036f31da16dbfc7"
+    },
+    "composition_replay": "passed"
+  },
+  "execution": {
+    "source_stream_reads": 1,
+    "target_stream_reads": 1,
+    "importer_runs": 2,
+    "composition_attempts": 1,
+    "composition_replays": 1,
+    "exit_status": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "support_credit": 1,
+    "qualified_support": "Int.fib_neg_natCast_presentation",
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Construct and qualify the independent (-1 : Int)^(n + 1) parity presentation, reusing the existing four empty-footprint modulo-parity supports.",
+  "limitations": "This establishes the conditional negative-value presentation only. It does not establish sign-power parity, the final Int.fib_neg_natCast join, or ledger admission."
+}

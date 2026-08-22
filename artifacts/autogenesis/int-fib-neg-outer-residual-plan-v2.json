@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-outer-residual-plan",
+  "state": "preregistered-direct-constructor-case-repair",
+  "predecessor": {"path": "artifacts/autogenesis/int-fib-neg-outer-residual-result-v1.json", "required_state": "deterministic-residual-rejected-for-environment-contaminated-case-split"},
+  "repair": {
+    "only_proof_change": "replace obtain from Int.eq_nat_or_neg with cases z",
+    "positive_contract": "unchanged over Int.ofNat n",
+    "negative_contract": "restated directly over Int.negSucc k rather than the normalized -ofNat n presentation",
+    "target_statement_unchanged": true,
+    "no_case_split_theorem_dependency": true
+  },
+  "source": "artifacts/autogenesis/sources/int-fib-neg-outer-residual-v2.lean",
+  "budget": {"source_constructions": 1, "compilations": 1, "exports": 2, "footprint_audits": 1, "exact_target_submissions": 0, "retries": 0, "ledger_writes": 0},
+  "acceptance": {"exports_byte_identical": true, "axiom_footprint": [], "direct_theorem_dependencies": [], "proof_terms_types_or_values_may_be_rendered": false},
+  "output": "artifacts/autogenesis/int-fib-neg-outer-residual-result-v2.json",
+  "limitations": "The residual remains parameterized by both exact constructor branches and grants no selected-fact credit."
+}

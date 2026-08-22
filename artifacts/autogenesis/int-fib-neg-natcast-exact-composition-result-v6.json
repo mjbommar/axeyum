@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-exact-int-fib-neg-natcast-composition-result",
+  "state": "declined-at-decision-witness-dependent-ite-shape",
+  "plan": "artifacts/autogenesis/int-fib-neg-natcast-exact-composition-plan-v6.json",
+  "execution": {"additional_bridge_compilations": 1, "bridge_exports": 0, "composition_operations": 0, "target_submissions": 0, "ledger_writes": 0},
+  "decline": {
+    "stage": "bridge-elaboration",
+    "class": "DecisionWitnessDependentTypeShape",
+    "diagnostics": [
+      "the structural successor disequality branch needs an explicit constructor-injectivity proof",
+      "the negative-presentation parameter's ite contains instDecidableEqNat while the residual specialization contains cleanNatDecEq; Decidable data is visible in the kernel expression"
+    ],
+    "important_finding": "Replacing the decision algorithm cannot cleanly specialize a proposition-indexed ite contract because the decision witness is part of the elaborated term shape.",
+    "partial_kernel_published": false
+  },
+  "next_boundary": "Preregister a decision-witness-independent residual stated over an explicit two-case parity witness or constructor match, plus adapters from the already clean modulo-case, negative-presentation, and power-presentation roots.",
+  "limitations": "No bridge, target, fact, evaluation, or ledger credit is established."
+}

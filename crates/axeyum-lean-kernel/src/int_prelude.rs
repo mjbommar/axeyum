@@ -225,6 +225,9 @@ pub struct IntPrelude {
     pub add_zero: NameId,
     /// `add_neg : ∀ (a : Int), Eq Int (add a (neg a)) zero`.
     pub add_neg: NameId,
+    /// `add_neg_cancel_right : ∀ (a b : Int),
+    /// Eq Int (add (add a b) (neg b)) a`.
+    pub add_neg_cancel_right: NameId,
     /// `add_lt_add_of_le_of_lt :
     /// ∀ (a b c d : Int), le a b → lt c d → lt (add a c) (add b d)`.
     pub add_lt_add_of_le_of_lt: NameId,
@@ -241,6 +244,10 @@ pub struct IntPrelude {
     pub mul_assoc: NameId,
     /// `mul_one : ∀ (a : Int), Eq Int (mul a one) a`.
     pub mul_one: NameId,
+    /// `one_mul : ∀ (a : Int), Eq Int (mul one a) a`.
+    pub one_mul: NameId,
+    /// `neg_one_mul : ∀ (a : Int), Eq Int (mul (neg one) a) (neg a)`.
+    pub neg_one_mul: NameId,
     /// `mul_zero : ∀ (a : Int), Eq Int (mul a zero) zero`.
     pub mul_zero: NameId,
     /// `left_distrib :
@@ -378,12 +385,15 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         add_assoc: child(kernel, "add_assoc"),
         add_zero: child(kernel, "add_zero"),
         add_neg: child(kernel, "add_neg"),
+        add_neg_cancel_right: child(kernel, "add_neg_cancel_right"),
         add_lt_add_of_le_of_lt: child(kernel, "add_lt_add_of_le_of_lt"),
         mul_le_mul_of_nonneg_left: child(kernel, "mul_le_mul_of_nonneg_left"),
         zero_lt_one: child(kernel, "zero_lt_one"),
         mul_comm: child(kernel, "mul_comm"),
         mul_assoc: child(kernel, "mul_assoc"),
         mul_one: child(kernel, "mul_one"),
+        one_mul: child(kernel, "one_mul"),
+        neg_one_mul: child(kernel, "neg_one_mul"),
         mul_zero: child(kernel, "mul_zero"),
         left_distrib: child(kernel, "left_distrib"),
         mul_nonneg: child(kernel, "mul_nonneg"),
@@ -462,6 +472,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         sub_nat_nat::declare_add_lemmas(&mut d)?;
         algebra::declare_add_assoc(&mut d)?;
         sign::declare_sign_lemmas(&mut d)?;
+        sign::declare_neg_one_mul(&mut d)?;
         sign::declare_mul_assoc(&mut d)?;
         sub_nat_nat::declare_mul_lemmas(&mut d)?;
         algebra::declare_left_distrib(&mut d)?;

@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-iff-exact-composition-plan",
+  "state": "preregistered-after-clippy-sort-diagnostic",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-even-iff-exact-composition-driver-result-v1.json",
+    "required_state": "focused-build-failed-before-stream-access"
+  },
+  "only_code_change": "replace expected_dependencies.sort() with sort_unstable()",
+  "unchanged": {
+    "input_hashes": true,
+    "proof_and_composition_logic": true,
+    "target_name_and_absence_check": true,
+    "receipt_and_evidence_checks": true,
+    "execution_authority": true
+  },
+  "budget": {
+    "focused_builds": 1,
+    "complete_invocations": 1,
+    "retries_after_build": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": "Focused Clippy passes with -D warnings before stream access.",
+  "stop_rule": "Any further diagnostic stops before execution."
+}

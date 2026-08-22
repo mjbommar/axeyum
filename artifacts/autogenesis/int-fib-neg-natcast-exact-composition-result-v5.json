@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-exact-int-fib-neg-natcast-composition-result",
+  "state": "deterministic-core-deceq-bridge-still-rejected-for-propext",
+  "plan": "artifacts/autogenesis/int-fib-neg-natcast-exact-composition-plan-v5.json",
+  "bridge": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-natcast-exact-bridge-v1/bridge-v5-1.ndjson", "bytes": 1427198, "sha256": "2f958c302902bb798637420a3e7603516465a02faba2ae80e4cc9ddf810641ec", "exports_byte_identical": true, "root_declaration_sha256": "7c61cc50ecf91df1607b7603ff363423f168262229ea7e8296edf565ec88fa90", "axiom_footprint": ["propext"]},
+  "audit": {"root_closure_size": 661, "propext_carrier_count": 82, "finding": "official Nat.decEq traverses proposition-equality and simp carriers; explicit naming does not isolate a clean decision route"},
+  "execution": {"additional_bridge_compilations": 1, "bridge_exports": 2, "composition_operations": 0, "target_submissions": 0, "ledger_writes": 0},
+  "next_boundary": "Preregister a local structural Nat equality decider using only recursor/noConfusion computation, then feed it to the unchanged residual.",
+  "limitations": "No bridge, target, fact, evaluation, or ledger credit is established."
+}

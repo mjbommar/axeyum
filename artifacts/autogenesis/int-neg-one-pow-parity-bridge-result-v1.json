@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-neg-one-power-parity-bridge-result",
+  "state": "function-parameterized-bridge-reconstructed-empty-footprint",
+  "plan": {
+    "path": "artifacts/autogenesis/int-neg-one-pow-parity-bridge-plan-v1.json",
+    "sha256": "f8c9d21bdfb8da33824470a31a53c0b63a010daff66569ba901006e67b980a56",
+    "commit": "9203ebe57e4e450e7a95f7d38a3b05a2520b4d92"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-neg-one-pow-parity-bridge-v1.lean",
+    "sha256": "46d399b901cf0577980482d4bad055ef70a702452d93cbde17cfc77f55915577"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-neg-one-pow-parity-bridge-v1",
+    "stream_sha256": "c9d12474fc3b05711622ff482d9ad9d4875a729cd49562f9fe26b5258990f625",
+    "stream_bytes": 390323,
+    "audit_1_sha256": "e32b7899f90ea66e0cb20968cf6a9c5e2baa496385c473909adadfc4a3db539e",
+    "audit_2_sha256": "a6d21e203d173e9da5d80d994d843982ad722664133ea02c984615e6535f3244",
+    "two_exports_byte_identical": true
+  },
+  "theorem": {
+    "name": "Axeyum.Autogenesis.intNegOnePowParityBridgeV1",
+    "canonical_declaration_sha256": "3a17cd1848e59a0f7d0693623083b882ab4f2d1d42e212571c24c0b026cc7197",
+    "canonical_type_sha256": "93e1fe26928d91d5a5ebc3bf5721b98b0a3f39ea66fc5cd434af33f2e9968784",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [
+      "Eq.symm",
+      "Eq.trans",
+      "if_neg",
+      "if_pos",
+      "noConfusion_of_Nat"
+    ]
+  },
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit_status": 0,
+    "exporter_invocations": 2,
+    "importer_runs": 2,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "parameterized_support_credit": 1,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Remove only the anonymous powFn binder by placing the concrete (-1 : Int)^k expression in the otherwise unchanged bridge contract.",
+  "limitations": "The checked specialization API consumes named declarations and cannot directly supply an anonymous power function argument."
+}

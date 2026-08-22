@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-constructor-lift-result",
+  "state": "double-lift-clean-half-lift-rejected-propext",
+  "plan": "artifacts/autogenesis/int-even-constructor-lift-plan-v3.json",
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-constructor-lift-v1",
+    "source_sha256": "2d7d716428e87dd86eec51fde4207ecf26071db8cbbce4ad004835dd3cbd20a3",
+    "olean_sha256": "cd8802cf1ed3650b4d4bf508295afbeeb835a1ba479f92224ec8290bb82f53de",
+    "stream_bytes": 874587,
+    "stream_sha256": "cf8c4fcb7981f1c0286e92570c08264749439e1f9962d125b494bc5b8308f887",
+    "exports": 2,
+    "exports_byte_identical": true
+  },
+  "roots": [
+    {
+      "name": "Axeyum.Autogenesis.intDoubleModTwoZeroLiftV1",
+      "declaration_sha256": "9dabe702ce6faac8cd00bb33714c9f50a7a54168723802a11873d825e9aa10f7",
+      "axiom_footprint": [],
+      "direct_theorem_dependencies": ["congrArg"],
+      "audit_sha256": "050823377c35d71de6b3aae245e4a4ba23e0214c40c0ccfafddfc3e2ede2477c"
+    },
+    {
+      "name": "Axeyum.Autogenesis.intHalfWitnessOfModTwoZeroLiftV1",
+      "declaration_sha256": "d5ab59dc9de669bb5b5f8463731c44dbff4d091ec5954050e8d3b49d6bbc7b",
+      "axiom_footprint": ["propext"],
+      "direct_theorem_dependencies": [
+        "Int.natCast_add",
+        "Int.neg_add",
+        "Int.ofNat.inj",
+        "congrArg",
+        "noConfusion_of_Nat"
+      ],
+      "audit_sha256": "5c4405f29e28923f6de5d61c9ee587116655caf44718de512547494eb9115956"
+    }
+  ],
+  "credit": {
+    "qualified_parameterized_roots": ["Axeyum.Autogenesis.intDoubleModTwoZeroLiftV1"],
+    "rejected_parameterized_roots": ["Axeyum.Autogenesis.intHalfWitnessOfModTwoZeroLiftV1"]
+  },
+  "execution": {
+    "module_builds": 1,
+    "exports": 2,
+    "root_footprint_audits": 2,
+    "retries": 0,
+    "specializations": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Audit the half-witness root's five exact direct theorem dependencies once before changing its source.",
+  "limitations": "The half-witness, exact integer directions, Int.even_iff, Fibonacci, and ledger mutation remain unqualified."
+}

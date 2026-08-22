@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-iff-dependency-audit-plan",
+  "state": "preregistered-before-single-existing-stream-reread",
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-decision-root-audit-v1/root.ndjson", "bytes": 9831839, "sha256": "662008f9976aae9e459b325a05a6fa22d2f04997ba8623bce5480ca400e7a526"},
+  "root": {"name": "Int.even_iff", "declaration_sha256": "ab4300192b1073d20d0e4110a3b77a79f6a57729e337db1f92889713ac9f9fba"},
+  "operation": "run theorem_footprint_batch_audit once with output redirected durably; record only root hashes, footprint, and direct theorem dependency names",
+  "decision_rule": "Factor a target-owned exact theorem over the smallest arithmetic contracts among its direct dependencies. Prefer already clean modulo-two and integer-constructor supports; do not copy the official proof or tactic trace.",
+  "budget": {"stream_reads": 1, "audit_invocations": 1, "proof_terms_rendered": 0, "theorem_types_rendered": 0, "theorem_values_rendered": 0, "reconstruction_compilations": 0, "exact_target_submissions": 0, "ledger_writes": 0, "retries": 0},
+  "output": "artifacts/autogenesis/int-even-iff-dependency-audit-result-v1.json",
+  "limitations": "Dependency names and footprints are localization evidence only, not proof authority."
+}

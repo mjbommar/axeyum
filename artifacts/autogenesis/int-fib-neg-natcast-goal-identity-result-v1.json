@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-theorem-goal-identity-audit",
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-natcast-decision-free-exact-v1/exact.ndjson", "bytes": 773264, "sha256": "6c803eff520a62d6925db5ed30f78714d9923281becfd78239cc28278bc9159f"},
+  "theorem": {
+    "name": "Int.fib_neg_natCast",
+    "canonical_type_sha256": "8696d229d7af2ee3fe3510a0782e54bcb217503ceef268a7d908e407ab447dad",
+    "canonical_declaration_sha256": "db090b11cf74c91607d5d0aabe43d364f9260c41f7de6bcd460cc59907deb087",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": ["Axeyum.Autogenesis.intFibNegNatCastDecisionFreeResidualV1", "Axeyum.Autogenesis.intFibNegativeEvenV1", "Axeyum.Autogenesis.intFibNegativeOddV1", "Axeyum.Autogenesis.intFibPowerEvenV1", "Axeyum.Autogenesis.intFibPowerOddV1", "Axeyum.IntFib.modCases", "Int.neg_one_mul", "Int.one_mul"]
+  },
+  "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0},
+  "authority": {"qualified_target_leaf": 1, "fact_status_changes": 0, "ledger_writes": 0},
+  "limitations": "The qualified theorem is a support leaf for selected fact Int.fib_neg, not itself a generated-catalog fact."
+}
