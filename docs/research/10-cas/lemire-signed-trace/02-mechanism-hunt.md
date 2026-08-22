@@ -1,0 +1,190 @@
+# Lemire signed-trace lane: mechanism hunt, rung 2
+
+Status: research note, 2026-08-21. Nothing here is a proof. This note records
+what the exact data say about the open layers, four further exact
+reformulations of the target found while looking for a mechanism, and the
+shortcuts that the data or a two-line argument kill. It is written so that no
+idea here has to be re-derived or re-refuted.
+
+Companion: [01-target-and-toolkit.md](01-target-and-toolkit.md) (target,
+formulations, literature, tooling). Data: `scripts/lemire-signed-trace/data/`.
+
+## 1. What the exact layer data say (`ell <= 22`, both endpoints)
+
+Source: class-population dumps of the branch CAS
+(`axeyum-gf2-dump-populations`, source in `scripts/lemire-signed-trace/`),
+analysed by `lemire_layers.py`. The ratio is
+`|T_{j,s}| / (#X_{j,s} (j-1) 2^{ceil(n/2)})`; `(HWO)` asks `<= 1/(4 ell)`.
+
+```text
+worst ratio over a <= j <= ell, relative to the threshold 1/(4 ell)
+ell  n    orders >= 2^3      orders >= 2^4
+12   25   2.20 x             2.20 x
+14   29   1.81 x             1.17 x
+14   30   3.54 x             3.54 x
+16   33   0.92 x             0.92 x
+16   34   0.98 x             0.96 x
+18   37   0.53 x             0.53 x
+18   38   0.53 x             0.46 x
+20   41   0.45 x             0.45 x
+20   42   0.46 x             0.16 x
+22   45   0.23 x             0.23 x
+22   46   0.22 x             0.22 x
+```
+
+Orders `2` and `4` sit at `1--3 x` threshold throughout; for `ell >= 200`
+those orders are `<= Q` and already paid by Weil, so they are not part of the
+open statement. The open high-order layers satisfy the needed bound with a
+margin that grows with `ell`. Inside a layer the sparse imbalances are at the
+square-root scale of their populations (`|Delta_{j,s}| ~ 10^3 -- 10^4` against
+populations `10^6 -- 10^9` at `ell = 20`), i.e. the data follow the random
+model; the allowance is larger by a factor that grows like `2^{ell/2}/ell`.
+So `(HWO)` is not delicate; a proof needs any uniform power saving over the
+trivial bound on the four-term alternating sums, of strength about
+`population^{1-0.055}` across the window, and no known method gives any power
+saving at this scale.
+
+Exact reduction, corrected. With `q = 2^s`:
+
+```text
+q does not divide j, q/2 does not divide j:  T = h_{j-1,s} Delta_{j,s} - h_{j-1,s-1} Delta_{j,s-1}
+q does not divide j, q/2 divides j:          T = h_{j-1,s} Delta_{j,s}
+q divides j:                                  layer empty
+```
+
+The first unconditional two-term form fails in the resonant middle case
+(`(j,s) = (7,1)` is the first counterexample; the analyzer asserts the correct
+form on every row). Resonant rows occur in the target range (`j = 200`,
+`q = 16`). The naive "squaring" recursion `chi -> chi^2` does not map the
+layer `X_{j,s}` onto `X_{floor(j/2),s-1}` (the conductor of `chi^2` can drop
+below `j/2` when `j` is odd), so there is no clean tower recursion beyond the
+four-population identity; `T_{17,3} != 0` at `(ell,n)=(20,41)` witnesses that
+the would-be recursion is wrong.
+
+## 2. Four further exact reformulations
+
+### 2.1 Type I is exact; the top layer is a second difference of Moebius interval sums
+
+Let `h = n - j` and `Phi(y) = sum_{deg r < h} Lambda(x^n + y + r)` (prime mass
+of the short interval `x^n + y + I(h)`). The top layer at conductor `j`,
+`m = floor(log2 j)`, is the mixed second difference
+
+```text
+T_top  prop.  Phi(0) - Phi(x^h) - Phi(x^{n-2^m}) + Phi(x^{n-2^m} + x^h).
+```
+
+Writing `Lambda = mu * deg`, every divisor `d` with `deg d <= h` contributes to
+`Phi(y)` a count that is independent of `y` (the cofactors form a full
+interval), so
+
+```text
+Phi(y) = C + sum_{deg e < j} deg(e) . M(I_{y,e}),    M(I) = sum_{d in I} mu(d),
+I_{y,e} = { d : d e in x^n + y + I(h) }   (an interval of length 2^{h - deg e}).
+```
+
+All `y`-dependence, hence the whole layer, lives in Moebius sums over intervals
+shorter than the square root of their location; this is exact but gives no
+bound (those sums are below the Weil range).
+
+### 2.2 Witt-vector geometry: Teichmueller curve against the trace-zero subgroup
+
+The reciprocal of the class condition is `charpoly(beta) = 1 mod x^{ell+1}`
+with `beta = alpha^{-1}`, i.e. `N(1 + gamma x) in U^{(ell+1)}` for the norm
+from `1 + x F_{2^n}[[x]]` to `1 + x F_2[[x]]`, `gamma = beta^{-1}`. Under
+Katz's splitting over `F_{2^n}`, `1 + gamma x` is the point
+`([gamma^k])_{k odd <= ell}` of the "Teichmueller curve" in
+`prod_k W_{e_k}(F_{2^n})`, and the norm is the coordinatewise Witt trace. So
+
+```text
+N_ell(1) - 1 = #( Teichmueller curve  intersect  ker(Witt trace) ),
+```
+
+a curve of `2^n - 1` points against a subgroup of index `2^ell` in a group
+isomorphic to `prod_k (Z/2^{e_k})^n`. Local class field theory says the norm
+is surjective and its kernel is `(sigma - 1)`-torsors; this explains the
+structure but supplies no count.
+
+### 2.3 Power-map pullbacks (n prime)
+
+For `n` prime every odd `k <= ell` is coprime to `2^n - 1`, so `t -> t^k` is a
+bijection of the Teichmueller group `T` and
+
+```text
+A = intersection over odd k <= ell of  (H_{e_k})^{1/k},
+H_e = { t in T : Tr_{GR(2^e,n)}(t) = 0 mod 2^e },   |H_e| ~ 2^{n-e}.
+```
+
+The identity class is the intersection of `k`-th roots of the nested basic
+trace-zero sets. `(HWO)`/`(REL)` then read as an "independence" statement for
+these multiplicative dilates of additive objects; `H_1` is a hyperplane,
+`H_2` the Kerdock set, `H_e` for `e >= 3` has no known rigid structure (the
+Teichmueller-trace Gauss sums measured in note 01 are generic).
+
+### 2.4 Coding-theory form
+
+`N_ell(1)` is the number of zero columns of the `Z/2^{e}`-linear code spanned
+by the functions `t -> Tr([t]^k) mod 2^{e_k}`, equivalently (MacWilliams) the
+number of weight-one words of its dual. For the order-two part alone (the
+squares subgroup, `delta = ceil(ell/2)` binary conditions) Weil already
+suffices with room (`delta + log2 delta < n/2 - 1`); every higher Witt digit
+adds the remaining `ell - delta` conditions and the barrier. The full object
+is a Kerdock/BCH-like `Z/2^e` code of designed degree `~ ell ~ n/2`, whose
+weight distribution is unknown in this range.
+
+## 3. Shortcuts killed in this rung
+
+- **Parity / algebraic count.** `I_n(1)` (irreducible `x^n + g`,
+  `deg g <= floor(n/2)`) for `2 <= n <= 38` is odd for
+  `n = 2,3,4,5,7,10,14,17,18,19,20,22,23,28,29,31,33,34,35,37` and even
+  otherwise; no congruence rules out `I_n(1) = 0`. The normalised count
+  `n I_n(1) / 2^{n - ceil(n/2) + 1}` stays within 5% of `1` from `n = 20`
+  on (table `data/irreducible-counts-n2-38.txt`). No involution on the
+  witness set exists: translation moves the class unless `n` is a power of
+  two, reciprocal moves to the other end, Frobenius orbits only give
+  `N = 1 + n I`.
+- **Swan / Stickelberger.** The discriminant character gives the number of
+  polynomials in the class with an odd number of factors exactly, but
+  separating `r = 1` from `r >= 3` odd needs the same `1/n`-relative
+  estimate; no gain.
+- **Explicit-formula / Oesterle linear programming** on the Carlitz curve
+  `Y_ell` (genus `(ell-2)2^{ell-1}+1`, `#Y(F_{2^r}) = 2^ell + 1` for
+  `r <= ell`): the known low-degree power sums are `-2^ell`, weighted
+  `2^{-r/2}`, and any nonnegative test polynomial has `c_0 >= |c_n|`, so the
+  bound never beats `g 2^{n/2}`; the low-field information is too weak.
+- **Cauchy--Schwarz over the low twists** for the cylinder variance
+  (`(ICV)`/`(PL2)`): loses exactly the factor `2^{a-1}` it must not; the
+  truth is `ell 2^{n-a+1}`, the bound is `ell 2^n`, the requirement
+  `2^{2 ell - 2}`.
+- **Second moments over cosets of the sparse subgroup**: the coset
+  imbalance function is not a character (the `x^j`-coefficient sign is a
+  cocycle, not a homomorphism), so the naive Parseval bound is not even
+  defined; the data show the imbalances are at the square-root scale of the
+  populations, not of `2^n`.
+- **Large-q machinery** (Katz monodromy, Sawin's Betti bounds) is
+  structurally the wrong direction: symmetry forces Frobenius toward scalars
+  on isotypic pieces and removes cancellation; cancellation at fixed `q` must
+  come from genericity that monodromy cannot certify.
+
+## 4. Where this leaves the proof
+
+The statement is a one-level-density assertion for the family of characters
+mod `x^{j+1}` at exactly the edge of the Hughes--Rudnick support (`|P| ~ |Q|^2`,
+the `primes = 1 mod Q up to Q^2` regime), restricted to exact-order Witt
+layers, at fixed `q = 2`. Its integer analogues (Legendre's conjecture under
+RH; Linnik's constant `2` for the residue `1` mod a prime power) are open
+under every standard hypothesis, and for function fields it is open for every
+fixed `q` (Sawin: "not yet nontrivial in the large `n` limit"). The data say
+the estimate holds with growing margin and that the populations behave
+randomly; the proof therefore has to manufacture cancellation from one of the
+exact structures above (the Witt-digit tower, the Teichmueller/trace-zero
+geometry, the power-map pullbacks, or the `Z/2^e` code), not from any
+general family-average theorem.
+
+The next experiments are the ones that could expose such a structure:
+(a) the conditional distribution of one Witt digit given all lower digits on
+the sparse sets `A_{s-1}`, across `s`, to see whether the nested
+conditional biases carry any relation beyond the four-population identity;
+(b) the joint statistics of `(S_n(chi), S_n(chi^2), S_{2n}(chi))` across a
+layer; (c) the exact energies `#{(alpha,beta) : same Witt profile}` inside
+the identity cylinder, to price the one-sided `(ICV)` route without Fourier
+loss.

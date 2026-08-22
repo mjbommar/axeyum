@@ -10,6 +10,12 @@ Kaser--Lemire half-degree-irreducibles chain (sibling repository
   short-interval), the scale of the required saving, primary-source literature
   verdicts, ranked candidate mechanisms with the experiment that kills each,
   and the checked tooling inventory.
+- [02-mechanism-hunt.md](02-mechanism-hunt.md) -- what the exact layer data
+  to `ell = 22` say, four further exact reformulations (Type I / Moebius
+  second difference, Teichmueller curve against the Witt trace-zero subgroup,
+  power-map pullbacks, `Z/2^e` code), the shortcuts killed in this rung
+  (parity, Swan, explicit-formula LP, Cauchy--Schwarz over twists), and the
+  next experiments.
 
 Executable companions live in
 [`scripts/lemire-signed-trace/`](../../../../scripts/lemire-signed-trace/README.md).
