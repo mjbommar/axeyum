@@ -4,7 +4,7 @@
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_gcd`, `Int.fib_dvd`, and now `Int.fib_of_nonneg` are durably proved with empty kernel footprints. The new operation survived an exit-75 intent fault without changing the fact, recovery performed exactly one authoritative ledger write, and an isolated exact-commit replay reproduced every primary byte identity and the preregistered empty unlock delta.
 
-**Next:** execute committed V11 once: rebuild the corrected exact `Nat.fib_pos` driver, consume its four sealed inputs, and accept only an empty-footprint target surviving two fresh imports.
+**Next:** freeze a current-source rebuild and one fail-if-present V13 rerun; the corrected V12 driver is Clippy-clean but the executable predates its theorem-root change.
 
 <!-- plan-section: landed-changes -->
 
@@ -150,6 +150,8 @@
 | 2026-08-22 | (pending) | V9 fails closed before theorem submission because the narrow recurrence base cannot receive recursive `Nat.le`; V10 freezes the core-support capsule as base and composes recurrence plus both residuals into it |
 | 2026-08-22 | (pending) | The V10 base-order correction passes focused Clippy with no proof-stream read, but the only runnable binary predates the source; execution remains gated on an explicit current-source rebuild |
 | 2026-08-22 | (pending) | V11 freezes one current-source rebuild and one corrected exact-target invocation from `d3583bffc`, with fail-if-present output and unchanged zero-ledger authority |
+| 2026-08-22 | (pending) | V11 rejects non-theorem root `Nat.fib` before submission; V12 freezes composing only `Nat.fib_add_two`, whose checked closure already transports the referenced definition |
+| 2026-08-22 | (pending) | The V12 theorem-root correction passes focused Clippy without reading proof streams; its stale executable remains unauthorized for rerun |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |

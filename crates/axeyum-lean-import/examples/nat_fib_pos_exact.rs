@@ -74,7 +74,7 @@ fn run() -> Result<(), String> {
         compose(
             imports[0].kernel(),
             &mut kernel,
-            &["Nat.fib", RECURRENCE],
+            &[RECURRENCE],
             "recurrence",
         )?,
         compose(
