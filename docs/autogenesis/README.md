@@ -235,6 +235,7 @@ compounding, not automation theatre.
 | [Absent-aware `Int.fib` blocker partition retry](206-int-fib-definition-blocker-partition-retry.md) | Which theorem-footprint blockers are truly inside `Int.fib`, after the strict all-present assumption fails? |
 | [Clean target-owned `Int.fib` construction plan](207-int-fib-clean-definition-construction-plan.md) | Can constructor matching and explicit Nat parity replace the contaminated official decision-instance closure? |
 | [Clean target-owned `Int.fib` construction result](208-int-fib-clean-definition-result.md) | Does the representation repair make exact `Int.fib_natCast` reproducible and axiom-free? |
+| [Production measurement and the general producer](226-production-measurement-and-general-producer-plan.md) | Why does a full goal queue produce ~1 autonomous theorem, and what must be measured before the producer is worth improving? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
