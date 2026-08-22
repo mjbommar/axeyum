@@ -73,7 +73,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ty: goal,
             value: candidate.proof,
         })
-        .map_err(|error| format!("independent kernel rejected bounded-induction candidate: {error:?}"))?;
+        .map_err(|error| {
+            format!("independent kernel rejected bounded-induction candidate: {error:?}")
+        })?;
     let closure = kernel.declaration_dependency_closure(candidate_name);
     let target_dependency = closure.contains(&target_name);
     let footprint = kernel.axiom_footprint(candidate_name);

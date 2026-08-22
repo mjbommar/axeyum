@@ -76,7 +76,10 @@ impl std::fmt::Display for DeclineReason {
                 "terminal goal is not definitionally equal and no applicable induction-hypothesis rewrite closed the gap"
             ),
             Self::RequiredDeclarationUnavailable(name) => {
-                write!(f, "required declaration {name:?} occurs a number of times other than one")
+                write!(
+                    f,
+                    "required declaration {name:?} occurs a number of times other than one"
+                )
             }
             Self::UnsupportedRecursorShape(detail) => {
                 write!(f, "unsupported recursor shape: {detail}")
@@ -129,7 +132,14 @@ fn spine_prefixes(kernel: &mut Kernel, whole: ExprId) -> Vec<(ExprId, ExprId)> {
 /// `fun (name : ty) => body`, abstracting the free variable `fv` in `body`.
 /// A free function (not a `Search` method) since it only ever touches its
 /// own arguments.
-fn lam_fv(kernel: &mut Kernel, name: NameId, fv: u64, ty: ExprId, body: ExprId, info: BinderInfo) -> ExprId {
+fn lam_fv(
+    kernel: &mut Kernel,
+    name: NameId,
+    fv: u64,
+    ty: ExprId,
+    body: ExprId,
+    info: BinderInfo,
+) -> ExprId {
     let abstracted = kernel.abstract_fvars(body, &[fv]);
     kernel.lam(name, ty, abstracted, info)
 }
@@ -201,17 +211,34 @@ fn discover_eq_primitives(kernel: &Kernel) -> Result<EqPrimitives, DeclineReason
             uparams.len()
         )));
     }
-    Ok(EqPrimitives { eq, eq_refl, eq_rec })
+    Ok(EqPrimitives {
+        eq,
+        eq_refl,
+        eq_rec,
+    })
 }
 
-fn build_eq(kernel: &mut Kernel, eq: NameId, level: LevelId, carrier: ExprId, x: ExprId, y: ExprId) -> ExprId {
+fn build_eq(
+    kernel: &mut Kernel,
+    eq: NameId,
+    level: LevelId,
+    carrier: ExprId,
+    x: ExprId,
+    y: ExprId,
+) -> ExprId {
     let head = kernel.const_(eq, vec![level]);
     let with_carrier = kernel.app(head, carrier);
     let with_x = kernel.app(with_carrier, x);
     kernel.app(with_x, y)
 }
 
-fn build_eq_refl(kernel: &mut Kernel, eq_refl: NameId, level: LevelId, carrier: ExprId, x: ExprId) -> ExprId {
+fn build_eq_refl(
+    kernel: &mut Kernel,
+    eq_refl: NameId,
+    level: LevelId,
+    carrier: ExprId,
+    x: ExprId,
+) -> ExprId {
     let head = kernel.const_(eq_refl, vec![level]);
     let with_carrier = kernel.app(head, carrier);
     kernel.app(with_carrier, x)
@@ -235,14 +262,17 @@ fn ctor_is_zero_shaped(kernel: &Kernel, ctor: NameId) -> bool {
 }
 
 fn ctor_is_succ_shaped(kernel: &Kernel, ctor: NameId, family: NameId) -> bool {
-    let Some(Declaration::Constructor { ty, num_fields: 1, .. }) = kernel.environment().get(ctor)
+    let Some(Declaration::Constructor {
+        ty, num_fields: 1, ..
+    }) = kernel.environment().get(ctor)
     else {
         return false;
     };
     let ExprNode::Pi(_, field_ty, body, _) = kernel.expr_node(*ty) else {
         return false;
     };
-    let field_is_family = matches!(kernel.expr_node(*field_ty), ExprNode::Const(n, _) if *n == family);
+    let field_is_family =
+        matches!(kernel.expr_node(*field_ty), ExprNode::Const(n, _) if *n == family);
     let result_is_family = matches!(kernel.expr_node(*body), ExprNode::Const(n, _) if *n == family);
     field_is_family && result_is_family
 }
@@ -261,13 +291,14 @@ fn detect_nat_shape(kernel: &Kernel, family: NameId) -> Option<NatShape> {
         return None;
     }
     let (c0, c1) = (ctor_names[0], ctor_names[1]);
-    let (zero_ctor, succ_ctor) = if ctor_is_zero_shaped(kernel, c0) && ctor_is_succ_shaped(kernel, c1, family) {
-        (c0, c1)
-    } else if ctor_is_zero_shaped(kernel, c1) && ctor_is_succ_shaped(kernel, c0, family) {
-        (c1, c0)
-    } else {
-        return None;
-    };
+    let (zero_ctor, succ_ctor) =
+        if ctor_is_zero_shaped(kernel, c0) && ctor_is_succ_shaped(kernel, c1, family) {
+            (c0, c1)
+        } else if ctor_is_zero_shaped(kernel, c1) && ctor_is_succ_shaped(kernel, c0, family) {
+            (c1, c0)
+        } else {
+            return None;
+        };
     for (name, decl) in kernel.environment().iter() {
         let Declaration::Recursor {
             rec_rules,
@@ -313,7 +344,11 @@ struct Hypothesis {
 /// hypothesis rather than failing the search) if `stmt` is not a `Pi` here —
 /// a genuine shape mismatch between the induction hypothesis and the goal,
 /// which should cost this one rewrite opportunity, not the whole candidate.
-fn instantiate_hypothesis(kernel: &mut Kernel, hypothesis: Hypothesis, x: ExprId) -> Option<Hypothesis> {
+fn instantiate_hypothesis(
+    kernel: &mut Kernel,
+    hypothesis: Hypothesis,
+    x: ExprId,
+) -> Option<Hypothesis> {
     let ExprNode::Pi(_, _, body, _) = kernel.expr_node(hypothesis.stmt).clone() else {
         return None;
     };
@@ -357,16 +392,24 @@ impl Search {
         hypothesis: Option<Hypothesis>,
     ) -> Result<ExprId, DeclineReason> {
         if kernel.def_eq(goal.lhs, goal.rhs) {
-            return Ok(build_eq_refl(kernel, self.eqp_refl, goal.level, goal.carrier, goal.lhs));
+            return Ok(build_eq_refl(
+                kernel,
+                self.eqp_refl,
+                goal.level,
+                goal.carrier,
+                goal.lhs,
+            ));
         }
         // The hypothesis is only usable once its (possibly still-Pi-headed)
         // statement has been peeled down to the same `Eq` shape as `goal` —
         // by the same number of `Search::attempt` generalization steps. A
         // hypothesis that is present but does not (yet, or ever) parse this
         // way is simply unavailable for this rewrite, not a hard error.
-        let Some((hyp_proof, hyp_goal)) = hypothesis
-            .and_then(|hyp| parse_eq_goal(kernel, self.eqp_eq, hyp.stmt).ok().map(|g| (hyp.proof, g)))
-        else {
+        let Some((hyp_proof, hyp_goal)) = hypothesis.and_then(|hyp| {
+            parse_eq_goal(kernel, self.eqp_eq, hyp.stmt)
+                .ok()
+                .map(|g| (hyp.proof, g))
+        }) else {
             return Err(DeclineReason::TerminalNotDefEqNoRewrite);
         };
         // Try deriving the rewrite "wrap" from the (whnf-reduced) RHS: some
@@ -403,7 +446,14 @@ impl Search {
     /// `congrArg` theorem — none exists in an isolated statement-import
     /// kernel), so its type is checked against `goal` only when the caller
     /// declares the surrounding theorem.
-    fn build_congr(&mut self, kernel: &mut Kernel, f: ExprId, hyp_proof: ExprId, hyp_goal: EqGoal, goal: EqGoal) -> ExprId {
+    fn build_congr(
+        &mut self,
+        kernel: &mut Kernel,
+        f: ExprId,
+        hyp_proof: ExprId,
+        hyp_goal: EqGoal,
+        goal: EqGoal,
+    ) -> ExprId {
         let anon = kernel.anon();
         let fa = kernel.app(f, hyp_goal.lhs);
         // motive := fun (x : hyp_goal.carrier) (_ : Eq hyp_goal.level hyp_goal.carrier hyp_goal.lhs x) =>
@@ -412,10 +462,24 @@ impl Search {
         let x = kernel.fvar(x_fv);
         let fx = kernel.app(f, x);
         let concl = build_eq(kernel, self.eqp_eq, goal.level, goal.carrier, fa, fx);
-        let hyp_ty = build_eq(kernel, self.eqp_eq, hyp_goal.level, hyp_goal.carrier, hyp_goal.lhs, x);
+        let hyp_ty = build_eq(
+            kernel,
+            self.eqp_eq,
+            hyp_goal.level,
+            hyp_goal.carrier,
+            hyp_goal.lhs,
+            x,
+        );
         let anon_hyp = kernel.anon();
         let inner = kernel.lam(anon_hyp, hyp_ty, concl, BinderInfo::Default);
-        let motive = lam_fv(kernel, anon, x_fv, hyp_goal.carrier, inner, BinderInfo::Default);
+        let motive = lam_fv(
+            kernel,
+            anon,
+            x_fv,
+            hyp_goal.carrier,
+            inner,
+            BinderInfo::Default,
+        );
         let refl_case = build_eq_refl(kernel, self.eqp_refl, goal.level, goal.carrier, fa);
         let z = kernel.level_zero();
         let rec = kernel.const_(self.eqp_rec, vec![z, hyp_goal.level]);
@@ -480,8 +544,22 @@ impl Search {
             stmt: pred_goal_expr,
         };
         let step_proof = self.attempt(kernel, step_goal_expr, eqp, Some(step_ih))?;
-        let step_body = lam_fv(kernel, anon, ih_fv, pred_goal_expr, step_proof, BinderInfo::Default);
-        let case_succ = lam_fv(kernel, anon, pred_fv, binder_ty, step_body, BinderInfo::Default);
+        let step_body = lam_fv(
+            kernel,
+            anon,
+            ih_fv,
+            pred_goal_expr,
+            step_proof,
+            BinderInfo::Default,
+        );
+        let case_succ = lam_fv(
+            kernel,
+            anon,
+            pred_fv,
+            binder_ty,
+            step_body,
+            BinderInfo::Default,
+        );
 
         let z = kernel.level_zero();
         let rec = kernel.const_(shape.rec_name, vec![z]);
@@ -495,7 +573,14 @@ impl Search {
         // same scope depth as `body` itself, so closing them into the current
         // binder is the ordinary fvar/`abstract_fvars` pattern, never manual
         // de Bruijn arithmetic).
-        Ok(lam_fv_apply_major(kernel, binder_name, x_fv, binder_ty, binder_info, with_succ))
+        Ok(lam_fv_apply_major(
+            kernel,
+            binder_name,
+            x_fv,
+            binder_ty,
+            binder_info,
+            with_succ,
+        ))
     }
 
     fn attempt(
@@ -524,7 +609,12 @@ impl Search {
                 {
                     self.inductions_left -= 1;
                     self.inductions_used += 1;
-                    let binder = Binder { name, ty, info, body };
+                    let binder = Binder {
+                        name,
+                        ty,
+                        info,
+                        body,
+                    };
                     if let Ok(proof) = self.try_induction(kernel, &shape, binder, eqp, hypothesis) {
                         return Ok(proof);
                     }
@@ -556,7 +646,10 @@ impl Search {
 /// induction hypothesis. Never dispatches on the target's name or fact id;
 /// every structural fact it uses (the equality primitives, the inductive
 /// shape, the recursor) is discovered from `kernel`'s own declarations.
-pub fn propose_bounded_induction(kernel: &mut Kernel, goal: ExprId) -> Result<Candidate, DeclineReason> {
+pub fn propose_bounded_induction(
+    kernel: &mut Kernel,
+    goal: ExprId,
+) -> Result<Candidate, DeclineReason> {
     let eqp = discover_eq_primitives(kernel)?;
     let mut search = Search {
         eqp_eq: eqp.eq,
