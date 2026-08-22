@@ -5,6 +5,9 @@ signed-trace theorem closing the open estimate `(HWO)` / `(REL)` in the
 Kaser--Lemire half-degree-irreducibles chain (sibling repository
 `lemire-half-degree-irreducibles`, roadmap paper of 21 Aug 2026).
 
+- [00-state-of-the-problem.md](00-state-of-the-problem.md) -- **start here**:
+  the synthesis. What is proved, what is open, and why -- two theorems, three
+  barriers, one wall.
 - [01-target-and-toolkit.md](01-target-and-toolkit.md) -- the exact open
   statement, three equivalent formulations (paper, Witt / Galois-ring,
   short-interval), the scale of the required saving, primary-source literature
@@ -42,6 +45,10 @@ Kaser--Lemire half-degree-irreducibles chain (sibling repository
   family: Lemire holds for n = 2*3^k with witness Phi_{3^{k+1}} =
   x^n + x^{n/2} + 1 (2 a primitive root mod 3^{k+1}); the first proven
   infinite family for the conjecture, machine-checked. Density zero, even n.
+- [09-construction-barrier.md](09-construction-barrier.md) -- the third
+  barrier: provable irreducibility-preserving constructions multiply the
+  degree, so window families are lacunary (density zero) and cannot cover a
+  residue class; honest scope (known toolbox, not a logical impossibility).
 
 Executable companions live in
 [`scripts/lemire-signed-trace/`](../../../../scripts/lemire-signed-trace/README.md).

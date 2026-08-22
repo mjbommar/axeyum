@@ -1316,6 +1316,21 @@ cylinder form carries doubly-exponential margin (weaker than `(HWO)`'s
 Theorem state unchanged: Lemire is not proved; the two barriers plus the
 almost-all theorem narrow it to exactly one unblocked analytic target.
 
+**Construction barrier (note 09) and synthesis (note 00), 2026-08-22.** The
+fourth side is closed: every provable irreducibility-preserving construction
+multiplies the degree, so window families are lacunary (density zero) and no
+finite union covers a residue class (Barrier III, machine-checked; honest
+scope -- the known toolbox, not a logical impossibility; a new
+arithmetic-progression seed would evade it, but the `sqrt n`
+prescribed-coefficient ceiling at `q=2` shows none is within reach). Note 00
+is the synthesis: two proved theorems (almost-all note 05; family `n=2*3^k`
+note 08), three proved barriers (moduli note 03, symmetry note 06,
+construction note 09), the one unblocked analytic target isolated (note 07,
+with the carry-collapse boundary), certified to `n=3000`. Every side goes as
+far as it can and stops at the same wall -- a phase-aware fixed-`F_2`
+pair-correlation estimate, open for the reason its integer analogue is open.
+Theorem state unchanged: Kaser--Lemire is not proved for all `n`.
+
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd` and `Nat.fib_dvd` remain durably proved. The next premise `Int.fib_neg` has now been measured from one root-selected v4.30 export: its official proof is assumption-bearing, with 26 direct dependencies and a footprint containing `Classical.choice`, `propext`, quotient primitives, and opaque/string support. It received no theorem or ledger credit.
 
 **Next:** preregister one non-rendering classification pass over the exact 26 `Int.fib_neg` dependencies in the sealed stream, isolate the clean parity/sign and `Int.fib_neg_natCast` core, then preregister the smallest target-owned reconstruction before any target submission.
