@@ -131,7 +131,11 @@ I_{y,e} = { d : d e in x^n + y + I(h) }   (an interval of length 2^{h - deg e}).
 
 All `y`-dependence, hence the whole layer, lives in Moebius sums over intervals
 shorter than the square root of their location; this is exact but gives no
-bound (those sums are below the Weil range).
+bound (those sums are below the Weil range). Checked by
+`scripts/lemire-signed-trace/lemire_typeI_check.py`: at `(n,j) = (11,5),
+(13,6), (15,7)` the difference `Phi(y) - RHS(y)` is the constant `2^h` on
+all four top-layer shifts, and the mixed second differences agree
+(`46 = 46` at `(15,7)`).
 
 ### 2.2 Witt-vector geometry: Teichmueller curve against the trace-zero subgroup
 
