@@ -54,6 +54,7 @@
 | 2026-08-22 | (pending) | All four directional convenience roots import twice identically but each reaches `propext`; the sealed rejection localizes V3 below theorem-level divisibility helpers to direct existential witnesses |
 | 2026-08-22 | (pending) | V3 freezes a four-constructor, definitional `Int.natAbs` multiplication proof with every rejected divisibility helper forbidden before source construction or compilation |
 | 2026-08-22 | (pending) | V3 closes same-sign multiplication definitionally and declines only the two cross-sign branches at `natAbs (Int.negOfNat n) = n`; no exporter or target ran |
+| 2026-08-22 | (pending) | V4 freezes a private two-constructor `natAbs (Int.negOfNat n)` proof and changes only the two rejected cross-sign branches before one compile |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |

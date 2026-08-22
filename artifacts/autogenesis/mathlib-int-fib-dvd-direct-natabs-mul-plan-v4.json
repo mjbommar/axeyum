@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-direct-natabs-mul-plan-v4",
+  "state": "preregistered-two-cross-sign-repair-before-source-change",
+  "predecessor": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-direct-natabs-mul-result-v3.json",
+    "sha256": "1042a8811329583e4994d9dce4844f495d0921b0c12c1a84cf589016644e71db"
+  },
+  "correction": {
+    "source": "artifacts/autogenesis/sources/int-natabs-mul-direct-v1.lean",
+    "add_private_support": "forall n : Nat, Int.natAbs (Int.negOfNat n) = n",
+    "support_method": "case split on n and close zero and successor by definitional equality",
+    "target_change": "replace rfl only in ofNat.negSucc and negSucc.ofNat with the private support; preserve rfl in both same-sign branches",
+    "forbidden_dependencies": [
+      "Int.natAbs_negOfNat",
+      "Int.natAbs_mul",
+      "Int.natAbs_dvd_natAbs",
+      "Int.dvd_natAbs_self",
+      "Int.dvd_trans",
+      "Int.ofNat_dvd_left",
+      "propext"
+    ]
+  },
+  "execution": {
+    "max_source_rewrites": 1,
+    "max_compile_invocations": 1,
+    "max_exporter_invocations": 0,
+    "max_importer_runs": 0,
+    "max_retries": 0,
+    "target_fib_dvd_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "source_compiles": true,
+    "source_mentions_no_forbidden_dependency": true
+  },
+  "next_on_accept": "freeze deterministic export and empty-footprint audit of the direct multiplication theorem"
+}
