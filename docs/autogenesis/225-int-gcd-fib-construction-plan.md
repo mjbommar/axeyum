@@ -62,3 +62,5 @@ the target received no credit. All five direct theorem dependencies were
 individually empty-footprint. The contamination therefore lies in a
 non-theorem declaration retained by source-level reduction or case analysis;
 the next bounded step is a non-rendering path audit to identify that carrier.
+V3 freezes that single read over the eight exact blockers and forbids rendering
+proof terms, theorem types or definition bodies.

@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-fib-construction-plan-v3",
+  "state": "preregistered-before-single-nonrendering-blocker-path-read",
+  "parent_result": {
+    "path": "artifacts/autogenesis/mathlib-int-gcd-fib-construction-result-v2.json",
+    "sha256": "699bb397eb4ef838c9f295dd0a367d2f8acf6cfb0af60e85d3a8340262617319"
+  },
+  "input": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-natabs-residual-v1/residual-1.ndjson",
+    "bytes": 9846065,
+    "sha256": "5ae684d7b5e254e4f523aff84816b697f3647e8fa51c7d1dae98401ace367152",
+    "mode": "0444",
+    "textual_read_allowed": false
+  },
+  "root": "Axeyum.Autogenesis.intFibNatAbsResidualV1",
+  "ordered_blockers": [
+    "Classical.choice",
+    "Lean.opaqueId",
+    "Quot",
+    "Quot.lift",
+    "Quot.mk",
+    "Quot.sound",
+    "String.Internal.append",
+    "propext"
+  ],
+  "measurement": {
+    "tool_path": "crates/axeyum-lean-import/examples/declaration_blocker_path_batch_audit.rs",
+    "tool_sha256": "cdf582bc9226aa2dd31bcfa172042f14ba6af582f99eb93ee61ca39904852d6a",
+    "proof_terms_types_or_values_may_be_rendered": false
+  },
+  "budget": {
+    "max_importer_runs": 1,
+    "max_proof_bearing_stream_reads": 1,
+    "max_retries": 0,
+    "max_theorem_submissions": 0,
+    "max_ledger_writes": 0
+  },
+  "authority": {
+    "reconstruction_allowed": false,
+    "proof_bodies_readable_by_model": false,
+    "definition_bodies_readable_by_model": false,
+    "theorem_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "decision_rule": {
+    "next": "replace the nearest shared contaminated carriers with explicit target-owned theorem parameters or direct kernel construction",
+    "authorize_successor_in_this_increment": false
+  },
+  "output": "artifacts/autogenesis/mathlib-int-gcd-fib-construction-result-v3.json"
+}
