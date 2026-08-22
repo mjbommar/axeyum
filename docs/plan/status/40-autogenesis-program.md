@@ -4,7 +4,7 @@
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_gcd`, `Int.fib_dvd`, and now `Int.fib_of_nonneg` are durably proved with empty kernel footprints. The new operation survived an exit-75 intent fault without changing the fact, recovery performed exactly one authoritative ledger write, and an isolated exact-commit replay reproduced every primary byte identity and the preregistered empty unlock delta.
 
-**Next:** preregister exact `Nat.fib_pos` construction over the reusable recurrence, core positivity roots, both qualified residuals, two target-owned definitional base theorems, and replayed specializations.
+**Next:** implement and compile the frozen exact `Nat.fib_pos` driver; do not read its four proof streams until the driver is committed and execution is separately gated.
 
 <!-- plan-section: landed-changes -->
 
@@ -144,6 +144,7 @@
 | 2026-08-22 | (pending) | V5 isolates recurrence-step positivity as a second function-abstracted residual over only a recurrence contract and generic right-summand positivity, leaving zero/one presentations as target-owned definitional constructions in the final driver |
 | 2026-08-22 | (pending) | V5 compiles and exports twice byte-identically with empty footprints, but withholds credit because the actual direct closure `[congrArg]` is narrower than predicted `[Eq.symm, congrArg]`; V6 freezes hash-only correction |
 | 2026-08-22 | (pending) | V6 qualifies the exact congrArg-only step residual from the two already completed imports with zero proof-stream, importer, theorem-submission, or ledger reruns |
+| 2026-08-22 | (pending) | V7 freezes exact `Nat.fib_pos` over four sealed inputs, two target-owned definitional base theorems, one step specialization, and one final specialization before driver code or proof-stream access |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
