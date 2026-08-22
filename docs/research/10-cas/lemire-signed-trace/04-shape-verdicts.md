@@ -277,4 +277,65 @@ exact facts rule out frequency-uniform or smoothed strategies.*
 
 ## Shape 1, computational leg
 
-Pending.
+*Verdict (landed 2026-08-22): closed; no small virtual object exists, for a
+structural reason, and the effective dimension is exponential in `j`.*
+
+- **Rebuilt from scratch** in exact `Z[zeta_M]` arithmetic (generator basis,
+  exact discrete log, `L(chi,T)` from degree-ball transforms); 107/107
+  agreements with brute-force enumeration over `F_2` (`j = 3..7`), `F_4`,
+  `F_8`; `deg L = j-1` and purity checked on every character.
+- **The four covers are nested**, `B, C subset A`, `B cap C = D`, so
+  `A - B - C + D` is inclusion--exclusion and equals `X_{j,s}` with
+  multiplicity `+1` everywhere: `T_{j,s}(n) = -p_n(prod_{chi in X} L(chi,T))`
+  and the "virtual" module is the honest `H^1_c` of the layer, pure of weight
+  one, rank exactly `#X_{j,s}(j-1)`. There is no negative part; the
+  alternating combination is a selector, not a source of cancellation.
+- **Effective dimension (distinct eigenvalues; two independent methods --
+  factoring Galois-orbit products over `Q`, and Berlekamp--Massey on the
+  integer sequence `n -> T_{j,s}(n)` -- agree on every row):** `j=7,s=3`:
+  172/192; `9,4`: 972/1024; `11,4`: 5004/5120; `12,4`: 11086/11264; `13,4`:
+  24274/24576 (ratio 0.988); for the top order the ratio rises toward 1 and
+  the absolute dimension grows by `2.19..2.33` per unit `j`, i.e.
+  `~2^{j-2}(j-1)`. Worst ratio anywhere `0.50` at `(11,1)`, a layer `(HWO)`
+  does not need; `(HWO)` would need `1/(4 ell) = 1/800` at `ell = 200`. The
+  formal bound is *attained exactly* at `(3,1)` for `n = 8,16,...`, `(3,2)`
+  for `n = 12,24,...`, `(5,1)` at `n = 24,48,...`, `(5,2)` at `n = 60,...`, so
+  no dimension count below `#X(j-1)` is even true.
+- **The `q` direction** has a small object (closed forms `T_{3,1}(7;q) =
+  q^4(q-1)`, `T_{3,2}(7;q) = q^4(q-1)^2` with 3 eigenvalues, `T_{5,1}(11;q) =
+  (-1)^r q^7(q-1)`), caused by the scaling symmetry `u(x) -> u(cx)`,
+  `c in F_q^*`, which forces `(q-1)`-fold eigenvalue repetition (verified on
+  48/48, 192/192, 448/448 characters at `q = 4, 8`); it delivers exactly one
+  square root of `q` and is empty at `q = 2` (`F_2^* = {1}`).
+- **What is true:** in the window `n in [2j, 4j]`, `max_n |T|/2^{n/2}` is
+  `1.5..7.9x sqrt(formal)`: square-root cancellation over the family; the
+  missing `4 ell` is `sqrt(formal)/(4 ell) ~ 2^{j/2} sqrt j/(4j)`, a
+  phase-cancellation statement over `2^{j-2}` characters, not a Betti count.
+
+## Barrier (added 2026-08-22): moduli-only proofs cannot work
+
+A fake population `F: E_ell -> R_{>=0}` with total mass `2^n`, every
+low-conductor (`< a`) Fourier coefficient equal to the truth, every
+high-conductor coefficient within the Weil bound for its conductor (by a
+factor `~6..13`), conductor-one coefficient `0`, second moment below the
+truth (ratio `0.22, 0.15, 0.12`), and `F(1) = 0`, exists at `(12,25)`,
+`(16,33)`, `(20,41)` (construction: spread the deficit `-(2^n + sum_{0 <
+cond < a} N^hat)` evenly over the high-conductor characters; verified
+numerically, `min F = 0`, `F(1) = 0` to float precision). Hence no argument
+whose only inputs are mass, nonnegativity, the exact low-conductor
+populations, per-character Weil moduli and low moments can prove `(REL)`: a
+proof must use that `N` is a Lambda-weighted prime count beyond its Fourier
+moduli -- the population-level form of fork B's `Q^k` obstruction and of the
+uncertainty reading of note 03.
+
+## Net of the five shapes
+
+All five are closed. Two structural facts stand out for any future attempt:
+the layer sums are *exact* main terms at every odd frequency below the
+conductor (`T_{j,s}(m) = +#X` for odd `m < j`), so the target is
+frequency-selective; and the stabilizer/Clifford boundary sits exactly at
+Witt order `4` with quadratic phase, beyond which every even moment is
+Gaussian. The missing statement is a phase-alignment (delocalization) bound
+at frequency `n ~ 2j` over a complete post-Clifford layer, invisible to all
+moduli and moments; the four exact structures catalogued here and in note 02
+are the only non-generic inputs left.
