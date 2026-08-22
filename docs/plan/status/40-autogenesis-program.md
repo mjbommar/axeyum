@@ -60,6 +60,7 @@
 | 2026-08-21 | (pending) | Raw V1 exposes the remaining `1^k` normalization; V2 freezes a structural `Nat` one-power proof and explicit transport through the two definitional Int branches |
 | 2026-08-21 | (pending) | Raw V2 reaches only overloaded successor-power elaboration; V3 freezes an explicit `1^k * 1 = 1` goal before reusing the same induction hypothesis |
 | 2026-08-21 | (pending) | Raw V3 exposes multiplication by one as the next propositional layer; V4 freezes target-owned structural zero-add, multiply-one, and one-power before rebuilding the raw Int theorem |
+| 2026-08-21 | (pending) | Raw V4 reconstructs zero-add, multiply-one, one-power, and exact negative-one power parity with empty footprints; the successor-parity bridge is frozen before source construction |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |

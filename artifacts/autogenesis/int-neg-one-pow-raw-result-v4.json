@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-native-neg-one-raw-power-result",
+  "state": "raw-negative-one-power-reconstructed-empty-footprint",
+  "plan": {
+    "path": "artifacts/autogenesis/int-neg-one-pow-raw-plan-v4.json",
+    "sha256": "fe3397fc998459060bdf657dc210853f3db146869f72168e27a99a2bfa0ca5cb",
+    "commit": "3eccddc2e1d261a44f66aaa582487528b6a8b4e1"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-neg-one-pow-raw-v4.lean",
+    "sha256": "c8e61b59650ea79d6bba7b111859c79ba1d1e97f1d51dca5f077735d35902c68"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-neg-one-pow-raw-v4",
+    "stream_sha256": "051c38c0001b01fa375c97aec93857e6afb173b89a852162a71939bf9683cde5",
+    "stream_bytes": 414821,
+    "audit_1_sha256": "209914308390079852d1e31085ccd44295dd32dd1314fdc5609976e3795f9d22",
+    "audit_2_sha256": "ed29dc62410879fc6792e86ca8bf28e049d738eb4737fecfb454e95a5e966159",
+    "two_exports_byte_identical": true,
+    "stream_axioms": []
+  },
+  "roots": [
+    {
+      "name": "Axeyum.Autogenesis.natZeroAddV1",
+      "declaration_sha256": "15c5f15f8bb150f0a6193b255252e2188f683281d3a467cc121a7cab0d74dc6f",
+      "axiom_footprint": []
+    },
+    {
+      "name": "Axeyum.Autogenesis.natMulOneV1",
+      "declaration_sha256": "dd377248ffd42d18f37fb248753054ce4cc91f13fdd89741a0a1486ab0a055d8",
+      "axiom_footprint": []
+    },
+    {
+      "name": "Axeyum.Autogenesis.natOnePowV1",
+      "declaration_sha256": "fa6552dfc09bcee27e97101a622260711cc631992c6d53dc814836f3d5f85b1b",
+      "axiom_footprint": []
+    },
+    {
+      "name": "Axeyum.Autogenesis.intNegOnePowRawV2",
+      "declaration_sha256": "74a8f52168f8e1d8c7897608933d032f45887e11681fa23017004586c8da452e",
+      "axiom_footprint": []
+    }
+  ],
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit_status": 0,
+    "exporter_invocations": 2,
+    "importer_runs": 2,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "support_credit": 4,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Construct the parameterized successor-parity bridge, then specialize it with this raw theorem and the existing clean modulo supports.",
+  "limitations": "The raw theorem indexes its conditional by the exponent itself; the final theorem needs the checked successor-parity bridge."
+}
