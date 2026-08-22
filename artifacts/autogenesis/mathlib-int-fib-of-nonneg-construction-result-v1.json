@@ -1,0 +1,12 @@
+{
+  "schema_version":1,
+  "kind":"axeyum-autogenesis-mathlib-int-fib-of-nonneg-construction-result-v1",
+  "state":"declined-pre-code-representation-mismatch-missing-negative-branch-eliminator",
+  "plan":{"path":"artifacts/autogenesis/mathlib-int-fib-of-nonneg-construction-plan-v1.json","sha256":"74062044aa76fdebfe07820fedc8150942568a1071bef6eedfcf461da0c72f12"},
+  "representation":{"source":"artifacts/autogenesis/sources/int-fib-clean-definition-v1.lean","sha256":"d21a5989c4940995bd8516b5fd3b98f409fcf71c6999432a84cf01a1a144c7b4","shape":"Int constructor match with a parity conditional only in the negSucc branch","planned_shape":"conditional on 0 <= n","mismatch":"if_pos does not eliminate the impossible nonnegative negSucc constructor branch"},
+  "qualified_support":{"name":"if_pos","still_empty_footprint":true,"sufficient_for_target":false},
+  "missing_support":{"preferred_root":"Int.negSucc_not_nonneg","type_probe":"forall n : Nat, 0 <= Int.negSucc n iff False","alternative_roots":["Int.negSucc_lt_zero","Int.not_le_of_gt"]},
+  "execution":{"driver_files_created":0,"driver_compilations":0,"input_stream_reads":0,"composition_operations":0,"target_theorem_submissions":0,"exports":0,"fresh_imports":0,"ledger_writes":0},
+  "authority":{"theorem_credit":0,"fact_status_changes":0,"ledger_writes":0},
+  "next":"preregister a root-selected audit of Int.negSucc_not_nonneg before revising the constructor-based target construction"
+}

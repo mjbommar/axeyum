@@ -4,7 +4,7 @@
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_gcd`, and now `Int.fib_dvd` are durably proved with empty kernel footprints. The exact `Int.fib_dvd` operation survived an exit-75 intent fault without changing the fact, recovery performed exactly one authoritative ledger write, the measured frontier produced the preregistered empty unlock delta, and isolated replay `e836fa51…667f` reproduced all ten semantic checks from a clean reconstructed prestate.
 
-**Next:** implement and compile the frozen direct kernel driver for exact `Int.fib_of_nonneg`, composing only target-owned transparent `Int.fib` and empty-footprint `if_pos`; execution and admission remain separately gated.
+**Next:** preregister and run a root-selected audit of `Int.negSucc_not_nonneg`; only after its closure is qualified may the constructor-based `Int.fib_of_nonneg` construction be revised.
 
 <!-- plan-section: landed-changes -->
 
@@ -105,6 +105,7 @@
 | 2026-08-22 | (pending) | V2 freezes the containing `Mathlib.Data.Int.Fib.Basic` environment but root-selects only `if_pos`, requires the target theorem absent, and preserves zero construction or ledger authority |
 | 2026-08-22 | (pending) | V2 exports only `if_pos`, imports it twice identically with zero dependencies and empty footprint, confirms `Int.fib_of_nonneg` absent, and seals the 18,458-byte support capsule with zero target submissions or writes |
 | 2026-08-22 | (pending) | Exact `Int.fib_of_nonneg` construction is frozen as one direct application of `if_pos` to the transparent nonnegative branch, with one expected dependency and the upstream target root forbidden |
+| 2026-08-22 | (pending) | Construction preflight declines before code because the target-owned `Int.fib` matches constructors rather than `0 ≤ n`; the positive branch is reflexive and the missing leaf is exactly `Int.negSucc_not_nonneg` |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
