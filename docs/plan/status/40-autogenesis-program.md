@@ -107,6 +107,7 @@
 | 2026-08-21 | (pending) | Constructor lift V1 reaches only unavailable `neg_add_rev` at the final line; V2 freezes its exact narrow-import replacement `Int.neg_add` |
 | 2026-08-21 | (pending) | Constructor lift V2 compiles both positive/negative integer parity contracts under narrow Basic; export and footprint qualification remain separate |
 | 2026-08-21 | (pending) | Exact root-mapped module build, two exports, and two independent lift audits are frozen before qualification execution |
+| 2026-08-21 | (pending) | Integer double-mod lift qualifies empty-footprint; half-witness is rejected at `propext`, and its five direct theorem dependencies are frozen for one audit |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
