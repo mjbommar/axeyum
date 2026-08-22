@@ -50,6 +50,7 @@
 | 2026-08-21 | (pending) | Root comparison finds matching definition kinds and kernel type shapes but different complete bodies; one checked presentation-theorem composition is frozen before execution |
 | 2026-08-21 | (pending) | Checked composition transports the negative-value presentation into the admitted recurrence capsule, replays, and adds exactly one axiom-free theorem; sign-power parity is now the remaining mathematical leaf |
 | 2026-08-21 | (pending) | Minus-one power parity is frozen as a function-parameterized induction over four explicit algebra contracts and the already sealed modulo-parity supports, before source construction |
+| 2026-08-21 | (pending) | V1 fails closed before Lean execution because one exporter invocation cannot prove two-export determinism; V2 freezes the unchanged source with a consistent two-export budget |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
