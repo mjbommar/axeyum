@@ -237,6 +237,7 @@ compounding, not automation theatre.
 | [Clean target-owned `Int.fib` construction result](208-int-fib-clean-definition-result.md) | Does the representation repair make exact `Int.fib_natCast` reproducible and axiom-free? |
 | [Production measurement and the general producer](226-production-measurement-and-general-producer-plan.md) | Why does a full goal queue produce ~1 autonomous theorem, and what must be measured before the producer is worth improving? |
 | [Held-out partition breach result](227-held-out-partition-breach-result.md) | A capsule was registered against a held-out fact and no gate looked; what was spent, how it was repaired, and the isolation gate that now exists. |
+| [Capsule lane retrospective](228-capsule-lane-retrospective.md) | Nine capsules in ten hours moved the generality metric by zero — what was structurally invisible from inside the work, and the eight things to do differently. |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

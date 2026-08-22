@@ -828,6 +828,44 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   which is how this one was identified as a session task rather than a user's
   job.
 
+- **A BLIND EVALUATION POPULATION IS A SHARED RESOURCE WITH NO OWNER, AND
+  TOUCHING ONE MEMBER SPENDS THE WHOLE FAMILY.** `artifacts/autogenesis/nursery-v1.json`
+  preregisters 214 Mathlib propositions into train / development / **held-out**,
+  and the split key is `<family>:<statement-shape>` precisely because a proof
+  route for one member is evidence about its siblings. On 2026-08-21 a capsule
+  was registered against `F:ml430-nat-gcd-greatest-0a04214a` — a held-out row —
+  and it cost **19 of 76** held-out propositions, 25% of the partition, for one
+  theorem.
+
+  Nothing caught it for a day. `check-autogenesis-nursery.py` validates the
+  manifest's *internal* integrity and never inspects what operations do to it;
+  `validate-autogenesis-operations.py` mentioned partitions zero times; the
+  README's "immutable held-out populations" guarantee was prose. Now gated by
+  `scripts/check-autogenesis-holdout-isolation.py`, and the repair is an
+  amendment ledger, never a deletion (ADR-0542).
+
+  The trap that nearly caught the repair too: **"dependency-ready facts" and
+  "train + development" are both 138 and are different sets** — the ready set is
+  44 train, 44 development and **50 held-out**. Check the partition, never the
+  count.
+
+- **AN OPERATION REGISTRY WHERE EVERY ENTRY NAMES ONE TARGET IS A DISPATCH
+  TABLE, NOT A PRODUCER — and it cannot fail to "produce".** Measured
+  2026-08-22: 24 registered operations, 23 facts covered, **0 naming more than
+  one fact, and 0 of 144 dependency-ready facts covered**. Coverage was 23-of-23
+  on theorems already proved and 0-of-144 on anything unproved. Nine capsules
+  landed in the ten hours before that was measured, each with a plan, a receipt
+  and a gate; the shape of the output had stopped changing and nothing was
+  watching that.
+
+  This is the checker-that-cannot-fail defect moved one arrow upstream, so the
+  same discipline applies: `scripts/gen-production-provenance-ledger.py` derives
+  generality from `applicability.fact_ids` — never from a label a fact carries —
+  and gates both counters. Before writing an operation for one theorem, ask what
+  the next three targets share with it; `applicability.fact_ids` is a list and
+  nothing ever required length one. Full retrospective:
+  `docs/autogenesis/228-capsule-lane-retrospective.md`.
+
 - **Tools in this repo have lied more often than the solver has been weak.**
   In one session: a corpus gate that ran zero tests for 15 days while exiting 0;
   a pre-push hook that had never run because `core.hooksPath` was unset; a
