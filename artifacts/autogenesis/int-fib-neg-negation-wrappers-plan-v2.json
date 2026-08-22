@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-negation-wrappers-plan",
+  "state": "preregistered-exact-surface-name-repair-before-source-edit",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-fib-neg-negation-name-probe-result-v1.json",
+    "required_state": "exact-int-negation-surface-names-resolved"
+  },
+  "repair": {
+    "SubtractionMonoid.neg_add_rev": "Int.neg_add",
+    "neg_neg": "Int.neg_neg",
+    "theorem_statements_changed": false,
+    "other_source_changes_authorized": false
+  },
+  "source": "artifacts/autogenesis/sources/int-fib-neg-negation-wrappers-v2.lean",
+  "evidence_pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-negation-wrappers-v2",
+  "budget": {
+    "directory_creations": 1,
+    "source_constructions": 1,
+    "source_stagings": 1,
+    "module_builds": 1,
+    "exports": 2,
+    "root_audits": 1,
+    "retries": 0,
+    "composition_operations": 0,
+    "exact_target_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "roots": [
+      "Axeyum.Autogenesis.intNegAddV2",
+      "Axeyum.Autogenesis.intNegNegV2"
+    ],
+    "exports_byte_identical": true,
+    "axiom_footprints": [],
+    "proof_terms_types_or_values_rendered": 0
+  },
+  "stop_rule": "Any source drift beyond the two selected names, build/export mismatch, nonempty footprint, or preexisting output stops without retry or theorem/ledger authority.",
+  "output_result": "artifacts/autogenesis/int-fib-neg-negation-wrappers-result-v2.json",
+  "limitations": "Negation wrappers alone grant no parity branch, Fibonacci target, fact, or ledger credit."
+}

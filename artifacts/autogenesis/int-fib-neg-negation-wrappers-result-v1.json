@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-negation-wrappers-result",
+  "state": "stopped-before-export-on-two-unavailable-surface-names",
+  "plan": "artifacts/autogenesis/int-fib-neg-negation-wrappers-plan-v1.json",
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-fib-neg-negation-wrappers-v1.lean",
+    "sha256": "5d3b80d8ae49b3a15b6d2915937f56b6b7b4f52b75bcb0aa50fc80bea4764f8a"
+  },
+  "diagnostics": [
+    {
+      "name": "SubtractionMonoid.neg_add_rev",
+      "class": "Unknown identifier"
+    },
+    {
+      "name": "neg_neg",
+      "class": "Unknown identifier"
+    }
+  ],
+  "execution": {
+    "directory_creations": 1,
+    "source_constructions": 1,
+    "source_stagings": 1,
+    "module_builds": 1,
+    "exports": 0,
+    "root_audits": 0,
+    "retries": 0,
+    "composition_operations": 0,
+    "exact_target_submissions": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "wrapper_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0
+  },
+  "next": "Probe a fixed set of qualified and unqualified integer negation-law surface names before changing proof code."
+}
