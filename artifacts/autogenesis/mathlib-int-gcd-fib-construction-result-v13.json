@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-fib-construction-result-v13",
+  "state": "exact-int-gcd-fib-constructed-exported-and-twice-reimported-empty-footprint",
+  "plan": {"path": "artifacts/autogenesis/mathlib-int-gcd-fib-construction-plan-v13.json", "sha256": "28645092f2f1eaf581a8131c4b8d9ab7aa3406662833a96a245983e85ef52dfc"},
+  "producer": {"commit": "220455193e05295f9cd3a962f0e8d1885d7be61f", "path": "crates/axeyum-lean-import/examples/int_gcd_fib_exact.rs", "sha256": "b46fb87e4d1770fac2fee805e0abb1f3f57f8bc75419e3305e35e5e067899652"},
+  "composition_receipt_sha256": "1770b3b0c5b4e48f795dc82599ee26f6202340c8a7bdca4de4fbe9f531f57096",
+  "int_gcd": {"name": "Int.gcd", "declaration_sha256": "3d6e341b7e69975671c8558317cb1598df0e00e8638ce90360fabe9f9e860ea2", "axiom_footprint": []},
+  "int_gcd_def": {"name": "Int.gcd_def", "declaration_sha256": "05bfb02153dce9815f3264705f708c027f008dc9f6bb7c06f1be764c188a2371", "axiom_footprint": [], "direct_theorem_dependencies": []},
+  "target": {
+    "name": "Int.gcd_fib",
+    "declaration_sha256": "44660dc7f15cda1b469f99e349f4b874afca9dbca24bcfc5c847ca226ccc357f",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": ["Axeyum.Autogenesis.intFibNatAbsV1", "Eq.symm", "Eq.trans", "Int.gcd_def", "Nat.fib_gcd"]
+  },
+  "capsule": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-gcd-fib-exact-v1/root.ndjson",
+    "bytes": 1152698,
+    "sha256": "b1ce136473ead161243e7cdc053f3a8e0dab81a8e253c364171e839f22fd86f6",
+    "mode": "0444",
+    "manifest_sha256": "1b68af399609794120540cd13857daaaad090148ce90299c5582e0d74186a561",
+    "directory_mode": "0555"
+  },
+  "execution": {"complete_invocations": 1, "input_stream_reads": 2, "composition_operations": 1, "composition_replays": 1, "definition_submissions": 1, "support_theorem_submissions": 1, "target_theorem_submissions": 1, "target_exports": 1, "fresh_target_imports": 2, "retries": 0, "ledger_writes": 0},
+  "authority": {"theorem_credit": 1, "fact_status_changes": 0, "ledger_writes": 0, "rendered_material": 0},
+  "next": "bind canonical Int.gcd_fib goal identity and preregister crash-safe admission"
+}

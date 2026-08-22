@@ -142,3 +142,11 @@ V12 accepts `p0` and identifies the first genuine mismatch at the manual
 the already established `Eq.rec` construction over the identical functions and
 equalities. This leaves the five-step mathematical chain unchanged and removes
 `congrArg` from the expected direct theorem dependencies.
+
+V13 succeeds on its first invocation. All five closed link checks pass, the
+target has exactly the five preregistered theorem dependencies and no axioms,
+and two fresh imports reproduce the same declaration evidence. The sealed
+1,152,698-byte capsule is read-only at
+`/nas3/data/axeyum/autogenesis/reference-packs/int-gcd-fib-exact-v1`.
+No fact status changes until a separate canonical goal-identity audit and
+crash-safe admission are preregistered.

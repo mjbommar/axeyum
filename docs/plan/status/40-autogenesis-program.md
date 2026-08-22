@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, and `Int.fib_neg` are durably proved with empty kernel footprints. The target-owned bridge `(Int.fib m).natAbs = Nat.fib m.natAbs` now composes from five sealed streams, replays, and survives two fresh imports with an empty footprint and exactly seven dependencies.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, and `Int.fib_neg` are durably proved with empty kernel footprints. The selected `Int.gcd_fib` target now reconstructs bottom-up, passes every link check, and survives two fresh imports with an empty footprint and exactly five dependencies; ledger admission remains separate.
 
-**Next:** preregister and execute the exact `Int.gcd_fib` composition over the sealed natAbs bridge, exact `Int.gcd_def`, and admitted `Nat.fib_gcd`; then bind its canonical goal identity before any crash-safe ledger admission.
+**Next:** bind the sealed `Int.gcd_fib` theorem to the statement-only ledger goal's canonical type, then preregister and execute its crash-safe fact operation and independently replay the admission.
 
 <!-- plan-section: landed-changes -->
 
@@ -31,6 +31,7 @@
 | 2026-08-22 | (pending) | V12 closes every diagnostic proof and proposition over matching integer binders, compiles Clippy-clean, and preserves the exact proof chain before one new invocation |
 | 2026-08-22 | (pending) | Closed diagnostics accept `p0` and localize the first real mismatch to manual `congrArg` at `p1`; V13 freezes established `Eq.rec` congruence for both transports and reduces expected theorem dependencies to five |
 | 2026-08-22 | (pending) | V13 replaces all three congruence applications with the established `Eq.rec` construction, compiles Clippy-clean, and preserves link-by-link checks before one new invocation |
+| 2026-08-22 | (pending) | V13 accepts all five links, constructs exact `Int.gcd_fib` empty-footprint with five dependencies, survives two fresh imports, and seals a 1,152,698-byte capsule with zero ledger writes |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
