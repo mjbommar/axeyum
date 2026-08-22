@@ -77,6 +77,16 @@ step autogenesis-mathlib-nursery-split-tests python3 -m unittest scripts.tests.t
 step autogenesis-nursery-dispatch-baseline-tests python3 -m unittest scripts.tests.test_create_autogenesis_nursery_dispatch_baseline
 step autogenesis-holdout-isolation-tests python3 -m unittest scripts.tests.test_check_autogenesis_holdout_isolation
 step autogenesis-holdout-isolation python3 scripts/check-autogenesis-holdout-isolation.py
+step autogenesis-must-decline-population-tests python3 -m unittest scripts.tests.test_check_autogenesis_must_decline_population
+# The must-decline population is 9 of the nursery's 12 generated-mutation rows
+# (train/development; the other 3 are held-out and are never referenced here).
+# Every one is FALSE by a concrete counterexample this gate independently
+# recomputes -- see artifacts/autogenesis/must-decline-mutations-v1.json. If a
+# producer census ever admits one, this VOIDS the census: admitting a false
+# statement is a soundness failure, not a low conversion rate. Companion to
+# `explain_corpus IS NOT AN ORACLE` and the checker-that-cannot-fail discipline
+# in CLAUDE.md, applied one arrow upstream to the PRODUCER for the first time.
+step autogenesis-must-decline-population python3 scripts/check-autogenesis-must-decline-population.py
 step lane-turn-controls ./scripts/tests/test-check-lane-turn.sh
 step autogenesis-nursery python3 scripts/check-autogenesis-nursery.py
 step autogenesis-mathlib-nursery-split python3 scripts/create-autogenesis-mathlib-nursery-split.py --check

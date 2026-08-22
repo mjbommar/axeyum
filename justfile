@@ -117,6 +117,8 @@ autogenesis-nursery:
     python3 scripts/create-autogenesis-mathlib-nursery-split.py --check
     python3 -m unittest scripts.tests.test_check_autogenesis_holdout_isolation
     python3 scripts/check-autogenesis-holdout-isolation.py
+    python3 -m unittest scripts.tests.test_check_autogenesis_must_decline_population
+    python3 scripts/check-autogenesis-must-decline-population.py
     python3 scripts/check-autogenesis-nursery.py
     python3 scripts/create-autogenesis-nursery-dispatch-baseline.py --check
     cargo test -p axeyum-lean-import --test statement_adapter
