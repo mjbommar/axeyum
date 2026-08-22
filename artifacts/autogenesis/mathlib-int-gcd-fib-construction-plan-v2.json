@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-fib-construction-plan-v2",
+  "state": "preregistered-before-residual-source-construction-or-proof-stream-read",
+  "predecessor": {
+    "path": "artifacts/autogenesis/mathlib-int-gcd-fib-construction-plan-v1.json",
+    "sha256": "01d4655a9dec0e83d3c13f70016f33bed69a136c2481a8ec67e018f029403b75",
+    "correction": "The first bridge must be exported as a theorem-parameterized residual before exact specialization; directly naming official Int.fib_neg would inherit its rejected source closure before Axeyum can substitute the admitted clean theorem."
+  },
+  "residual": {
+    "name": "Axeyum.Autogenesis.intFibNatAbsResidualV1",
+    "result_statement": "∀ (m : ℤ), (Int.fib m).natAbs = Nat.fib m.natAbs",
+    "explicit_theorem_parameters": [
+      "∀ z : ℤ, Int.fib (-z) = if Even z then -Int.fib z else Int.fib z",
+      "∀ z : ℤ, (-z).natAbs = z.natAbs"
+    ],
+    "proof_route": "integer eq_nat_or_neg cases; positive case by reduction; negative case by the explicit fib-neg parameter, conditional cases, and explicit natAbs-neg transport"
+  },
+  "exact_specialization": {
+    "output_name": "Axeyum.Autogenesis.intFibNatAbsV1",
+    "inputs": [
+      {
+        "name": "Int.fib_neg",
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-exact-v1/root.ndjson",
+        "capsule_sha256": "d787dc502dff901cab0cab22bf8fd11578bf6e1632892651b1bf67b3d786d257",
+        "declaration_sha256": "55e3a3efbd6e435e5b02ce4382af74763b7be21c1a351cfc5798249f5798feb0"
+      },
+      {
+        "name": "Int.natAbs_neg",
+        "required_axiom_footprint": []
+      }
+    ]
+  },
+  "execution": {
+    "max_lean_compiler_invocations": 1,
+    "max_exporter_invocations": 2,
+    "max_residual_imports": 2,
+    "max_specialization_submissions": 1,
+    "max_fresh_exact_imports": 2,
+    "max_retries": 0,
+    "int_gcd_fib_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "lean_version": "4.30.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "residual_exports_byte_identical": true,
+    "residual_axiom_footprint": [],
+    "residual_direct_theorem_dependencies": [],
+    "exact_axiom_footprint": [],
+    "exact_direct_theorem_dependencies": [
+      "Axeyum.Autogenesis.intFibNatAbsResidualV1",
+      "Int.fib_neg",
+      "Int.natAbs_neg"
+    ],
+    "proof_bodies_inspected": false,
+    "held_out_inspected": false
+  },
+  "authority": {
+    "official_target_proof_body_allowed": false,
+    "official_int_fib_neg_proof_body_allowed": false,
+    "same_name_declaration_transport_allowed": false,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_on_accept": "freeze exact Int.gcd_fib composition over Int.gcd_def, intFibNatAbsV1, and admitted Nat.fib_gcd before target code"
+}

@@ -11,13 +11,22 @@ The useful intermediate statement is
 ∀ (m : ℤ), (Int.fib m).natAbs = Nat.fib m.natAbs
 ```
 
-Call its target-owned form
+Call its final target-owned form
 `Axeyum.Autogenesis.intFibNatAbsV1`. Mathematically it says that the sign
 extension used by integer Fibonacci disappears when `natAbs` is taken. The
 positive constructor is definitional. The negative constructor must be reduced
 through the already admitted exact `Int.fib_neg` theorem and independently
-checked, target-owned `natAbs` transport; an assumption-bearing simplifier is a
-decline rather than a usable result.
+checked `natAbs` transport; an assumption-bearing simplifier is a decline
+rather than a usable result.
+
+The V1 plan named that final bridge directly. Before execution, closure analysis
+showed why that is one boundary too coarse: Lean source that directly names the
+official `Int.fib_neg` would inherit its rejected source proof closure before
+Axeyum could substitute the admitted clean theorem. V2 therefore exports
+`intFibNatAbsResidualV1` with `fib_neg` and `natAbs_neg` as explicit theorem
+parameters, requires that residual to be dependency-free, and only then
+specializes it against the exact admitted capsule and a separately checked
+clean `Int.natAbs_neg` root.
 
 Once that bridge is clean, the final composition is short:
 
@@ -37,6 +46,7 @@ first execution has no target-submission or ledger-write authority.
 
 ```sh
 python3 scripts/check-autogenesis-int-gcd-fib-construction-plan.py
+python3 scripts/check-autogenesis-int-gcd-fib-construction-plan-v2.py
 ```
 
 On a clean bridge result, the next increment will preregister the exact

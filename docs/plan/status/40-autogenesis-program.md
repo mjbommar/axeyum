@@ -9,6 +9,7 @@
 <!-- plan-section: landed-changes -->
 
 | 2026-08-21 | (pending) | The newly ready `Int.gcd_fib` route is frozen through one target-owned Fibonacci/natAbs bridge and the two exact admitted premise capsules before source construction or proof-stream access |
+| 2026-08-21 | (pending) | Closure analysis corrects the bridge boundary before execution: export a dependency-free two-parameter residual, then specialize it with exact clean `Int.fib_neg` and `Int.natAbs_neg` roots |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
