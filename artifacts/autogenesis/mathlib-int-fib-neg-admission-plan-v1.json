@@ -7,7 +7,7 @@
     "construction_result": "artifacts/autogenesis/int-fib-neg-exact-composition-result-v1.json",
     "construction_result_sha256": "13ad5b85bdf81e4017db46ffb101bf2d896f16d7968244816493bf5668ae2102",
     "identity_result": "artifacts/autogenesis/int-fib-neg-goal-identity-result-v1.json",
-    "identity_result_sha256": "cb72589d87020b510e58b800b603e79c7cf18dc1200deb3bfb1f1c670354f1f8",
+    "identity_result_sha256": "f3624680c2c811bc85bcfd890462c3b1dbdb2339768cdb284529c676d4f6e31e",
     "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-exact-v1/root.ndjson",
     "capsule_sha256": "d787dc502dff901cab0cab22bf8fd11578bf6e1632892651b1bf67b3d786d257",
     "capsule_bytes": 826942,
