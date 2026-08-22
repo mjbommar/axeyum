@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-bounded-induction-candidate",
+  "state": "candidate-checked-not-admitted",
+  "source_fact_id": "F:ml430-nat-one-ascfactorial-8bacb017",
+  "statement_adapter": "artifacts/autogenesis/mathlib-bounded-induction-family-one-ascfactorial-statement-adapter-v1.json",
+  "operation": {
+    "implementation": "crates/axeyum-lean-import/examples/bounded_induction_operation.rs",
+    "target_definition": "Axeyum.Autogenesis.Statement.BoundedInductionFamily.natOneAscFactorial",
+    "goal_sha256": "081f88a78526f992e7e4bae20a309e45ee85626a4700ed126dbd7a6805eb077a",
+    "proof_sha256": "d44d2b103768f69e8df408a8610db09b9bfa5ca9468497c9d2718da1ecdc1d30",
+    "target_content_sha256": "920465cca20920ed378e387293d21b10f198bf2056c0fbfdb737e6fdff181a3d",
+    "binders_used": 1,
+    "inductions_used": 1,
+    "max_binders": 8,
+    "max_inductions": 2,
+    "admitted_declarations": 57,
+    "axioms": 0,
+    "theorem_dependencies": 0,
+    "target_dependency": false,
+    "ledger_writes": 0
+  },
+  "reproduction": "python3 scripts/check-autogenesis-bounded-induction-family.py",
+  "limitations": "The candidate is independently kernel checked but remains uncredited until the exact registered operation completes the authoritative transaction."
+}

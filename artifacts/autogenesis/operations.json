@@ -1051,7 +1051,9 @@
         "fact_ids": [
           "F:ml430-nat-descfactorial-one-d4856d4a",
           "F:ml430-nat-ascfactorial-zero-fd183202",
-          "F:ml430-nat-descfactorial-zero-966b01df"
+          "F:ml430-nat-descfactorial-zero-966b01df",
+          "F:ml430-nat-zero-ascfactorial-af4fcdca",
+          "F:ml430-nat-one-ascfactorial-8bacb017"
         ],
         "formal_languages": [
           "lean4-surface"
@@ -1078,7 +1080,9 @@
         "input_fact_id": "F:ml430-nat-descfactorial-one-d4856d4a",
         "additional_fact_ids": [
           "F:ml430-nat-ascfactorial-zero-fd183202",
-          "F:ml430-nat-descfactorial-zero-966b01df"
+          "F:ml430-nat-descfactorial-zero-966b01df",
+          "F:ml430-nat-zero-ascfactorial-af4fcdca",
+          "F:ml430-nat-one-ascfactorial-8bacb017"
         ],
         "targets": [
           {
@@ -1098,6 +1102,18 @@
             "statement_adapter_manifest": "artifacts/autogenesis/mathlib-descfactorial-zero-statement-adapter-v1.json",
             "induction_manifest": "artifacts/autogenesis/mathlib-bounded-induction-family-descfactorial-zero-v1.json",
             "target_definition": "Axeyum.Autogenesis.Statement.FactorialZero.natDescFactorialZero"
+          },
+          {
+            "fact_id": "F:ml430-nat-zero-ascfactorial-af4fcdca",
+            "statement_adapter_manifest": "artifacts/autogenesis/mathlib-bounded-induction-family-zero-ascfactorial-succ-statement-adapter-v1.json",
+            "induction_manifest": "artifacts/autogenesis/mathlib-bounded-induction-family-zero-ascfactorial-succ-v1.json",
+            "target_definition": "Axeyum.Autogenesis.Statement.BoundedInductionFamily.natZeroAscFactorialSucc"
+          },
+          {
+            "fact_id": "F:ml430-nat-one-ascfactorial-8bacb017",
+            "statement_adapter_manifest": "artifacts/autogenesis/mathlib-bounded-induction-family-one-ascfactorial-statement-adapter-v1.json",
+            "induction_manifest": "artifacts/autogenesis/mathlib-bounded-induction-family-one-ascfactorial-v1.json",
+            "target_definition": "Axeyum.Autogenesis.Statement.BoundedInductionFamily.natOneAscFactorial"
           }
         ],
         "max_binders": 8,

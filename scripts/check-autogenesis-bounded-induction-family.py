@@ -9,15 +9,20 @@ target-agnostic: `Eq.refl`, and where that is stuck, one bounded structural
 induction over a discovered zero/succ binder plus one congruence rewrite
 driven by the induction hypothesis.
 
-This gate re-runs the checker example against all three targets the
+This gate re-runs the checker example against all five targets the
 operation names, from their tracked, hash-pinned external Mathlib exports,
 and requires every receipt field to match the committed induction manifest
-exactly. It also re-checks the ONE fact this operation actually settles
-(`F:ml430-nat-descfactorial-one-d4856d4a`) is bound to it correctly, and
-confirms the negative control -- the outcome-blind `n! = 0` mutation from the
-same frozen census -- still declines. A checker that cannot fail is worse
-than no checker, so this script fails loudly on any mismatch rather than
-reporting completion alone.
+exactly. It also re-checks that each fact this operation actually settles
+(`F:ml430-nat-descfactorial-one-d4856d4a`,
+`F:ml430-nat-zero-ascfactorial-af4fcdca`,
+`F:ml430-nat-one-ascfactorial-8bacb017`) is bound to it correctly -- exactly
+one checked evidence row each, and no other named fact carries evidence
+bound to this operation (those two are already proved through their own
+narrower, single-target operations, and this family operation is not
+claiming a second evidence row for them) -- and confirms the negative
+control -- the outcome-blind `n! = 0` mutation from the same frozen census --
+still declines. A checker that cannot fail is worse than no checker, so this
+script fails loudly on any mismatch rather than reporting completion alone.
 """
 
 from __future__ import annotations
@@ -34,7 +39,11 @@ from typing import Any
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 REGISTRY = ROOT / "artifacts/autogenesis/operations.json"
 OPERATION_ID = "authoritative-mathlib-bounded-induction-factorial-family-v1"
-SETTLED_FACT_ID = "F:ml430-nat-descfactorial-one-d4856d4a"
+SETTLED_FACT_IDS = (
+    "F:ml430-nat-descfactorial-one-d4856d4a",
+    "F:ml430-nat-zero-ascfactorial-af4fcdca",
+    "F:ml430-nat-one-ascfactorial-8bacb017",
+)
 NEGATIVE_CONTROL_ROOT = pathlib.Path(
     "/nas3/data/axeyum/autogenesis/coverage/"
     "26fcc2c2f-mathlib-v4.30.0-reflexivity-train-development-v1"
@@ -210,29 +219,41 @@ def check_target(target: dict[str, Any], max_binders: int, max_inductions: int) 
 
 
 def check_settled_fact_binding(operation: dict[str, Any]) -> None:
-    fact = load(
-        ROOT / "artifacts/facts" / (SETTLED_FACT_ID.replace("F:", "F-") + ".json")
-    )
-    if fact.get("epistemic_status") != "proved" or fact.get("proof_route") != "kernel-lean":
-        raise FamilyError(f"{SETTLED_FACT_ID}: not settled as expected")
-    if fact.get("axiom_footprint") != []:
-        raise FamilyError(f"{SETTLED_FACT_ID}: axiom footprint is not empty")
-    rows = [
-        row
-        for row in fact.get("evidence", [])
-        if isinstance(row, dict)
-        and isinstance(row.get("checker_operation"), dict)
-        and row["checker_operation"].get("id") == OPERATION_ID
-    ]
-    if len(rows) != 1:
+    settled = set(SETTLED_FACT_IDS)
+    all_named = operation["applicability"]["fact_ids"]
+    missing_settled = settled - set(all_named)
+    if missing_settled:
         raise FamilyError(
-            f"{SETTLED_FACT_ID}: expected exactly one evidence row bound to "
-            f"{OPERATION_ID}, found {len(rows)}"
+            f"SETTLED_FACT_IDS names fact(s) {sorted(missing_settled)} the "
+            "operation no longer applies to"
         )
-    if rows[0].get("check_status") != "checked":
-        raise FamilyError(f"{SETTLED_FACT_ID}: bound evidence row is not checked")
-    for other_fact_id in operation["applicability"]["fact_ids"]:
-        if other_fact_id == SETTLED_FACT_ID:
+    for settled_fact_id in SETTLED_FACT_IDS:
+        fact = load(
+            ROOT / "artifacts/facts" / (settled_fact_id.replace("F:", "F-") + ".json")
+        )
+        if (
+            fact.get("epistemic_status") != "proved"
+            or fact.get("proof_route") != "kernel-lean"
+        ):
+            raise FamilyError(f"{settled_fact_id}: not settled as expected")
+        if fact.get("axiom_footprint") != []:
+            raise FamilyError(f"{settled_fact_id}: axiom footprint is not empty")
+        rows = [
+            row
+            for row in fact.get("evidence", [])
+            if isinstance(row, dict)
+            and isinstance(row.get("checker_operation"), dict)
+            and row["checker_operation"].get("id") == OPERATION_ID
+        ]
+        if len(rows) != 1:
+            raise FamilyError(
+                f"{settled_fact_id}: expected exactly one evidence row bound to "
+                f"{OPERATION_ID}, found {len(rows)}"
+            )
+        if rows[0].get("check_status") != "checked":
+            raise FamilyError(f"{settled_fact_id}: bound evidence row is not checked")
+    for other_fact_id in all_named:
+        if other_fact_id in settled:
             continue
         other = load(
             ROOT / "artifacts/facts" / (other_fact_id.replace("F:", "F-") + ".json")
@@ -301,8 +322,8 @@ def main() -> int:
         max_binders = executor["max_binders"]
         max_inductions = executor["max_inductions"]
         targets = executor["targets"]
-        if len(targets) != 3:
-            raise FamilyError("expected exactly three targets in this family")
+        if len(targets) != 5:
+            raise FamilyError("expected exactly five targets in this family")
         for target in targets:
             check_target(target, max_binders, max_inductions)
         check_settled_fact_binding(operation)
@@ -310,7 +331,7 @@ def main() -> int:
         print(
             "AUTOGENESIS_BOUNDED_INDUCTION_FAMILY_OK|"
             f"operation={OPERATION_ID}|targets={len(targets)}|"
-            f"settled_fact={SETTLED_FACT_ID}|"
+            f"settled_facts={','.join(SETTLED_FACT_IDS)}|"
             f"negative_control={NEGATIVE_CONTROL_FACT_ID}|"
             "negative_control_outcome=declined"
         )

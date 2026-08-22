@@ -4,7 +4,7 @@
   "state": "pre-execution-capability-census",
   "authority": {
     "nursery_sha256": "b4dc596fd83d164eae1a152cb62ab99f0db30c59510c1edaa3589aab59218767",
-    "operation_registry_sha256": "a8488d105b174b4c0ec1d584f75321cbebd4496448530a1c2d7bdebee588dd3f",
+    "operation_registry_sha256": "848a43747a63ee983ae8a087640debfcaed3809bf7338f1f10639d20c9b96a97",
     "partitions_inspected": [
       "development",
       "train"
@@ -15,7 +15,9 @@
     "statement_adapter_fact_ids": [
       "F:ml430-nat-ascfactorial-zero-fd183202",
       "F:ml430-nat-descfactorial-one-d4856d4a",
-      "F:ml430-nat-descfactorial-zero-966b01df"
+      "F:ml430-nat-descfactorial-zero-966b01df",
+      "F:ml430-nat-one-ascfactorial-8bacb017",
+      "F:ml430-nat-zero-ascfactorial-af4fcdca"
     ],
     "checked_reflexivity_candidate_fact_ids": [
       "F:ml430-nat-ascfactorial-zero-fd183202",
@@ -30,10 +32,10 @@
   "coverage": {
     "candidates": 157,
     "eligible_for_dispatch": 0,
-    "declined_before_execution": 136,
-    "already_established": 21,
+    "declined_before_execution": 134,
+    "already_established": 23,
     "decline_reasons": {
-      "no-exact-authoritative-operation": 136
+      "no-exact-authoritative-operation": 134
     },
     "families": {
       "integer-fibonacci": {
@@ -49,7 +51,7 @@
         "no-exact-authoritative-operation": 19
       },
       "natural-factorial": {
-        "no-exact-authoritative-operation": 12
+        "no-exact-authoritative-operation": 10
       },
       "natural-fibonacci": {
         "no-exact-authoritative-operation": 9
@@ -1936,11 +1938,13 @@
       "partition": "train",
       "formal_language": "lean4-surface",
       "fragment": "Nat",
-      "outcome": "declined-before-execution",
-      "decline_reason": "no-exact-authoritative-operation",
-      "registered_operation_ids": [],
+      "outcome": "already-established",
+      "decline_reason": null,
+      "registered_operation_ids": [
+        "authoritative-mathlib-bounded-induction-factorial-family-v1"
+      ],
       "executor_budget_consumed": 0,
-      "statement_adapter_ready": false,
+      "statement_adapter_ready": true,
       "reflexivity_candidate_checked": false
     },
     {
@@ -2131,11 +2135,13 @@
       "partition": "train",
       "formal_language": "lean4-surface",
       "fragment": "Nat",
-      "outcome": "declined-before-execution",
-      "decline_reason": "no-exact-authoritative-operation",
-      "registered_operation_ids": [],
+      "outcome": "already-established",
+      "decline_reason": null,
+      "registered_operation_ids": [
+        "authoritative-mathlib-bounded-induction-factorial-family-v1"
+      ],
       "executor_budget_consumed": 0,
-      "statement_adapter_ready": false,
+      "statement_adapter_ready": true,
       "reflexivity_candidate_checked": false
     },
     {
@@ -2153,5 +2159,5 @@
     }
   ],
   "interpretation": "This is a dispatch-contract census, not a proof episode. A pre-execution decline consumes no producer budget and earns no proof credit; an already-established row is counted separately and is not redispatched.",
-  "baseline_sha256": "f287e32cda7c5625b0e67fc4d0c2ba827425ebf7673509ac3f35896cab174592"
+  "baseline_sha256": "07a9299206e38fb9b81da94ac247a104a4d51f088e7b513fb3b50b2654977e1c"
 }

@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-statement-adapter",
+  "state": "independent-kernel-goal-admitted-proof-free",
+  "source_fact_id": "F:ml430-nat-zero-ascfactorial-af4fcdca",
+  "source_statement_sha256": "65927d0e726c1dfb9e4c37303088496720a4616b9653d00b3f258bc4f3414dd1",
+  "adapter_source": {
+    "path": "scripts/lean/autogenesis_statement_adapter_bounded_induction_family_v2.lean",
+    "sha256": "7989d9c7bcb3b4f73049f7ec0d75b828bfbada45bf5a9e3dbb7ed3ab1c3aafc4",
+    "target_definition": "Axeyum.Autogenesis.Statement.BoundedInductionFamily.natZeroAscFactorialSucc",
+    "encoding": "transparent-definition-of-prop",
+    "proof_declarations_allowed": false
+  },
+  "toolchain": {
+    "lean_version": "4.30.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean4export_version": "3.1.0",
+    "lean4export_commit": "a3e35a584f59b390667db7269cd37fca8575e4bf"
+  },
+  "external_artifact": {
+    "path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-bounded-induction-family-v2/zero-ascfactorial-succ.ndjson",
+    "sha256": "f2d041ef54cc5e82598e7cfb78d41d4c3fd19c198285e1b9b696786a2bb606c5",
+    "bytes": 52542,
+    "records": 921,
+    "mode": "0444"
+  },
+  "independent_import": {
+    "goal_sha256": "a7bf5e3930e0b21c23be03d0ceb0f7a18f7fce8a7ac69e3c9e03b32fbe3cc1e0",
+    "target_content_sha256": "a01f6a29db0bca15f8e248cbd7a3be4c20d882be04ce0705fcd9df96e2a40f32",
+    "direct_dependencies": 5,
+    "admitted_declarations": 55,
+    "axioms": 0
+  },
+  "reproduction": {
+    "host_profile": "s5 pinned Mathlib v4.30.0 checkout",
+    "export": "copy the tracked adapter source to the pinned Mathlib root as AxeyumAutogenesisBoundedInductionFamilyV2.lean; lake env lean -o .lake/build/lib/lean/AxeyumAutogenesisBoundedInductionFamilyV2.olean -i .lake/build/lib/lean/AxeyumAutogenesisBoundedInductionFamilyV2.ilean AxeyumAutogenesisBoundedInductionFamilyV2.lean; lake env /home/mjbommar/lean-import-scale/lean4export/.lake/build/bin/lean4export AxeyumAutogenesisBoundedInductionFamilyV2 -- Axeyum.Autogenesis.Statement.BoundedInductionFamily.natZeroAscFactorialSucc",
+    "check": "python3 scripts/check-autogenesis-bounded-induction-family.py"
+  },
+  "limitations": "This adapts the train proposition F:ml430-nat-zero-ascfactorial-af4fcdca into a checked goal. It exposes no Mathlib proof and grants no proof credit before authoritative execution."
+}

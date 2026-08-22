@@ -8,7 +8,7 @@
     "implementation": "crates/axeyum-lean-import/examples/bounded_induction_operation.rs",
     "target_definition": "Axeyum.Autogenesis.Statement.BoundedInductionFamily.natDescFactorialOne",
     "goal_sha256": "29d67ba637045e918b70290a218dfe43db046a97bfc0cadb981d706ed37b56e4",
-    "proof_sha256": "177010044d58672157662ae640db891b2418233395b68333dfbfbfcf348eeda0",
+    "proof_sha256": "b05d1fa37636341ef3251512dcb9d9797d565ce9cad427517771386a68f082a9",
     "target_content_sha256": "a8adc68c502ee2679ce4aef7eedee7f996b015ed7b76b2fee59a586ff5e4263e",
     "binders_used": 1,
     "inductions_used": 1,
@@ -21,5 +21,6 @@
     "ledger_writes": 0
   },
   "reproduction": "python3 scripts/check-autogenesis-bounded-induction-family.py",
-  "limitations": "The candidate is independently kernel checked but remains uncredited until the exact registered operation completes the authoritative transaction. Bare reflexivity does not close this goal (docs/autogenesis/229-nat-descfactorial-one-reflexivity-decline.md); this is the first fact this producer closes that reflexivity alone could not."
+  "limitations": "The candidate is independently kernel checked but remains uncredited until the exact registered operation completes the authoritative transaction. Bare reflexivity does not close this goal (docs/autogenesis/229-nat-descfactorial-one-reflexivity-decline.md); this is the first fact this producer closes that reflexivity alone could not.",
+  "notes": "proof_sha256 was updated 2026-08-22 when the producer was extended from three targets to five (commit 18f32254e). That extension generalized the congruence search (spine-argument matching -> full kabstract occurrence search) so it could reach a nested recursive call behind a structure projection; the more general search also finds a different, still axiom-free and dependency-free, proof term for this ALREADY-VALID goal. goal_sha256, target_content_sha256, binders_used, inductions_used, and admitted_declarations are unchanged -- only the specific rendered proof term differs. Verified independently: `cargo run --release -q -p axeyum-lean-import --example bounded_induction_operation -- <this artifact> <this target>` reproducibly emits proof_sha256 b05d1fa3... (not the prior 17701004...) across repeated runs. This manifest is a supporting reproduction artifact, not the fact's evidence row; F:ml430-nat-descfactorial-one-d4856d4a's evidence in artifacts/facts/F-ml430-nat-descfactorial-one-d4856d4a.json is left untouched per this session's instructions and still cites the original 17701004... digest, which remains a historically valid, independently kernel-checked proof of the same goal -- it is simply no longer the one this producer reproduces today."
 }

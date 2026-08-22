@@ -59,13 +59,13 @@
   "contract": "internal-autogenesis-phase0",
   "ledger": {
     "assurance": {
-      "axiom_free_kernel_facts": 76,
+      "axiom_free_kernel_facts": 78,
       "check_statuses": {
-        "checked": 291
+        "checked": 293
       },
-      "evidence_rows": 291,
-      "with_checker_command": 289,
-      "with_multiple_named_checkers": 145
+      "evidence_rows": 293,
+      "with_checker_command": 291,
+      "with_multiple_named_checkers": 147
     },
     "dependency_graph": {
       "dangling": [],
@@ -713,7 +713,7 @@
     "facts": 342,
     "kernel_dependency_coverage": {
       "authority_gate": "scripts/check-fact-depends-derived.py",
-      "facts": 78,
+      "facts": 80,
       "named": 35,
       "unnamed_fact_ids": [
         "F:complex-admits-no-compatible-order",
@@ -744,6 +744,8 @@
         "F:ml430-nat-fib-pos-9e67bd8e",
         "F:ml430-nat-gcd-fib-add-self-5a92d5e3",
         "F:ml430-nat-gcd-greatest-0a04214a",
+        "F:ml430-nat-one-ascfactorial-8bacb017",
+        "F:ml430-nat-zero-ascfactorial-af4fcdca",
         "F:nat-peano-categoricity",
         "F:nra-refutations-reconstruct-over-constructed-reals",
         "F:ordered-ring-farkas-refutation",
@@ -764,7 +766,7 @@
     "kernel_lean_graph": {
       "dangling": [],
       "depth_histogram": {
-        "1": 32,
+        "1": 34,
         "10": 1,
         "2": 11,
         "3": 13,
@@ -1106,21 +1108,21 @@
           "premise": "F:real-axioms-modelled-by-constructed-setoid"
         }
       ],
-      "isolated": 17,
+      "isolated": 19,
       "max_depth": 10,
-      "nodes": 78,
+      "nodes": 80,
       "statuses": {
-        "proved": 78
+        "proved": 80
       },
       "unsettled": 0,
       "with_dependencies": 46,
       "with_dependents": 43
     },
     "routes": {
-      "(missing)": 202,
+      "(missing)": 200,
       "cas-certificate": 19,
       "imported-kernel-lean": 5,
-      "kernel-lean": 78,
+      "kernel-lean": 80,
       "search-certificate": 12,
       "smt-clausal": 9,
       "smt-term-level": 17
@@ -1128,8 +1130,8 @@
     "statuses": {
       "computed": 2,
       "conjectured": 3,
-      "open": 199,
-      "proved": 135,
+      "open": 197,
+      "proved": 137,
       "refuted": 3
     }
   },
@@ -1234,7 +1236,7 @@
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "09ad01dfcc0aa911065d0643374be35b599006fe7de3a4de66520fc9c92cdf69",
+    "digest": "77cf545127cc8f532e4deba8b09b08c4791dc77f131eba80a31e88185b30f2a6",
     "inputs": [
       {
         "bytes": 1939,
@@ -1287,9 +1289,9 @@
         "sha256": "aa7a2769fcc51bdcf90c360b435e5efed6797751e81ae9931fd52bb89c25e7f1"
       },
       {
-        "bytes": 58547,
+        "bytes": 57622,
         "path": "artifacts/autogenesis/operations.json",
-        "sha256": "ad32ea7955786fa8843832cfaaaa5cc8b5a2c17ff43cda824524107f46b9a302"
+        "sha256": "9343c2e456c17272fad2c9621af659a4b56aaf4cb8198a066fe38045970591c2"
       },
       {
         "bytes": 3519,
@@ -2552,9 +2554,9 @@
         "sha256": "59cfaf88984fcedde9f6252a0c5e5c0c6cb082c524cc1e9c2316ff46e98392a3"
       },
       {
-        "bytes": 1570,
+        "bytes": 4911,
         "path": "artifacts/facts/F-ml430-nat-one-ascfactorial-8bacb017.json",
-        "sha256": "2220a24b824344919931d50d51ff75f689c981b87ff2ad4ea854be04c43cea5b"
+        "sha256": "8f36990facbb37f70723772ef56cd48a306400dc61582526649141ae80037041"
       },
       {
         "bytes": 1626,
@@ -2677,9 +2679,9 @@
         "sha256": "ade92dfff282a7d68e381d43af29429e79c25f4c9735028e3cd18410c7736e5c"
       },
       {
-        "bytes": 1570,
+        "bytes": 4925,
         "path": "artifacts/facts/F-ml430-nat-zero-ascfactorial-af4fcdca.json",
-        "sha256": "a02ef164f1b6a45348a1beb35d3e4dead2b3f4e4d344a217d4e0bd127a1fbc55"
+        "sha256": "5934cbffe35663c9f58d27f04fe3bc0e94358fd87d4108e4df6e2835ce065f7f"
       },
       {
         "bytes": 1622,
@@ -3032,9 +3034,9 @@
         "sha256": "77d0d1e654f105b7ad60a9f83b4a3ffbd6d765d53652126539fc63a39da15feb"
       },
       {
-        "bytes": 97346,
+        "bytes": 97412,
         "path": "justfile",
-        "sha256": "b3522555170163ff74243f7469458134a11ee9ae5d5865628c95cff8c30e0794"
+        "sha256": "fb23c54ec3efcadff87afcc471d59cb3781dab9a9fda8059ceb134e71cb34b76"
       },
       {
         "bytes": 11929,
@@ -3107,9 +3109,9 @@
         "sha256": "745d919e6c9db709d77beb05ce7bff3f12e99daf16507edb4d883cb7860f9dbc"
       },
       {
-        "bytes": 40896,
+        "bytes": 41000,
         "path": "scripts/check.sh",
-        "sha256": "7a1aa5406941db0be2384af4878a3fadbe28c9c73983db62a29d580d065ba525"
+        "sha256": "e21e16c4e28d69e4d28d92bedbf9487790e732842bf3162c3ad00c50a3075417"
       },
       {
         "bytes": 6846,
