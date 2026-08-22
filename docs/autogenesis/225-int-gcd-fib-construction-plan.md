@@ -81,3 +81,11 @@ reused across all blockers; `--output` creates and syncs one new JSON file and
 refuses an existing path before reading the proof stream. Three focused tests
 cover legacy arguments, parseable fail-if-present output, and shared-carrier
 cache reuse; focused Clippy passes with warnings denied.
+
+The repaired V5 audit is durable and decisive. Every one of the eight blockers
+shares the same top-level source path: official `Int.fib`, through
+`Int.instDecidablePredEven` and its proof. The residual was not contaminated by
+its five direct equality helpers; it accidentally retained the broad official
+function definition. V6 therefore abstracts both Fibonacci functions and uses
+only explicit positive, negative-even, negative-odd, modulo-case, and `natAbs`
+contracts. It contains no proposition-level `Even` conditional at all.

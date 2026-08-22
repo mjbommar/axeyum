@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-fib-construction-result-v5",
+  "state": "durable-blocker-path-audit-complete",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-gcd-fib-construction-plan-v5.json",
+    "sha256": "a32fd39a081ecef1e6815cbbd30eb1275e3ed5845ec8757026bccb54d0b61e4f"
+  },
+  "report": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-natabs-blocker-path-v1/report.json",
+    "bytes": 405119,
+    "mode": "0444",
+    "sha256": "0e7dafe4616b07ddbd4fdb72fcce3bead95d49a32a45d685dfeaecec8881bf6a"
+  },
+  "execution": {
+    "importer_runs": 1,
+    "proof_bearing_stream_reads": 1,
+    "candidate_closure_computations": 2538,
+    "candidate_closures_reused_across_blockers": true,
+    "completed_audit_documents": 1,
+    "retries": 0,
+    "theorem_submissions": 0,
+    "ledger_writes": 0
+  },
+  "measured": {
+    "root": "Axeyum.Autogenesis.intFibNatAbsResidualV1",
+    "root_declaration_sha256": "bbbc332712076f99547a25cf22efe3497eaaf3e6284c5bfa6eb36dc7242b9f1d",
+    "root_closure_size": 2538,
+    "blockers_classified": 8,
+    "nearest_common_source_carriers": [
+      "Int.instDecidablePredEven._proof_1",
+      "Int.instDecidablePredEven",
+      "Int.fib"
+    ],
+    "conclusion": "All eight blockers share the official Int.fib definition path through the official Even decision instance. The next residual must abstract Int.fib and avoid proposition-level Even decisions entirely."
+  },
+  "authority": {
+    "rendered_proof_terms": 0,
+    "rendered_theorem_types": 0,
+    "rendered_theorem_values": 0,
+    "diagnostic_credit": 1,
+    "theorem_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  }
+}

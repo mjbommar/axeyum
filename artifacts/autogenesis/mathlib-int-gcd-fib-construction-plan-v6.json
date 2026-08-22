@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-fib-construction-plan-v6",
+  "state": "preregistered-before-function-abstracted-residual-source-construction",
+  "parent_result": {
+    "path": "artifacts/autogenesis/mathlib-int-gcd-fib-construction-result-v5.json",
+    "sha256": "8e7b0773eed4bcbcc9c6ef7df519f2e9e2a0c9f259b4b77180bd0e0839cc43b6"
+  },
+  "residual": {
+    "name": "Axeyum.Autogenesis.intFibNatAbsResidualV2",
+    "statement_shape": "for arbitrary fibFn : Int -> Int and natFib : Nat -> Nat, positive presentation plus modulo-two negative-even/negative-odd presentations imply natAbs (fibFn m) = natFib (natAbs m)",
+    "explicit_parameters": [
+      "fibFn : Int -> Int",
+      "natFib : Nat -> Nat",
+      "positivePresentation : forall n, fibFn (Int.ofNat n) = Int.ofNat (natFib n)",
+      "negativeEven : forall n, n % 2 = 0 -> fibFn (-(Int.ofNat n)) = -Int.ofNat (natFib n)",
+      "negativeOdd : forall n, n % 2 = 1 -> fibFn (-(Int.ofNat n)) = Int.ofNat (natFib n)",
+      "modCases : forall n, n % 2 = 0 or n % 2 = 1",
+      "natAbsNeg : forall z, (-z).natAbs = z.natAbs",
+      "natAbsOfNat : forall n, (Int.ofNat n).natAbs = n"
+    ],
+    "forbidden_constants": [
+      "Int.fib",
+      "Int.instDecidablePredEven",
+      "Int.even_iff",
+      "Classical.propDecidable"
+    ],
+    "proof_route": "direct Int constructor cases; positive presentation in ofNat; clean modCases with negativeEven or negativeOdd in negSucc; no proposition-level conditional"
+  },
+  "execution": {
+    "max_lean_compiler_invocations": 1,
+    "max_exporter_invocations": 2,
+    "max_importer_runs": 2,
+    "max_retries": 0,
+    "specialization_submissions": 0,
+    "int_gcd_fib_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "exports_byte_identical": true,
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [],
+    "forbidden_constants_absent_from_root_closure": true,
+    "fresh_imports": 2,
+    "proof_bodies_inspected": false
+  },
+  "authority": {
+    "official_target_proof_body_allowed": false,
+    "same_name_declaration_transport_allowed": false,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_on_accept": "freeze exact specialization over the already sealed positive, negative-even, negative-odd, modCases, and natAbs support roots"
+}
