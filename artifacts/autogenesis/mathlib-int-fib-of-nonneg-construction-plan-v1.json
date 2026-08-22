@@ -1,0 +1,16 @@
+{
+  "schema_version":1,
+  "kind":"axeyum-autogenesis-mathlib-int-fib-of-nonneg-construction-plan-v1",
+  "state":"preregistered-before-driver-code-or-target-submission",
+  "target":{"fact_id":"F:ml430-int-fib-of-nonneg-438018c5","fact_path":"artifacts/facts/F-ml430-int-fib-of-nonneg-438018c5.json","fact_sha256":"312711e8dc1d54a17b9efdad9c61ab46ca9ef77747acc80a0c24d5f6821d6d6e","name":"Int.fib_of_nonneg","formal_statement_sha256":"98d93e536206aa25bf2260c876c5fd7ad9b3fcb7c767b7ebf9bd59efda336d45","required_status":"open"},
+  "inputs":[
+    {"role":"target-owned transparent Int.fib definition","path":"/nas3/data/axeyum/autogenesis/reference-packs/int-fib-clean-definition-v1/int-fib-clean.ndjson","bytes":374550,"sha256":"f0e34ecb1dff747938b7f1079c307af5f4e79e7a67e3bc514feee03e4f30656d"},
+    {"role":"qualified conditional positive-branch rewrite","path":"/nas3/data/axeyum/autogenesis/reference-packs/if-pos-mathlib-basic-v1/root.ndjson","bytes":18458,"sha256":"71daf2d6a8486884799f54856d1dc305529659e38edc7fd16befd9a8848d0b55"}
+  ],
+  "predecessor":{"path":"artifacts/autogenesis/mathlib-int-fib-of-nonneg-if-pos-export-result-v2.json","sha256":"98ae8a157fe320729d79cf91e786d112050c12557e51f9ce703fb45f4a76e299","required_state":"qualified-sealed-if-pos-root-empty-footprint"},
+  "construction":{"driver":"crates/axeyum-lean-import/examples/int_fib_of_nonneg_exact.rs","driver_must_not_preexist":true,"method":"compose if_pos into the target-owned Int.fib kernel; under binders n and hn apply if_pos to the exact transparent definition branch and submit the closed theorem","expected_direct_theorem_dependencies":["if_pos"],"forbidden_roots":["Int.fib_of_nonneg"],"output":"/nas3/data/axeyum/autogenesis/reference-packs/int-fib-of-nonneg-exact-v1/root.ndjson","output_must_not_preexist":true},
+  "execution":{"max_driver_compilations":1,"max_input_stream_reads":2,"max_composition_operations":1,"max_composition_replays":1,"max_target_theorem_submissions":1,"max_target_exports":1,"max_fresh_imports":2,"max_retries":0,"rendered_proof_terms":0,"rendered_theorem_types":0,"rendered_theorem_values":0,"ledger_writes":0},
+  "acceptance":{"target_name":"Int.fib_of_nonneg","axiom_footprint":[],"direct_theorem_dependencies":["if_pos"],"fresh_imports":2,"sealed_output":true},
+  "limitations":"Construction grants no fact admission, operation registration, search, or ledger authority. The upstream target proof root remains forbidden.",
+  "next_on_accept":"bind the exact target identity non-renderingly, then preregister crash-safe admission"
+}
