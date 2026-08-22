@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-direct-natabs-mul-export-result-v5",
+  "state": "declined-at-nonempty-direct-dependency-set-before-sealing",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-direct-natabs-mul-export-plan-v5.json",
+    "sha256": "b6c5a3d9aeb97931382d7aa770c8706b43cf82dd6d6c5d83b7949648b132d590"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-natabs-mul-direct-v1",
+    "root_bytes": 81977,
+    "root_sha256": "09ebd925b3af67009b1806fd157a25b195e046124065778ec6eaf754f5ecfc04",
+    "replay_sha256": "09ebd925b3af67009b1806fd157a25b195e046124065778ec6eaf754f5ecfc04",
+    "audit_sha256": "e3a9dc2f6c393594a4ff9e95feed18be7192392a90a2204fbff8b7114e1b9715",
+    "sealed": false
+  },
+  "root": {
+    "name": "Axeyum.Autogenesis.intNatAbsMulDirectV1",
+    "declaration_sha256": "ebfbf0442e5e7d93a2a38e70e51b364100455633f44832878ed34ec37de01bb3",
+    "axiom_footprint": [],
+    "observed_direct_theorem_dependencies": [
+      "Eq.symm",
+      "_private.AxeyumIntNatAbsMulDirectV1.0.Axeyum.Autogenesis.intNatAbsNegOfNatDirectV1"
+    ],
+    "preregistered_direct_theorem_dependencies": []
+  },
+  "execution": {
+    "staging_source_writes": 1,
+    "module_compiles": 1,
+    "exporter_invocations": 2,
+    "root_stream_writes": 2,
+    "importer_runs": 2,
+    "exports_byte_identical": true,
+    "imports_byte_identical": true,
+    "staging_paths_removed": true,
+    "retries": 0,
+    "target_fib_dvd_submissions": 0,
+    "ledger_writes": 0
+  },
+  "decision": {
+    "accepted_under_v5": false,
+    "reason": "the empty axiom footprint passed but the exact preregistered direct dependency set did not",
+    "next_boundary": "qualify the exact observed dependency closure from the fixed audit hash without rerunning exporter or importer"
+  }
+}
