@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-concrete-parity-composition-driver-result",
+  "state": "driver-build-stopped-on-two-kernel-transfer-api-errors-before-stream-access",
+  "plan": "artifacts/autogenesis/int-fib-neg-concrete-parity-composition-plan-v1.json",
+  "driver": "crates/axeyum-lean-import/examples/int_fib_neg_concrete_parity_composition.rs",
+  "focused_build": {
+    "command": "cargo clippy -p axeyum-lean-import --example int_fib_neg_concrete_parity_composition -- -D warnings",
+    "exit": 101,
+    "diagnostics": [
+      "CompletedTheoremComposition has no into_kernel method",
+      "CompletedTheoremSpecialization has no into_kernel method"
+    ]
+  },
+  "execution": {
+    "driver_constructions": 1,
+    "focused_builds": 1,
+    "input_stream_reads": 0,
+    "composition_operations": 0,
+    "specialization_operations": 0,
+    "capsule_writes": 0,
+    "ledger_writes": 0
+  },
+  "credit": "no driver or theorem credit",
+  "next": "Freeze replacement of only both into_kernel calls with the repository-established kernel().clone() transfer."
+}

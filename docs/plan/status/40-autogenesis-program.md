@@ -150,6 +150,7 @@
 | 2026-08-21 | (pending) | Wrapper V2 rejects general `Int.neg_add` for `propext` while confirming `Int.neg_neg` clean; a constructor residual for the strictly needed negated-double law is frozen |
 | 2026-08-21 | (pending) | Constructor residual proves the strictly weaker negated-double law reproducibly and empty-footprint in 84,802 bytes; parity V2 freezes only that premise narrowing |
 | 2026-08-21 | (pending) | Parity V2 reproduces all three empty-footprint adapters using only negated doubling; exact four-step clean specialization is frozen before driver code |
+| 2026-08-21 | (pending) | Concrete-parity driver V1 stops before stream access on two nonexistent consuming-kernel APIs; V2 freezes only the established `kernel().clone()` replacements |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |

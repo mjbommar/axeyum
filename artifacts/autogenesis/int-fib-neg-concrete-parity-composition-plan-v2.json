@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-concrete-parity-composition-plan",
+  "state": "preregistered-two-api-corrections-before-rebuild",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-fib-neg-concrete-parity-composition-driver-result-v1.json",
+    "required_state": "driver-build-stopped-on-two-kernel-transfer-api-errors-before-stream-access"
+  },
+  "correction": {
+    "completed_composition.into_kernel()": "completed_composition.kernel().clone()",
+    "completed_specialization.into_kernel()": "completed_specialization.kernel().clone()",
+    "other_code_changes_authorized": false,
+    "proof_route_changed": false
+  },
+  "driver": "crates/axeyum-lean-import/examples/int_fib_neg_concrete_parity_composition.rs",
+  "inputs_output_and_acceptance": "unchanged from artifacts/autogenesis/int-fib-neg-concrete-parity-composition-plan-v1.json",
+  "budget": {
+    "driver_edits": 2,
+    "focused_builds": 1,
+    "complete_invocations": 1,
+    "input_stream_reads": 5,
+    "composition_operations": 4,
+    "composition_replays": 4,
+    "specialization_operations": 4,
+    "specialization_replays": 4,
+    "capsule_exports": 1,
+    "fresh_imports": 2,
+    "retries": 0,
+    "exact_target_submissions": 0,
+    "ledger_writes": 0
+  },
+  "stop_rule": "Any build, preparation/input, composition, specialization, receipt, footprint, replay, or output mismatch stops without retry or target/ledger authority.",
+  "output_result": "artifacts/autogenesis/int-fib-neg-concrete-parity-composition-result-v2.json",
+  "limitations": "Concrete parity support alone grants no exact Fibonacci target, fact, or ledger credit."
+}
