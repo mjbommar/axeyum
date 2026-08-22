@@ -56,6 +56,7 @@
 | 2026-08-22 | (pending) | V3 closes same-sign multiplication definitionally and declines only the two cross-sign branches at `natAbs (Int.negOfNat n) = n`; no exporter or target ran |
 | 2026-08-22 | (pending) | V4 freezes a private two-constructor `natAbs (Int.negOfNat n)` proof and changes only the two rejected cross-sign branches before one compile |
 | 2026-08-22 | (pending) | V4 compiles all four multiplication branches using only definitional reduction plus the private two-constructor support; theorem export and credit remain zero |
+| 2026-08-22 | (pending) | V5 freezes exact sudo-scoped module staging, one compile, two exports, two imports, cleanup, and empty-footprint acceptance before producing a durable direct multiplication capsule |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
