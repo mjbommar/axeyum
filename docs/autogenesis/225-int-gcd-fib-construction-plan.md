@@ -75,3 +75,9 @@ durable report. Before another read, the shared blocker-path auditor will cache
 candidate closures across blockers and gain a fail-if-present explicit output
 path. Four controls retain the legacy interface, prove durable creation and
 overwrite refusal, and count closure computations under shared carriers.
+
+That repair is now implemented. Candidate closures are computed once and
+reused across all blockers; `--output` creates and syncs one new JSON file and
+refuses an existing path before reading the proof stream. Three focused tests
+cover legacy arguments, parseable fail-if-present output, and shared-carrier
+cache reuse; focused Clippy passes with warnings denied.

@@ -14,6 +14,7 @@
 | 2026-08-21 | (pending) | One non-rendering declaration-path read is frozen from the declined natAbs residual to its exact eight blockers before choosing replacement carriers |
 | 2026-08-21 | (pending) | The first path audit yields no durable report and receives zero credit; V4 freezes a five-nearest-carrier projection before one fresh read |
 | 2026-08-21 | (pending) | V4 completes slowly but again leaves no durable report; memoized closure reuse plus an explicit fail-if-present output contract are frozen before tool edits or another stream read |
+| 2026-08-21 | (pending) | The blocker auditor now caches each candidate closure once and writes a synced fail-if-present JSON report; three focused controls and Clippy pass without a proof-stream read |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |

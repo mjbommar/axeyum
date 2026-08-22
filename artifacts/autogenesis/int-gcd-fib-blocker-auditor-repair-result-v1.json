@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-gcd-fib-blocker-auditor-repair-result-v1",
+  "state": "memoized-durable-output-interface-implemented-and-focused-green",
+  "plan": {
+    "path": "artifacts/autogenesis/int-gcd-fib-blocker-auditor-repair-plan-v1.json",
+    "sha256": "db3116a52a3a52fc600bd2fb32254e1aba48bab3986193623fbd6314dd774323"
+  },
+  "tool": {
+    "path": "crates/axeyum-lean-import/examples/declaration_blocker_path_batch_audit.rs",
+    "before_sha256": "cdf582bc9226aa2dd31bcfa172042f14ba6af582f99eb93ee61ca39904852d6a",
+    "after_sha256": "eb3b70fb0c730e30f67d95996711b3e1db75787f4c0edab3e5a34bdeda5f2739"
+  },
+  "implementation": {
+    "candidate_closures_cached_once": true,
+    "cache_reused_across_blockers": true,
+    "legacy_stdout_interface_retained": true,
+    "explicit_output_uses_create_new": true,
+    "explicit_output_synced": true,
+    "preexisting_output_rejected_before_stream_read": true
+  },
+  "validation": {
+    "focused_tests": 3,
+    "focused_test_failures": 0,
+    "focused_clippy": "passed-with-D-warnings",
+    "format": "passed-after-rustfmt",
+    "proof_bearing_stream_reads": 0
+  },
+  "authority": {
+    "diagnostic_credit": 0,
+    "theorem_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Preregister one exact residual read to a fail-if-present durable report path through the repaired auditor."
+}
