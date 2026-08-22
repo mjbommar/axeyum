@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-parity-adapters-plan",
+  "state": "preregistered-before-source-construction",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-fib-neg-constructor-branches-result-v1.json",
+    "required_state": "both-parameterized-constructor-branches-reproduced"
+  },
+  "roots": {
+    "even_neg_generic": "For Int, additive negation transport plus double negation imply Even (-x) iff Even x.",
+    "even_positive_generic": "Int.even_iff plus definitional nonnegative emod and Int.ofNat injectivity imply Even (Int.ofNat n) iff n % 2 = 0.",
+    "even_negative_generic": "Compose even_neg_generic at Int.ofNat n with even_positive_generic."
+  },
+  "parameters": [
+    "negAdd : forall a b : Int, -(a+b) = -a + -b",
+    "negNeg : forall x : Int, -(-x) = x",
+    "evenIff : forall z : Int, Even z iff z % 2 = 0"
+  ],
+  "source": "artifacts/autogenesis/sources/int-fib-neg-parity-adapters-v1.lean",
+  "evidence_pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-parity-adapters-v1",
+  "budget": {
+    "directory_creations": 1,
+    "source_constructions": 1,
+    "source_stagings": 1,
+    "module_builds": 1,
+    "exports": 2,
+    "root_audits": 1,
+    "retries": 0,
+    "composition_operations": 0,
+    "exact_target_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "roots": [
+      "Axeyum.Autogenesis.intEvenNegResidualV1",
+      "Axeyum.Autogenesis.intEvenOfNatModTwoResidualV1",
+      "Axeyum.Autogenesis.intEvenNegOfNatModTwoResidualV1"
+    ],
+    "exports_byte_identical": true,
+    "proof_terms_types_or_values_rendered": 0
+  },
+  "stop_rule": "Any construction, staging, elaboration, export, determinism, or audit failure stops without retry or theorem/ledger authority.",
+  "output_result": "artifacts/autogenesis/int-fib-neg-parity-adapters-result-v1.json",
+  "next_on_accept": "Compose the adapters with clean integer negation laws and exact Int.even_iff, specialize both parity contracts, then specialize the two Fibonacci constructor branches.",
+  "limitations": "Parameterized parity adapters alone grant no concrete branch, target, fact, or ledger credit."
+}
