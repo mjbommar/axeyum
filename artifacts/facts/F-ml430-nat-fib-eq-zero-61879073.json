@@ -1,30 +1,69 @@
 {
-  "schema_version": 1,
-  "id": "F:ml430-nat-fib-eq-zero-61879073",
-  "title": "Mathlib v4.30 source proposition Nat.fib_eq_zero",
-  "statement": "The proposition declared as `Nat.fib_eq_zero` in the pinned Mathlib v4.30 source.",
-  "formal": {
-    "language": "lean4-surface",
-    "statement": "∀ {n : ℕ}, Nat.fib n = 0 ↔ n = 0",
-    "fragment": "Nat"
-  },
-  "epistemic_status": "open",
-  "external_status": "proved",
+  "axiom_footprint": [],
   "depends_on": [],
-  "evidence": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "artifact": "sha256:b1629dcbad485d92e790215d401e7ac92c0d19b99d034c624607ee64d38f23d0",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-autogenesis-fact-operation.py --fact artifacts/facts/F-ml430-nat-fib-eq-zero-61879073.json",
+      "checker_operation": {
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/nat-fib-eq-zero-exact-v1/root.ndjson",
+        "capsule_sha256": "b25fc8b0db939ace2cbb0a096e86dd79f185398b93ff3c7698bb7b3d9fd796aa",
+        "declaration_sha256": "9709309661cd94542db84c175fd8a68f1e5a9eba9bc616374320654050435c83",
+        "direct_theorem_dependencies": [
+          "Axeyum.Autogenesis.natFibEqZeroResidualV1",
+          "Axeyum.Autogenesis.natFibZeroV1",
+          "Nat.fib_pos",
+          "Nat.zero_lt_succ"
+        ],
+        "execution_sha256": "b1629dcbad485d92e790215d401e7ac92c0d19b99d034c624607ee64d38f23d0",
+        "formal_statement_sha256": "41f5a653cb6fdb386509bb4a1c794e33871aafb7356c236a4b780e015acd9711",
+        "frontier_sha256": "de4aa6cd9208d058465730bd7fcc8e8a8b7d8125e6445de6e7bd46cab6d7d837",
+        "goal_sha256": "cf9757fc1ca8af964ee54762575362e33e6c48dcf34c56381aa1e3a7a0850f4c",
+        "id": "authoritative-mathlib-nat-fib-eq-zero-kernel-capsule-v1",
+        "operation_sha256": "cc98c8f328220195287b779e97f03a29509506096898cc8cdfb5db3cad729b83",
+        "receipt_sha256": "c8466767c516d48e0e214aaf7e8a43e88a8bc7fa952a7baa2748eff03d51f3d3",
+        "registry_sha256_at_execution": "2759a2f69caaba69037347990643cdd87665617d88e51fb0ddce8eb484ff1aaf",
+        "result_manifest": "artifacts/autogenesis/mathlib-nat-fib-eq-zero-goal-identity-result-v1.json",
+        "result_manifest_sha256": "b994e2be661d7132883d3cf15fe5ea0b7c262e473037411ce3253820a60f12c2",
+        "target_theorem": "Nat.fib_eq_zero"
+      },
+      "checkers": [
+        "specialized-natural-fibonacci-zero-characterization-v1",
+        "axeyum-lean-import/sealed-nat-fib-eq-zero-capsule-receipt-v1",
+        "axeyum-lean-import/sealed-kernel-capsule-v1"
+      ],
+      "id": "autogenesis-operation-b1629dcbad485d92",
+      "kind": "kernel-term",
+      "notes": "Derived from a clean-commit typed execution receipt. The registered fact-operation checker replays the immutable capsule and committed identity manifest and requires its exact theorem identity, two fresh imports, empty axiom footprint, and four named direct theorem dependencies; no caller-authored route, footprint, checker, or shell command is accepted.",
+      "supports": "The proposition declared as `Nat.fib_eq_zero` in the pinned Mathlib v4.30 source."
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "language": "lean4-surface",
+    "statement": "\u2200 {n : \u2115}, Nat.fib n = 0 \u2194 n = 0"
+  },
+  "id": "F:ml430-nat-fib-eq-zero-61879073",
+  "notes": "CLOSED BY AXEYUM AUTOGENESIS. The machine frontier selected this exact fact for registered operation `authoritative-mathlib-nat-fib-eq-zero-kernel-capsule-v1`; execution receipt `b1629dcbad485d92e790215d401e7ac92c0d19b99d034c624607ee64d38f23d0` produced a four-link-specialized axiom-free sealed natural Fibonacci zero capsule, and the typed transaction derived this status, route, footprint, evidence row, checker, and provenance without caller-authored admission metadata.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
   "provenance": {
     "date": "2026-08-18",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Nat.fib_eq_zero` from Mathlib v4.30.0; no proof value was exposed",
+    "established_by": "axeyum-autogenesis execution fe021688c0af9dd5f3e69f28534aea400122928c499a94fae09fb52fa676f33c",
     "prior_art": [
       {
-        "who": "the Mathlib contributors",
+        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted",
         "what": "the theorem declaration `Nat.fib_eq_zero`",
         "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
-        "year": 2026,
-        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted"
+        "who": "the Mathlib contributors",
+        "year": 2026
       }
-    ]
+    ],
+    "source": "statement-only extraction of `Nat.fib_eq_zero` from Mathlib v4.30.0; no proof value was exposed"
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "schema_version": 1,
+  "statement": "The proposition declared as `Nat.fib_eq_zero` in the pinned Mathlib v4.30 source.",
+  "title": "Mathlib v4.30 source proposition Nat.fib_eq_zero"
 }
