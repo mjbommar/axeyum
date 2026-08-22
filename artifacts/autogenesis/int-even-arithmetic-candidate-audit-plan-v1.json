@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-arithmetic-candidate-audit-plan",
+  "state": "preregistered-before-single-existing-stream-reread",
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-decision-root-audit-v1/root.ndjson", "bytes": 9831839, "sha256": "662008f9976aae9e459b325a05a6fa22d2f04997ba8623bce5480ca400e7a526"},
+  "ordered_roots": ["Int.add_mul_emod_self_left", "Int.mul_ediv_add_emod"],
+  "roles": {"Int.add_mul_emod_self_left": "candidate normalization for double_mod_zero", "Int.mul_ediv_add_emod": "candidate quotient-remainder equation for half_witness"},
+  "operation": "run one theorem footprint batch audit with durable redirected output; record exact identities, footprints, and direct theorem dependencies",
+  "decision_rule": "Use only empty-footprint candidates. For each rejected candidate, descend to its nearest definition boundary rather than importing a broader division API.",
+  "budget": {"stream_reads": 1, "audit_invocations": 1, "proof_terms_rendered": 0, "theorem_types_rendered": 0, "theorem_values_rendered": 0, "source_constructions": 0, "exact_target_submissions": 0, "ledger_writes": 0, "retries": 0},
+  "output": "artifacts/autogenesis/int-even-arithmetic-candidate-audit-result-v1.json",
+  "limitations": "Candidate cleanliness does not by itself prove either exact arithmetic leaf."
+}
