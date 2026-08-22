@@ -9,6 +9,33 @@
 
 use axeyum_solver::{CheckResult, SmtLibResponse, SolverConfig, solve_smtlib_session};
 
+/// Runs a session on a worker thread and fails if it has not finished inside
+/// `bound`.
+///
+/// The two `:timeout` tests below assert that a budget *bit*, and without this
+/// their failure mode is a **hang**: delete the budget and the instance they use
+/// runs unbounded, so the assertion that would have caught it never executes. A
+/// mutation run sat on exactly that for twenty minutes before this was added. A
+/// test whose failure is indistinguishable from "still working" is the same
+/// defect as a gate whose exit status cannot fail.
+///
+/// This bounds *time*, not memory -- `recv_timeout` on a detached thread never
+/// has -- and the leaked worker dies with the test process.
+fn session_within(
+    text: &str,
+    config: &SolverConfig,
+    bound: std::time::Duration,
+) -> Vec<SmtLibResponse> {
+    let (tx, rx) = std::sync::mpsc::channel();
+    let (text, config) = (text.to_owned(), config.clone());
+    std::thread::spawn(move || {
+        let _ = tx.send(solve_smtlib_session(&text, &config).expect("session"));
+    });
+    rx.recv_timeout(bound).unwrap_or_else(|_| {
+        panic!("the session did not finish within {bound:?}: the budget under test did not bite")
+    })
+}
+
 fn session(text: &str) -> Vec<SmtLibResponse> {
     solve_smtlib_session(text, &SolverConfig::new()).expect("session")
 }
@@ -129,6 +156,42 @@ fn get_value_declines_a_bare_bit_vector_in_a_string_script() {
     let out = lines(text);
     assert_eq!(out[0], "sat");
     assert_eq!(out[1], "unsupported");
+}
+
+/// An array value renders as `(store … ((as const (Array I E)) default) …)` —
+/// the spelling Z3 4.13.3 prints for the same query [measured].
+///
+/// This was a refusal first, and the refusal cost more than every other one
+/// combined: 58 of 66 declined `(get-model)`s in a 400-file census. The check
+/// is not string equality with z3's output, which would be wrong — z3 picks a
+/// different (equally valid) model — but that the value satisfies the query,
+/// re-derived here by evaluating both `select`s.
+#[test]
+fn array_values_render_as_const_plus_stores() {
+    let text = "(set-logic QF_ABV)\n\
+                (declare-const a (Array (_ BitVec 4) (_ BitVec 8)))\n\
+                (assert (= (select a (_ bv1 4)) (_ bv9 8)))\n\
+                (assert (= (select a (_ bv2 4)) (_ bv7 8)))\n\
+                (check-sat)\n(get-value (a (select a (_ bv1 4))))\n";
+    let out = lines(text);
+    assert_eq!(out[0], "sat");
+    assert!(
+        out[1].contains("(as const (Array (_ BitVec 4) (_ BitVec 8)))"),
+        "expected an `as const` array value, got {}",
+        out[1]
+    );
+    assert!(
+        out[1].contains("store"),
+        "expected a `store` chain, got {}",
+        out[1]
+    );
+    // The second requested term is the element the query pinned, so the model
+    // is checked rather than merely printed.
+    assert!(
+        out[1].ends_with("((select a (_ bv1 4)) #b00001001))"),
+        "the array model does not satisfy the query it came from: {}",
+        out[1]
+    );
 }
 
 /// An uninterpreted carrier token is a model artifact, not a term: z3 prints its
@@ -289,6 +352,42 @@ fn get_proof_after_sat_is_an_error() {
     assert!(out[1].contains("was not unsat"), "got {}", out[1]);
 }
 
+/// A bounded-string `unsat` the string gate did NOT confirm — restored by the
+/// source-level word route instead — must not draw an Alethe proof of the
+/// *packed* assertions. ADR-0029's encoding carries a length bound, so such a
+/// refutation can be true of the encoding and false of the string theory.
+///
+/// This pins the refusal's reason, not merely that something was refused: with
+/// the `proof_eligible` check deleted the same file answers `unsupported` for a
+/// different reason (the `QF_BV` emitter declines the packed shapes), and a test
+/// asserting only "unsupported" would not notice.
+#[test]
+fn a_string_route_unsat_does_not_draw_a_proof_of_the_bounded_encoding() {
+    use std::path::Path;
+    let file = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(Path::parent)
+        .expect("workspace root")
+        .join(
+            "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/\
+             cli__regress0__strings__replace-find-base.smt2",
+        );
+    let body = std::fs::read_to_string(&file).expect("the corpus instance");
+    let text = format!("(set-option :produce-proofs true)\n{body}\n(get-proof)\n");
+    let responses = session(&text);
+    assert_eq!(line(&responses[0]), "unsat");
+    match &responses[1] {
+        SmtLibResponse::Unsupported { command, detail } => {
+            assert_eq!(command, "get-proof");
+            assert!(
+                detail.contains("source-level string route"),
+                "refused for the wrong reason: {detail}"
+            );
+        }
+        other => panic!("expected a refusal, got {other:?}"),
+    }
+}
+
 // ---------------------------------------------------------------------------
 // set-option
 // ---------------------------------------------------------------------------
@@ -396,6 +495,107 @@ fn every_logic_the_corpus_declares_is_recognized() {
             out,
             ["sat"],
             "`{logic}` is declared by tracked benchmarks and must not draw `unsupported`"
+        );
+    }
+}
+
+/// The shape rule must accept the SMT-LIB standard names the corpus does *not*
+/// happen to declare, and reject a name that is not a logic.
+///
+/// The corpus test above is the regression control; this is the specification
+/// one. Together they are what a hand-written list could not be: the list that
+/// preceded this rule omitted `BV` and would have passed a test written from
+/// the same memory that wrote the list.
+#[test]
+fn the_logic_shape_rule_accepts_standard_names_and_rejects_non_logics() {
+    const NOT_LOGICS: &[&str] = &[
+        "NONSENSE_XYZ",
+        "QF_NONSENSE",
+        "FOO",
+        "BAR_BAZ",
+        "QF_",
+        "MYLOGIC",
+        "QF_XYZ",
+        "LOGIC",
+        "HELLO",
+        "SMT",
+        "QF_ABCDEF",
+    ];
+    const STANDARD: &[&str] = &[
+        "ALL",
+        "HORN",
+        "AUFLIA",
+        "AUFLIRA",
+        "AUFNIRA",
+        "LIA",
+        "LRA",
+        "NIA",
+        "NRA",
+        "QF_ABV",
+        "QF_AUFBV",
+        "QF_AUFLIA",
+        "QF_AX",
+        "QF_BV",
+        "QF_IDL",
+        "QF_LIA",
+        "QF_LIRA",
+        "QF_LRA",
+        "QF_NIA",
+        "QF_NIRA",
+        "QF_NRA",
+        "QF_RDL",
+        "QF_UF",
+        "QF_UFBV",
+        "QF_UFIDL",
+        "QF_UFLIA",
+        "QF_UFLRA",
+        "QF_UFNIA",
+        "QF_UFNRA",
+        "UF",
+        "UFBV",
+        "UFIDL",
+        "UFLIA",
+        "UFLRA",
+        "UFNIA",
+        "BV",
+        "ABV",
+        "AUFBV",
+        "AUFNIA",
+        "UFDT",
+        "QF_DT",
+        "QF_UFDT",
+        "QF_UFDTLIA",
+        "AUFDTLIA",
+        "UFDTNIRA",
+        "QF_S",
+        "QF_SLIA",
+        "QF_SNIA",
+        "QF_FP",
+        "QF_BVFP",
+        "QF_ABVFP",
+        "QF_FPLRA",
+        "QF_ABVFPLRA",
+        "QF_BVFPLRA",
+        "QF_UFFP",
+        "QF_ANIA",
+        "QF_ALIA",
+        "QF_AUFNIA",
+        "QF_FF",
+        "QF_UFFF",
+    ];
+    for logic in STANDARD {
+        assert_eq!(
+            lines(&format!("(set-logic {logic})\n(check-sat)\n")),
+            ["sat"],
+            "`{logic}` is an SMT-LIB logic and must not draw `unsupported`"
+        );
+    }
+    // Negative control: an accept-everything rule would pass the block above.
+    for name in NOT_LOGICS {
+        assert_eq!(
+            lines(&format!("(set-logic {name})\n(check-sat)\n")),
+            ["unsupported", "sat"],
+            "`{name}` is not a logic and must draw `unsupported`"
         );
     }
 }
@@ -518,7 +718,7 @@ fn a_script_timeout_cannot_exceed_the_callers_ceiling() {
     let text = format!("(set-option :timeout 20000)\n{body}");
     let started = std::time::Instant::now();
     let config = SolverConfig::new().with_timeout(std::time::Duration::from_millis(200));
-    let out = solve_smtlib_session(&text, &config).expect("session");
+    let out = session_within(&text, &config, std::time::Duration::from_secs(60));
     let elapsed = started.elapsed();
     assert!(
         elapsed < std::time::Duration::from_secs(10),
@@ -546,8 +746,14 @@ fn a_script_timeout_below_the_ceiling_is_what_bites() {
     let body = std::fs::read_to_string(&file).expect("the corpus instance");
     let text = format!("(set-option :timeout 300)\n{body}");
     let started = std::time::Instant::now();
-    // No caller ceiling at all: only the script's 300 ms can stop this.
-    let out = solve_smtlib_session(&text, &SolverConfig::new()).expect("session");
+    // No caller ceiling at all: only the script's 300 ms can stop this. The
+    // instance runs for minutes without it, so the outer bound is what turns a
+    // regression here into a failure instead of a hang.
+    let out = session_within(
+        &text,
+        &SolverConfig::new(),
+        std::time::Duration::from_secs(60),
+    );
     let elapsed = started.elapsed();
     assert!(
         elapsed < std::time::Duration::from_secs(10),
@@ -574,6 +780,7 @@ fn a_script_timeout_below_the_ceiling_is_what_bites() {
 /// `SILENT_BY_DESIGN` is the commands that legitimately print nothing, and
 /// `NOT_A_COMMAND` is the match arms that are not command keywords.
 #[test]
+#[allow(clippy::too_many_lines)] // two explicit allow-lists, and inlining them is the point
 fn every_command_the_parser_accepts_draws_a_response_or_is_listed() {
     use std::path::Path;
 

@@ -2980,7 +2980,7 @@ fn parse_smtlib_bool(value: &str) -> Option<bool> {
 /// `unsupported` for every option it does not honor.
 ///
 /// The verdicts are not a second opinion: [`solve_smtlib_incremental`] is
-/// implemented as this walk with [`SessionPolicy::VerdictsOnly`], so the two
+/// implemented as this walk with `SessionPolicy::VerdictsOnly`, so the two
 /// cannot disagree about a `check-sat`.
 ///
 /// # Divergences from `z3 file.smt2`, stated rather than discovered
@@ -3164,11 +3164,13 @@ fn run_session(
             ScriptCommand::CheckSat => {
                 let result = solve(&mut script.arena, &stack, &effective)?;
                 let result = gate.confirm(&mut script.arena, &stack, &effective, result)?;
+                let proof_eligible = !gate.active || matches!(result, CheckResult::Unsat);
                 let result = apply_word_route(script, &effective, result);
                 last = Some(DecidedQuery {
                     result: result.clone(),
                     assertions: stack.clone(),
                     assertion_names: names.clone(),
+                    proof_eligible,
                 });
                 stack_dirty_since_check = false;
                 responses.push(SmtLibResponse::CheckSat(result));
@@ -3180,6 +3182,7 @@ fn run_session(
                 with.extend_from_slice(assumptions);
                 let result = solve(&mut script.arena, &with, &effective)?;
                 let result = gate.confirm(&mut script.arena, &with, &effective, result)?;
+                let proof_eligible = !gate.active || matches!(result, CheckResult::Unsat);
                 // The word-problem side channel is `None` whenever the script
                 // uses `check-sat-assuming` (see `build_word_problem`), so this is
                 // a plain pass-through here; kept uniform with the other queries.
@@ -3190,6 +3193,7 @@ fn run_session(
                     result: result.clone(),
                     assertions: with,
                     assertion_names: with_names,
+                    proof_eligible,
                 });
                 stack_dirty_since_check = false;
                 responses.push(SmtLibResponse::CheckSat(result));
@@ -3365,6 +3369,34 @@ struct DecidedQuery {
     result: CheckResult,
     assertions: Vec<TermId>,
     assertion_names: Vec<Option<String>>,
+    /// Whether an Alethe proof of `assertions` would be a proof of the *query*.
+    ///
+    /// It is not, in one narrow shape. ADR-0029 packs strings into bit-vectors
+    /// with an encoding bound, so a bit-blast refutation of the packed
+    /// assertions can be bound-DEPENDENT — true of the encoding, false of the
+    /// string theory. [`StringGate::confirm`] catches that and downgrades such
+    /// an `unsat` to `unknown`; the word route may then restore `unsat` on
+    /// *source* grounds, which is a correct verdict reached by a different
+    /// argument. The final verdict is `Unsat` either way, so the verdict alone
+    /// cannot tell the two apart — and emitting the packed refutation in the
+    /// second case would hand a consumer a proof of the encoding labelled as a
+    /// proof of the query.
+    ///
+    /// So this records the verdict **as `StringGate::confirm` left it**, before
+    /// the word route ran. `solve_smtlib_get_proof` gets the same guarantee by
+    /// running the gate itself.
+    ///
+    /// **Defence in depth, not a measured leak.** Scanned 2026-08-21 over 184
+    /// tracked `QF_S`/`QF_SLIA` benchmarks: the flag is `false` on real files
+    /// (`cli__regress0__strings__replace-find-base.smt2` is one), and with the
+    /// check deleted those same files still answer `unsupported` — the `QF_BV`
+    /// Alethe emitter declines the packed shapes, which carry shifts and
+    /// division. No instance was found where removing this leaks a proof. It
+    /// stays because the emitter's coverage is a moving target and the failure
+    /// it would cause is a bound-dependent refutation published as a proof of
+    /// the query, which is exactly the class of defect this repository has paid
+    /// for before.
+    proof_eligible: bool,
 }
 
 /// The shared precondition of every model/core/proof query: a `check-sat` must
@@ -3436,7 +3468,7 @@ fn answer_get_model(
         };
         let value = render_string_value_for(script, symbol, value);
         let is_string = script.declared_strings.iter().any(|&(s, _)| s == symbol);
-        let text = match smtlib_value_text(&value, is_string) {
+        let text = match smtlib_value_text(&script.arena, &value, is_string) {
             Ok(text) => text,
             Err(detail) => return decline(format!("`{name}`: {detail}")),
         };
@@ -3521,7 +3553,7 @@ fn answer_get_value(
                  encoding, where it cannot be told apart from a packed string"
             ));
         }
-        match smtlib_value_text(&value, is_string) {
+        match smtlib_value_text(&script.arena, &value, is_string) {
             Ok(rendered) => values.push((text.clone(), rendered)),
             Err(detail) => return decline(format!("`{text}`: {detail}")),
         }
@@ -3549,7 +3581,7 @@ fn is_declared_string_term(script: &Script, term: TermId) -> bool {
 ///
 /// Every `Err` is a refusal the caller turns into `unsupported`. That is the
 /// contract: this function never invents a placeholder.
-fn smtlib_value_text(value: &Value, as_string: bool) -> Result<String, String> {
+fn smtlib_value_text(arena: &TermArena, value: &Value, as_string: bool) -> Result<String, String> {
     match value {
         Value::Bool(b) => Ok(b.to_string()),
         Value::Int(n) => Ok(smtlib_int_text(*n)),
@@ -3585,14 +3617,63 @@ fn smtlib_value_text(value: &Value, as_string: bool) -> Result<String, String> {
         // arrives here still `Bv`-shaped. Rendering it as `#b…` would print a
         // bit-vector for a variable the user declared `String` — the guess this
         // whole function refuses to make — so it is a refusal, not a fallback.
+        //
+        // THIS ARM IS NOT COVERED BY A TEST, and deleting it kills nothing.
+        // Recorded rather than left implied: no input reaching it was found.
+        // Searched 2026-08-21 over unconstrained, length-pinned, `str.contains`,
+        // `str.++`, `str.in_re` and concatenation-equation shapes — every model
+        // value of a declared `String` decoded. It is kept because it fails
+        // CLOSED (a refusal, never a wrong value), which is the only kind of
+        // untested guard worth keeping.
         other if as_string => Err(format!(
             "a declared `String` whose model value did not decode as a string: {other:?}"
         )),
-        Value::Array(_) | Value::GenericArray(_) => Err(
-            "an array value has no SMT-LIB spelling here (no `as const` / `store` \
-                 rendering)"
-                .to_owned(),
-        ),
+        // `(store … ((as const (Array I E)) default) …)`, the spelling Z3 4.13.3
+        // prints. Refusing arrays cost more than every other refusal combined —
+        // 58 of 66 declined `(get-model)`s in a 400-file census, 2026-08-21.
+        Value::Array(array) => {
+            let sort = smtlib_sort_text(
+                arena,
+                Sort::Array {
+                    index: ArraySortKey::BitVec(array.index_width()),
+                    element: ArraySortKey::BitVec(array.element_width()),
+                },
+            )?;
+            let bv = |width, value| Value::Bv { width, value };
+            let default = smtlib_value_text(
+                arena,
+                &bv(array.element_width(), array.default_element()),
+                false,
+            )?;
+            let mut text = format!("((as const {sort}) {default})");
+            // `ArrayValue::entries` walks a `BTreeMap`, so the store order is
+            // index order and the text is deterministic — an API promise.
+            for (index_value, element_value) in array.entries() {
+                let i = smtlib_value_text(arena, &bv(array.index_width(), index_value), false)?;
+                let e = smtlib_value_text(arena, &bv(array.element_width(), element_value), false)?;
+                text = format!("(store {text} {i} {e})");
+            }
+            Ok(text)
+        }
+        Value::GenericArray(array) => {
+            let sort = smtlib_sort_text(
+                arena,
+                Sort::Array {
+                    index: array.index_sort(),
+                    element: array.element_sort(),
+                },
+            )?;
+            let default = smtlib_value_text(arena, array.default_value(), false)?;
+            let mut text = format!("((as const {sort}) {default})");
+            // Insertion order here (`Value` is not `Ord`), which the array value
+            // itself keeps deterministic.
+            for (index_value, element_value) in array.entries() {
+                let i = smtlib_value_text(arena, index_value, false)?;
+                let e = smtlib_value_text(arena, element_value, false)?;
+                text = format!("(store {text} {i} {e})");
+            }
+            Ok(text)
+        }
         Value::Datatype { .. } => Err("a datatype value has no SMT-LIB spelling here \
                                        (constructor names are not reachable from the id)"
             .to_owned()),
@@ -3693,26 +3774,32 @@ fn smtlib_function_text(
         for (args, out) in value.value_entries() {
             let mut rendered = Vec::with_capacity(args.len());
             for arg in args {
-                rendered.push(smtlib_value_text(arg, false)?);
+                rendered.push(smtlib_value_text(arena, arg, false)?);
             }
-            arms.push((rendered, smtlib_value_text(out, false)?));
+            arms.push((rendered, smtlib_value_text(arena, out, false)?));
         }
-        smtlib_value_text(&value.default_value(), false)?
+        smtlib_value_text(arena, &value.default_value(), false)?
     } else {
         for (args, _coded_out) in value.entries() {
             let mut rendered = Vec::with_capacity(args.len());
             for (&code, &sort) in args.iter().zip(params) {
                 rendered.push(smtlib_value_text(
+                    arena,
                     &Value::from_scalar_code(sort, code),
                     false,
                 )?);
             }
             arms.push((
                 rendered,
-                smtlib_value_text(&Value::from_scalar_code(result, value.apply(args)), false)?,
+                smtlib_value_text(
+                    arena,
+                    &Value::from_scalar_code(result, value.apply(args)),
+                    false,
+                )?,
             ));
         }
         smtlib_value_text(
+            arena,
             &Value::from_scalar_code(result, value.default_result()),
             false,
         )?
@@ -3801,6 +3888,14 @@ fn answer_get_proof(
         return SmtLibResponse::Error {
             command: "get-proof".to_owned(),
             message: "no proof is available (the last check-sat was not unsat)".to_owned(),
+        };
+    }
+    if !query.proof_eligible {
+        return SmtLibResponse::Unsupported {
+            command: "get-proof".to_owned(),
+            detail: "this `unsat` was reached by a source-level string route; a refutation of \
+                     the bounded encoding would not be a proof of the query"
+                .to_owned(),
         };
     }
     let arena = &script.arena;

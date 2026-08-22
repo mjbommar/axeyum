@@ -51,7 +51,7 @@ impl SExpr {
 
     /// This tree rendered back to s-expression text, one space between siblings.
     ///
-    /// Round-trips through [`read`](crate::read) up to whitespace: atoms are
+    /// Round-trips through [`read_all`] up to whitespace: atoms are
     /// stored verbatim (including a string literal's quotes), so nothing is
     /// re-escaped on the way out.
     ///
