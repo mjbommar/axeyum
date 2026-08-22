@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-exact-int-fib-neg-natcast-composition-result",
+  "state": "deterministic-bridge-rejected-for-propext-decision-provider",
+  "plan": "artifacts/autogenesis/int-fib-neg-natcast-exact-composition-plan-v4.json",
+  "bridge": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-natcast-exact-bridge-v1/bridge-1.ndjson",
+    "bytes": 1427534,
+    "sha256": "245ef1988c70360d6d656eb8e249fcab8211da79dbf67495c672cbfe6fc33634",
+    "exports_byte_identical": true,
+    "root": "Axeyum.Autogenesis.intFibNegNatCastExactBridgeV1",
+    "declaration_sha256": "8bd9ec938bfb014271031250dfbc3d9e8e3fe74cd96e1b06d26e4ef8775e2abb",
+    "axiom_footprint": ["propext"],
+    "direct_theorem_dependencies": ["Axeyum.Autogenesis.intFibNegNatCastResidualV2"]
+  },
+  "execution": {"presentation_support_compilations": 1, "additional_bridge_compilations": 1, "bridge_exports": 2, "composition_operations": 0, "target_submissions": 0, "ledger_writes": 0},
+  "decline": {"stage": "bridge-footprint-gate-before-driver-code", "class": "PropextBearingDecisionProvider", "source_expression": "fun _ => inferInstance", "partial_kernel_published": false},
+  "next_boundary": "Preregister replacing only generic instance synthesis with explicit core Nat.decEq on n % 2 and zero.",
+  "limitations": "Determinism does not overcome the failed trust gate; no exact target, fact, evaluation, or ledger credit is established."
+}

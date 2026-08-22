@@ -17,7 +17,7 @@ theorem intFibNegNatCastExactBridgeV1
     Int.fib
     Nat.fib
     (fun n => n % 2 = 0)
-    (fun _ => inferInstance)
+    (fun n => Nat.decEq (n % 2) 0)
     negativePresentation
     powerPresentation
     negOneMul

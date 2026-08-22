@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-exact-int-fib-neg-natcast-composition-plan",
+  "state": "preregistered-core-decision-provider-repair-before-fifth-bridge-compilation",
+  "predecessor": {"path": "artifacts/autogenesis/int-fib-neg-natcast-exact-composition-result-v4.json", "required_state": "deterministic-bridge-rejected-for-propext-decision-provider"},
+  "repair": {
+    "only_proof_change": "replace (fun _ => inferInstance) with (fun n => Nat.decEq (n % 2) 0)",
+    "reason": "retain the residual's explicit Decidable contract while selecting core Nat equality computation rather than generic proposition-instance synthesis",
+    "statement_unchanged": true,
+    "four_proof_arguments_unchanged": true,
+    "sealed_inputs_unchanged": true,
+    "target_authority_unchanged": true
+  },
+  "budget": {"additional_bridge_compilations": 1, "bridge_exports": 2, "complete_composition_invocations": 1, "composition_operations": 4, "composition_replays": 4, "specialization_operations": 1, "specialization_replays": 1, "target_submissions": 1, "target_exports": 1, "fresh_target_imports": 2, "retries": 0, "ledger_writes": 0},
+  "acceptance": "The repaired bridge and final exact target must both have empty footprints; every original identity, replay, and no-ledger condition remains unchanged.",
+  "output": "artifacts/autogenesis/int-fib-neg-natcast-exact-composition-result-v5.json",
+  "limitations": "No credit is granted until the repaired bridge passes its footprint gate and the full exact composition succeeds."
+}
