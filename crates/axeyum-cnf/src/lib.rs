@@ -61,8 +61,9 @@ mod xor_propagate;
 mod xor_search;
 
 pub use alethe::{
-    AletheClause, AletheCommand, AletheError, AletheLit, AletheTerm, check_alethe,
-    check_alethe_with, lrat_to_alethe, parse_alethe, write_alethe,
+    AletheClause, AletheCommand, AletheError, AletheLit, AletheTerm, CARCARA_CHECKED_RULES,
+    check_alethe, check_alethe_with, is_carcara_checked_rule, lrat_to_alethe,
+    non_carcara_checked_rules, parse_alethe, write_alethe,
 };
 pub use bve::{
     BveOptions, BveOutcome, BveStats, Reconstruction, eliminate_variables,

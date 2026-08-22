@@ -680,6 +680,243 @@ fn write_atom(term: &AletheTerm) -> String {
     }
 }
 
+/// Rule names the **Carcara** Alethe checker checks, as of Carcara 1.1.0
+/// (`ufmg-smite/carcara` at `6624ea80`, read from `get_rule` in
+/// `carcara/src/checker/shared.rs` on 2026-08-21).
+///
+/// Deliberately **excludes** `hole`, `lia_generic` and `rare_rewrite`, all three
+/// of which Carcara *accepts* without checking: the first two set its `is_holey`
+/// flag, and `rare_rewrite` resolves against cvc5's external RARE database which
+/// we do not ship. An artifact whose steps Carcara can only hole is not an
+/// externally-checked artifact, and counting it as one is the precise error
+/// [`crate::alethe`]'s consumers exist to avoid.
+///
+/// Sorted, so [`is_carcara_checked_rule`] can binary-search it and so a diff
+/// against a newer Carcara is readable.
+pub const CARCARA_CHECKED_RULES: &[&str] = &[
+    "ac_simp",
+    "aci_simp",
+    "and",
+    "and_intro",
+    "and_neg",
+    "and_pos",
+    "and_simplify",
+    "arrays_ext",
+    "arrays_idx",
+    "arrays_row",
+    "arrays_row_contra",
+    "bfun_elim",
+    "bind",
+    "bind_let",
+    "bitblast_add",
+    "bitblast_and",
+    "bitblast_ashr",
+    "bitblast_comp",
+    "bitblast_concat",
+    "bitblast_const",
+    "bitblast_equal",
+    "bitblast_extract",
+    "bitblast_lshr",
+    "bitblast_mult",
+    "bitblast_neg",
+    "bitblast_not",
+    "bitblast_or",
+    "bitblast_shl",
+    "bitblast_sign_extend",
+    "bitblast_slt",
+    "bitblast_udiv",
+    "bitblast_ult",
+    "bitblast_urem",
+    "bitblast_var",
+    "bitblast_xnor",
+    "bitblast_xor",
+    "bool_simplify",
+    "bounded_farkas",
+    "comp_simplify",
+    "concat_conflict",
+    "concat_cprop_prefix",
+    "concat_cprop_suffix",
+    "concat_csplit_prefix",
+    "concat_csplit_suffix",
+    "concat_eq",
+    "concat_lprop_prefix",
+    "concat_lprop_suffix",
+    "concat_split_prefix",
+    "concat_split_suffix",
+    "concat_unify",
+    "cong",
+    "connective_def",
+    "contraction",
+    "cp_addition",
+    "cp_division",
+    "cp_literal",
+    "cp_multiplication",
+    "cp_normalize",
+    "cp_saturation",
+    "distinct_elim",
+    "div_simplify",
+    "drat",
+    "drup",
+    "eq_congruent",
+    "eq_congruent_pred",
+    "eq_mp",
+    "eq_reflexive",
+    "eq_simplify",
+    "eq_symmetric",
+    "eq_transitive",
+    "equiv1",
+    "equiv2",
+    "equiv_neg1",
+    "equiv_neg2",
+    "equiv_pos1",
+    "equiv_pos2",
+    "equiv_simplify",
+    "evaluate",
+    "false",
+    "forall_inst",
+    "ho_cong",
+    "implies",
+    "implies_neg1",
+    "implies_neg2",
+    "implies_pos",
+    "implies_simplify",
+    "ite1",
+    "ite2",
+    "ite_intro",
+    "ite_neg1",
+    "ite_neg2",
+    "ite_pos1",
+    "ite_pos2",
+    "ite_simplify",
+    "la_disequality",
+    "la_generic",
+    "la_mult_neg",
+    "la_mult_pos",
+    "la_rw_eq",
+    "la_tautology",
+    "la_totality",
+    "let",
+    "miniscope_distribute",
+    "miniscope_ite",
+    "miniscope_split",
+    "mod_simplify",
+    "nary_elim",
+    "not_and",
+    "not_equiv1",
+    "not_equiv2",
+    "not_implies1",
+    "not_implies2",
+    "not_ite1",
+    "not_ite2",
+    "not_not",
+    "not_or",
+    "not_simplify",
+    "not_symm",
+    "not_xor1",
+    "not_xor2",
+    "onepoint",
+    "or",
+    "or_neg",
+    "or_pos",
+    "or_simplify",
+    "pbblast_bvand",
+    "pbblast_bvand_ith_bit",
+    "pbblast_bveq",
+    "pbblast_bvsge",
+    "pbblast_bvsgt",
+    "pbblast_bvsle",
+    "pbblast_bvslt",
+    "pbblast_bvuge",
+    "pbblast_bvugt",
+    "pbblast_bvule",
+    "pbblast_bvult",
+    "pbblast_bvxor",
+    "pbblast_bvxor_ith_bit",
+    "pbblast_pbbconst",
+    "pbblast_pbbvar",
+    "poly_simp",
+    "poly_simp_rel",
+    "prod_simplify",
+    "qnt_cnf",
+    "qnt_join",
+    "qnt_rm_unused",
+    "qnt_simplify",
+    "re_concat_unfold_pos",
+    "re_inter",
+    "re_kleene_star_unfold_pos",
+    "re_unfold_neg",
+    "re_unfold_neg_concat_fixed_prefix",
+    "re_unfold_neg_concat_fixed_suffix",
+    "refl",
+    "reordering",
+    "resolution",
+    "shuffle",
+    "sko_ex",
+    "sko_forall",
+    "strict_refl",
+    "strict_resolution",
+    "string_decompose",
+    "string_length_non_empty",
+    "string_length_pos",
+    "subproof",
+    "sum_simplify",
+    "symm",
+    "tautology",
+    "th_resolution",
+    "trans",
+    "true",
+    "unary_minus_simplify",
+    "weakening",
+    "xor1",
+    "xor2",
+    "xor_neg1",
+    "xor_neg2",
+    "xor_pos1",
+    "xor_pos2",
+];
+
+/// Is `rule` a rule the Carcara checker **checks** (not merely tolerates)?
+///
+/// `la_generic` is in the list because Carcara has a checker for it, but it is
+/// *also* one of the two rules Carcara flags as a hole; callers deciding
+/// portability must additionally reject a proof Carcara would report `holey`.
+/// That is why [`non_carcara_checked_rules`] exists and why `lia_generic` — which
+/// has no checker at all — is absent from the list.
+#[must_use]
+pub fn is_carcara_checked_rule(rule: &str) -> bool {
+    CARCARA_CHECKED_RULES.binary_search(&rule).is_ok()
+}
+
+/// The rule names in `commands` that Carcara would **not** check — the reason an
+/// otherwise well-formed Alethe artifact is not externally checkable.
+///
+/// Returns them sorted and deduplicated, so the result is a stable explanation
+/// rather than a boolean. An empty result means every step in `commands` names a
+/// rule Carcara has a checker for; it does **not** by itself mean Carcara accepts
+/// the proof (the steps still have to be valid, and the `assume`s still have to
+/// match the problem's assertions).
+///
+/// This is the vocabulary gate the `lia_generic` exclusion in
+/// `axeyum_solver::Evidence::portable_artifact` generalises: a rule name the
+/// external checker does not know turns a "portable" artifact into an
+/// `unknown rule` error, and counting such an artifact as externally checkable is
+/// worse than counting it as internal-only.
+#[must_use]
+pub fn non_carcara_checked_rules(commands: &[AletheCommand]) -> Vec<String> {
+    let mut out: Vec<String> = commands
+        .iter()
+        .filter_map(|command| match command {
+            AletheCommand::Step { rule, .. } => {
+                (!is_carcara_checked_rule(rule)).then(|| rule.clone())
+            }
+            AletheCommand::Assume { .. } => None,
+        })
+        .collect();
+    out.sort_unstable();
+    out.dedup();
+    out
+}
+
 /// Checks an Alethe resolution-layer proof.
 ///
 /// Returns `Ok(true)` when every command checks and a verified step derives the
@@ -838,13 +1075,22 @@ fn check_structural_rule(
         "not_equiv1" => Some(is_not_equiv1(premise_clauses, clause)),
         "not_equiv2" => Some(is_not_equiv2(premise_clauses, clause)),
         "refl" => Some(no_premises && is_refl(clause)),
-        // Array read-over-write axiom rules. These are axeyum-INTERNAL Alethe
-        // rules: Alethe/Carcara has NO array theory rules (see
-        // `docs/research/07-verification/array-elimination-alethe-proofs.md`), so
-        // these sound structural shapes are owned by this in-tree checker, not
-        // Carcara. Both are premise-free.
+        // Array axiom rules.
+        //
+        // `arrays_idx` and `arrays_row` are **Carcara's own** array rules
+        // (`carcara/src/checker/rules/arrays.rs`, registered in `shared.rs`), so a
+        // proof using only them is externally checkable. `read_over_write_same` is
+        // the axeyum-internal spelling of `arrays_idx` — identical shape, a name
+        // Carcara answers with `unknown rule` — kept for proofs already in flight;
+        // emitters must prefer `arrays_idx`. `read_over_write` (the `ite` form) has
+        // no Carcara counterpart at all and is internal-only by construction.
+        // Measured 2026-08-21 against Carcara 1.1.0 (`6624ea80`); see
+        // `docs/research/07-verification/array-elimination-alethe-proofs.md`.
         "read_over_write" => Some(no_premises && is_read_over_write(clause)),
-        "read_over_write_same" => Some(no_premises && is_read_over_write_same(clause)),
+        "arrays_idx" | "read_over_write_same" => {
+            Some(no_premises && is_read_over_write_same(clause))
+        }
+        "arrays_row" => Some(is_arrays_row(premise_clauses, clause)),
         "symm" => Some(is_symm(premise_clauses, clause)),
         "trans" => Some(is_trans(premise_clauses, clause)),
         "cong" => Some(is_cong(premise_clauses, clause)),
@@ -1478,6 +1724,59 @@ fn is_read_over_write_same(clause: &AletheClause) -> bool {
     };
     // Read index equals write index, and RHS is exactly the stored value.
     j == i && rhs == v
+}
+
+/// Structural check for **Carcara's** `arrays_row` rule — the read-over-write
+/// axiom's *different-index* branch, the one that needs a disequality premise.
+///
+/// Mirrors `carcara/src/checker/rules/arrays.rs::row` exactly. One premise, the
+/// unit clause `(not (= i j))`; the conclusion is the unit clause
+/// `(cl (= (select (store a i e) j) (select a j)))`. Accepts iff:
+///
+/// - the premise is a single **negated** equality `(= i j)` (either carried as
+///   `negated: true` over the atom `(= i j)` or as a positive `(not (= i j))`
+///   atom — [`term_of_lit`] normalizes the two spellings);
+/// - the conclusion's LHS is `(select (store a i e) j)` with the store's write
+///   index structurally identical to the premise's `i` and the read index
+///   identical to the premise's `j`; and
+/// - the conclusion's RHS is `(select a j)` over the **same** base array `a` and
+///   the **same** read index `j`.
+///
+/// Carcara checks `assert_eq(ip, ic)`, `assert_eq(jp, jc1)`, `assert_eq(jc1, jc2)`
+/// and `assert_eq(a1, a2)`; the four checks below are those four. Nothing weaker
+/// is sound: with `i` and `j` unconstrained, `(select (store a i e) j)` is `e`
+/// when `i = j`, so dropping the premise would let this rule prove a false
+/// equality.
+fn is_arrays_row(premises: &[&AletheClause], clause: &AletheClause) -> bool {
+    let [premise] = premises else {
+        return false;
+    };
+    let [premise_lit] = premise.as_slice() else {
+        return false;
+    };
+    // The premise must be the NEGATION of an equality. `term_of_lit` folds the
+    // `negated: true` and positive-`(not …)`-atom spellings into one term.
+    let premise_term = term_of_lit(premise_lit);
+    let Some([inner]) = as_app(&premise_term, "not") else {
+        return false;
+    };
+    let Some((i, j)) = as_eq(inner) else {
+        return false;
+    };
+    // Conclusion: (cl (= (select (store a i e) j) (select a j))).
+    let Some((lhs, rhs)) = conclusion_eq(clause) else {
+        return false;
+    };
+    let Some([store_term, read_index]) = as_app(lhs, "select") else {
+        return false;
+    };
+    let Some([base, write_index, _value]) = as_app(store_term, "store") else {
+        return false;
+    };
+    let Some([rhs_array, rhs_index]) = as_app(rhs, "select") else {
+        return false;
+    };
+    write_index == i && read_index == j && rhs_array == base && rhs_index == j
 }
 
 /// Structural check for the Alethe `symm` rule.
@@ -2541,8 +2840,9 @@ fn cnf_lit(var_of: &BTreeMap<String, CnfVar>, lit: &AletheLit) -> CnfLit {
 #[cfg(test)]
 mod tests {
     use super::{
-        AletheClause, AletheCommand, AletheError, AletheLit, AletheTerm, check_alethe,
-        check_alethe_with, lrat_to_alethe, parse_alethe, write_alethe,
+        AletheClause, AletheCommand, AletheError, AletheLit, AletheTerm, CARCARA_CHECKED_RULES,
+        check_alethe, check_alethe_with, is_carcara_checked_rule, lrat_to_alethe,
+        non_carcara_checked_rules, parse_alethe, write_alethe,
     };
     use crate::{
         CnfClause, CnfFormula, CnfLit, CnfVar, ProofSolveOutcome, elaborate_drat_to_lrat,
@@ -4517,6 +4817,302 @@ mod tests {
             check_alethe(&eq_unit_step("read_over_write_same", lhs, cst("w"))),
             Err(AletheError::StepNotEntailed { id: "s".to_owned() })
         );
+    }
+
+    // --- Carcara's OWN array rules (`arrays_idx` / `arrays_row`) ---------------
+    //
+    // These names are what an external checker answers to. `read_over_write_same`
+    // is the same shape under a name Carcara rejects with `unknown rule`, which is
+    // why the vocabulary tests below exist as well as the shape tests.
+
+    #[test]
+    fn arrays_idx_accepts_the_exact_axiom_shape() {
+        // (= (select (store a i v) i) v)
+        let lhs = app_t(
+            "select",
+            vec![app_t("store", vec![cst("a"), cst("i"), cst("v")]), cst("i")],
+        );
+        // Valid shape; no empty clause derived, so Ok(false) (checked, not UNSAT).
+        assert_eq!(
+            check_alethe(&eq_unit_step("arrays_idx", lhs, cst("v"))),
+            Ok(false)
+        );
+    }
+
+    #[test]
+    fn arrays_idx_rejects_a_differing_read_index() {
+        // (= (select (store a i v) j) v) -- j is not i, so this is not the axiom.
+        let lhs = app_t(
+            "select",
+            vec![app_t("store", vec![cst("a"), cst("i"), cst("v")]), cst("j")],
+        );
+        assert!(matches!(
+            check_alethe(&eq_unit_step("arrays_idx", lhs, cst("v"))),
+            Err(AletheError::StepNotEntailed { .. })
+        ));
+    }
+
+    /// `(select (store a i v) j)` with `i != j` is `(select a j)`, and
+    /// `arrays_row` is how Carcara says so. The premise is what makes it sound.
+    fn row_commands(
+        premise: AletheClause,
+        conclusion_lhs: AletheTerm,
+        conclusion_rhs: AletheTerm,
+    ) -> Vec<AletheCommand> {
+        vec![
+            assume("h", premise),
+            step(
+                "s",
+                vec![AletheLit {
+                    atom: eq_term(conclusion_lhs, conclusion_rhs),
+                    negated: false,
+                }],
+                "arrays_row",
+                &["h"],
+            ),
+        ]
+    }
+
+    fn row_shapes() -> (AletheTerm, AletheTerm) {
+        (
+            app_t(
+                "select",
+                vec![app_t("store", vec![cst("a"), cst("i"), cst("v")]), cst("j")],
+            ),
+            app_t("select", vec![cst("a"), cst("j")]),
+        )
+    }
+
+    fn neg_eq_ij() -> AletheClause {
+        vec![AletheLit {
+            atom: eq_term(cst("i"), cst("j")),
+            negated: true,
+        }]
+    }
+
+    #[test]
+    fn arrays_row_accepts_the_exact_axiom_shape() {
+        let (lhs, rhs) = row_shapes();
+        // Valid shape; no empty clause derived, so Ok(false) (checked, not UNSAT).
+        assert_eq!(
+            check_alethe(&row_commands(neg_eq_ij(), lhs, rhs)),
+            Ok(false)
+        );
+    }
+
+    #[test]
+    fn arrays_row_accepts_a_premise_written_as_a_positive_not_atom() {
+        // The emitter may carry `(not (= i j))` as a positive atom rather than a
+        // `negated` flag; both denote the same literal.
+        let (lhs, rhs) = row_shapes();
+        let premise = vec![AletheLit {
+            atom: app_t("not", vec![eq_term(cst("i"), cst("j"))]),
+            negated: false,
+        }];
+        assert_eq!(check_alethe(&row_commands(premise, lhs, rhs)), Ok(false));
+    }
+
+    #[test]
+    fn arrays_row_rejects_a_positive_equality_premise() {
+        // `(= i j)` as the premise would make the conclusion FALSE: with i = j the
+        // read returns the stored `v`, not `(select a j)`.
+        let (lhs, rhs) = row_shapes();
+        let premise = vec![AletheLit {
+            atom: eq_term(cst("i"), cst("j")),
+            negated: false,
+        }];
+        assert!(matches!(
+            check_alethe(&row_commands(premise, lhs, rhs)),
+            Err(AletheError::StepNotEntailed { .. })
+        ));
+    }
+
+    #[test]
+    fn arrays_row_rejects_a_premise_about_other_indices() {
+        // The disequality must be about the store's write index and the read
+        // index; `(not (= k j))` says nothing about `i`.
+        let (lhs, rhs) = row_shapes();
+        let premise = vec![AletheLit {
+            atom: eq_term(cst("k"), cst("j")),
+            negated: true,
+        }];
+        assert!(matches!(
+            check_alethe(&row_commands(premise, lhs, rhs)),
+            Err(AletheError::StepNotEntailed { .. })
+        ));
+    }
+
+    #[test]
+    fn arrays_row_rejects_a_read_index_the_premise_does_not_mention() {
+        // Conclusion reads `(store a i v)` at `k` while the premise only says
+        // `i != j`. Nothing rules out `i = k`, so the conclusion does not follow.
+        // Isolated from the right-hand-side index check below: the RHS here still
+        // reads at `j`, so only the LHS read-index guard can reject it.
+        let lhs = app_t(
+            "select",
+            vec![app_t("store", vec![cst("a"), cst("i"), cst("v")]), cst("k")],
+        );
+        let rhs = app_t("select", vec![cst("a"), cst("j")]);
+        assert!(matches!(
+            check_alethe(&row_commands(neg_eq_ij(), lhs, rhs)),
+            Err(AletheError::StepNotEntailed { .. })
+        ));
+    }
+
+    #[test]
+    fn arrays_row_rejects_a_right_hand_side_read_at_a_different_index() {
+        // Mirror of the test above, isolating the OTHER index guard: the LHS reads
+        // at `j` (so the read-index check passes) but the RHS reads at `k`.
+        // `(select (store a i v) j) = (select a k)` is not an instance of the rule.
+        let lhs = app_t(
+            "select",
+            vec![app_t("store", vec![cst("a"), cst("i"), cst("v")]), cst("j")],
+        );
+        let rhs = app_t("select", vec![cst("a"), cst("k")]);
+        assert!(matches!(
+            check_alethe(&row_commands(neg_eq_ij(), lhs, rhs)),
+            Err(AletheError::StepNotEntailed { .. })
+        ));
+    }
+
+    #[test]
+    fn arrays_row_rejects_a_different_base_array_on_the_right() {
+        let (lhs, _rhs) = row_shapes();
+        let rhs = app_t("select", vec![cst("b"), cst("j")]);
+        assert!(matches!(
+            check_alethe(&row_commands(neg_eq_ij(), lhs, rhs)),
+            Err(AletheError::StepNotEntailed { .. })
+        ));
+    }
+
+    #[test]
+    fn arrays_row_rejects_a_missing_premise() {
+        let (lhs, rhs) = row_shapes();
+        let commands = vec![step(
+            "s",
+            vec![AletheLit {
+                atom: eq_term(lhs, rhs),
+                negated: false,
+            }],
+            "arrays_row",
+            &[],
+        )];
+        assert!(matches!(
+            check_alethe(&commands),
+            Err(AletheError::StepNotEntailed { .. })
+        ));
+    }
+
+    #[test]
+    fn arrays_idx_composes_to_the_empty_clause() {
+        // The shape the QF_ABV emitter produces, verbatim:
+        //   (assume h (not (= (select (store a i v) i) v)))
+        //   (step s1 (cl (= (select (store a i v) i) v)) :rule arrays_idx)
+        //   (step s2 (cl) :rule resolution :premises (s1 h))
+        let row = eq_term(
+            app_t(
+                "select",
+                vec![app_t("store", vec![cst("a"), cst("i"), cst("v")]), cst("i")],
+            ),
+            cst("v"),
+        );
+        let commands = vec![
+            assume(
+                "h",
+                vec![AletheLit {
+                    atom: row.clone(),
+                    negated: true,
+                }],
+            ),
+            step(
+                "s1",
+                vec![AletheLit {
+                    atom: row,
+                    negated: false,
+                }],
+                "arrays_idx",
+                &[],
+            ),
+            step("s2", vec![], "resolution", &["s1", "h"]),
+        ];
+        assert_eq!(check_alethe(&commands), Ok(true));
+        assert!(non_carcara_checked_rules(&commands).is_empty());
+    }
+
+    // --- The Carcara rule vocabulary ------------------------------------------
+
+    #[test]
+    fn the_carcara_rule_list_is_sorted_and_deduplicated() {
+        // `is_carcara_checked_rule` binary-searches it, so an unsorted list would
+        // silently answer `false` for rules that ARE in it -- a portability
+        // undercount that no other test would show.
+        let mut sorted = CARCARA_CHECKED_RULES.to_vec();
+        sorted.sort_unstable();
+        sorted.dedup();
+        assert_eq!(sorted.as_slice(), CARCARA_CHECKED_RULES);
+    }
+
+    #[test]
+    fn the_axeyum_internal_array_rules_are_not_carcara_rules() {
+        // Measured 2026-08-21 against carcara 1.1.0 (`6624ea80`): the SAME proof
+        // over the SAME problem is `invalid` ("unknown rule") under
+        // `read_over_write_same` and `valid` under `arrays_idx`.
+        assert!(!is_carcara_checked_rule("read_over_write_same"));
+        assert!(!is_carcara_checked_rule("read_over_write"));
+        assert!(is_carcara_checked_rule("arrays_idx"));
+        assert!(is_carcara_checked_rule("arrays_row"));
+    }
+
+    #[test]
+    fn the_holed_rules_are_not_counted_as_carcara_checked() {
+        // Carcara ACCEPTS these and flags the proof `holey`. An artifact whose
+        // steps are holes is not an externally-checked artifact.
+        assert!(!is_carcara_checked_rule("hole"));
+        assert!(!is_carcara_checked_rule("lia_generic"));
+        assert!(!is_carcara_checked_rule("rare_rewrite"));
+        // ...but `la_generic` has a real checker and is not holed.
+        assert!(is_carcara_checked_rule("la_generic"));
+    }
+
+    #[test]
+    fn non_carcara_checked_rules_names_the_offending_steps() {
+        let row = eq_term(
+            app_t(
+                "select",
+                vec![app_t("store", vec![cst("a"), cst("i"), cst("v")]), cst("i")],
+            ),
+            cst("v"),
+        );
+        let internal = vec![
+            step(
+                "s1",
+                vec![AletheLit {
+                    atom: row.clone(),
+                    negated: false,
+                }],
+                "read_over_write_same",
+                &[],
+            ),
+            step("s2", vec![], "resolution", &["s1"]),
+        ];
+        assert_eq!(
+            non_carcara_checked_rules(&internal),
+            vec!["read_over_write_same".to_owned()]
+        );
+
+        let portable = vec![
+            step(
+                "s1",
+                vec![AletheLit {
+                    atom: row,
+                    negated: false,
+                }],
+                "arrays_idx",
+                &[],
+            ),
+            step("s2", vec![], "resolution", &["s1"]),
+        ];
+        assert!(non_carcara_checked_rules(&portable).is_empty());
     }
 
     #[test]

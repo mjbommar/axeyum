@@ -852,8 +852,32 @@ impl Evidence {
     /// level down, so it is not left to vigilance — see the test named in this
     /// module that fails when a certificate gains an `UnsatProof` field without
     /// an arm here.
+    ///
+    /// **The Alethe arms OVERCOUNTED by construction until 2026-08-21**, which is
+    /// the same error in the other direction and the more dangerous one. Every
+    /// [`Evidence::UnsatAletheProof`] was reported portable regardless of the rule
+    /// names inside it, and the `QF_ABV` emitter's array step was named
+    /// `read_over_write_same` — an axeyum-internal name Carcara answers with
+    /// `unknown rule`, i.e. `invalid`, not merely `holey`. Measured against
+    /// `references/carcara` at `6624ea80`: same problem, same proof, rule renamed
+    /// to Carcara's own `arrays_idx`, `valid`. So the Alethe arms now decide from
+    /// the **rule vocabulary of the artifact** via
+    /// [`axeyum_cnf::non_carcara_checked_rules`], exactly as the `lia_generic`
+    /// exclusion below does for one rule by hand. A name-based judgement of
+    /// portability is what produced both the 1.75x undercount this function was
+    /// written to fix and this overcount.
     #[must_use]
-    pub const fn portable_artifact(&self) -> Option<PortableArtifact> {
+    pub fn portable_artifact(&self) -> Option<PortableArtifact> {
+        /// An Alethe artifact is externally checkable only if **every** rule it
+        /// names is one Carcara checks. One unknown rule makes the whole proof
+        /// `invalid` to the external checker, so this is an all-or-nothing test,
+        /// not a proportion.
+        fn alethe_if_carcara_vocabulary(proof: &[AletheCommand]) -> Option<PortableArtifact> {
+            axeyum_cnf::non_carcara_checked_rules(proof)
+                .is_empty()
+                .then_some(PortableArtifact::Alethe)
+        }
+
         match self {
             // DRAT: checkable by `check_drat` in-tree and by external
             // `drat-trim` out of tree (verified with a negative control — a
@@ -864,14 +888,25 @@ impl Evidence {
             | Evidence::UnsatBvAlternationCounterexample(_)
             | Evidence::UnsatBvConjunctiveUniversalInstance(_)
             | Evidence::UnsatBvPositiveUniversalInstanceSet(_) => Some(PortableArtifact::Drat),
-            // Alethe: checkable by Carcara, a Rust Alethe checker.
+            // Alethe: checkable by Carcara, a Rust Alethe checker — but only
+            // when every rule in the artifact is one Carcara checks.
             //
-            // `UnsatArithAletheProof` is deliberately EXCLUDED. Its QF_LIA route
-            // emits `lia_generic`, a rule Carcara has no case for and treats as
-            // a hole — so it is checkable only internally, and claiming it here
-            // would re-commit the exact error this function was written to fix.
-            Evidence::UnsatAletheProof(_) | Evidence::UnsatGuardedQuantAletheProof { .. } => {
-                Some(PortableArtifact::Alethe)
+            // `UnsatGuardedQuantAletheProof` reaches the same gate rather than a
+            // blanket `Some`: its refutation is `forall_inst_guarded` (an axeyum
+            // hook rule Carcara has never heard of) plus `lia_generic` (which
+            // Carcara accepts only by holing it), so the gate reports it
+            // internal-only. It was counted as portable before this change.
+            //
+            // `UnsatArithAletheProof` stays EXCLUDED as a variant. Its QF_LIA
+            // route emits `lia_generic`, a rule Carcara has no checker for and
+            // treats as a hole; the QF_LRA route's `la_generic` IS checked, but
+            // routing the variant through the vocabulary gate would widen what
+            // this function claims on the strength of a rule-name list alone,
+            // with no Carcara crosscheck behind it for this variant. Widen it
+            // when there is one.
+            Evidence::UnsatAletheProof(proof) => alethe_if_carcara_vocabulary(proof),
+            Evidence::UnsatGuardedQuantAletheProof { proof, .. } => {
+                alethe_if_carcara_vocabulary(proof)
             }
             _ => None,
         }
@@ -5121,6 +5156,115 @@ mod tests {
         );
     }
 
+    /// An Alethe artifact is portable only if EVERY rule in it is one the
+    /// external checker checks.
+    ///
+    /// This is the guard for the overcount half of `portable_artifact`. Before
+    /// 2026-08-21 the function answered `Some(Alethe)` for any
+    /// `UnsatAletheProof`, so a proof whose array step was named
+    /// `read_over_write_same` — which Carcara rejects outright with
+    /// `unknown rule`, measured against `references/carcara` at `6624ea80` —
+    /// counted toward the published "artifact an external checker can read"
+    /// figure. Renaming that one step to Carcara's own `arrays_idx` makes the
+    /// same proof `valid`.
+    #[test]
+    fn an_alethe_proof_naming_a_rule_carcara_lacks_is_not_portable() {
+        use axeyum_cnf::{AletheLit, AletheTerm};
+
+        fn row_proof(rule: &str) -> Vec<AletheCommand> {
+            let sel = AletheTerm::App(
+                "select".to_owned(),
+                vec![
+                    AletheTerm::App(
+                        "store".to_owned(),
+                        vec![
+                            AletheTerm::Const("a".to_owned()),
+                            AletheTerm::Const("i".to_owned()),
+                            AletheTerm::Const("v".to_owned()),
+                        ],
+                    ),
+                    AletheTerm::Const("i".to_owned()),
+                ],
+            );
+            let row = AletheTerm::App("=".to_owned(), vec![sel, AletheTerm::Const("v".to_owned())]);
+            vec![
+                AletheCommand::Assume {
+                    id: "h".to_owned(),
+                    clause: vec![AletheLit {
+                        atom: row.clone(),
+                        negated: true,
+                    }],
+                },
+                AletheCommand::Step {
+                    id: "s1".to_owned(),
+                    clause: vec![AletheLit {
+                        atom: row,
+                        negated: false,
+                    }],
+                    rule: rule.to_owned(),
+                    premises: Vec::new(),
+                    args: Vec::new(),
+                },
+                AletheCommand::Step {
+                    id: "s2".to_owned(),
+                    clause: Vec::new(),
+                    rule: "resolution".to_owned(),
+                    premises: vec!["s1".to_owned(), "h".to_owned()],
+                    args: Vec::new(),
+                },
+            ]
+        }
+
+        // Both proofs are accepted by our OWN checker -- that is the point: the
+        // in-tree checker cannot tell you whether an outside one can read it.
+        let internal = row_proof("read_over_write_same");
+        let portable = row_proof("arrays_idx");
+        assert_eq!(check_alethe(&internal), Ok(true));
+        assert_eq!(check_alethe(&portable), Ok(true));
+
+        assert_eq!(
+            Evidence::UnsatAletheProof(internal).portable_artifact(),
+            None,
+            "`read_over_write_same` is an axeyum-internal rule name; Carcara \
+             answers `unknown rule`, so this artifact is not externally checkable"
+        );
+        assert_eq!(
+            Evidence::UnsatAletheProof(portable).portable_artifact(),
+            Some(PortableArtifact::Alethe),
+            "`arrays_idx` is Carcara's own array rule"
+        );
+    }
+
+    /// The shipped `QF_ABV` read-over-write-same route must emit a portable
+    /// artifact — not merely a checkable one.
+    ///
+    /// A test that only asserted `check_alethe(&proof) == Ok(true)` would have
+    /// passed for the whole period the emitted rule name was one no external
+    /// checker knows. This asserts the property that was actually claimed.
+    #[test]
+    fn the_shipped_qf_abv_row_same_proof_is_portable() {
+        let mut arena = TermArena::new();
+        let a = arena.array_var("a", 4, 8).expect("array var");
+        let i = arena.bv_var("i", 4).expect("index var");
+        let v = arena.bv_var("v", 8).expect("value var");
+        let stored = arena.store(a, i, v).expect("store");
+        let sel = arena.select(stored, i).expect("select");
+        let eq = arena.eq(sel, v).expect("eq");
+        let neq = arena.not(eq).expect("not");
+
+        let proof = crate::prove_qf_abv_unsat_alethe(&arena, &[neq])
+            .expect("the ROW-same emitter covers this shape");
+        assert_eq!(
+            axeyum_cnf::non_carcara_checked_rules(&proof),
+            Vec::<String>::new(),
+            "the shipped array proof names a rule no external checker has"
+        );
+        assert_eq!(
+            Evidence::UnsatAletheProof(proof).portable_artifact(),
+            Some(PortableArtifact::Alethe)
+        );
+    }
+
     /// Every certificate that CARRIES a DRAT proof must be reported as portable.
     ///
     /// `portable_artifact`'s wildcard undercounts by construction, and
@@ -5188,7 +5332,7 @@ mod tests {
 
         // The arms actually listed in `portable_artifact`.
         let listed = evidence
-            .split("pub const fn portable_artifact")
+            .split("pub fn portable_artifact")
             .nth(1)
             .and_then(|tail| tail.split("\n    }").next())
             .expect("portable_artifact is present")
