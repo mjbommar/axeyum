@@ -73,6 +73,21 @@ class ProvenanceTests(unittest.TestCase):
         report = self.report()
         self.assertEqual(report["generality"][prov.NO_OP], 1)
 
+    def test_a_fixture_scope_operation_cannot_move_the_headline(self) -> None:
+        """The metric's author could otherwise move it with a JSON edit: register a
+        `counterfactual-fixture-only` operation naming three facts, no producer, no
+        receipt, no kernel. Found while holding a genuine three-fact producer with
+        no authoritative path to register it through."""
+        facts = {f"F:{c}": fact(f"F:{c}", operation="op-wide") for c in "abc"}
+        auth = self.report(facts=facts, widths={"op-wide": 3})
+        self.assertEqual(auth["multi_target_operations"], 1)
+        self.assertEqual(len(auth["facts_via_multi_target"]), 3)
+        fixture = prov.classify(facts, {"op-wide": 3},
+                                {"op-wide": "counterfactual-fixture-only"})
+        self.assertEqual(fixture["multi_target_operations"], 0)
+        self.assertEqual(fixture["facts_via_multi_target"], [])
+        self.assertEqual(fixture["multi_target_fixture_operations"], 1)
+
     # --- fail closed ---------------------------------------------------------
     def test_an_unknown_route_is_an_error_not_an_other_bucket(self) -> None:
         facts = copy.deepcopy(self.facts)
@@ -93,7 +108,8 @@ class ProvenanceTests(unittest.TestCase):
 
     # --- the committed ledger ------------------------------------------------
     def test_the_committed_ledger_reports_the_live_registry(self) -> None:
-        report = prov.classify(prov.load_facts(), prov.operation_widths())
+        widths, scopes = prov.operation_widths()
+        report = prov.classify(prov.load_facts(), widths, scopes)
         text = prov.LEDGER.read_text()
         self.assertIn(f"| {report['settled']} |", text)
         # The claim the whole ledger exists to make. If this ever fails because
@@ -127,6 +143,7 @@ class ProvenanceTests(unittest.TestCase):
                 ),
                 "by_route": {},
                 "multi_target_operations": general,
+                "multi_target_fixture_operations": 0,
                 "operations": 2,
                 "facts_via_multi_target": ["F:b"] if general else [],
                 "axiom_free": 3,

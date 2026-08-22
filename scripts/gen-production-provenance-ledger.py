@@ -92,12 +92,27 @@ def load_facts() -> dict[str, dict[str, Any]]:
     return facts
 
 
-def operation_widths() -> dict[str, int]:
+AUTHORITATIVE = "authoritative"
+
+
+def operation_widths() -> tuple[dict[str, int], dict[str, str]]:
+    """Widths and scopes, kept separate because only one of them is the metric.
+
+    Found 2026-08-22 while verifying a real result: this counted EVERY operation
+    regardless of `scope`, so the headline generality number could have been moved
+    by registering a `counterfactual-fixture-only` operation naming three facts --
+    no producer, no receipt, no kernel, just a JSON edit. I noticed because I was
+    about to be the one to do it, having a genuine three-fact producer in hand and
+    no authoritative adapter path to register it through.
+
+    A metric its own author can move by hand is the checker-that-cannot-fail
+    defect wearing the other hat, so the headline counts AUTHORITATIVE operations
+    only, and fixture-scope coverage is reported beside it rather than folded in.
+    """
     registry = json.loads(OPERATIONS.read_text())["operations"]
-    return {
-        operation["id"]: len(operation["applicability"]["fact_ids"])
-        for operation in registry
-    }
+    widths = {o["id"]: len(o["applicability"]["fact_ids"]) for o in registry}
+    scopes = {o["id"]: o["scope"] for o in registry}
+    return widths, scopes
 
 
 def operation_ids(fact: dict[str, Any]) -> set[str]:
@@ -112,8 +127,11 @@ def operation_ids(fact: dict[str, Any]) -> set[str]:
 
 
 def classify(
-    facts: dict[str, dict[str, Any]], widths: dict[str, int]
+    facts: dict[str, dict[str, Any]],
+    widths: dict[str, int],
+    scopes: dict[str, str] | None = None,
 ) -> dict[str, Any]:
+    scopes = {} if scopes is None else scopes
     settled = {i: d for i, d in facts.items() if d["epistemic_status"] in SETTLED}
     if not settled:
         raise ProvenanceError("no settled facts; this ledger would pass vacuously")
@@ -140,7 +158,9 @@ def classify(
             )
         if not ids:
             label = NO_OP
-        elif max(widths[i] for i in ids) > 1:
+        elif max(
+            widths[i] for i in ids if scopes.get(i, AUTHORITATIVE) == AUTHORITATIVE
+        ) > 1 if any(scopes.get(i, AUTHORITATIVE) == AUTHORITATIVE for i in ids) else False:
             label = GENERAL
             via_general.append(fact_id)
         else:
@@ -152,7 +172,14 @@ def classify(
         "settled": len(settled),
         "generality": generality,
         "by_route": by_route,
-        "multi_target_operations": sum(1 for w in widths.values() if w > 1),
+        "multi_target_operations": sum(
+            1 for i, w in widths.items()
+            if w > 1 and scopes.get(i, AUTHORITATIVE) == AUTHORITATIVE
+        ),
+        "multi_target_fixture_operations": sum(
+            1 for i, w in widths.items()
+            if w > 1 and scopes.get(i, AUTHORITATIVE) != AUTHORITATIVE
+        ),
         "operations": len(widths),
         "facts_via_multi_target": sorted(via_general),
         "axiom_free": sum(1 for d in settled.values() if not d.get("axiom_footprint")),
@@ -179,7 +206,10 @@ def render(report: dict[str, Any]) -> str:
         f"| …with no registered operation (hand-constructed or imported) | "
         f"{generality[NO_OP]} |",
         f"| Registered operations | {report['operations']} |",
-        f"| …covering more than one fact | **{report['multi_target_operations']}** |",
+        f"| …**authoritative** and covering more than one fact | "
+        f"**{report['multi_target_operations']}** |",
+        f"| …fixture-scope covering more than one fact (NOT the metric) | "
+        f"{report['multi_target_fixture_operations']} |",
         "",
     ]
     if generality[GENERAL] == 0:
@@ -247,7 +277,8 @@ def main() -> int:
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
     try:
-        report = classify(load_facts(), operation_widths())
+        widths, scopes = operation_widths()
+        report = classify(load_facts(), widths, scopes)
         rendered = render(report)
         if args.check:
             if not LEDGER.exists() or LEDGER.read_text() != rendered:
@@ -264,6 +295,7 @@ def main() -> int:
             f"via_capsule={report['generality'][CAPSULE]}|"
             f"no_operation={report['generality'][NO_OP]}|"
             f"multi_target_operations={report['multi_target_operations']}|"
+            f"multi_target_fixture={report['multi_target_fixture_operations']}|"
             f"operations={report['operations']}"
         )
     except (OSError, KeyError, json.JSONDecodeError, ProvenanceError) as error:

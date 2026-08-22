@@ -13,7 +13,8 @@
 | …via a single-target operation (a capsule) | 21 |
 | …with no registered operation (hand-constructed or imported) | 115 |
 | Registered operations | 24 |
-| …covering more than one fact | **0** |
+| …**authoritative** and covering more than one fact | **0** |
+| …fixture-scope covering more than one fact (NOT the metric) | 0 |
 
 **The two bold numbers are the metric.** Both are zero. Every operation in
 the registry names exactly one fact, so every result it has produced came
