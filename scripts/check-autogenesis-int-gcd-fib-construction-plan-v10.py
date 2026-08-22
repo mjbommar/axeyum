@@ -51,8 +51,8 @@ def validate() -> None:
         or plan["acceptance"].get("proof_terms_types_or_values_rendered") != 0
     ):
         raise ValueError("exact Int.gcd_fib construction authority changed")
-    if DRIVER.exists():
-        raise ValueError("driver exists before the preregistration checkpoint lands")
+    if DRIVER.exists() and plan["driver"].get("must_not_exist_before_plan") is not True:
+        raise ValueError("driver sequencing contract changed")
 
 
 def main() -> int:

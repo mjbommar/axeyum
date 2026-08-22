@@ -24,6 +24,7 @@
 | 2026-08-22 | (pending) | The exact natAbs driver compiles and passes focused Clippy without reading proof streams; route-specific root assurance excludes unrelated assumptions in the official natAbs source before one fail-if-present execution |
 | 2026-08-22 | (pending) | Exact `intFibNatAbsV1` composes once, replays four receipts, survives two fresh imports, and seals as a 544,756-byte empty-footprint capsule with exactly seven dependencies and zero ledger writes |
 | 2026-08-22 | (pending) | V10 freezes the final `Int.gcd_fib` join over two exact capsules, a target-owned transparent `Int.gcd`, its reflexive equation, and one six-dependency theorem submission before driver code |
+| 2026-08-22 | (pending) | The final join driver compiles and passes focused Clippy without reading either capsule; one fail-if-present execution must still typecheck the explicit five-step equality chain and exact dependency set |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
