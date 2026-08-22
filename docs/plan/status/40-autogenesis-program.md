@@ -85,6 +85,7 @@
 | 2026-08-22 | (pending) | V18 freezes five binder-closed infer/definitional-equality checks from forward witness through final reverse transport, with the proof term unchanged and target submission forbidden during instrumentation |
 | 2026-08-22 | (pending) | V18 instruments all five proof links under identical closed binders and builds Clippy-clean without reading capsules; the next run will stop before submission at the first invalid link |
 | 2026-08-22 | (pending) | V19 freezes one instrumented run: at most five closed link checks and one target submission, with any decline localized before proof changes |
+| 2026-08-22 | (pending) | V19 proves links 1–2 and localizes the first failure to link 3: `Eq.rec` needs a destination-and-equality motive, not the unary divisibility predicate currently supplied |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |

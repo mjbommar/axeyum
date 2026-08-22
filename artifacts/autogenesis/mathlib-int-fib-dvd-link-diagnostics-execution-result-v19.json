@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-link-diagnostics-execution-result-v19",
+  "state": "first-two-links-pass-third-eq-rec-motive-arity-fails",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-link-diagnostics-execution-plan-v19.json",
+    "sha256": "4cf079f3b00264ffec502b0d94356558775d806459203b33c9de97bf49924d8d"
+  },
+  "implementation_sha256": "7f95b1aa4df253be85305d71d75b78a4de68e485607244f8f730d87b3c9f1095",
+  "diagnostic": {
+    "passed_links": ["forward witness proof", "natural Fibonacci divisibility"],
+    "first_failed_link": "second equality transport",
+    "class": "TypeMismatch",
+    "cause": "Eq.rec expects a motive over destination and equality proof; the helper supplied only a unary destination predicate",
+    "output_remains_absent": true
+  },
+  "execution": {
+    "complete_invocations": 1,
+    "input_stream_reads": 4,
+    "composition_operations": 3,
+    "link_checks_attempted": 3,
+    "link_checks_passed": 2,
+    "target_theorem_submissions": 0,
+    "target_exports": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {"target_credit": 0, "ledger_writes": 0}
+}
