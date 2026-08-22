@@ -70,7 +70,13 @@ test, roughly 100x slower. Nothing else is required.
   degree-doubling through `chi -> chi^2` supplies no bound: the new
   Liouville-weighted term is not a Hayes character sum.
 
-`data/` holds the generated tables: worst layer ratios (`layer-ratios-*`), full layer
+- `lemire_witness_search.py <lo> <hi>` -- flint-based sparse witness search with
+  independent pure-Python Rabin re-verification (cross-check for the Rust certifier).
+
+`data/witnesses-401-3000-sha256.tsv` is the certified witness table (degree, tail exponents,
+SHA-256 of the `axeyum-gf2-search` artifact, check status); artifacts at
+`/data0/axeyum/scratch/lemire-signed-trace-witnesses-401-3000/`.
+`data/` also holds the generated tables: worst layer ratios (`layer-ratios-*`), full layer
 tables at `ell = 20..24`, cylinder variances, twisted sums, irreducible counts.
 
 ## Cross-validation performed 2026-08-21

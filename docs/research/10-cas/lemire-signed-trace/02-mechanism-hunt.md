@@ -388,3 +388,23 @@ conductor layer, as noted above.  This is an algebraic identity, not a
 conditional-balance theorem.  `lemire_adams_check.py` sums prime powers
 directly for every character of `E_j`, `j <= 5`, and degrees `m <= 10`;
 it asserts all 620 instances of the displayed equation.
+
+## 6. Certified finite handoff extended to `n = 3000`
+
+Using the branch CAS's own search and checker (`axeyum-gf2-search`,
+`axeyum-gf2-check`; snapshot at `47fd7b440` with the two resource caps
+`max_word_ops` and `max_coefficient_ops` raised 1000x -- resource admission,
+not soundness guards), every degree `401 <= n <= 3000` now has a sparse
+witness `x^n + sum x^e + 1` with all `e <= floor(n/2)`, carrying a
+Frobenius/Bezout certificate that passes both the primary and the independent
+checker: 2600 of 2600 `PASS`, 1334 trinomials and 1266 pentanomials. The
+compact replayable table (degree, tail exponents, SHA-256 of the artifact,
+check status) is `scripts/lemire-signed-trace/data/witnesses-401-3000-sha256.tsv` (the collaborating session committed the same witnesses as `witnesses-401-3000.txt`);
+the 9.4 GB of artifacts live outside the repository at
+`/data0/axeyum/scratch/lemire-signed-trace-witnesses-401-3000/`. An
+independent flint-based search (`lemire_witness_search.py`, pure-Python Rabin
+re-verification) agrees on existence for every degree in `401..842` (identical
+trinomial witnesses; pentanomials differ by search order). Meaning (note: this
+is insurance, not evidence for the open step): the chain is now complete for
+`n <= 3000`, and for all `n` if `(HWO)`/`(CYL)` holds for `ell >= 1500`; the
+open estimate itself is unchanged.
