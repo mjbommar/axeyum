@@ -66,6 +66,7 @@
 | 2026-08-22 | (pending) | V8 compiles both direct witness transports with no rejected helper named; the only new case splits are the preregistered opposite-sign quotient boundaries, before export or theorem credit |
 | 2026-08-22 | (pending) | V9 freezes exact staging, one compile, two two-root exports, two imports, forbidden-dependency audit, cleanup, and sealing before transport theorem credit |
 | 2026-08-22 | (pending) | V9 reproduces and seals both direct witness transports empty-footprint; their exact dependencies are only `Eq.symm`, `congrArg`, and `noConfusion_of_Nat`, with every rejected helper absent |
+| 2026-08-22 | (pending) | V10 freezes exact `Int.fib_dvd` over four sealed capsules: forward witness transport, admitted `Nat.fib_dvd`, two `intFibNatAbsV1` equality transports, and direct reverse witness transport before driver code |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |

@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-exact-construction-plan-v10",
+  "state": "preregistered-four-capsule-exact-composition-before-driver-code",
+  "predecessor": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-witness-transport-export-result-v9.json",
+    "sha256": "7e98454a508cd840a3c78272c280d894a763b42522df39dd2adb9162a9caad6b"
+  },
+  "inputs": [
+    {
+      "role": "integer Fibonacci natAbs identity",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-natabs-exact-v1/root.ndjson",
+      "sha256": "1ec10d475fb3c77fea3353036e2a09f70abf88f03402a2912407c71b26e3b7e4",
+      "root": "Axeyum.Autogenesis.intFibNatAbsV1"
+    },
+    {
+      "role": "admitted natural Fibonacci divisibility",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/c2266de88-nat-fib-dvd-v1/target-1.ndjson",
+      "sha256": "52acbd5a51f2163ab5b712483c582adb916ab198567c2b0b6c3678f7316d86d7",
+      "root": "Nat.fib_dvd"
+    },
+    {
+      "role": "direct natAbs multiplication",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-natabs-mul-direct-v1/root.ndjson",
+      "sha256": "09ebd925b3af67009b1806fd157a25b195e046124065778ec6eaf754f5ecfc04",
+      "root": "Axeyum.Autogenesis.intNatAbsMulDirectV1"
+    },
+    {
+      "role": "direct divisibility witness transports",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-dvd-natabs-witness-transport-v1/root.ndjson",
+      "sha256": "66faaafc0b7a34267d22427cd968fe3649e31cae3dcf9b87c56ab3db83004bc6",
+      "roots": [
+        "Axeyum.Autogenesis.intNatAbsDvdForwardResidualV1",
+        "Axeyum.Autogenesis.intDvdOfNatAbsDvdDirectV1"
+      ]
+    }
+  ],
+  "target": {
+    "name": "Int.fib_dvd",
+    "statement": "forall m n : Int, m divides n -> Int.fib m divides Int.fib n",
+    "implementation": "crates/axeyum-lean-import/examples/int_fib_dvd_exact.rs",
+    "method": [
+      "apply the forward witness residual to intNatAbsMulDirectV1 and the input Int divisibility proof",
+      "apply exact Nat.fib_dvd to the resulting natAbs index divisibility",
+      "transport both Nat divisibility arguments with the two intFibNatAbsV1 equalities using Eq.rec",
+      "apply the direct reverse witness transport to obtain Int Fibonacci divisibility"
+    ],
+    "expected_direct_theorem_dependencies": [
+      "Axeyum.Autogenesis.intDvdOfNatAbsDvdDirectV1",
+      "Axeyum.Autogenesis.intFibNatAbsV1",
+      "Axeyum.Autogenesis.intNatAbsDvdForwardResidualV1",
+      "Axeyum.Autogenesis.intNatAbsMulDirectV1",
+      "Eq.symm",
+      "Nat.fib_dvd"
+    ]
+  },
+  "output": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-dvd-exact-v1/root.ndjson",
+  "execution": {
+    "max_driver_builds": 1,
+    "max_complete_invocations": 1,
+    "max_input_stream_reads": 4,
+    "max_composition_operations": 3,
+    "max_composition_replays": 3,
+    "max_target_theorem_submissions": 1,
+    "max_target_exports": 1,
+    "max_fresh_target_imports": 2,
+    "max_retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "target_axiom_footprint": [],
+    "exact_direct_dependencies": true,
+    "fresh_imports_reproduce_evidence": true,
+    "sealed_output": true
+  },
+  "next_on_accept": "bind canonical goal identity, register exact operation, crash-safe admit, and independently replay"
+}
