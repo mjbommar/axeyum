@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-exact-construction-result-v10",
+  "state": "declined-at-driver-typecheck-before-proof-stream-read",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-exact-construction-plan-v10.json",
+    "sha256": "6a0a520b159cb5a3ab1fe116ce2f292ad78d40daf507d375d2796c134c0fa35d"
+  },
+  "implementation": {
+    "path": "crates/axeyum-lean-import/examples/int_fib_dvd_exact.rs",
+    "sha256": "975bcfeb4294c191324459190aa6728b55a8c6f29c6ac4177f839f8345ab19b1"
+  },
+  "diagnostic": {
+    "stage": "cargo-clippy-driver-build",
+    "exit_status": 101,
+    "errors": [
+      "natAbs multiplication theorem NameId passed where ExprId was required",
+      "nested_name used unavailable str_name instead of name_str",
+      "Nat Dvd instance expression was created inside an existing mutable borrow",
+      "nat_fib_dvd and nat_fibs_dvd violated the similar-names lint",
+      "bridge_m_reverse and bridge_n_reverse violated the similar-names lint"
+    ]
+  },
+  "execution": {
+    "driver_builds": 1,
+    "complete_invocations": 0,
+    "input_stream_reads": 0,
+    "composition_operations": 0,
+    "target_theorem_submissions": 0,
+    "target_exports": 0,
+    "fresh_target_imports": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "target_credit": 0,
+    "ledger_writes": 0
+  }
+}
