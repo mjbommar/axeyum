@@ -71,6 +71,7 @@
 | 2026-08-22 | (pending) | V11 freezes exactly five local driver repairs—two expression materializations, one kernel API rename, and two binding renames—while forbidding proof changes and all capsule reads |
 | 2026-08-22 | (pending) | V11 applies exactly those five repairs and builds focused Clippy-clean; no capsule was read and the exact proof construction is now ready for one separately authorized execution |
 | 2026-08-22 | (pending) | V12 freezes one complete, no-retry execution of the Clippy-clean exact driver: four reads, three checked compositions and replays, one target, one export, and two fresh imports |
+| 2026-08-22 | (pending) | V12 wrapper stops before driver launch because Clippy produced metadata but no runnable example binary; output stays absent and every proof-read, composition, target, and ledger counter remains zero |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |

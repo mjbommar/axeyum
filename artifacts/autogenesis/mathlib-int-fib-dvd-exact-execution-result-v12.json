@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-exact-execution-result-v12",
+  "state": "declined-before-driver-launch-at-absent-example-executable",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-exact-execution-plan-v12.json",
+    "sha256": "8cece21fcff52ce43a03834fba1ff602d6e1dd1c591808f13464a83b849c3542"
+  },
+  "diagnostic": {
+    "attempted_executable": "target/debug/examples/int_fib_dvd_exact",
+    "exit_status": 127,
+    "reason": "cargo clippy produced dependency metadata but no runnable example binary",
+    "output_remains_absent": true
+  },
+  "execution": {
+    "driver_process_launches": 0,
+    "complete_invocations": 0,
+    "input_stream_reads": 0,
+    "composition_operations": 0,
+    "target_theorem_submissions": 0,
+    "target_exports": 0,
+    "fresh_target_imports": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "target_credit": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "authorize one cargo run invocation that includes the missing executable build and unchanged exact arguments"
+}
