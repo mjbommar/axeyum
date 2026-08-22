@@ -124,4 +124,33 @@ retains the logarithmic prescribed-coefficient gap or treats only boundedly
 many coefficients.  No endpoint theorem was found, and the open fact is
 unchanged.
 
+**Certified finite handoff extended to n<=3000 (2026-08-22).** One monic
+irreducible with `deg(f - x^n) <= floor(n/2)` for every degree `401 <= n <=
+3000` (1334 trinomials, 1266 pentanomials), produced by the branch CAS
+`axeyum-gf2-search` and verified by `axeyum-gf2-check` -- every row passed
+BOTH the primary Frobenius/Bezout certificate and the independent re-check
+(2600/2600, 0 failures), plus an independent flint re-verification of a
+204-degree sample. Table:
+`scripts/lemire-signed-trace/data/witnesses-401-3000.txt`. This raises the
+finite-handoff insurance from `n<=400` to `n<=3000` (covers any future
+effective threshold `ell <= 1499` on the open estimate); it does not touch
+the open estimate, which is uniform in `ell`.
+
+**Five "of course" shapes closed and an unconditional theorem landed
+(2026-08-22).** Five Opus agents each took one candidate solution shape
+(small virtual Witt-tower trace; horizontal Sato--Tate/automorphy; 2-adic
+arithmetic uncertainty; manifest positivity; Clifford-hierarchy aggregate
+cancellation): all negative, each with exact new facts and a precise
+obstruction (note 04). The Fourier-uncertainty reading is now made rigorous
+as a barrier lemma (note 03 section 5): an explicit nonnegative fake
+population with the true low-conductor Fourier data, Weil-admissible high
+moduli, and empty identity class, so moduli-only methods provably cannot
+prove `(REL)`. A separate agent proved the unconditional almost-all theorem
+(note 05): all but `< 4 ell^2 2^{-ell}` of the `2^ell` top-half patterns are
+realized by an irreducible, sharp constant `ell^2-4ell+6`; Lemire is exactly
+the residual claim that the one named all-zero pattern is not exceptional. The
+public companion PDF `lemire-almost-all.pdf` carries Theorems A/B and the
+barrier; the roadmap PDF carries the AP/Witt restatement, `(CYL)`, and the
+generic-invariant obstruction. Theorem state unchanged: Lemire is not proved.
+
 <!-- plan-section: landed-changes -->
