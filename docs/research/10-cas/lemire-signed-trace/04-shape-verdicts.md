@@ -213,6 +213,68 @@ Gaussian.*
   nothing. The 2-adic tower is closed as a source of archimedean cancellation;
   any surviving mechanism must be phase-aware.
 
-## Shape 2 and the computational leg of shape 1
+## Shape 2 -- horizontal Sato--Tate at fixed `F_2` via automorphy
+
+*Verdict (landed 2026-08-22): negative; the route is circular, and two new
+exact facts rule out frequency-uniform or smoothed strategies.*
+
+- **Method.** Every Hayes character of `E_j` via FFT over `prod Z/2^{e_k}`,
+  its `L`-polynomial and `j-1` inverse roots; layer Weyl sums
+  `w_{j,s}(m) = sum_theta e^{i m theta}/(#X (j-1))`, so that Weil is
+  `|w(n)| <= 1` and `(HWO)` is `|w_{j,s}(n)| <= 2^{ceil(n/2)-n/2}/(4 ell)`
+  -- a Weyl-criterion discrepancy bound at the single frequency `n`.
+  54/54 cross-checks against the four-population identity; reached
+  `j = 16, s = 5` (491,520 angles).
+- **New exact law (fact 1).** `T_{j,s}(m) = +#X_{j,s}` for every odd
+  `m < j` (171/171 instances, `j = 4..16`, all layers); also
+  `sum_{chi in X} chi(1+x) = 0`, so `|w(1)| = 1/(sqrt2 (j-1))` and
+  `sup_{1 <= m < j} |w(m)| = 1/(j-1)` exactly (attained). Consequence:
+  `(HWO)`'s inequality is FALSE at low frequencies (by `2 ell/(j-1)` at
+  `m = 1`, by `~4x` at even `m` in order-2 layers, e.g. `(13,1)`:
+  `T(12) = +64 #X`). No frequency-uniform equidistribution theorem can
+  prove `(HWO)`; the target is frequency-selective and lives only at
+  `m >~ j`.
+- **`m = n` is not anomalous.** Over 62 layer x endpoint instances
+  (`j = 6..16`), the rank-quantile of `|w(n)|` among `m in [j, 6j]` has
+  median `0.496` (KS vs uniform `sqrt(N) D = 0.45`); `|w(n)| sqrt(#A)` has
+  median `0.72` (Rayleigh `1.18`); the Weyl constant `(j-1)|w(n)|` has median
+  `0.11`, max `1.31`. Per-case: `(7,15)` 4/11 layers satisfy `(HWO)`,
+  `(9,19)` 6/14, `(11,23)` 7/17; at `j = 16, s = 5`, `(j-1)|w(23)| = 0.034`
+  and for `m >= j` the angles are indistinguishable from `U(N)`.
+- **Smoothing is exactly self-defeating (fact 2).** Fejer windows `H =
+  3..33` about `n` reduce `|w|` by the independent-frequency prediction
+  (median smoothed/prediction `0.44..0.95`), and de-smoothing costs exactly
+  `H`: for the admissible Weil polynomial `Q(T) = 1 - 2^{(n+1)/2}T^n +
+  2^n T^{2n}`, `|p_m|/(D 2^{m/2}) = 0` for `m != n` and `0.7071` at `m = n`,
+  and the `H = 9` Fejer average is `0.0786 = 0.7071/9` exactly. Strictly
+  lossy.
+- **Moments price the Rankin--Selberg input.** `M_2/((j-1)2^n)` median
+  `0.967` (Keating--Rudnick diagonal), `M_4/M_2^2 ~ 2` (CUE); Cauchy--Schwarz
+  over the layer is short of `(HWO)` by `5.2..11.4x` at `j <= 15` and by
+  `40x` (odd `n`) / `57x` (even `n`) at `ell = 200`; Hoelder with higher
+  moments runs the wrong way; the hook decomposition `p_n = sum_k (-1)^k
+  s_{(n-k,1^k)}` has `j-1` terms whose leading dimension is `~10^164` at
+  `ell = 200`.
+- **Literature (two sweeps).** Katz IMRN 2013/2015/2017 are `q -> infinity`;
+  Katz, Sato--Tate in the higher dimensional case (Enseign. Math. 2013):
+  packetwise equidistribution only, classical refinement false in
+  equicharacteristic (Rmk 3.7); no horizontal Sato--Tate over function fields
+  exists. Fixed-`q` results stop at our line: Entin GAFA 2012 (`r <= d` at
+  `p = 2`, non-decaying main term), Gorodetsky 2020 (`h/n > 1/2` only up to
+  `e^{O(n loglog n/log n)}`), Gorodetsky--Kovaleva (one character over all
+  `M_n`, saving `1/n`, restriction to primes stated open), Fu--Lau--Li--Xi
+  IMRN 2025 (`h > d/2 - 1` wall), Sawin Duke 2021 ("not yet nontrivial in
+  the large `n` limit"), Sawin--Shusterman Annals 2022 and arXiv:2512.24080
+  (large `q`, squarefree moduli), Kowalski's Frobenius large sieve (needs
+  `L^A <= sqrt q`), Lomeli--Navarro (Sym^k cuspidality via Lafforgue adds
+  nothing analytic beyond rationality + Weil II).
+- **Circularity.** Weyl's criterion at frequency `n` for this family is
+  literally orthogonality: `sum_{chi in X} sum_i alpha_chi^n = -sum_{deg F
+  = n} Lambda(F) sum_chi chi(<F>_j)` = the four-population integer. So
+  "horizontal Sato--Tate at frequency `n`" is the target restated, not an
+  input; the needed automorphic object is a first-moment bound with saving
+  `4 ell`, which even moments cannot deliver.
+
+## Shape 1, computational leg
 
 Pending.
