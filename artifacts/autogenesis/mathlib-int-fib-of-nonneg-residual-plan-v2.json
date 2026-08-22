@@ -1,0 +1,10 @@
+{
+  "schema_version":1,"kind":"axeyum-autogenesis-mathlib-int-fib-of-nonneg-residual-plan-v2","state":"preregistered-explicit-olean-before-repaired-export",
+  "predecessor":{"path":"artifacts/autogenesis/mathlib-int-fib-of-nonneg-residual-result-v1.json","sha256":"707f833212b96822407514f04355b241934d603773686457f4241c9c99e237f3","required_state":"declined-export-before-stream-missing-olean"},
+  "source":{"path":"artifacts/autogenesis/sources/int-fib-of-nonneg-residual-v1.lean","sha256":"356fd8da67487c1f6b049ad9760a9d7b94545d590f11e3f708d52af14dcd8333","remote_path":"/home/mjbommar/lean-import-scale/mathlib4/AxeyumIntFibOfNonnegResidualV1.lean","olean":"/home/mjbommar/lean-import-scale/mathlib4/AxeyumIntFibOfNonnegResidualV1.olean","compile_shape":"lake env lean -o AxeyumIntFibOfNonnegResidualV1.olean AxeyumIntFibOfNonnegResidualV1.lean"},
+  "target":{"fact_id":"F:ml430-int-fib-of-nonneg-438018c5","fact_path":"artifacts/facts/F-ml430-int-fib-of-nonneg-438018c5.json","fact_sha256":"312711e8dc1d54a17b9efdad9c61ab46ca9ef77747acc80a0c24d5f6821d6d6e","required_status":"open"},
+  "export":{"module":"AxeyumIntFibOfNonnegResidualV1","root":"Axeyum.Autogenesis.intFibOfNonnegResidualV1","pack":"/nas3/data/axeyum/autogenesis/reference-packs/int-fib-of-nonneg-residual-v2","must_not_preexist":true,"stderr_must_be_empty":true},
+  "execution":{"max_olean_compilations":1,"max_exporter_invocations":2,"max_importer_runs":2,"max_retries":0,"target_theorem_submissions":0,"rendered_proof_terms":0,"rendered_theorem_types":0,"rendered_theorem_values":0,"ledger_writes":0},
+  "acceptance":{"axiom_footprint":[],"direct_theorem_dependencies":[],"exports_byte_identical":true,"imports_identical":true,"sealed_output":true},
+  "next_on_accept":"freeze exact specialization over target-owned Int.fib, Nat.fib, and Int.fib_natCast"
+}
