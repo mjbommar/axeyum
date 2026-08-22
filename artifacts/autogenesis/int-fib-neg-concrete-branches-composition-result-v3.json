@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-concrete-branches-composition-result",
+  "state": "declined-before-composition-on-residual-stream-assumptions",
+  "plan": "artifacts/autogenesis/int-fib-neg-concrete-branches-composition-plan-v3.json",
+  "driver_checkpoint": "artifacts/autogenesis/int-fib-neg-concrete-branches-composition-driver-result-v3.json",
+  "execution": {
+    "complete_invocations": 1,
+    "exit": 1,
+    "diagnostic": "constructor branch residuals stream reaches assumptions",
+    "composition_operations": 0,
+    "specialization_operations": 0,
+    "capsule_writes": 0,
+    "ledger_writes": 0,
+    "retries": 0
+  },
+  "output": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-concrete-branches-v1/roots.ndjson",
+    "exists": false
+  },
+  "credit": "fail-closed stream-level decline only",
+  "next": "Audit only the two selected residual roots for exact identity and axiom footprint before deciding whether route-specific assurance is sound."
+}
