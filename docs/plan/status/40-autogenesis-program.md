@@ -134,6 +134,7 @@
 | 2026-08-21 | (pending) | V3 exact-target driver passes focused Clippy with all three proof streams unread; one fail-if-present composition remains |
 | 2026-08-21 | (pending) | The one-shot official composition accepts clean support, then fails closed on `Int.fib_neg_natCast` type-shape mismatch with zero target/output writes; target-owned constructor-residual qualification is frozen next |
 | 2026-08-21 | (pending) | Clean constructor-residual driver passes focused Clippy with all three proof streams unread; one fail-if-present support composition remains |
+| 2026-08-21 | (pending) | Residual composition fails closed at broad-source `Lean.RArray`; a function-parameterized constructor residual is frozen to remove `Int.fib` and its implementation closure entirely |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |

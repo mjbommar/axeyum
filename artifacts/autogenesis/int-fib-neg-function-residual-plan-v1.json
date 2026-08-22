@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-function-residual-plan",
+  "state": "preregistered-before-source-construction",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-fib-neg-clean-outer-residual-composition-result-v1.json",
+    "required_state": "declined-on-broad-source-recursive-inductive-before-support-publication"
+  },
+  "factorization": {
+    "function_parameter": "fib : Int -> Int",
+    "positive_contract": "forall n : Nat, fib (-(Int.ofNat n)) = if Even (Int.ofNat n) then -fib (Int.ofNat n) else fib (Int.ofNat n)",
+    "negative_contract": "forall k : Nat, fib (-(Int.negSucc k)) = if Even (Int.negSucc k) then -fib (Int.negSucc k) else fib (Int.negSucc k)",
+    "result": "forall z : Int, fib (-z) = if Even z then -fib z else fib z",
+    "proof": "direct cases on z and exact use of the matching contract"
+  },
+  "source": "artifacts/autogenesis/sources/int-fib-neg-function-residual-v1.lean",
+  "module_import": "Mathlib.Algebra.Group.Int.Even",
+  "evidence_pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-function-residual-v1",
+  "budget": {
+    "directory_creations": 1,
+    "source_constructions": 1,
+    "module_builds": 1,
+    "exports": 2,
+    "closure_audits": 1,
+    "retries": 0,
+    "composition_operations": 0,
+    "exact_target_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "root": "Axeyum.Autogenesis.intFibNegFunctionResidualV1",
+    "exports_byte_identical": true,
+    "closure_must_not_contain": [
+      "Int.fib",
+      "Lean.RArray"
+    ],
+    "proof_terms_types_or_values_rendered": 0
+  },
+  "stop_rule": "Any construction/build/export mismatch, unexpected Int.fib or Lean.RArray closure member, or preexisting output stops without retry or theorem/ledger authority.",
+  "output_result": "artifacts/autogenesis/int-fib-neg-function-residual-result-v1.json",
+  "next_on_accept": "Compose the generic residual into the clean decision/natCast kernel, construct both exact branch contracts, and specialize fib to the clean Int.fib declaration.",
+  "limitations": "The generic residual proves no Fibonacci branch and grants no exact-target or ledger credit."
+}
