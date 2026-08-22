@@ -47,10 +47,14 @@ def fact_path(fact_id: str) -> pathlib.Path:
     return FACTS / (fact_id.replace("F:", "F-") + ".json")
 
 
+LIVE_POPULATION = 157
+
+
 def build(
     nursery: dict[str, Any],
     fact_loader: Callable[[str], dict[str, Any]],
     modules_by_family: dict[str, str],
+    expected: int | None = None,
 ) -> tuple[str, dict[str, Any]]:
     if nursery.get("state") != "frozen-evaluation":
         raise CoverageInputError("nursery is not frozen")
@@ -62,13 +66,22 @@ def build(
         ),
         key=lambda entry: entry["fact_id"],
     )
-    # 157 = train 78 + development 79, after the `natural-gcd` family left
-    # held-out on 2026-08-22 (ADR-0542). Kept as a literal tripwire rather than
-    # derived from the manifest, so an unexplained change to the evaluation
-    # population stops this instead of silently re-sizing it.
-    if len(selected) != 157:
+    # LIVE_POPULATION is the tripwire for generating a NEW census: an unexplained
+    # change to the evaluation population must stop this rather than silently
+    # re-size it. 157 = train 78 + development 79, after the `natural-gcd` family
+    # left held-out on 2026-08-22 (ADR-0542).
+    #
+    # `expected` exists because RE-VERIFYING an OLD census is a different
+    # question. A frozen capture is evidence about the population as it stood
+    # when it was taken, so checking it against the LIVE manifest guarantees it
+    # goes stale the moment the population legitimately changes -- which is
+    # exactly what happened on 2026-08-22, turning a valid 2026-08-19 census into
+    # a red gate that said nothing about the census. The re-verifier passes the
+    # count its own manifest records instead.
+    want = LIVE_POPULATION if expected is None else expected
+    if len(selected) != want:
         raise CoverageInputError(
-            f"expected 157 train/development entries, found {len(selected)}"
+            f"expected {want} train/development entries, found {len(selected)}"
         )
     if {entry["partition"] for entry in selected} != PARTITIONS:
         raise CoverageInputError("coverage input does not contain both open partitions")

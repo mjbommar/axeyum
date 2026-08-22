@@ -138,9 +138,32 @@ current history`), so this does not newly break a green gate — but the reason
 changed, and pinning the input at 138 to keep the old reason would have been
 choosing a quiet gate over a true one.
 
-**Follow-up (unassigned):** rebuild the reflexivity coverage capture over the
-157-row population. Until then the reflexivity grammar census describes a
-population that no longer exists.
+**Resolved 2026-08-22, and not the way this section predicted.** Rebuilding the
+capture was the wrong fix. A frozen census is evidence about the population *as
+it stood when it was taken*; `check-autogenesis-reflexivity-coverage.py` was
+rebuilding its expected input from the **live** nursery and comparing it against
+a capture pinned at `ledger_snapshot_commit 26fcc2c2f`, which guarantees the gate
+goes red whenever the population legitimately changes — saying nothing whatever
+about the census.
+
+The checker now rebuilds from the nursery **at the commit its own manifest
+pins**, read out of git, and takes the row count from
+`population.train_development` rather than a literal. The invariant it enforces
+is the honest one: *this capture matches the population it claims to describe*.
+`create-autogenesis-reflexivity-coverage-input.py` keeps its live tripwire
+(`LIVE_POPULATION = 157`) for generating a NEW census, which is a different
+question and still wants doing.
+
+Discrimination checked three ways: an unreachable pinned commit errors rather
+than falling back to the live file, a wrong recorded population count fails, and
+a tampered capture hash fails.
+
+```text
+AUTOGENESIS_REFLEXIVITY_COVERAGE_OK|08c41f91…|rows=138|adapter_rejections=114|
+producer_declines=15|kernel_rejections=7|admissible=2|held_out=0|ledger_writes=0
+```
+
+**Still open:** a NEW reflexivity census over the 157-row population.
 
 ## What this does not fix
 

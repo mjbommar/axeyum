@@ -46,6 +46,30 @@ def load(path: pathlib.Path) -> dict[str, Any]:
     return value
 
 
+def pinned_nursery(commit: str) -> dict:
+    """The nursery manifest as of `commit`, read from git rather than from disk.
+
+    Fails closed: an unreachable commit or an unparseable blob is an error, not a
+    fallback to the live file. Falling back would silently restore exactly the
+    behaviour this exists to remove.
+    """
+    completed = subprocess.run(
+        ["git", "show", f"{commit}:artifacts/autogenesis/nursery-v1.json"],
+        cwd=ROOT, capture_output=True, text=True, check=False,
+    )
+    if completed.returncode != 0:
+        raise CoverageResultError(
+            f"pinned nursery commit {commit[:12]} is unreachable: "
+            f"{completed.stderr.strip()[:160]}"
+        )
+    try:
+        return json.loads(completed.stdout)
+    except json.JSONDecodeError as error:
+        raise CoverageResultError(
+            f"pinned nursery at {commit[:12]} is unreadable: {error}"
+        ) from error
+
+
 def load_module(name: str, path: pathlib.Path):
     spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
@@ -193,10 +217,19 @@ def validate() -> dict[str, Any]:
     generator = load_module("reflexivity_coverage_input_for_result", GENERATOR)
     policy = generator.load(generator.SOURCE_POLICY)
     modules = {row["theme"]: row["module"] for row in policy["families"]}
+    # Rebuild from the nursery AS IT STOOD when this census was taken, read out
+    # of git at the commit the manifest itself pins. Using the live manifest made
+    # a valid census go red for a population change it predates and cannot have
+    # accounted for; the honest invariant is "this capture matches the population
+    # it claims to describe", and that is what is checked here.
+    pinned = manifest["population"]["ledger_snapshot_commit"]
+    expected_rows = manifest["population"]["train_development"]
+    nursery = pinned_nursery(pinned)
     expected_source, expected_mapping = generator.build(
-        generator.load(generator.NURSERY),
+        nursery,
         lambda fact_id: generator.load(generator.fact_path(fact_id)),
         modules,
+        expected=expected_rows,
     )
     mapping = load(root / "mapping.json")
     if (root / "source.lean").read_text() != expected_source or mapping != expected_mapping:
@@ -206,7 +239,7 @@ def validate() -> dict[str, Any]:
 
     streams = sorted((root / "streams").glob("*.ndjson"))
     mapped_files = sorted(row["artifact_file"] for row in mapping["rows"])
-    if len(streams) != 138 or [path.name for path in streams] != mapped_files:
+    if len(streams) != expected_rows or [path.name for path in streams] != mapped_files:
         raise CoverageResultError("isolated stream population changed")
     provenance = load(root / "provenance.json")
     if (
