@@ -54,6 +54,15 @@ argument or a separately proved uniform upper bound remains open. Then
 candidate B (tower relations `chi, chi^2, chi^4`). Nothing receives proof
 credit until it closes the endpoint ledger.
 
+**Asymptotic-calibration correction:** the `ell <= 24` exact dumps cannot
+test the large quotient in candidate A. Their cutoff is `Q=1`, and every
+nonresonant `q >= 8` row has `R <= 8`. At the first theorem row `ell=200`,
+`Q=8`; its first unpaid nonresonant row `(j,q)=(199,16)` has
+`R=2^(floor(198/8)-floor(198/16))=4096`. The existing rows are therefore
+valuable to falsify fibrewise claims but not evidence for a uniform large-`R`
+bit-balance theorem. A relevant scaled probe must retain `(j/q,R)`, target
+the identity path, and separately cover the resonant direct-discrepancy rows.
+
 **Evidence correction:** the cylinder-variance analyzer now accumulates every
 cylinder's scaled variance numerator as an integer.  This preserves all
 identity-cylinder values in the checked `ell <= 22` table, while correcting

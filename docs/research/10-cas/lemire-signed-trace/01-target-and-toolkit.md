@@ -255,7 +255,14 @@ the cheapest computation that could refute it before any proof is attempted.
   (`s >= 3`, Weil only). First experiment: tabulate `delta_s - delta_{s-1}`
   and the conditional bit biases for `ell <= 13` (Python) and `ell <= 23`
   (branch CAS), and look for any structure in `s` beyond the four-population
-  identity.
+  identity. This is a falsification/calibration tool, not a sample of the
+  asymptotic quotient geometry: for every `ell <= 24`, its cutoff is `Q=1`
+  and its `q >= 8` nonresonant rows have `R <= 8`. At the first theorem row,
+  `ell=200`, `Q=8`, and the first unpaid nonresonant row `(j,q)=(199,16)` has
+  `d_{s-1}=24`, `d_s=12`, hence `R=4096`. Thus finite data can disprove a
+  proposed fibre symmetry (and do), but cannot establish a uniform large-`R`
+  conditional-balance law. Any scaled experiment must retain `(j/q,R)` and
+  separately sample the direct resonant rows.
 - **B. Tower relations among `chi, chi^2, chi^4, ...`.** Squaring on `E_j` is
   the Frobenius substitution `u(x) -> u(x^2)`, so `S_n(chi^2)` is the
   `F_{2^n}`-subfield part of `S_{2n}(chi)`. The ledger's Adams/Moebius
