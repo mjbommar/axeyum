@@ -1,0 +1,60 @@
+engine: rust (/data0/axeyum/scratch/snap-lemire-signed-trace-47fd7b440/target/release/axeyum-gf2-monomial-family); cross-check engine: python-flint
+
+== controls (each dies if one hypothesis of Theorem A is dropped) ==
+  control-1 rad(t)|e violated (m=2,e=3,t=5): x^10+x^5+1 irreducible=False (flint) / False (rust) -- must be False
+  control-1b rad(t)|e satisfied (m=2,e=3,t=3): x^6+x^3+1 irreducible=True / True -- must be True
+  control-2 gcd(t,(2^m-1)/e) != 1: seed x^6+(1, 2, 4)+1 has order 21, t=3, cond(i)=True cond(ii)=False; f(x^3) of degree 18 irreducible=False / False -- must be False
+  control-3 window preservation t*floor(m/2) <= floor(mt/2): counterexamples over m<200, odd t<200 (must be []): []
+  control-3b non-monomial substitution: exact tail formula km-(k-s)lsb(m) and the criterion (k-s)lsb(m) >= ceil(km/2) -- mismatches (must be []): []
+  control-3b' seed degrees admitting an IN-WINDOW non-monomial composition: [2, 4, 8, 16] (must be exactly the powers of two present: [2, 4, 8, 16]) -- note 09's 'only the degree-2 seed' is false
+  control-5 admissible primes by ord(f) from a sympy factorization of 2^m-1 vs the powmod test, in both engines: 19 seeds (degrees 2..20); disagreements (must be []): []
+  control-4a norm of x^3+w*x+1 over F_4: degree 6, tail degree 4 (prediction n(k-1)+deg g = 4), in-window=False (must be False)
+  control-4b norm of x^5+w over F_4 = x^10+x^5+1: True, tail degree 5, in-window=True (must be True; this is the m=2 family)
+  controls: OK
+
+== admissible primes (seed degrees 2..3000, n <= 100000) ==
+  ord_p(2) for 5132 odd primes p <= 50000 in 0.0s
+  2332 degrees have a candidate prime p <= N/m with p | 2^m-1
+  seed search + admissibility in 114.4s; 2207 degrees contribute at least one usable t
+  W = max_f |A(f)| = 16 (first attained at degree m = 360); the proved lacunarity exponent, so #S(L,N) = O((log N)^16) for this fixed ledger -- asymptotic only, the implied constant is enormous
+    m=2    seeds=[(1,)] admissible primes=[[3]]
+    m=3    seeds=[(1,)] admissible primes=[[7]]
+    m=4    seeds=[(1,)] admissible primes=[[3, 5]]
+    m=5    seeds=[(2,)] admissible primes=[[31]]
+    m=6    seeds=[(1,)] admissible primes=[[3, 7]]
+    m=7    seeds=[(1,)] admissible primes=[[127]]
+    m=8    seeds=[(2, 3, 4)] admissible primes=[[3, 5, 17]]
+    m=9    seeds=[(4,)] admissible primes=[[7, 73]]
+    m=10   seeds=[(3,)] admissible primes=[[3, 11, 31]]
+    m=11   seeds=[(2,)] admissible primes=[[23, 89]]
+    m=12   seeds=[(1, 4, 6)] admissible primes=[[3, 5, 7, 13]]
+    m=14   seeds=[(3, 5, 7)] admissible primes=[[3, 43, 127]]
+
+== the coverage set S ==  built in 0.2s
+  N        |S cap [1,N]|   |S|/N       composites   covered fraction of composites
+  1000     243             0.24300     831          0.29242
+  10000    2086            0.20860     8770         0.23786
+  100000   8394            0.08394     90407        0.09285
+  smallest composites NOT in S: [4, 8, 9, 10, 14, 15, 16, 22, 25, 26, 27, 28, 32, 33]
+  smallest ODD composites NOT in S: [9, 15, 25, 27, 33, 35, 39, 45, 49, 51, 55, 57]
+  primes in S (must be []): []
+  powers of two in S (must be [], t is forced odd): []
+  density trend:
+    N=100      |S|=22       |S|/N=0.220000   proved lacunarity bound sum_m prod_p (1+log_p(N/m)) = 275
+    N=1000     |S|=243      |S|/N=0.243000   proved lacunarity bound sum_m prod_p (1+log_p(N/m)) = 1.56e+04
+    N=10000    |S|=2086     |S|/N=0.208600   proved lacunarity bound sum_m prod_p (1+log_p(N/m)) = 1.25e+06
+    N=100000   |S|=8394     |S|/N=0.083940   proved lacunarity bound sum_m prod_p (1+log_p(N/m)) = 6.51e+07
+
+  witnessing seed degrees m, most used: [(24, 91), (12, 85), (48, 76), (36, 70), (20, 63), (8, 59), (16, 54), (40, 54), (96, 53), (72, 50), (60, 46), (28, 44)]
+  multipliers t, most used: [(3, 565), (27, 541), (9, 537), (7, 527), (31, 416), (49, 363), (5, 290), (25, 290), (81, 225), (23, 193), (17, 188), (15, 171)]
+
+== direct re-verification of f(x^t) (independent of the criterion) ==
+  rust: 411 members re-verified in 20.7s, degrees 6..20000 (pool capped at degree 20000: 3419 of 8394 members); failures (must be []): []
+
+== python-flint cross-check (independent implementation) ==
+  220 of those re-derived in flint in 288.1s, degrees 105..20000
+  rust/flint disagreements (must be []): []
+  flint says out of window (must be []): []
+
+TOTAL 423.7s
+COMPOSITION FAMILY OK

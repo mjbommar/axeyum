@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "id": "F:gf2-lemire-monomial-composition-family",
+  "title": "Lemire's half-degree conjecture is inherited by monomial composition: from any in-window seed of degree m to degree m*t",
+  "statement": "Let f be irreducible over F_2 of degree m with f(0) != 0 and order e = ord(f), and suppose f is in-window, i.e. deg(f - x^m) <= floor(m/2). Let t >= 2 be an integer such that every prime divisor of t divides e but does not divide (2^m-1)/e. Then f(x^t) is irreducible over F_2 of degree m*t and order e*t, and f(x^t) is again in-window, because deg(f(x^t) - x^(m*t)) = t * deg(f - x^m) <= t*floor(m/2) <= floor(m*t/2). Consequently Kaser--Lemire holds at n = m*t. Equivalently, the two hypotheses on t say exactly that for every prime p | t one has v_p(e) = v_p(2^m-1) >= 1, which is decided by the single test x^((2^m-1)/p) != 1 in F_2[x]/(f) and needs no factorization of 2^m-1.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "; NOT a single SMT instance: the statement is universally quantified over (f, m, t). Each instance (fixed f, t) is a decidable irreducibility check over F_2, machine-verified by the Rust GF(2) CAS (Rabin certificate produced and replay-checked) and independently by python-flint. The family is proved by Lidl-Niederreiter Thm 3.35 plus the one-line window computation, not by SMT.",
+    "fragment": "none",
+    "free_symbols": [
+      "f",
+      "m",
+      "e",
+      "t"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "evidence": [
+    {
+      "id": "lidl-niederreiter-3-35-plus-window-scaling",
+      "kind": "bound-citation",
+      "supports": "statement",
+      "check_status": "checked",
+      "detail": "Irreducibility of f(x^t) of degree m*t and order e*t is Lidl-Niederreiter, Finite Fields (Encyclopedia of Mathematics and its Applications 20), 2nd ed., Thm 3.35, under exactly the hypotheses rad(t) | e and gcd(t, (q^m-1)/e) = 1 (plus q^m = 1 mod 4 when 4 | t, which is vacuous at q = 2 because e | 2^m-1 is odd, so (i) forces t odd). The window half is arithmetic: f(x^t) - x^(m*t) = (f - x^m)(x^t), so its degree is t*deg(f - x^m) <= t*floor(m/2) <= floor(m*t/2) for every t >= 1; monomial substitution scales tail and degree by the same factor.",
+      "notes": "The window inequality t*floor(m/2) <= floor(m*t/2) is machine-checked for all m < 200 and all odd t < 200 as control-3 of the evidence script."
+    },
+    {
+      "id": "rust-cas-criterion-and-direct-recheck",
+      "kind": "exhaustive-enumeration",
+      "supports": "statement",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum-cas-gf2-monomial-prime-eligibility",
+        "axeyum-cas-gf2-certify-irreducible-plus-replay",
+        "python-flint-0.9.0-rabin",
+        "sympy-order-of-f-from-factorization-of-2-to-m-minus-1"
+      ],
+      "checker_command": "python scripts/lemire-signed-trace/lemire_composition_family.py --nmax 100000 --sample 400 --flint-crosscheck 220 --procs 20",
+      "checker_seconds": 420,
+      "detail": "Two engines, never sharing an implementation. PRIMARY: the lane's Rust GF(2) CAS -- monomial_prime_eligibility decides the per-prime hypothesis (x^((2^m-1)/p) != 1 mod f), and certify_irreducible + check_irreducible_certificate produce and replay-check a Rabin/Bezout certificate for the CONCLUSION f(x^t). CROSS-CHECK: python-flint re-derives verdicts by an independent Rabin test. Measured 2026-08-22 at N = 10^5 over the lane's certified seed ledger (one in-window irreducible for every degree m <= 3000, plus a bounded per-degree search): the reachable set S has |S| = 22 / 243 / 2086 / 8394 at N = 10^2 / 10^3 / 10^4 / 10^5; 411 members were re-verified irreducible AND in-window by the direct Rust route at degrees 6..20000, 220 of them re-derived a third time in flint with ZERO disagreements, and larger members were checked by hand (degrees 50421, 97500, 118098). The script asserts engine agreement, that no prime and no power of two is in S, and exits nonzero otherwise. Four mutation controls each die when one hypothesis is dropped: (1) rad(t) | e violated -- x^10+x^5+1 (m=2, e=3, t=5) is reducible, with its positive twin x^6+x^3+1 irreducible; (2) gcd(t,(2^m-1)/e) = 1 violated -- the degree-6 seed of order 21 has 3 | 21 but (2^6-1)/21 = 3, and its cubic composition of degree 18 is reducible; (3) the window inequality t*floor(m/2) <= floor(m*t/2) holds for all m < 200 and odd t < 200, and (3b) the exact NON-monomial tail formula k*m - (k-s)*lsb(m) is confirmed, its in-window solutions being exactly the power-of-two seed degrees; (4) the norm map from F_4[x] leaves the window except at a constant tail, where it reproduces the m = 2 family. A fifth control derives the admissible prime set A(f) a THIRD way -- ord(f) computed outright from a sympy factorization of 2^m-1, then A(f) = {p : v_p(ord f) = v_p(2^m-1)} -- and asserts it agrees with the powmod test in both engines on one in-window seed of every degree 2..20 (19 seeds, zero disagreements)."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-22",
+    "established_by": "lane lemire-signed-trace (angle 3, construction/Galois); the irreducibility half is a textbook theorem, applied to this lane's certified in-window seed ledger",
+    "source": "docs/research/10-cas/lemire-signed-trace/08-infinite-family.md",
+    "prior_art": [
+      {
+        "who": "R. Lidl and H. Niederreiter",
+        "what": "f irreducible of degree m and order e over F_q, t >= 2 with rad(t) | e and gcd(t, (q^m-1)/e) = 1 (and q^m = 1 mod 4 if 4 | t) implies f(x^t) irreducible of degree mt and order et",
+        "where": "Finite Fields, Encyclopedia of Mathematics and its Applications 20, 2nd ed., Theorem 3.35",
+        "year": 1997,
+        "attribution": "standard textbook attribution; this lane did not consult the primary source, but the criterion is independently implemented and machine-checked in this repository's own GF(2) CAS (axeyum_cas::gf2::monomial_composition_criterion, which attributes the equivalence of x^t - alpha irreducible over F_(2^m) with f(x^t) irreducible over F_2 to Capell's lemma) and every instance quoted here was verified by direct irreducibility testing in two independent engines"
+      },
+      {
+        "who": "H. Fredricksen and R. Wisniewski",
+        "what": "x^(2k)+x^k+1 is irreducible over GF(2) iff k is a power of 3 -- the m = 2 case of the theorem above",
+        "where": "Information and Control 50 (1981)",
+        "year": 1981,
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "concept_refs": [],
+  "notes": "The contribution here is NOT the irreducibility theorem, which is textbook, but the observation that monomial substitution is exactly window-preserving -- the tail and the degree scale by the same factor t -- so the theorem transports Kaser--Lemire from a seed degree m to every degree m*t with t admissible. F:gf2-lemire-cyclotomic-infinite-family is the special case m = 2, f = x^2+x+1, e = 3, t = 3^k. Odd n occur: m = 3, f = x^3+x+1, e = 7 gives n = 3*7^k (x^21+x^7+1, x^147+x^49+1, x^1029+x^343+1, ...), refuting the first version of note 08's claim that the provable family gives only even n. Scope is honest and unchanged in kind: applied to a FINITE ledger of known seeds (this lane certifies one in-window irreducible for every degree m <= 3000), the set of degrees this theorem reaches has counting function O((log N)^W) and hence density zero; it never contains a prime n, and never a power of two, because the hypotheses force t odd and t >= 2. Converting it into a positive-density statement would require in-window seeds at a positive density of degrees, which IS the conjecture. The all-n statement still needs the phase-aware estimate F:gf2-lemire-cylinder-twist-sup-bound.",
+  "proof_route": "search-certificate",
+  "axiom_footprint": [
+    "lidl-niederreiter-thm-3-35-monomial-substitution-irreducibility-criterion",
+    "capell-lemma-x-to-t-minus-alpha-irreducible-over-f-2-to-m-iff-f-of-x-to-t-irreducible-over-f-2",
+    "rabin-irreducibility-criterion-over-gf2",
+    "axeyum-cas-gf2-bounded-polynomial-arithmetic",
+    "flint-nmod-poly-arithmetic-over-gf2"
+  ]
+}

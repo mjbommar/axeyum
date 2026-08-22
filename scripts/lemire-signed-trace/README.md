@@ -70,6 +70,49 @@ test, roughly 100x slower. Nothing else is required.
   degree-doubling through `chi -> chi^2` supplies no bound: the new
   Liouville-weighted term is not a Hayes character sum.
 
+- `lemire_composition_family.py` -- **Theorem A** of note 08 (monomial composition
+  transports Kaser--Lemire from an in-window seed of degree `m` to every degree
+  `m*t` with `rad(t) | ord(f)` and `gcd(t, (2^m-1)/ord f) = 1`; Lidl--Niederreiter
+  Thm 3.35 plus the one-line window computation), the exact coverage set
+  `S(L,N)` over the certified seed ledger, the density trend against the proved
+  `O((log N)^W)` lacunarity bound, the smallest uncovered composite, and the
+  prime-`n` / power-of-two blockers of note 09.
+
+  Two engines, never sharing an implementation. **Primary: the lane's Rust
+  `GF(2)` CAS** -- `axeyum-gf2-monomial-family`, a batch driver over
+  `axeyum_cas::gf2::{monomial_prime_eligibility, certify_irreducible,
+  check_irreducible_certificate}` (source in the snapshot at
+  `crates/axeyum-cas/src/bin/axeyum-gf2-monomial-family.rs`; build with
+  `AXEYUM_CARGO_LOCK=... scripts/cargo-serialized.sh build --release -p axeyum-cas
+  --bin axeyum-gf2-monomial-family` from the snapshot root). It is 10--300x
+  faster than python-flint here, being bit-packed with a sparsity-aware
+  reduction, so degree `10^5` compositions are seconds rather than minutes.
+  **Cross-check: python-flint**, which re-derives a sample of the same verdicts
+  by an independent Rabin test; the script asserts the two engines agree and
+  exits nonzero if they do not. Point `AXEYUM_GF2_MONOMIAL_FAMILY` at the binary,
+  or pass `--rust-binary`; `--engine flint` runs the whole computation on flint
+  alone. It refuses to fall back silently when the binary is missing.
+
+  Five mutation controls, each of which dies when one hypothesis of Theorem A is
+  dropped: (1) `rad(t) | e` violated (`x^10+x^5+1` reducible) with its positive
+  twin `x^6+x^3+1`; (2) `gcd(t,(2^m-1)/e) = 1` violated at the degree-6 seed of
+  order 21 (`f(x^3)` of degree 18 reducible); (3) the window inequality
+  `t*floor(m/2) <= floor(mt/2)` and (3b) the exact non-monomial tail formula
+  `k*m - (k-s)*lsb(m)`, whose in-window solutions are exactly the power-of-two
+  seed degrees; (4) the norm map from `F_4[x]` leaves the window except at a
+  constant tail, where it reproduces the `m = 2` family; (5) the admissible
+  prime set derived a third way -- `ord(f)` from a sympy factorization of
+  `2^m-1` -- agrees with the powmod test in both engines on every degree
+  `2..20`.
+
+  ```sh
+  python lemire_composition_family.py --nmax 100000 --sample 400 \
+      --flint-crosscheck 220 --procs 24 --out data/composition-coverage.txt
+  ```
+
+  Generated table: `data/composition-coverage.txt`.  Ledger fact:
+  `F:gf2-lemire-monomial-composition-family`.
+
 - `lemire_witness_search.py <lo> <hi>` -- flint-based sparse witness search with
   independent pure-Python Rabin re-verification (cross-check for the Rust certifier).
 

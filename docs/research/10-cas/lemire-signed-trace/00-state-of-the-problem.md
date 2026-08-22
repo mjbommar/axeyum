@@ -18,10 +18,17 @@ the square-root scale). It is the identity ray class of
 1. **Certified to `n = 3000`.** A doubly-certified half-degree irreducible for
    every `n <= 3000` (note: the finite handoff; 2600/2600 for `401..3000`,
    both checkers plus an independent flint re-check).
-2. **An unconditional infinite family** (note 08, fact
-   `F:gf2-lemire-cyclotomic-infinite-family`): `Phi_{3^{k+1}} =
-   x^{2*3^k}+x^{3^k}+1` is irreducible and in-window, so the conjecture holds
-   at every `n = 2*3^k`. First proven infinite family; density zero, even `n`.
+2. **Unconditional infinite families, one per seed** (note 08 Theorem A, fact
+   `F:gf2-lemire-monomial-composition-family`): if `f` is an in-window
+   irreducible of degree `m` and order `e`, and `rad(t) | e`,
+   `gcd(t,(2^m-1)/e) = 1`, then `f(x^t)` is an in-window irreducible of degree
+   `mt` (Lidl--Niederreiter Thm 3.35 plus the fact that monomial substitution
+   scales tail and degree by the same factor). `m = 2` is the cyclotomic family
+   `Phi_{3^{k+1}} = x^{2*3^k}+x^{3^k}+1`, `n = 2*3^k` (fact
+   `F:gf2-lemire-cyclotomic-infinite-family`); `m = 3` gives the ODD family
+   `n = 3*7^k`. Applied to this lane's certified seed ledger the reachable set
+   covers 9.3% of the composites below `10^5` and has density zero
+   asymptotically; it never contains a prime `n`.
 3. **An almost-all theorem** (note 05, public PDF): all but `< 4 ell^2 2^{-ell}`
    of the `2^ell` top-half patterns are realized by an irreducible of degree
    `n`; sharp constant `ell^2-4ell+6`. Lemire is exactly the claim that the one
@@ -54,11 +61,19 @@ traces vanish -- and every general method reduces to the same missing estimate.
   has size `<= 2 < 4 ell^2`; the Hecke action is transitive but degree-shifting.
   No group action moves the identity into the non-exceptional set.
 - **Barrier III (construction), note 09.** Every provable irreducibility-
-  preserving construction multiplies the degree, so window families are
-  lacunary (density zero); no finite union covers a residue class. The proven
-  family `n = 2*3^k` is the best reachable; a positive-density explicit family
-  would need a new arithmetic-progression seed, and the provable
-  prescribed-coefficient ceiling at `q = 2` is `sqrt n`, far below `n/2`.
+  preserving construction multiplies the degree, so it transports the conjecture
+  from known degrees to their multiples and is structurally silent at **prime**
+  `n` (`n = m*t` has no factorization with both factors `>= 2`) and at powers of
+  two. For a fixed finite seed ledger the reachable set has counting function
+  `O((log N)^W)`, hence density zero; a positive-density explicit family would
+  need in-window seeds at a positive density of degrees, which is the conjecture
+  itself. Separately -- and this is a counting theorem, not a construction, so it
+  is not what Barrier III blocks -- the provable prescribed-coefficient ceiling
+  for the TOP positions at `q = 2` is `n/2 - log_2 n` (Hayes/Weil, sharp form
+  Hsu 1996 = Cohen 2005), so Kaser--Lemire is `~log_2 n` coefficients past Weil:
+  the classical square-root barrier, not a power gap. (`sqrt n` is the ceiling
+  for *arbitrary* coefficient positions -- Pollack 2013 -- and quoting it here
+  was an error in the first version of note 09.)
 - **The wall (phase correlation), note 07.** The one input no barrier blocks is
   a phase-aware correlation among the `S_n(chi)` -- the cylinder covariance
   `C = sum_{chi != chi'} S_n(chi) conj(S_n(chi'))`. Measured exactly: random in
