@@ -4,7 +4,7 @@
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_dvd`, `Int.fib_of_nonneg`, `Nat.fib_pos`, `Nat.fib_eq_zero`, and now `Int.fib_eq_zero` are durably proved with empty kernel footprints. An isolated clean replay independently reproduced `Int.fib_eq_zero` selection, certified execution, exit-75 recovery, exactly one ledger write, its proved fact, and the preregistered empty readiness delta.
 
-**Next:** apply the preregistered hash-only dependency correction to the completed pair-case imports, then freeze the four concrete `Int.fib_add` constructor branches over admitted recurrence and integer-presentation capsules.
+**Next:** compile a generic bi-infinite Fibonacci-recurrence uniqueness theorem, then separately freeze its deterministic empty-footprint export before specializing it to `Int.fib_add`.
 
 <!-- plan-section: landed-changes -->
 
@@ -33,6 +33,7 @@
 | 2026-08-22 | (pending) | One pinned root export and nonrendering import reject official `Int.fib_add` as assumption-bearing while localizing its replacement boundary to five direct theorem dependencies |
 | 2026-08-22 | (pending) | Five-root localization finds clean `Eq.symm` and `Int.eq_nat_or_neg` but rejects all three private sign-case proofs; a generic four-branch integer pair eliminator is frozen before source construction |
 | 2026-08-22 | (pending) | The generic pair eliminator compiles and reproduces empty-footprint twice, but exact clean dependencies include `Exists.elim` and `Or.elim`; V1 receives zero credit and V2 freezes hash-only correction without proof rerun |
+| 2026-08-22 | (pending) | Hash-only V2 accepts the pair eliminator with exact clean dependencies; recurrence uniqueness replaces four separate sign quadrants as the smaller reusable route to `Int.fib_add` |
 
 | 2026-08-21 | (pending) | The newly ready `Int.gcd_fib` route is frozen through one target-owned Fibonacci/natAbs bridge and the two exact admitted premise capsules before source construction or proof-stream access |
 | 2026-08-21 | (pending) | Closure analysis corrects the bridge boundary before execution: export a dependency-free two-parameter residual, then specialize it with exact clean `Int.fib_neg` and `Int.natAbs_neg` roots |
