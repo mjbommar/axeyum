@@ -4,7 +4,7 @@
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_gcd`, and now `Int.fib_dvd` are durably proved with empty kernel footprints. The exact `Int.fib_dvd` operation survived an exit-75 intent fault without changing the fact, recovery performed exactly one authoritative ledger write, the measured frontier produced the preregistered empty unlock delta, and isolated replay `e836fa51…667f` reproduced all ten semantic checks from a clean reconstructed prestate.
 
-**Next:** preregister one fail-if-present execution of the compiled exact `Int.fib_of_nonneg` driver; require checked composition and specialization replay, two fresh imports, the exact two-root dependency set, and zero ledger writes.
+**Next:** execute the corrected fail-if-present V2 boundary: one binary build, one exact `Int.fib_of_nonneg` invocation, checked composition/specialization replay, two fresh imports, and zero ledger writes.
 
 <!-- plan-section: landed-changes -->
 
@@ -121,6 +121,7 @@
 | 2026-08-22 | (pending) | V6 qualifies the exact `[Eq.symm]` residual closure from the two prior empty-footprint imports without rerunning any exporter, importer, theorem submission, or ledger write |
 | 2026-08-22 | (pending) | V7 freezes exact `Int.fib_of_nonneg` specialization over the clean definition capsule and qualified residual, expecting direct roots `[residual, Int.fib_natCast]` with `Eq.symm` retained in closure |
 | 2026-08-22 | (pending) | The exact nonnegative Fibonacci driver compiles Clippy-clean after its single authorized compilation with both proof streams still unread; execution remains separately gated |
+| 2026-08-22 | (pending) | Clippy left no runnable example binary, so V1's compilation budget is exhausted without stream access; V2 explicitly freezes one binary build and one fail-if-present execution rather than silently overspending |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |

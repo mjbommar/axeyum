@@ -9,9 +9,7 @@ use axeyum_lean_import::{
     ImportLimits, canonical_declaration_sha256, compose_checked_theorem_slice, import_ndjson,
     verify_checked_theorem_composition,
 };
-use axeyum_lean_kernel::{
-    BinderInfo, Declaration, ExprId, Kernel, Lean4ExportMetadata, NameId,
-};
+use axeyum_lean_kernel::{BinderInfo, Declaration, ExprId, Kernel, Lean4ExportMetadata, NameId};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
@@ -51,7 +49,10 @@ fn run() -> Result<(), String> {
         .zip(INPUT_SHA256)
         .map(|(path, hash)| import_bound(path, hash))
         .collect::<Result<Vec<_>, _>>()?;
-    if imports.iter().any(|imported| !imported.report().axioms.is_empty()) {
+    if imports
+        .iter()
+        .any(|imported| !imported.report().axioms.is_empty())
+    {
         return Err("an input stream reaches assumptions".to_owned());
     }
     require_bound_root(
@@ -206,13 +207,8 @@ fn add_int_fib_dvd(kernel: &mut Kernel) -> Result<(), String> {
         &[],
         &[abs_m, abs_n, abs_indices_dvd],
     );
-    let nat_fibonacci_divisibility_ty = dvd(
-        kernel,
-        nat_ty,
-        "Nat.instDvd",
-        nat_fib_abs_m,
-        nat_fib_abs_n,
-    )?;
+    let nat_fibonacci_divisibility_ty =
+        dvd(kernel, nat_ty, "Nat.instDvd", nat_fib_abs_m, nat_fib_abs_n)?;
     require_closed_link(
         kernel,
         nat_fibonacci_divisibility,
@@ -327,16 +323,7 @@ fn add_int_fib_dvd(kernel: &mut Kernel) -> Result<(), String> {
         int_ty,
         proposition_with_h,
     );
-    let value = close_lam2(
-        kernel,
-        m_id,
-        n_id,
-        "m",
-        "n",
-        int_ty,
-        int_ty,
-        proof_with_h,
-    );
+    let value = close_lam2(kernel, m_id, n_id, "m", "n", int_ty, int_ty, proof_with_h);
     kernel
         .add_declaration(Declaration::Theorem {
             name,
@@ -360,16 +347,9 @@ fn require_closed_link(
     label: &str,
 ) -> Result<(), String> {
     let closed_proof = close_lam(kernel, h_id, "h", hypothesis_ty, proof);
-    let closed_proof = close_lam2(
-        kernel, m_id, n_id, "m", "n", int_ty, int_ty, closed_proof,
-    );
+    let closed_proof = close_lam2(kernel, m_id, n_id, "m", "n", int_ty, int_ty, closed_proof);
     let h_binder = nested_name(kernel, &["h"]);
-    let closed_expected = kernel.pi(
-        h_binder,
-        hypothesis_ty,
-        expected,
-        BinderInfo::Default,
-    );
+    let closed_expected = kernel.pi(h_binder, hypothesis_ty, expected, BinderInfo::Default);
     let closed_expected = close_pi2(
         kernel,
         m_id,
@@ -426,13 +406,7 @@ fn eq_rec_transport(
     let result = kernel.app(motive, destination);
     let premise = equality_type(kernel, domain, left, destination)?;
     let dependent_motive = close_lam(kernel, equality_id, "h", premise, result);
-    let dependent_motive = close_lam(
-        kernel,
-        destination_id,
-        "b",
-        domain,
-        dependent_motive,
-    );
+    let dependent_motive = close_lam(kernel, destination_id, "b", domain, dependent_motive);
     let rec = find_name(kernel, "Eq.rec")?;
     let zero = kernel.level_zero();
     let domain_level = kernel.level_succ(zero);
@@ -478,7 +452,9 @@ fn import_bound(
     let bytes = fs::read(path).map_err(|error| format!("input read failed: {error}"))?;
     let actual = hex_sha256(&bytes);
     if actual != expected_sha256 {
-        return Err(format!("input hash changed: expected {expected_sha256}, got {actual}"));
+        return Err(format!(
+            "input hash changed: expected {expected_sha256}, got {actual}"
+        ));
     }
     import_ndjson(Cursor::new(bytes), ImportLimits::default())
         .map_err(|error| format!("input import failed: {error:?}"))
@@ -491,7 +467,9 @@ fn require_bound_root(kernel: &Kernel, name: &str, expected: &str) -> Result<(),
     if actual == expected {
         Ok(())
     } else {
-        Err(format!("{name} declaration changed: expected {expected}, got {actual}"))
+        Err(format!(
+            "{name} declaration changed: expected {expected}, got {actual}"
+        ))
     }
 }
 
