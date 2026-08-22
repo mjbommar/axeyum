@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-fib-construction-plan-v5",
+  "state": "preregistered-before-single-durable-blocker-path-read",
+  "tool_repair": {
+    "path": "artifacts/autogenesis/int-gcd-fib-blocker-auditor-repair-result-v1.json",
+    "sha256": "d1ce2e6acf00ccfbacb7597501bc4bb8195d71d0efb009ccd08e582c4fd3b6f8"
+  },
+  "input": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-natabs-residual-v1/residual-1.ndjson",
+    "bytes": 9846065,
+    "sha256": "5ae684d7b5e254e4f523aff84816b697f3647e8fa51c7d1dae98401ace367152",
+    "mode": "0444",
+    "textual_read_allowed": false
+  },
+  "root": "Axeyum.Autogenesis.intFibNatAbsResidualV1",
+  "ordered_blockers": [
+    "Classical.choice",
+    "Lean.opaqueId",
+    "Quot",
+    "Quot.lift",
+    "Quot.mk",
+    "Quot.sound",
+    "String.Internal.append",
+    "propext"
+  ],
+  "execution": {
+    "tool_path": "crates/axeyum-lean-import/examples/declaration_blocker_path_batch_audit.rs",
+    "tool_sha256": "eb3b70fb0c730e30f67d95996711b3e1db75787f4c0edab3e5a34bdeda5f2739",
+    "output_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-natabs-blocker-path-v1/report.json",
+    "output_must_not_preexist": true,
+    "max_importer_runs": 1,
+    "max_proof_bearing_stream_reads": 1,
+    "max_retries": 0,
+    "max_theorem_submissions": 0,
+    "max_ledger_writes": 0
+  },
+  "acceptance": {
+    "report_parseable": true,
+    "report_synced": true,
+    "all_eight_blockers_classified": true,
+    "candidate_closures_reused_across_blockers": true,
+    "rendered_proof_terms": 0,
+    "rendered_theorem_types": 0,
+    "rendered_theorem_values": 0
+  },
+  "authority": {
+    "reconstruction_allowed": false,
+    "proof_bodies_readable_by_model": false,
+    "definition_bodies_readable_by_model": false,
+    "theorem_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_on_accept": "select the nearest common contaminated carrier and freeze its smallest target-owned replacement"
+}
