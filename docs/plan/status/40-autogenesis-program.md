@@ -92,6 +92,7 @@
 | 2026-08-22 | (pending) | V21 adds exactly that scoped allowance and builds the dependent `Eq.rec` motive Clippy-clean, without reading capsules or changing the proof |
 | 2026-08-22 | (pending) | V22 freezes one dependent-motive execution through all five closed link checks, one target submission, one export, and two fresh imports before rereading capsules |
 | 2026-08-22 | (pending) | V22 passes all five links, constructs exact `Int.fib_dvd` with six fixed dependencies and empty footprint, reproduces twice, and seals a 1,197,314-byte capsule with zero ledger writes |
+| 2026-08-22 | (pending) | One hash-only, nonrendering read of the sealed `Int.fib_dvd` root is frozen to bind its canonical kernel type before operation registration or ledger authority |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
