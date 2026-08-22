@@ -1,0 +1,13 @@
+{
+  "schema_version":1,
+  "kind":"axeyum-autogenesis-mathlib-int-fib-of-nonneg-if-pos-export-result-v2",
+  "state":"qualified-sealed-if-pos-root-empty-footprint",
+  "plan":{"path":"artifacts/autogenesis/mathlib-int-fib-of-nonneg-if-pos-export-plan-v2.json","sha256":"8f8888b8663efc7ad26c36987ba8db058fcaa1d349f5c90dee955f0090b8fc15"},
+  "environment":{"host":"server5","mathlib_commit":"c5ea00351c28e24afc9f0f84379aa41082b1188f","lean_version":"4.30.0","lean_githash":"d024af099ca4bf2c86f649261ebf59565dc8c622"},
+  "capsule":{"path":"/nas3/data/axeyum/autogenesis/reference-packs/if-pos-mathlib-basic-v1/root.ndjson","bytes":18458,"sha256":"71daf2d6a8486884799f54856d1dc305529659e38edc7fd16befd9a8848d0b55","manifest_sha256":"28fc2036e91d811eadd6e64ea5945a35df08c6afea85e6952709aa9d68c10fe3"},
+  "theorem":{"name":"if_pos","canonical_type_sha256":"bea4c2dc0742e0d32e503e825af128997b6f84e269773683edab93a29ee599aa","canonical_declaration_sha256":"389c40b4ea4ac025ec31cf30ae1e601a6c9780952a08f1220a875db7fcf4e09a","axiom_footprint":[],"direct_theorem_dependencies":[]},
+  "execution":{"exporter_invocations":1,"exporter_stderr_bytes":0,"root_stream_writes":1,"importer_runs":2,"observations_identical":true,"forbidden_target_scans":1,"forbidden_target_present":false,"retries":0,"target_theorem_submissions":0,"ledger_writes":0},
+  "rendered_material":{"proof_terms":0,"theorem_types":0,"theorem_values":0},
+  "authority":{"support_credit":1,"target_theorem_credit":0,"fact_status_changes":0,"ledger_writes":0},
+  "next":"preregister one exact direct kernel construction of Int.fib_of_nonneg from target-owned Int.fib and qualified if_pos"
+}
