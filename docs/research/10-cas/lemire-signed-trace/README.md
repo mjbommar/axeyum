@@ -16,6 +16,11 @@ Kaser--Lemire half-degree-irreducibles chain (sibling repository
   power-map pullbacks, `Z/2^e` code), the shortcuts killed in this rung
   (parity, Swan, explicit-formula LP, Cauchy--Schwarz over twists), and the
   next experiments.
+- [03-uncertainty-analogy.md](03-uncertainty-analogy.md) -- the gap as a
+  Fourier-uncertainty gap on `E_ell` (exact), the Witt-order filtration as
+  the Clifford hierarchy of diagonal gates with Kerdock at the stabilizer
+  boundary (exact), and the interference / delocalization reading of the
+  missing inequality (analogy), with what each would have to become.
 
 Executable companions live in
 [`scripts/lemire-signed-trace/`](../../../../scripts/lemire-signed-trace/README.md).
