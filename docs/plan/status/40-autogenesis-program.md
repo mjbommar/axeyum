@@ -4,7 +4,7 @@
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_dvd`, `Int.fib_of_nonneg`, and now `Nat.fib_pos` are durably proved with empty kernel footprints. `Nat.fib_pos` survived an exit-75 intent fault unchanged, recovered with exactly one ledger write, passed its registered checker, and produced the preregistered empty readiness delta.
 
-**Next:** freeze one current-source binary build and one fail-if-present exact `Nat.fib_eq_zero` execution; focused Clippy passed without reading either proof stream or leaving a runnable binary.
+**Next:** execute committed V2 once: build the exact `Nat.fib_eq_zero` driver, compose and specialize its two sealed inputs, reimport twice, and seal the output with zero ledger writes.
 
 <!-- plan-section: landed-changes -->
 
@@ -173,6 +173,7 @@
 | 2026-08-22 | (pending) | V4 rebuilds the module explicitly, exports two 99,415-byte streams byte-identically, and qualifies the empty-footprint residual with exact clean dependencies `[Eq.symm, Iff.mpr, congrArg]` after two nonrendering imports |
 | 2026-08-22 | (pending) | Exact `Nat.fib_eq_zero` is frozen as one checked residual composition and one four-argument specialization over the sealed `Nat.fib_pos` capsule, expecting four direct theorem dependencies and zero ledger writes |
 | 2026-08-22 | (pending) | The exact `Nat.fib_eq_zero` driver passes focused Clippy under its single compile budget with both proof streams unread; Clippy leaves no runnable binary, so execution remains separately gated |
+| 2026-08-22 | (pending) | V2 freezes one current-source binary build and one fail-if-present exact `Nat.fib_eq_zero` execution from `26c1bceb9`, including one output-directory creation and zero ledger authority |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
