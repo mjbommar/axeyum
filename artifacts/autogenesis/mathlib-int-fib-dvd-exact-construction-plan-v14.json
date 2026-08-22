@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-dvd-exact-construction-plan-v14",
+  "state": "preregistered-direct-int-dvd-hypothesis-before-code-change",
+  "predecessor": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-dvd-exact-execution-result-v13.json",
+    "sha256": "eda869d822f1fc32a1c57a781e6451d54d0e4a0b4869c169a2bf0cf788b10d39"
+  },
+  "correction": {
+    "implementation": "crates/axeyum-lean-import/examples/int_fib_dvd_exact.rs",
+    "remove": "infer the domain of the open forward application",
+    "add": "construct Dvd.dvd Int Int.instDvd m n with the same generic helper used for Nat divisibility",
+    "proof_chain_change": "none after introduction of h",
+    "expected_new_theorem_dependencies": []
+  },
+  "execution": {
+    "max_driver_builds": 1,
+    "max_complete_invocations": 0,
+    "max_input_stream_reads": 0,
+    "max_target_theorem_submissions": 0,
+    "max_target_exports": 0,
+    "max_fresh_target_imports": 0,
+    "max_retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "focused_clippy_exit_status": 0,
+    "function_domain_helper_removed": true,
+    "direct_int_dvd_type_present": true
+  },
+  "next_on_accept": "authorize one new complete execution with unchanged four capsules and proof chain"
+}

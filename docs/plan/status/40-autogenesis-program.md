@@ -74,6 +74,7 @@
 | 2026-08-22 | (pending) | V12 wrapper stops before driver launch because Clippy produced metadata but no runnable example binary; output stays absent and every proof-read, composition, target, and ledger counter remains zero |
 | 2026-08-22 | (pending) | V13 freezes one `cargo run` that includes the missing executable build and the unchanged four-input proof execution, with the same no-retry target and import budgets |
 | 2026-08-22 | (pending) | V13 reads all four capsules and replays three compositions, then declines before target submission because `infer` cannot type an open `m,n` hypothesis; output and ledger remain untouched |
+| 2026-08-22 | (pending) | V14 freezes replacing only open-term inference with direct `Dvd.dvd Int Int.instDvd m n` construction; the proof chain after `h` and every dependency prediction stay unchanged |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
