@@ -30,6 +30,8 @@ const LABELS: [&str; 5] = [
 ];
 
 const NAT_DOUBLE: &str = "Axeyum.Autogenesis.intNegNatDoubleV2";
+const NAT_DOUBLE_DECL_SHA256: &str =
+    "693e5bf7ae54debf66eca058b166b6e1e91898524b8a21d6471eba65ce168c2f";
 const NEG_NEG: &str = "Axeyum.Autogenesis.intNegNegV2";
 const NEG_DOUBLE_RESIDUAL: &str = "Axeyum.Autogenesis.intNegDoubleResidualV1";
 const NEG_DOUBLE: &str = "Axeyum.Autogenesis.intNegDoubleV1";
@@ -85,12 +87,20 @@ fn run() -> Result<(), String> {
     let mut kernel = imports[0].kernel().clone();
     let mut composition_receipts = Vec::new();
     let mut specialization_receipts = Vec::new();
-    composition_receipts.push(compose(
-        imports[1].kernel(),
-        &mut kernel,
-        &[NAT_DOUBLE],
-        "natural double negation",
-    )?);
+    let source_nat_double = find_name(imports[1].kernel(), NAT_DOUBLE)?;
+    let target_nat_double = find_name(&kernel, NAT_DOUBLE)?;
+    require_empty(&kernel, target_nat_double, NAT_DOUBLE)?;
+    for (label, current, name) in [
+        ("source", imports[1].kernel(), source_nat_double),
+        ("target", &kernel, target_nat_double),
+    ] {
+        let actual = canonical_declaration_sha256(current, name)?;
+        if actual != NAT_DOUBLE_DECL_SHA256 {
+            return Err(format!(
+                "{label} natural double negation identity changed: expected {NAT_DOUBLE_DECL_SHA256}, got {actual}"
+            ));
+        }
+    }
     composition_receipts.push(compose(
         imports[2].kernel(),
         &mut kernel,
@@ -186,8 +196,9 @@ fn run() -> Result<(), String> {
             "execution": {
                 "complete_invocations": 1,
                 "input_stream_reads": 5,
-                "composition_operations": 4,
-                "composition_replays": 4,
+                "exact_reuse_checks": 1,
+                "composition_operations": 3,
+                "composition_replays": 3,
                 "specialization_operations": 4,
                 "specialization_replays": 4,
                 "capsule_exports": 1,
