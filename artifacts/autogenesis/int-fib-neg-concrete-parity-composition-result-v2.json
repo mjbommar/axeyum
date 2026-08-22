@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-concrete-parity-composition-result",
+  "state": "declined-before-composition-on-preregistered-lift-hash-mismatch",
+  "plan": "artifacts/autogenesis/int-fib-neg-concrete-parity-composition-plan-v2.json",
+  "mismatch": {
+    "input": "nat_double_neg",
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-constructor-lift-v2/roots-1.ndjson",
+    "preregistered_sha256": "a00d0b93b55500c04928939ea2ff00d4d35b4caa0e0fa96fefeebf1be3f3c6",
+    "observed_sha256": "a00d0b93b55500c04928939ea2ff00c4d0d35b4caa0e0fa96fefeebf1be3f3c6",
+    "classification": "preregistration-transcription-error"
+  },
+  "execution": {
+    "complete_invocations": 1,
+    "raw_input_reads": 2,
+    "ndjson_imports": 1,
+    "composition_operations": 0,
+    "specialization_operations": 0,
+    "capsule_writes": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "output_present": false,
+  "authority": {
+    "support_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0
+  },
+  "next": "Freeze only the observed sealed lift SHA correction before another invocation."
+}

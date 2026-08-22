@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-concrete-parity-composition-plan",
+  "state": "preregistered-exact-reuse-correction-before-code-or-reread",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-fib-neg-nat-double-exact-reuse-result-v1.json",
+    "required_state": "natural-double-negation-exact-reuse-qualified"
+  },
+  "correction": {
+    "remove_composition_root": "Axeyum.Autogenesis.intNegNatDoubleV2",
+    "require_source_and_target_declaration_sha256": "693e5bf7ae54debf66eca058b166b6e1e91898524b8a21d6471eba65ce168c2f",
+    "require_target_axiom_footprint": [],
+    "other_compositions_specializations_inputs_and_output_unchanged": true
+  },
+  "driver": "crates/axeyum-lean-import/examples/int_fib_neg_concrete_parity_composition.rs",
+  "budget": {
+    "driver_edits": 1,
+    "focused_builds": 1,
+    "complete_invocations": 1,
+    "input_stream_reads": 5,
+    "exact_reuse_checks": 1,
+    "composition_operations": 3,
+    "composition_replays": 3,
+    "specialization_operations": 4,
+    "specialization_replays": 4,
+    "capsule_exports": 1,
+    "fresh_imports": 2,
+    "retries": 0,
+    "exact_target_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "exported_roots": [
+      "Axeyum.Autogenesis.intNegDoubleV1",
+      "Axeyum.Autogenesis.intEvenNegV1",
+      "Axeyum.Autogenesis.intEvenOfNatModTwoV1",
+      "Axeyum.Autogenesis.intEvenNegOfNatModTwoV1"
+    ],
+    "axiom_footprints": [],
+    "fresh_import_evidence_unchanged": true
+  },
+  "stop_rule": "Any build, input, reuse, composition, specialization, receipt, footprint, replay, or output mismatch stops without retry or target/ledger authority.",
+  "output_result": "artifacts/autogenesis/int-fib-neg-concrete-parity-composition-result-v4.json",
+  "limitations": "Concrete parity support alone grants no exact Fibonacci target, fact, or ledger credit."
+}

@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-concrete-parity-composition-plan",
+  "state": "preregistered-lift-hash-correction-before-reinvocation",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-fib-neg-concrete-parity-composition-result-v2.json",
+    "required_state": "declined-before-composition-on-preregistered-lift-hash-mismatch"
+  },
+  "correction": {
+    "field": "nat_double_neg.sha256",
+    "from": "a00d0b93b55500c04928939ea2ff00d4d35b4caa0e0fa96fefeebf1be3f3c6",
+    "to": "a00d0b93b55500c04928939ea2ff00c4d0d35b4caa0e0fa96fefeebf1be3f3c6",
+    "driver_constant_must_match": true,
+    "other_code_or_proof_changes_authorized": false
+  },
+  "driver": "crates/axeyum-lean-import/examples/int_fib_neg_concrete_parity_composition.rs",
+  "inputs_output_method_and_acceptance": "unchanged from artifacts/autogenesis/int-fib-neg-concrete-parity-composition-plan-v1.json except the corrected sealed lift SHA",
+  "budget": {
+    "driver_edits": 1,
+    "focused_builds": 1,
+    "complete_invocations": 1,
+    "input_stream_reads": 5,
+    "composition_operations": 4,
+    "composition_replays": 4,
+    "specialization_operations": 4,
+    "specialization_replays": 4,
+    "capsule_exports": 1,
+    "fresh_imports": 2,
+    "retries": 0,
+    "exact_target_submissions": 0,
+    "ledger_writes": 0
+  },
+  "stop_rule": "Any build, input, composition, specialization, receipt, footprint, replay, or output mismatch stops without retry or target/ledger authority.",
+  "output_result": "artifacts/autogenesis/int-fib-neg-concrete-parity-composition-result-v3.json",
+  "limitations": "Concrete parity support alone grants no exact Fibonacci target, fact, or ledger credit."
+}

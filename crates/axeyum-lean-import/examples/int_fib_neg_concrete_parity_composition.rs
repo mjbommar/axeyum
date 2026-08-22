@@ -16,7 +16,7 @@ use sha2::{Digest, Sha256};
 
 const HASHES: [&str; 5] = [
     "29053dba3b90cecf5a70ba347ea7dba81a19990f715e69d5fc0a1c60cb9a6c07",
-    "a00d0b93b55500c04928939ea2ff00d4d35b4caa0e0fa96fefeebf1be3f3c6",
+    "a00d0b93b55500c04928939ea2ff00c4d0d35b4caa0e0fa96fefeebf1be3f3c6",
     "22a7252af7c92318170aa9712fbdaeaf75fe094c371b95033e7c582cba65bb6f",
     "0547aedeece1147719fc8adfae83a517daca460a8125c087e15989811184b098",
     "e26dbda36de1c09154da8e761dfedfec08c21b61c8be4669830fc6729e9d0715",
