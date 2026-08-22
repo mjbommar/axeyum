@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-clean-outer-residual-composition-plan",
+  "state": "preregistered-before-driver-code-or-stream-reread",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-fib-neg-clean-instance-composition-result-v3.json",
+    "required_state": "declined-on-clean-natcast-target-leaf-type-shape"
+  },
+  "inputs": {
+    "outer_residual": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-outer-residual-v2/residual-1.ndjson",
+      "sha256": "ba8493ff4fa32e0c8ec1a085d797dc1fe39713e5f98295cebdb1eaaa54cde707",
+      "root": "Axeyum.Autogenesis.intFibNegOuterResidualV2"
+    },
+    "clean_natcast": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-natcast-decision-free-exact-v1/exact.ndjson",
+      "sha256": "6c803eff520a62d6925db5ed30f78714d9923281becfd78239cc28278bc9159f",
+      "root": "Int.fib_neg_natCast"
+    },
+    "clean_decision": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-decision-clean-v1/root.ndjson",
+      "sha256": "29053dba3b90cecf5a70ba347ea7dba81a19990f715e69d5fc0a1c60cb9a6c07"
+    }
+  },
+  "method": "Create the exact output parent, compose and replay clean natCast into the clean decision kernel, then compose and replay only the parameterized constructor residual. Require the residual's resulting footprint empty, export that root, and freshly import it twice before fail-if-present write. No branch or exact-target theorem is submitted.",
+  "reason": "The residual was rejected only because its broad source environment supplied contaminated Even/ite type closure. Checked composition into the now-clean exact decision kernel can either reuse compatible clean carriers or fail at the first precise representation boundary.",
+  "driver": "crates/axeyum-lean-import/examples/int_fib_neg_clean_outer_residual_composition.rs",
+  "output": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-outer-residual-clean-v1/root.ndjson",
+  "budget": {
+    "directory_creations": 1,
+    "driver_constructions": 1,
+    "focused_builds": 1,
+    "complete_invocations": 1,
+    "input_stream_reads": 3,
+    "composition_operations": 2,
+    "composition_replays": 2,
+    "support_submissions": 1,
+    "capsule_exports": 1,
+    "fresh_imports": 2,
+    "exact_target_submissions": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "root": "Axeyum.Autogenesis.intFibNegOuterResidualV2",
+    "axiom_footprint": [],
+    "fresh_import_evidence_unchanged": true,
+    "proof_terms_types_or_values_rendered": 0
+  },
+  "stop_rule": "Any preparation/input mismatch, composition decline, receipt mismatch, nonempty residual footprint, replay change, or preexisting output stops without retry or theorem/ledger authority.",
+  "output_result": "artifacts/autogenesis/int-fib-neg-clean-outer-residual-composition-result-v1.json",
+  "next_on_accept": "Construct the positive and negative constructor branch contracts bottom-up in this compatible clean representation, then specialize the residual to exact Int.fib_neg.",
+  "limitations": "A clean parameterized residual proves neither branch and grants no selected-fact credit."
+}
