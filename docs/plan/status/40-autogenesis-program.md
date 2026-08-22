@@ -4,7 +4,7 @@
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_gcd`, `Int.fib_dvd`, and now `Int.fib_of_nonneg` are durably proved with empty kernel footprints. The new operation survived an exit-75 intent fault without changing the fact, recovery performed exactly one authoritative ledger write, and an isolated exact-commit replay reproduced every primary byte identity and the preregistered empty unlock delta.
 
-**Next:** construct and compile the frozen function-abstracted `Nat.fib_pos` residual over four explicit contracts; do not access official `Nat.fib_pos` or submit the target.
+**Next:** apply only the frozen V2 elaboration repairs—an explicit Nat successor binder and supplying successor positivity to the induction hypothesis—then compile once before any export.
 
 <!-- plan-section: landed-changes -->
 
@@ -136,6 +136,7 @@
 | 2026-08-22 | (pending) | Existing recurrence executable predates the new mode, so V2 explicitly freezes one current-source binary build and one fail-if-present materialization rather than treating the stale binary as runnable authority |
 | 2026-08-22 | (pending) | V2 reconstructs the receipt-bound recurrence once, verifies its admitted proof/type hashes, submits exact-name `Nat.fib_add_two` with no theorem dependencies, survives two fresh imports, and seals a reusable 56,115-byte library capsule without new theorem credit or ledger writes |
 | 2026-08-22 | (pending) | `Nat.fib_pos` V1 freezes a decision-free constructor/induction residual over zero presentation, one positivity, recurrence-step positivity, and successor positivity, forbidding the concrete Fibonacci function and both target/next theorem roots |
+| 2026-08-22 | (pending) | V1 spends its sole compile and stops before export on two local elaboration seams: successor binder inference and an induction hypothesis retaining the branch premise; V2 freezes only those two repairs |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
