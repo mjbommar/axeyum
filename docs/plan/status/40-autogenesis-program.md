@@ -2,9 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, and now `Int.gcd_fib` are durably proved with empty kernel footprints. The exact `Int.gcd_fib` operation survived an exit-75 intent fault, recovery performed one authoritative ledger write, the measured frontier unlocked exactly `Int.fib_gcd`, and an isolated clean replay reproduced every semantic check.
+**Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, and `Int.gcd_fib` are durably proved with empty kernel footprints. The newly unlocked `Int.fib_gcd` now also reconstructs exactly, survives two fresh imports with an empty footprint and four dependencies, and remains separate from ledger admission.
 
-**Next:** measure the newly unlocked `Int.fib_gcd` proof boundary, freeze the smallest clean composition, and continue the bottom-up construction without consulting its proof value.
+**Next:** bind the sealed `Int.fib_gcd` theorem to the statement-only ledger goal's canonical kernel type, then preregister and execute its crash-safe admission and independent replay.
 
 <!-- plan-section: landed-changes -->
 
@@ -41,6 +41,7 @@
 | 2026-08-22 | (pending) | Isolated clean replay `b33b25c…bcea` independently repeats selection, certified execution, exit-75 recovery, one write, and the exact `Int.fib_gcd` readiness delta |
 | 2026-08-22 | (pending) | Newly ready `Int.fib_gcd` is frozen as a one-capsule, four-theorem equality composition over admitted `Int.gcd_fib` and `Int.fib_natCast` before source construction or proof-stream access |
 | 2026-08-22 | (pending) | The exact `Int.fib_gcd` driver specializes natCast, transports symmetric gcd equality through `Int.ofNat` with checked `Eq.rec`, and preserves the four-dependency contract before execution |
+| 2026-08-22 | (pending) | One authorized run constructs exact `Int.fib_gcd`, survives two fresh imports, and seals a 1,154,781-byte empty-footprint capsule with exactly four theorem dependencies and zero ledger writes |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |

@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-gcd-construction-result-v1",
+  "state": "exact-int-fib-gcd-constructed-exported-and-twice-reimported-empty-footprint",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-gcd-construction-plan-v1.json",
+    "sha256": "57b0742dcccd66a9c9657148747ab5e7571eef77cd62912b2032cb112bc49700"
+  },
+  "producer": {
+    "commit": "e433c9a68f4ee4d0648a90f67c66a4221e62bea3",
+    "path": "crates/axeyum-lean-import/examples/int_fib_gcd_exact.rs",
+    "sha256": "66d92220c69292321d46698e81b5de5622792bc701cc82ac6c058b4da43298b7",
+    "shared_path": "crates/axeyum-lean-import/examples/int_gcd_fib_exact.rs",
+    "shared_sha256": "73352194f503c434ef512cf70f9db830646b8c7cbca2c1c234932830603616ee"
+  },
+  "input": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-gcd-fib-exact-v1/root.ndjson",
+    "sha256": "b1ce136473ead161243e7cdc053f3a8e0dab81a8e253c364171e839f22fd86f6",
+    "stream_reads": 1
+  },
+  "target": {
+    "name": "Int.fib_gcd",
+    "declaration_sha256": "d269d9ef0763dd923c7825c77c0a3a3dd05ebbe4fbad4d84f3ce93482386a0bf",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [
+      "Eq.symm",
+      "Eq.trans",
+      "Int.fib_natCast",
+      "Int.gcd_fib"
+    ]
+  },
+  "capsule": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-gcd-exact-v1/root.ndjson",
+    "bytes": 1154781,
+    "sha256": "040f269431f58c8efe69e995c65b25f64952aa9b3d8f552ab0e7faf2711967f1",
+    "mode": "0444",
+    "directory_mode": "0555",
+    "manifest_sha256": "f2b4518872594b4eda65dcfb93d1ff2758dcc17c9e64374294aebed05d5d99e9",
+    "fresh_imports": 2
+  },
+  "execution": {
+    "complete_invocations": 1,
+    "input_stream_reads": 1,
+    "target_theorem_submissions": 1,
+    "target_exports": 1,
+    "fresh_target_imports": 2,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "fact_status_changes": 0,
+    "proof_terms_types_or_values_rendered": 0,
+    "official_target_proof_body_inspected": false,
+    "same_name_declaration_transported": false
+  },
+  "next": "bind canonical Int.fib_gcd goal identity before operation registration"
+}
