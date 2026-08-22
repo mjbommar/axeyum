@@ -87,7 +87,91 @@ def h(j: int, s: int) -> int:
     return 1 << (j - (j >> s))
 
 
-def analyse(ell: int, degree: int, counts: np.ndarray, jmin: int | None = None, verbose: bool = True):
+def conditional_witt_cosets(factors, populations: np.ndarray, j: int, s: int):
+    """Exact nonresonant Witt-coset diagnostic for one `(j, 2^s)` layer.
+
+    The parent subgroup is `2^(s-1) E_j` and its child is `2^s E_j`.
+    When `2^(s-1)` does not divide `j`, both force the new coefficient to
+    zero.  Let `mu_z` be the mean coefficient imbalance over the coset `z` of
+    the child in the parent.  The exact-order core is
+
+        R Delta_s - Delta_{s-1} = R |child| (mu_0 - mean_z mu_z).
+
+    Returning every coset aggregate distinguishes genuine conditional bit
+    balance from cancellation visible only after averaging the coarse fibres.
+    """
+    q = 1 << s
+    if j % q == 0 or j % (q >> 1) == 0:
+        raise ValueError("conditional Witt cosets require a nonresonant layer")
+
+    parent = subgroup_mask(factors, s - 1)
+    indices = np.flatnonzero(parent)
+    d_s = (j - 1) >> s
+    d_previous = (j - 1) >> (s - 1)
+    coset_count = 1 << (d_previous - d_s)
+    child_size = 1 << d_s
+    assert len(indices) == coset_count * child_size
+
+    # Multiplication by 1+x^j adds 2^v2(j) in the Big-Witt factor indexed by
+    # odd(j).  Thus this computes H_j(g)=N_j(g)-N_j(g(1+x^j)) without decoding
+    # every class back to its polynomial representative.
+    odd_part, valuation = j, 0
+    while odd_part % 2 == 0:
+        odd_part //= 2
+        valuation += 1
+    coordinate = next(i for i, (k, _) in enumerate(factors) if k == odd_part)
+    stride = math.prod(order for _, order in factors[:coordinate])
+    order = factors[coordinate][1]
+    increment = (1 << valuation) * stride
+    digit = (indices // stride) % order
+    partners = indices + np.where(digit + (1 << valuation) < order, increment, -increment)
+    imbalance = populations[indices] - populations[partners]
+
+    # In the parent/child quotient each factor with order at least q contributes
+    # one bit: coordinate q/2 modulo q.  Packing those bits gives its coset.
+    labels = np.zeros(len(indices), dtype=np.int64)
+    stride = 1
+    bit = 0
+    for _, factor_order in factors:
+        if factor_order >= q:
+            digit = (indices // stride) % factor_order
+            assert np.all(digit % (q >> 1) == 0)
+            labels |= ((digit // (q >> 1)) & 1) << bit
+            bit += 1
+        stride *= factor_order
+    assert (1 << bit) == coset_count
+    sums = np.zeros(coset_count, dtype=np.int64)
+    np.add.at(sums, labels, imbalance)
+    assert int(sums[0]) == int(imbalance[labels == 0].sum())
+
+    total = int(sums.sum())
+    identity_sum = int(sums[0])
+    identity_deviation = coset_count * identity_sum - total
+    deviations = [coset_count * int(value) - total for value in sums]
+    return dict(
+        j=j,
+        s=s,
+        q=q,
+        coset_count=coset_count,
+        child_size=child_size,
+        delta_s=identity_sum,
+        delta_previous=total,
+        core=identity_deviation,
+        maximum_absolute_core=max(abs(value) for value in deviations),
+        total_absolute_core=sum(abs(value) for value in deviations),
+        identity_is_max=abs(identity_deviation) == max(abs(value) for value in deviations),
+        nonzero_cosets=sum(value != 0 for value in deviations),
+    )
+
+
+def analyse(
+    ell: int,
+    degree: int,
+    counts: np.ndarray,
+    jmin: int | None = None,
+    verbose: bool = True,
+    conditional_min_order: int | None = None,
+):
     n = degree
     c = math.ceil(math.log2(ell))
     a = ell - c - 1
@@ -126,15 +210,41 @@ def analyse(ell: int, degree: int, counts: np.ndarray, jmin: int | None = None, 
             expect = h(j - 1, s) * D_s - (0 if j % (1 << (s - 1)) == 0 else h(j - 1, s - 1) * D_s1)
             assert T == expect, (j, s, T, expect)
             ratio = abs(T) / (X * (j - 1) * 2 ** math.ceil(n / 2))
-            rows.append(dict(j=j, s=s, X=X, T=T, P=P[s], P1=P1[s], D_s=D_s, D_s1=D_s1, d_s=d_s, R=R,
-                             ratio=ratio, ok=ratio <= 1 / (4 * ell), high=(1 << s) > Q))
+            row = dict(j=j, s=s, X=X, T=T, P=P[s], P1=P1[s], D_s=D_s, D_s1=D_s1, d_s=d_s, R=R,
+                       ratio=ratio, ok=ratio <= 1 / (4 * ell), high=(1 << s) > Q,
+                       resonant=j % (1 << (s - 1)) == 0)
+            if (conditional_min_order is not None and (1 << s) >= conditional_min_order
+                    and not row["resonant"]):
+                conditional = conditional_witt_cosets(fj, Nj, j, s)
+                assert conditional["delta_s"] == D_s
+                assert conditional["delta_previous"] == D_s1
+                assert conditional["core"] == R * D_s - D_s1
+                denominator = (R - 1) * (j - 1) * (1 << math.ceil(n / 2))
+                conditional["identity_hwo_ratio"] = abs(conditional["core"]) / denominator
+                conditional["maximum_coset_hwo_ratio"] = (
+                    conditional["maximum_absolute_core"] / denominator
+                )
+                assert math.isclose(conditional["identity_hwo_ratio"], ratio, rel_tol=0.0, abs_tol=1e-15)
+                row["conditional"] = conditional
+            rows.append(row)
     if verbose:
         print(f"ell={ell} n={n}: a={a}, c={c}, Q={Q}; threshold 1/(4ell)={1/(4*ell):.5f}; "
               f"N_ell(1)={int(counts[0])} mean={2**(n-ell)}")
         for r in rows:
-            print(f"  j={r['j']:2d} s={r['s']} {'HIGH' if r['high'] else 'low '} #X={r['X']:8d} "
+            print(f"  j={r['j']:2d} s={r['s']} {'HIGH' if r['high'] else 'low '} "
+                  f"{'RSD' if r['resonant'] else 'NSD'} #X={r['X']:8d} "
                   f"P={r['P']:10d} D_s={r['D_s']:9d} D_s-1={r['D_s1']:9d} R={r['R']:3d} "
                   f"T={r['T']:13d} ratio={r['ratio']:.5f} {'OK' if r['ok'] else 'over'}")
+            if "conditional" in r:
+                d = r["conditional"]
+                share = (abs(d["core"]) / d["total_absolute_core"]
+                         if d["total_absolute_core"] else 0.0)
+                print(f"    CONDITIONAL|cosets={d['coset_count']}|child_cells={d['child_size']}"
+                      f"|identity_core={d['core']}|maximum_absolute_core={d['maximum_absolute_core']}"
+                      f"|identity_share_of_abs_coset_deviation={share:.5f}"
+                      f"|identity_is_max={d['identity_is_max']}|nonzero_cosets={d['nonzero_cosets']}"
+                      f"|identity_hwo_ratio={d['identity_hwo_ratio']:.5f}"
+                      f"|maximum_coset_hwo_ratio={d['maximum_coset_hwo_ratio']:.5f}")
         worst = max((r for r in rows if r['high']), key=lambda r: r['ratio'], default=None)
         if worst:
             print(f"  worst HIGH layer: j={worst['j']} s={worst['s']} ratio={worst['ratio']:.5f} "
@@ -143,7 +253,18 @@ def analyse(ell: int, degree: int, counts: np.ndarray, jmin: int | None = None, 
 
 
 if __name__ == "__main__":
-    path = sys.argv[1]
-    jmin = int(sys.argv[2]) if len(sys.argv) > 2 else None
+    arguments = iter(sys.argv[1:])
+    path = next(arguments, None)
+    if path is None:
+        raise SystemExit("usage: lemire_layers.py <dump> [jmin] [--conditional-min-order Q]")
+    jmin = None
+    conditional_min_order = None
+    for argument in arguments:
+        if argument == "--conditional-min-order":
+            conditional_min_order = int(next(arguments, None))
+        elif jmin is None:
+            jmin = int(argument)
+        else:
+            raise SystemExit("usage: lemire_layers.py <dump> [jmin] [--conditional-min-order Q]")
     ell, degree, factors, counts = load_dump(path)
-    analyse(ell, degree, counts, jmin)
+    analyse(ell, degree, counts, jmin, conditional_min_order=conditional_min_order)

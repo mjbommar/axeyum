@@ -1187,8 +1187,14 @@ through `ell <= 23` using branch population dumps. For the eventually relevant
 orders `q >= 16`, the first direct data are below the `1/(4ell)` HWO ratio from
 `ell=16` onward and fall to a worst observed factor `0.219` at
 `(ell,n)=(22,46)`, but this is finite evidence and not the eventual `Q=8`
-theorem regime. Then candidate B (tower relations `chi, chi^2, chi^4`). Nothing
-receives proof credit until it closes the endpoint ledger.
+theorem regime. The dump analyzer now also computes every nonresonant coset of
+`2^s E_j` in `2^{s-1}E_j` exactly. At `ell=22`, in the first genuinely
+multi-coset (`R=4,8`) rows, the identity coset supplies only `7%..37%` of the
+absolute coset deviation and is usually not maximal. Thus a theorem saying all
+Witt fibres have the same bias is false as a formulation; an identity-specific
+argument or a separately proved uniform upper bound remains open. Then
+candidate B (tower relations `chi, chi^2, chi^4`). Nothing receives proof
+credit until it closes the endpoint ledger.
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd` and `Nat.fib_dvd` remain durably proved. The next premise `Int.fib_neg` has now been measured from one root-selected v4.30 export: its official proof is assumption-bearing, with 26 direct dependencies and a footprint containing `Classical.choice`, `propext`, quotient primitives, and opaque/string support. It received no theorem or ledger credit.
 
