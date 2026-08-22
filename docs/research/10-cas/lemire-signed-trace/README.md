@@ -24,6 +24,11 @@ Kaser--Lemire half-degree-irreducibles chain (sibling repository
 - [04-shape-verdicts.md](04-shape-verdicts.md) -- running diary of the five
   'of course' solution shapes (Opus agents): literature, exact tests with our
   tools, and verdicts, appended as they land.
+- [05-almost-all-theorem.md](05-almost-all-theorem.md) -- an unconditional,
+  machine-checked theorem: all but `< 4 ell^2 2^{-ell}` of the `2^ell` top
+  halves are the top half of an irreducible of degree `n` (sharp constant
+  `eps(ell) = ell^2-4ell+6`); Lemire is exactly the claim that the one named
+  all-zero pattern is not exceptional. Script `lemire_almostall.py`.
 
 Executable companions live in
 [`scripts/lemire-signed-trace/`](../../../../scripts/lemire-signed-trace/README.md).
