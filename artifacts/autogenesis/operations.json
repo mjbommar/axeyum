@@ -1019,6 +1019,16 @@
         "axiom_footprint_policy": "must-be-empty",
         "axiom_footprint": []
       }
+    },
+    {
+      "id": "authoritative-mathlib-nat-fib-eq-zero-kernel-capsule-v1",
+      "scope": "authoritative",
+      "reviewed_gate_mentions": ["validate-autogenesis-operations.py"],
+      "applicability": {"fact_ids": ["F:ml430-nat-fib-eq-zero-61879073"], "formal_languages": ["lean4-surface"], "fragments": ["Nat"]},
+      "producer": {"operation": "specialized-natural-fibonacci-zero-characterization-v1", "implementation": "crates/axeyum-lean-import/examples/nat_fib_eq_zero_exact.rs", "input_kind": "axeyum-sealed-kernel-theorem-capsule", "output_kind": "axeyum-sealed-kernel-theorem-capsule"},
+      "checker": {"operation": "axeyum-lean-import/sealed-nat-fib-eq-zero-capsule-receipt-v1", "implementation": "scripts/check-autogenesis-nat-fib-eq-zero-capsule.py", "input_kind": "axeyum-sealed-kernel-theorem-capsule", "output_kind": "axeyum-checked-sealed-kernel-capsule-receipt-v1"},
+      "executor": {"driver": "axeyum-lean-import/sealed-kernel-capsule-v1", "implementation": "scripts/execute-autogenesis-operation.py", "input_fact_id": "F:ml430-nat-fib-eq-zero-61879073", "result_manifest": "artifacts/autogenesis/mathlib-nat-fib-eq-zero-goal-identity-result-v1.json", "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/nat-fib-eq-zero-exact-v1/root.ndjson", "capsule_sha256": "b25fc8b0db939ace2cbb0a096e86dd79f185398b93ff3c7698bb7b3d9fd796aa", "target_theorem": "Nat.fib_eq_zero", "goal_sha256": "cf9757fc1ca8af964ee54762575362e33e6c48dcf34c56381aa1e3a7a0850f4c", "declaration_sha256": "9709309661cd94542db84c175fd8a68f1e5a9eba9bc616374320654050435c83", "receipt_sha256": "c8466767c516d48e0e214aaf7e8a43e88a8bc7fa952a7baa2748eff03d51f3d3", "timeout_seconds": 120, "expected_evidence_label": "kernel-term-mathlib-nat-fib-eq-zero-capsule-axiom-free"},
+      "admission": {"epistemic_status": "proved", "proof_route": "kernel-lean", "evidence_kind": "kernel-term", "axiom_footprint_policy": "must-be-empty", "axiom_footprint": []}
     }
   ]
 }

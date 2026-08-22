@@ -4,7 +4,7 @@
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_dvd`, `Int.fib_of_nonneg`, and now `Nat.fib_pos` are durably proved with empty kernel footprints. `Nat.fib_pos` survived an exit-75 intent fault unchanged, recovered with exactly one ledger write, passed its registered checker, and produced the preregistered empty readiness delta.
 
-**Next:** write and reseal the committed immutable `Nat.fib_eq_zero` capsule manifest, then bind its hash and admission receipt in a fail-closed checker.
+**Next:** derive the unique `Nat.fib_eq_zero` frontier, execution, and typed transaction from the clean registration commit; freeze their exact identities before exit-75 fault injection.
 
 <!-- plan-section: landed-changes -->
 
@@ -177,6 +177,7 @@
 | 2026-08-22 | (pending) | V2 composes and specializes exact `Nat.fib_eq_zero` once, replays both receipts, survives two fresh imports, and seals a 205,258-byte empty-footprint capsule with the predicted four dependencies and zero ledger writes |
 | 2026-08-22 | (pending) | One hash-only, nonrendering read of sealed `Nat.fib_eq_zero` is frozen against exact capsule, declaration, fact, and tool identities before admission authority |
 | 2026-08-22 | (pending) | Hash-only audit binds canonical `Nat.fib_eq_zero` type `cf9757fc…0f4c`, declaration `97093096…5c83`, four dependencies, and an empty footprint; one manifest-only packaging step is frozen next |
+| 2026-08-22 | (pending) | The manifest is written once and resealed; checker receipt `c8466767…f3d3`, the twenty-third typed operation, explicit four-dependency transaction assurance, and all 19 regression tests pass with zero ledger writes |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |

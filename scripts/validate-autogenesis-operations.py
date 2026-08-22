@@ -35,6 +35,13 @@ ADMISSION_CONTRACTS = {
     ),
 }
 SEALED_CAPSULE_CONTRACTS = {
+    "F:ml430-nat-fib-eq-zero-61879073": {
+        "result_manifest": "artifacts/autogenesis/mathlib-nat-fib-eq-zero-goal-identity-result-v1.json",
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/nat-fib-eq-zero-exact-v1/root.ndjson",
+        "capsule_sha256": "b25fc8b0db939ace2cbb0a096e86dd79f185398b93ff3c7698bb7b3d9fd796aa",
+        "target_theorem": "Nat.fib_eq_zero",
+        "receipt_sha256": "c8466767c516d48e0e214aaf7e8a43e88a8bc7fa952a7baa2748eff03d51f3d3",
+    },
     "F:ml430-nat-fib-pos-9e67bd8e": {
         "result_manifest": "artifacts/autogenesis/mathlib-nat-fib-pos-goal-identity-result-v1.json",
         "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/nat-fib-pos-exact-v1/root.ndjson",
@@ -388,6 +395,7 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
         expected_manifest = (root / contract["result_manifest"]).resolve()
         manifest = json.loads(manifest_path.read_text())
         if value["input_fact_id"] in {
+            "F:ml430-nat-fib-eq-zero-61879073",
             "F:ml430-nat-fib-pos-9e67bd8e",
             "F:ml430-int-fib-natcast-d5886be4",
             "F:ml430-int-fib-add-two-739358dd",
@@ -421,8 +429,18 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             is_nat_fib_pos = (
                 value["input_fact_id"] == "F:ml430-nat-fib-pos-9e67bd8e"
             )
+            is_nat_fib_eq_zero = (
+                value["input_fact_id"] == "F:ml430-nat-fib-eq-zero-61879073"
+            )
             expected_dependencies = (
                 [
+                    "Axeyum.Autogenesis.natFibEqZeroResidualV1",
+                    "Axeyum.Autogenesis.natFibZeroV1",
+                    "Nat.fib_pos",
+                    "Nat.zero_lt_succ",
+                ]
+                if is_nat_fib_eq_zero
+                else [
                     "Axeyum.Autogenesis.natFibOnePositiveV1",
                     "Axeyum.Autogenesis.natFibPosResidualV1",
                     "Axeyum.Autogenesis.natFibStepPositiveV1",
@@ -491,7 +509,7 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
                 or manifest.get("state")
                 != (
                     "exact-goal-identity-bound-without-rendering"
-                    if is_nat_fib_pos or is_add_two or is_corollary or is_add_one or is_neg or is_gcd_fib or is_fib_gcd or is_fib_dvd or is_fib_of_nonneg
+                    if is_nat_fib_eq_zero or is_nat_fib_pos or is_add_two or is_corollary or is_add_one or is_neg or is_gcd_fib or is_fib_gcd or is_fib_dvd or is_fib_of_nonneg
                     else "single-read-hash-only-identity-qualified"
                 )
                 or value["capsule_path"] != contract["capsule_path"]
@@ -507,13 +525,13 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
                 or execution.get("importer_runs") != 1
                 or execution.get(
                     "stream_reads"
-                    if is_nat_fib_pos or is_add_two or is_corollary or is_add_one or is_neg or is_gcd_fib or is_fib_gcd or is_fib_dvd or is_fib_of_nonneg
+                    if is_nat_fib_eq_zero or is_nat_fib_pos or is_add_two or is_corollary or is_add_one or is_neg or is_gcd_fib or is_fib_gcd or is_fib_dvd or is_fib_of_nonneg
                     else "proof_bearing_stream_reads"
                 )
                 != 1
                 or (
                     execution.get("theorem_submissions") != 0
-                    if not is_nat_fib_pos and not is_add_two and not is_corollary and not is_add_one and not is_neg and not is_gcd_fib and not is_fib_gcd and not is_fib_dvd and not is_fib_of_nonneg
+                    if not is_nat_fib_eq_zero and not is_nat_fib_pos and not is_add_two and not is_corollary and not is_add_one and not is_neg and not is_gcd_fib and not is_fib_gcd and not is_fib_dvd and not is_fib_of_nonneg
                     else execution.get("ledger_writes") != 0
                 )
                 or execution.get("retries") != 0
@@ -527,6 +545,7 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
         if (
             value["input_fact_id"]
             not in {
+                "F:ml430-nat-fib-eq-zero-61879073",
                 "F:ml430-nat-fib-pos-9e67bd8e",
                 "F:ml430-int-fib-natcast-d5886be4",
                 "F:ml430-int-fib-add-two-739358dd",
