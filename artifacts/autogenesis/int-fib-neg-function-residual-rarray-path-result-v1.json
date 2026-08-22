@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-function-residual-rarray-path-result",
+  "state": "rarray-localized-below-clean-even-iff-replacement-boundary",
+  "plan": "artifacts/autogenesis/int-fib-neg-function-residual-rarray-path-plan-v1.json",
+  "inputs": {
+    "source_sha256": "0136201181ae82b0b1dae091190a4a961f53574cd24d686a2c075b5e6599337c",
+    "target_sha256": "29053dba3b90cecf5a70ba347ea7dba81a19990f715e69d5fc0a1c60cb9a6c07",
+    "root": "Axeyum.Autogenesis.intFibNegFunctionResidualV1",
+    "blocked_dependency": "Lean.RArray"
+  },
+  "observation": {
+    "root_closure_size": 2531,
+    "carrier_count": 137,
+    "blocked": {
+      "name": "Lean.RArray",
+      "kind": "inductive",
+      "source_declaration_sha256": "20c91fd8f30443e3fdf7a22f375d557be151acc60595760fa5a128d08531f9ce",
+      "target_present": false
+    },
+    "nearest_replaceable_theorem_boundary": {
+      "name": "Int.even_iff",
+      "source_declaration_sha256": "ab4300192b1073d20d0e4110a3b77a79f6a57729e337db1f92889713ac9f9fba",
+      "source_closure_size": 2527,
+      "target_declaration_sha256": "6ec4a6f5577bc3602d13ff02907469045f0987323f6f9f84f8c4b7b23c243c13",
+      "target_compatibility": "kernel-type-shape"
+    },
+    "exact_carriers_above_boundary": [
+      {
+        "name": "Int.instDecidablePredEven._proof_1",
+        "declaration_sha256": "d655d0b2e356cf9b7584db3950ac315084ab174136024a63f2b8c6e42a19856b"
+      },
+      {
+        "name": "Int.instDecidablePredEven",
+        "declaration_sha256": "c01ed8edfc717e6cc0119a5c824cf94ad6fd1fb0b322487a28036b41b0713c61"
+      }
+    ]
+  },
+  "execution": {
+    "complete_audits": 1,
+    "source_stream_reads": 1,
+    "target_stream_reads": 1,
+    "kernel_submissions": 0,
+    "exports": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "decision": "Re-run only under a newly frozen target-leaf composition that cuts the source proof closure at clean target Int.even_iff.",
+  "authority": {
+    "support_credit": 0,
+    "target_credit": 0,
+    "fact_status_changes": 0
+  }
+}

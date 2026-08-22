@@ -258,6 +258,7 @@ now. Nothing was deleted.
 | 2026-08-21 | (pending) | Function-parameterized residual exports twice byte-identically with `Int.fib` and `Lean.RArray` absent from its selected closure; clean-kernel composition is frozen next |
 | 2026-08-21 | (pending) | Function-residual clean-composition driver passes focused Clippy with all three streams unread; one fail-if-present invocation remains |
 | 2026-08-21 | (pending) | Semantic composition still reaches `Lean.RArray`, disproving the prior raw-text absence check; a kernel declaration-path audit is frozen to correct coverage and localize the carrier |
+| 2026-08-21 | (pending) | Kernel path audit finds all 137 `Lean.RArray` carriers below source `Int.even_iff`; V2 freezes clean `Int.even_iff` as the explicit checked target leaf while retaining the exact decision helper/instance |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |

@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-fib-neg-function-residual-clean-composition-plan",
+  "state": "preregistered-even-iff-target-leaf-correction-before-code-or-reread",
+  "predecessor": {
+    "path": "artifacts/autogenesis/int-fib-neg-function-residual-rarray-path-result-v1.json",
+    "required_state": "rarray-localized-below-clean-even-iff-replacement-boundary"
+  },
+  "correction": {
+    "old_residual_operation": "compose_checked_theorem_slice",
+    "new_residual_operation": "compose_checked_theorem_slice_with_target_leaves",
+    "target_theorem_leaves": [
+      "Int.even_iff"
+    ],
+    "reason": "The semantic dependency-path audit proves every Lean.RArray path passes through the assumption-bearing source Int.even_iff, while the target provides a checked empty-footprint type-compatible theorem and exact decision helper/instance above it.",
+    "generic_residual_source_changed": false,
+    "mathematical_statement_changed": false
+  },
+  "inputs": {
+    "function_residual": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-function-residual-v1/root-1.ndjson",
+      "sha256": "0136201181ae82b0b1dae091190a4a961f53574cd24d686a2c075b5e6599337c",
+      "root": "Axeyum.Autogenesis.intFibNegFunctionResidualV1"
+    },
+    "clean_natcast": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-natcast-decision-free-exact-v1/exact.ndjson",
+      "sha256": "6c803eff520a62d6925db5ed30f78714d9923281becfd78239cc28278bc9159f",
+      "root": "Int.fib_neg_natCast"
+    },
+    "clean_decision": {
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-decision-clean-v1/root.ndjson",
+      "sha256": "29053dba3b90cecf5a70ba347ea7dba81a19990f715e69d5fc0a1c60cb9a6c07",
+      "clean_leaf": "Int.even_iff"
+    }
+  },
+  "driver": "crates/axeyum-lean-import/examples/int_fib_neg_function_residual_clean_composition.rs",
+  "output": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-neg-function-residual-clean-v1/root.ndjson",
+  "budget": {
+    "driver_edits": 1,
+    "focused_builds": 1,
+    "complete_invocations": 1,
+    "input_stream_reads": 3,
+    "ordinary_compositions": 1,
+    "ordinary_replays": 1,
+    "target_leaf_compositions": 1,
+    "target_leaf_replays": 1,
+    "support_submissions": 1,
+    "capsule_exports": 1,
+    "fresh_imports": 2,
+    "exact_target_submissions": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "root": "Axeyum.Autogenesis.intFibNegFunctionResidualV1",
+    "target_theorem_leaves": [
+      "Int.even_iff"
+    ],
+    "axiom_footprint": [],
+    "fresh_import_evidence_unchanged": true
+  },
+  "stop_rule": "Any input mismatch, target-leaf decline, receipt mismatch, nonempty footprint, replay change, or preexisting output stops without retry or theorem/ledger authority.",
+  "output_result": "artifacts/autogenesis/int-fib-neg-function-residual-clean-composition-result-v2.json",
+  "limitations": "The clean generic residual alone proves neither branch and grants no selected-fact credit."
+}
