@@ -25,6 +25,7 @@
 | 2026-08-22 | (pending) | One nonrendering read of the sealed `Int.fib_eq_zero` root is frozen to bind its canonical kernel type before manifest creation or admission authority |
 | 2026-08-22 | (pending) | Hash-only audit binds canonical `Int.fib_eq_zero` type `1822290d…70bc`; immutable manifest retains its empty footprint and exact four-dependency closure before operation registration |
 | 2026-08-22 | (pending) | Exact crash-safe `Int.fib_eq_zero` admission is frozen against receipt `e005b598…b00c`, one ledger write, one recovery, one isolated replay, and an expected empty unlock delta before registry code |
+| 2026-08-22 | (pending) | Exact `Int.fib_eq_zero` sealed-capsule execution is registered through typed frontier, execution, transaction, and replay machinery with four fixed dependencies and zero ledger writes so far |
 
 | 2026-08-21 | (pending) | The newly ready `Int.gcd_fib` route is frozen through one target-owned Fibonacci/natAbs bridge and the two exact admitted premise capsules before source construction or proof-stream access |
 | 2026-08-21 | (pending) | Closure analysis corrects the bridge boundary before execution: export a dependency-free two-parameter residual, then specialize it with exact clean `Int.fib_neg` and `Int.natAbs_neg` roots |

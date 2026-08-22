@@ -485,7 +485,19 @@ def build_authoritative_transaction(
             operation["id"]
             == "authoritative-mathlib-nat-fib-eq-zero-kernel-capsule-v1"
         )
+        is_int_fib_eq_zero = (
+            operation["id"]
+            == "authoritative-mathlib-int-fib-eq-zero-kernel-capsule-v1"
+        )
         expected_dependencies = (
+            [
+                "Axeyum.Autogenesis.intFibEqZeroResidualV1",
+                "Axeyum.Autogenesis.intFibNatAbsV1",
+                "Axeyum.Autogenesis.intNatAbsEqZeroV1",
+                "Nat.fib_eq_zero",
+            ]
+            if is_int_fib_eq_zero
+            else
             [
                 "Axeyum.Autogenesis.natFibEqZeroResidualV1",
                 "Axeyum.Autogenesis.natFibZeroV1",
@@ -570,6 +582,7 @@ def build_authoritative_transaction(
             or is_int_fib_of_nonneg
             or is_nat_fib_pos
             or is_nat_fib_eq_zero
+            or is_int_fib_eq_zero
         )
         expected_fresh_imports = 2 if is_single_construction else 4
         expected_reconstructions = 1 if is_single_construction else 2
@@ -600,6 +613,7 @@ def build_authoritative_transaction(
                 or is_int_fib_of_nonneg
                 or is_nat_fib_pos
                 or is_nat_fib_eq_zero
+                or is_int_fib_eq_zero
                 else not dependencies
             )
             or len(dependencies) != len(set(dependencies))
@@ -626,7 +640,16 @@ def build_authoritative_transaction(
             "declaration_sha256": observation["declaration_sha256"],
             "direct_theorem_dependencies": dependencies,
         }
-        if is_nat_fib_eq_zero:
+        if is_int_fib_eq_zero:
+            result_description = (
+                "four-link-specialized axiom-free sealed integer Fibonacci zero capsule"
+            )
+            replay_description = (
+                "immutable capsule and committed identity manifest and requires its "
+                "exact theorem identity, two fresh imports, empty axiom footprint, "
+                "and four named direct theorem dependencies"
+            )
+        elif is_nat_fib_eq_zero:
             result_description = (
                 "four-link-specialized axiom-free sealed natural Fibonacci zero capsule"
             )

@@ -27,6 +27,7 @@ INT_FIB_DVD_FACT = "F:ml430-int-fib-dvd-ffb3c5c1"
 INT_FIB_OF_NONNEG_FACT = "F:ml430-int-fib-of-nonneg-438018c5"
 NAT_FIB_POS_FACT = "F:ml430-nat-fib-pos-9e67bd8e"
 NAT_FIB_EQ_ZERO_FACT = "F:ml430-nat-fib-eq-zero-61879073"
+INT_FIB_EQ_ZERO_FACT = "F:ml430-int-fib-eq-zero-8193c7cb"
 
 
 def settle_reflexivity_fact(facts):
@@ -44,6 +45,7 @@ def settle_reflexivity_fact(facts):
         INT_FIB_OF_NONNEG_FACT,
         NAT_FIB_POS_FACT,
         NAT_FIB_EQ_ZERO_FACT,
+        INT_FIB_EQ_ZERO_FACT,
     ):
         target = copy.deepcopy(facts[fact_id])
         target["epistemic_status"] = "proved"
