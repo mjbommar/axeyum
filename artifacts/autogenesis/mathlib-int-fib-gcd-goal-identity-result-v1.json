@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-theorem-goal-identity-audit",
+  "state": "exact-goal-identity-bound-without-rendering",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-gcd-goal-identity-plan-v1.json",
+    "sha256": "16a299aae947e65e10006e48f65a42f6aab8b9a5e699ec6296fa37162a99f7a8"
+  },
+  "input": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-gcd-exact-v1/root.ndjson",
+    "bytes": 1154781,
+    "sha256": "040f269431f58c8efe69e995c65b25f64952aa9b3d8f552ab0e7faf2711967f1"
+  },
+  "theorem": {
+    "name": "Int.fib_gcd",
+    "canonical_type_sha256": "c073add7c75a14558f57793924f2bfaac48ff452c9382bfd77727386ba7a464d",
+    "canonical_declaration_sha256": "d269d9ef0763dd923c7825c77c0a3a3dd05ebbe4fbad4d84f3ce93482386a0bf",
+    "axiom_footprint": [],
+    "direct_theorem_dependencies": [
+      "Eq.symm",
+      "Eq.trans",
+      "Int.fib_natCast",
+      "Int.gcd_fib"
+    ]
+  },
+  "rendered_material": {
+    "proof_terms": 0,
+    "theorem_types": 0,
+    "theorem_values": 0
+  },
+  "execution": {
+    "importer_runs": 1,
+    "stream_reads": 1,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "qualified_exact_target": 1,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next": "register one exact sealed-capsule admission operation for F:ml430-int-fib-gcd-3a8bfdec"
+}
