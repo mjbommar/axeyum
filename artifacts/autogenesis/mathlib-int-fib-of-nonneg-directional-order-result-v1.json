@@ -1,0 +1,9 @@
+{
+  "schema_version":1,"kind":"axeyum-autogenesis-mathlib-int-fib-of-nonneg-directional-order-result-v1","state":"rejected-both-directional-roots-reach-propext",
+  "plan":{"path":"artifacts/autogenesis/mathlib-int-fib-of-nonneg-directional-order-plan-v1.json","sha256":"90c0eec8f7ca8b925fec0f3496d1430282c2c4d3f57266e06b16f640c7629513"},
+  "capsule":{"path":"/nas3/data/axeyum/autogenesis/reference-packs/int-negsucc-directional-order-v1/root.ndjson","bytes":890172,"sha256":"ca451c46c40a2e82bf1a0342dd167c6a9a701babb8ca8787c7f5e1c818e483ff","manifest_sha256":"22f24d1f2edb34e33a85c75fc60520cebc89d66d773735892b546fcbc9fb9395"},
+  "theorems":[{"name":"Int.negSucc_lt_zero","axiom_footprint":["propext"],"direct_theorem_dependencies":["Iff.mp","Int.eq_ofNat_of_zero_le","Int.not_le"]},{"name":"Int.not_le_of_gt","axiom_footprint":["propext"],"direct_theorem_dependencies":["And.right","Iff.mp","Int.lt_iff_le_and_not_ge"]}],
+  "execution":{"exporter_invocations":1,"importer_runs":2,"forbidden_roots_present":false,"target_theorem_submissions":0,"ledger_writes":0},
+  "authority":{"support_credit":0,"theorem_credit":0,"fact_status_changes":0,"ledger_writes":0},
+  "next":"preregister a target-owned constructor residual whose negSucc branch eliminates the indexed NonNeg hypothesis directly by noConfusion"
+}
