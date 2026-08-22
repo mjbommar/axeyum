@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-theorem-goal-identity-audit",
+  "state": "exact-goal-identity-bound-without-rendering",
+  "plan": {"path": "artifacts/autogenesis/mathlib-int-fib-dvd-goal-identity-plan-v1.json", "sha256": "986d3923e52f8af4cc948b8a9a30601ffb91c9b6a1071a7b0f06e2dbe5a8d3b5"},
+  "input": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-dvd-exact-v1/root.ndjson", "bytes": 1197314, "sha256": "f684a4de870734f60f33abe1da468637697c0d27ce988a47d08dfed601ec6af0"},
+  "theorem": {"name": "Int.fib_dvd", "canonical_type_sha256": "ed84c258cad64868b6e14a1fe1cf46732aa2ca7e231defa0a627a16fae795016", "canonical_declaration_sha256": "2d4463d2a000519460bc3c7e644d2880af49c95ff9d51edcb16379ed974b22aa", "axiom_footprint": [], "direct_theorem_dependencies": ["Axeyum.Autogenesis.intDvdOfNatAbsDvdDirectV1", "Axeyum.Autogenesis.intFibNatAbsV1", "Axeyum.Autogenesis.intNatAbsDvdForwardResidualV1", "Axeyum.Autogenesis.intNatAbsMulDirectV1", "Eq.symm", "Nat.fib_dvd"]},
+  "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0},
+  "execution": {"importer_runs": 1, "stream_reads": 1, "retries": 0, "ledger_writes": 0},
+  "authority": {"qualified_exact_target": 1, "fact_status_changes": 0, "ledger_writes": 0},
+  "next": "register one exact sealed-capsule admission operation for F:ml430-int-fib-dvd-ffb3c5c1"
+}
