@@ -24,9 +24,9 @@ class OperationRegistryTests(unittest.TestCase):
             (ROOT / "artifacts/autogenesis/operations.json").read_text()
         )
 
-    def test_committed_registry_has_one_fixture_and_sixteen_authoritative_operations(self) -> None:
+    def test_committed_registry_has_one_fixture_and_seventeen_authoritative_operations(self) -> None:
         registry_module.validate_registry(self.registry, ROOT)
-        self.assertEqual(len(self.registry["operations"]), 17)
+        self.assertEqual(len(self.registry["operations"]), 18)
         self.assertEqual(
             self.registry["operations"][0]["scope"], "counterfactual-fixture-only"
         )

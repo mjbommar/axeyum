@@ -461,6 +461,10 @@ def build_authoritative_transaction(
             operation["id"]
             == "authoritative-mathlib-int-fib-neg-kernel-capsule-v1"
         )
+        is_int_gcd_fib = (
+            operation["id"]
+            == "authoritative-mathlib-int-gcd-fib-kernel-capsule-v1"
+        )
         expected_dependencies = (
             []
             if is_int_fib_natcast
@@ -494,6 +498,14 @@ def build_authoritative_transaction(
                 "Axeyum.Autogenesis.intFibNegPositiveBranchV1",
             ]
             if is_int_fib_neg
+            else [
+                "Axeyum.Autogenesis.intFibNatAbsV1",
+                "Eq.symm",
+                "Eq.trans",
+                "Int.gcd_def",
+                "Nat.fib_gcd",
+            ]
+            if is_int_gcd_fib
             else None
         )
         is_single_construction = (
@@ -501,6 +513,7 @@ def build_authoritative_transaction(
             or is_int_fib_recurrence_corollary
             or is_int_fib_add_one
             or is_int_fib_neg
+            or is_int_gcd_fib
         )
         expected_fresh_imports = 2 if is_single_construction else 4
         expected_reconstructions = 1 if is_single_construction else 2
@@ -525,6 +538,7 @@ def build_authoritative_transaction(
                 or is_int_fib_recurrence_corollary
                 or is_int_fib_add_one
                 or is_int_fib_neg
+                or is_int_gcd_fib
                 else not dependencies
             )
             or len(dependencies) != len(set(dependencies))
@@ -595,6 +609,15 @@ def build_authoritative_transaction(
                 "immutable capsule and committed identity manifest and requires its "
                 "exact theorem identity, two fresh imports, empty axiom footprint, "
                 "and three named direct theorem dependencies"
+            )
+        elif is_int_gcd_fib:
+            result_description = (
+                "five-link-composed axiom-free sealed integer Fibonacci gcd capsule"
+            )
+            replay_description = (
+                "immutable capsule and committed identity manifest and requires its "
+                "exact theorem identity, two fresh imports, empty axiom footprint, "
+                "and five named direct theorem dependencies"
             )
         else:
             result_description = (

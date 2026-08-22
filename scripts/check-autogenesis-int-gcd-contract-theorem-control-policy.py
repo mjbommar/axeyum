@@ -107,10 +107,20 @@ def validate_policy(
         not isinstance(premise_rows, list)
         or [row.get("fact_id") for row in premise_rows] != expected_premises
         or facts["F:ml430-int-gcd-fib-73bdafc2"].get("depends_on") != expected_premises
-        or horizon.get("target_file_sha256")
-        != sha256(fact_path("F:ml430-int-gcd-fib-73bdafc2"))
     ):
         raise ControlPolicyError("evaluation dependency chain changed")
+    target_fact = facts["F:ml430-int-gcd-fib-73bdafc2"]
+    if target_fact.get("epistemic_status") == "open":
+        if horizon.get("target_file_sha256") != sha256(
+            fact_path("F:ml430-int-gcd-fib-73bdafc2")
+        ):
+            raise ControlPolicyError("open evaluation horizon identity changed")
+    elif (
+        target_fact.get("epistemic_status") != "proved"
+        or target_fact.get("proof_route") != "kernel-lean"
+        or target_fact.get("axiom_footprint") != []
+    ):
+        raise ControlPolicyError("settled evaluation horizon assurance changed")
     for row in premise_rows:
         fact_id = row["fact_id"]
         fact = facts[fact_id]

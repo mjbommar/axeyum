@@ -35,6 +35,7 @@
 | 2026-08-22 | (pending) | One hash-only, non-rendering read of the sealed `Int.gcd_fib` root is frozen to bind its canonical kernel type before any operation registration or ledger authority |
 | 2026-08-22 | (pending) | Hash-only audit binds canonical `Int.gcd_fib` type `050ddb31…901b` with unchanged empty footprint and five dependencies; the sealed-capsule checker is ready before operation registration |
 | 2026-08-22 | (pending) | Exact crash-safe `Int.gcd_fib` admission is frozen against receipt `d02db0ee…3ac1`, one ledger write, one recovery, one isolated replay, and the predicted `Int.fib_gcd` unlock before registry code |
+| 2026-08-22 | (pending) | The exact sealed-capsule operation is registered through existing typed execution and transaction machinery; the older `Int.gcd_def` calibration gate now validates either the frozen open target or its proved empty-footprint poststate |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |

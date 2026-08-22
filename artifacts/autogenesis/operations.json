@@ -771,6 +771,54 @@
         "axiom_footprint_policy": "must-be-empty",
         "axiom_footprint": []
       }
+    },
+    {
+      "id": "authoritative-mathlib-int-gcd-fib-kernel-capsule-v1",
+      "scope": "authoritative",
+      "reviewed_gate_mentions": [
+        "check-autogenesis-int-gcd-fib-capsule.py",
+        "check-autogenesis-int-gcd-fib-admission-plan.py",
+        "check-autogenesis-int-gcd-contract-theorem-control-policy.py",
+        "validate-autogenesis-operations.py"
+      ],
+      "applicability": {
+        "fact_ids": ["F:ml430-int-gcd-fib-73bdafc2"],
+        "formal_languages": ["lean4-surface"],
+        "fragments": ["Int"]
+      },
+      "producer": {
+        "operation": "five-link-integer-fibonacci-gcd-composition-v1",
+        "implementation": "crates/axeyum-lean-import/examples/int_gcd_fib_exact.rs",
+        "input_kind": "axeyum-checked-theorem-slices",
+        "output_kind": "axeyum-sealed-kernel-theorem-capsule"
+      },
+      "checker": {
+        "operation": "axeyum-lean-import/sealed-int-gcd-fib-capsule-receipt-v1",
+        "implementation": "scripts/check-autogenesis-int-gcd-fib-capsule.py",
+        "input_kind": "axeyum-sealed-kernel-theorem-capsule",
+        "output_kind": "axeyum-checked-sealed-kernel-capsule-receipt-v1"
+      },
+      "executor": {
+        "driver": "axeyum-lean-import/sealed-kernel-capsule-v1",
+        "implementation": "scripts/execute-autogenesis-operation.py",
+        "input_fact_id": "F:ml430-int-gcd-fib-73bdafc2",
+        "result_manifest": "artifacts/autogenesis/mathlib-int-gcd-fib-goal-identity-result-v1.json",
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-gcd-fib-exact-v1/root.ndjson",
+        "capsule_sha256": "b1ce136473ead161243e7cdc053f3a8e0dab81a8e253c364171e839f22fd86f6",
+        "target_theorem": "Int.gcd_fib",
+        "goal_sha256": "050ddb31135f25341d15c5a8a0802512b11a3965983c5a1a21aaabf9a7bb901b",
+        "declaration_sha256": "44660dc7f15cda1b469f99e349f4b874afca9dbca24bcfc5c847ca226ccc357f",
+        "receipt_sha256": "d02db0eee57fb9b6be43c283054b28141a249003acca3eb0fb90f6eecaae3ac1",
+        "timeout_seconds": 120,
+        "expected_evidence_label": "kernel-term-mathlib-int-gcd-fib-capsule-axiom-free"
+      },
+      "admission": {
+        "epistemic_status": "proved",
+        "proof_route": "kernel-lean",
+        "evidence_kind": "kernel-term",
+        "axiom_footprint_policy": "must-be-empty",
+        "axiom_footprint": []
+      }
     }
   ]
 }

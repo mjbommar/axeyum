@@ -84,6 +84,13 @@ SEALED_CAPSULE_CONTRACTS = {
         "target_theorem": "Int.fib_neg",
         "receipt_sha256": "6e57d30c732edf80a6a5c5f82c91cb27e6c8d715beca00ff0d5d5d9f2494fbef",
     },
+    "F:ml430-int-gcd-fib-73bdafc2": {
+        "result_manifest": "artifacts/autogenesis/mathlib-int-gcd-fib-goal-identity-result-v1.json",
+        "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-gcd-fib-exact-v1/root.ndjson",
+        "capsule_sha256": "b1ce136473ead161243e7cdc053f3a8e0dab81a8e253c364171e839f22fd86f6",
+        "target_theorem": "Int.gcd_fib",
+        "receipt_sha256": "d02db0eee57fb9b6be43c283054b28141a249003acca3eb0fb90f6eecaae3ac1",
+    },
     "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d": {
         "result_manifest": "artifacts/autogenesis/mathlib-int-fib-recurrence-corollary-goal-identity-result-v1.json",
         "capsule_path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-recurrence-corollary-composition-v3/int-fib-recurrence-corollary-1.ndjson",
@@ -358,6 +365,7 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
             "F:ml430-int-fib-add-one-33f1b748",
             "F:ml430-int-fib-neg-b4021d37",
+            "F:ml430-int-gcd-fib-73bdafc2",
         }:
             theorem = manifest.get("theorem") or {}
             execution = manifest.get("execution") or {}
@@ -372,6 +380,7 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
                 value["input_fact_id"] == "F:ml430-int-fib-add-one-33f1b748"
             )
             is_neg = value["input_fact_id"] == "F:ml430-int-fib-neg-b4021d37"
+            is_gcd_fib = value["input_fact_id"] == "F:ml430-int-gcd-fib-73bdafc2"
             expected_dependencies = (
                 [
                     "Axeyum.Autogenesis.fibAddTwo",
@@ -403,6 +412,14 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
                     "Axeyum.Autogenesis.intFibNegPositiveBranchV1",
                 ]
                 if is_neg
+                else [
+                    "Axeyum.Autogenesis.intFibNatAbsV1",
+                    "Eq.symm",
+                    "Eq.trans",
+                    "Int.gcd_def",
+                    "Nat.fib_gcd",
+                ]
+                if is_gcd_fib
                 else []
             )
             if (
@@ -410,7 +427,7 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
                 or manifest.get("state")
                 != (
                     "exact-goal-identity-bound-without-rendering"
-                    if is_add_two or is_corollary or is_add_one or is_neg
+                    if is_add_two or is_corollary or is_add_one or is_neg or is_gcd_fib
                     else "single-read-hash-only-identity-qualified"
                 )
                 or value["capsule_path"] != contract["capsule_path"]
@@ -426,13 +443,13 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
                 or execution.get("importer_runs") != 1
                 or execution.get(
                     "stream_reads"
-                    if is_add_two or is_corollary or is_add_one or is_neg
+                    if is_add_two or is_corollary or is_add_one or is_neg or is_gcd_fib
                     else "proof_bearing_stream_reads"
                 )
                 != 1
                 or (
                     execution.get("theorem_submissions") != 0
-                    if not is_add_two and not is_corollary and not is_add_one and not is_neg
+                    if not is_add_two and not is_corollary and not is_add_one and not is_neg and not is_gcd_fib
                     else execution.get("ledger_writes") != 0
                 )
                 or execution.get("retries") != 0
@@ -451,6 +468,7 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
                 "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
                 "F:ml430-int-fib-add-one-33f1b748",
                 "F:ml430-int-fib-neg-b4021d37",
+                "F:ml430-int-gcd-fib-73bdafc2",
             }
             and (
                 manifest_path != expected_manifest
