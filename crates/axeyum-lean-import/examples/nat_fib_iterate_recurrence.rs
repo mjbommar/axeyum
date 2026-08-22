@@ -12,8 +12,8 @@ use axeyum_lean_import::{
     verify_checked_theorem_composition,
 };
 use axeyum_lean_kernel::{
-    BinderInfo, Declaration, ExprId, ExprNode, Kernel, KernelError, LevelId, NameId,
-    build_nat_prelude,
+    BinderInfo, Declaration, ExprId, ExprNode, Kernel, KernelError, Lean4ExportMetadata, LevelId,
+    NameId, build_nat_prelude,
 };
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -67,6 +67,13 @@ fn run() -> Result<(), String> {
     let stream = fs::read(&arguments.stream).map_err(|error| error.to_string())?;
     if hex_sha256(&stream) != STREAM_SHA256 {
         return Err("r080 stream identity changed".to_owned());
+    }
+    if arguments.export_admitted_capsule {
+        let output = arguments
+            .output
+            .as_ref()
+            .ok_or("admitted capsule export requires --output")?;
+        return run_admitted_capsule_export(&stream, output);
     }
     if let Some(candidate) = &arguments.receipt_candidate {
         let output = arguments
@@ -721,6 +728,78 @@ fn reconstruct_fixed_candidate(stream: &[u8]) -> Result<(Kernel, NameId), String
         })
         .map_err(|error| format!("fixed receipt reconstruction rejected: {error:?}"))?;
     Ok((kernel, theorem))
+}
+
+fn run_admitted_capsule_export(stream: &[u8], output: &PathBuf) -> Result<(), String> {
+    if output.exists() {
+        return Err("admitted capsule output already exists".to_owned());
+    }
+    let (mut kernel, reconstructed) = reconstruct_fixed_candidate(stream)?;
+    let (ty, value) = match kernel.environment().get(reconstructed) {
+        Some(Declaration::Theorem {
+            uparams, ty, value, ..
+        }) if uparams.is_empty() => (*ty, *value),
+        _ => return Err("fixed recurrence is not a monomorphic theorem".to_owned()),
+    };
+    if canonical_expression_sha256(&kernel, ty)? != GOAL_SHA256
+        || canonical_expression_sha256(&kernel, value)? != CANDIDATE_PROOF_SHA256
+        || canonical_declaration_sha256(&kernel, reconstructed)? != CANDIDATE_THEOREM_SHA256
+    {
+        return Err("admitted recurrence identity changed".to_owned());
+    }
+    let exact = nested_name(&mut kernel, &["Nat", "fib_add_two"]);
+    if kernel.environment().get(exact).is_some() {
+        return Err("exact recurrence exists before materialization".to_owned());
+    }
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name: exact,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .map_err(|error| format!("exact recurrence submission rejected: {error:?}"))?;
+    let axioms = rendered_names(&kernel, &kernel.axiom_footprint(exact));
+    let dependencies = rendered_names(&kernel, &kernel.theorem_dependencies(exact));
+    if !axioms.is_empty() || !dependencies.is_empty() {
+        return Err("materialized recurrence is not proof-isolated".to_owned());
+    }
+    let declaration_sha256 = canonical_declaration_sha256(&kernel, exact)?;
+    let bytes = kernel
+        .render_lean4export_ndjson_roots(&Lean4ExportMetadata::axeyum("4.30.0"), &[exact])
+        .map_err(|error| format!("exact recurrence export failed: {error}"))?;
+    for pass in 1..=2 {
+        let imported = import_ndjson(Cursor::new(bytes.as_bytes()), ImportLimits::default())
+            .map_err(|error| format!("fresh exact recurrence import {pass} failed: {error:?}"))?;
+        let imported_exact = exact_name(imported.kernel(), "Nat.fib_add_two")?;
+        if canonical_declaration_sha256(imported.kernel(), imported_exact)? != declaration_sha256
+            || !imported.kernel().axiom_footprint(imported_exact).is_empty()
+            || !imported
+                .kernel()
+                .theorem_dependencies(imported_exact)
+                .is_empty()
+        {
+            return Err(format!(
+                "fresh exact recurrence import {pass} changed evidence"
+            ));
+        }
+    }
+    fs::write(output, &bytes).map_err(|error| format!("exact recurrence write failed: {error}"))?;
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "schema_version": 1,
+            "kind": "axeyum-admitted-nat-fib-add-two-library-materialization",
+            "state": "exact-name-capsule-exported-and-twice-reimported-empty-footprint",
+            "source": {"stream_sha256": STREAM_SHA256, "receipt_sha256": "395f6e80e6addbc69cca8ad560b312dadc31d623fe05f6b1603b5fa523622329"},
+            "target": {"name": "Nat.fib_add_two", "type_sha256": GOAL_SHA256, "proof_sha256": CANDIDATE_PROOF_SHA256, "declaration_sha256": declaration_sha256, "axiom_footprint": axioms, "direct_theorem_dependencies": dependencies},
+            "capsule": {"path": output, "bytes": bytes.len(), "sha256": hex_sha256(bytes.as_bytes()), "fresh_imports": 2},
+            "execution": {"complete_invocations": 1, "stream_reads": 1, "fixed_reconstructions": 1, "exact_name_submissions": 1, "exports": 1, "fresh_imports": 2, "retries": 0, "fact_status_changes": 0, "ledger_writes": 0},
+            "rendered_material": {"proof_terms": 0, "theorem_types": 0, "theorem_values": 0}
+        }))
+        .map_err(|error| error.to_string())?
+    );
+    Ok(())
 }
 
 fn run_composition_control(kernel: &mut Kernel, shape: &FibShape) -> Result<(), String> {
@@ -1541,6 +1620,7 @@ struct Arguments {
     receipt_candidate: Option<PathBuf>,
     native_composition: bool,
     native_coprime_control: bool,
+    export_admitted_capsule: bool,
 }
 
 fn parse_arguments() -> Result<Arguments, String> {
@@ -1552,6 +1632,7 @@ fn parse_arguments() -> Result<Arguments, String> {
     let mut receipt_candidate = None;
     let mut native_composition = false;
     let mut native_coprime_control = false;
+    let mut export_admitted_capsule = false;
     let mut arguments = env::args().skip(1);
     while let Some(flag) = arguments.next() {
         if flag == "--preflight" {
@@ -1598,6 +1679,13 @@ fn parse_arguments() -> Result<Arguments, String> {
             native_coprime_control = true;
             continue;
         }
+        if flag == "--export-admitted-capsule" {
+            if export_admitted_capsule {
+                return Err("duplicate --export-admitted-capsule".to_owned());
+            }
+            export_admitted_capsule = true;
+            continue;
+        }
         let value = arguments
             .next()
             .ok_or_else(|| format!("{flag} requires a value"))?;
@@ -1616,6 +1704,7 @@ fn parse_arguments() -> Result<Arguments, String> {
         + usize::from(receipt_candidate.is_some())
         + usize::from(native_composition)
         + usize::from(native_coprime_control)
+        + usize::from(export_admitted_capsule)
         > 1
     {
         return Err("preflight modes are mutually exclusive".to_owned());
@@ -1629,6 +1718,7 @@ fn parse_arguments() -> Result<Arguments, String> {
         receipt_candidate,
         native_composition,
         native_coprime_control,
+        export_admitted_capsule,
     })
 }
 
