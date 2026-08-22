@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-int-even-iff-residual-result",
+  "state": "two-direction-residual-qualified-empty-footprint",
+  "plan": "artifacts/autogenesis/int-even-iff-residual-plan-v1.json",
+  "evidence": {"path": "/nas3/data/axeyum/autogenesis/reference-packs/int-even-iff-residual-v1/residual-1.ndjson", "bytes": 340486, "sha256": "71238c494f33b99420351baaed7ed5c3f06e918e6b36cd70db980826a5a04770", "exports_byte_identical": true, "stream_axioms": []},
+  "root": {"name": "Axeyum.Autogenesis.intEvenIffResidualV1", "declaration_sha256": "4ebf3e3cb7899a494dec9b2e1d27e27524849381cbead75b0d2325ec1a00a0ea", "axiom_footprint": [], "direct_theorem_dependencies": []},
+  "execution": {"source_constructions": 1, "compilations": 1, "exports": 2, "footprint_audits": 1, "exact_target_submissions": 0, "retries": 0, "ledger_writes": 0},
+  "authority": {"qualified_residuals": 1, "exact_int_even_iff_credit": 0, "ledger_writes": 0},
+  "next_boundary": "Qualify the forward modulo-zero implication from a clean multiple-of-two law and the backward implication from an explicit quotient witness.",
+  "limitations": "Both injected arithmetic directions remain obligations."
+}
