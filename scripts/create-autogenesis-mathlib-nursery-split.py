@@ -22,6 +22,53 @@ class SplitError(RuntimeError):
     """The preregistered split cannot be reproduced exactly."""
 
 
+PREREGISTERED_STATES = {
+    "preregistered-before-target-outcomes",
+    "preregistered-before-target-outcomes-with-recorded-amendments",
+}
+PARTITION_COUNTS = {"train": 78, "development": 79, "held-out": 57}
+AMENDMENT_KEYS = {
+    "date", "family", "from", "to", "reason", "breach", "authority", "irreversible",
+}
+BREACH_KEYS = {
+    "fact_id", "proof_shape", "operation_id", "registered_commit",
+    "registered_date", "detected_date",
+}
+
+
+def validate_amendments(split_policy: dict[str, Any]) -> list[dict[str, Any]]:
+    """A partition amendment is a spend of evaluation value; it must be legible.
+
+    An amendment that omitted its breach would be indistinguishable from an
+    ordinary edit to the split, which is the failure this ledger exists to make
+    impossible.
+    """
+    amendments = split_policy.get("amendments", [])
+    if not isinstance(amendments, list):
+        raise SplitError("split policy amendments must be a list")
+    if amendments and split_policy["state"] != (
+        "preregistered-before-target-outcomes-with-recorded-amendments"
+    ):
+        raise SplitError("amendments are present but the policy state does not say so")
+    if not amendments and split_policy["state"] != (
+        "preregistered-before-target-outcomes"
+    ):
+        raise SplitError("the policy state claims amendments but none are recorded")
+    for amendment in amendments:
+        if not isinstance(amendment, dict) or set(amendment) != AMENDMENT_KEYS:
+            raise SplitError(f"amendment fields differ: {sorted(amendment)}")
+        if amendment["from"] != "held-out":
+            raise SplitError("only a held-out spend needs an amendment record")
+        if amendment["irreversible"] is not True:
+            raise SplitError("a held-out spend is not reversible")
+        breach = amendment["breach"]
+        if not isinstance(breach, dict) or set(breach) != BREACH_KEYS:
+            raise SplitError(f"amendment breach fields differ: {sorted(breach)}")
+        if not all(isinstance(v, str) and v for v in breach.values()):
+            raise SplitError("amendment breach fields must be nonempty strings")
+    return amendments
+
+
 def canonical_json(value: Any) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"))
 
@@ -44,8 +91,9 @@ def build(catalog: dict[str, Any], split_policy: dict[str, Any]) -> dict[str, An
     claimed = unsigned.pop("catalog_sha256", None)
     if not isinstance(claimed, str) or digest(unsigned) != claimed:
         raise SplitError("fact catalog digest is invalid")
-    if split_policy.get("state") != "preregistered-before-target-outcomes":
+    if split_policy.get("state") not in PREREGISTERED_STATES:
         raise SplitError("split policy is not preregistered")
+    amendments = validate_amendments(split_policy)
     family_partitions = split_policy.get("family_partitions")
     route_hypotheses = split_policy.get("route_hypotheses")
     if not isinstance(family_partitions, dict) or not isinstance(route_hypotheses, dict):
@@ -100,8 +148,15 @@ def build(catalog: dict[str, Any], split_policy: dict[str, Any]) -> dict[str, An
                 "answer_access": "unavailable" if generated else "withheld-during-episode",
             }
         )
+    for amendment in amendments:
+        family = amendment["family"]
+        if family_partitions.get(family) == "held-out":
+            raise SplitError(
+                f"amended family {family!r} is assigned to held-out; a family whose "
+                "blind-evaluation value was spent cannot be recycled into held-out"
+            )
     counts = Counter(entry["partition"] for entry in entries[2:])
-    if counts != {"train": 78, "development": 60, "held-out": 76}:
+    if counts != PARTITION_COUNTS:
         raise SplitError(f"preregistered partition counts changed: {dict(counts)}")
     return {
         "schema_version": 1,
@@ -123,6 +178,7 @@ def build(catalog: dict[str, Any], split_policy: dict[str, Any]) -> dict[str, An
             "split_freeze": "before-target-outcomes",
             "split_leakage": "no-declared-component-may-cross-evaluation-partitions",
         },
+        "amendments": amendments,
         "entries": entries,
         "longitudinal_result": "artifacts/autogenesis/autogenesis-1-result.json",
         "split_policy": "artifacts/autogenesis/mathlib-nursery-split-policy-v1.json",
@@ -147,7 +203,8 @@ def main() -> int:
         print(
             "AUTOGENESIS_MATHLIB_NURSERY_SPLIT_OK|"
             f"{digest(expected)}|evaluation={len(expected['entries']) - 2}|"
-            "train=78|development=60|held-out=76"
+            + "|".join(f"{k}={v}" for k, v in sorted(PARTITION_COUNTS.items()))
+            + f"|amendments={len(expected['amendments'])}"
         )
     except (OSError, json.JSONDecodeError, KeyError, SplitError) as error:
         print(f"autogenesis-mathlib-nursery-split: {error}", file=sys.stderr)

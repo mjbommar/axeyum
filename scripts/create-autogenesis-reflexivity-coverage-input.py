@@ -62,9 +62,13 @@ def build(
         ),
         key=lambda entry: entry["fact_id"],
     )
-    if len(selected) != 138:
+    # 157 = train 78 + development 79, after the `natural-gcd` family left
+    # held-out on 2026-08-22 (ADR-0542). Kept as a literal tripwire rather than
+    # derived from the manifest, so an unexplained change to the evaluation
+    # population stops this instead of silently re-sizing it.
+    if len(selected) != 157:
         raise CoverageInputError(
-            f"expected 138 train/development entries, found {len(selected)}"
+            f"expected 157 train/development entries, found {len(selected)}"
         )
     if {entry["partition"] for entry in selected} != PARTITIONS:
         raise CoverageInputError("coverage input does not contain both open partitions")

@@ -1,7 +1,26 @@
 {
   "schema_version": 1,
   "kind": "axeyum-autogenesis-mathlib-nursery-split-policy",
-  "state": "preregistered-before-target-outcomes",
+  "state": "preregistered-before-target-outcomes-with-recorded-amendments",
+  "amendments": [
+    {
+      "date": "2026-08-22",
+      "family": "natural-gcd",
+      "from": "held-out",
+      "to": "development",
+      "reason": "an authoritative operation was registered against a held-out fact, spending the family's blind-evaluation value; the family is moved rather than split because partition_unit is whole-family-with-source-review-groups-indivisible",
+      "breach": {
+        "fact_id": "F:ml430-nat-gcd-greatest-0a04214a",
+        "proof_shape": "natural-gcd:conditional-proposition",
+        "operation_id": "authoritative-mathlib-nat-gcd-greatest-kernel-capsule-v1",
+        "registered_commit": "6e112b4bc",
+        "registered_date": "2026-08-21",
+        "detected_date": "2026-08-22"
+      },
+      "authority": "docs/research/09-decisions/adr-0542-held-out-partition-breach-repair.md",
+      "irreversible": true
+    }
+  ],
   "authority": {
     "catalog": "artifacts/autogenesis/mathlib-nat-int-fact-catalog-v1.json",
     "partition_unit": "whole-family-with-source-review-groups-indivisible",
@@ -16,25 +35,61 @@
     "natural-bitwise": "development",
     "natural-factorial": "train",
     "natural-fibonacci": "train",
-    "natural-gcd": "held-out",
+    "natural-gcd": "development",
     "natural-logarithm": "held-out",
     "natural-modular-equivalence": "development",
     "natural-primes": "development",
     "natural-square-root": "held-out"
   },
   "route_hypotheses": {
-    "integer-fibonacci": ["kernel-induction", "recursive-function-reconstruction"],
-    "integer-gcd": ["divisibility-library-application", "kernel-induction"],
-    "integer-modular-equivalence": ["kernel-library-application", "modular-arithmetic-reconstruction"],
-    "natural-binomial": ["kernel-induction", "recursive-function-reconstruction"],
-    "natural-bitwise": ["bitvector-lowering-hypothesis", "kernel-recursion"],
-    "natural-factorial": ["kernel-induction", "recursive-function-reconstruction"],
-    "natural-fibonacci": ["kernel-induction", "recursive-function-reconstruction"],
-    "natural-gcd": ["divisibility-library-application", "kernel-induction"],
-    "natural-logarithm": ["kernel-induction", "recursive-function-reconstruction"],
-    "natural-modular-equivalence": ["kernel-library-application", "modular-arithmetic-reconstruction"],
-    "natural-primes": ["divisibility-library-application", "kernel-induction"],
-    "natural-square-root": ["kernel-induction", "recursive-function-reconstruction"]
+    "integer-fibonacci": [
+      "kernel-induction",
+      "recursive-function-reconstruction"
+    ],
+    "integer-gcd": [
+      "divisibility-library-application",
+      "kernel-induction"
+    ],
+    "integer-modular-equivalence": [
+      "kernel-library-application",
+      "modular-arithmetic-reconstruction"
+    ],
+    "natural-binomial": [
+      "kernel-induction",
+      "recursive-function-reconstruction"
+    ],
+    "natural-bitwise": [
+      "bitvector-lowering-hypothesis",
+      "kernel-recursion"
+    ],
+    "natural-factorial": [
+      "kernel-induction",
+      "recursive-function-reconstruction"
+    ],
+    "natural-fibonacci": [
+      "kernel-induction",
+      "recursive-function-reconstruction"
+    ],
+    "natural-gcd": [
+      "divisibility-library-application",
+      "kernel-induction"
+    ],
+    "natural-logarithm": [
+      "kernel-induction",
+      "recursive-function-reconstruction"
+    ],
+    "natural-modular-equivalence": [
+      "kernel-library-application",
+      "modular-arithmetic-reconstruction"
+    ],
+    "natural-primes": [
+      "divisibility-library-application",
+      "kernel-induction"
+    ],
+    "natural-square-root": [
+      "kernel-induction",
+      "recursive-function-reconstruction"
+    ]
   },
   "rejected_split_keys": [
     {

@@ -3,8 +3,8 @@
   "kind": "axeyum-autogenesis-nursery-dispatch-baseline",
   "state": "pre-execution-capability-census",
   "authority": {
-    "nursery_sha256": "f23d76470e29719f5f4303d3e6d34fcd23bf2018692d6fe73fd9f17b85aa497b",
-    "operation_registry_sha256": "a7a4c54e7b1f694b9dc78269652af6d5f95fbe5178e550db231231b2d88f0a6a",
+    "nursery_sha256": "b4dc596fd83d164eae1a152cb62ab99f0db30c59510c1edaa3589aab59218767",
+    "operation_registry_sha256": "6de9a9251eb96ca1c3c69db9d285e58391ad61b3d75d453c0874143f04ab3d14",
     "partitions_inspected": [
       "development",
       "train"
@@ -22,21 +22,21 @@
     ]
   },
   "budget": {
-    "candidate_inspection_limit": 138,
+    "candidate_inspection_limit": 157,
     "executor_invocations": 0,
     "executor_budget_consumed": 0
   },
   "coverage": {
-    "candidates": 138,
+    "candidates": 157,
     "eligible_for_dispatch": 0,
-    "declined_before_execution": 136,
-    "already_established": 2,
+    "declined_before_execution": 137,
+    "already_established": 20,
     "decline_reasons": {
-      "no-exact-authoritative-operation": 136
+      "no-exact-authoritative-operation": 137
     },
     "families": {
       "integer-fibonacci": {
-        "no-exact-authoritative-operation": 16
+        "no-exact-authoritative-operation": 6
       },
       "integer-gcd": {
         "no-exact-authoritative-operation": 11
@@ -51,7 +51,10 @@
         "no-exact-authoritative-operation": 13
       },
       "natural-fibonacci": {
-        "no-exact-authoritative-operation": 16
+        "no-exact-authoritative-operation": 9
+      },
+      "natural-gcd": {
+        "no-exact-authoritative-operation": 18
       },
       "natural-modular-equivalence": {
         "no-exact-authoritative-operation": 20
@@ -133,9 +136,11 @@
       "partition": "train",
       "formal_language": "lean4-surface",
       "fragment": "Int",
-      "outcome": "declined-before-execution",
-      "decline_reason": "no-exact-authoritative-operation",
-      "registered_operation_ids": [],
+      "outcome": "already-established",
+      "decline_reason": null,
+      "registered_operation_ids": [
+        "authoritative-mathlib-int-fib-add-one-kernel-capsule-v1"
+      ],
       "executor_budget_consumed": 0,
       "statement_adapter_ready": false,
       "reflexivity_candidate_checked": false
@@ -146,9 +151,11 @@
       "partition": "train",
       "formal_language": "lean4-surface",
       "fragment": "Int",
-      "outcome": "declined-before-execution",
-      "decline_reason": "no-exact-authoritative-operation",
-      "registered_operation_ids": [],
+      "outcome": "already-established",
+      "decline_reason": null,
+      "registered_operation_ids": [
+        "authoritative-mathlib-int-fib-add-two-kernel-capsule-v1"
+      ],
       "executor_budget_consumed": 0,
       "statement_adapter_ready": false,
       "reflexivity_candidate_checked": false
@@ -159,9 +166,11 @@
       "partition": "train",
       "formal_language": "lean4-surface",
       "fragment": "Int",
-      "outcome": "declined-before-execution",
-      "decline_reason": "no-exact-authoritative-operation",
-      "registered_operation_ids": [],
+      "outcome": "already-established",
+      "decline_reason": null,
+      "registered_operation_ids": [
+        "authoritative-mathlib-int-fib-dvd-kernel-capsule-v1"
+      ],
       "executor_budget_consumed": 0,
       "statement_adapter_ready": false,
       "reflexivity_candidate_checked": false
@@ -172,9 +181,11 @@
       "partition": "train",
       "formal_language": "lean4-surface",
       "fragment": "Int",
-      "outcome": "declined-before-execution",
-      "decline_reason": "no-exact-authoritative-operation",
-      "registered_operation_ids": [],
+      "outcome": "already-established",
+      "decline_reason": null,
+      "registered_operation_ids": [
+        "authoritative-mathlib-int-fib-recurrence-corollary-kernel-capsule-v1"
+      ],
       "executor_budget_consumed": 0,
       "statement_adapter_ready": false,
       "reflexivity_candidate_checked": false
@@ -185,9 +196,11 @@
       "partition": "train",
       "formal_language": "lean4-surface",
       "fragment": "Int",
-      "outcome": "declined-before-execution",
-      "decline_reason": "no-exact-authoritative-operation",
-      "registered_operation_ids": [],
+      "outcome": "already-established",
+      "decline_reason": null,
+      "registered_operation_ids": [
+        "authoritative-mathlib-int-fib-eq-zero-kernel-capsule-v1"
+      ],
       "executor_budget_consumed": 0,
       "statement_adapter_ready": false,
       "reflexivity_candidate_checked": false
@@ -198,9 +211,11 @@
       "partition": "train",
       "formal_language": "lean4-surface",
       "fragment": "Int",
-      "outcome": "declined-before-execution",
-      "decline_reason": "no-exact-authoritative-operation",
-      "registered_operation_ids": [],
+      "outcome": "already-established",
+      "decline_reason": null,
+      "registered_operation_ids": [
+        "authoritative-mathlib-int-fib-gcd-kernel-capsule-v1"
+      ],
       "executor_budget_consumed": 0,
       "statement_adapter_ready": false,
       "reflexivity_candidate_checked": false
@@ -211,9 +226,11 @@
       "partition": "train",
       "formal_language": "lean4-surface",
       "fragment": "Int",
-      "outcome": "declined-before-execution",
-      "decline_reason": "no-exact-authoritative-operation",
-      "registered_operation_ids": [],
+      "outcome": "already-established",
+      "decline_reason": null,
+      "registered_operation_ids": [
+        "authoritative-mathlib-int-fib-natcast-kernel-capsule-v1"
+      ],
       "executor_budget_consumed": 0,
       "statement_adapter_ready": false,
       "reflexivity_candidate_checked": false
@@ -224,9 +241,11 @@
       "partition": "train",
       "formal_language": "lean4-surface",
       "fragment": "Int",
-      "outcome": "declined-before-execution",
-      "decline_reason": "no-exact-authoritative-operation",
-      "registered_operation_ids": [],
+      "outcome": "already-established",
+      "decline_reason": null,
+      "registered_operation_ids": [
+        "authoritative-mathlib-int-fib-neg-kernel-capsule-v1"
+      ],
       "executor_budget_consumed": 0,
       "statement_adapter_ready": false,
       "reflexivity_candidate_checked": false
@@ -237,9 +256,11 @@
       "partition": "train",
       "formal_language": "lean4-surface",
       "fragment": "Int",
-      "outcome": "declined-before-execution",
-      "decline_reason": "no-exact-authoritative-operation",
-      "registered_operation_ids": [],
+      "outcome": "already-established",
+      "decline_reason": null,
+      "registered_operation_ids": [
+        "authoritative-mathlib-int-fib-of-nonneg-kernel-capsule-v1"
+      ],
       "executor_budget_consumed": 0,
       "statement_adapter_ready": false,
       "reflexivity_candidate_checked": false
@@ -367,9 +388,11 @@
       "partition": "train",
       "formal_language": "lean4-surface",
       "fragment": "Int",
-      "outcome": "declined-before-execution",
-      "decline_reason": "no-exact-authoritative-operation",
-      "registered_operation_ids": [],
+      "outcome": "already-established",
+      "decline_reason": null,
+      "registered_operation_ids": [
+        "authoritative-mathlib-int-gcd-fib-kernel-capsule-v1"
+      ],
       "executor_budget_consumed": 0,
       "statement_adapter_ready": false,
       "reflexivity_candidate_checked": false
@@ -713,6 +736,19 @@
       "reflexivity_candidate_checked": false
     },
     {
+      "fact_id": "F:ml430-mutation-c20db9b4c60b816ce738bdf2",
+      "family": "natural-gcd",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
       "fact_id": "F:ml430-mutation-c86940b52af8159ca9b381d6",
       "family": "natural-modular-equivalence",
       "partition": "development",
@@ -806,6 +842,45 @@
       "reflexivity_candidate_checked": false
     },
     {
+      "fact_id": "F:ml430-nat-coprime-add-self-left-5e93448c",
+      "family": "natural-gcd",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-add-self-right-c3ed0f45",
+      "family": "natural-gcd",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-iff-isrelprime-0c08eb25",
+      "family": "natural-gcd",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
       "fact_id": "F:ml430-nat-coprime-odd-of-left-ed80ab44",
       "family": "natural-primes",
       "partition": "development",
@@ -832,8 +907,47 @@
       "reflexivity_candidate_checked": false
     },
     {
+      "fact_id": "F:ml430-nat-coprime-of-dvd-18fcd09f",
+      "family": "natural-gcd",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
       "fact_id": "F:ml430-nat-coprime-of-dvd-6f652673",
       "family": "natural-primes",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-of-dvd-left-b0e2aa94",
+      "family": "natural-gcd",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-of-dvd-right-a640bd56",
+      "family": "natural-gcd",
       "partition": "development",
       "formal_language": "lean4-surface",
       "fragment": "Nat",
@@ -871,6 +985,32 @@
       "reflexivity_candidate_checked": false
     },
     {
+      "fact_id": "F:ml430-nat-coprime-one-left-iff-45945e80",
+      "family": "natural-gcd",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-one-right-iff-42fed4ce",
+      "family": "natural-gcd",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
       "fact_id": "F:ml430-nat-coprime-or-dvd-of-prime-65f47114",
       "family": "natural-primes",
       "partition": "development",
@@ -886,6 +1026,45 @@
     {
       "fact_id": "F:ml430-nat-coprime-primes-5769049f",
       "family": "natural-primes",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-self-add-left-51351fa1",
+      "family": "natural-gcd",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-self-add-right-966e5434",
+      "family": "natural-gcd",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-coprime-symmetric-9b5cfa12",
+      "family": "natural-gcd",
       "partition": "development",
       "formal_language": "lean4-surface",
       "fragment": "Nat",
@@ -990,8 +1169,73 @@
       "reflexivity_candidate_checked": true
     },
     {
+      "fact_id": "F:ml430-nat-div-dvd-div-left-b56f6f7c",
+      "family": "natural-gcd",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-dvd-lcm-of-dvd-left-141a64bb",
+      "family": "natural-gcd",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-dvd-lcm-of-dvd-right-61a50fc3",
+      "family": "natural-gcd",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
       "fact_id": "F:ml430-nat-dvd-of-forall-prime-mul-dvd-5898723b",
       "family": "natural-primes",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-dvd-of-lcm-left-dvd-d6b2407c",
+      "family": "natural-gcd",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-dvd-of-lcm-right-dvd-61bd1a60",
+      "family": "natural-gcd",
       "partition": "development",
       "formal_language": "lean4-surface",
       "fragment": "Nat",
@@ -1112,9 +1356,11 @@
       "partition": "train",
       "formal_language": "lean4-surface",
       "fragment": "Nat",
-      "outcome": "declined-before-execution",
-      "decline_reason": "no-exact-authoritative-operation",
-      "registered_operation_ids": [],
+      "outcome": "already-established",
+      "decline_reason": null,
+      "registered_operation_ids": [
+        "authoritative-mathlib-nat-fib-add-two-receipt-v1"
+      ],
       "executor_budget_consumed": 0,
       "statement_adapter_ready": false,
       "reflexivity_candidate_checked": false
@@ -1138,9 +1384,11 @@
       "partition": "train",
       "formal_language": "lean4-surface",
       "fragment": "Nat",
-      "outcome": "declined-before-execution",
-      "decline_reason": "no-exact-authoritative-operation",
-      "registered_operation_ids": [],
+      "outcome": "already-established",
+      "decline_reason": null,
+      "registered_operation_ids": [
+        "authoritative-mathlib-nat-fib-coprime-dependency-receipt-v1"
+      ],
       "executor_budget_consumed": 0,
       "statement_adapter_ready": false,
       "reflexivity_candidate_checked": false
@@ -1151,9 +1399,11 @@
       "partition": "train",
       "formal_language": "lean4-surface",
       "fragment": "Nat",
-      "outcome": "declined-before-execution",
-      "decline_reason": "no-exact-authoritative-operation",
-      "registered_operation_ids": [],
+      "outcome": "already-established",
+      "decline_reason": null,
+      "registered_operation_ids": [
+        "authoritative-mathlib-nat-fib-dvd-kernel-capsule-v1"
+      ],
       "executor_budget_consumed": 0,
       "statement_adapter_ready": false,
       "reflexivity_candidate_checked": false
@@ -1164,9 +1414,11 @@
       "partition": "train",
       "formal_language": "lean4-surface",
       "fragment": "Nat",
-      "outcome": "declined-before-execution",
-      "decline_reason": "no-exact-authoritative-operation",
-      "registered_operation_ids": [],
+      "outcome": "already-established",
+      "decline_reason": null,
+      "registered_operation_ids": [
+        "authoritative-mathlib-nat-fib-eq-zero-kernel-capsule-v1"
+      ],
       "executor_budget_consumed": 0,
       "statement_adapter_ready": false,
       "reflexivity_candidate_checked": false
@@ -1177,9 +1429,11 @@
       "partition": "train",
       "formal_language": "lean4-surface",
       "fragment": "Nat",
-      "outcome": "declined-before-execution",
-      "decline_reason": "no-exact-authoritative-operation",
-      "registered_operation_ids": [],
+      "outcome": "already-established",
+      "decline_reason": null,
+      "registered_operation_ids": [
+        "authoritative-mathlib-nat-fib-gcd-kernel-capsule-v1"
+      ],
       "executor_budget_consumed": 0,
       "statement_adapter_ready": false,
       "reflexivity_candidate_checked": false
@@ -1229,9 +1483,11 @@
       "partition": "train",
       "formal_language": "lean4-surface",
       "fragment": "Nat",
-      "outcome": "declined-before-execution",
-      "decline_reason": "no-exact-authoritative-operation",
-      "registered_operation_ids": [],
+      "outcome": "already-established",
+      "decline_reason": null,
+      "registered_operation_ids": [
+        "authoritative-mathlib-nat-fib-pos-kernel-capsule-v1"
+      ],
       "executor_budget_consumed": 0,
       "statement_adapter_ready": false,
       "reflexivity_candidate_checked": false
@@ -1255,9 +1511,26 @@
       "partition": "train",
       "formal_language": "lean4-surface",
       "fragment": "Nat",
-      "outcome": "declined-before-execution",
-      "decline_reason": "no-exact-authoritative-operation",
-      "registered_operation_ids": [],
+      "outcome": "already-established",
+      "decline_reason": null,
+      "registered_operation_ids": [
+        "authoritative-mathlib-nat-gcd-fib-add-self-kernel-capsule-v1"
+      ],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
+      "fact_id": "F:ml430-nat-gcd-greatest-0a04214a",
+      "family": "natural-gcd",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "already-established",
+      "decline_reason": null,
+      "registered_operation_ids": [
+        "authoritative-mathlib-nat-gcd-greatest-kernel-capsule-v1"
+      ],
       "executor_budget_consumed": 0,
       "statement_adapter_ready": false,
       "reflexivity_candidate_checked": false
@@ -1627,6 +1900,19 @@
       "reflexivity_candidate_checked": false
     },
     {
+      "fact_id": "F:ml430-nat-not-coprime-zero-zero-6c4e8dd8",
+      "family": "natural-gcd",
+      "partition": "development",
+      "formal_language": "lean4-surface",
+      "fragment": "Nat",
+      "outcome": "declined-before-execution",
+      "decline_reason": "no-exact-authoritative-operation",
+      "registered_operation_ids": [],
+      "executor_budget_consumed": 0,
+      "statement_adapter_ready": false,
+      "reflexivity_candidate_checked": false
+    },
+    {
       "fact_id": "F:ml430-nat-not-prime-of-dvd-of-ne-4ff592c0",
       "family": "natural-primes",
       "partition": "development",
@@ -1862,5 +2148,5 @@
     }
   ],
   "interpretation": "This is a dispatch-contract census, not a proof episode. A pre-execution decline consumes no producer budget and earns no proof credit; an already-established row is counted separately and is not redispatched.",
-  "baseline_sha256": "2104e7d46697e799f3a876dbb2c05f57f43a7ac04d881f24a319a0c481450c21"
+  "baseline_sha256": "65402df8ca3bd1355e525903c3c411bf6429d0c057181d32a16ceb36c3cf0cbd"
 }

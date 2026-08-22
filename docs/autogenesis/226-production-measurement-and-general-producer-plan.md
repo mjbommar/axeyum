@@ -127,7 +127,15 @@ not followed, and nothing in the gates required it to be.
 Each phase must enter the live queue through an owned file in
 [`../plan/status/`](../plan/status/README.md) before implementation.
 
-### P0 — Contain the breach (small; blocking)
+### P0 — Contain the breach (small; blocking) — **DONE 2026-08-22**
+
+Result: [`227-held-out-partition-breach-result.md`](227-held-out-partition-breach-result.md).
+Decision: [ADR-0542](../research/09-decisions/adr-0542-held-out-partition-breach-repair.md).
+`natural-gcd` moved to development as a whole family; held-out re-froze at 57 rows
+across three families; `scripts/check-autogenesis-holdout-isolation.py` gates both
+directions and is mutation-verified. Train + development is now **157**, and the
+programme's own census reports `eligible-for-dispatch 0` on the repaired population.
+
 
 Nothing downstream is trustworthy until the evaluation population's identity is
 repaired and made enforceable.
@@ -196,9 +204,11 @@ of these counters or recording an explicit, reviewed exemption.
 
 ### P3 — Producer census over train + development (medium; the headline)
 
-Run one genuinely general producer over **88 facts** — the dependency-ready
-train (44) and development (44) rows — under fixed budgets, with held-out
-untouched.
+Run one genuinely general producer over the dependency-ready train and
+development rows under fixed budgets, with held-out untouched. After the P0
+repair the evaluation population is train 78 + development 79 = **157**, of
+which the census counts 137 open and undispatchable; the dependency-ready
+subset is the corpus to freeze. Held-out is **57** rows across three families.
 
 Constraints, all mechanically checkable:
 

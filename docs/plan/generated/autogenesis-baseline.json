@@ -59,13 +59,13 @@
   "contract": "internal-autogenesis-phase0",
   "ledger": {
     "assurance": {
-      "axiom_free_kernel_facts": 59,
+      "axiom_free_kernel_facts": 75,
       "check_statuses": {
-        "checked": 274
+        "checked": 290
       },
-      "evidence_rows": 274,
-      "with_checker_command": 272,
-      "with_multiple_named_checkers": 128
+      "evidence_rows": 290,
+      "with_checker_command": 288,
+      "with_multiple_named_checkers": 144
     },
     "dependency_graph": {
       "dangling": [],
@@ -713,7 +713,7 @@
     "facts": 342,
     "kernel_dependency_coverage": {
       "authority_gate": "scripts/check-fact-depends-derived.py",
-      "facts": 61,
+      "facts": 77,
       "named": 35,
       "unnamed_fact_ids": [
         "F:complex-admits-no-compatible-order",
@@ -723,10 +723,26 @@
         "F:int-characterization",
         "F:lean-kernel-accepts-the-whole-constructed-real-carrier",
         "F:lean-query-module-shrinks-by-a-shared-import",
+        "F:ml430-int-fib-add-one-33f1b748",
+        "F:ml430-int-fib-add-two-739358dd",
+        "F:ml430-int-fib-dvd-ffb3c5c1",
+        "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
+        "F:ml430-int-fib-eq-zero-8193c7cb",
+        "F:ml430-int-fib-gcd-3a8bfdec",
+        "F:ml430-int-fib-natcast-d5886be4",
+        "F:ml430-int-fib-neg-b4021d37",
+        "F:ml430-int-fib-of-nonneg-438018c5",
+        "F:ml430-int-gcd-fib-73bdafc2",
         "F:ml430-nat-ascfactorial-zero-fd183202",
         "F:ml430-nat-descfactorial-zero-966b01df",
         "F:ml430-nat-fib-add-two-b86e0c82",
         "F:ml430-nat-fib-coprime-fib-succ-162fc738",
+        "F:ml430-nat-fib-dvd-f80f3de1",
+        "F:ml430-nat-fib-eq-zero-61879073",
+        "F:ml430-nat-fib-gcd-d1d98407",
+        "F:ml430-nat-fib-pos-9e67bd8e",
+        "F:ml430-nat-gcd-fib-add-self-5a92d5e3",
+        "F:ml430-nat-gcd-greatest-0a04214a",
         "F:nat-peano-categoricity",
         "F:nra-refutations-reconstruct-over-constructed-reals",
         "F:ordered-ring-farkas-refutation",
@@ -747,10 +763,10 @@
     "kernel_lean_graph": {
       "dangling": [],
       "depth_histogram": {
-        "1": 22,
+        "1": 31,
         "10": 1,
-        "2": 8,
-        "3": 9,
+        "2": 11,
+        "3": 13,
         "4": 8,
         "5": 5,
         "6": 2,
@@ -758,7 +774,7 @@
         "8": 3,
         "9": 2
       },
-      "edges": 73,
+      "edges": 82,
       "edges_detail": [
         {
           "consequent": "F:complex-admits-no-compatible-order",
@@ -877,8 +893,44 @@
           "premise": "F:nat-add-zero"
         },
         {
+          "consequent": "F:ml430-int-fib-add-one-33f1b748",
+          "premise": "F:ml430-int-fib-add-two-739358dd"
+        },
+        {
+          "consequent": "F:ml430-int-fib-add-two-739358dd",
+          "premise": "F:ml430-int-fib-natcast-d5886be4"
+        },
+        {
+          "consequent": "F:ml430-int-fib-add-two-739358dd",
+          "premise": "F:ml430-nat-fib-add-two-b86e0c82"
+        },
+        {
+          "consequent": "F:ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d",
+          "premise": "F:ml430-int-fib-add-two-739358dd"
+        },
+        {
+          "consequent": "F:ml430-int-fib-gcd-3a8bfdec",
+          "premise": "F:ml430-int-gcd-fib-73bdafc2"
+        },
+        {
+          "consequent": "F:ml430-int-gcd-fib-73bdafc2",
+          "premise": "F:ml430-int-fib-neg-b4021d37"
+        },
+        {
+          "consequent": "F:ml430-int-gcd-fib-73bdafc2",
+          "premise": "F:ml430-nat-fib-gcd-d1d98407"
+        },
+        {
           "consequent": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
           "premise": "F:ml430-nat-fib-add-two-b86e0c82"
+        },
+        {
+          "consequent": "F:ml430-nat-fib-dvd-f80f3de1",
+          "premise": "F:ml430-nat-fib-gcd-d1d98407"
+        },
+        {
+          "consequent": "F:ml430-nat-gcd-fib-add-self-5a92d5e3",
+          "premise": "F:ml430-nat-fib-coprime-fib-succ-162fc738"
         },
         {
           "consequent": "F:nat-add-comm",
@@ -1053,21 +1105,21 @@
           "premise": "F:real-axioms-modelled-by-constructed-setoid"
         }
       ],
-      "isolated": 10,
+      "isolated": 16,
       "max_depth": 10,
-      "nodes": 61,
+      "nodes": 77,
       "statuses": {
-        "proved": 61
+        "proved": 77
       },
       "unsettled": 0,
-      "with_dependencies": 39,
-      "with_dependents": 37
+      "with_dependencies": 46,
+      "with_dependents": 43
     },
     "routes": {
-      "(missing)": 219,
+      "(missing)": 203,
       "cas-certificate": 19,
       "imported-kernel-lean": 5,
-      "kernel-lean": 61,
+      "kernel-lean": 77,
       "search-certificate": 12,
       "smt-clausal": 9,
       "smt-term-level": 17
@@ -1075,8 +1127,8 @@
     "statuses": {
       "computed": 2,
       "conjectured": 3,
-      "open": 216,
-      "proved": 118,
+      "open": 200,
+      "proved": 134,
       "refuted": 3
     }
   },
@@ -1181,7 +1233,7 @@
   },
   "source_identity": {
     "algorithm": "sha256",
-    "digest": "c7ed086a393d82c8fef0ed070e6cc5a00af422931bd0a50f5596fe0afe26c453",
+    "digest": "d70786c6a6f65d346eacbd80b20a452b82e6f18dc433e9641df18a2f3e1bb79a",
     "inputs": [
       {
         "bytes": 1939,
@@ -1229,14 +1281,14 @@
         "sha256": "8d7df257783ab2cdcfad18719de68d6f40681e1bacb06e938c7f0827d07eebdc"
       },
       {
-        "bytes": 109126,
+        "bytes": 110048,
         "path": "artifacts/autogenesis/nursery-v1.json",
-        "sha256": "221b5278448e933590c665647b3fcad72fae96cd03b9701eecf50bac65b5d161"
+        "sha256": "aa7a2769fcc51bdcf90c360b435e5efed6797751e81ae9931fd52bb89c25e7f1"
       },
       {
-        "bytes": 15146,
+        "bytes": 53218,
         "path": "artifacts/autogenesis/operations.json",
-        "sha256": "68bfd78b02661b3e06949c9100231b42b3ed686d9c69820f2a7d1d3489e955ea"
+        "sha256": "e04c6fef0c6ca826e6fd60a7c183a41eaf926a8c6814d1fa8c81f414e3d24169"
       },
       {
         "bytes": 3519,
@@ -1589,49 +1641,49 @@
         "sha256": "35c93059503fc4261e585ae2fa8897a1f1f174c96b940ab71ed43a483b2b7b13"
       },
       {
-        "bytes": 1598,
+        "bytes": 4876,
         "path": "artifacts/facts/F-ml430-int-fib-add-one-33f1b748.json",
-        "sha256": "c0cbfccdb62f822c1136f504bf2b245529372029764fb728b8135b5afa46ea02"
+        "sha256": "80b46bafd3368e6ccd8de0da904b48a17729ee050757bbfe69a6ecc261560ead"
       },
       {
-        "bytes": 1638,
+        "bytes": 5069,
         "path": "artifacts/facts/F-ml430-int-fib-add-two-739358dd.json",
-        "sha256": "ac1a670e6bfe9e6dc49baeef6d6996b1af237bdd06b0e23a08fccb2f6537ec07"
+        "sha256": "e3b3ee3f8a45db6145ad30dbc5de54a0a6d63b0a73b505582d766782edaeb6ff"
       },
       {
-        "bytes": 1528,
+        "bytes": 4890,
         "path": "artifacts/facts/F-ml430-int-fib-dvd-ffb3c5c1.json",
-        "sha256": "e090e582ec91f379392269820f00075ad9bec739deabe0558e491ee8c8209862"
+        "sha256": "475e4f11b18811251c8b5c8dc371cbab53e36c73a06f23f58d93580fd3446c32"
       },
       {
-        "bytes": 1713,
+        "bytes": 5154,
         "path": "artifacts/facts/F-ml430-int-fib-eq-fib-add-two-sub-fib-add-one-0dab3f6d.json",
-        "sha256": "aeb5bcc29621ce36f402eb1fc316771d29af39dceef0910535b979480801c9f8"
+        "sha256": "5c200d87d2d2ca8dd40fb4e94af54717b75669758dfea8c3dca49af2f8070338"
       },
       {
-        "bytes": 1534,
+        "bytes": 4835,
         "path": "artifacts/facts/F-ml430-int-fib-eq-zero-8193c7cb.json",
-        "sha256": "0cd1fd11ec3c7d40a44f842e7343243a2d935c97880b9b40426183078aaeed92"
+        "sha256": "d72697c272dfef0e1065248d0c4dcbc0b83cb26a5c4fef83cea9d051f5125f42"
       },
       {
-        "bytes": 1586,
+        "bytes": 4774,
         "path": "artifacts/facts/F-ml430-int-fib-gcd-3a8bfdec.json",
-        "sha256": "a608cd1893289740a18c2df3d5ba711b44e9c7d9a7022839870010cc09e90e40"
+        "sha256": "b80504510baaaa471c141ef2091d31a7fc909275075f3d00e27b9f7b6d77fc12"
       },
       {
-        "bytes": 1540,
+        "bytes": 4650,
         "path": "artifacts/facts/F-ml430-int-fib-natcast-d5886be4.json",
-        "sha256": "45bec051f4f54a14956697f68f193f4f9f0c6e14d6536886a60bfc01aab59d42"
+        "sha256": "0dfd31df66db432fec7a7b84c0792bf904f3eb036321e7f615b8fa686a657b79"
       },
       {
-        "bytes": 1546,
+        "bytes": 4800,
         "path": "artifacts/facts/F-ml430-int-fib-neg-b4021d37.json",
-        "sha256": "be84c078d1d9b2a5af3119a2d86ef2a7511d541e8e8aaf7c8971b42203c6695d"
+        "sha256": "378e894e7687c9dea85c5dde0df485a45f10c9064eae8b402a80a71ee249b419"
       },
       {
-        "bytes": 1565,
+        "bytes": 4788,
         "path": "artifacts/facts/F-ml430-int-fib-of-nonneg-438018c5.json",
-        "sha256": "312711e8dc1d54a17b9efdad9c61ab46ca9ef77747acc80a0c24d5f6821d6d6e"
+        "sha256": "abc473ea4bc69b76c933f90b222795126f362941f99f8c25d40be25300ae504b"
       },
       {
         "bytes": 1549,
@@ -1679,9 +1731,9 @@
         "sha256": "bd1f7ec6df8065f481d2368dabb267c082753aa505071a28b4f1eca64295f41b"
       },
       {
-        "bytes": 1614,
+        "bytes": 4827,
         "path": "artifacts/facts/F-ml430-int-gcd-fib-73bdafc2.json",
-        "sha256": "0363e2fa200d99356050891f3c697b5447ca9744965ea0c554b0070f7f8607c5"
+        "sha256": "2ecf80bc2b4b0ff986249271d69afc9bf49d120be7305c4547a52c73b9d61d50"
       },
       {
         "bytes": 1625,
@@ -2204,19 +2256,19 @@
         "sha256": "146a11e44dc14c0c15e57717a585759ac37dae4f88eab62f2a6b26bccef2364d"
       },
       {
-        "bytes": 1566,
+        "bytes": 4919,
         "path": "artifacts/facts/F-ml430-nat-fib-dvd-f80f3de1.json",
-        "sha256": "523804a5730bc72f1865e1415126e4d1825df8285fef01ae99ca9f57ae6230ff"
+        "sha256": "3bac3095580546e680e5b24923f6f7e54b01d0dfd116d7e28d381a89180d4002"
       },
       {
-        "bytes": 1534,
+        "bytes": 4809,
         "path": "artifacts/facts/F-ml430-nat-fib-eq-zero-61879073.json",
-        "sha256": "cbee4cd38f59d632e07e92fa92c0da8cfede149a8e1e3f2f9d76f934b56fba44"
+        "sha256": "61fe34957d2ceb4ec2b6d93c8519c0d0522359ba736b68744500dcb08f3c42ad"
       },
       {
-        "bytes": 1540,
+        "bytes": 4838,
         "path": "artifacts/facts/F-ml430-nat-fib-gcd-d1d98407.json",
-        "sha256": "e678d6b3a3b3bb9d6d7915b14e0ed3deed6377583fc0a15e22ea2d9c191db25d"
+        "sha256": "6c6ed24ea4f5c7ffef1fe4ad14fdce2335ba0e46d789b7d40eec83a3d2ba22cc"
       },
       {
         "bytes": 1602,
@@ -2234,9 +2286,9 @@
         "sha256": "7064a481cecf9754b6dd8c111569348f078be40161200d51aa3a735d083bb650"
       },
       {
-        "bytes": 1514,
+        "bytes": 4829,
         "path": "artifacts/facts/F-ml430-nat-fib-pos-9e67bd8e.json",
-        "sha256": "bc4be3d2930895ed979325242c1fd3f94496eae418832bbb4e0fe7eea2a2dbe7"
+        "sha256": "f729d660a6836c2e70a0ffdad30c18c8a059185f31da5e3f766bf6b26fda0995"
       },
       {
         "bytes": 1606,
@@ -2244,14 +2296,14 @@
         "sha256": "fa8bc484cb2aea516a969d093c09f2ef052abd20f51fab781c3f482530838eb0"
       },
       {
-        "bytes": 1652,
+        "bytes": 5409,
         "path": "artifacts/facts/F-ml430-nat-gcd-fib-add-self-5a92d5e3.json",
-        "sha256": "f5752e5060191ff58837f9f3a5f589dd0174827ba2a836bfdb2fbb775aaa733a"
+        "sha256": "8062f8b42cd8a2f7c131b438b4c20d9d48f226fd65b403930b22c4e6d8bf3f47"
       },
       {
-        "bytes": 1608,
+        "bytes": 4940,
         "path": "artifacts/facts/F-ml430-nat-gcd-greatest-0a04214a.json",
-        "sha256": "fd8ff0e7627b03b0727e651f797218a6db938453edad70e86d10ba9c73429f77"
+        "sha256": "b197376163599a57cc538167d6f5aa343e1af66c0ab034096ad6b380125c899d"
       },
       {
         "bytes": 1580,
@@ -2976,12 +3028,12 @@
       {
         "bytes": 48777,
         "path": "docs/plan/generated/proof-gap-matrix.json",
-        "sha256": "0458fd39f0bfc2f170257badab3f1e2f0e2f355889eadb7b3e51a3b0c4351c2a"
+        "sha256": "77d0d1e654f105b7ad60a9f83b4a3ffbd6d765d53652126539fc63a39da15feb"
       },
       {
-        "bytes": 94656,
+        "bytes": 96886,
         "path": "justfile",
-        "sha256": "837d9abfd539d932add3328e762d0a530e3b8cfd262ea7b4765172b95e43b9b6"
+        "sha256": "2305726238782ae3d3a6b6476f0a39da108dc31fbe5c76e45388cda3ee4885b3"
       },
       {
         "bytes": 11929,
@@ -3014,9 +3066,9 @@
         "sha256": "98361cbd4b978273d5e49270f2614af91755379c5229fbba00812281797493fa"
       },
       {
-        "bytes": 20429,
+        "bytes": 23301,
         "path": "scripts/check-autogenesis-fact-operation.py",
-        "sha256": "68c483a9db79f939bf2a4d1ee3105db4309c38b2e0fd14e42500333077a30d9f"
+        "sha256": "f2d9562d9154cd011f1b8d75d239b966221ff2b74c941aec5b69852c619375a1"
       },
       {
         "bytes": 3677,
@@ -3054,9 +3106,9 @@
         "sha256": "745d919e6c9db709d77beb05ce7bff3f12e99daf16507edb4d883cb7860f9dbc"
       },
       {
-        "bytes": 37737,
+        "bytes": 39580,
         "path": "scripts/check.sh",
-        "sha256": "18b5a7c3b7012988c821b2528c40b0fc279ff5053d61c103e3b3a4efbf47c92c"
+        "sha256": "1c8ad65fab80c4e913f0f583d5dda74cca7bf4c00fdcae83aebb42bcc20cb3c6"
       },
       {
         "bytes": 6846,
@@ -3124,9 +3176,9 @@
         "sha256": "cb7b1b6ed2cb8f268b6adac42cc1bfb4ff3b99ce9e85b438c23790b4ce92c9e1"
       },
       {
-        "bytes": 59637,
+        "bytes": 63751,
         "path": "scripts/execute-autogenesis-operation.py",
-        "sha256": "f57e6dbb2059859b6eefc789097a13cafcc00585b6275b6f8ac28b8d6491074d"
+        "sha256": "ec8c788a588a5c5938118bf35a7acbff64004816844f1ee47787ef2de03b0c27"
       },
       {
         "bytes": 27844,
@@ -3154,9 +3206,9 @@
         "sha256": "78cc93de6ab3c1fed5378c757f0ebfcbee47e66ecd72c25022755a4707e2b376"
       },
       {
-        "bytes": 31661,
+        "bytes": 45819,
         "path": "scripts/prepare-autogenesis-fact-transaction.py",
-        "sha256": "6177aec35a5976e516cdc395071757763847ee6792c1e7946dcb120334d13cc8"
+        "sha256": "0c9ea1a70c3f496f81444ee849c2ba91a2c4d61a4e97866f7357017556f25829"
       },
       {
         "bytes": 14169,
@@ -3204,9 +3256,9 @@
         "sha256": "b8b8cd547a1626597e4c03c5d84bcf2e293703d451fce4a19a172c1218efdf39"
       },
       {
-        "bytes": 25058,
+        "bytes": 43880,
         "path": "scripts/validate-autogenesis-operations.py",
-        "sha256": "d8a9b5ea142d7ef5cbfc9a05ad53d5bd8263e9e75b05ff2c940d6c125f90bd83"
+        "sha256": "837ae9aa1612794c488a1629d17c02b452e7c3ddeae4d2889100431afdad6ff6"
       },
       {
         "bytes": 2711,

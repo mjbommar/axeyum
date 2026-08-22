@@ -25,6 +25,25 @@
     "split_freeze": "before-target-outcomes",
     "split_leakage": "no-declared-component-may-cross-evaluation-partitions"
   },
+  "amendments": [
+    {
+      "date": "2026-08-22",
+      "family": "natural-gcd",
+      "from": "held-out",
+      "to": "development",
+      "reason": "an authoritative operation was registered against a held-out fact, spending the family's blind-evaluation value; the family is moved rather than split because partition_unit is whole-family-with-source-review-groups-indivisible",
+      "breach": {
+        "fact_id": "F:ml430-nat-gcd-greatest-0a04214a",
+        "proof_shape": "natural-gcd:conditional-proposition",
+        "operation_id": "authoritative-mathlib-nat-gcd-greatest-kernel-capsule-v1",
+        "registered_commit": "6e112b4bc",
+        "registered_date": "2026-08-21",
+        "detected_date": "2026-08-22"
+      },
+      "authority": "docs/research/09-decisions/adr-0542-held-out-partition-breach-repair.md",
+      "irreversible": true
+    }
+  ],
   "entries": [
     {
       "fact_id": "F:nat-zero-add",
@@ -768,7 +787,7 @@
     },
     {
       "fact_id": "F:ml430-mutation-c20db9b4c60b816ce738bdf2",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "generated-mutation",
       "family": "natural-gcd",
       "proof_shape": "natural-gcd:unconditional-relation",
@@ -1216,7 +1235,7 @@
     },
     {
       "fact_id": "F:ml430-nat-coprime-add-self-left-5e93448c",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-gcd",
       "proof_shape": "natural-gcd:biconditional",
@@ -1230,7 +1249,7 @@
     },
     {
       "fact_id": "F:ml430-nat-coprime-add-self-right-c3ed0f45",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-gcd",
       "proof_shape": "natural-gcd:biconditional",
@@ -1244,7 +1263,7 @@
     },
     {
       "fact_id": "F:ml430-nat-coprime-iff-isrelprime-0c08eb25",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-gcd",
       "proof_shape": "natural-gcd:biconditional",
@@ -1286,7 +1305,7 @@
     },
     {
       "fact_id": "F:ml430-nat-coprime-of-dvd-18fcd09f",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-gcd",
       "proof_shape": "natural-gcd:conditional-proposition",
@@ -1314,7 +1333,7 @@
     },
     {
       "fact_id": "F:ml430-nat-coprime-of-dvd-left-b0e2aa94",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-gcd",
       "proof_shape": "natural-gcd:conditional-proposition",
@@ -1328,7 +1347,7 @@
     },
     {
       "fact_id": "F:ml430-nat-coprime-of-dvd-right-a640bd56",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-gcd",
       "proof_shape": "natural-gcd:conditional-proposition",
@@ -1370,7 +1389,7 @@
     },
     {
       "fact_id": "F:ml430-nat-coprime-one-left-iff-45945e80",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-gcd",
       "proof_shape": "natural-gcd:biconditional",
@@ -1384,7 +1403,7 @@
     },
     {
       "fact_id": "F:ml430-nat-coprime-one-right-iff-42fed4ce",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-gcd",
       "proof_shape": "natural-gcd:biconditional",
@@ -1426,7 +1445,7 @@
     },
     {
       "fact_id": "F:ml430-nat-coprime-self-add-left-51351fa1",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-gcd",
       "proof_shape": "natural-gcd:biconditional",
@@ -1440,7 +1459,7 @@
     },
     {
       "fact_id": "F:ml430-nat-coprime-self-add-right-966e5434",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-gcd",
       "proof_shape": "natural-gcd:biconditional",
@@ -1454,7 +1473,7 @@
     },
     {
       "fact_id": "F:ml430-nat-coprime-symmetric-9b5cfa12",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-gcd",
       "proof_shape": "natural-gcd:higher-order-property",
@@ -1566,7 +1585,7 @@
     },
     {
       "fact_id": "F:ml430-nat-div-dvd-div-left-b56f6f7c",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-gcd",
       "proof_shape": "natural-gcd:conditional-proposition",
@@ -1580,7 +1599,7 @@
     },
     {
       "fact_id": "F:ml430-nat-dvd-lcm-of-dvd-left-141a64bb",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-gcd",
       "proof_shape": "natural-gcd:conditional-proposition",
@@ -1594,7 +1613,7 @@
     },
     {
       "fact_id": "F:ml430-nat-dvd-lcm-of-dvd-right-61a50fc3",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-gcd",
       "proof_shape": "natural-gcd:conditional-proposition",
@@ -1622,7 +1641,7 @@
     },
     {
       "fact_id": "F:ml430-nat-dvd-of-lcm-left-dvd-d6b2407c",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-gcd",
       "proof_shape": "natural-gcd:conditional-proposition",
@@ -1636,7 +1655,7 @@
     },
     {
       "fact_id": "F:ml430-nat-dvd-of-lcm-right-dvd-61bd1a60",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-gcd",
       "proof_shape": "natural-gcd:conditional-proposition",
@@ -1972,7 +1991,7 @@
     },
     {
       "fact_id": "F:ml430-nat-gcd-greatest-0a04214a",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-gcd",
       "proof_shape": "natural-gcd:conditional-proposition",
@@ -2644,7 +2663,7 @@
     },
     {
       "fact_id": "F:ml430-nat-not-coprime-zero-zero-6c4e8dd8",
-      "partition": "held-out",
+      "partition": "development",
       "provenance_class": "external-transcribed",
       "family": "natural-gcd",
       "proof_shape": "natural-gcd:negated-proposition",
@@ -3051,7 +3070,7 @@
   ],
   "longitudinal_result": "artifacts/autogenesis/autogenesis-1-result.json",
   "split_policy": "artifacts/autogenesis/mathlib-nursery-split-policy-v1.json",
-  "split_policy_sha256": "6bcee21f6456be1e11c60815bf65d4651d5505ecef81da7bd2d38210d1f9314c",
+  "split_policy_sha256": "6713d17309f7cfdf160238a7bb9ba173aedc9379ab7e92c860f4a31059f6bd93",
   "source_catalog_sha256": "d2ebcbd56c70445e3a1be864426ee783021387c5d6c885f182dc2a374855f988",
   "notes": "Autogenesis-1 remains a disjoint longitudinal regression. The 214 Mathlib statements are frozen before target outcomes; source groups, families, family-scoped proof shapes, mutations, and declared dependency components cannot cross evaluation partitions."
 }

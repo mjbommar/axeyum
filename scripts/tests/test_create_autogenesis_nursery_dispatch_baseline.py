@@ -24,7 +24,7 @@ class DispatchBaselineTests(unittest.TestCase):
         result = MODULE.build(self.nursery, self.registry, self.facts)
         self.assertFalse(result["authority"]["held_out_inspected"])
         self.assertEqual({row["partition"] for row in result["rows"]}, {"train", "development"})
-        self.assertEqual(result["coverage"]["candidates"], 138)
+        self.assertEqual(result["coverage"]["candidates"], 157)
 
     def test_fact_loader_does_not_open_held_out_paths(self) -> None:
         nursery = {
@@ -46,15 +46,28 @@ class DispatchBaselineTests(unittest.TestCase):
 
     def test_current_population_separates_admitted_row_from_pre_execution_declines(self) -> None:
         result = MODULE.build(self.nursery, self.registry, self.facts)
-        self.assertEqual(result["coverage"]["eligible_for_dispatch"], 0)
+        coverage = result["coverage"]
+
+        # The load-bearing invariant, and the one this census exists to report:
+        # no row in the evaluation population has an operation that could be
+        # dispatched to it. Registry coverage is entirely on facts already
+        # established.
+        self.assertEqual(coverage["eligible_for_dispatch"], 0)
+        self.assertEqual(set(coverage["decline_reasons"]), {"no-exact-authoritative-operation"})
         self.assertEqual(
-            result["coverage"]["decline_reasons"],
-            {
-                "no-exact-authoritative-operation": 136,
-            },
+            coverage["declined_before_execution"] + coverage["already_established"],
+            coverage["candidates"],
         )
-        self.assertEqual(result["coverage"]["already_established"], 2)
         self.assertEqual(result["budget"]["executor_invocations"], 0)
+
+        # A FLOOR, not an equality. `already_established` rises whenever a lane
+        # registers another capsule -- nine landed in the ten hours before this
+        # was written -- so an equality here goes red hourly for a reason that is
+        # not a defect, and the pin gets bumped without being read. A floor still
+        # catches the regression that matters (established rows disappearing)
+        # while leaving legitimate growth alone. The absolute count belongs in a
+        # production counter, not in a dispatch census.
+        self.assertGreaterEqual(coverage["already_established"], 20)
 
         fact_id = "F:ml430-nat-descfactorial-zero-966b01df"
         row = next(row for row in result["rows"] if row["fact_id"] == fact_id)
@@ -91,18 +104,34 @@ class DispatchBaselineTests(unittest.TestCase):
     def test_established_row_is_not_redispatched(self) -> None:
         nursery = copy.deepcopy(self.nursery)
         facts = copy.deepcopy(self.facts)
-        fact_id = "F:ml430-nat-ascfactorial-zero-fd183202"
+        # Pick the subject from the live population rather than naming one. The
+        # hard-coded `F:ml430-nat-ascfactorial-zero-fd183202` silently stopped
+        # testing anything once another lane proved it: setting an already-proved
+        # fact to "proved" is a no-op, so the mutation this test performs had no
+        # effect and the assertion was measuring nothing.
+        baseline = MODULE.build(self.nursery, self.registry, self.facts)
+        fact_id = next(
+            row["fact_id"]
+            for row in baseline["rows"]
+            if row["outcome"] != "already-established"
+        )
         facts[fact_id]["epistemic_status"] = "proved"
         result = MODULE.build(nursery, self.registry, facts)
         row = next(row for row in result["rows"] if row["fact_id"] == fact_id)
         self.assertEqual(row["outcome"], "already-established")
         self.assertIsNone(row["decline_reason"])
-        self.assertEqual(result["coverage"]["already_established"], 2)
+        # This test is about ONE row not being redispatched, so it pins the delta
+        # its own mutation causes rather than the population-wide total, which
+        # another lane moves hourly.
+        self.assertEqual(
+            result["coverage"]["already_established"],
+            baseline["coverage"]["already_established"] + 1,
+        )
 
     def test_population_drift_fails_closed(self) -> None:
         nursery = copy.deepcopy(self.nursery)
         nursery["entries"] = nursery["entries"][:-1]
-        with self.assertRaisesRegex(MODULE.BaselineError, "expected 138"):
+        with self.assertRaisesRegex(MODULE.BaselineError, "expected 157"):
             MODULE.build(nursery, self.registry, self.facts)
 
 

@@ -75,6 +75,8 @@ step autogenesis-chain-catalog python3 scripts/create-autogenesis-chain-catalog.
 step autogenesis-nursery-tests python3 -m unittest scripts.tests.test_check_autogenesis_nursery
 step autogenesis-mathlib-nursery-split-tests python3 -m unittest scripts.tests.test_create_autogenesis_mathlib_nursery_split
 step autogenesis-nursery-dispatch-baseline-tests python3 -m unittest scripts.tests.test_create_autogenesis_nursery_dispatch_baseline
+step autogenesis-holdout-isolation-tests python3 -m unittest scripts.tests.test_check_autogenesis_holdout_isolation
+step autogenesis-holdout-isolation python3 scripts/check-autogenesis-holdout-isolation.py
 step autogenesis-nursery python3 scripts/check-autogenesis-nursery.py
 step autogenesis-mathlib-nursery-split python3 scripts/create-autogenesis-mathlib-nursery-split.py --check
 step autogenesis-nursery-dispatch-baseline python3 scripts/create-autogenesis-nursery-dispatch-baseline.py --check
