@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-fib-construction-result-v11",
+  "state": "diagnostic-declined-on-open-term-inference-no-target-submission",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-gcd-fib-construction-plan-v11.json",
+    "sha256": "9e04c99917bdf626b0fed6f45cf8395349e2bbaae06fa86b0431b09fac01dd94"
+  },
+  "producer": {
+    "commit": "46649ab1005208c8a14ede985bb82f17f7161003",
+    "path": "crates/axeyum-lean-import/examples/int_gcd_fib_exact.rs",
+    "sha256": "264fc2075659b7ab27bf036d49b0a24452b676c323ada0cd12a850861bd97efc"
+  },
+  "observation": {
+    "exit_code": 1,
+    "stage": "p0 diagnostic inference",
+    "error": "UnboundFVar { id: 18446744073709431414 }",
+    "interpretation": "the diagnostic inferred an open term without a local context; this does not classify p0",
+    "output_absent": true
+  },
+  "execution": {
+    "complete_invocations": 1,
+    "input_stream_reads": 2,
+    "target_theorem_submissions": 0,
+    "target_exports": 0,
+    "fresh_target_imports": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "diagnostic_credit": 0,
+    "theorem_credit": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0,
+    "rendered_material": 0
+  }
+}

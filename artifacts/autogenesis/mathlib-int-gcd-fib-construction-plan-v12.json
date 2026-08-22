@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-gcd-fib-construction-plan-v12",
+  "state": "preregistered-closed-link-diagnostic-before-code-repair",
+  "predecessor": {
+    "path": "artifacts/autogenesis/mathlib-int-gcd-fib-construction-result-v11.json",
+    "sha256": "51c599c2368e33bd70dc3c84760950e41522a03f0997b13d928ac85ab6b4142a"
+  },
+  "repair": {
+    "allowed_change": "close each diagnostic proof with two lambdas and each expected equality with the matching two Pis before inference",
+    "proof_chain_changes": 0,
+    "input_changes": 0,
+    "dependency_contract_changes": 0,
+    "rendered_material": 0
+  },
+  "execution": {
+    "max_complete_invocations": 1,
+    "max_input_stream_reads": 2,
+    "max_target_theorem_submissions": 1,
+    "max_target_exports": 1,
+    "required_fresh_imports_on_accept": 2,
+    "max_retries": 0,
+    "max_ledger_writes": 0
+  },
+  "next_on_accept": "seal exact Int.gcd_fib and bind canonical goal identity",
+  "next_on_decline": "record the first closed link whose inferred type is not the expected equality"
+}

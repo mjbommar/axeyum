@@ -130,3 +130,9 @@ zero theorem credit. V11 authorizes one diagnostic repair: check the inferred
 type of each of the five equality links and the completed chain against its
 expected proposition, expose only the first failing stage, and change only the
 malformed combinator application.
+
+V11 stops before classifying even `p0`: the diagnostic asked the kernel to
+infer an open term without a local context, so the reported free variable is
+the diagnostic's defect. V12 changes no proof node. It closes each proof under
+the two integer lambdas and each expected proposition under matching Pis before
+inference, preserving opaque failure reporting and the same zero-retry budget.

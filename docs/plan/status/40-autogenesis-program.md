@@ -27,6 +27,7 @@
 | 2026-08-22 | (pending) | The final join driver compiles and passes focused Clippy without reading either capsule; one fail-if-present execution must still typecheck the explicit five-step equality chain and exact dependency set |
 | 2026-08-22 | (pending) | V10 declines at final theorem typechecking with no export or ledger write; V11 freezes link-by-link opaque type diagnostics before changing any equality combinator |
 | 2026-08-22 | (pending) | V11 instruments all five links and the completed chain with inference plus definitional-equality checks, compiles Clippy-clean, and still leaves both sealed streams unread pending one diagnostic invocation |
+| 2026-08-22 | (pending) | V11 stops at an unbound free variable in the diagnostic itself before target submission; V12 freezes closing both proof and expected equality over the same binders with no proof-chain change |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |
