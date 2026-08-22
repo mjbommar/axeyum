@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-target-owned-definition-compatibility-result",
+  "state": "definition-kinds-and-types-compatible-bodies-not-identical",
+  "plan": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-negative-presentation-compatibility-plan-v2.json",
+    "sha256": "be22addac244eb9fecbb69d0e4b30174a67ecc20f31260590a05efca8759558f",
+    "commit": "e7e5047c5c6dfbee7bada60702baaa486ba5b40a"
+  },
+  "evidence": {
+    "path": "/nas3/data/axeyum/autogenesis/reference-packs/int-fib-negative-presentation-compatibility-v2/audit.json",
+    "sha256": "1a9dbff651eb51291ef82e42ab865c80b67f7b3954aa96372ea3e4654601f192",
+    "sealed": true
+  },
+  "observed": {
+    "declaration": "Int.fib",
+    "source_kind": "definition",
+    "target_kind": "definition",
+    "source_declaration_sha256": "0f6d661f551f49ff74a05124a452fed97d8fdb4aee7637a88ae68db208927360",
+    "target_declaration_sha256": "5b20e8693270b29a959bc7d4ab28140b87ee7b6d79868405b036f31da16dbfc7",
+    "declaration_identities_match": false,
+    "checked_reused_declaration_compatibility": "kernel-type-shape"
+  },
+  "execution": {
+    "source_stream_reads": 1,
+    "target_stream_reads": 1,
+    "importer_runs": 2,
+    "kernel_submissions": 0,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "diagnosis": "The source and recurrence capsules agree that Int.fib is a definition with the same kernel type shape, but their full declarations differ. Type compatibility alone cannot authorize treating a definitional proof over the source body as a proof over the target body.",
+  "authority": {
+    "support_credit": 0,
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Attempt one checked, replay-verified composition of the clean presentation theorem into the admitted recurrence capsule; the target kernel decides whether the proof transports.",
+  "limitations": "This diagnostic establishes neither definition-body equality nor the negative Fibonacci theorem."
+}
