@@ -4,7 +4,7 @@
 
 **Status:** Exact Mathlib 4.30 `Nat.fib_gcd`, `Nat.fib_dvd`, `Int.fib_natCast`, `Int.fib_add_two`, both recurrence corollaries, `Int.fib_neg`, `Int.gcd_fib`, `Int.fib_gcd`, `Int.fib_dvd`, and `Int.fib_of_nonneg` are durably proved with empty kernel footprints. Exact `Nat.fib_pos` is additionally reconstructed in a sealed 190,972-byte capsule, has an empty footprint, and survives two fresh imports; ledger admission remains deliberately separate.
 
-**Next:** commit the measured gate-coupling correction, replace the declined detached worktree with that exact commit, and derive a fresh machine frontier before any transaction or ledger mutation.
+**Next:** derive frontier, execution, and transaction anew from the committed assurance contract; freeze their exact identities before exit-75 fault injection or ledger mutation.
 
 <!-- plan-section: landed-changes -->
 
@@ -160,6 +160,9 @@
 | 2026-08-22 | (pending) | Immutable capsule packaging is frozen before reopening the sealed directory: one manifest write, no root rewrite or proof-stream read, and restoration to root `0444` / directory `0555` |
 | 2026-08-22 | (pending) | The exact manifest is written once and resealed; its fail-closed checker binds receipt `60954cc8…6aff`, and operation registry validation accepts `Nat.fib_pos` as the twenty-second typed operation with zero ledger writes |
 | 2026-08-22 | (pending) | The first registration frontier refuses `Nat.fib_pos` because six reviewed checker names are not live gate mentions; a measured correction retains only `validate-autogenesis-operations.py`, with no execution, intent, or ledger write |
+| 2026-08-22 | (pending) | The corrected frontier selects and checks `Nat.fib_pos`, but transaction preparation rejects the previously unenumerated Nat capsule; an explicit five-dependency single-construction assurance contract is frozen with no transaction or write |
+| 2026-08-22 | (pending) | Transaction regression tests expose one pre-existing unreviewed `Int.fib_of_nonneg` replay-result gate when reopening that settled fixture; the exact gate name is added alongside the new Nat assurance case |
+| 2026-08-22 | (pending) | The explicit five-dependency Nat assurance path and repaired settled-fixture isolation pass all 19 transaction regression tests; transaction derivation remains unspent until the correction is committed |
 
 | 2026-08-21 | `acd940d19` | The first recurrence corollary is frozen as a two-parameter residual over admitted recurrence and native right cancellation |
 | 2026-08-21 | `982bc4925` | V1 compiles but naming official opaque `Int.fib` imports eight assumptions; V2 abstracts the function itself before one fresh compile/export/audit |

@@ -925,6 +925,7 @@
       "scope": "authoritative",
       "reviewed_gate_mentions": [
         "check-autogenesis-int-fib-of-nonneg-admission-plan.py",
+        "check-autogenesis-int-fib-of-nonneg-admission-replay-result.py",
         "check-autogenesis-int-fib-of-nonneg-construction-plan.py",
         "check-autogenesis-int-fib-of-nonneg-directional-order-plan.py",
         "check-autogenesis-int-fib-of-nonneg-if-pos-export-plan-v2.py",

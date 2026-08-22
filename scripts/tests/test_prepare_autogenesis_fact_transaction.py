@@ -25,6 +25,7 @@ INT_FIB_ADD_ONE_FACT = "F:ml430-int-fib-add-one-33f1b748"
 INT_FIB_GCD_FACT = "F:ml430-int-fib-gcd-3a8bfdec"
 INT_FIB_DVD_FACT = "F:ml430-int-fib-dvd-ffb3c5c1"
 INT_FIB_OF_NONNEG_FACT = "F:ml430-int-fib-of-nonneg-438018c5"
+NAT_FIB_POS_FACT = "F:ml430-nat-fib-pos-9e67bd8e"
 
 
 def settle_reflexivity_fact(facts):
@@ -40,6 +41,7 @@ def settle_reflexivity_fact(facts):
         INT_FIB_GCD_FACT,
         INT_FIB_DVD_FACT,
         INT_FIB_OF_NONNEG_FACT,
+        NAT_FIB_POS_FACT,
     ):
         target = copy.deepcopy(facts[fact_id])
         target["epistemic_status"] = "proved"
@@ -843,6 +845,59 @@ class AuthoritativeFactTransactionTests(unittest.TestCase):
         self.assertEqual(
             observation["retained_answer_dependencies"],
             ["Axeyum.Autogenesis.intFibOfNonnegResidualV1", "Int.fib_natCast"],
+        )
+        execution_receipt = executor.build_receipt(
+            frontier={"frontier_sha256": "a" * 64},
+            fact=before,
+            operation=operation,
+            registry=registry,
+            git_commit="b" * 40,
+            observation=observation,
+        )
+        transaction = MODULE.build_authoritative_transaction(
+            before_fact=before,
+            execution=execution_receipt,
+            operation=operation,
+            registry=registry,
+        )
+        binding = transaction["authoritative_write"]["after_fact"]["evidence"][0][
+            "checker_operation"
+        ]
+        self.assertEqual(
+            binding["direct_theorem_dependencies"],
+            observation["retained_answer_dependencies"],
+        )
+
+    def test_five_dependency_natural_fibonacci_positivity_is_admissible(self):
+        executor = MODULE.load_module(
+            "executor_for_nat_fib_pos_transaction_test", MODULE.EXECUTOR_SCRIPT
+        )
+        frontier_module = executor.load_module(
+            "frontier_for_nat_fib_pos_transaction_test", executor.FRONTIER_SCRIPT
+        )
+        facts = frontier_module.load()
+        settle_reflexivity_fact(facts)
+        target = copy.deepcopy(facts[NAT_FIB_POS_FACT])
+        target["epistemic_status"] = "open"
+        target["evidence"] = []
+        target.pop("proof_route", None)
+        target.pop("axiom_footprint", None)
+        facts[NAT_FIB_POS_FACT] = target
+        frontier = frontier_module.build_machine_frontier(facts)
+        before, operation, registry = executor.selected_inputs(frontier, facts)
+        self.assertEqual(before["id"], NAT_FIB_POS_FACT)
+        observation = executor.expected_sealed_kernel_capsule_observation(
+            operation, before
+        )
+        self.assertEqual(
+            observation["retained_answer_dependencies"],
+            [
+                "Axeyum.Autogenesis.natFibOnePositiveV1",
+                "Axeyum.Autogenesis.natFibPosResidualV1",
+                "Axeyum.Autogenesis.natFibStepPositiveV1",
+                "Axeyum.Autogenesis.natFibZeroV1",
+                "Nat.zero_lt_succ",
+            ],
         )
         execution_receipt = executor.build_receipt(
             frontier={"frontier_sha256": "a" * 64},

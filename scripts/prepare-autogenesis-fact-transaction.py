@@ -477,8 +477,20 @@ def build_authoritative_transaction(
             operation["id"]
             == "authoritative-mathlib-int-fib-of-nonneg-kernel-capsule-v1"
         )
+        is_nat_fib_pos = (
+            operation["id"]
+            == "authoritative-mathlib-nat-fib-pos-kernel-capsule-v1"
+        )
         expected_dependencies = (
-            []
+            [
+                "Axeyum.Autogenesis.natFibOnePositiveV1",
+                "Axeyum.Autogenesis.natFibPosResidualV1",
+                "Axeyum.Autogenesis.natFibStepPositiveV1",
+                "Axeyum.Autogenesis.natFibZeroV1",
+                "Nat.zero_lt_succ",
+            ]
+            if is_nat_fib_pos
+            else []
             if is_int_fib_natcast
             else [
                 "Axeyum.Autogenesis.fibAddTwo",
@@ -545,6 +557,7 @@ def build_authoritative_transaction(
             or is_int_fib_gcd
             or is_int_fib_dvd
             or is_int_fib_of_nonneg
+            or is_nat_fib_pos
         )
         expected_fresh_imports = 2 if is_single_construction else 4
         expected_reconstructions = 1 if is_single_construction else 2
@@ -573,6 +586,7 @@ def build_authoritative_transaction(
                 or is_int_fib_gcd
                 or is_int_fib_dvd
                 or is_int_fib_of_nonneg
+                or is_nat_fib_pos
                 else not dependencies
             )
             or len(dependencies) != len(set(dependencies))
@@ -599,7 +613,16 @@ def build_authoritative_transaction(
             "declaration_sha256": observation["declaration_sha256"],
             "direct_theorem_dependencies": dependencies,
         }
-        if is_int_fib_natcast:
+        if is_nat_fib_pos:
+            result_description = (
+                "five-link-specialized axiom-free sealed natural Fibonacci positivity capsule"
+            )
+            replay_description = (
+                "immutable capsule and committed identity manifest and requires its "
+                "exact theorem identity, two fresh imports, empty axiom footprint, "
+                "and five named direct theorem dependencies"
+            )
+        elif is_int_fib_natcast:
             result_description = (
                 "definitionally reconstructed axiom-free sealed kernel theorem capsule"
             )
