@@ -165,6 +165,54 @@ Gaussian.*
   Quantum 2020, Thm 8: the aggregate of a complete degree-3 layer is provably
   Gaussian -- a no-collapse theorem whose numbers match our `M_4, M_6`.
 
-## Shapes 2, 3 and the computational leg of shape 1
+## Shape 3 -- an arithmetic uncertainty principle (2-adic rigidity forces archimedean decorrelation)
+
+*Verdict (landed 2026-08-22): refuted, with a proof of the obstruction.*
+
+- **Literature.** Every implication in the slope literature (Wan Ann. Math.
+  1993, Asian J. Math. 2004; Davis--Wan--Xiao 2016; Ren--Wan--Xiao--Yu 2018;
+  Kosters--Wan 2018; Kramer-Miller--Upton IMRN 2023; Liu--Wan 2009; Newton-
+  over-Hodge: Adolphson--Sperber, Zhu 2004, Kramer-Miller ANT 2021) runs
+  p-adic to p-adic; none states an archimedean consequence. The only real
+  bridge is integrality rounding (Moreno--Moreno AJM 1995, FFA 1998;
+  Litsyn--Moreno--Moreno 1994; Helleseth--Kumar--Moreno--Shanbhag IEEE-IT
+  1996 for `Z_4` trace codes), whose saving is additive `< 2^v`. Canonical
+  counterexample: Stickelberger/Gross--Koblitz give `v_p(g(chi)) =
+  s_p(a)/(p-1)` exactly while `|g(chi)| = sqrt q` always. Uncertainty
+  principles (Tao MRL 2005, Meshulam 2014, Donoho--Stark) have no Frobenius
+  content and no family version; Sawin--Sutherland (murmurations) use the
+  term heuristically, archimedean on both sides. Rojas-Leon--Wan Math. Ann.
+  2011 is l-adic and vacuous at fixed `q = 2`.
+- **Data (exact `Z[zeta_{2^S}]` arithmetic, valuation via the norm).** At
+  `(5,11), (7,15), (7,16)` the Newton-polygon slope multiset is constant on
+  7 of 9 exact layers (DWX arithmetic progressions, e.g. `j=4: {1/4,1/2,3/4}`,
+  `j=7,s=1: {1/3 x3, 2/3 x3}`) while `log2|S_n|` inside the same layers spans
+  the full Weil range (e.g. layer `(6,3)` at `(7,15)`: one NP class,
+  `log2|S_n| in [6.14, 7.83]`, Weil `9.82`); variance of `log2|S_n|`
+  explained by NP class: `R^2 = 0.000 / 0.077 / 0.007`, and where classes
+  split, the class with more 2-adic structure has the larger mean `|S_n|`.
+  For 233 high-order layers across `ell = 12..24`, `log2(Weil_layer) -
+  v_2(T_{j,s})` has min `6.00`, median `23`, max `30.3` (min `16.9` for
+  `s >= 5`); the rounding mechanism needs `<= 0`. Ax--Katz exponents for the
+  sparse trace system are `2..11`, below the observed `v_2`; `corr(v_2,
+  log2(Weil/|T|)) = -0.236`. Over 16,646,144 exact twisted cylinder sums at
+  `(24,49)`: `corr(v_2(A_psi), log2|A_psi|) = +0.003`, conditional mean
+  `|A_psi|` flat to 0.7% across `v_2 = 0..8`, and the `v_2` histogram halves
+  exactly (random-integer law). Coset products `P_psi` (fork B): within one
+  NP class `|A_psi|` still varies by `1.8..6.2x`; `corr(v(p_n), log2|A_psi|)
+  = +0.30, +0.49` (wrong sign); the one large outlier is the coset carrying
+  the trivial character (a main term).
+- **Obstruction, as a lemma.** Product formula: for `0 != beta in
+  Z[zeta_{2^S}]`, `max_sigma |sigma beta| >= 2^{v(beta)}`, and the
+  conjugates of `S_n(chi)` are the `S_n(chi^u)`, which lie in the same exact
+  layer -- so 2-adic divisibility of one member certifies archimedean
+  largeness of another (0 violations over 285 characters). Rounding ceiling:
+  `T in Z, |T| <= W, 2^v | T` gives `|T| <= 2^v floor(W/2^v)`, and a factor
+  `4 ell` saving then forces `floor(W/2^v) = 0`, i.e. `T = 0`. 2-adic rigidity
+  is the property of being constant on the layer; a constant separates
+  nothing. The 2-adic tower is closed as a source of archimedean cancellation;
+  any surviving mechanism must be phase-aware.
+
+## Shape 2 and the computational leg of shape 1
 
 Pending.
