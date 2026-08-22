@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-native-neg-one-power-leaves-result",
+  "state": "three-clean-leaves-one-propext-power-successor",
+  "plan": {
+    "path": "artifacts/autogenesis/int-neg-one-pow-native-leaves-plan-v2.json",
+    "sha256": "0a406774c989af7527d366641d30d12f0e8c0d8a2531340d37e4d810523c21a4",
+    "commit": "6197e8b9b300fcbe6ee2da0225da832c6511e521"
+  },
+  "source": {
+    "path": "artifacts/autogenesis/sources/int-neg-one-pow-native-leaves-v2.lean",
+    "sha256": "2ec1b38726cc0798802b07d893f4108311e67ce0374f8b404864d7ab10f6180c"
+  },
+  "evidence": {
+    "pack": "/nas3/data/axeyum/autogenesis/reference-packs/int-neg-one-pow-native-leaves-v2",
+    "stream_sha256": "578139639cfe17cc063ef9b0060e1b6172fa5122843644704b6a9dd634eec604",
+    "stream_bytes": 1142761,
+    "audit_1_sha256": "73a19a77d425ba3631e7981048bb5d9f205adc241924356d0b977a5420a2d436",
+    "audit_2_sha256": "012e314dbf38427cfc318750ab90f2e30c1daa4ae2fa4d80e497d691743bb16d"
+  },
+  "roots": [
+    {
+      "name": "Axeyum.Autogenesis.intNegOnePowZeroV1",
+      "declaration_sha256": "b2adfba236cfff0b27b9d16c6798e1b16a17f0deb3322a551e6be5bb53cf3f9b",
+      "axiom_footprint": []
+    },
+    {
+      "name": "Axeyum.Autogenesis.intNegOnePowSuccV1",
+      "declaration_sha256": "09d4c28f402190573d755907e2487be60a5fb5dbd20f8de0cb6aaf5d0cdb9c0d",
+      "axiom_footprint": ["propext"],
+      "direct_theorem_dependencies": ["Int.pow_succ"]
+    },
+    {
+      "name": "Axeyum.Autogenesis.intNegOneMulNegOneV1",
+      "declaration_sha256": "5496ae87df1c83905386eb8bb4dd0efbb94f4719c726b7bd1d2842236c6dc035",
+      "axiom_footprint": []
+    },
+    {
+      "name": "Axeyum.Autogenesis.intOneMulNegOneV1",
+      "declaration_sha256": "640c0a9d0904e2eda59a183f982afe3a2be4f88a7825417ca8d92c32a1e3e42c",
+      "axiom_footprint": []
+    }
+  ],
+  "execution": {
+    "compiler_invocations": 1,
+    "compiler_exit_status": 0,
+    "exporter_invocations": 2,
+    "importer_runs": 2,
+    "retries": 0,
+    "ledger_writes": 0
+  },
+  "authority": {
+    "support_credit": 3,
+    "rejected_root": "Axeyum.Autogenesis.intNegOnePowSuccV1",
+    "exact_target_submissions": 0,
+    "fact_status_changes": 0,
+    "ledger_writes": 0
+  },
+  "next_boundary": "Replace only the Int.pow_succ proof with kernel reduction and re-test the exact same statement.",
+  "limitations": "The four-leaf capsule is not accepted while its power-successor root reaches propext."
+}
