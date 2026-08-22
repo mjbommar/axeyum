@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-fib-of-nonneg-if-pos-export-plan-v1",
+  "state": "preregistered-before-pinned-core-root-export-or-proof-stream-read",
+  "predecessor": {
+    "path": "artifacts/autogenesis/mathlib-int-fib-of-nonneg-support-audit-result-v1.json",
+    "sha256": "32cacc762ed2a0357fe63608867b8acfb4e8075e96b46cacb013fcfc8a3df7d8"
+  },
+  "target": {
+    "fact_id": "F:ml430-int-fib-of-nonneg-438018c5",
+    "fact_path": "artifacts/facts/F-ml430-int-fib-of-nonneg-438018c5.json",
+    "fact_sha256": "312711e8dc1d54a17b9efdad9c61ab46ca9ef77747acc80a0c24d5f6821d6d6e",
+    "required_status": "open"
+  },
+  "fixed_environment": {
+    "ssh_alias": "s5",
+    "hostname": "server5",
+    "mathlib_checkout": "/home/mjbommar/lean-import-scale/mathlib4",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean_version": "4.30.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "lake_binary": "/home/mjbommar/.elan/toolchains/leanprover--lean4---v4.30.0/bin/lake",
+    "lean4export_binary": "/home/mjbommar/lean-import-scale/lean4export/.lake/build/bin/lean4export",
+    "lean4export_binary_sha256": "8e763913b03762488571a93ced6ec1a4e04f7d8eebbe40bd1215ba41a6bd4449"
+  },
+  "support": {
+    "module": "Init.Prelude",
+    "root": "if_pos",
+    "role": "rewrite only the already-selected nonnegative branch of transparent Int.fib",
+    "target_proof_body_allowed": false
+  },
+  "command": {
+    "shape": "cd <mathlib_checkout> && <lake> env <lean4export> Init.Prelude -- if_pos",
+    "output": "/nas3/data/axeyum/autogenesis/reference-packs/if-pos-core-v1/root.ndjson",
+    "output_must_not_preexist": true
+  },
+  "execution": {
+    "max_exporter_invocations": 1,
+    "max_root_stream_writes": 1,
+    "max_importer_runs": 2,
+    "max_retries": 0,
+    "rendered_proof_terms": 0,
+    "rendered_theorem_types": 0,
+    "rendered_theorem_values": 0,
+    "target_theorem_submissions": 0,
+    "ledger_writes": 0
+  },
+  "acceptance": {
+    "root_name": "if_pos",
+    "axiom_footprint": [],
+    "two_fresh_imports": true,
+    "outputs_byte_identical": true,
+    "sealed_output": true
+  },
+  "limitations": "This authorizes one support export and two imports only. Int.fib_of_nonneg construction, admission, and all other roots remain unauthorized.",
+  "next_on_accept": "preregister one exact direct kernel construction over target-owned Int.fib plus if_pos"
+}
