@@ -112,6 +112,7 @@
 | 2026-08-21 | (pending) | V4 transport stops before Lean because its new evidence-pack directory is absent; V5 freezes only exact directory creation before unchanged compilation |
 | 2026-08-21 | (pending) | V5 compiles the target-owned raw `intNegNatDoubleV2` replacement; revised support and both lift footprints remain unqualified |
 | 2026-08-21 | (pending) | Revised helper plus both integer lift roots are frozen for two exports and three independent audits before any Nat-support specialization |
+| 2026-08-21 | (pending) | Target-owned negated doubling removes `Int.neg_add`; helper plus both integer lifts qualify empty-footprint in a 53% smaller root capsule |
 | 2026-08-21 | `a94903df7` | Native axiom-free integer right cancellation is frozen for a deterministic root capsule and two fresh imports |
 | 2026-08-21 | (pending) | `Int.add_neg_cancel_right` exports twice byte-identically, survives two fresh imports, and rests exactly on three axiom-free native integer laws |
 | 2026-08-21 | `3e1e281a8` | Generic constructor-level integer right cancellation is frozen before its first compilation diagnostic |
