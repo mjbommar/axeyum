@@ -26,7 +26,30 @@ class OperationRegistryTests(unittest.TestCase):
 
     def test_committed_registry_has_one_fixture_and_twenty_authoritative_operations(self) -> None:
         registry_module.validate_registry(self.registry, ROOT)
-        self.assertEqual(len(self.registry["operations"]), 21)
+        # A FLOOR, not an equality. This pinned 21 while the registry grew to 25,
+        # and stayed red for hours across three further registrations -- an
+        # equality on a number that legitimately rises goes red for a reason that
+        # is not a defect, and then it gets bumped without being read, which is
+        # how a ratchet stops being a ratchet.
+        #
+        # The floor still catches the regression that matters (operations
+        # disappearing) and leaves growth alone. What is pinned BY VALUE below is
+        # the composition, which is where a meaningful change would show: exactly
+        # one fixture-scope entry, and the multi-target count that is this
+        # programme's headline metric.
+        self.assertGreaterEqual(len(self.registry["operations"]), 25)
+        scopes = [o["scope"] for o in self.registry["operations"]]
+        self.assertEqual(scopes.count("counterfactual-fixture-only"), 1)
+        multi = [
+            o["id"]
+            for o in self.registry["operations"]
+            if o["scope"] == "authoritative"
+            and len(o["applicability"]["fact_ids"]) > 1
+        ]
+        # 1 as of 2026-08-22 -- the first operation in this repository covering
+        # more than one fact. A FALL here means generality was lost and is never
+        # something to re-pin quietly; a rise is the result.
+        self.assertGreaterEqual(len(multi), 1)
         self.assertEqual(
             self.registry["operations"][0]["scope"], "counterfactual-fixture-only"
         )
